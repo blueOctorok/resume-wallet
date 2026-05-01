@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Link2, Plus, Trash2, Loader2 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
@@ -26,7 +27,7 @@ interface LensManageModalProps {
  */
 export default function LensManageModal({ onClose }: LensManageModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const lenses = useLenses()
   const installedBlocks = useInstalledBlocks()

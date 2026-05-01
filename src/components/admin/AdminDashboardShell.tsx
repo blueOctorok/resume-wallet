@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAccount } from '@account-kit/react'
@@ -45,8 +46,8 @@ import CreateCompanyModal from './modals/CreateCompanyModal'
 
 function AdminDashboardContent() {
   const { theme } = useTheme()
-  /** Admin tabs/modals only branch on dark vs not-dark; sepia/paper/icy use the light styling path. */
-  const adminUiTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light'
+  /** Admin tabs/modals only branch on dark vs not-dark; paper/icy use the light styling path. */
+  const adminUiTheme: 'light' | 'dark' = isDarkTheme(theme) ? 'dark' : 'light'
   const account = useAccount({ type: 'LightAccount' })
 
   const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
@@ -220,14 +221,14 @@ function AdminDashboardContent() {
       <div className='min-h-screen flex items-center justify-center p-8'>
         <div className={`${cardClass} p-8 text-center max-w-md`}>
           <AlertTriangle className='w-12 h-12 mx-auto mb-4 text-yellow-500' />
-          <h2 className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`text-xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Access Denied
           </h2>
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             Your wallet is not authorized to access the admin panel.
           </p>
           {walletAddress && (
-            <p className={`mt-4 text-xs font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`mt-4 text-xs font-mono ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
               {walletAddress}
             </p>
           )}
@@ -242,7 +243,7 @@ function AdminDashboardContent() {
       <div className='min-h-screen flex items-center justify-center'>
         <div className='text-center'>
           <Loader2 className='w-8 h-8 animate-spin text-indigo-400 mx-auto mb-4' />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             {walletAddress ? 'Checking admin access...' : 'Waiting for wallet connection...'}
           </p>
         </div>
@@ -308,15 +309,15 @@ function AdminDashboardContent() {
       {/* Sidebar */}
       <aside
         className={`w-64 flex-shrink-0 border-r ${
-          theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
+          isDarkTheme(theme) ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
         }`}
       >
         <div className='sticky top-0 h-screen overflow-y-auto'>
-          <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <div className={`p-4 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h1 className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               Central Admin
             </h1>
-            <p className={`text-xs mt-1 font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`text-xs mt-1 font-mono ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
               {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
             </p>
           </div>
@@ -326,7 +327,7 @@ function AdminDashboardContent() {
               <div key={section.id}>
                 <h2
                   className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                   }`}
                 >
                   {section.label}
@@ -342,10 +343,10 @@ function AdminDashboardContent() {
                       }}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         activeTab === tab.id
-                          ? theme === 'dark'
+                          ? isDarkTheme(theme)
                             ? 'bg-teal-500 text-gray-900'
                             : 'bg-teal-600 text-white'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'text-gray-400 hover:text-white hover:bg-gray-800'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                       }`}
@@ -366,7 +367,7 @@ function AdminDashboardContent() {
         <div className='max-w-6xl mx-auto space-y-6'>
           {/* Page Header */}
           <div>
-            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               {sidebarSections.flatMap((s) => s.tabs).find((t) => t.id === activeTab)?.label || 'Admin'}
             </h2>
           </div>
@@ -377,7 +378,7 @@ function AdminDashboardContent() {
               <div className='relative flex-1'>
                 <Search
                   className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                   }`}
                 />
                 <input
@@ -389,7 +390,7 @@ function AdminDashboardContent() {
                   }}
                   placeholder='Search...'
                   className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                   } focus:outline-none focus:ring-2 focus:ring-teal-500`}
@@ -398,7 +399,7 @@ function AdminDashboardContent() {
               <button
                 onClick={() => setRefreshKey((k) => k + 1)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-white hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -415,7 +416,7 @@ function AdminDashboardContent() {
           {/* Pagination */}
           {activeTab !== 'tools' && totalPages > 1 && (
             <div className='flex items-center justify-between'>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Page {currentPage} of {totalPages} ({totalCount} total)
               </p>
               <div className='flex gap-2'>
@@ -423,7 +424,7 @@ function AdminDashboardContent() {
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                   className={`p-2 rounded-lg ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-white hover:bg-gray-600'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   } disabled:opacity-50`}
@@ -434,7 +435,7 @@ function AdminDashboardContent() {
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className={`p-2 rounded-lg ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-white hover:bg-gray-600'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   } disabled:opacity-50`}

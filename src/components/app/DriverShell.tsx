@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -435,10 +436,10 @@ export default function DriverShell({
             <div className='relative text-center'>
               <div
                 className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
-                  theme !== 'dark' ? 'border-indigo-600' : 'border-indigo-400'
+                  !isDarkTheme(theme) ? 'border-indigo-600' : 'border-indigo-400'
                 }`}
               />
-              <p className={theme !== 'dark' ? 'text-gray-600' : 'text-gray-300'}>
+              <p className={!isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}>
                 Checking for existing session...
               </p>
             </div>

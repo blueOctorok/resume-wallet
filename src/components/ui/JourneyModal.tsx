@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect } from 'react'
 import { CheckCircle, FileText, Briefcase, Truck, FileCheck, Send, Building, Users, Code, Github, Star, Search } from 'lucide-react'
 import { useUIStore, usePreferencesStore } from '@/stores'
@@ -119,7 +120,7 @@ export default function JourneyModal() {
           {/* Title */}
           <h2 className={cn(
             'text-xl font-bold mb-2',
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           )}>
             {step.title}
           </h2>
@@ -127,7 +128,7 @@ export default function JourneyModal() {
           {/* Message */}
           <p className={cn(
             'text-sm mb-6',
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
           )}>
             {step.message}
           </p>
@@ -151,7 +152,7 @@ export default function JourneyModal() {
               onClick={handleDismiss}
               className={cn(
                 'w-full px-6 py-3 rounded-xl font-medium transition-colors',
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700 hover:bg-gray-600 text-white'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               )}
@@ -165,7 +166,7 @@ export default function JourneyModal() {
             onClick={handleDisableJourneyModals}
             className={cn(
               'mt-4 text-xs transition-colors',
-              theme === 'dark' 
+              isDarkTheme(theme) 
                 ? 'text-gray-500 hover:text-gray-400' 
                 : 'text-gray-400 hover:text-gray-500'
             )}

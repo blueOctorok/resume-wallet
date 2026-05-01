@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleMobileSheet — card sheet for iPad portrait (md–lg).
  *
@@ -21,7 +22,7 @@ interface SimpleMobileSheetProps {
 
 export default function SimpleMobileSheet({ open, onClose }: SimpleMobileSheetProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   useEffect(() => {
     if (!open) return

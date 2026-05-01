@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Product guardrail: Storm is not a batch-apply tool. Lenses improve the
  * quality of a single application; they do not multiply clicks. Do not add
@@ -59,7 +60,7 @@ export default function ApplyWithStormChainModal({
   onApplicationSubmitted,
 }: ApplyWithStormChainModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const [card, setCard] = useState<ProjectedCareerCard | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)

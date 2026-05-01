@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleJobRail — the left column of Guided mode.
  *
@@ -63,7 +64,7 @@ function jobToSnapshot(job: JobListing): SelectedJobSnapshot {
 
 export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const selectedJobId = useSimpleModeStore((s) => s.selectedJobId)
   const setSelection = useSimpleModeStore((s) => s.setSelection)

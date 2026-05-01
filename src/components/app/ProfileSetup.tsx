@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Loader2, ArrowLeft, Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
@@ -61,7 +62,7 @@ function Field({
   return (
     <div>
       <label className={`block text-sm font-medium mb-1.5 ${
-        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
       }`}>
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
@@ -73,7 +74,7 @@ function Field({
 
 const inputClass = (theme: string) =>
   `w-full px-3 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/40 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
   }`
@@ -193,14 +194,14 @@ export default function ProfileSetup({
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
         <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+          isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
         }`}>
           <CheckCircle className="w-8 h-8 text-teal-500" />
         </div>
-        <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+        <h2 className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
           Profile created!
         </h2>
-        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
           Taking you to your hub…
         </p>
       </div>
@@ -215,7 +216,7 @@ export default function ProfileSetup({
         <button
           onClick={onSkip}
           className={`flex items-center gap-2 mb-6 text-sm transition-colors ${
-            theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -227,19 +228,19 @@ export default function ProfileSetup({
       <div className="flex items-start gap-4 mb-8">
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
           isDriver
-            ? theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-            : theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+            ? isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
+            : isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-100'
         }`}>
           {isDriver
-            ? <Car className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            : <Code2 className={`w-6 h-6 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            ? <Car className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
+            : <Code2 className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`} />
           }
         </div>
         <div>
-          <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Set up your profile
           </h1>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             {isDriver
               ? 'Quick setup so employers can find you. Takes under a minute.'
               : 'Basic info so employers know who you are and can reach out.'
@@ -252,7 +253,7 @@ export default function ProfileSetup({
       <form
         onSubmit={handleSubmit}
         className={`rounded-2xl p-6 space-y-5 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-900 border border-gray-700'
             : 'bg-white shadow-sm border border-gray-100'
         }`}
@@ -261,16 +262,16 @@ export default function ProfileSetup({
         {/* Cross-role identity banner */}
         {crossRoleName && (
           <div className={`p-4 rounded-xl border flex items-start gap-3 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-amber-500/10 border-amber-500/30'
               : 'bg-amber-50 border-amber-200'
           }`}>
             <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-amber-300' : 'text-amber-800'}`}>
+              <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-800'}`}>
                 We see you already have a {crossRoleHubLabel} profile as <strong>{crossRoleName}</strong>.
               </p>
-              <p className={`text-sm mt-0.5 ${theme === 'dark' ? 'text-amber-400/80' : 'text-amber-700'}`}>
+              <p className={`text-sm mt-0.5 ${isDarkTheme(theme) ? 'text-amber-400/80' : 'text-amber-700'}`}>
                 Is that you?
               </p>
               <div className="flex gap-2 mt-2">
@@ -285,7 +286,7 @@ export default function ProfileSetup({
                   type="button"
                   onClick={() => setCrossRoleName(null)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   }`}
@@ -365,9 +366,9 @@ export default function ProfileSetup({
             </div>
 
             {/* ── Driver: CDL info ── */}
-            <div className={`pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+            <div className={`pt-4 border-t ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-100'}`}>
               <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
               }`}>
                 CDL Information
               </p>
@@ -429,7 +430,7 @@ export default function ProfileSetup({
               <Field label="GitHub Username" theme={theme}>
                 <div className="relative">
                   <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                   }`}>@</span>
                   <input
                     type="text"
@@ -479,7 +480,7 @@ export default function ProfileSetup({
         </div>
       </form>
 
-      <p className={`text-xs text-center mt-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+      <p className={`text-xs text-center mt-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
         You can always update this later from your hub settings.
       </p>
     </div>

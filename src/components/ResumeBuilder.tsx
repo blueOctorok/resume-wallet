@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { 
@@ -658,12 +659,12 @@ export default function ResumeBuilder({
   // Match developer resume builder layout and styling
   return (
     <div
-      className={`h-full flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+      className={`h-full flex flex-col overflow-hidden ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-50'}`}
     >
       {/* Header - fixed at top */}
       <div
         className={`flex-shrink-0 z-10 border-b ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-900/95 border-gray-800'
             : 'bg-white/95 border-gray-200'
         } backdrop-blur-sm`}
@@ -680,7 +681,7 @@ export default function ResumeBuilder({
             {isUploadedResumeFallback && (
               <p
                 className={`w-full mt-2 text-xs rounded-lg px-3 py-2 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-amber-500/10 text-amber-100 border border-amber-500/25'
                     : 'bg-amber-50 text-amber-950 border border-amber-200'
                 }`}
@@ -696,7 +697,7 @@ export default function ResumeBuilder({
               {profileLoaded && profileSource && (
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/30'
                       : 'bg-teal-600/10 text-gray-700 border border-teal-500/30'
                   }`}
@@ -719,7 +720,7 @@ export default function ResumeBuilder({
                   type='button'
                   onClick={clearResume}
                   className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl font-medium transition-all ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
                       : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
                   }`}
@@ -733,7 +734,7 @@ export default function ResumeBuilder({
                 type='button'
                 onClick={fillTestData}
                 className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700'
                     : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
                 }`}
@@ -776,10 +777,10 @@ export default function ResumeBuilder({
                     isActive
                       ? 'text-teal-600 dark:text-teal-400'
                       : isCompleted
-                        ? theme === 'dark'
+                        ? isDarkTheme(theme)
                           ? 'text-gray-400'
                           : 'text-gray-600'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'text-gray-600'
                           : 'text-gray-400'
                   }`}
@@ -790,7 +791,7 @@ export default function ResumeBuilder({
                         ? 'bg-teal-600/20 border-2 border-teal-500'
                         : isCompleted
                           ? 'bg-teal-600/10 border border-teal-500/50'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'bg-gray-800 border border-gray-700'
                             : 'bg-gray-100 border border-gray-300'
                     }`}
@@ -812,13 +813,13 @@ export default function ResumeBuilder({
           {/* Step content card */}
           <div
             className={`rounded-2xl border p-6 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800/50 border-gray-700'
                 : 'bg-white border-gray-200'
             }`}
           >
             <h2
-              className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-2xl font-bold mb-6 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               {STEPS[currentStep].name}
             </h2>
@@ -833,7 +834,7 @@ export default function ResumeBuilder({
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-colors ${
                 currentStep === 0
                   ? 'opacity-50 cursor-not-allowed'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-800 text-white hover:bg-gray-700'
                     : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
               }`}
@@ -887,7 +888,7 @@ function PersonalInfoStep({ data, onChange, theme }: PersonalInfoStepProps) {
     <div className='space-y-4'>
       <h4
         className={`text-base sm:text-lg font-semibold mb-4 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}
       >
         Personal Information
@@ -988,7 +989,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
     <div className='space-y-4'>
       <h4
         className={`text-base sm:text-lg font-semibold mb-4 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}
       >
         CDL & License Information
@@ -1029,7 +1030,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Endorsements
@@ -1041,7 +1042,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
               className={`flex items-center gap-2 p-2 sm:p-3 rounded-xl cursor-pointer border transition-all text-xs sm:text-sm ${
                 data.endorsements.includes(endorsement)
                   ? 'bg-teal-600/20 border-teal-500/50'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-300'
               }`}
@@ -1052,7 +1053,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
                 onChange={() => toggleEndorsement(endorsement)}
                 className='w-4 h-4'
               />
-              <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+              <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 {endorsement}
               </span>
             </label>
@@ -1063,7 +1064,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Restrictions
@@ -1073,7 +1074,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
             <span
               key={restriction}
               className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
                   : 'bg-gray-100 text-gray-700 border border-gray-200'
               }`}
@@ -1099,7 +1100,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
             }
           }}
           className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
           }`}
@@ -1168,7 +1169,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
       <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4'>
         <h4
           className={`text-base sm:text-lg font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Employment History
@@ -1185,7 +1186,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
       {employments.length === 0 ? (
         <div
           className={`text-center py-8 rounded-lg border-2 border-dashed ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400'
               : 'border-gray-300 text-gray-500'
           }`}
@@ -1198,7 +1199,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
             <div
               key={emp.id}
               className={`p-3 sm:p-4 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 border-gray-700'
                   : 'bg-gray-50 border-gray-200'
               }`}
@@ -1206,7 +1207,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
               <div className='flex items-start justify-between mb-4'>
                 <h5
                   className={`font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Employment #{employments.indexOf(emp) + 1}
@@ -1214,7 +1215,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                 <button
                   onClick={() => removeEmployment(emp.id)}
                   className={`p-1 rounded hover:opacity-70 ${
-                    theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                    isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'
                   }`}
                 >
                   <X className='w-4 h-4' />
@@ -1268,7 +1269,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                     }
                     className='w-4 h-4'
                   />
-                  <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                  <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                     Currently employed here
                   </span>
                 </label>
@@ -1277,7 +1278,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
               <div className='mt-4'>
                 <label
                   className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Responsibilities
@@ -1287,7 +1288,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                     <span
                       key={resp}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
                           : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
@@ -1313,7 +1314,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                     }
                   }}
                   className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
                   }`}
@@ -1383,7 +1384,7 @@ function EducationStep({
       <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4'>
         <h4
           className={`text-base sm:text-lg font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Education & Training
@@ -1400,7 +1401,7 @@ function EducationStep({
       {educations.length === 0 ? (
         <div
           className={`text-center py-8 rounded-lg border-2 border-dashed ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400'
               : 'border-gray-300 text-gray-500'
           }`}
@@ -1413,7 +1414,7 @@ function EducationStep({
             <div
               key={edu.id}
               className={`p-3 sm:p-4 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 border-gray-700'
                   : 'bg-gray-50 border-gray-200'
               }`}
@@ -1421,7 +1422,7 @@ function EducationStep({
               <div className='flex items-start justify-between mb-4'>
                 <h5
                   className={`font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Education #{educations.indexOf(edu) + 1}
@@ -1429,7 +1430,7 @@ function EducationStep({
                 <button
                   onClick={() => removeEducation(edu.id)}
                   className={`p-1 rounded hover:opacity-70 ${
-                    theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                    isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'
                   }`}
                 >
                   <X className='w-4 h-4' />
@@ -1471,7 +1472,7 @@ function EducationStep({
               <div className='mt-4'>
                 <label
                   className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Certifications & Licenses
@@ -1481,7 +1482,7 @@ function EducationStep({
                     <span
                       key={cert}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
                           : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
@@ -1507,7 +1508,7 @@ function EducationStep({
                     }
                   }}
                   className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
                   }`}
@@ -1567,7 +1568,7 @@ function SkillsStep({
     <div className='space-y-4'>
       <h4
         className={`text-base sm:text-lg font-semibold mb-4 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}
       >
         Skills & Equipment
@@ -1576,7 +1577,7 @@ function SkillsStep({
       {/* Add Skill Form */}
       <div
         className={`p-4 rounded-lg border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700'
             : 'bg-gray-50 border-gray-200'
         }`}
@@ -1585,7 +1586,7 @@ function SkillsStep({
           <div className='sm:col-span-2'>
             <label
               className={`block text-sm font-medium mb-1 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Skill Name
@@ -1602,7 +1603,7 @@ function SkillsStep({
               }}
               placeholder='e.g., Double/Triple Trailers, ELD Systems'
               className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
               }`}
@@ -1632,7 +1633,7 @@ function SkillsStep({
       {skills.length === 0 ? (
         <div
           className={`text-center py-8 rounded-lg border-2 border-dashed ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400'
               : 'border-gray-300 text-gray-500'
           }`}
@@ -1649,14 +1650,14 @@ function SkillsStep({
               <div
                 key={category.value}
                 className={`p-4 rounded-lg border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-800 border-gray-700'
                     : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <h5
                   className={`font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   {category.label}
@@ -1666,7 +1667,7 @@ function SkillsStep({
                     <span
                       key={skill.id}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
                           : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
@@ -1727,7 +1728,7 @@ function ReferencesStep({
       <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4'>
         <h4
           className={`text-base sm:text-lg font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Professional References
@@ -1744,7 +1745,7 @@ function ReferencesStep({
       {references.length === 0 ? (
         <div
           className={`text-center py-8 rounded-lg border-2 border-dashed ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400'
               : 'border-gray-300 text-gray-500'
           }`}
@@ -1757,7 +1758,7 @@ function ReferencesStep({
             <div
               key={ref.id}
               className={`p-3 sm:p-4 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 border-gray-700'
                   : 'bg-gray-50 border-gray-200'
               }`}
@@ -1765,7 +1766,7 @@ function ReferencesStep({
               <div className='flex items-start justify-between mb-4'>
                 <h5
                   className={`font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Reference #{references.indexOf(ref) + 1}
@@ -1773,7 +1774,7 @@ function ReferencesStep({
                 <button
                   onClick={() => removeReference(ref.id)}
                   className={`p-1 rounded hover:opacity-70 ${
-                    theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                    isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'
                   }`}
                 >
                   <X className='w-4 h-4' />
@@ -1867,7 +1868,7 @@ function ReviewStep({
     <div className='space-y-6'>
       <h4
         className={`text-base sm:text-lg font-semibold mb-4 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}
       >
         Review Your Resume
@@ -1876,7 +1877,7 @@ function ReviewStep({
       <div
         id='resume-review-content'
         className={`rounded-lg border p-6 sm:p-8 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700'
             : 'bg-white border-gray-200'
         }`}
@@ -1885,7 +1886,7 @@ function ReviewStep({
         <section className='mb-6 pb-6 border-b border-gray-300 dark:border-gray-700'>
           <h5
             className={`text-lg font-bold mb-3 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             {personalInfo.firstName || personalInfo.lastName
@@ -1894,7 +1895,7 @@ function ReviewStep({
           </h5>
           <div
             className={`text-sm space-y-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             {personalInfo.email && <p>📧 {personalInfo.email}</p>}
@@ -1911,7 +1912,7 @@ function ReviewStep({
           {personalInfo.professionalSummary && (
             <p
               className={`mt-3 text-sm leading-relaxed ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               {personalInfo.professionalSummary}
@@ -1924,14 +1925,14 @@ function ReviewStep({
           <section className='mb-6 pb-6 border-b border-gray-300 dark:border-gray-700'>
             <h5
               className={`text-base font-semibold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               CDL & License Information
             </h5>
             <div
               className={`text-sm space-y-1 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               {cdlInfo.cdlState && (
@@ -1970,7 +1971,7 @@ function ReviewStep({
           <section className='mb-6 pb-6 border-b border-gray-300 dark:border-gray-700'>
             <h5
               className={`text-base font-semibold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Employment History
@@ -1982,14 +1983,14 @@ function ReviewStep({
                     <div>
                       <p
                         className={`font-semibold ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                         }`}
                       >
                         {emp.position || 'Position'}
                       </p>
                       <p
                         className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                         }`}
                       >
                         {emp.companyName || 'Company'} {emp.location && `• ${emp.location}`}
@@ -1997,7 +1998,7 @@ function ReviewStep({
                     </div>
                     <p
                       className={`text-sm mt-1 sm:mt-0 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }`}
                     >
                       {formatDate(emp.startDate)} -{' '}
@@ -2007,7 +2008,7 @@ function ReviewStep({
                   {emp.responsibilities.length > 0 && (
                     <ul
                       className={`mt-2 ml-4 list-disc text-sm space-y-1 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       {emp.responsibilities.map((resp, i) => (
@@ -2026,7 +2027,7 @@ function ReviewStep({
           <section className='mb-6 pb-6 border-b border-gray-300 dark:border-gray-700'>
             <h5
               className={`text-base font-semibold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Education & Training
@@ -2036,14 +2037,14 @@ function ReviewStep({
                 <div key={edu.id || idx}>
                   <p
                     className={`font-semibold ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                     }`}
                   >
                     {edu.degree || 'Degree'} {edu.field && `in ${edu.field}`}
                   </p>
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     {edu.school} {edu.year && `• ${edu.year}`}
@@ -2051,7 +2052,7 @@ function ReviewStep({
                   {edu.certifications.length > 0 && (
                     <p
                       className={`text-sm mt-1 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       Certifications: {edu.certifications.join(', ')}
@@ -2068,7 +2069,7 @@ function ReviewStep({
           <section className='mb-6 pb-6 border-b border-gray-300 dark:border-gray-700'>
             <h5
               className={`text-base font-semibold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Skills & Equipment
@@ -2082,14 +2083,14 @@ function ReviewStep({
                   <div key={category.value}>
                     <p
                       className={`text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       {category.label}:
                     </p>
                     <p
                       className={`text-sm ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }`}
                     >
                       {categorySkills.map((s) => s.name).join(', ')}
@@ -2106,7 +2107,7 @@ function ReviewStep({
           <section>
             <h5
               className={`text-base font-semibold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Professional References
@@ -2116,14 +2117,14 @@ function ReviewStep({
                 <div key={ref.id || idx}>
                   <p
                     className={`font-semibold ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                     }`}
                   >
                     {ref.name || 'Name'}
                   </p>
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     {ref.title} {ref.company && `at ${ref.company}`}
@@ -2131,7 +2132,7 @@ function ReviewStep({
                   {ref.relationship && (
                     <p
                       className={`text-xs mt-1 ${
-                        theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
                       }`}
                     >
                       {ref.relationship}
@@ -2140,7 +2141,7 @@ function ReviewStep({
                   {ref.phone && (
                     <p
                       className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }`}
                     >
                       📞 {ref.phone}
@@ -2149,7 +2150,7 @@ function ReviewStep({
                   {ref.email && (
                     <p
                       className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }`}
                     >
                       📧 {ref.email}
@@ -2170,7 +2171,7 @@ function ReviewStep({
           references.length === 0 && (
             <div
               className={`text-center py-8 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
               }`}
             >
               <p>Your resume preview will appear here once you fill in the previous steps.</p>
@@ -2207,7 +2208,7 @@ function InputField({
     <div className={className}>
       <label
         className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
         {label}
@@ -2221,7 +2222,7 @@ function InputField({
         placeholder={placeholder}
         required={required}
         className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -2249,7 +2250,7 @@ function PhoneField({
     <div className={className}>
       <label
         className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
         {label}
@@ -2259,7 +2260,7 @@ function PhoneField({
         value={value}
         onChange={onChange}
         className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         }`}
@@ -2289,7 +2290,7 @@ function TextareaField({
     <div>
       <label
         className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
         {label}
@@ -2302,7 +2303,7 @@ function TextareaField({
         rows={rows}
         placeholder={placeholder}
         className={`w-full px-4 py-3 rounded-xl border transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         }`}
@@ -2330,7 +2331,7 @@ function SelectField({
     <div>
       <label
         className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
         {label}
@@ -2341,7 +2342,7 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800 border-gray-700 text-white focus:border-teal-500'
             : 'bg-white border-gray-300 text-gray-900 focus:border-teal-500'
         }`}

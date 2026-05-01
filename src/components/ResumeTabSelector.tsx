@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Upload, FileEdit } from 'lucide-react'
@@ -17,7 +18,7 @@ export default function ResumeTabSelector({
 }: ResumeTabSelectorProps) {
   const { theme: themeFromContext } = useTheme()
   const theme = themeProp || themeFromContext
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   
   return (
     <div className={`flex gap-1 sm:gap-2 p-0.5 sm:p-1 rounded-xl border ${

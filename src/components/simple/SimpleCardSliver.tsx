@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleCardSliver — card access bar for iPad portrait (md–lg only).
  *
@@ -16,7 +17,7 @@ import { useSimpleModeStore } from '@/stores/simple-mode-store'
 
 export default function SimpleCardSliver() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const installedCount = useInstalledBlocks().length
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
   const openCardSheet = useSimpleModeStore((s) => s.openCardSheet)

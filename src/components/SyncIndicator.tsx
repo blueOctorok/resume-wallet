@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -80,7 +81,7 @@ export default function SyncIndicator({
   const getStyles = () => {
     const base = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300'
     
-    if (theme === 'dark') {
+    if (isDarkTheme(theme)) {
       switch (currentStatus) {
         case 'syncing':
           return `${base} bg-gray-700/50 text-white border border-gray-600`

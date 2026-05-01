@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, AlertCircle, MessageSquare, Inbox } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -54,7 +55,7 @@ function timeLabel(dateString: string): string {
  */
 export default function MessageInbox({ walletAddress, onBack, initialThreadId }: MessageInboxProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [threads, setThreads] = useState<ThreadSummary[]>([])
   const [totalUnread, setTotalUnread] = useState(0)

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from './ui/Modal'
@@ -258,7 +259,7 @@ export default function CandidateRequestsSection({
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0
   }
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const cardClass = isDark
     ? 'bg-gray-900/40 border-indigo-500/20 hover:border-indigo-400/35'
@@ -481,7 +482,7 @@ export default function CandidateRequestsSection({
               </p>
 
               {selectedRequest.documentType && (
-                <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className={`p-4 rounded-xl ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                   <p className={`text-sm font-medium ${textPrimary}`}>
                     Document Requested
                   </p>
@@ -492,7 +493,7 @@ export default function CandidateRequestsSection({
               )}
 
               {selectedRequest.message && (
-                <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className={`p-4 rounded-xl ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                   <p className={`text-sm font-medium mb-2 ${textPrimary}`}>
                     Message from employer
                   </p>
@@ -503,11 +504,11 @@ export default function CandidateRequestsSection({
               )}
 
               {isMvrConsentFlow(selectedRequest) && (
-                <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
-                  <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
+                <div className={`p-4 rounded-xl border ${isDarkTheme(theme) ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-800'}`}>
                     Your rights are protected
                   </p>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-700'}`}>
+                  <p className={`text-sm ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-700'}`}>
                     Under the Fair Credit Reporting Act (FCRA), you must review and sign a Background Check Disclosure before this employer can order a report. Click "Review & Sign Disclosure" to read the full form and authorize.
                   </p>
                 </div>
@@ -597,7 +598,7 @@ export default function CandidateRequestsSection({
                     onClick={() => updateRequestStatus(selectedRequest.id, 'declined')}
                     disabled={updating}
                     className={`px-4 py-2.5 rounded-xl border transition-colors ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'border-gray-600 text-gray-300 hover:bg-gray-800'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { 
@@ -614,7 +615,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
   if (!isOpen) return null
 
   // Determine if we're in dark mode
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={10100}>

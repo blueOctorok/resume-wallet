@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
@@ -466,7 +467,7 @@ export default function ResumeDashboard({
     return (
       <div
         className={`max-w-4xl mx-auto p-6 rounded-2xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-teal-200/20 border-teal-500/30 text-brand-cream/80'
             : 'bg-white/80 border-teal-700/20 text-gray-700'
         }`}
@@ -497,18 +498,18 @@ export default function ResumeDashboard({
           <div className='p-6'>
             <div className="flex items-start gap-4">
               <div className={`p-3 rounded-full ${
-                theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
+                isDarkTheme(theme) ? 'bg-red-500/20' : 'bg-red-100'
               }`}>
                 <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
               <div className="flex-1">
                 <h3 className={`text-lg font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}>
                   Delete Resume
                 </h3>
                 <p className={`mt-2 text-sm ${
-                  theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'
                 }`}>
                   Are you sure you want to delete &quot;{resumeToDelete.title || resumeToDelete.filename}&quot;?
                 </p>
@@ -516,12 +517,12 @@ export default function ResumeDashboard({
                 {/* Warning for verified resumes */}
                 {resumeToDelete.verification_status === 'VERIFIED' && (
                   <div className={`mt-3 p-3 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-amber-500/10 border-amber-500/30'
                       : 'bg-amber-50 border-amber-200'
                   }`}>
                     <p className={`text-xs ${
-                      theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+                      isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-700'
                     }`}>
                       <strong>Note:</strong> This resume is verified on the blockchain. 
                       Deleting will remove it from your dashboard, but the blockchain record is permanent and cannot be removed.
@@ -536,7 +537,7 @@ export default function ResumeDashboard({
                 onClick={() => { setDeleteModalOpen(false); setResumeToDelete(null) }}
                 disabled={isDeleting}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-teal-700/30 text-brand-cream hover:bg-teal-700/50'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -567,7 +568,7 @@ export default function ResumeDashboard({
 
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-teal-200/20 border-teal-500/30'
             : 'bg-white/80 border-teal-700/20'
         }`}
@@ -577,14 +578,14 @@ export default function ResumeDashboard({
             <div>
               <h3
                 className={`text-2xl font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 Resume Management
               </h3>
               <p
                 className={`text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'text-brand-cream/70'
                     : 'text-teal-800 dark:text-teal-300/80'
                 }`}
@@ -595,7 +596,7 @@ export default function ResumeDashboard({
             <button
               onClick={() => user.address && fetchResumes(user.address)}
               className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-600 text-white hover:bg-teal-500 shadow-lg'
                   : 'bg-teal-700 text-white hover:bg-teal-700/90 shadow-lg'
               }`}
@@ -607,7 +608,7 @@ export default function ResumeDashboard({
 
           <div
             className={`grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border p-4 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-700/30 border-teal-500/20'
                 : 'bg-teal-700/10 border-teal-700/20'
             }`}
@@ -638,7 +639,7 @@ export default function ResumeDashboard({
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   className={`w-full rounded-xl border px-4 py-2 text-sm focus:outline-none focus:ring-2 ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-brand-cream text-gray-900 border-transparent focus:ring-teal-500'
                       : 'bg-white text-gray-900 border-teal-700/40 focus:ring-teal-500'
                   }`}
@@ -651,10 +652,10 @@ export default function ResumeDashboard({
                         onClick={() => setStatusFilter(status)}
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-all ${
                           statusFilter === status
-                            ? theme === 'dark'
+                            ? isDarkTheme(theme)
                               ? 'bg-teal-600 text-white border-teal-500'
                               : 'bg-teal-700 text-white border-teal-700'
-                            : theme === 'dark'
+                            : isDarkTheme(theme)
                               ? 'bg-teal-700/20 text-brand-cream/70 border-teal-500/20 hover:bg-teal-700/30'
                               : 'bg-white text-teal-800 dark:text-teal-300 border-teal-700/30 hover:bg-teal-700/10'
                         }`}
@@ -670,7 +671,7 @@ export default function ResumeDashboard({
 
               <div
                 className={`rounded-xl border p-3 sm:p-4 overflow-hidden ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-teal-700/20 border-teal-500/20'
                     : 'bg-brand-cream/40 border-teal-700/20'
                 }`}
@@ -678,7 +679,7 @@ export default function ResumeDashboard({
                 {error && (
                   <div
                     className={`mb-3 rounded-lg border px-3 py-2 text-sm ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-red-900/20 border-red-500/40 text-red-300'
                         : 'bg-red-50 border-red-200 text-red-700'
                     }`}
@@ -694,7 +695,7 @@ export default function ResumeDashboard({
                 {!isLoading && filteredResumes.length === 0 && (
                   <div
                     className={`rounded-lg border px-4 py-6 text-center text-sm ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'border-teal-500/20 text-brand-cream/60'
                         : 'border-teal-700/20 text-teal-800 dark:text-teal-300/70'
                     }`}
@@ -715,10 +716,10 @@ export default function ResumeDashboard({
                           onClick={() => setSelectedResume(resume)}
                           className={`w-full text-left rounded-xl border p-4 transition-all ${
                             selectedResume?.id === resume.id
-                              ? theme === 'dark'
+                              ? isDarkTheme(theme)
                                 ? 'bg-teal-600/20 border-teal-500/60 shadow-lg'
                                 : 'bg-white border-teal-700/60 shadow-lg'
-                              : theme === 'dark'
+                              : isDarkTheme(theme)
                                 ? 'bg-teal-700/30 border-teal-500/10 hover:border-teal-500/40 hover:bg-teal-700/40'
                                 : 'bg-white/70 border-teal-700/20 hover:border-teal-700/40 hover:bg-white'
                           }`}
@@ -728,7 +729,7 @@ export default function ResumeDashboard({
                               <div className='flex items-center gap-2'>
                                 <h4
                                   className={`text-sm font-semibold truncate ${
-                                    theme === 'dark'
+                                    isDarkTheme(theme)
                                       ? 'text-brand-cream'
                                       : 'text-teal-800 dark:text-teal-300'
                                   }`}
@@ -737,7 +738,7 @@ export default function ResumeDashboard({
                                 </h4>
                                 {resume.resume_type === 'built' && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium flex-shrink-0 ${
-                                    theme === 'dark'
+                                    isDarkTheme(theme)
                                       ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/30'
                                       : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/20'
                                   }`}>
@@ -747,7 +748,7 @@ export default function ResumeDashboard({
                               </div>
                               <p
                                 className={`text-xs mt-1 truncate ${
-                                  theme === 'dark'
+                                  isDarkTheme(theme)
                                     ? 'text-brand-cream/60'
                                     : 'text-teal-800 dark:text-teal-300/70'
                                 }`}
@@ -763,7 +764,7 @@ export default function ResumeDashboard({
                           </div>
                           <div
                             className={`mt-3 text-xs flex justify-between ${
-                              theme === 'dark'
+                              isDarkTheme(theme)
                                 ? 'text-brand-cream/60'
                                 : 'text-teal-800 dark:text-teal-300/70'
                             }`}
@@ -781,7 +782,7 @@ export default function ResumeDashboard({
 
             <div
               className={`rounded-2xl border p-4 sm:p-6 h-full ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-700/25 border-teal-500/20'
                   : 'bg-white border-teal-700/20'
               }`}
@@ -801,7 +802,7 @@ export default function ResumeDashboard({
               ) : (
                 <div
                   className={`h-full flex items-center justify-center text-sm ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'text-brand-cream/60'
                       : 'text-teal-800 dark:text-teal-300/70'
                   }`}
@@ -828,14 +829,14 @@ function StatItem({ label, value, theme }: StatItemProps) {
     <div className='flex flex-col gap-1'>
       <span
         className={`text-xs uppercase tracking-wide font-semibold ${
-          theme === 'dark' ? 'text-brand-cream/60' : 'text-teal-800 dark:text-teal-300/70'
+          isDarkTheme(theme) ? 'text-brand-cream/60' : 'text-teal-800 dark:text-teal-300/70'
         }`}
       >
         {label}
       </span>
       <span
         className={`text-2xl font-bold ${
-          theme === 'dark' ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
+          isDarkTheme(theme) ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
         }`}
       >
         {value}
@@ -885,7 +886,7 @@ function ResumeDetail({
     <div className='flex flex-col gap-1'>
       <span
         className={`text-xs font-semibold uppercase tracking-wide ${
-          theme === 'dark' ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
+          isDarkTheme(theme) ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
         }`}
       >
         {label}
@@ -893,7 +894,7 @@ function ResumeDetail({
       <span
         className={`text-sm ${
           mono ? 'font-mono text-xs break-all' : ''
-        } ${theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'}`}
+        } ${isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-800'}`}
       >
         {value && value.length > 0 ? value : '—'}
       </span>
@@ -902,19 +903,19 @@ function ResumeDetail({
 
   // Button styles
   const primaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-teal-600 text-white hover:bg-teal-500'
       : 'bg-teal-700 text-white hover:bg-teal-700/90'
   }`
 
   const secondaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/40 hover:bg-teal-600/30'
       : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/30 hover:bg-teal-700/20'
   }`
 
   const dangerButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30'
       : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
   }`
@@ -925,14 +926,14 @@ function ResumeDetail({
         <div>
           <h4
             className={`text-xl font-semibold ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
+              isDarkTheme(theme) ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
             }`}
           >
             {resume.title || resume.filename}
           </h4>
           <p
             className={`text-sm ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'text-brand-cream/60'
                 : 'text-teal-800 dark:text-teal-300/70'
             }`}
@@ -940,7 +941,7 @@ function ResumeDetail({
             {isBuilt ? 'Created' : 'Uploaded'} {formatDate(resume.created_at)}
             {isBuilt && (
               <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/30'
                   : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/20'
               }`}>
@@ -959,17 +960,17 @@ function ResumeDetail({
       {/* Not Verified CTA */}
       {!isVerified && (
         <div className={`p-3 rounded-lg border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-amber-500/10 border-amber-500/30'
             : 'bg-amber-50 border-amber-200'
         }`}>
           <div className="flex items-center gap-2">
-            <Shield className={`w-4 h-4 ${theme === 'dark' ? 'text-amber-300' : 'text-amber-600'}`} />
-            <p className={`text-sm font-medium ${theme === 'dark' ? 'text-amber-300' : 'text-amber-700'}`}>
+            <Shield className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-600'}`} />
+            <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-700'}`}>
               Secure this resume on the blockchain
             </p>
           </div>
-          <p className={`mt-1 text-xs ${theme === 'dark' ? 'text-amber-300/70' : 'text-amber-600'}`}>
+          <p className={`mt-1 text-xs ${isDarkTheme(theme) ? 'text-amber-300/70' : 'text-amber-600'}`}>
             Verification creates a permanent, tamper-proof record that employers can trust.
           </p>
         </div>
@@ -985,44 +986,44 @@ function ResumeDetail({
               <div className='mt-2'>
                 <span
                   className={`text-xs font-semibold uppercase tracking-wide ${
-                    theme === 'dark' ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
+                    isDarkTheme(theme) ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
                   }`}
                 >
                   Resume Sections
                 </span>
                 <div className={`mt-2 p-3 rounded-lg border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-teal-700/20 border-teal-500/20'
                     : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className='grid grid-cols-2 gap-2 text-sm'>
                     {(resume.structured_data as { personalInfo?: object }).personalInfo && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ Personal Info
                       </span>
                     )}
                     {(resume.structured_data as { cdlInfo?: object }).cdlInfo && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ CDL & License
                       </span>
                     )}
                     {((resume.structured_data as { employments?: unknown[] }).employments?.length ?? 0) > 0 && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ Employment ({(resume.structured_data as { employments?: unknown[] }).employments?.length})
                       </span>
                     )}
                     {((resume.structured_data as { educations?: unknown[] }).educations?.length ?? 0) > 0 && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ Education ({(resume.structured_data as { educations?: unknown[] }).educations?.length})
                       </span>
                     )}
                     {((resume.structured_data as { skills?: unknown[] }).skills?.length ?? 0) > 0 && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ Skills ({(resume.structured_data as { skills?: unknown[] }).skills?.length})
                       </span>
                     )}
                     {((resume.structured_data as { references?: unknown[] }).references?.length ?? 0) > 0 && (
-                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                      <span className={isDarkTheme(theme) ? 'text-brand-cream/80' : 'text-gray-700'}>
                         ✓ References ({(resume.structured_data as { references?: unknown[] }).references?.length})
                       </span>
                     )}
@@ -1191,7 +1192,7 @@ function LoadingList({ theme }: { theme: string }) {
         <div
           key={index}
           className={`animate-pulse rounded-xl border p-4 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-700/30 border-teal-500/10'
               : 'bg-white border-teal-700/20'
           }`}

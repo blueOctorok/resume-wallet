@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useRef, useEffect } from 'react'
 import {
   LayoutDashboard,
@@ -103,7 +104,7 @@ export default function Navigation({
   const { navigateToMessages, requestHubRefresh } = useUIStore()
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const isPaperLight = !isDark && theme === 'paper'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length

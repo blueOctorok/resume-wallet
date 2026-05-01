@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useState } from 'react'
 import { Bell, LayoutGrid, Pencil, Trash2, Loader2, Search } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -33,7 +34,7 @@ export interface JobAlertsHubSectionProps {
 
 export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSectionProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 

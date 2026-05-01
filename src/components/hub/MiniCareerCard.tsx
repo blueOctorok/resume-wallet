@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Live preview of what employers see — name, headline, and installed block pills with status.
  * Full card opens the in-app career card; QR opens share link + QR modal (public /card/[token]).
@@ -24,7 +25,7 @@ export interface MiniCareerCardProps {
 
 export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const userProfile = useHubBlocksStore((s) => s.userProfile)

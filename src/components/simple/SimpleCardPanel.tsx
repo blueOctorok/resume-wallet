@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleCardPanel — the right column of the guided split view.
  *
@@ -135,7 +136,7 @@ function GuestStormiHint({
 
 export default function SimpleCardPanel() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const user = useAuthStore((s) => s.user)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   // sessionStorage may hold a stale walletAddress after the Alchemy session

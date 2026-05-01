@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { FileText, Car, Sparkles, Loader2, CheckCircle2 } from 'lucide-react'
@@ -81,7 +82,7 @@ export default function PrefillBanner({
   return (
     <div
       className={`mb-8 rounded-2xl border-2 p-6 shadow-xl backdrop-blur-sm ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gradient-to-br from-teal-600/20 via-teal-200/10 to-brand-cream/10 border-teal-500/40'
           : 'bg-gradient-to-br from-teal-700/10 via-brand-cream/20 to-teal-500/10 border-teal-700/40'
       }`}
@@ -91,7 +92,7 @@ export default function PrefillBanner({
         <div className="flex items-center gap-3">
           <div
             className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                 : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
             }`}
@@ -101,14 +102,14 @@ export default function PrefillBanner({
           <div>
             <h3
               className={`text-xl font-bold mb-1 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               ⚡ Quick Start: Auto-Fill Your Application
             </h3>
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Save time by automatically filling your application from your resume or MVR
@@ -124,7 +125,7 @@ export default function PrefillBanner({
           onClick={handleResumePrefill}
           disabled={isResumePrefilling || isMvrPrefilling}
           className={`group relative p-5 rounded-xl border-2 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-lg cursor-pointer ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? hasResume
                 ? 'bg-teal-200/10 border-teal-500/30 hover:border-teal-500/50'
                 : 'bg-gray-800/50 border-gray-700'
@@ -136,7 +137,7 @@ export default function PrefillBanner({
           <div className="flex items-start gap-4">
             <div
               className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? hasResume
                     ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                     : 'bg-gray-700 text-gray-500'
@@ -151,7 +152,7 @@ export default function PrefillBanner({
               <div className="flex items-center gap-2 mb-2">
                 <h4
                   className={`font-bold text-lg ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   From Resume
@@ -165,7 +166,7 @@ export default function PrefillBanner({
               </div>
               <p
                 className={`text-sm mb-3 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 {hasResume
@@ -175,7 +176,7 @@ export default function PrefillBanner({
               {hasResume && (
                 <div
                   className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                       : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                   }`}
@@ -192,7 +193,7 @@ export default function PrefillBanner({
           onClick={handleMvrPrefill}
           disabled={isMvrPrefilling || isResumePrefilling}
           className={`group relative p-5 rounded-xl border-2 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-lg cursor-pointer ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? hasMvr
                 ? 'bg-teal-200/10 border-teal-500/30 hover:border-teal-500/50'
                 : 'bg-gray-800/50 border-gray-700'
@@ -204,7 +205,7 @@ export default function PrefillBanner({
           <div className="flex items-start gap-4">
             <div
               className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? hasMvr
                     ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                     : 'bg-gray-700 text-gray-500'
@@ -219,7 +220,7 @@ export default function PrefillBanner({
               <div className="flex items-center gap-2 mb-2">
                 <h4
                   className={`font-bold text-lg ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   From MVR
@@ -233,7 +234,7 @@ export default function PrefillBanner({
               </div>
               <p
                 className={`text-sm mb-3 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 {hasMvr
@@ -243,7 +244,7 @@ export default function PrefillBanner({
               {hasMvr && (
                 <div
                   className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                       : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                   }`}
@@ -259,14 +260,14 @@ export default function PrefillBanner({
       {/* Info Message */}
       <div
         className={`p-4 rounded-lg ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-teal-600/10 border border-teal-500/20'
             : 'bg-teal-700/10 border border-teal-700/20'
         }`}
       >
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           <strong>💡 Tip:</strong> You can use both options! MVR fills verified license

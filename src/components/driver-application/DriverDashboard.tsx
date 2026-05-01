@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import ComplianceReview from './ComplianceReview'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -134,7 +135,7 @@ const DriverDashboard = ({
     return (
       <div className='max-w-6xl mx-auto p-6 text-center'>
         <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto'></div>
-        <p className={`mt-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+        <p className={`mt-4 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
           Loading dashboard data...
         </p>
       </div>
@@ -144,25 +145,25 @@ const DriverDashboard = ({
   return (
     <div
       className={`max-w-6xl mx-auto p-6 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/20 backdrop-blur-xl'
           : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
+        isDarkTheme(theme) ? 'border-teal-500' : 'border-teal-700'
       }`}
     >
       {/* Header */}
       <div className='mb-8'>
         <h1
           className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Driver Application Dashboard
         </h1>
         <p
           className={`text-lg ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
           Manage your verified driver application and track your progress
@@ -174,14 +175,14 @@ const DriverDashboard = ({
         <div
           className={`p-6 rounded-lg border-2 ${
             statusDisplay.tone === 'success'
-              ? theme === 'dark'
+              ? isDarkTheme(theme)
                 ? 'bg-green-900/20 border-green-500/50'
                 : 'bg-green-50 border-green-200'
               : statusDisplay.tone === 'danger'
-                ? theme === 'dark'
+                ? isDarkTheme(theme)
                   ? 'bg-red-900/20 border-red-500/50'
                   : 'bg-red-50 border-red-200'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-yellow-900/20 border-yellow-500/50'
                   : 'bg-yellow-50 border-yellow-200'
           }`}
@@ -191,10 +192,10 @@ const DriverDashboard = ({
               <h2
                 className={`text-xl font-semibold ${
                   statusDisplay.tone === 'success'
-                    ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
+                    ? isDarkTheme(theme) ? 'text-green-400' : 'text-green-800'
                     : statusDisplay.tone === 'danger'
-                      ? theme === 'dark' ? 'text-red-400' : 'text-red-800'
-                      : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                      ? isDarkTheme(theme) ? 'text-red-400' : 'text-red-800'
+                      : isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-800'
                 }`}
               >
                 {statusDisplay.tone === 'success' ? '✅' : statusDisplay.tone === 'danger' ? '❌' : '⏳'} {data.status}
@@ -203,14 +204,14 @@ const DriverDashboard = ({
             <span
               className={`px-4 py-2 rounded-full text-sm font-medium ${
                 statusDisplay.tone === 'success'
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-green-500/20 text-green-400'
                     : 'bg-green-100 text-green-800'
                   : statusDisplay.tone === 'danger'
-                    ? theme === 'dark'
+                    ? isDarkTheme(theme)
                       ? 'bg-red-500/20 text-red-400'
                       : 'bg-red-100 text-red-800'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                       ? 'bg-yellow-500/20 text-yellow-400'
                       : 'bg-yellow-100 text-yellow-800'
               }`}
@@ -223,14 +224,14 @@ const DriverDashboard = ({
             <div>
               <p
                 className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 Submitted
               </p>
               <p
                 className={`font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 {data.submittedDate}
@@ -240,14 +241,14 @@ const DriverDashboard = ({
             <div>
               <p
                 className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 Est. Review Time
               </p>
               <p
                 className={`font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 {data.estimatedReviewTime}
@@ -257,14 +258,14 @@ const DriverDashboard = ({
             <div>
               <p
                 className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 Application ID
               </p>
               <p
                 className={`font-mono text-sm ${
-                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                 }`}
               >
                 {data.applicationId ? `#${data.applicationId}` : 'N/A'}
@@ -278,7 +279,7 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Verification Progress
@@ -288,7 +289,7 @@ const DriverDashboard = ({
           {/* Driver Application */}
           <div
             className={`flex items-center justify-between p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <div className='flex items-center space-x-3'>
@@ -315,7 +316,7 @@ const DriverDashboard = ({
               )}
               <span
                 className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 Driver Application (Forms 1-3)
@@ -323,7 +324,7 @@ const DriverDashboard = ({
             </div>
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
               }`}
             >
               Verified ✓
@@ -333,7 +334,7 @@ const DriverDashboard = ({
           {/* Employment Verification */}
           <div
             className={`flex items-center justify-between p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <div className='flex items-center space-x-3'>
@@ -360,7 +361,7 @@ const DriverDashboard = ({
               )}
               <span
                 className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 Employment Verification
@@ -368,7 +369,7 @@ const DriverDashboard = ({
             </div>
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-600'
               }`}
             >
               Incomplete
@@ -378,7 +379,7 @@ const DriverDashboard = ({
           {/* DOT Approval */}
           <div
             className={`flex items-center justify-between p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <div className='flex items-center space-x-3'>
@@ -405,7 +406,7 @@ const DriverDashboard = ({
               )}
               <span
                 className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 DOT Approval
@@ -413,7 +414,7 @@ const DriverDashboard = ({
             </div>
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}
             >
               Pending
@@ -426,7 +427,7 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           🤖 AI Compliance Review
@@ -448,7 +449,7 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           🔗 Blockchain Verification
@@ -456,14 +457,14 @@ const DriverDashboard = ({
 
         <div
           className={`p-6 rounded-lg ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+            isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
           }`}
         >
           <div className='space-y-3'>
             <div className='flex justify-between items-center'>
               <span
                 className={`font-medium ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Transaction Hash:
@@ -474,7 +475,7 @@ const DriverDashboard = ({
                   target='_blank'
                   rel='noopener noreferrer'
                   className={`font-mono text-sm hover:underline ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.blockchainTxHash.slice(0, 10)}...
@@ -483,7 +484,7 @@ const DriverDashboard = ({
               ) : (
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   Not available
@@ -495,14 +496,14 @@ const DriverDashboard = ({
               <div className='flex justify-between items-center'>
                 <span
                   className={`font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Block Number:
                 </span>
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.blockNumber.toLocaleString()}
@@ -514,14 +515,14 @@ const DriverDashboard = ({
               <div className='flex justify-between items-center'>
                 <span
                   className={`font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   IPFS Hash:
                 </span>
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.ipfsHash.slice(0, 10)}...{data.ipfsHash.slice(-8)}
@@ -536,7 +537,7 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           📋 Driver Profile Summary
@@ -545,19 +546,19 @@ const DriverDashboard = ({
         <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
           <div
             className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               CDL Class
             </p>
             <p
               className={`text-2xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               {data.cdlClass}
@@ -566,19 +567,19 @@ const DriverDashboard = ({
 
           <div
             className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Experience
             </p>
             <p
               className={`text-2xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               {data.yearsExperience} yrs
@@ -587,19 +588,19 @@ const DriverDashboard = ({
 
           <div
             className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Accidents
             </p>
             <p
               className={`text-2xl font-bold ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
               }`}
             >
               {data.accidentCount}
@@ -608,19 +609,19 @@ const DriverDashboard = ({
 
           <div
             className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Convictions
             </p>
             <p
               className={`text-2xl font-bold ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
               }`}
             >
               {data.convictionCount}
@@ -633,7 +634,7 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           🎯 Quick Actions
@@ -644,7 +645,7 @@ const DriverDashboard = ({
             <button
               onClick={onCompleteEmploymentVerification}
               className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-600 text-white hover:bg-teal-500'
                   : 'bg-teal-700 text-white hover:bg-teal-700/90'
               }`}
@@ -663,7 +664,7 @@ const DriverDashboard = ({
             disabled
             title='Coming soon'
             className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 text-white opacity-60 cursor-not-allowed'
                 : 'bg-gray-50 text-gray-900 opacity-60 cursor-not-allowed'
             }`}
@@ -679,7 +680,7 @@ const DriverDashboard = ({
             disabled
             title='Coming soon'
             className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 text-white opacity-60 cursor-not-allowed'
                 : 'bg-gray-50 text-gray-900 opacity-60 cursor-not-allowed'
             }`}
@@ -694,7 +695,7 @@ const DriverDashboard = ({
           <button
             onClick={() => setShowShareLink(!showShareLink)}
             className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 text-white hover:bg-gray-700'
                 : 'bg-gray-50 text-gray-900 hover:bg-gray-100'
             }`}
@@ -712,7 +713,7 @@ const DriverDashboard = ({
           <div className='mt-4 p-4 rounded-lg bg-teal-700/20 border border-teal-500/30'>
             <p
               className={`text-sm mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Share this link with employers:
@@ -724,7 +725,7 @@ const DriverDashboard = ({
                   value={data.shareLink}
                   readOnly
                   className={`flex-1 px-4 py-2 rounded-lg font-mono text-sm ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 text-white'
                       : 'bg-white text-gray-900'
                   }`}
@@ -732,7 +733,7 @@ const DriverDashboard = ({
                 <button
                   onClick={() => navigator.clipboard.writeText(data.shareLink)}
                   className={`px-4 py-2 rounded-lg font-semibold ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-teal-600 text-white hover:bg-teal-500'
                       : 'bg-teal-700 text-white hover:bg-teal-700/90'
                   }`}
@@ -743,7 +744,7 @@ const DriverDashboard = ({
             ) : (
               <div
                 className={`px-4 py-2 rounded-lg text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-800 text-gray-300'
                     : 'bg-gray-100 text-gray-700'
                 }`}
@@ -759,7 +760,7 @@ const DriverDashboard = ({
       <div className='text-center'>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
           }`}
         >
           Your application data is securely stored on the blockchain and cannot

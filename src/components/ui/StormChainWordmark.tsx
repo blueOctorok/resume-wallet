@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { CloudLightning } from 'lucide-react'
@@ -291,7 +292,7 @@ export default function StormChainWordmark({
   vaultChrome = true,
 }: StormChainWordmarkProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   /** Larger than nav: whitepaper hero + marketing homepage */
   const isLarge = size === 'hero' || size === 'display'
   const isDisplay = size === 'display'

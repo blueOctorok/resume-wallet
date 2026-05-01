@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Trash2, Filter } from 'lucide-react'
 import type { AdminTabProps, User, UserDetail } from '@/components/admin/admin-types'
@@ -121,7 +122,7 @@ export default function CandidatesTab({
     <>
       {/* Block category filter */}
       <div className="flex items-center gap-2 mb-4">
-        <Filter className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+        <Filter className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`} />
         <div className="flex flex-wrap gap-1">
           {FILTER_OPTIONS.map(opt => (
             <button
@@ -129,10 +130,10 @@ export default function CandidatesTab({
               onClick={() => setBlockFilter(opt.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 blockFilter === opt.value
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
                     : 'bg-teal-50 text-teal-700 border border-teal-300'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600'
                     : 'bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300'
               }`}
@@ -145,7 +146,7 @@ export default function CandidatesTab({
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+          <thead className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}>
             <tr>
               <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
               <th className={`${tableHeaderClass} px-4 py-3`}>Blocks</th>
@@ -160,7 +161,7 @@ export default function CandidatesTab({
               <tr
                 key={user.id}
                 className={`cursor-pointer ${
-                  theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
+                  isDarkTheme(theme) ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
                 }`}
                 onClick={() => fetchUserDetail(user.id)}
               >
@@ -245,7 +246,7 @@ export default function CandidatesTab({
                     <button
                       onClick={() => fetchUserDetail(user.id)}
                       className={`p-1.5 rounded ${
-                        theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                        isDarkTheme(theme) ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                       } text-indigo-500`}
                       title="View details"
                     >

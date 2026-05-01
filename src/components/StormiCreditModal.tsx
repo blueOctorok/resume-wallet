@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * StormiCreditModal — USDC payment flow for Stormi chat credit packs.
  * Follows the same Alchemy Smart Wallet pattern as MvrPaymentButton.
@@ -34,7 +35,7 @@ const PACK_META: Record<StormiCreditPackId, { label: string; badge: string | nul
 
 export default function StormiCreditModal({ walletAddress, onClose, onSuccess }: StormiCreditModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const { isConnected } = useSignerStatus()
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendCallsAsync, isPending } = useSendCalls({ client })

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Short, plain-language orientation above the step list — works for any age or career.
  * Three icons show the model (add → finish → outcome) without a wall of text.
@@ -32,7 +33,8 @@ export default function PathGuidance({
   hasPostedJob = false,
 }: PathGuidanceProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
+  const ink = theme === 'ink'
 
   const who =
     audience === 'candidate'
@@ -81,14 +83,33 @@ export default function PathGuidance({
 
   return (
     <div className='space-y-3'>
-      <p className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>
+      <p
+        className={cn(
+          'text-[11px] font-bold uppercase tracking-wider',
+          ink ? 'text-zinc-500' : 'text-gray-500 dark:text-gray-400',
+        )}
+      >
         {title}
       </p>
-      <p className={cn('text-sm font-semibold leading-snug', isDark ? 'text-white' : 'text-slate-900')}>
+      <p
+        className={cn(
+          'text-sm font-semibold leading-snug',
+          ink ? 'text-zinc-100' : isDark ? 'text-white' : 'text-slate-900',
+        )}
+      >
         Hey {who},{' '}
-        <span className={cn('font-bold', isDark ? 'text-teal-300' : 'text-teal-700')}>{headline}</span>
+        <span
+          className={cn(
+            'font-bold',
+            ink ? 'text-zinc-50' : isDark ? 'text-teal-300' : 'text-teal-700',
+          )}
+        >
+          {headline}
+        </span>
       </p>
-      <p className='text-xs text-gray-600 dark:text-gray-400 leading-relaxed'>{sub}</p>
+      <p className={cn('text-xs leading-relaxed', ink ? 'text-zinc-400' : 'text-gray-600 dark:text-gray-400')}>
+        {sub}
+      </p>
 
       <div className='flex min-w-0 items-stretch gap-1 pt-1'>
         {steps.map(({ Icon, label, caption }, i) => {
@@ -99,22 +120,41 @@ export default function PathGuidance({
               className={cn(
                 'min-w-0 flex-1 rounded-lg border px-1.5 py-2 text-center transition-colors',
                 active
-                  ? isDark
-                    ? 'border-teal-400/45 bg-teal-500/15 ring-1 ring-teal-400/35'
-                    : 'border-teal-400 bg-teal-50/95 ring-1 ring-teal-300/80'
-                  : isDark
-                    ? 'border-gray-700 bg-gray-800/40'
-                    : 'border-slate-200 bg-slate-50/80',
+                  ? ink
+                    ? 'border-zinc-500/55 bg-zinc-800/70 ring-1 ring-zinc-500/30'
+                    : isDark
+                      ? 'border-teal-400/45 bg-teal-500/15 ring-1 ring-teal-400/35'
+                      : 'border-teal-400 bg-teal-50/95 ring-1 ring-teal-300/80'
+                  : ink
+                    ? 'border-zinc-700/80 bg-zinc-900/50'
+                    : isDark
+                      ? 'border-gray-700 bg-gray-800/40'
+                      : 'border-slate-200 bg-slate-50/80',
               )}
             >
               <Icon
                 className={cn(
                   'w-4 h-4 mx-auto mb-1',
-                  active ? 'text-teal-700 dark:text-teal-300' : 'text-gray-400 dark:text-gray-500',
+                  active
+                    ? ink
+                      ? 'text-zinc-200'
+                      : 'text-teal-700 dark:text-teal-300'
+                    : ink
+                      ? 'text-zinc-500'
+                      : 'text-gray-400 dark:text-gray-500',
                 )}
               />
-              <p className='text-[10px] font-semibold text-gray-800 dark:text-gray-200 leading-tight'>{label}</p>
-              <p className='text-[9px] text-gray-500 dark:text-gray-500 mt-0.5'>{caption}</p>
+              <p
+                className={cn(
+                  'text-[10px] font-semibold leading-tight',
+                  ink ? 'text-zinc-100' : 'text-gray-800 dark:text-gray-200',
+                )}
+              >
+                {label}
+              </p>
+              <p className={cn('text-[9px] mt-0.5', ink ? 'text-zinc-500' : 'text-gray-500 dark:text-gray-500')}>
+                {caption}
+              </p>
             </div>
           )
         })}
@@ -124,7 +164,11 @@ export default function PathGuidance({
         <summary
           className={cn(
             'flex items-center gap-1 cursor-pointer list-none font-medium select-none',
-            isDark ? 'text-gray-400 hover:text-gray-300' : 'text-slate-600 hover:text-slate-800',
+            ink
+              ? 'text-zinc-400 hover:text-zinc-200'
+              : isDark
+                ? 'text-gray-400 hover:text-gray-300'
+                : 'text-slate-600 hover:text-slate-800',
           )}
         >
           <ChevronDown className='w-3.5 h-3.5 transition-transform group-open:rotate-180' />
@@ -132,8 +176,9 @@ export default function PathGuidance({
         </summary>
         <ul
           className={cn(
-            'mt-2 space-y-1.5 pl-1 border-l-2 border-gray-200 dark:border-gray-600 ml-1.5',
-            isDark ? 'text-gray-400' : 'text-slate-600',
+            'mt-2 space-y-1.5 pl-1 border-l-2 ml-1.5',
+            ink ? 'border-zinc-600 text-zinc-400' : 'border-gray-200 dark:border-gray-600',
+            !ink && (isDark ? 'text-gray-400' : 'text-slate-600'),
           )}
         >
           {audience === 'candidate' ? (

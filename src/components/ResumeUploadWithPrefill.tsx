@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import {
   Upload,
@@ -164,7 +165,7 @@ export default function ResumeUploadWithPrefill({
   return (
     <div
       className={`w-full max-w-2xl mx-auto p-6 rounded-lg shadow-lg border-2 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
           : 'bg-white/80 backdrop-blur-xl border-teal-700/20'
       }`}
@@ -172,16 +173,16 @@ export default function ResumeUploadWithPrefill({
       <div className='mb-6'>
         <div className='flex items-center gap-3 mb-2'>
           <Sparkles
-            className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}
+            className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}
           />
           <h2
-            className={`text-2xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
+            className={`text-2xl font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
           >
             AI Resume Prefill
           </h2>
         </div>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}
         >
           Upload your resume and let AI automatically fill out your driver
           application. Supports PDF, DOCX, and TXT files.
@@ -192,7 +193,7 @@ export default function ResumeUploadWithPrefill({
         {/* File Upload Area */}
         <div className='space-y-4'>
           <label
-            className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+            className={`block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
           >
             Resume File *
           </label>
@@ -214,10 +215,10 @@ export default function ResumeUploadWithPrefill({
                 transition-all duration-200
                 ${
                   file
-                    ? theme === 'dark'
+                    ? isDarkTheme(theme)
                       ? 'border-teal-500 bg-teal-600/10'
                       : 'border-green-400 bg-green-50'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                       ? 'border-gray-600 hover:border-teal-500/50 bg-gray-800/50'
                       : 'border-gray-300 hover:border-gray-400 bg-gray-50'
                 }
@@ -227,14 +228,14 @@ export default function ResumeUploadWithPrefill({
               {file ? (
                 <div
                   className={`flex flex-col items-center ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-green-700'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-green-700'
                   }`}
                 >
                   <CheckCircle className='w-8 h-8 mb-2' />
                   <span className='font-medium'>{file.name}</span>
                   <span
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-green-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-green-600'
                     }`}
                   >
                     {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -243,7 +244,7 @@ export default function ResumeUploadWithPrefill({
               ) : (
                 <div
                   className={`flex flex-col items-center ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   <Upload className='w-8 h-8 mb-2' />
@@ -252,7 +253,7 @@ export default function ResumeUploadWithPrefill({
                   </span>
                   <span
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                     }`}
                   >
                     PDF, DOC, DOCX, or TXT (max 10MB)
@@ -268,10 +269,10 @@ export default function ResumeUploadWithPrefill({
           <div
             className={`flex items-center p-3 rounded-md border ${
               uploadStatus === 'success'
-                ? theme === 'dark'
+                ? isDarkTheme(theme)
                   ? 'bg-green-900/20 border-green-500/50'
                   : 'bg-green-50 border-green-200'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-blue-900/20 border-blue-500/50'
                   : 'bg-blue-50 border-blue-200'
             }`}
@@ -280,10 +281,10 @@ export default function ResumeUploadWithPrefill({
             <span
               className={`ml-2 text-sm font-medium ${
                 uploadStatus === 'success'
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'text-green-400'
                     : 'text-green-700'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'text-blue-400'
                     : 'text-blue-700'
               }`}
@@ -297,7 +298,7 @@ export default function ResumeUploadWithPrefill({
         {extractedStats && extractedStats.fieldNames.length > 0 && (
           <div
             className={`p-3 rounded-md border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-purple-900/20 border-purple-500/50'
                 : 'bg-purple-50 border-purple-200'
             }`}
@@ -305,20 +306,20 @@ export default function ResumeUploadWithPrefill({
             <div className='flex items-start gap-2'>
               <Brain
                 className={`w-5 h-5 mt-0.5 ${
-                  theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                  isDarkTheme(theme) ? 'text-purple-400' : 'text-purple-600'
                 }`}
               />
               <div>
                 <p
                   className={`text-sm font-medium ${
-                    theme === 'dark' ? 'text-purple-400' : 'text-purple-700'
+                    isDarkTheme(theme) ? 'text-purple-400' : 'text-purple-700'
                   }`}
                 >
                   Extracted Information:
                 </p>
                 <p
                   className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-purple-300' : 'text-purple-600'
+                    isDarkTheme(theme) ? 'text-purple-300' : 'text-purple-600'
                   }`}
                 >
                   {extractedStats.fieldNames.join(', ')}
@@ -332,19 +333,19 @@ export default function ResumeUploadWithPrefill({
         {errorMessage && (
           <div
             className={`flex items-center p-3 rounded-md border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-red-900/20 border-red-500/50'
                 : 'bg-red-50 border-red-200'
             }`}
           >
             <AlertCircle
               className={`w-5 h-5 mr-2 ${
-                theme === 'dark' ? 'text-red-400' : 'text-red-500'
+                isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
               }`}
             />
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-red-400' : 'text-red-700'
+                isDarkTheme(theme) ? 'text-red-400' : 'text-red-700'
               }`}
             >
               {errorMessage}
@@ -363,7 +364,7 @@ export default function ResumeUploadWithPrefill({
               ${
                 !file || isUploading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-teal-600 text-white hover:bg-teal-500'
                     : 'bg-teal-700 hover:bg-teal-700/90'
               }
@@ -389,7 +390,7 @@ export default function ResumeUploadWithPrefill({
               type='button'
               onClick={resetForm}
               className={`px-4 py-3 border rounded-md shadow-sm text-sm font-medium transition-all duration-200 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'border-teal-500/30 text-teal-600 dark:text-teal-400 bg-transparent hover:bg-teal-600/10'
                   : 'border-teal-700/30 text-teal-800 dark:text-teal-300 bg-white hover:bg-teal-700/5'
               }`}
@@ -404,7 +405,7 @@ export default function ResumeUploadWithPrefill({
       {ipfsHash && (
         <div className='mt-4 pt-4 border-t border-gray-200'>
           <p
-            className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+            className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
           >
             IPFS Hash: <code className='font-mono'>{ipfsHash}</code>
           </p>

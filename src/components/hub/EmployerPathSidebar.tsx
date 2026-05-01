@@ -1,8 +1,10 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { navControlButtonClass } from '@/lib/navigation-styles'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getBlockColor } from '@/lib/block-registry'
 import Button from '@/components/ui/Button'
@@ -68,7 +70,7 @@ export default function EmployerPathSidebar({
   onRequestCollapse,
 }: EmployerPathSidebarProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const pathVaultGlow = getBlockColor('general-resume').glowColor
   const hiring = useEmployerHiringPathStore((s) => s.hiring)
 
@@ -95,7 +97,11 @@ export default function EmployerPathSidebar({
   const divider = (
     <div
       aria-hidden
-      className='h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
+      className={
+        theme === 'ink'
+          ? 'h-px shrink-0 bg-gradient-to-r from-transparent via-zinc-500/35 to-transparent'
+          : 'h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
+      }
     />
   )
 
@@ -128,7 +134,7 @@ export default function EmployerPathSidebar({
               type='button'
               variant='ghost'
               size='sm'
-              className='!h-8 !w-8 !p-1.5 border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm backdrop-blur-sm hover:text-gray-800 dark:border-gray-600/80 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:text-gray-100'
+              className={cn('!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm', navControlButtonClass(isDark, theme))}
               onClick={onRequestCollapse}
               aria-label='Collapse job path panel'
               title='Collapse job path'

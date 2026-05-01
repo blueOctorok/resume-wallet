@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * ModeToggle — flips between Simple / Apply (job-first) and Hub / Construct (full hub) chromes.
  *
@@ -26,7 +27,7 @@ interface ModeToggleProps {
 
 export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeToggleProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const mode = useUIModeStore((s) => s.mode)
   const setMode = useUIModeStore((s) => s.setMode)
   const walletAddress = useAuthStore((s) => s.walletAddress)

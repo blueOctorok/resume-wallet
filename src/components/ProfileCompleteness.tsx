@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { CheckCircle, AlertCircle, Clock, TrendingUp } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import type { ProfileCompletenessResult } from '@/lib/profile-completeness'
@@ -41,7 +42,7 @@ export default function ProfileCompleteness({
           />
         </div>
         <span className={`text-sm font-semibold ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}>
           {completeness.percentage}
         </span>
@@ -151,7 +152,7 @@ export default function ProfileCompleteness({
         <button
           onClick={onImproveClick}
           className={`mt-4 w-full py-2 px-4 rounded-lg font-semibold transition-all ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-white/10 hover:bg-white/20 text-white'
               : 'bg-black/10 hover:bg-black/20 text-black'
           }`}

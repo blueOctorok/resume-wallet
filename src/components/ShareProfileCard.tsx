@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -144,7 +145,7 @@ export default function ShareProfileCard({
     finally { setSavingSettings(false) }
   }
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const cardBg = isDark ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/70 border border-gray-200'
   const accentClass = isDark ? 'text-teal-400' : 'text-teal-600'
   const accentBg = isDark ? 'bg-teal-500/20' : 'bg-teal-50'
@@ -372,7 +373,7 @@ function SettingToggle({
 }) {
   return (
     <label className='flex items-center justify-between cursor-pointer'>
-      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+      <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
         {label}
       </span>
       <button
@@ -381,7 +382,7 @@ function SettingToggle({
         className={`relative w-10 h-6 rounded-full transition-colors ${
           enabled
             ? 'bg-teal-600'
-            : theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'
+            : isDarkTheme(theme) ? 'bg-gray-600' : 'bg-gray-300'
         }`}
       >
         <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${

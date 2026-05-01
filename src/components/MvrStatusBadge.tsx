@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -57,19 +58,19 @@ export default function MvrStatusBadge({ walletAddress }: MvrStatusBadgeProps) {
   const getBadgeStyles = () => {
     switch (status) {
       case 'loading':
-        return theme === 'dark'
+        return isDarkTheme(theme)
           ? 'bg-gray-700/50 text-gray-400 border-gray-600'
           : 'bg-gray-100 text-gray-500 border-gray-300'
       case 'none':
-        return theme === 'dark'
+        return isDarkTheme(theme)
           ? 'bg-gray-700/50 text-gray-400 border-gray-600'
           : 'bg-gray-100 text-gray-500 border-gray-300'
       case 'processing':
-        return theme === 'dark'
+        return isDarkTheme(theme)
           ? 'bg-yellow-900/30 text-yellow-400 border-yellow-600/50'
           : 'bg-yellow-100 text-yellow-700 border-yellow-300'
       case 'available':
-        return theme === 'dark'
+        return isDarkTheme(theme)
           ? 'bg-green-900/30 text-green-400 border-green-600/50'
           : 'bg-green-100 text-green-700 border-green-300'
     }

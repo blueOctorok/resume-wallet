@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
@@ -115,7 +116,7 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
   }
 
   const { navigateToMessages } = useUIStore()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const isPaperLight = !isDark && theme === 'paper'
 
   return (

@@ -5,12 +5,23 @@ function paperLight(isDark: boolean, theme?: Theme) {
   return !isDark && theme === 'paper'
 }
 
+/** Dark analogue of paper — monochrome `ink` theme (no teal/indigo nav chrome). */
+function quietInk(isDark: boolean, theme?: Theme) {
+  return Boolean(isDark && theme === 'ink')
+}
+
 /** Compact control chips (wallet, messages, hamburger). */
 export function navControlButtonClass(isDark: boolean, theme?: Theme) {
   if (paperLight(isDark, theme)) {
     return cn(
       'rounded-lg border transition-colors duration-200',
       'border-zinc-300/95 bg-white text-zinc-900 hover:bg-zinc-50 hover:border-zinc-400/90',
+    )
+  }
+  if (quietInk(isDark, theme)) {
+    return cn(
+      'rounded-lg border transition-colors duration-200',
+      'border-zinc-600/70 bg-zinc-900/55 text-zinc-200 hover:bg-zinc-900/90 hover:border-zinc-500/65',
     )
   }
   return cn(
@@ -30,6 +41,12 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral', t
         'border-zinc-400/55 bg-zinc-100/95 text-zinc-800 hover:bg-zinc-200/90 hover:border-zinc-500/45',
       )
     }
+    if (quietInk(isDark, theme)) {
+      return cn(
+        'rounded-lg border text-sm font-semibold transition-colors',
+        'border-zinc-500/45 bg-zinc-800/90 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-400/50',
+      )
+    }
     return cn(
       'rounded-lg border text-sm font-semibold transition-colors',
       isDark
@@ -41,6 +58,12 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral', t
     return cn(
       'rounded-lg border text-sm font-semibold transition-colors',
       'border-zinc-300/90 text-zinc-800 hover:bg-zinc-100',
+    )
+  }
+  if (quietInk(isDark, theme)) {
+    return cn(
+      'rounded-lg border text-sm font-semibold transition-colors',
+      'border-zinc-600/75 text-zinc-300 hover:bg-zinc-800/80',
     )
   }
   return cn(
@@ -59,6 +82,12 @@ export function navStormiButtonClass(isDark: boolean, theme?: Theme) {
       'border-zinc-300/90 bg-zinc-50/98 text-zinc-800 hover:bg-zinc-100 hover:border-zinc-400/85',
     )
   }
+  if (quietInk(isDark, theme)) {
+    return cn(
+      'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
+      'border-zinc-600/80 bg-zinc-900/90 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-500/75',
+    )
+  }
   return cn(
     'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
     isDark
@@ -67,27 +96,13 @@ export function navStormiButtonClass(isDark: boolean, theme?: Theme) {
   )
 }
 
-/** Hub primary CTA — teal/violet gradient ring; sepia/paper/business use alternate rings. */
+/** Hub primary CTA — teal/violet gradient ring; paper uses neutral zinc ring. */
 export function navHubGradientRingClass(theme: Theme = 'light') {
-  if (theme === 'sepia') {
-    return cn(
-      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
-      'bg-gradient-to-br from-stone-500/50 via-stone-400/32 to-stone-600/42',
-      'shadow-md shadow-stone-600/12',
-    )
-  }
-  if (theme === 'paper') {
+  if (theme === 'paper' || theme === 'ink') {
     return cn(
       'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
       'bg-gradient-to-br from-zinc-400/48 via-zinc-300/26 to-zinc-500/40',
       'shadow-md shadow-zinc-500/10',
-    )
-  }
-  if (theme === 'business') {
-    return cn(
-      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
-      'bg-gradient-to-br from-blue-700/90 via-blue-600/75 to-slate-600/55',
-      'shadow-md shadow-slate-400/20',
     )
   }
   return cn(
@@ -100,27 +115,19 @@ export function navHubGradientRingClass(theme: Theme = 'light') {
 }
 
 export function navHubInnerButtonClass(theme: Theme = 'light') {
-  if (theme === 'business') {
-    return cn(
-      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
-      'bg-white text-blue-700 border border-blue-100/90',
-      'hover:bg-blue-50/95',
-      'transition-colors duration-200',
-    )
-  }
-  if (theme === 'sepia') {
-    return cn(
-      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
-      'bg-stone-100/95 text-stone-900 border border-stone-500/35',
-      'hover:bg-stone-200/90 hover:border-stone-600/40',
-      'transition-colors duration-200',
-    )
-  }
   if (theme === 'paper') {
     return cn(
       'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
       'bg-white text-zinc-900 border border-zinc-300/90',
       'hover:bg-zinc-50 hover:border-zinc-400/85',
+      'transition-colors duration-200',
+    )
+  }
+  if (theme === 'ink') {
+    return cn(
+      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
+      'bg-zinc-900 text-zinc-100 border border-zinc-600/90',
+      'hover:bg-zinc-800 hover:border-zinc-500/85',
       'transition-colors duration-200',
     )
   }
@@ -134,28 +141,20 @@ export function navHubInnerButtonClass(theme: Theme = 'light') {
 
 /** Icon-only sibling to My Hub — same gradient ring + inner vault treatment, square control */
 export function navHubRefreshInnerButtonClass(theme: Theme = 'light') {
-  if (theme === 'business') {
-    return cn(
-      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
-      'bg-white text-blue-700 border border-blue-100/90',
-      'hover:bg-blue-50/95 disabled:opacity-45 disabled:cursor-not-allowed',
-      'transition-colors duration-200',
-    )
-  }
-  if (theme === 'sepia') {
-    return cn(
-      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
-      'bg-stone-100/95 text-stone-800 border border-stone-500/35',
-      'hover:bg-stone-200/90 hover:border-stone-600/40',
-      'disabled:opacity-45 disabled:cursor-not-allowed',
-      'transition-colors duration-200',
-    )
-  }
   if (theme === 'paper') {
     return cn(
       'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
       'bg-white text-zinc-800 border border-zinc-300/90',
       'hover:bg-zinc-50 hover:border-zinc-400/85',
+      'disabled:opacity-45 disabled:cursor-not-allowed',
+      'transition-colors duration-200',
+    )
+  }
+  if (theme === 'ink') {
+    return cn(
+      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
+      'bg-zinc-900 text-zinc-200 border border-zinc-600/90',
+      'hover:bg-zinc-800 hover:border-zinc-500/85',
       'disabled:opacity-45 disabled:cursor-not-allowed',
       'transition-colors duration-200',
     )
@@ -198,6 +197,12 @@ export function navStormPillClass(isDark: boolean, theme?: Theme) {
     return cn(
       'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
       'text-zinc-700 bg-zinc-100/95 hover:bg-zinc-200/95 border-zinc-300/90',
+    )
+  }
+  if (quietInk(isDark, theme)) {
+    return cn(
+      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
+      'text-zinc-300 bg-zinc-800/95 hover:bg-zinc-700/95 border-zinc-600/80',
     )
   }
   return cn(

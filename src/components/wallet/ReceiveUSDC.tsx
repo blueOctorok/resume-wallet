@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Copy, Check, ExternalLink } from 'lucide-react'
@@ -32,7 +33,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
       {/* QR Code */}
       <div className='flex flex-col items-center'>
         <div className={`p-4 rounded-xl ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-white/10 backdrop-blur-sm'
             : 'bg-gray-50'
         }`}>
@@ -43,7 +44,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
           />
         </div>
         <p className={`text-sm mt-4 ${
-          theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+          isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'
         }`}>
           Scan to receive USDC
         </p>
@@ -52,13 +53,13 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
       {/* Wallet Address */}
       <div>
         <label className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-brand-cream' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-700'
         }`}>
           Your Wallet Address
         </label>
         <div className='flex items-center gap-2'>
           <div className={`flex-1 px-4 py-3 rounded-lg border font-mono text-sm break-all ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-200/10 border-brand-cream/30 text-brand-cream'
               : 'bg-white border-gray-300 text-gray-900'
           }`}>
@@ -67,7 +68,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
           <button
             onClick={copyToClipboard}
             className={`p-3 rounded-lg border transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-200/20 border-brand-cream/30 hover:bg-teal-200/30 text-brand-cream'
                 : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
             }`}
@@ -82,7 +83,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
         </div>
         {copied && (
           <p className={`text-xs mt-2 ${
-            theme === 'dark' ? 'text-green-400' : 'text-green-600'
+            isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
           }`}>
             Address copied to clipboard!
           </p>
@@ -91,31 +92,31 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
 
       {/* Network Info */}
       <div className={`p-4 rounded-lg ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-700/20 border border-teal-500/30'
           : 'bg-blue-50 border border-blue-200'
       }`}>
         <div className='space-y-2'>
           <div className='flex items-center justify-between'>
             <span className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-700'
             }`}>
               Network:
             </span>
             <span className={`text-sm ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-900'
             }`}>
               Base Sepolia (Testnet)
             </span>
           </div>
           <div className='flex items-center justify-between'>
             <span className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-700'
             }`}>
               Token:
             </span>
             <span className={`text-sm ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-900'
             }`}>
               USDC
             </span>
@@ -129,7 +130,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
         target='_blank'
         rel='noopener noreferrer'
         className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-teal-200/20 hover:bg-teal-200/30 border border-brand-cream/30 text-brand-cream'
             : 'bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700'
         }`}
@@ -139,7 +140,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
       </a>
 
       <p className={`text-xs text-center ${
-        theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+        isDarkTheme(theme) ? 'text-brand-cream/50' : 'text-gray-500'
       }`}>
         Only send USDC tokens to this address on Base Sepolia network
       </p>

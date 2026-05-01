@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import {
   getSTORMBalanceSepolia,
@@ -21,6 +22,139 @@ interface STORMBalanceProps {
   onReadWhitepaper?: () => void
   /** Hub only: fold “Add USDC” into this card so tokens + stablecoin live in one place */
   showBuyUsdc?: boolean
+  /**
+   * When true, render only the inner balance rows (no `VaultHorizontalVaultShell` / `BlockCard`).
+   * Parent supplies `HubSectionPanel` + `BlockCard` — same pattern as `HubAccountSection` expanded body.
+   */
+  hubEmbed?: boolean
+}
+
+function STORMBalanceRows(props: {
+  isDark: boolean
+  balanceSepolia: string
+  balanceMainnet: string
+  showBuyUsdc: boolean
+  walletAddress: string
+  onReadWhitepaper?: () => void
+}) {
+  const { isDark, balanceSepolia, balanceMainnet, showBuyUsdc, walletAddress, onReadWhitepaper } = props
+
+  return (
+    <>
+      <div className='space-y-2'>
+        <div
+          className={`flex items-center justify-between p-2.5 rounded-xl ${
+            isDark ? 'bg-amber-500/15' : 'bg-amber-50 dark:bg-amber-500/10'
+          }`}
+        >
+          <div className='flex items-center gap-2'>
+            <div
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isDark ? 'bg-amber-400' : 'bg-amber-500'
+              }`}
+            />
+            <span
+              className={`text-sm ${
+                isDark ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              Sepolia
+            </span>
+          </div>
+          <span
+            className={`text-sm font-bold ${
+              isDark ? 'text-amber-300' : 'text-amber-700 dark:text-amber-300'
+            }`}
+          >
+            {balanceSepolia} STORM
+          </span>
+        </div>
+
+        <div
+          className={`flex items-center justify-between p-2.5 rounded-xl ${
+            isDark ? 'bg-gray-700/30' : 'bg-gray-100 dark:bg-gray-700/30'
+          }`}
+        >
+          <div className='flex items-center gap-2'>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isDark ? 'bg-gray-500' : 'bg-gray-400 dark:bg-gray-500'
+              }`}
+            />
+            <span
+              className={`text-sm ${
+                isDark ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              Mainnet
+            </span>
+          </div>
+          <span
+            className={`text-sm ${
+              isDark ? 'text-gray-500' : 'text-gray-400 dark:text-gray-500'
+            }`}
+          >
+            {balanceMainnet !== '0.00' ? `${balanceMainnet} STORM` : 'Soon'}
+          </span>
+        </div>
+      </div>
+
+      {showBuyUsdc && (
+        <div className={`mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50`}>
+          <h3
+            className={`text-sm font-semibold mb-1 ${
+              isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100'
+            }`}
+          >
+            Add USDC
+          </h3>
+          <p
+            className={`text-xs mb-3 ${
+              isDark ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
+          </p>
+          <BuyUSDCButton walletAddress={walletAddress} />
+        </div>
+      )}
+
+      <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50 flex items-center justify-between gap-2 flex-wrap'>
+        {STORM_TOKEN_ADDRESS_SEPOLIA && (
+          <a
+            href={`https://sepolia.basescan.org/address/${STORM_TOKEN_ADDRESS_SEPOLIA}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            className={`inline-flex items-center gap-1 text-xs ${
+              isDark
+                ? 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+            }`}
+          >
+            <span className='font-mono'>
+              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(0, 6)}...
+              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(-4)}
+            </span>
+            <ExternalLink className='w-3 h-3' />
+          </a>
+        )}
+        {onReadWhitepaper && (
+          <button
+            type='button'
+            onClick={onReadWhitepaper}
+            className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
+              isDark
+                ? 'text-teal-400 hover:text-teal-300'
+                : 'text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300'
+            }`}
+          >
+            <FileText className='w-3 h-3' />
+            Whitepaper
+          </button>
+        )}
+      </div>
+    </>
+  )
 }
 
 export default function STORMBalance({
@@ -29,6 +163,7 @@ export default function STORMBalance({
   compact = false,
   onReadWhitepaper,
   showBuyUsdc = false,
+  hubEmbed = false,
 }: STORMBalanceProps) {
   const { theme } = useTheme()
   const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
@@ -87,7 +222,6 @@ export default function STORMBalance({
     fetchBalance()
   }
 
-  // Compact mode for nav/header display
   if (compact) {
     if (loading) {
       return (
@@ -95,7 +229,7 @@ export default function STORMBalance({
           <StormTokenMark size='xs' />
           <div
             className={`animate-pulse h-4 w-12 rounded ${
-              theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+              isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
             }`}
           />
         </div>
@@ -113,7 +247,7 @@ export default function STORMBalance({
         <StormTokenMark size='xs' />
         <span
           className={`text-sm font-medium ${
-            theme === 'dark' ? 'text-yellow-300' : 'text-yellow-600'
+            isDarkTheme(theme) ? 'text-yellow-300' : 'text-yellow-600'
           }`}
         >
           {displayBalance}
@@ -122,7 +256,57 @@ export default function STORMBalance({
     )
   }
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
+
+  if (hubEmbed) {
+    if (loading) {
+      return (
+        <div className='flex items-center gap-3'>
+          <StormTokenMark size='md' />
+          <div className='flex-1'>
+            <div
+              className={`h-4 w-20 rounded animate-pulse ${
+                isDark ? 'bg-gray-700' : 'bg-gray-200'
+              }`}
+            />
+            <div
+              className={`h-3 w-16 rounded animate-pulse mt-2 ${
+                isDark ? 'bg-gray-700' : 'bg-gray-200'
+              }`}
+            />
+          </div>
+        </div>
+      )
+    }
+    if (error) {
+      return (
+        <div className='space-y-2'>
+          <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-700'}`}>{error}</p>
+          <Button type='button' variant='secondary' size='sm' onClick={handleRefresh}>
+            <RefreshCw className='w-4 h-4 mr-1' />
+            Retry
+          </Button>
+        </div>
+      )
+    }
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <Button type="button" variant="ghost" size="sm" onClick={handleRefresh} title="Refresh balances">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+        <STORMBalanceRows
+          isDark={isDark}
+          balanceSepolia={balanceSepolia}
+          balanceMainnet={balanceMainnet}
+          showBuyUsdc={showBuyUsdc}
+          walletAddress={walletAddress}
+          onReadWhitepaper={onReadWhitepaper}
+        />
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -195,124 +379,14 @@ export default function STORMBalance({
           </Button>
         }
       >
-      {/* Balance rows */}
-      <div className='space-y-2'>
-        {/* Base Sepolia (currently active for testnet) */}
-        <div
-          className={`flex items-center justify-between p-2.5 rounded-xl ${
-            isDark ? 'bg-amber-500/15' : 'bg-amber-50 dark:bg-amber-500/10'
-          }`}
-        >
-          <div className='flex items-center gap-2'>
-            <div
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                isDark ? 'bg-amber-400' : 'bg-amber-500'
-              }`}
-            />
-            <span
-              className={`text-sm ${
-                isDark ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'
-              }`}
-            >
-              Sepolia
-            </span>
-          </div>
-          <span
-            className={`text-sm font-bold ${
-              isDark ? 'text-amber-300' : 'text-amber-700 dark:text-amber-300'
-            }`}
-          >
-            {balanceSepolia} STORM
-          </span>
-        </div>
-
-        {/* Base Mainnet (coming soon) */}
-        <div
-          className={`flex items-center justify-between p-2.5 rounded-xl ${
-            isDark ? 'bg-gray-700/30' : 'bg-gray-100 dark:bg-gray-700/30'
-          }`}
-        >
-          <div className='flex items-center gap-2'>
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isDark ? 'bg-gray-500' : 'bg-gray-400 dark:bg-gray-500'
-              }`}
-            />
-            <span
-              className={`text-sm ${
-                isDark ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
-              }`}
-            >
-              Mainnet
-            </span>
-          </div>
-          <span
-            className={`text-sm ${
-              isDark ? 'text-gray-500' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            {balanceMainnet !== '0.00' ? `${balanceMainnet} STORM` : 'Soon'}
-          </span>
-        </div>
-      </div>
-
-      {showBuyUsdc && (
-        <div
-          className={`mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50`}
-        >
-          <h3
-            className={`text-sm font-semibold mb-1 ${
-              isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100'
-            }`}
-          >
-            Add USDC
-          </h3>
-          <p
-            className={`text-xs mb-3 ${
-              isDark ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
-          </p>
-          <BuyUSDCButton walletAddress={walletAddress} />
-        </div>
-      )}
-
-      {/* Footer row: contract link + whitepaper */}
-      <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50 flex items-center justify-between gap-2 flex-wrap'>
-        {STORM_TOKEN_ADDRESS_SEPOLIA && (
-          <a
-            href={`https://sepolia.basescan.org/address/${STORM_TOKEN_ADDRESS_SEPOLIA}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            className={`inline-flex items-center gap-1 text-xs ${
-              isDark
-                ? 'text-gray-500 hover:text-gray-300'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
-            }`}
-          >
-            <span className='font-mono'>
-              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(0, 6)}...
-              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(-4)}
-            </span>
-            <ExternalLink className='w-3 h-3' />
-          </a>
-        )}
-        {onReadWhitepaper && (
-          <button
-            type='button'
-            onClick={onReadWhitepaper}
-            className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
-              isDark
-                ? 'text-teal-400 hover:text-teal-300'
-                : 'text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300'
-            }`}
-          >
-            <FileText className='w-3 h-3' />
-            Whitepaper
-          </button>
-        )}
-      </div>
+        <STORMBalanceRows
+          isDark={isDark}
+          balanceSepolia={balanceSepolia}
+          balanceMainnet={balanceMainnet}
+          showBuyUsdc={showBuyUsdc}
+          walletAddress={walletAddress}
+          onReadWhitepaper={onReadWhitepaper}
+        />
       </BlockCard>
     </VaultHorizontalVaultShell>
   )

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef } from 'react'
 import { Check, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,7 +22,7 @@ interface LensPickerPopoverProps {
  */
 export default function LensPickerPopover({ onClose, onManage }: LensPickerPopoverProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const lenses = useLenses()
   const activeLensId = useSimpleModeStore((s) => s.activeLensId)
   const setActiveLens = useSimpleModeStore((s) => s.setActiveLens)

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Trash2, Github, ExternalLink } from 'lucide-react'
 import type { AdminTabProps, DevProject } from '@/components/admin/admin-types'
@@ -45,7 +46,7 @@ export default function DevProjectsTab({
     <div className='overflow-x-auto'>
       <table className='w-full'>
         <thead
-          className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}
+          className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}
         >
           <tr>
             <th className={`${tableHeaderClass} px-4 py-3`}>Project</th>
@@ -62,7 +63,7 @@ export default function DevProjectsTab({
             <tr
               key={project.id}
               className={
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'hover:bg-gray-800/50'
                   : 'hover:bg-gray-50'
               }

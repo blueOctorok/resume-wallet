@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useRef, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import {
@@ -404,7 +405,7 @@ export default function BackgroundCheckDisclosure({
     }
   }
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const overlayBg = isDark ? 'bg-gray-950' : 'bg-gray-100'
   const headerBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
   const footerBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'

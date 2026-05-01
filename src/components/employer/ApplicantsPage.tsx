@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -16,6 +17,8 @@ import {
   User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 
@@ -158,7 +161,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className={`w-12 h-12 animate-spin ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+        <Loader2 className={`w-12 h-12 animate-spin ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`} />
       </div>
     )
   }
@@ -173,35 +176,39 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Applicants
           </h1>
-          <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Review and manage applications to your job postings
           </p>
         </div>
       </div>
 
-      {/* Stats Cards — simplified pipeline (submitted / contacted / archived) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total" value={stats.total} theme={theme} />
-        <StatCard label="New" value={stats.new} theme={theme} highlight />
-        <StatCard label="Contacted" value={stats.contacted} theme={theme} />
-        <StatCard label="Archived" value={stats.archived} theme={theme} />
-      </div>
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
+        <BlockCard
+          variant="embed"
+          icon={Users}
+          title="Pipeline snapshot"
+          description="Counts across all applications."
+        >
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard label="Total" value={stats.total} theme={theme} />
+            <StatCard label="New" value={stats.new} theme={theme} highlight />
+            <StatCard label="Contacted" value={stats.contacted} theme={theme} />
+            <StatCard label="Archived" value={stats.archived} theme={theme} />
+          </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Filters */}
-      <div className={`rounded-2xl p-4 mb-6 ${
-        theme === 'dark'
-          ? 'bg-teal-900/50 border border-teal-500/30'
-          : 'bg-white border border-teal-700/20 shadow-xl'
-      }`}>
-        <div className="flex flex-wrap gap-4">
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
+        <BlockCard variant="embed" icon={Search} title="Search & filter" description="Narrow by job, status, or keyword.">
+          <div className="flex flex-wrap gap-4">
           {/* Search */}
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
               }`} />
               <input
                 type="text"
@@ -209,11 +216,11 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`w-full pl-10 pr-4 py-2 rounded-xl ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-800 border-gray-700 text-white'
                     : 'bg-gray-100 border-gray-300 text-gray-900'
                 } border focus:outline-none focus:ring-2 ${
-                  theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
+                  isDarkTheme(theme) ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
                 }`}
               />
             </div>
@@ -224,11 +231,11 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
             value={selectedJob}
             onChange={(e) => setSelectedJob(e.target.value)}
             className={`px-4 py-2 rounded-xl border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:outline-none focus:ring-2 ${
-              theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
+              isDarkTheme(theme) ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
             }`}
           >
             <option value="all">All Jobs</option>
@@ -242,11 +249,11 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
             className={`px-4 py-2 rounded-xl border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:outline-none focus:ring-2 ${
-              theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
+              isDarkTheme(theme) ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
             }`}
           >
             <option value="all">All Status</option>
@@ -255,47 +262,64 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
             <option value="archived">Archived</option>
           </select>
         </div>
-      </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Applicants List */}
-      {error ? (
-        <div className={`p-6 rounded-xl text-center ${
-          theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
-        }`}>
-          {error}
-        </div>
-      ) : filteredApplicants.length === 0 ? (
-        <div className={`p-12 rounded-xl text-center ${
-          theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-        }`}>
-          <Users className={`w-16 h-16 mx-auto mb-4 ${
-            theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
-          }`} />
-          <p className={`text-lg font-semibold mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            No applicants found
-          </p>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-            {searchQuery || selectedJob !== 'all' || selectedStatus !== 'all'
-              ? 'Try adjusting your filters'
-              : 'No one has applied to your jobs yet'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredApplicants.map(applicant => (
-            <ApplicantCard
-              key={applicant.applicationId}
-              applicant={applicant}
-              onClick={() => setSelectedApplicant(applicant)}
-              onStatusChange={(status) => updateStatus(applicant.applicationId, status)}
-              updating={updatingStatus === applicant.applicationId}
-              theme={theme}
-            />
-          ))}
-        </div>
-      )}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
+        <BlockCard
+          variant="embed"
+          icon={FileText}
+          title="Applications"
+          description="Open a row for full detail and career card."
+        >
+          {error ? (
+            <div
+              className={`rounded-xl p-6 text-center ${
+                isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
+              }`}
+            >
+              {error}
+            </div>
+          ) : filteredApplicants.length === 0 ? (
+            <div
+              className={`rounded-xl p-12 text-center ${
+                isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
+              }`}
+            >
+              <Users
+                className={`mx-auto mb-4 h-16 w-16 ${
+                  isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'
+                }`}
+              />
+              <p
+                className={`mb-2 text-lg font-semibold ${
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                No applicants found
+              </p>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
+                {searchQuery || selectedJob !== 'all' || selectedStatus !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'No one has applied to your jobs yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredApplicants.map((applicant) => (
+                <ApplicantCard
+                  key={applicant.applicationId}
+                  applicant={applicant}
+                  onClick={() => setSelectedApplicant(applicant)}
+                  onStatusChange={(status) => updateStatus(applicant.applicationId, status)}
+                  updating={updatingStatus === applicant.applicationId}
+                  theme={theme}
+                />
+              ))}
+            </div>
+          )}
+        </BlockCard>
+      </HubSectionPanel>
 
       {/* Detail Modal */}
       {selectedApplicant && (
@@ -325,15 +349,15 @@ function StatCard({ label, value, theme, highlight, success }: {
 }) {
   return (
     <div className={`rounded-xl p-4 ${
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-teal-900/50 border border-teal-500/20'
         : 'bg-white border border-gray-200 shadow-sm'
     }`}>
-      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+      <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
         {label}
       </p>
       <p className={`text-2xl font-bold ${
-        highlight ? 'text-orange-500' : success ? 'text-green-500' : theme === 'dark' ? 'text-white' : 'text-gray-900'
+        highlight ? 'text-orange-500' : success ? 'text-green-500' : isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
       }`}>
         {value}
       </p>
@@ -358,7 +382,7 @@ function ApplicantCard({
     <button
       onClick={onClick}
       className={`w-full text-left p-4 rounded-xl transition-colors ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-900/50 border border-teal-500/20 hover:bg-teal-900'
           : 'bg-white border border-gray-200 shadow-sm hover:bg-gray-50'
       }`}
@@ -366,10 +390,10 @@ function ApplicantCard({
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          theme === 'dark' ? 'bg-teal-600/20' : 'bg-teal-700/10'
+          isDarkTheme(theme) ? 'bg-teal-600/20' : 'bg-teal-700/10'
         }`}>
           <span className={`text-lg font-bold ${
-            theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+            isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
           }`}>
             {applicant.applicantName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </span>
@@ -379,21 +403,21 @@ function ApplicantCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h3 className={`font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`font-semibold truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 {applicant.applicantName}
               </h3>
-              <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm truncate ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 {applicant.jobTitle}
               </p>
               <div className="flex items-center gap-4 mt-2 text-xs flex-wrap">
-                <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                <span className={`flex items-center gap-1 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                   <Calendar className="w-3 h-3" />
                   {formatDate(applicant.appliedAt)}
                 </span>
                 {applicant.lensNameSnapshot && (
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-teal-500/10 text-teal-200 ring-1 ring-teal-400/30'
                         : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
                     }`}
@@ -475,13 +499,13 @@ function ApplicantDetailModal({
     <Modal onClose={onClose} maxWidth="max-w-2xl">
       {/* Custom header with Career Card button alongside close */}
       <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
-        theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
+        isDarkTheme(theme) ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
       }`}>
         <div>
-          <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             {applicant.applicantName}
           </h3>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Applied for {applicant.jobTitle}
           </p>
         </div>
@@ -489,7 +513,7 @@ function ApplicantDetailModal({
           <button
             onClick={() => setShowCareerCard(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
                 : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
             }`}
@@ -499,9 +523,9 @@ function ApplicantDetailModal({
           </button>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+            className={`p-2 rounded-lg ${isDarkTheme(theme) ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
           >
-            <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+            <X className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`} />
           </button>
         </div>
       </div>
@@ -514,7 +538,7 @@ function ApplicantDetailModal({
               <a
                 href={`mailto:${applicant.applicantEmail}`}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -527,7 +551,7 @@ function ApplicantDetailModal({
               <a
                 href={`tel:${applicant.applicantPhone}`}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -541,12 +565,12 @@ function ApplicantDetailModal({
           {/* Resume */}
           {applicant.hasResume && (
             <div>
-              <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 Resume
               </h4>
               <div className="flex items-center gap-3">
                 <FileText className={`w-5 h-5 ${applicant.resumeVerified ? 'text-green-500' : 'text-gray-400'}`} />
-                <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                   {applicant.resumeTitle || 'Resume'}
                 </span>
                 {applicant.resumeVerified && (
@@ -569,11 +593,11 @@ function ApplicantDetailModal({
           {/* Cover Letter */}
           {applicant.coverLetter && (
             <div>
-              <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 Cover Letter
               </h4>
               <p className={`text-sm p-3 rounded-lg ${
-                theme === 'dark' ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'
+                isDarkTheme(theme) ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'
               }`}>
                 {applicant.coverLetter}
               </p>
@@ -582,7 +606,7 @@ function ApplicantDetailModal({
 
           {/* Status Update */}
           <div>
-            <h4 className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <h4 className={`font-medium mb-3 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               Update Status
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -592,10 +616,10 @@ function ApplicantDetailModal({
                   onClick={() => onStatusChange(option.value)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     applicant.status === option.value
-                      ? theme === 'dark'
+                      ? isDarkTheme(theme)
                         ? 'bg-teal-600 text-white'
                         : 'bg-teal-700 text-white'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -608,7 +632,7 @@ function ApplicantDetailModal({
 
           {/* Notes */}
           <div>
-            <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               Notes
             </h4>
             <textarea
@@ -617,11 +641,11 @@ function ApplicantDetailModal({
               onBlur={saveNotes}
               rows={4}
               className={`w-full px-4 py-3 rounded-xl border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 border-gray-700 text-white'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 ${
-                theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
+                isDarkTheme(theme) ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
               }`}
               placeholder="Add private notes about this applicant..."
             />

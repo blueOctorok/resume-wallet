@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -185,7 +186,7 @@ export default function DriverEmploymentVerificationSection({
     return (
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
         }`}
@@ -193,7 +194,7 @@ export default function DriverEmploymentVerificationSection({
         <div className="flex items-center justify-center py-8">
           <Loader2
             className={`w-6 h-6 animate-spin ${
-              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+              isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           />
         </div>
@@ -205,14 +206,14 @@ export default function DriverEmploymentVerificationSection({
     return (
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-red-900/20 border border-red-500/30'
             : 'bg-red-50 border border-red-200'
         }`}
       >
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500" />
-          <span className={theme === 'dark' ? 'text-red-400' : 'text-red-600'}>{error}</span>
+          <span className={isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}>{error}</span>
         </div>
       </div>
     )
@@ -222,7 +223,7 @@ export default function DriverEmploymentVerificationSection({
     return (
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
         }`}
@@ -230,24 +231,24 @@ export default function DriverEmploymentVerificationSection({
         <div className="flex items-center gap-3 mb-4">
           <div
             className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
+              isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-50'
             }`}
           >
             <ClipboardCheck
               className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
               }`}
             />
           </div>
           <h3
             className={`font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Employment Verification
           </h3>
         </div>
-        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
           Employment here is pulled from your resume or DOT application. Upload a resume and
           we&apos;ll extract your jobs, or complete your DOT application—then you can request
           verification from past employers to strengthen your career card.
@@ -260,7 +261,7 @@ export default function DriverEmploymentVerificationSection({
           }}
           disabled={refreshingFromResume}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
               : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -291,7 +292,7 @@ export default function DriverEmploymentVerificationSection({
     <>
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
         }`}
@@ -300,26 +301,26 @@ export default function DriverEmploymentVerificationSection({
           <div className="flex items-center gap-3">
             <div
               className={`p-2 rounded-lg ${
-                theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
+                isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-50'
               }`}
             >
               <ClipboardCheck
                 className={`w-5 h-5 ${
-                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                 }`}
               />
             </div>
             <div>
               <h3
                 className={`font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 Employment Verification
               </h3>
               <p
                 className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 Verify your employment to strengthen your career card
@@ -331,7 +332,7 @@ export default function DriverEmploymentVerificationSection({
             onClick={() => fetchData()}
             disabled={loading}
             className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
                 : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -344,49 +345,49 @@ export default function DriverEmploymentVerificationSection({
         <div className="grid grid-cols-3 gap-2 mb-6">
           <div
             className={`rounded-xl p-3 text-center ${
-              theme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'
+              isDarkTheme(theme) ? 'bg-green-900/20' : 'bg-green-50'
             }`}
           >
             <p
               className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
               }`}
             >
               {verifiedCount}
             </p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}>
+            <p className={`text-xs ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'}`}>
               Verified
             </p>
           </div>
           <div
             className={`rounded-xl p-3 text-center ${
-              theme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50'
+              isDarkTheme(theme) ? 'bg-yellow-900/20' : 'bg-yellow-50'
             }`}
           >
             <p
               className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'
+                isDarkTheme(theme) ? 'text-yellow-300' : 'text-yellow-700'
               }`}
             >
               {pendingCount}
             </p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}>
+            <p className={`text-xs ${isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-600'}`}>
               Pending
             </p>
           </div>
           <div
             className={`rounded-xl p-3 text-center ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               {notRequestedCount}
             </p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
               Not Requested
             </p>
           </div>
@@ -413,7 +414,7 @@ export default function DriverEmploymentVerificationSection({
               <div
                 key={employment.id}
                 className={`rounded-xl p-4 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-800/50 border border-gray-700/50'
                     : 'bg-gray-50 border border-gray-200'
                 }`}
@@ -423,12 +424,12 @@ export default function DriverEmploymentVerificationSection({
                     <div className="flex items-center gap-2 mb-1">
                       <Building2
                         className={`w-4 h-4 flex-shrink-0 ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       />
                       <p
                         className={`font-medium truncate ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                         }`}
                       >
                         {employment.companyName}
@@ -436,7 +437,7 @@ export default function DriverEmploymentVerificationSection({
                     </div>
                     <p
                       className={`text-sm mb-1 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       {employment.position}
@@ -444,12 +445,12 @@ export default function DriverEmploymentVerificationSection({
                     <div className="flex items-center gap-1">
                       <Calendar
                         className={`w-3 h-3 ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                          isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                         }`}
                       />
                       <span
                         className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                          isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                         }`}
                       >
                         {formatDate(employment.startDate)} -{' '}
@@ -459,7 +460,7 @@ export default function DriverEmploymentVerificationSection({
                     {verification?.verifiedAt && (
                       <p
                         className={`text-xs mt-1 ${
-                          theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                          isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
                         }`}
                       >
                         Verified {formatDate(verification.verifiedAt)}
@@ -485,7 +486,7 @@ export default function DriverEmploymentVerificationSection({
                         onClick={() => initiateVerification(employment)}
                         disabled={isInitiating}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
                             : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -505,7 +506,7 @@ export default function DriverEmploymentVerificationSection({
                       onClick={() => setDeleteConfirm(employment)}
                       disabled={deletingId === employment.id}
                       className={`p-1.5 rounded-lg transition-colors ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'text-gray-400 hover:text-red-400 hover:bg-red-900/20'
                           : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
                       } disabled:opacity-50`}
@@ -526,7 +527,7 @@ export default function DriverEmploymentVerificationSection({
 
         <p
           className={`mt-4 text-xs ${
-            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           Click &quot;Verify&quot; to send a verification request to your previous employer.
@@ -551,7 +552,7 @@ export default function DriverEmploymentVerificationSection({
           <div className="p-4 sm:p-6">
             <p
               className={`text-sm mb-4 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}
             >
               To verify your employment at <strong>{showContactModal.companyName}</strong>, we
@@ -562,7 +563,7 @@ export default function DriverEmploymentVerificationSection({
               <div>
                 <label
                   className={`block text-sm font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   <Mail className="w-4 h-4 inline mr-1" />
@@ -574,7 +575,7 @@ export default function DriverEmploymentVerificationSection({
                   onChange={(e) => setContactEmail(e.target.value)}
                   placeholder="supervisor@company.com"
                   className={`w-full px-3 py-2 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                   } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -583,7 +584,7 @@ export default function DriverEmploymentVerificationSection({
               <div>
                 <label
                   className={`block text-sm font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   <Phone className="w-4 h-4 inline mr-1" />
@@ -593,7 +594,7 @@ export default function DriverEmploymentVerificationSection({
                   value={contactPhone}
                   onChange={setContactPhone}
                   className={`w-full px-3 py-2 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                   } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -608,7 +609,7 @@ export default function DriverEmploymentVerificationSection({
                   setContactPhone('')
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -619,7 +620,7 @@ export default function DriverEmploymentVerificationSection({
                 onClick={handleContactSubmit}
                 disabled={!contactEmail && !contactPhone}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                     : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -637,7 +638,7 @@ export default function DriverEmploymentVerificationSection({
           <div className="p-4 sm:p-6">
             <p
               className={`text-sm mb-4 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}
             >
               Remove <strong>{deleteConfirm.companyName}</strong> from your employment list?
@@ -649,7 +650,7 @@ export default function DriverEmploymentVerificationSection({
                 type="button"
                 onClick={() => setDeleteConfirm(null)}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}

@@ -48,6 +48,48 @@
   --text-secondary: #a8b0bc;
 }
 
+/*
+ * Ink = quiet dark (inverse of paper): zinc/grey void — no teal/violet blooms.
+ * Tailwind `dark:` applies via `[data-theme="ink"]` in tailwind.config.ts.
+ */
+[data-theme='ink'] {
+  color-scheme: dark;
+  --storm-void: #050506;
+  --storm-deep: #09090b;
+  --storm-surface: #121214;
+  --storm-body-gradient: linear-gradient(
+    165deg,
+    var(--storm-surface) 0%,
+    var(--storm-deep) 45%,
+    var(--storm-void) 100%
+  );
+  --storm-teal-soft: rgb(24 24 27 / 0.06);
+  --storm-violet-soft: rgb(24 24 27 / 0.04);
+  --storm-panel-bg: linear-gradient(
+    165deg,
+    rgb(24 24 27 / 0.96) 0%,
+    rgb(18 18 20 / 0.94) 52%,
+    rgb(12 12 14 / 0.97) 100%
+  );
+  --storm-panel-border: rgb(63 63 70 / 0.35);
+  --storm-panel-glow:
+    0 1px 0 rgb(255 255 255 / 0.04),
+    0 18px 44px -18px rgb(0 0 0 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.03);
+  --surface-card: #18181b;
+  --surface-elevated: #0f0f11;
+  --border-subtle: #3f3f46;
+  --text-primary: #fafafa;
+  /* Brighter than galactic slate-400 — body copy on zinc panels was washing out */
+  --text-secondary: #d4d4d8;
+  --storm-accent: #71717a;
+  --storm-accent-rgb: 113 113 122;
+  --storm-accent-mid: #a1a1aa;
+  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.06);
+  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.09);
+  --storm-violet-bloom: rgb(113 113 122 / 0.04);
+}
+
 [data-theme='light'] {
   color-scheme: light;
   /*
@@ -79,31 +121,6 @@
 }
 
 /*
- * Sepia = Kindle-style paperback: warm cream, low chroma (not icy/teal vault).
- */
-[data-theme='sepia'] {
-  color-scheme: light;
-  --surface-card: #faf4e8;
-  --surface-elevated: #f3eadc;
-  --border-subtle: #c9b8a4;
-  --text-primary: #3d362e;
-  --text-secondary: #6b5f52;
-  /* Muted “ink” accent — links/vars only; components may use softer fills */
-  --storm-accent: #5f6f6b;
-  --storm-accent-rgb: 95 111 107;
-  --storm-accent-mid: #6d7f7a;
-  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.04);
-  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.055);
-  --storm-violet-bloom: rgb(120 108 92 / 0.03);
-  --storm-light-specular: linear-gradient(
-    125deg,
-    rgb(255 250 240 / 0.45) 0%,
-    rgb(245 232 212 / 0.25) 35%,
-    transparent 55%
-  );
-}
-
-/*
  * Paper = newsprint: soft white / zinc grey only — no brand teal or warm sepia.
  */
 [data-theme='paper'] {
@@ -123,30 +140,6 @@
     125deg,
     rgb(255 255 255 / 0.55) 0%,
     rgb(244 244 245 / 0.28) 38%,
-    transparent 56%
-  );
-}
-
-/*
- * Business classic — white cards, slate chrome, professional blue accent (not teal).
- */
-[data-theme='business'] {
-  color-scheme: light;
-  --surface-card: #ffffff;
-  --surface-elevated: #f8fafc;
-  --border-subtle: #cbd5e1;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --storm-accent: #0a66c2;
-  --storm-accent-rgb: 10 102 194;
-  --storm-accent-mid: #2563eb;
-  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.07);
-  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.095);
-  --storm-violet-bloom: rgb(59 130 246 / 0.05);
-  --storm-light-specular: linear-gradient(
-    125deg,
-    rgb(255 255 255 / 0.52) 0%,
-    rgb(239 246 255 / 0.28) 38%,
     transparent 56%
   );
 }
@@ -174,6 +167,13 @@ body {
   color: var(--text-primary);
 }
 
+[data-theme='ink'] body {
+  background:
+    radial-gradient(ellipse min(92vw, 38rem) min(92vw, 38rem) at 50% 12%, rgb(39 39 42 / 0.22), transparent 58%),
+    var(--storm-body-gradient);
+  color: var(--text-primary);
+}
+
 /*
  * Light canvas — icy depth: deeper blue-slate base + visible blooms + bottom cool vignette
  * so vault grain and teal rims don’t disappear into #fff.
@@ -189,29 +189,12 @@ body {
   color: var(--text-primary);
 }
 
-/* Sepia canvas — warm page (no slate/teal base) */
-[data-theme='sepia'] body {
-  background:
-    var(--storm-light-specular),
-    radial-gradient(ellipse 130% 70% at 50% 0%, rgb(230 210 186 / 0.12), transparent 58%),
-    linear-gradient(175deg, #e8dcc8 0%, #efe3d4 28%, #f5ebe0 55%, #faf4ea 82%, #fdf8f0 100%);
-  color: var(--text-primary);
-}
-
 /* Paper canvas — cool newsprint (grey stock, no chroma blooms) */
 [data-theme='paper'] body {
   background:
     var(--storm-light-specular),
     radial-gradient(ellipse 125% 72% at 50% 0%, rgb(228 228 231 / 0.45), transparent 58%),
     linear-gradient(178deg, #e4e4e7 0%, #ececed 30%, #f4f4f5 58%, #fafafa 100%);
-  color: var(--text-primary);
-}
-
-[data-theme='business'] body {
-  background:
-    var(--storm-light-specular),
-    radial-gradient(ellipse 120% 68% at 50% 0%, rgb(219 234 254 / 0.4), transparent 58%),
-    linear-gradient(178deg, #e8ecf1 0%, #f1f5f9 32%, #f8fafc 62%, #ffffff 100%);
   color: var(--text-primary);
 }
 
@@ -237,25 +220,6 @@ body {
     0 22px 56px -16px rgb(15 51 73 / 0.14);
 }
 
-/* Sepia panels — cream card, warm shadow; no teal rim */
-[data-theme='sepia'] .storm-light-panel {
-  background: linear-gradient(
-    180deg,
-    rgb(255 252 244 / 0.99) 0%,
-    rgb(248 240 228 / 0.97) 50%,
-    rgb(242 232 218 / 0.98) 100%
-  );
-  -webkit-backdrop-filter: blur(16px) saturate(0.95);
-  backdrop-filter: blur(16px) saturate(0.95);
-  border: 1px solid rgb(198 182 162 / 0.45);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.65),
-    inset 0 0 0 1px rgb(255 255 255 / 0.12),
-    0 1px 2px rgb(61 54 46 / 0.05),
-    0 10px 28px -10px rgb(61 54 46 / 0.07),
-    0 18px 44px -14px rgb(92 82 72 / 0.08);
-}
-
 /* Paper panels — white stock, neutral shadow */
 [data-theme='paper'] .storm-light-panel {
   background: linear-gradient(
@@ -275,66 +239,10 @@ body {
     0 18px 44px -14px rgb(63 63 70 / 0.07);
 }
 
-/* Business panels — crisp white card, slate border, flat glossy shadow (no teal rim) */
-[data-theme='business'] .storm-light-panel {
-  background: linear-gradient(180deg, rgb(255 255 255 / 1) 0%, rgb(252 252 252 / 0.99) 50%, rgb(248 250 252 / 1) 100%);
-  -webkit-backdrop-filter: blur(12px) saturate(1.02);
-  backdrop-filter: blur(12px) saturate(1.02);
-  border: 1px solid rgb(226 232 240 / 0.95);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 1),
-    0 1px 2px rgb(15 23 42 / 0.05),
-    0 4px 12px rgb(15 23 42 / 0.06),
-    0 16px 40px -12px rgb(15 23 42 / 0.08);
-}
-
 /*
- * Sepia + paper: mute high-chroma Tailwind utilities (most UI still uses teal/violet classes).
+ * Paper: mute high-chroma Tailwind utilities (most UI still uses teal/violet classes).
  * Primary actions use `Button` + muted fill; this catches links, badges, borders.
  */
-[data-theme='sepia'] .text-teal-300,
-[data-theme='sepia'] .text-teal-400,
-[data-theme='sepia'] .text-teal-500,
-[data-theme='sepia'] .text-teal-600,
-[data-theme='sepia'] .text-teal-700,
-[data-theme='sepia'] .text-teal-800 {
-  color: rgb(72 88 84) !important;
-}
-[data-theme='sepia'] .text-cyan-500,
-[data-theme='sepia'] .text-cyan-600,
-[data-theme='sepia'] .text-cyan-700 {
-  color: rgb(78 90 88) !important;
-}
-[data-theme='sepia'] .text-emerald-600,
-[data-theme='sepia'] .text-emerald-700,
-[data-theme='sepia'] .text-emerald-800 {
-  color: rgb(68 88 72) !important;
-}
-[data-theme='sepia'] .border-teal-200,
-[data-theme='sepia'] .border-teal-300,
-[data-theme='sepia'] .border-teal-500,
-[data-theme='sepia'] .border-teal-600 {
-  border-color: rgb(186 174 158) !important;
-}
-[data-theme='sepia'] .bg-teal-50,
-[data-theme='sepia'] .bg-teal-100 {
-  background-color: rgb(237 230 218) !important;
-}
-[data-theme='sepia'] .bg-teal-500\/20,
-[data-theme='sepia'] .bg-teal-500\/10 {
-  background-color: rgb(215 206 192 / 0.35) !important;
-}
-[data-theme='sepia'] .ring-teal-500,
-[data-theme='sepia'] .ring-teal-400 {
-  --tw-ring-color: rgb(140 130 118) !important;
-}
-[data-theme='sepia'] .text-violet-600,
-[data-theme='sepia'] .text-violet-700,
-[data-theme='sepia'] .text-indigo-600,
-[data-theme='sepia'] .text-indigo-700 {
-  color: rgb(88 80 98) !important;
-}
-
 [data-theme='paper'] .text-teal-300,
 [data-theme='paper'] .text-teal-400,
 [data-theme='paper'] .text-teal-500,
@@ -378,48 +286,144 @@ body {
   color: rgb(63 63 70) !important;
 }
 
-/* Business: remap teal/violet utilities → professional blue + slate */
-[data-theme='business'] .text-teal-300,
-[data-theme='business'] .text-teal-400,
-[data-theme='business'] .text-teal-500,
-[data-theme='business'] .text-teal-600,
-[data-theme='business'] .text-teal-700,
-[data-theme='business'] .text-teal-800 {
-  color: rgb(29 78 216) !important;
+/*
+ * Ink: same idea as paper — most components still ship teal/violet utility classes;
+ * remap to zinc on dark so the UI stays monochrome without rewriting every block.
+ */
+[data-theme='ink'] .text-teal-300,
+[data-theme='ink'] .text-teal-400 {
+  color: rgb(212 212 216) !important;
 }
-[data-theme='business'] .text-cyan-500,
-[data-theme='business'] .text-cyan-600,
-[data-theme='business'] .text-cyan-700 {
-  color: rgb(37 99 235) !important;
+[data-theme='ink'] .text-teal-500,
+[data-theme='ink'] .text-teal-600,
+[data-theme='ink'] .text-teal-700,
+[data-theme='ink'] .text-teal-800 {
+  color: rgb(228 228 231) !important;
 }
-[data-theme='business'] .text-emerald-600,
-[data-theme='business'] .text-emerald-700,
-[data-theme='business'] .text-emerald-800 {
-  color: rgb(22 101 52) !important;
+[data-theme='ink'] .text-cyan-500,
+[data-theme='ink'] .text-cyan-600,
+[data-theme='ink'] .text-cyan-700 {
+  color: rgb(212 212 216) !important;
 }
-[data-theme='business'] .border-teal-200,
-[data-theme='business'] .border-teal-300,
-[data-theme='business'] .border-teal-500,
-[data-theme='business'] .border-teal-600 {
-  border-color: rgb(191 219 254) !important;
+[data-theme='ink'] .text-emerald-600,
+[data-theme='ink'] .text-emerald-700,
+[data-theme='ink'] .text-emerald-800 {
+  color: rgb(200 200 204) !important;
 }
-[data-theme='business'] .bg-teal-50,
-[data-theme='business'] .bg-teal-100 {
-  background-color: rgb(239 246 255) !important;
+[data-theme='ink'] .border-teal-200,
+[data-theme='ink'] .border-teal-300,
+[data-theme='ink'] .border-teal-500,
+[data-theme='ink'] .border-teal-600 {
+  border-color: rgb(63 63 70) !important;
 }
-[data-theme='business'] .bg-teal-500\/20,
-[data-theme='business'] .bg-teal-500\/10 {
-  background-color: rgb(219 234 254 / 0.55) !important;
+[data-theme='ink'] .bg-teal-50,
+[data-theme='ink'] .bg-teal-100 {
+  background-color: rgb(39 39 42 / 0.65) !important;
 }
-[data-theme='business'] .ring-teal-500,
-[data-theme='business'] .ring-teal-400 {
-  --tw-ring-color: rgb(59 130 246) !important;
+[data-theme='ink'] .bg-teal-500\/20,
+[data-theme='ink'] .bg-teal-500\/10 {
+  background-color: rgb(63 63 70 / 0.35) !important;
 }
-[data-theme='business'] .text-violet-600,
-[data-theme='business'] .text-violet-700,
-[data-theme='business'] .text-indigo-600,
-[data-theme='business'] .text-indigo-700 {
-  color: rgb(51 65 85) !important;
+[data-theme='ink'] .ring-teal-500,
+[data-theme='ink'] .ring-teal-400 {
+  --tw-ring-color: rgb(113 113 122) !important;
+}
+[data-theme='ink'] .text-violet-600,
+[data-theme='ink'] .text-violet-700,
+[data-theme='ink'] .text-indigo-600,
+[data-theme='ink'] .text-indigo-700,
+[data-theme='ink'] .text-indigo-300,
+[data-theme='ink'] .text-violet-300,
+[data-theme='ink'] .text-violet-400 {
+  color: rgb(212 212 216) !important;
+}
+
+/*
+ * Ink — legibility: many blocks use light-mode `text-slate-*` / `text-gray-*` without `dark:`.
+ * When those sit on dark vault glass they go muddy; lift toward zinc-200–50.
+ */
+[data-theme='ink'] .text-slate-900,
+[data-theme='ink'] .text-gray-900 {
+  color: rgb(250 250 250) !important;
+}
+[data-theme='ink'] .text-slate-800,
+[data-theme='ink'] .text-gray-800 {
+  color: rgb(244 244 245) !important;
+}
+[data-theme='ink'] .text-slate-700,
+[data-theme='ink'] .text-gray-700 {
+  color: rgb(228 228 231) !important;
+}
+[data-theme='ink'] .text-slate-600,
+[data-theme='ink'] .text-gray-600 {
+  color: rgb(212 212 216) !important;
+}
+[data-theme='ink'] .text-slate-500,
+[data-theme='ink'] .text-gray-500 {
+  color: rgb(180 180 186) !important;
+}
+
+/*
+ * Ink — surfaces: force common “paper” Tailwind fills to zinc so embeds aren’t bright slabs.
+ * (Career card sections, pickers, and legacy `bg-white` without a `dark:` pair.)
+ */
+[data-theme='ink'] .bg-white {
+  background-color: rgb(24 24 27 / 0.94) !important;
+}
+[data-theme='ink'] .bg-white\/40,
+[data-theme='ink'] .bg-white\/60,
+[data-theme='ink'] .bg-white\/70,
+[data-theme='ink'] .bg-white\/80,
+[data-theme='ink'] .bg-white\/85,
+[data-theme='ink'] .bg-white\/90,
+[data-theme='ink'] .bg-white\/95 {
+  background-color: rgb(39 39 42 / 0.88) !important;
+}
+[data-theme='ink'] .bg-slate-50,
+[data-theme='ink'] .bg-slate-50\/80,
+[data-theme='ink'] .bg-slate-50\/90,
+[data-theme='ink'] .bg-slate-50\/98,
+[data-theme='ink'] .bg-slate-100,
+[data-theme='ink'] .bg-gray-50,
+[data-theme='ink'] .bg-gray-50\/50,
+[data-theme='ink'] .bg-gray-50\/80,
+[data-theme='ink'] .bg-zinc-50 {
+  background-color: rgb(39 39 42 / 0.82) !important;
+}
+[data-theme='ink'] .hover\:bg-slate-50:hover,
+[data-theme='ink'] .hover\:bg-slate-100:hover,
+[data-theme='ink'] .hover\:bg-gray-50:hover,
+[data-theme='ink'] .hover\:bg-gray-100:hover {
+  background-color: rgb(63 63 70 / 0.55) !important;
+}
+[data-theme='ink'] .border-slate-100,
+[data-theme='ink'] .border-slate-200,
+[data-theme='ink'] .border-slate-300,
+[data-theme='ink'] .border-gray-100,
+[data-theme='ink'] .border-gray-200,
+[data-theme='ink'] .border-gray-300 {
+  border-color: rgb(63 63 70 / 0.75) !important;
+}
+[data-theme='ink'] .ring-slate-200,
+[data-theme='ink'] .ring-gray-900\/\[0\.04\] {
+  --tw-ring-color: rgb(82 82 91 / 0.45) !important;
+}
+
+/* If anything still mounts `.storm-light-panel` under ink, give it a dark face (loader / edge cases). */
+[data-theme='ink'] .storm-light-panel {
+  background: linear-gradient(
+    180deg,
+    rgb(39 39 42 / 0.96) 0%,
+    rgb(30 30 33 / 0.98) 52%,
+    rgb(24 24 27 / 0.99) 100%
+  );
+  -webkit-backdrop-filter: blur(16px) saturate(0.85);
+  backdrop-filter: blur(16px) saturate(0.85);
+  border: 1px solid rgb(63 63 70 / 0.45);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 12px 36px -12px rgb(0 0 0 / 0.45);
 }
 
 /* Global cursor-pointer for all clickable elements */
@@ -490,6 +494,12 @@ button:disabled,
  * Pair with rounded-2xl + backdrop-blur-xl + ring-1 ring-teal-400/15 in components.
  */
 [data-theme='dark'] .storm-glass-panel {
+  background: var(--storm-panel-bg);
+  border: 1px solid var(--storm-panel-border);
+  box-shadow: var(--storm-panel-glow);
+}
+
+[data-theme='ink'] .storm-glass-panel {
   background: var(--storm-panel-bg);
   border: 1px solid var(--storm-panel-border);
   box-shadow: var(--storm-panel-glow);
@@ -634,33 +644,64 @@ button:disabled,
   background: rgb(45 212 191 / 0.65);
 }
 
-/* Light + sepia + paper + business — step indicator scrollbars (accent from CSS vars) */
+[data-theme='ink'] .resume-steps-scrollbar {
+  scrollbar-color: rgb(113 113 122 / 0.45) transparent;
+}
+
+[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    rgb(113 113 122 / 0.35) 0%,
+    rgb(161 161 170 / 0.5) 50%,
+    rgb(113 113 122 / 0.35) 100%
+  );
+  border-radius: 10px;
+  border: 1px solid rgb(82 82 91 / 0.35);
+  transition: all 0.3s ease;
+}
+
+[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    90deg,
+    rgb(161 161 170 / 0.45) 0%,
+    rgb(212 212 216 / 0.55) 50%,
+    rgb(161 161 170 / 0.45) 100%
+  );
+  border-color: rgb(113 113 122 / 0.45);
+}
+
+[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgb(161 161 170 / 0.55);
+}
+
+/* Light + paper — step indicator scrollbars (accent from CSS vars) */
 [data-theme='light'] .resume-steps-scrollbar,
-[data-theme='sepia'] .resume-steps-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar,
-[data-theme='business'] .resume-steps-scrollbar {
+[data-theme='paper'] .resume-steps-scrollbar {
   scrollbar-color: rgb(var(--storm-accent-rgb) / 0.35) transparent;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar,
-[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar,
-[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar {
   height: 8px; /* Horizontal scrollbar height */
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-track,
-[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-track,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track,
-[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-track {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
-[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
-[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(
     90deg,
     rgb(var(--storm-accent-rgb) / 0.28) 0%,
@@ -673,9 +714,7 @@ button:disabled,
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
-[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
-[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     90deg,
     rgb(var(--storm-accent-rgb) / 0.38) 0%,
@@ -687,9 +726,7 @@ button:disabled,
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
-[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
-[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
   background: rgb(var(--storm-accent-rgb) / 0.55);
 }
 
@@ -712,63 +749,44 @@ button:disabled,
   background: #3d4d62;
 }
 
-/* Light + sepia + paper + business scrollbars */
-[data-theme='light'] ::-webkit-scrollbar-track,
-[data-theme='sepia'] ::-webkit-scrollbar-track,
-[data-theme='paper'] ::-webkit-scrollbar-track,
-[data-theme='business'] ::-webkit-scrollbar-track {
-  background: #cbd5e1;
+[data-theme='ink'] ::-webkit-scrollbar-track {
+  background: #0c0c0e;
 }
 
-[data-theme='sepia'] ::-webkit-scrollbar-track {
-  background: #d6d3d1;
+[data-theme='ink'] ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 6px;
+}
+
+[data-theme='ink'] ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Light + paper scrollbars */
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: #cbd5e1;
 }
 
 [data-theme='paper'] ::-webkit-scrollbar-track {
   background: #e4e4e7;
 }
 
-[data-theme='business'] ::-webkit-scrollbar-track {
-  background: #e2e8f0;
-}
-
-[data-theme='light'] ::-webkit-scrollbar-thumb,
-[data-theme='sepia'] ::-webkit-scrollbar-thumb,
-[data-theme='paper'] ::-webkit-scrollbar-thumb,
-[data-theme='business'] ::-webkit-scrollbar-thumb {
+[data-theme='light'] ::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 6px;
 }
 
-[data-theme='sepia'] ::-webkit-scrollbar-thumb {
-  background: #78716c;
-}
-
 [data-theme='paper'] ::-webkit-scrollbar-thumb {
   background: #a1a1aa;
+  border-radius: 6px;
 }
 
-[data-theme='business'] ::-webkit-scrollbar-thumb {
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
-}
-
-[data-theme='light'] ::-webkit-scrollbar-thumb:hover,
-[data-theme='sepia'] ::-webkit-scrollbar-thumb:hover,
-[data-theme='paper'] ::-webkit-scrollbar-thumb:hover,
-[data-theme='business'] ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-[data-theme='sepia'] ::-webkit-scrollbar-thumb:hover {
-  background: #57534e;
 }
 
 [data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
   background: #71717a;
-}
-
-[data-theme='business'] ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
 }
 
 /* ===== BRAND CUSTOMIZATIONS ===== */
@@ -815,23 +833,6 @@ button:disabled,
   --akui-active: #0d9488;
 }
 
-[data-theme='sepia'] {
-  --akui-btn-primary: #5f6f6b;
-  --akui-btn-secondary: #ebe4d8;
-  --akui-btn-auth: #faf4ea;
-  --akui-fg-primary: #3d362e;
-  --akui-fg-secondary: #6b5f52;
-  --akui-fg-tertiary: #8a7d6e;
-  --akui-fg-invert: #faf6ef;
-  --akui-fg-accent-brand: #535f5c;
-  --akui-fg-disabled: #a89888;
-  --akui-bg-surface-default: #faf4ea;
-  --akui-bg-surface-subtle: #f3eadc;
-  --akui-bg-surface-inset: #e8dcc8;
-  --akui-static: #c9b8a4;
-  --akui-active: #5f6f6b;
-}
-
 [data-theme='paper'] {
   --akui-btn-primary: #52525b;
   --akui-btn-secondary: #e4e4e7;
@@ -847,23 +848,6 @@ button:disabled,
   --akui-bg-surface-inset: #e4e4e7;
   --akui-static: #d4d4d8;
   --akui-active: #52525b;
-}
-
-[data-theme='business'] {
-  --akui-btn-primary: #0a66c2;
-  --akui-btn-secondary: #f1f5f9;
-  --akui-btn-auth: #ffffff;
-  --akui-fg-primary: #0f172a;
-  --akui-fg-secondary: #475569;
-  --akui-fg-tertiary: #64748b;
-  --akui-fg-invert: #ffffff;
-  --akui-fg-accent-brand: #0a66c2;
-  --akui-fg-disabled: #94a3b8;
-  --akui-bg-surface-default: #ffffff;
-  --akui-bg-surface-subtle: #f8fafc;
-  --akui-bg-surface-inset: #f1f5f9;
-  --akui-static: #cbd5e1;
-  --akui-active: #0a66c2;
 }
 
 [data-theme='dark'] {
@@ -883,27 +867,34 @@ button:disabled,
   --akui-active: #2dd4bf;
 }
 
+[data-theme='ink'] {
+  --akui-btn-primary: #a1a1aa;
+  --akui-btn-secondary: #3f3f46;
+  --akui-btn-auth: rgb(24 24 27 / 0.94);
+  --akui-fg-primary: #fafafa;
+  --akui-fg-secondary: #d4d4d8;
+  --akui-fg-tertiary: #a1a1aa;
+  --akui-fg-invert: #18181b;
+  --akui-fg-accent-brand: #d4d4d8;
+  --akui-fg-disabled: #71717a;
+  --akui-bg-surface-default: #18181b;
+  --akui-bg-surface-subtle: #27272a;
+  --akui-bg-surface-inset: #3f3f46;
+  --akui-static: #71717a;
+  --akui-active: #a1a1aa;
+}
+
 /* Alchemy AuthCard — headers use design tokens; !important only where Kit still leaks low contrast */
 [data-theme='light'] .akui-header-title,
 [data-theme='light'] [data-testid='header-title'],
 [data-theme='light'] .akui-header h1,
 [data-theme='light'] .akui-header h2,
 [data-theme='light'] .akui-header h3,
-[data-theme='sepia'] .akui-header-title,
-[data-theme='sepia'] [data-testid='header-title'],
-[data-theme='sepia'] .akui-header h1,
-[data-theme='sepia'] .akui-header h2,
-[data-theme='sepia'] .akui-header h3,
 [data-theme='paper'] .akui-header-title,
 [data-theme='paper'] [data-testid='header-title'],
 [data-theme='paper'] .akui-header h1,
 [data-theme='paper'] .akui-header h2,
-[data-theme='paper'] .akui-header h3,
-[data-theme='business'] .akui-header-title,
-[data-theme='business'] [data-testid='header-title'],
-[data-theme='business'] .akui-header h1,
-[data-theme='business'] .akui-header h2,
-[data-theme='business'] .akui-header h3 {
+[data-theme='paper'] .akui-header h3 {
   color: var(--akui-fg-primary) !important;
 }
 
@@ -911,7 +902,12 @@ button:disabled,
 [data-theme='dark'] [data-testid='header-title'],
 [data-theme='dark'] .akui-header h1,
 [data-theme='dark'] .akui-header h2,
-[data-theme='dark'] .akui-header h3 {
+[data-theme='dark'] .akui-header h3,
+[data-theme='ink'] .akui-header-title,
+[data-theme='ink'] [data-testid='header-title'],
+[data-theme='ink'] .akui-header h1,
+[data-theme='ink'] .akui-header h2,
+[data-theme='ink'] .akui-header h3 {
   color: var(--akui-fg-primary) !important;
 }
 
@@ -922,24 +918,12 @@ button:disabled,
 [data-theme='light'] .akui-footer *,
 [data-theme='light'] .akui-auth-footer,
 [data-theme='light'] .akui-auth-footer *,
-[data-theme='sepia'] .akui-text-tertiary,
-[data-theme='sepia'] .akui-text-tertiary *,
-[data-theme='sepia'] .akui-footer,
-[data-theme='sepia'] .akui-footer *,
-[data-theme='sepia'] .akui-auth-footer,
-[data-theme='sepia'] .akui-auth-footer *,
 [data-theme='paper'] .akui-text-tertiary,
 [data-theme='paper'] .akui-text-tertiary *,
 [data-theme='paper'] .akui-footer,
 [data-theme='paper'] .akui-footer *,
 [data-theme='paper'] .akui-auth-footer,
-[data-theme='paper'] .akui-auth-footer *,
-[data-theme='business'] .akui-text-tertiary,
-[data-theme='business'] .akui-text-tertiary *,
-[data-theme='business'] .akui-footer,
-[data-theme='business'] .akui-footer *,
-[data-theme='business'] .akui-auth-footer,
-[data-theme='business'] .akui-auth-footer * {
+[data-theme='paper'] .akui-auth-footer * {
   color: var(--akui-fg-secondary) !important;
 }
 
@@ -948,18 +932,23 @@ button:disabled,
 [data-theme='dark'] .akui-footer,
 [data-theme='dark'] .akui-footer *,
 [data-theme='dark'] .akui-auth-footer,
-[data-theme='dark'] .akui-auth-footer * {
+[data-theme='dark'] .akui-auth-footer *,
+[data-theme='ink'] .akui-text-tertiary,
+[data-theme='ink'] .akui-text-tertiary *,
+[data-theme='ink'] .akui-footer,
+[data-theme='ink'] .akui-footer *,
+[data-theme='ink'] .akui-auth-footer,
+[data-theme='ink'] .akui-auth-footer * {
   color: var(--akui-fg-secondary) !important;
 }
 
 [data-theme='light'] .akui-btn-primary:hover,
-[data-theme='sepia'] .akui-btn-primary:hover,
-[data-theme='paper'] .akui-btn-primary:hover,
-[data-theme='business'] .akui-btn-primary:hover {
+[data-theme='paper'] .akui-btn-primary:hover {
   filter: brightness(1.06);
 }
 
-[data-theme='dark'] .akui-btn-primary:hover {
+[data-theme='dark'] .akui-btn-primary:hover,
+[data-theme='ink'] .akui-btn-primary:hover {
   filter: brightness(1.08);
 }
 

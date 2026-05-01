@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import * as LucideIcons from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -36,7 +37,7 @@ export default function BlockPickerCategoryCard({
   onPick,
 }: BlockPickerCategoryCardProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const CategoryIcon = resolveIcon(category.icon)
   const glow = categoryGlow(category.id)
   const installedCount = blocks.filter((b) => installedTypes.has(b.id)).length

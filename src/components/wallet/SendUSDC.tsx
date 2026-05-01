@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import {
   useSignerStatus,
@@ -35,13 +36,13 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
 
   // Card styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'
   }`
 
   const inputClass = `w-full px-4 py-3 rounded-xl border text-sm transition-colors ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-indigo-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
   } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`
@@ -222,7 +223,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       <div className={`${cardClass} p-4`}>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           Please connect your wallet to send USDC
@@ -236,7 +237,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       {/* Network context badge */}
       <div
         className={`flex items-center justify-between p-3 rounded-xl ${
-          theme === 'dark' ? 'bg-blue-500/10' : 'bg-blue-50'
+          isDarkTheme(theme) ? 'bg-blue-500/10' : 'bg-blue-50'
         }`}
       >
         <div className='flex items-center gap-2'>
@@ -244,14 +245,14 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
               }`}
             >
               USDC on Base Sepolia
             </p>
             <p
               className={`text-xs ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
               }`}
             >
               Testnet funds only
@@ -260,7 +261,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
         </div>
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-blue-500/20 text-blue-300'
               : 'bg-blue-100 text-blue-600'
           }`}
@@ -273,7 +274,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Recipient Address
@@ -294,7 +295,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Amount (USDC)
@@ -317,19 +318,19 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       {error && (
         <div
           className={`flex items-start gap-2 p-3 rounded-xl ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-red-500/10 border border-red-500/20'
               : 'bg-red-50 border border-red-200'
           }`}
         >
           <AlertCircle
             className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-              theme === 'dark' ? 'text-red-400' : 'text-red-500'
+              isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
             }`}
           />
           <p
             className={`text-sm ${
-              theme === 'dark' ? 'text-red-300' : 'text-red-700'
+              isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'
             }`}
           >
             {error}
@@ -341,7 +342,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       {success && (
         <div
           className={`p-3 rounded-xl ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-green-500/10 border border-green-500/20'
               : 'bg-green-50 border border-green-200'
           }`}
@@ -349,12 +350,12 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
           <div className='flex items-center gap-2 mb-2'>
             <CheckCircle
               className={`w-4 h-4 ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
               }`}
             />
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
               }`}
             >
               Transaction sent successfully!
@@ -366,7 +367,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
               target='_blank'
               rel='noopener noreferrer'
               className={`inline-flex items-center gap-1 text-xs ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'text-green-400 hover:text-green-300'
                   : 'text-green-600 hover:text-green-700'
               }`}
@@ -384,10 +385,10 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
         disabled={isLoading || isPending || !recipient || !amount}
         className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
           isLoading || isPending || !recipient || !amount
-            ? theme === 'dark'
+            ? isDarkTheme(theme)
               ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            : theme === 'dark'
+            : isDarkTheme(theme)
               ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
               : 'bg-indigo-600 hover:bg-indigo-700 text-white'
         }`}
@@ -397,7 +398,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
 
       <p
         className={`text-xs text-center ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
         }`}
       >
         Gas fees are sponsored

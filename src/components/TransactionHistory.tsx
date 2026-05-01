@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import {
   getWalletTransfers,
@@ -143,15 +144,15 @@ export default function TransactionHistory({
   if (loading) {
     return (
       <div className={`p-6 rounded-lg ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/10 border border-brand-cream/20'
           : 'bg-white border border-gray-200'
       }`}>
         <div className='flex items-center space-x-2'>
           <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${
-            theme === 'dark' ? 'border-teal-500' : 'border-blue-600'
+            isDarkTheme(theme) ? 'border-teal-500' : 'border-blue-600'
           }`}></div>
-          <span className={theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'}>
+          <span className={isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'}>
             Loading transaction history...
           </span>
         </div>
@@ -162,17 +163,17 @@ export default function TransactionHistory({
   if (error) {
     return (
       <div className={`p-6 rounded-lg ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/10 border border-brand-cream/20'
           : 'bg-white border border-gray-200'
       }`}>
-        <div className={`mb-4 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+        <div className={`mb-4 ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}`}>
           <span>❌</span> Error: {error}
         </div>
         <button
           onClick={handleRefresh}
           className={`px-4 py-2 rounded-md ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-600 text-white hover:bg-teal-500'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
@@ -185,23 +186,23 @@ export default function TransactionHistory({
 
   return (
     <div className={`rounded-lg ${
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-transparent'
         : 'bg-white'
     }`}>
       {/* Header */}
       {showFilters && (
         <div className={`p-4 border-b ${
-          theme === 'dark' ? 'border-teal-500/20' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-teal-500/20' : 'border-gray-200'
         }`}>
           <div className='flex items-center justify-between mb-4'>
             <h2 className={`text-xl font-bold ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-900'
             }`}>📊 Transaction History</h2>
             <button
               onClick={handleRefresh}
               className={`text-sm underline ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'text-teal-600 dark:text-teal-400 hover:text-brand-cream'
                   : 'text-blue-600 hover:text-blue-800'
               }`}
@@ -212,7 +213,7 @@ export default function TransactionHistory({
 
           {/* Summary */}
           <div className={`flex flex-wrap items-center gap-2 text-xs mb-4 ${
-            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'
           }`}>
             <span>
               Address: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
@@ -230,10 +231,10 @@ export default function TransactionHistory({
                   onClick={() => setFilter(filterType)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     filter === filterType
-                      ? theme === 'dark'
+                      ? isDarkTheme(theme)
                         ? 'bg-teal-600 text-white'
                         : 'bg-blue-600 text-white'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'bg-teal-200/20 text-brand-cream/70 hover:bg-teal-200/30'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -250,7 +251,7 @@ export default function TransactionHistory({
       <div className='max-h-[400px] overflow-y-auto'>
         {transfers.length === 0 ? (
           <div className={`p-6 text-center ${
-            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-500'
           }`}>
             <div className='text-4xl mb-2'>📭</div>
             <div>No transactions found</div>
@@ -260,7 +261,7 @@ export default function TransactionHistory({
           </div>
         ) : (
           <div className={`divide-y ${
-            theme === 'dark' ? 'divide-teal-600/20' : 'divide-gray-200'
+            isDarkTheme(theme) ? 'divide-teal-600/20' : 'divide-gray-200'
           }`}>
             {transfers.map((transfer, index) => {
               const formatted = formatTransferForDisplay(transfer)
@@ -269,7 +270,7 @@ export default function TransactionHistory({
                 <div
                   key={`${transfer.hash}-${index}`}
                   className={`p-4 transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'hover:bg-teal-200/10'
                       : 'hover:bg-gray-50'
                   }`}
@@ -290,12 +291,12 @@ export default function TransactionHistory({
                         ></div>
                         <div>
                           <div className={`font-medium ${
-                            theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                            isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-900'
                           }`}>
                             {formatted.type}
                           </div>
                           <div className={`text-xs ${
-                            theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                            isDarkTheme(theme) ? 'text-brand-cream/60' : 'text-gray-500'
                           }`}>
                             {formatted.timestamp}
                           </div>
@@ -303,7 +304,7 @@ export default function TransactionHistory({
                       </div>
 
                       <div className={`mt-2 text-xs ${
-                        theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'
                       }`}>
                         <div>
                           From: {formatted.from.slice(0, 10)}...
@@ -318,12 +319,12 @@ export default function TransactionHistory({
 
                     <div className='text-right'>
                       <div className={`font-medium ${
-                        theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                        isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-900'
                       }`}>
                         {formatted.amount} {transfer.asset || 'ETH'}
                       </div>
                       <div className={`text-xs ${
-                        theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-brand-cream/60' : 'text-gray-500'
                       }`}>
                         Block #{formatted.blockNumber}
                       </div>
@@ -336,7 +337,7 @@ export default function TransactionHistory({
                       target='_blank'
                       rel='noopener noreferrer'
                       className={`text-xs underline ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'text-teal-600 dark:text-teal-400 hover:text-brand-cream'
                           : 'text-blue-600 hover:text-blue-800'
                       }`}
@@ -354,17 +355,17 @@ export default function TransactionHistory({
       {/* Load More */}
       {pageKey && (
         <div className={`p-4 border-t text-center ${
-          theme === 'dark' ? 'border-teal-500/20' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-teal-500/20' : 'border-gray-200'
         }`}>
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
             className={`px-4 py-2 rounded-md font-medium transition-colors ${
               loadingMore
-                ? theme === 'dark'
+                ? isDarkTheme(theme)
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-400 text-white cursor-not-allowed'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-teal-600 text-white hover:bg-teal-500'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
@@ -376,7 +377,7 @@ export default function TransactionHistory({
 
       {/* Footer Info */}
       <div className={`px-4 py-3 text-xs text-center ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'text-brand-cream/50'
           : 'bg-gray-50 text-gray-500'
       }`}>

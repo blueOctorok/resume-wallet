@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Users,
@@ -113,7 +114,7 @@ export default function CompaniesTab({
         }).length
         return staleCount > 0 ? (
           <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-5 border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-yellow-900/20 border-yellow-700/40 text-yellow-300'
               : 'bg-yellow-50 border-yellow-200 text-yellow-800'
           }`}>
@@ -141,7 +142,7 @@ export default function CompaniesTab({
                     : status === 'suspended'
                       ? 'bg-red-500 text-white'
                       : 'bg-indigo-500 text-white'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -154,7 +155,7 @@ export default function CompaniesTab({
             <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
               companyStatusFilter === status
                 ? 'bg-white/20'
-                : theme === 'dark' ? 'bg-gray-600' : 'bg-gray-200'
+                : isDarkTheme(theme) ? 'bg-gray-600' : 'bg-gray-200'
             }`}>
               {status === 'all'
                 ? companyStats.total
@@ -168,7 +169,7 @@ export default function CompaniesTab({
       {companies.length === 0 ? (
         <div className='text-center py-12'>
           <Building2 className='w-12 h-12 mx-auto mb-4 opacity-30' />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}>
             No companies found
           </p>
         </div>
@@ -178,7 +179,7 @@ export default function CompaniesTab({
             <div
               key={company.id}
               className={`rounded-xl border p-5 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
                   : 'bg-white border-gray-200 hover:border-gray-300'
               } transition-colors`}
@@ -187,7 +188,7 @@ export default function CompaniesTab({
               <div className='flex items-start justify-between mb-3'>
                 <div className='flex-1 min-w-0'>
                   <h3 className={`font-semibold truncate ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}>
                     {company.name}
                   </h3>
@@ -213,7 +214,7 @@ export default function CompaniesTab({
                         {days}d waiting
                       </span>
                     ) : days > 0 ? (
-                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                         {days}d
                       </span>
                     ) : null
@@ -222,7 +223,7 @@ export default function CompaniesTab({
               </div>
 
               {/* Owner Info */}
-              <div className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className={`text-sm mb-3 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 <div className='flex items-center gap-2'>
                   <UserCircle className='w-4 h-4' />
                   <span className='truncate'>
@@ -257,7 +258,7 @@ export default function CompaniesTab({
 
               {/* Location */}
               {(company.city || company.state) && (
-                <p className={`text-xs mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                <p className={`text-xs mb-3 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                   {[company.city, company.state].filter(Boolean).join(', ')}
                 </p>
               )}
@@ -334,7 +335,7 @@ export default function CompaniesTab({
                     }
                   }}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -381,7 +382,7 @@ export default function CompaniesTab({
               {expandedCompanyId === company.id && (
                 <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'>
                   <h4 className={`text-sm font-medium mb-3 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}>
                     Team Members
                   </h4>
@@ -397,13 +398,13 @@ export default function CompaniesTab({
                         <div
                           key={member.id}
                           className={`flex items-center justify-between p-2 rounded-lg ${
-                            theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+                            isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-100'
                           }`}
                         >
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-2'>
                               <span className={`text-sm font-medium truncate ${
-                                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                               }`}>
                                 {member.name || member.email || 'Unknown'}
                               </span>
@@ -463,7 +464,7 @@ export default function CompaniesTab({
           <UserPlus className='w-4 h-4' />
           Pre-Create Company
         </button>
-        <p className={`mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
           Pre-create a company for a client. When the designated owner logs in with their email, they will automatically be linked as the owner.
         </p>
       </div>

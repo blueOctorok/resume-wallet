@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getBlockColor } from '@/lib/block-registry'
@@ -23,7 +24,7 @@ export interface HubSidebarProps {
 
 export default function HubSidebar({ variant, id, onCloseDrawer, className }: HubSidebarProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const pathVaultGlow = getBlockColor('general-resume').glowColor
   const { setCurrentPage } = useUIStore()
   const openPicker = useHubBlocksStore((s) => s.openPicker)

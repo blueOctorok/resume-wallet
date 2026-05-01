@@ -1,4 +1,7 @@
+'use client'
+
 import { type HTMLAttributes } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -7,6 +10,12 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export default function Card({ variant = 'default', className, children, ...props }: CardProps) {
+  const { theme } = useTheme()
+  const inkElevatedRing =
+    theme === 'ink'
+      ? 'dark:ring-1 dark:ring-zinc-500/[0.22]'
+      : 'dark:ring-1 dark:ring-teal-400/[0.14]'
+
   return (
     <div
       className={cn(
@@ -15,7 +24,10 @@ export default function Card({ variant = 'default', className, children, ...prop
           cn(
             /* Light: icy face + slate border so edges survive the brighter canvas */
             'bg-gradient-to-b from-slate-50/98 to-slate-100/95 dark:bg-[rgb(21,25,34)]/85 border border-slate-400/45 dark:border-slate-600/35',
-            'shadow-[0_1px_2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[0_0_32px_-14px_rgba(45,212,191,0.08)]',
+            'shadow-[0_1px_2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.75)]',
+            theme === 'ink'
+              ? 'dark:shadow-[0_0_28px_-14px_rgba(0,0,0,0.5)]'
+              : 'dark:shadow-[0_0_32px_-14px_rgba(45,212,191,0.08)]',
             'backdrop-blur-none dark:backdrop-blur-md',
           ),
         variant === 'elevated' &&
@@ -25,8 +37,9 @@ export default function Card({ variant = 'default', className, children, ...prop
             'storm-light-panel dark:bg-transparent',
             'border-0 dark:border-transparent',
             'shadow-none dark:shadow-none',
-            /* Dark: same storm-glass stack as LoadingScreen */
-            'dark:storm-glass-panel dark:backdrop-blur-xl dark:ring-1 dark:ring-teal-400/[0.14]',
+            /* Dark: storm glass; Quiet ink uses a neutral ring (see `inkElevatedRing`). */
+            'dark:storm-glass-panel dark:backdrop-blur-xl',
+            inkElevatedRing,
           ),
         variant === 'flat' &&
           'bg-transparent border-gray-200 dark:border-gray-700',
@@ -37,7 +50,11 @@ export default function Card({ variant = 'default', className, children, ...prop
       {variant === 'elevated' && (
         <div
           aria-hidden
-          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-600/32 to-transparent dark:from-transparent dark:via-teal-400/25 dark:to-transparent'
+          className={
+            theme === 'ink'
+              ? 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-500/35 to-transparent dark:from-transparent dark:via-zinc-400/28 dark:to-transparent'
+              : 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-600/32 to-transparent dark:from-transparent dark:via-teal-400/25 dark:to-transparent'
+          }
         />
       )}
       {children}

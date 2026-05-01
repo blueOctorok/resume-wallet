@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * STORM Resume — one shell for upload + career-path guided builders.
  * Add new career tabs by extending `CAREER_TABS` and the panel switch below.
@@ -53,7 +54,7 @@ interface StormResumeBlockProps {
 
 export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const resumes = useResumes()
   const blockStatus: BlockStatus = resumes.length > 0 ? 'complete' : 'empty'
   const walletAddress = useAuthStore((s) => s.walletAddress)

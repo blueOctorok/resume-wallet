@@ -8,7 +8,7 @@ const config: Config = withAccountKitUi(
       './src/components/**/*.{js,ts,jsx,tsx,mdx}',
       './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     ],
-    darkMode: ['class', '[data-theme="dark"]'],
+    darkMode: ['class', '[data-theme="dark"]', '[data-theme="ink"]'],
     theme: {
       extend: {
         colors: {

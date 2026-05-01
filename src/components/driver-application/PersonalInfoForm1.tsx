@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
@@ -669,12 +670,12 @@ export default function PersonalInfoForm1({
 
       <div className='text-center'>
         <h2
-          className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           Applicant information
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Complete in full or it will not be considered
         </p>
@@ -845,7 +846,7 @@ export default function PersonalInfoForm1({
               onChange={(e) =>
                 handleInputChange('hasLegalRightToWork', e.target.value)
               }
-              className={`mr-2 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
+              className={`mr-2 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
             <span
               className={`${labelClass}`}
@@ -862,7 +863,7 @@ export default function PersonalInfoForm1({
               onChange={(e) =>
                 handleInputChange('hasLegalRightToWork', e.target.value)
               }
-              className={`mr-2 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
+              className={`mr-2 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
             <span
               className={`${labelClass}`}
@@ -879,12 +880,12 @@ export default function PersonalInfoForm1({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           PREVIOUS THREE YEARS RESIDENCY
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Attach additional sheet if more space is needed
         </p>
@@ -893,7 +894,7 @@ export default function PersonalInfoForm1({
       {/* Current Mailing Address */}
       <div className='space-y-4'>
         <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           CURRENT MAILING
         </h3>
@@ -1006,17 +1007,17 @@ export default function PersonalInfoForm1({
           return (
             <div className={`p-4 rounded-lg border-2 ${
               isValid
-                ? theme === 'dark'
+                ? isDarkTheme(theme)
                   ? 'bg-green-900/20 border-green-500/50'
                   : 'bg-green-50 border-green-200'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-yellow-900/20 border-yellow-500/50'
                   : 'bg-yellow-50 border-yellow-200'
             }`}>
               <p className={`text-sm font-medium ${
                 isValid
-                  ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
-                  : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                  ? isDarkTheme(theme) ? 'text-green-400' : 'text-green-800'
+                  : isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-800'
               }`}>
                 {isValid
                   ? `✓ Total residency history: ${totalYears.toFixed(1)} years (meets 3+ year requirement)`
@@ -1032,12 +1033,12 @@ export default function PersonalInfoForm1({
       {/* Total Years Error Message */}
       {errors.totalYears && (
         <div className={`p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-red-900/20 border-red-500/50'
             : 'bg-red-50 border-red-200'
         }`}>
           <p className={`text-sm font-medium ${
-            theme === 'dark' ? 'text-red-400' : 'text-red-800'
+            isDarkTheme(theme) ? 'text-red-400' : 'text-red-800'
           }`}>
             {errors.totalYears}
           </p>
@@ -1049,7 +1050,7 @@ export default function PersonalInfoForm1({
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
-              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               PREVIOUS {index + 1}
             </h3>
@@ -1057,7 +1058,7 @@ export default function PersonalInfoForm1({
               type='button'
               onClick={() => removePreviousAddress(index)}
               className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-red-500 text-white hover:bg-red-600'
               }`}
@@ -1167,7 +1168,7 @@ export default function PersonalInfoForm1({
           type='button'
           onClick={addPreviousAddress}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
@@ -1182,12 +1183,12 @@ export default function PersonalInfoForm1({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           LICENSE INFORMATION
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           No person who operates a commercial motor vehicle shall at any time
           have more than one driver's license (49 CFR 383.21). I certify that I
@@ -1202,7 +1203,7 @@ export default function PersonalInfoForm1({
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
-              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               CURRENT LICENSE {index + 1}
             </h3>
@@ -1211,7 +1212,7 @@ export default function PersonalInfoForm1({
                 type='button'
                 onClick={() => removeCurrentLicense(index)}
                 className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
@@ -1325,7 +1326,7 @@ export default function PersonalInfoForm1({
           type='button'
           onClick={addCurrentLicense}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
@@ -1340,7 +1341,7 @@ export default function PersonalInfoForm1({
           <div key={index} className='space-y-4'>
             <div className='flex justify-between items-center'>
               <h3
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 PREVIOUS LICENSE {index + 1}
               </h3>
@@ -1348,7 +1349,7 @@ export default function PersonalInfoForm1({
                 type='button'
                 onClick={() => removePreviousLicense(index)}
                 className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
@@ -1462,7 +1463,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
           type='button'
           onClick={addPreviousLicense}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
@@ -1474,17 +1475,17 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
       {/* Med card — uses DotForm1Data.medicalQualification (same fields as career card preview) */}
       <div
         className={`mt-10 pt-8 border-t space-y-4 ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <div>
           <h3
-            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
+            className={`text-xl font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
           >
             MED CARD (DOT MEDICAL CERTIFICATE)
           </h3>
           <p
-            className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`text-sm mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
           >
             CDL holders operating in interstate commerce must have a valid medical examiner&rsquo;s
             certificate. Answer below; if you have a current med card, enter its expiration date.
@@ -1516,7 +1517,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`accent-teal-600 ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 />
                 <span className={labelClass}>{value.toUpperCase()}</span>
@@ -1559,12 +1560,12 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
 
       <div className='space-y-6 mt-8'>
         <h3
-          className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
+          className={`text-xl font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
         >
           DISQUALIFICATION HISTORY (49 CFR 391.15)
         </h3>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           These questions help us confirm you meet federal disqualification rules. Answer truthfully; if you select "Yes," provide the required details so compliance can review your record.
         </p>
@@ -1596,7 +1597,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
@@ -1660,7 +1661,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
@@ -1724,7 +1725,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
@@ -1788,7 +1789,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
@@ -1829,17 +1830,17 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
   )
 
   const cardClass =
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
       : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
   const sectionClass =
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'rounded-xl border border-gray-700/50 bg-gray-700/30 p-6'
       : 'rounded-xl border border-gray-200 bg-gray-50/80 p-6'
   const labelClass =
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
   const inputBaseClass =
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
       : 'bg-white border-gray-200 text-gray-900 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
 
@@ -1848,33 +1849,33 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
       {/* Header */}
       <div
         className={`text-center py-8 px-6 border-b ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <h1
           className={`text-2xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Driver Employment Application
         </h1>
         <p
           className={`text-base ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           [COMPANY NAME, ADDRESS, PHONE NUMBER, AND EMAIL]
         </p>
         <p
           className={`text-sm mt-1 ${
-            theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
           }`}
         >
           An Equal Opportunity Employer
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
           }`}
         >
           Complete in full or it will not be considered.
@@ -1890,7 +1891,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
             type='button'
             onClick={fillTestData}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
                 : 'bg-yellow-500 text-white hover:bg-yellow-400'
             }`}
@@ -1907,14 +1908,14 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         <div className='flex items-center justify-between mb-4'>
           <div
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'
+              isDarkTheme(theme) ? 'text-white' : 'text-teal-800 dark:text-teal-300'
             }`}
           >
             Step {currentStep} of {STEPS.length}
           </div>
           <div
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-teal-800 dark:text-teal-300/80'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-teal-800 dark:text-teal-300/80'
             }`}
           >
             {Math.round((currentStep / STEPS.length) * 100)}% Complete
@@ -1922,12 +1923,12 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         </div>
         <div
           className={`w-full bg-gray-200 rounded-full h-2 ${
-            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+            isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
           }`}
         >
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-indigo-500'
                 : 'bg-indigo-600'
             }`}
@@ -1942,7 +1943,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
       {/* Navigation */}
       <div
         className={`flex justify-between items-center px-6 py-8 border-t-2 ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <button
@@ -1951,7 +1952,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
           className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
             currentStep === 1
               ? 'opacity-50 cursor-not-allowed'
-              : theme === 'dark'
+              : isDarkTheme(theme)
                 ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
           }`}
@@ -1965,10 +1966,10 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
               key={step.id}
               className={`w-3 h-3 rounded-full ${
                 step.id <= currentStep
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-indigo-500'
                     : 'bg-indigo-600'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-600'
                     : 'bg-gray-300'
               }`}
@@ -1979,7 +1980,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         <button
           onClick={nextStep}
           className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}

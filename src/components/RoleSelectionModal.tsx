@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -44,7 +45,7 @@ export default function RoleSelectionModal({
   existingCompanyName,
 }: RoleSelectionModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   // Map legacy roles to the new two-option model
   const initialRole = existingRole === 'driver' || existingRole === 'developer'

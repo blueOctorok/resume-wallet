@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { CloudLightning } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -80,7 +81,7 @@ export default function StormTokenMark({
   decorative = true,
 }: StormTokenMarkProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const s = SIZE_MAP[size]
   const ring = s.ring
 

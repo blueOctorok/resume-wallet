@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Eye, Trash2, Loader2 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
@@ -78,7 +79,7 @@ export default function MvrTab({
       <div className='overflow-x-auto'>
         <table className='w-full'>
           <thead
-            className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}
+            className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}
           >
             <tr>
               <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
@@ -96,7 +97,7 @@ export default function MvrTab({
               <tr
                 key={mvr.id}
                 className={
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'hover:bg-gray-800/50'
                     : 'hover:bg-gray-50'
                 }
@@ -191,8 +192,8 @@ export default function MvrTab({
                 <div className='p-4 space-y-6'>
                   {/* Order info */}
                   <div>
-                    <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Order</h4>
-                    <div className={`p-4 rounded-lg text-sm grid grid-cols-2 md:grid-cols-3 gap-2 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                    <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'}`}>Order</h4>
+                    <div className={`p-4 rounded-lg text-sm grid grid-cols-2 md:grid-cols-3 gap-2 ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                       <div><span className='opacity-70'>Driver:</span> {String(selectedMvrDetail.order.driverName || selectedMvrDetail.order.walletAddress || '-')}</div>
                       <div><span className='opacity-70'>Wallet:</span> <code className='text-xs'>{String(selectedMvrDetail.order.walletAddress || '-')}</code></div>
                       <div><span className='opacity-70'>Status:</span> {String(selectedMvrDetail.order.status)}</div>
@@ -210,14 +211,14 @@ export default function MvrTab({
 
                   {/* Results */}
                   {selectedMvrDetail.results.length === 0 ? (
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>No results yet.</p>
+                    <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>No results yet.</p>
                   ) : (
                     selectedMvrDetail.results.map((res, idx) => (
                       <div key={idx}>
-                        <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                        <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'}`}>
                           Result {selectedMvrDetail.results.length > 1 ? idx + 1 : ''}
                         </h4>
-                        <div className={`p-4 rounded-lg text-sm space-y-3 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                        <div className={`p-4 rounded-lg text-sm space-y-3 ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                           <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
                             <div><span className='opacity-70'>License status:</span> {String(res.licenseStatus ?? '-')}</div>
                             <div><span className='opacity-70'>Class:</span> {String(res.licenseClass ?? '-')}</div>
@@ -237,7 +238,7 @@ export default function MvrTab({
                           {Array.isArray(res.violations) && (res.violations as unknown[]).length > 0 && (
                             <div>
                               <span className='opacity-70'>Violations detail:</span>
-                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-40 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-40 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                                 {JSON.stringify(res.violations, null, 2)}
                               </pre>
                             </div>
@@ -245,7 +246,7 @@ export default function MvrTab({
                           {Array.isArray(res.accidents) && (res.accidents as unknown[]).length > 0 && (
                             <div>
                               <span className='opacity-70'>Accidents:</span>
-                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                                 {JSON.stringify(res.accidents, null, 2)}
                               </pre>
                             </div>
@@ -253,7 +254,7 @@ export default function MvrTab({
                           {Array.isArray(res.suspensions) && (res.suspensions as unknown[]).length > 0 && (
                             <div>
                               <span className='opacity-70'>Suspensions:</span>
-                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                                 {JSON.stringify(res.suspensions, null, 2)}
                               </pre>
                             </div>
@@ -261,7 +262,7 @@ export default function MvrTab({
                           {res.parsedData && (
                             <div>
                               <span className='opacity-70'>Parsed data (full):</span>
-                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-48 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                              <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-48 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                                 {JSON.stringify(res.parsedData, null, 2)}
                               </pre>
                             </div>
@@ -274,12 +275,12 @@ export default function MvrTab({
                   {/* Raw XML (collapsible) */}
                   {(selectedMvrDetail.order.orderXml || selectedMvrDetail.order.resultXml) && (
                     <div>
-                      <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Raw XML</h4>
+                      <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'}`}>Raw XML</h4>
                       <div className='flex gap-2 mb-2'>
                         {selectedMvrDetail.order.orderXml && (
                           <button
                             onClick={() => setMvrDetailShowXml(mvrDetailShowXml === 'order' ? 'none' : 'order')}
-                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'order' ? 'bg-teal-600 text-white' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
+                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'order' ? 'bg-teal-600 text-white' : isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'}`}
                           >
                             Order XML
                           </button>
@@ -287,19 +288,19 @@ export default function MvrTab({
                         {selectedMvrDetail.order.resultXml && (
                           <button
                             onClick={() => setMvrDetailShowXml(mvrDetailShowXml === 'result' ? 'none' : 'result')}
-                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'result' ? 'bg-teal-600 text-white' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
+                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'result' ? 'bg-teal-600 text-white' : isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'}`}
                           >
                             Result XML
                           </button>
                         )}
                       </div>
                       {mvrDetailShowXml === 'order' && selectedMvrDetail.order.orderXml && (
-                        <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                        <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-100'}`}>
                           {String(selectedMvrDetail.order.orderXml)}
                         </pre>
                       )}
                       {mvrDetailShowXml === 'result' && selectedMvrDetail.order.resultXml && (
-                        <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                        <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-100'}`}>
                           {String(selectedMvrDetail.order.resultXml)}
                         </pre>
                       )}

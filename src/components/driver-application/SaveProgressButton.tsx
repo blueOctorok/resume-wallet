@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -137,16 +138,16 @@ export default function SaveProgressButton({
     
     let colorStyles = ''
     if (saveState === 'saved') {
-      colorStyles = theme === 'dark'
+      colorStyles = isDarkTheme(theme)
         ? 'bg-green-600 text-white hover:bg-green-700'
         : 'bg-green-500 text-white hover:bg-green-600'
     } else if (saveState === 'error') {
-      colorStyles = theme === 'dark'
+      colorStyles = isDarkTheme(theme)
         ? 'bg-red-600 text-white hover:bg-red-700'
         : 'bg-red-500 text-white hover:bg-red-600'
     } else {
       // Teal colors for both themes
-      colorStyles = theme === 'dark'
+      colorStyles = isDarkTheme(theme)
         ? 'bg-teal-500 text-gray-900 hover:bg-teal-400 shadow-md hover:shadow-lg'
         : 'bg-teal-600 text-white hover:bg-teal-700 shadow-md hover:shadow-lg'
     }
@@ -168,7 +169,7 @@ export default function SaveProgressButton({
       </button>
       
       {lastSaved && saveState === 'idle' && (
-        <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+        <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
           Last saved: {lastSaved.toLocaleTimeString()}
         </span>
       )}

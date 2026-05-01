@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -152,7 +153,7 @@ export default function GeneralResumeBuilder({
   hideHubBackButton = false,
 }: GeneralResumeBuilderProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const [currentStep, setCurrentStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)

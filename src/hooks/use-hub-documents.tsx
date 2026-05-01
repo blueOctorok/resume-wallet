@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Hub document fetch + verify/delete + preview modals (extracted from CandidateHub My Files).
  * Used by Construct mode inline block actions on the career card.
@@ -40,7 +41,7 @@ export function useHubDocuments(refreshKey: number): {
   myFilesResumeCanView: (doc: HubDocument) => boolean
 } {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)

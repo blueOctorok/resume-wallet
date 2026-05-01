@@ -1,3 +1,4 @@
+import { isDarkTheme } from '@/lib/theme-storage'
 import Link from 'next/link'
 import Card from '@/components/ui/Card'
 import type { ProjectedCareerCard } from '@/types/career-card'
@@ -26,7 +27,7 @@ export default function CareerCardEmbed({
   return (
     <div
       className={
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'min-h-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950 p-3 sm:p-4'
           : 'min-h-0 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 sm:p-4'
       }

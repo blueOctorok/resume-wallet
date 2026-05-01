@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Briefcase, Trash2 } from 'lucide-react'
 import type { AdminTabProps, AdminJob } from '@/components/admin/admin-types'
@@ -66,7 +67,7 @@ export default function JobsTab({
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               jobsFilter === status
                 ? 'bg-indigo-500 text-white'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                 ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -88,7 +89,7 @@ export default function JobsTab({
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               sourceFilter === src
                 ? 'bg-teal-500 text-white'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                 ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -104,7 +105,7 @@ export default function JobsTab({
           <div
             key={job.id}
             className={`p-4 rounded-xl border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 border-gray-700'
                 : 'bg-white border-gray-200'
             }`}
@@ -113,12 +114,12 @@ export default function JobsTab({
             <div className='flex items-start justify-between mb-3'>
               <div className='flex-1 min-w-0'>
                 <h3 className={`font-semibold truncate ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}>
                   {job.title}
                 </h3>
                 <p className={`text-sm truncate ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}>
                   {job.companyName}
                 </p>
@@ -144,19 +145,19 @@ export default function JobsTab({
             {/* Details */}
             <div className='space-y-1 text-sm mb-3'>
               {job.locationCity && job.locationState && (
-                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
                   📍 {job.locationCity}, {job.locationState}
                 </p>
               )}
               {job.targetRole && (
-                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
                   👤 {job.targetRole}
                 </p>
               )}
-              <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+              <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
                 📝 {job.applicationCount} application{job.applicationCount !== 1 ? 's' : ''}
               </p>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                 Created {new Date(job.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -210,9 +211,9 @@ export default function JobsTab({
       {jobs.length === 0 && (
         <div className='text-center py-12'>
           <Briefcase className={`w-12 h-12 mx-auto mb-4 ${
-            theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+            isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'
           }`} />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             No job postings found
           </p>
         </div>

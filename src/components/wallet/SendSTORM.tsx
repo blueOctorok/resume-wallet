@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import {
   useSignerStatus,
@@ -39,13 +40,13 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
 
   // Card styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'
   }`
 
   const inputClass = `w-full px-4 py-3 rounded-xl border text-sm transition-colors ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-yellow-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500'
   } focus:outline-none focus:ring-2 focus:ring-yellow-500/20`
@@ -214,7 +215,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       <div className={`${cardClass} p-4`}>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           Please connect your wallet to send STORM
@@ -228,7 +229,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       {/* Network context badge */}
       <div
         className={`flex items-center justify-between p-3 rounded-xl ${
-          theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
+          isDarkTheme(theme) ? 'bg-yellow-500/10' : 'bg-yellow-50'
         }`}
       >
         <div className='flex items-center gap-2'>
@@ -236,14 +237,14 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
               }`}
             >
               STORM on Base Sepolia
             </p>
             <p
               className={`text-xs ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
               }`}
             >
               Storm test tokens
@@ -252,7 +253,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
         </div>
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-yellow-500/20 text-yellow-300'
               : 'bg-yellow-100 text-yellow-600'
           }`}
@@ -265,7 +266,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Recipient Address
@@ -286,7 +287,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       <div>
         <label
           className={`block text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Amount (STORM)
@@ -309,19 +310,19 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       {error && (
         <div
           className={`flex items-start gap-2 p-3 rounded-xl ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-red-500/10 border border-red-500/20'
               : 'bg-red-50 border border-red-200'
           }`}
         >
           <AlertCircle
             className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-              theme === 'dark' ? 'text-red-400' : 'text-red-500'
+              isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
             }`}
           />
           <p
             className={`text-sm ${
-              theme === 'dark' ? 'text-red-300' : 'text-red-700'
+              isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'
             }`}
           >
             {error}
@@ -333,7 +334,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
       {success && (
         <div
           className={`p-3 rounded-xl ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-green-500/10 border border-green-500/20'
               : 'bg-green-50 border border-green-200'
           }`}
@@ -341,12 +342,12 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
           <div className='flex items-center gap-2 mb-2'>
             <CheckCircle
               className={`w-4 h-4 ${
-                theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
               }`}
             />
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
               }`}
             >
               STORM sent successfully!
@@ -358,7 +359,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
               target='_blank'
               rel='noopener noreferrer'
               className={`inline-flex items-center gap-1 text-xs ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'text-green-400 hover:text-green-300'
                   : 'text-green-600 hover:text-green-700'
               }`}
@@ -376,10 +377,10 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
         disabled={isLoading || isPending || !recipient || !amount}
         className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
           isLoading || isPending || !recipient || !amount
-            ? theme === 'dark'
+            ? isDarkTheme(theme)
               ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            : theme === 'dark'
+            : isDarkTheme(theme)
               ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
               : 'bg-yellow-500 hover:bg-yellow-600 text-white'
         }`}
@@ -396,7 +397,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
 
       <p
         className={`text-xs text-center ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
         }`}
       >
         Gas fees are sponsored

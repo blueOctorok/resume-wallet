@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
@@ -62,7 +63,7 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
   const [submittedForReview, setSubmittedForReview] = useState(false)
   const [reviewMessage, setReviewMessage] = useState<string | null>(null)
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   function handleChange(field: keyof FormData, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))

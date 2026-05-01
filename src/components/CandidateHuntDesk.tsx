@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Hunt Desk — full-page shortlist workspace (app-within-app feel).
  * Three draggable lanes (not employer kanban semantics): radar → motion → ready to apply.
@@ -81,7 +82,7 @@ interface CandidateHuntDeskProps {
 
 export default function CandidateHuntDesk({ onBack, userAddress }: CandidateHuntDeskProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
   const jobs = useSavedJobsStore((s) => s.jobs)

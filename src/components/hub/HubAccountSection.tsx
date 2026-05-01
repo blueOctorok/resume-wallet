@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,7 +22,7 @@ export interface HubAccountSectionProps {
  */
 export default function HubAccountSection({ walletAddress, onReadWhitepaper }: HubAccountSectionProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const [open, setOpen] = useState(false)
 
   return (

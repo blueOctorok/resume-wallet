@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import {
   Briefcase,
@@ -20,6 +21,10 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
 
 // ----------------------------------------------------------------
 // Types
@@ -177,7 +182,7 @@ function KanbanColumn({
   togglingId: string | null
   deletingId: string | null
 }) {
-  const dark = theme === 'dark'
+  const dark = isDarkTheme(theme)
   return (
     <div className="flex-1 min-w-0">
       {/* Column header */}
@@ -242,7 +247,7 @@ function JobCard({
   isToggling: boolean
   isDeleting: boolean
 }) {
-  const dark = theme === 'dark'
+  const dark = isDarkTheme(theme)
   const salary = formatSalary(job.salaryMin, job.salaryMax)
 
   return (
@@ -379,7 +384,7 @@ function EditJobModal({
   onClose: () => void
   onSaved: () => void
 }) {
-  const dark = theme === 'dark'
+  const dark = isDarkTheme(theme)
   const [form, setForm] = useState<EditForm>(() => jobToEditForm(job))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -577,7 +582,7 @@ export default function JobPostingsSection({
   isCollapsed = false,
   onToggle,
 }: JobPostingsSectionProps) {
-  const dark = theme === 'dark'
+  const dark = isDarkTheme(theme)
 
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
@@ -622,37 +627,36 @@ export default function JobPostingsSection({
   }
 
   return (
-    <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
-      dark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
-    }`}>
-      {/* Section header */}
-      <div className={`flex items-center justify-between ${isCollapsed ? '' : 'mb-5'}`}>
-        <button
-          onClick={onToggle}
-          className="flex items-center gap-2 min-w-0 text-left group"
-        >
-          <Briefcase className={`w-5 h-5 flex-shrink-0 ${dark ? 'text-teal-400' : 'text-teal-600'}`} />
-          <h2 className={`text-lg font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>
-            Job Postings
-          </h2>
-          <span className={`text-sm ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {jobs.length} total
-          </span>
-          <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-            dark ? 'text-gray-500' : 'text-gray-400'
-          } ${isCollapsed ? '-rotate-90' : ''}`} />
-        </button>
-        {!isCollapsed && (
-          <button
-            onClick={onPostJob}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-500 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Post New Job
-          </button>
-        )}
-      </div>
-
+    <>
+    <HubSectionPanel isDark={dark} accent="teal" className="mb-8">
+      <BlockCard
+        variant="embed"
+        icon={Briefcase}
+        title="Job postings"
+        description={`${jobs.length} total — active and closed listings.`}
+        headerActions={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {!isCollapsed && (
+              <Button type="button" variant="primary" size="sm" onClick={onPostJob}>
+                <Plus className="h-4 w-4" />
+                Post new job
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? 'Expand job postings' : 'Collapse job postings'}
+            >
+              <ChevronDown
+                className={cn('h-4 w-4 transition-transform duration-200', isCollapsed && '-rotate-90')}
+              />
+            </Button>
+          </div>
+        }
+      >
       {/* Kanban columns — hidden when collapsed */}
       {!isCollapsed && (
         jobs.length === 0 ? (
@@ -664,13 +668,10 @@ export default function JobPostingsSection({
             <p className={`text-sm mb-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`}>
               Create your first posting to start attracting candidates
             </p>
-            <button
-              onClick={onPostJob}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-500 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Post a Job
-            </button>
+            <Button type="button" variant="primary" size="md" onClick={onPostJob}>
+              <Plus className="h-4 w-4" />
+              Post a job
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -699,6 +700,8 @@ export default function JobPostingsSection({
           </div>
         )
       )}
+      </BlockCard>
+    </HubSectionPanel>
 
       {/* Edit modal */}
       {editingJob && (
@@ -740,6 +743,6 @@ export default function JobPostingsSection({
           </div>
         </Modal>
       )}
-    </div>
+    </>
   )
 }

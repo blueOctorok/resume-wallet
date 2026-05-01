@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleModeShell — the job-first split view.
  *
@@ -31,7 +32,7 @@ const GRADUATE_BLOCK_THRESHOLD = 3
 
 export default function SimpleModeShell() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const installedCount = useInstalledBlocks().length
   const hasDismissedGraduate = usePreferencesStore((s) => s.hasCompletedJourneyStep(GRADUATE_BANNER_STEP))

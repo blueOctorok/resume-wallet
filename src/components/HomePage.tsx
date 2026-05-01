@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -356,7 +357,7 @@ function PhoneFrame({ children, isDark }: { children: React.ReactNode; isDark: b
 
 export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }: HomePageProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const [showWhitepaper, setShowWhitepaper] = useState(false)
   const revealRef = useScrollReveal(showWhitepaper)
 

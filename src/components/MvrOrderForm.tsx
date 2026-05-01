@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -141,23 +142,23 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
   // Consistent styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'
   }`
 
   const inputClass = `w-full px-4 py-3 rounded-xl border text-sm transition-colors ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-indigo-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
   } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`
 
   const labelClass = `block text-xs font-medium mb-1.5 ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
   }`
 
   const sectionHeaderClass = `flex items-center gap-2 text-sm font-semibold mb-4 ${
-    theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+    isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
   }`
 
   return (
@@ -171,28 +172,28 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           <div className='flex items-center gap-3'>
             <div
               className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-indigo-500/20 border border-indigo-500/30'
                   : 'bg-indigo-50 border border-indigo-200'
               }`}
             >
               <FileText
                 className={`w-6 h-6 ${
-                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                 }`}
               />
             </div>
             <div>
               <h1
                 className={`text-xl font-semibold ${
-                  theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'
                 }`}
               >
                 Order MVR
               </h1>
               <p
                 className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
                 Motor Vehicle Record via Accio
@@ -206,25 +207,25 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           <div className={`${cardClass} p-8 text-center`}>
             <div
               className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                theme === 'dark' ? 'bg-green-500/20' : 'bg-green-50'
+                isDarkTheme(theme) ? 'bg-green-500/20' : 'bg-green-50'
               }`}
             >
               <CheckCircle
                 className={`w-8 h-8 ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                  isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
                 }`}
               />
             </div>
             <h3
               className={`text-xl font-semibold mb-2 ${
-                theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'
               }`}
             >
               MVR Order Placed!
             </h3>
             <p
               className={`text-sm mb-6 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
               }`}
             >
               Order Number:{' '}
@@ -235,7 +236,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             <button
               onClick={onBack}
               className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               }`}
@@ -253,14 +254,14 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               <div className={sectionHeaderClass}>
                 <User
                   className={`w-4 h-4 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 />
                 Personal Information
               </div>
               <p
                 className={`text-xs mb-4 ${
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                 }`}
               >
                 Enter your name exactly as it appears on your driver&apos;s
@@ -346,7 +347,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               <div className={sectionHeaderClass}>
                 <CreditCard
                   className={`w-4 h-4 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 />
                 Driver License
@@ -383,7 +384,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               <div className={sectionHeaderClass}>
                 <MapPin
                   className={`w-4 h-4 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 />
                 Address
@@ -443,21 +444,21 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             {/* Vendor / CRA disclosure — self-order; express consent required before pay */}
             <div
               className={`rounded-2xl border p-5 ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800/40 border-gray-600'
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
               <p
                 className={`text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                  isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
                 }`}
               >
                 Your MVR and consumer reporting
               </p>
               <p
                 className={`text-xs leading-relaxed mb-3 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 {
@@ -466,7 +467,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </p>
               <p
                 className={`text-xs leading-relaxed mb-4 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 Learn more:{' '}
@@ -475,7 +476,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                   target='_blank'
                   rel='noopener noreferrer'
                   className={`font-medium underline underline-offset-2 ${
-                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                    isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
                   }`}
                 >
                   keybackground.com
@@ -483,7 +484,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </p>
               <label
                 className={`flex items-start gap-3 cursor-pointer text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 <input
@@ -505,7 +506,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               <div className={sectionHeaderClass}>
                 <CreditCard
                   className={`w-4 h-4 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 />
                 Payment
@@ -515,7 +516,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                 <div className='space-y-3'>
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                     }`}
                   >
                     {!isFormValid
@@ -534,27 +535,27 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               ) : (
                 <div
                   className={`flex items-center gap-3 p-3 rounded-xl ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-green-500/10 border border-green-500/20'
                       : 'bg-green-50 border border-green-200'
                   }`}
                 >
                   <CheckCircle
                     className={`w-5 h-5 ${
-                      theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                      isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
                     }`}
                   />
                   <div>
                     <p
                       className={`text-sm font-medium ${
-                        theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                        isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
                       }`}
                     >
                       Payment confirmed
                     </p>
                     <p
                       className={`text-xs font-mono ${
-                        theme === 'dark' ? 'text-green-400/70' : 'text-green-600'
+                        isDarkTheme(theme) ? 'text-green-400/70' : 'text-green-600'
                       }`}
                     >
                       {paymentTxHash?.slice(0, 20)}...
@@ -568,19 +569,19 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             {error && (
               <div
                 className={`flex items-start gap-2 p-4 rounded-xl ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-red-500/10 border border-red-500/20'
                     : 'bg-red-50 border border-red-200'
                 }`}
               >
                 <AlertCircle
                   className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                    theme === 'dark' ? 'text-red-400' : 'text-red-500'
+                    isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
                   }`}
                 />
                 <p
                   className={`text-sm ${
-                    theme === 'dark' ? 'text-red-300' : 'text-red-700'
+                    isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'
                   }`}
                 >
                   {error}
@@ -594,10 +595,10 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               disabled={isLoading || !isPaymentComplete || !vendorProcessingAck}
               className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
                 isLoading || !isPaymentComplete || !vendorProcessingAck
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
                     : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               }`}

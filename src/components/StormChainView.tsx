@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -27,7 +28,7 @@ interface StormChainViewProps {
 
 export default function StormChainView({ onBack, backLabel }: StormChainViewProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   return (
     <div className='max-w-4xl mx-auto'>

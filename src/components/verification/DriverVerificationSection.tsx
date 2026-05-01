@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -98,13 +99,13 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
   if (loading) {
     return (
       <div className={`rounded-2xl p-6 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-800/50 border border-gray-700'
           : 'bg-white border border-gray-200 shadow-lg'
       }`}>
         <div className="flex items-center justify-center py-8">
           <Loader2 className={`w-6 h-6 animate-spin ${
-            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+            isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
           }`} />
         </div>
       </div>
@@ -114,13 +115,13 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
   if (error) {
     return (
       <div className={`rounded-2xl p-6 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-red-900/20 border border-red-500/30'
           : 'bg-red-50 border border-red-200'
       }`}>
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500" />
-          <span className={theme === 'dark' ? 'text-red-400' : 'text-red-600'}>
+          <span className={isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}>
             {error}
           </span>
         </div>
@@ -136,27 +137,27 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
   return (
     <>
       <div className={`rounded-2xl p-6 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-800/50 border border-gray-700'
           : 'bg-white border border-gray-200 shadow-lg'
       }`}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className={`p-2 rounded-lg ${
-            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+            isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
           }`}>
             <ClipboardCheck className={`w-5 h-5 ${
-              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+              isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
             }`} />
           </div>
           <div>
             <h3 className={`font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}>
               Employment Verification Status
             </h3>
             <p className={`text-sm ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Status of employer verifications on your history
             </p>
@@ -195,7 +196,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
         {summary.activeVerifications.length > 0 && (
           <div className="mb-4">
             <h4 className={`text-sm font-medium mb-3 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}>
               Active Verifications
             </h4>
@@ -204,7 +205,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                 <div
                   key={i}
                   className={`flex items-center justify-between p-3 rounded-xl ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800/50 hover:bg-gray-800'
                       : 'bg-gray-50 hover:bg-gray-100'
                   } cursor-pointer transition-colors`}
@@ -215,16 +216,16 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                 >
                   <div className="flex items-center gap-3">
                     <Building2 className={`w-4 h-4 ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                     }`} />
                     <div>
                       <p className={`font-medium ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                       }`}>
                         {v.employerName}
                       </p>
                       <p className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                       }`}>
                         Being verified by {v.requestingCompanyName}
                       </p>
@@ -238,7 +239,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                       theme={theme}
                     />
                     <ChevronRight className={`w-4 h-4 ${
-                      theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                     }`} />
                   </div>
                 </div>
@@ -251,7 +252,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
         {requests.filter(r => ['VERIFIED', 'PARTIALLY_VERIFIED', 'VERIFICATION_DENIED', 'ATTEMPTS_EXHAUSTED'].includes(r.status)).length > 0 && (
           <div>
             <h4 className={`text-sm font-medium mb-3 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}>
               Recent Results
             </h4>
@@ -263,7 +264,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                   <div
                     key={req.id}
                     className={`flex items-center justify-between p-3 rounded-xl ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-800/50 hover:bg-gray-800'
                         : 'bg-gray-50 hover:bg-gray-100'
                     } cursor-pointer transition-colors`}
@@ -271,16 +272,16 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                   >
                     <div className="flex items-center gap-3">
                       <Building2 className={`w-4 h-4 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                       }`} />
                       <div>
                         <p className={`font-medium ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                         }`}>
                           {req.previousEmployerName}
                         </p>
                         <p className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                           Verified by {req.requestingCompanyName}
                         </p>
@@ -293,7 +294,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
                         theme={theme}
                       />
                       <ChevronRight className={`w-4 h-4 ${
-                        theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                        isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                       }`} />
                     </div>
                   </div>
@@ -304,7 +305,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
 
         {/* Help text */}
         <p className={`mt-4 text-xs ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
         }`}>
           When companies are interested in hiring you, they may verify your employment history with previous employers.
         </p>
@@ -341,24 +342,24 @@ function StatBox({
 }) {
   const colorClasses = {
     gray: {
-      bg: theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50',
-      text: theme === 'dark' ? 'text-gray-400' : 'text-gray-600',
-      value: theme === 'dark' ? 'text-gray-200' : 'text-gray-800',
+      bg: isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50',
+      text: isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600',
+      value: isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800',
     },
     yellow: {
-      bg: theme === 'dark' ? 'bg-yellow-900/20' : 'bg-yellow-50',
-      text: theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700',
-      value: theme === 'dark' ? 'text-yellow-300' : 'text-yellow-800',
+      bg: isDarkTheme(theme) ? 'bg-yellow-900/20' : 'bg-yellow-50',
+      text: isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-700',
+      value: isDarkTheme(theme) ? 'text-yellow-300' : 'text-yellow-800',
     },
     green: {
-      bg: theme === 'dark' ? 'bg-green-900/20' : 'bg-green-50',
-      text: theme === 'dark' ? 'text-green-400' : 'text-green-700',
-      value: theme === 'dark' ? 'text-green-300' : 'text-green-800',
+      bg: isDarkTheme(theme) ? 'bg-green-900/20' : 'bg-green-50',
+      text: isDarkTheme(theme) ? 'text-green-400' : 'text-green-700',
+      value: isDarkTheme(theme) ? 'text-green-300' : 'text-green-800',
     },
     orange: {
-      bg: theme === 'dark' ? 'bg-orange-900/20' : 'bg-orange-50',
-      text: theme === 'dark' ? 'text-orange-400' : 'text-orange-700',
-      value: theme === 'dark' ? 'text-orange-300' : 'text-orange-800',
+      bg: isDarkTheme(theme) ? 'bg-orange-900/20' : 'bg-orange-50',
+      text: isDarkTheme(theme) ? 'text-orange-400' : 'text-orange-700',
+      value: isDarkTheme(theme) ? 'text-orange-300' : 'text-orange-800',
     },
   }
 
@@ -413,27 +414,27 @@ function VerificationDetailModal({
           {/* Employment Details */}
           <div>
             <h4 className={`text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Employment Being Verified
             </h4>
             <div className={`rounded-xl p-4 ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
             }`}>
               <p className={`font-medium ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}>
                 {request.previousEmployerName}
               </p>
               <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 {request.claimedPosition}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <span className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                 }`}>
                   {formatDate(request.claimedStartDate)} - {formatDate(request.claimedEndDate)}
                 </span>
@@ -444,11 +445,11 @@ function VerificationDetailModal({
           {/* Requesting Company */}
           <div>
             <h4 className={`text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}>
               Verification Requested By
             </h4>
-            <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
+            <p className={isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}>
               {request.requestingCompanyName || 'Unknown Company'}
             </p>
           </div>
@@ -457,7 +458,7 @@ function VerificationDetailModal({
           {request.answers && (
             <div>
               <h4 className={`text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 Verification Results
               </h4>
@@ -500,7 +501,7 @@ function VerificationDetailModal({
           {attempts.length > 0 && (
             <div>
               <h4 className={`text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 Contact Attempts ({attempts.length}/3)
               </h4>
@@ -509,22 +510,22 @@ function VerificationDetailModal({
                   <div
                     key={attempt.id}
                     className={`flex items-center justify-between p-3 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+                      isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
                     }`}
                   >
                     <div>
-                      <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
+                      <span className={isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}>
                         Attempt {attempt.attemptNumber}
                       </span>
                       <span className={`ml-2 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                       }`}>
                         via {attempt.method}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                        isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                       }`}>
                         {formatDate(attempt.sentAt)}
                       </span>
@@ -540,7 +541,7 @@ function VerificationDetailModal({
 
           {/* Dates */}
           <div className={`text-xs ${
-            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
           }`}>
             <p>Requested: {formatDate(request.createdAt)}</p>
             {request.verifiedAt && <p>Verified: {formatDate(request.verifiedAt)}</p>}
@@ -566,7 +567,7 @@ function AnswerRow({
   const isNegative = value === 'no'
   const isNA = value === 'na' || value === 'discuss'
 
-  let textColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+  let textColor = isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
   if (label.toLowerCase().includes('terminated') || label.toLowerCase().includes('failed') || label.toLowerCase().includes('refused')) {
     // For these, "no" is good, "yes" is bad
     if (value === 'no') textColor = 'text-green-500'
@@ -580,7 +581,7 @@ function AnswerRow({
 
   return (
     <div className={`flex items-center justify-between py-1 ${
-      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
     }`}>
       <span className="text-sm">{label}</span>
       <span className={`text-sm font-medium capitalize ${textColor}`}>

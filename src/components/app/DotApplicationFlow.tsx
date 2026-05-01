@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -663,24 +664,24 @@ export default function DotApplicationFlow({
   const renderSubmissionLoading = () => (
     <div
       className={`max-w-4xl mx-auto p-6 ${
-        theme === 'dark' ? 'bg-gray-800/50 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl'
+        isDarkTheme(theme) ? 'bg-gray-800/50 backdrop-blur-xl' : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-indigo-500' : 'border-indigo-600'
+        isDarkTheme(theme) ? 'border-indigo-500' : 'border-indigo-600'
       }`}
     >
       <div className='text-center py-12'>
         <div className='flex justify-center mb-4'>
           <div className='animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500' />
         </div>
-        <h1 className={`text-3xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+        <h1 className={`text-3xl font-bold mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
           Saving Application...
         </h1>
-        <p className={`text-lg mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+        <p className={`text-lg mb-6 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
           Your driver application is being saved to your profile. This will only take a moment.
         </p>
         <div
           className={`inline-block px-6 py-2 rounded-full text-sm font-medium ${
-            theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
+            isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
           }`}
         >
           Please wait...
@@ -706,7 +707,7 @@ export default function DotApplicationFlow({
               className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
                 dotApp.currentForm === step.id
                   ? 'bg-teal-600 text-white shadow-lg'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
               }`}
@@ -834,7 +835,7 @@ export default function DotApplicationFlow({
       {dotApp.submissionError && (
         <div
           className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-red-900/20 border-red-500/50 text-red-300'
               : 'bg-red-50 border-red-200 text-red-800'
           }`}
@@ -860,7 +861,7 @@ export default function DotApplicationFlow({
                 dotApp.setCurrentForm(1)
               }}
               className={`text-sm underline transition-colors ${
-                theme === 'dark' ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'
+                isDarkTheme(theme) ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'
               }`}
             >
               Skip AI prefill and fill manually
@@ -875,7 +876,7 @@ export default function DotApplicationFlow({
           {dotApp.hasPrefilled && !dotApp.isApplicationCompleted && (
             <div
               className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-green-900/20 border-green-500/50 text-green-300'
                   : 'bg-green-50 border-green-200 text-green-800'
               }`}
@@ -884,7 +885,7 @@ export default function DotApplicationFlow({
               <button
                 onClick={() => dotApp.setShowPrefillUpload(true)}
                 className={`text-xs underline ml-4 ${
-                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                  isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
                 }`}
               >
                 Upload different resume

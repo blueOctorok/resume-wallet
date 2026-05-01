@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { CheckCircle, Trash2 } from 'lucide-react'
 import type { AdminTabProps, Resume } from '@/components/admin/admin-types'
@@ -57,7 +58,7 @@ export default function ResumesTab({
     <div className='overflow-x-auto'>
       <table className='w-full'>
         <thead
-          className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}
+          className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}
         >
           <tr>
             <th className={`${tableHeaderClass} px-4 py-3`}>Owner</th>
@@ -73,7 +74,7 @@ export default function ResumesTab({
             <tr
               key={resume.id}
               className={
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'hover:bg-gray-800/50'
                   : 'hover:bg-gray-50'
               }

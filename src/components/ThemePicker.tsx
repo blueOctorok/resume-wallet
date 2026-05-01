@@ -1,38 +1,34 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Briefcase, Check, ChevronDown, FileText, Moon, Sun } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Check, ChevronDown, Contrast, FileText, Orbit, Sun } from 'lucide-react'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass, navDropdownItemBorderClass, navDropdownItemClass } from '@/lib/navigation-styles'
 
-const OPTIONS: { id: Theme; label: string; description: string; Icon: typeof Sun }[] = [
+const OPTIONS: { id: Theme; label: string; description: string; Icon: LucideIcon }[] = [
   { id: 'light', label: 'Icy light', description: 'Cool slate vault (default)', Icon: Sun },
-  { id: 'sepia', label: 'Sepia', description: 'Kindle-style warm cream — soft & easy on the eyes', Icon: BookOpen },
   { id: 'paper', label: 'Paper', description: 'Newsprint grey — calm, low contrast, print-like', Icon: FileText },
-  {
-    id: 'business',
-    label: 'Business classic',
-    description: 'Clean white, professional blue accent, flat corporate chrome',
-    Icon: Briefcase,
-  },
-  { id: 'dark', label: 'Dark', description: 'Storm void', Icon: Moon },
+  { id: 'dark', label: 'Galactic void', description: 'Teal & violet storm — colorful dark', Icon: Orbit },
+  { id: 'ink', label: 'Quiet ink', description: 'Monochrome night — soft greys, minimal color', Icon: Contrast },
 ]
 
 function activeThemeIcon(theme: Theme) {
-  if (theme === 'dark') return Moon
-  if (theme === 'sepia') return BookOpen
+  if (theme === 'ink') return Contrast
+  if (theme === 'dark') return Orbit
   if (theme === 'paper') return FileText
-  if (theme === 'business') return Briefcase
   return Sun
 }
 
-/** Selected-row icon/check: teal default light, blue for business, zinc for monochrome paper. */
-function rowAccent(isDark: boolean, selected: boolean, appTheme: Theme) {
-  if (!selected) return isDark ? 'text-gray-400' : 'text-stone-500'
-  if (isDark) return 'text-teal-400'
-  if (appTheme === 'business') return 'text-blue-700'
-  if (appTheme === 'paper') return 'text-zinc-700'
+/** Selected-row icon/check: teal for icy / galactic; zinc for paper / quiet ink. */
+function rowAccent(isDarkPicker: boolean, selected: boolean, appTheme: Theme) {
+  if (!selected) return isDarkPicker ? 'text-gray-400' : 'text-stone-500'
+  if (appTheme === 'paper' || appTheme === 'ink') {
+    return isDarkPicker ? 'text-zinc-300' : 'text-zinc-700'
+  }
+  if (isDarkPicker) return 'text-teal-400'
   return 'text-teal-600'
 }
 
@@ -40,7 +36,7 @@ export default function ThemePicker() {
   const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const ActiveIcon = activeThemeIcon(theme)
 
   useEffect(() => {

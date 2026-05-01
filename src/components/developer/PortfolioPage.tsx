@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ProjectDetailModal from './ProjectDetailModal'
@@ -420,7 +421,7 @@ export default function PortfolioPage({
     return (
       <div className='flex items-center justify-center min-h-[60vh]'>
         <Loader2
-          className={`w-12 h-12 animate-spin ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
+          className={`w-12 h-12 animate-spin ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
         />
       </div>
     )
@@ -434,12 +435,12 @@ export default function PortfolioPage({
         <div className='flex items-center justify-between'>
           <div>
             <h1
-              className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               Portfolio
             </h1>
             <p
-              className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+              className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
             >
               Showcase your projects to employers
             </p>
@@ -461,8 +462,8 @@ export default function PortfolioPage({
       )}
 
       {/* Portfolio URL: single link used for live preview on this page and on the career card */}
-      <div className={`mb-6 rounded-2xl border p-4 space-y-4 ${theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-        <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+      <div className={`mb-6 rounded-2xl border p-4 space-y-4 ${isDarkTheme(theme) ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+        <label className={`block text-sm font-medium ${isDarkTheme(theme) ? 'text-zinc-300' : 'text-zinc-700'}`}>
           Your portfolio URL
         </label>
         <div className='flex gap-2'>
@@ -472,7 +473,7 @@ export default function PortfolioPage({
             onChange={(e) => setPortfolioUrl(e.target.value)}
             placeholder='https://your-portfolio.com'
             className={`flex-1 rounded-lg border px-3 py-2 text-sm placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-zinc-600 bg-zinc-800 text-zinc-100'
                 : 'border-zinc-300 bg-white text-zinc-900'
             }`}
@@ -488,7 +489,7 @@ export default function PortfolioPage({
         </div>
         {portfolioUrl.trim() && isSafePreviewUrl(portfolioUrl) && (
           <div className='rounded-lg border overflow-hidden bg-white'>
-            <p className={`text-xs px-2 py-1 border-b ${theme === 'dark' ? 'text-zinc-400 border-zinc-700' : 'text-zinc-500 border-zinc-200'}`}>
+            <p className={`text-xs px-2 py-1 border-b ${isDarkTheme(theme) ? 'text-zinc-400 border-zinc-700' : 'text-zinc-500 border-zinc-200'}`}>
               Live preview
             </p>
             <iframe
@@ -513,7 +514,7 @@ export default function PortfolioPage({
               {/* Title */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   Project Title *
                 </label>
@@ -526,7 +527,7 @@ export default function PortfolioPage({
                   placeholder='My Awesome Project'
                   required
                   className={`w-full px-3 py-2 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                   }`}
@@ -536,7 +537,7 @@ export default function PortfolioPage({
               {/* Description */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   Short Description
                 </label>
@@ -551,7 +552,7 @@ export default function PortfolioPage({
                   placeholder='A brief 1-2 sentence summary'
                   rows={2}
                   className={`w-full px-3 py-2 rounded-lg border resize-none ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                   }`}
@@ -561,7 +562,7 @@ export default function PortfolioPage({
               {/* Tech Stack */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   Tech Stack
                 </label>
@@ -582,7 +583,7 @@ export default function PortfolioPage({
                     }}
                     placeholder='Type to add (e.g., React, Node.js)'
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                     }`}
@@ -591,7 +592,7 @@ export default function PortfolioPage({
                     filteredTechSuggestions.length > 0 && (
                       <div
                         className={`absolute z-10 w-full mt-1 rounded-lg border shadow-lg max-h-48 overflow-y-auto ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700 border-gray-600'
                             : 'bg-white border-gray-200'
                         }`}
@@ -602,7 +603,7 @@ export default function PortfolioPage({
                             type='button'
                             onClick={() => addTech(tech)}
                             className={`w-full px-3 py-2 text-left text-sm ${
-                              theme === 'dark'
+                              isDarkTheme(theme)
                                 ? 'hover:bg-gray-600 text-white'
                                 : 'hover:bg-gray-100 text-gray-900'
                             }`}
@@ -619,7 +620,7 @@ export default function PortfolioPage({
                       <span
                         key={tech}
                         className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-indigo-500/20 text-indigo-300'
                             : 'bg-indigo-100 text-indigo-700'
                         }`}
@@ -642,7 +643,7 @@ export default function PortfolioPage({
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     <Globe className='w-4 h-4 inline mr-1' />
                     Live URL
@@ -658,7 +659,7 @@ export default function PortfolioPage({
                     }
                     placeholder='https://myproject.com'
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                     }`}
@@ -666,7 +667,7 @@ export default function PortfolioPage({
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     <Github className='w-4 h-4 inline mr-1' />
                     Repo URL
@@ -682,7 +683,7 @@ export default function PortfolioPage({
                     }
                     placeholder='https://github.com/user/repo'
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                     }`}
@@ -693,7 +694,7 @@ export default function PortfolioPage({
               {/* Thumbnail URL */}
               <div>
                 <label
-                  className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   <ImageIcon className='w-4 h-4 inline mr-1' />
                   Thumbnail URL
@@ -709,7 +710,7 @@ export default function PortfolioPage({
                   }
                   placeholder='https://example.com/screenshot.png'
                   className={`w-full px-3 py-2 rounded-lg border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                   }`}
@@ -720,7 +721,7 @@ export default function PortfolioPage({
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     Your Role
                   </label>
@@ -730,7 +731,7 @@ export default function PortfolioPage({
                       setFormData((prev) => ({ ...prev, role: e.target.value }))
                     }
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white'
                         : 'bg-white border-gray-300 text-gray-900'
                     }`}
@@ -743,7 +744,7 @@ export default function PortfolioPage({
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     Team Size
                   </label>
@@ -759,7 +760,7 @@ export default function PortfolioPage({
                     }
                     placeholder='1'
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
                         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                     }`}
@@ -771,7 +772,7 @@ export default function PortfolioPage({
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     Start Date
                   </label>
@@ -785,7 +786,7 @@ export default function PortfolioPage({
                       }))
                     }
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white'
                         : 'bg-white border-gray-300 text-gray-900'
                     }`}
@@ -793,7 +794,7 @@ export default function PortfolioPage({
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     End Date
                   </label>
@@ -808,7 +809,7 @@ export default function PortfolioPage({
                     }
                     disabled={formData.isOngoing}
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 border-gray-600 text-white disabled:opacity-50'
                         : 'bg-white border-gray-300 text-gray-900 disabled:opacity-50'
                     }`}
@@ -819,7 +820,7 @@ export default function PortfolioPage({
               {/* Checkboxes */}
               <div className='flex flex-wrap gap-4'>
                 <label
-                  className={`inline-flex items-center gap-2 cursor-pointer ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`inline-flex items-center gap-2 cursor-pointer ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   <input
                     type='checkbox'
@@ -836,7 +837,7 @@ export default function PortfolioPage({
                   Ongoing project
                 </label>
                 <label
-                  className={`inline-flex items-center gap-2 cursor-pointer ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`inline-flex items-center gap-2 cursor-pointer ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   <input
                     type='checkbox'
@@ -853,7 +854,7 @@ export default function PortfolioPage({
                   Featured on Career Card
                 </label>
                 <label
-                  className={`inline-flex items-center gap-2 cursor-pointer ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`inline-flex items-center gap-2 cursor-pointer ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   <input
                     type='checkbox'
@@ -879,7 +880,7 @@ export default function PortfolioPage({
                     resetForm()
                   }}
                   className={`px-4 py-2 rounded-lg font-medium ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -912,21 +913,21 @@ export default function PortfolioPage({
       {projects.length === 0 ? (
         <div
           className={`text-center py-16 rounded-xl border-2 border-dashed ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 bg-gray-800/30'
               : 'border-gray-300 bg-gray-50/50'
           }`}
         >
           <Folder
-            className={`w-16 h-16 mx-auto mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}
+            className={`w-16 h-16 mx-auto mb-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}
           />
           <h3
-            className={`text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             No Projects Yet
           </h3>
           <p
-            className={`mb-4 max-w-md mx-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`mb-4 max-w-md mx-auto ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
           >
             Add your projects, side hustles, and case studies. Show employers
             what you can build.
@@ -945,7 +946,7 @@ export default function PortfolioPage({
             <div
               key={project.id}
               className={`rounded-xl border overflow-hidden ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800/50 border-gray-700'
                   : 'bg-white border-gray-200'
               }`}
@@ -965,7 +966,7 @@ export default function PortfolioPage({
                 {/* Title & Featured Badge */}
                 <div className='flex items-start justify-between mb-2'>
                   <h3
-                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                   >
                     {project.title}
                   </h3>
@@ -980,7 +981,7 @@ export default function PortfolioPage({
                 {/* Description */}
                 {project.description && (
                   <p
-                    className={`text-sm mb-3 line-clamp-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                    className={`text-sm mb-3 line-clamp-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
                   >
                     {project.description}
                   </p>
@@ -993,7 +994,7 @@ export default function PortfolioPage({
                       <span
                         key={tech}
                         className={`px-2 py-0.5 rounded text-xs ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700 text-gray-300'
                             : 'bg-gray-100 text-gray-700'
                         }`}
@@ -1003,7 +1004,7 @@ export default function PortfolioPage({
                     ))}
                     {(project.techStack?.length ?? 0) > 5 && (
                       <span
-                        className={`px-2 py-0.5 rounded text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                        className={`px-2 py-0.5 rounded text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                       >
                         +{(project.techStack?.length ?? 0) - 5}
                       </span>
@@ -1016,7 +1017,7 @@ export default function PortfolioPage({
                   <button
                     onClick={() => setSelectedProject(project)}
                     className={`inline-flex items-center gap-1 text-sm font-medium ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'text-indigo-400 hover:text-indigo-300'
                         : 'text-indigo-600 hover:text-indigo-700'
                     }`}
@@ -1031,7 +1032,7 @@ export default function PortfolioPage({
                       rel='noopener noreferrer'
                       onClick={(e) => e.stopPropagation()}
                       className={`inline-flex items-center gap-1 text-sm ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'text-gray-400 hover:text-gray-300'
                           : 'text-gray-600 hover:text-gray-700'
                       }`}
@@ -1047,7 +1048,7 @@ export default function PortfolioPage({
                       rel='noopener noreferrer'
                       onClick={(e) => e.stopPropagation()}
                       className={`inline-flex items-center gap-1 text-sm ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'text-gray-400 hover:text-gray-300'
                           : 'text-gray-600 hover:text-gray-700'
                       }`}
@@ -1061,7 +1062,7 @@ export default function PortfolioPage({
                 {/* Actions */}
                 <div
                   className={`flex items-center justify-between pt-3 border-t ${
-                    theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+                    isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
                   }`}
                 >
                   <div className='flex items-center gap-1'>
@@ -1073,7 +1074,7 @@ export default function PortfolioPage({
                           : 'Add to featured'
                       }
                       className={`p-1.5 rounded ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'hover:bg-gray-700'
                           : 'hover:bg-gray-100'
                       }`}
@@ -1082,14 +1083,14 @@ export default function PortfolioPage({
                         <Star className='w-4 h-4 text-yellow-500 fill-yellow-500' />
                       ) : (
                         <StarOff
-                          className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+                          className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
                         />
                       )}
                     </button>
                     <button
                       onClick={() => openEditForm(project)}
                       className={`p-1.5 rounded ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'hover:bg-gray-700 text-gray-400'
                           : 'hover:bg-gray-100 text-gray-600'
                       }`}
@@ -1099,7 +1100,7 @@ export default function PortfolioPage({
                     <button
                       onClick={() => handleDelete(project.id)}
                       className={`p-1.5 rounded ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'hover:bg-gray-700 text-red-400'
                           : 'hover:bg-gray-100 text-red-600'
                       }`}
@@ -1108,7 +1109,7 @@ export default function PortfolioPage({
                     </button>
                   </div>
                   <span
-                    className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+                    className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
                   >
                     {project.role === 'solo'
                       ? 'Solo'

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState } from 'react'
 import { Building2, X, UserPlus, Loader2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
@@ -84,14 +85,14 @@ export default function CreateCompanyModal({
           <div className='flex items-center gap-3'>
             <div
               className={`p-2 rounded-full ${
-                theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+                isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-100'
               }`}
             >
               <Building2 className='w-6 h-6 text-indigo-500' />
             </div>
             <h3
               className={`text-lg font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Pre-Create Company
@@ -100,7 +101,7 @@ export default function CreateCompanyModal({
           <button
             onClick={handleClose}
             className={`p-1 rounded-lg ${
-              theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+              isDarkTheme(theme) ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
             }`}
           >
             <X className='w-5 h-5' />
@@ -109,7 +110,7 @@ export default function CreateCompanyModal({
 
         <p
           className={`mb-4 text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           Pre-create a company for a client. When the designated owner logs in
@@ -120,7 +121,7 @@ export default function CreateCompanyModal({
           <div>
             <label
               className={`block text-sm font-medium mb-1 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Company Name <span className='text-red-500'>*</span>
@@ -132,7 +133,7 @@ export default function CreateCompanyModal({
                 setForm((prev) => ({ ...prev, companyName: e.target.value }))
               }
               className={`w-full px-3 py-2 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700 border-gray-600 text-white'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -143,13 +144,13 @@ export default function CreateCompanyModal({
           <div>
             <label
               className={`block text-sm font-medium mb-1 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               DOT Number{' '}
               <span
                 className={
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                 }
               >
                 (optional)
@@ -162,7 +163,7 @@ export default function CreateCompanyModal({
                 setForm((prev) => ({ ...prev, dotNumber: e.target.value }))
               }
               className={`w-full px-3 py-2 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700 border-gray-600 text-white'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -173,7 +174,7 @@ export default function CreateCompanyModal({
           <div>
             <label
               className={`block text-sm font-medium mb-1 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Designated Owner Email <span className='text-red-500'>*</span>
@@ -185,7 +186,7 @@ export default function CreateCompanyModal({
                 setForm((prev) => ({ ...prev, ownerEmail: e.target.value }))
               }
               className={`w-full px-3 py-2 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700 border-gray-600 text-white'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -193,7 +194,7 @@ export default function CreateCompanyModal({
             />
             <p
               className={`mt-1 text-xs ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
               }`}
             >
               This email address will become the owner when they sign up.
@@ -211,7 +212,7 @@ export default function CreateCompanyModal({
           <button
             onClick={handleClose}
             className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700 text-white hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}

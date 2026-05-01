@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Trash2 } from 'lucide-react'
 import type {
@@ -90,7 +91,7 @@ export default function UsersTab({
       <div className='overflow-x-auto'>
         <table className='w-full'>
           <thead
-            className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}
+            className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}
           >
             <tr>
               <th className={`${tableHeaderClass} px-4 py-3`}>User</th>
@@ -106,7 +107,7 @@ export default function UsersTab({
               <tr
                 key={user.id}
                 className={`cursor-pointer ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'hover:bg-gray-800/50'
                     : 'hover:bg-gray-50'
                 }`}
@@ -197,7 +198,7 @@ export default function UsersTab({
                     <button
                       onClick={() => fetchUserDetail(user.id)}
                       className={`p-1.5 rounded ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'hover:bg-gray-700'
                           : 'hover:bg-gray-100'
                       } text-indigo-500`}

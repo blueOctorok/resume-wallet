@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -15,6 +16,9 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { INVITEABLE_ROLES, getDisplayRole } from '@/lib/employer-roles'
 import UserIdentity from '@/components/ui/UserIdentity'
@@ -192,18 +196,12 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
     }
   }
 
-  const cardClass = `rounded-2xl border shadow-lg ${
-    theme === 'dark'
-      ? 'bg-gray-800/50 border-gray-700'
-      : 'bg-white/70 border-gray-200'
-  }`
-
   if (loading) {
     return (
       <div className='min-h-[60vh] flex items-center justify-center'>
         <div className='text-center'>
-          <Loader2 className={`w-8 h-8 animate-spin mx-auto ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-          <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Loading team...</p>
+          <Loader2 className={`w-8 h-8 animate-spin mx-auto ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
+          <p className={`mt-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>Loading team...</p>
         </div>
       </div>
     )
@@ -215,16 +213,9 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
         <div className='text-center'>
           <AlertCircle className='w-12 h-12 text-red-500 mx-auto' />
           <p className='text-red-500 font-medium mt-4'>{error}</p>
-          <button
-            onClick={fetchTeam}
-            className={`mt-4 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
-                ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
-                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-            }`}
-          >
+          <Button type="button" variant="secondary" size="md" className="mt-4" onClick={() => fetchTeam()}>
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -245,88 +236,85 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       {/* Header */}
       <div className='flex items-center justify-between flex-wrap gap-4'>
         <div>
-          <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Team Management
           </h1>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Manage your company team members and invitations
           </p>
         </div>
 
         <div className='flex items-center gap-2'>
-          <button
+          <Button
+            type='button'
+            variant='secondary'
+            size='md'
             onClick={() => fetchTeam(true)}
             disabled={refreshing}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-              theme === 'dark'
-                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 disabled:opacity-50'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50'
-            }`}
             title='Refresh team list'
           >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </Button>
           {canManageTeam && (
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className='flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md'
-            >
-              <UserPlus className='w-4 h-4' />
-              Invite Member
-            </button>
+            <Button type='button' variant='primary' size='md' onClick={() => setShowInviteModal(true)}>
+              <UserPlus className='h-4 w-4' />
+              Invite member
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Stats */}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal' className='mb-6'>
+        <BlockCard variant='embed' icon={Users} title='Team overview' description='Active seats and outstanding invites.'>
       <div className='grid grid-cols-2 gap-4'>
-        <div className={`${cardClass} p-4`}>
+        <div className='rounded-xl border border-gray-200/90 bg-gradient-to-b from-white/95 to-slate-50/90 p-4 dark:border-gray-600/70 dark:from-gray-900/90 dark:to-gray-950/90'>
           <div className='flex items-center gap-3'>
-            <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'}`}>
+            <div className={`p-2.5 rounded-xl ${isDarkTheme(theme) ? 'bg-green-500/20' : 'bg-green-100'}`}>
               <Users className='w-5 h-5 text-green-500' />
             </div>
             <div>
-              <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <p className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 {activeMembers.length}
               </p>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Active Members
               </p>
             </div>
           </div>
         </div>
 
-        <div className={`${cardClass} p-4`}>
+        <div className='rounded-xl border border-gray-200/90 bg-gradient-to-b from-white/95 to-slate-50/90 p-4 dark:border-gray-600/70 dark:from-gray-900/90 dark:to-gray-950/90'>
           <div className='flex items-center gap-3'>
-            <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-100'}`}>
+            <div className={`p-2.5 rounded-xl ${isDarkTheme(theme) ? 'bg-yellow-500/20' : 'bg-yellow-100'}`}>
               <Clock className='w-5 h-5 text-yellow-500' />
             </div>
             <div>
-              <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <p className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 {pendingInvites.length}
               </p>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Pending Invites
               </p>
             </div>
           </div>
         </div>
       </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Active Members */}
-      <div className={cardClass}>
-        <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-          <h2 className={`text-lg font-semibold flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            <CheckCircle className='w-5 h-5 text-green-500' />
-            Active Members ({activeMembers.length})
-          </h2>
-        </div>
-        <div className={`divide-y ${theme === 'dark' ? 'divide-gray-700/50' : 'divide-gray-200'}`}>
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal' className='mb-6'>
+        <BlockCard
+          variant='embed'
+          icon={CheckCircle}
+          title={`Active members (${activeMembers.length})`}
+          description='People with access to your employer hub.'
+        >
+        <div className={`divide-y ${isDarkTheme(theme) ? 'divide-gray-700/50' : 'divide-gray-200'}`}>
           {activeMembers.length === 0 ? (
             <div className='p-8 text-center'>
-              <Users className={`w-12 h-12 mx-auto ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Users className={`w-12 h-12 mx-auto ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`} />
+              <p className={`mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 No active team members yet
               </p>
             </div>
@@ -357,7 +345,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                           : member.role === 'viewer'
                             ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                            : theme === 'dark'
+                            : isDarkTheme(theme)
                               ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30'
                               : 'bg-teal-100 text-teal-700 border border-teal-200'
                     }`}>
@@ -368,7 +356,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                         onClick={() => handleRemoveMember(member.id)}
                         disabled={removingMember === member.id}
                         className={`p-2 rounded-lg transition-colors ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-red-500/20 text-red-400'
                             : 'hover:bg-red-50 text-red-500'
                         }`}
@@ -387,52 +375,52 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
             ))
           )}
         </div>
-      </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Pending Invites */}
       {pendingInvites.length > 0 && (
-        <div className={cardClass}>
-          <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            <h2 className={`text-lg font-semibold flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              <Clock className='w-5 h-5 text-yellow-500' />
-              Pending Invites ({pendingInvites.length})
-            </h2>
-          </div>
-          <div className={`divide-y ${theme === 'dark' ? 'divide-gray-700/50' : 'divide-gray-200'}`}>
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='amber' className='mb-6'>
+          <BlockCard
+            variant='embed'
+            icon={Clock}
+            title={`Pending invites (${pendingInvites.length})`}
+            description='Awaiting acceptance — you can cancel from here.'
+          >
+          <div className={`divide-y ${isDarkTheme(theme) ? 'divide-gray-700/50' : 'divide-gray-200'}`}>
             {pendingInvites.map(member => (
               <div key={member.id} className='p-4 flex items-center justify-between gap-4'>
                 <div className='flex items-center gap-3'>
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-100'
+                    isDarkTheme(theme) ? 'bg-yellow-500/20' : 'bg-yellow-100'
                   }`}>
                     <Mail className='w-5 h-5 text-yellow-500' />
                   </div>
                   <div>
-                    <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    <p className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                       {member.email}
                     </p>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                       Invited {new Date(member.invitedAt).toLocaleDateString()} as {getDisplayRole(member.role)}
                     </p>
                   </div>
                 </div>
                 {canManageTeam && (
-                  <button
+                  <Button
+                    type='button'
+                    variant='danger'
+                    size='sm'
                     onClick={() => handleRemoveMember(member.id)}
                     disabled={removingMember === member.id}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        : 'bg-red-50 text-red-600 hover:bg-red-100'
-                    }`}
+                    isLoading={removingMember === member.id}
                   >
-                    {removingMember === member.id ? 'Canceling...' : 'Cancel Invite'}
-                  </button>
+                    Cancel invite
+                  </Button>
                 )}
               </div>
             ))}
           </div>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
       )}
 
       {/* Invite Modal */}
@@ -449,7 +437,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
               {/* Email Input */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'
                 }`}>
                   Email Address
                 </label>
@@ -459,7 +447,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder='teammate@company.com'
                   className={`w-full px-4 py-3 rounded-xl border-2 text-base ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-indigo-500'
                       : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
                   } focus:outline-none transition-colors`}
@@ -469,7 +457,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
               {/* Role Selection - Radio Cards */}
               <div>
                 <label className={`block text-sm font-semibold mb-3 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'
                 }`}>
                   Select Role
                 </label>
@@ -479,10 +467,10 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                       key={role.value}
                       className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         inviteRole === role.value
-                          ? theme === 'dark'
+                          ? isDarkTheme(theme)
                             ? 'border-indigo-500 bg-indigo-500/10'
                             : 'border-indigo-500 bg-indigo-50'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                             : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
@@ -498,7 +486,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
                         inviteRole === role.value
                           ? 'border-indigo-500 bg-indigo-500'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'border-gray-600'
                             : 'border-gray-300'
                       }`}>
@@ -507,10 +495,10 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                         )}
                       </div>
                       <div className='flex-1'>
-                        <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                           {role.label}
                         </p>
-                        <p className={`text-sm mt-0.5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`text-sm mt-0.5 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                           {role.description}
                         </p>
                       </div>
@@ -535,19 +523,19 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                       <p className='text-sm text-green-400 font-medium'>{inviteSuccess}</p>
                       {lastInviteUrl && (
                         <div className='mt-3'>
-                          <p className={`text-xs mb-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <p className={`text-xs mb-2 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                             Share this link directly:
                           </p>
                           <div className='flex items-center gap-2'>
                             <code className={`text-xs flex-1 truncate px-3 py-2 rounded-lg ${
-                              theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+                              isDarkTheme(theme) ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
                             }`}>
                               {lastInviteUrl}
                             </code>
                             <button
                               onClick={copyInviteUrl}
                               className={`p-2 rounded-lg transition-colors ${
-                                theme === 'dark'
+                                isDarkTheme(theme)
                                   ? 'bg-gray-800 hover:bg-gray-700 text-gray-400'
                                   : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                               }`}
@@ -565,7 +553,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
             </div>
 
           {/* Modal Footer */}
-          <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} flex justify-end gap-3`}>
+          <div className={`p-6 border-t ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'} flex justify-end gap-3`}>
             <button
               onClick={() => {
                 setShowInviteModal(false)
@@ -575,7 +563,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                 setLastInviteUrl(null)
               }}
               className={`px-5 py-2.5 rounded-xl font-semibold transition-colors ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}

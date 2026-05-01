@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -159,21 +160,21 @@ export default function CandidateNotesPanel({
   const currentRating = notes.find(n => n.dataType === 'rating')?.content.rating || 0
   const existingTags = notes.filter(n => n.dataType === 'tag').map(n => n.content.tag)
 
-  const cardClass = theme === 'dark'
+  const cardClass = isDarkTheme(theme)
     ? 'bg-gray-800/50 border-gray-700'
     : 'bg-white border-gray-200'
 
-  const inputClass = theme === 'dark'
+  const inputClass = isDarkTheme(theme)
     ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500'
     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
 
   const tabClass = (isActive: boolean) => `
     px-3 py-1.5 text-sm font-medium rounded-lg transition-colors
     ${isActive
-      ? theme === 'dark'
+      ? isDarkTheme(theme)
         ? 'bg-teal-500/20 text-teal-400'
         : 'bg-teal-100 text-teal-700'
-      : theme === 'dark'
+      : isDarkTheme(theme)
         ? 'text-gray-400 hover:text-gray-300'
         : 'text-gray-600 hover:text-gray-700'
     }
@@ -182,9 +183,9 @@ export default function CandidateNotesPanel({
   return (
     <div className={`rounded-xl border ${cardClass}`}>
       {/* Header */}
-      <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className={`p-4 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className='flex items-center justify-between'>
-          <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Notes & Activity
           </h3>
           {currentRating > 0 && (
@@ -198,19 +199,19 @@ export default function CandidateNotesPanel({
             </div>
           )}
         </div>
-        <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
           Private notes about {candidateName}
         </p>
       </div>
 
       {/* Quick Tags */}
       {existingTags.length > 0 && (
-        <div className={`px-4 py-3 border-b flex flex-wrap gap-2 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`px-4 py-3 border-b flex flex-wrap gap-2 ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
           {existingTags.map((tag, idx) => (
             <span
               key={idx}
               className={`px-2 py-1 text-xs font-medium rounded-full ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-500/20 text-teal-400'
                   : 'bg-teal-100 text-teal-700'
               }`}
@@ -222,7 +223,7 @@ export default function CandidateNotesPanel({
       )}
 
       {/* Add Note Form */}
-      <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className={`p-4 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
         {/* Tabs */}
         <div className='flex gap-2 mb-3'>
           <button onClick={() => setActiveTab('note')} className={tabClass(activeTab === 'note')}>
@@ -276,7 +277,7 @@ export default function CandidateNotesPanel({
                     className={`w-6 h-6 ${
                       star <= (hoverRating || rating)
                         ? 'fill-yellow-400 text-yellow-400'
-                        : theme === 'dark' ? 'text-gray-600' : 'text-gray-300'
+                        : isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'
                     }`}
                   />
                 </button>
@@ -306,7 +307,7 @@ export default function CandidateNotesPanel({
                   className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
                     selectedTag === tag
                       ? 'border-teal-500 bg-teal-500/20 text-teal-500'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'border-gray-600 text-gray-400 hover:border-gray-500'
                         : 'border-gray-300 text-gray-600 hover:border-gray-400'
                   }`}
@@ -350,7 +351,7 @@ export default function CandidateNotesPanel({
             <span className='text-sm'>{error}</span>
           </div>
         ) : notes.filter(n => n.dataType === 'note').length === 0 ? (
-          <div className={`text-center py-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+          <div className={`text-center py-8 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
             <MessageSquare className='w-8 h-8 mx-auto mb-2 opacity-50' />
             <p className='text-sm'>No notes yet</p>
           </div>
@@ -361,12 +362,12 @@ export default function CandidateNotesPanel({
               .map(note => (
                 <div
                   key={note.id}
-                  className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-50'}`}
+                  className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-900/50' : 'bg-gray-50'}`}
                 >
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     {note.content.text}
                   </p>
-                  <div className={`flex items-center gap-2 mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <div className={`flex items-center gap-2 mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                     <Clock className='w-3 h-3' />
                     {formatDate(note.createdAt)}
                     {note.createdByName && (

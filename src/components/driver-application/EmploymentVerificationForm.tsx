@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -379,32 +380,32 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
   return (
     <div
       className={`max-w-4xl mx-auto p-6 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/20 backdrop-blur-xl'
           : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
+        isDarkTheme(theme) ? 'border-teal-500' : 'border-teal-700'
       }`}
     >
       {/* Header */}
       <div className='text-center mb-8'>
         <h1
           className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Safety Performance History Records Request
         </h1>
         <p
           className={`text-lg ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
           (Employment Verification)
         </p>
         <p
           className={`text-sm mt-2 ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
           }`}
         >
           Required by 49 CFR § 391.23
@@ -416,7 +417,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             type='button'
             onClick={fillTestData}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
                 : 'bg-yellow-500 text-white hover:bg-yellow-400'
             }`}
@@ -432,7 +433,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Section 1 – Driver/Applicant Authorization
@@ -442,7 +443,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Driver Name:
@@ -452,7 +453,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.driverName}
               onChange={(e) => handleInputChange('driverName', e.target.value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -462,7 +463,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               SSN (optional):
@@ -472,7 +473,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.ssn}
               onChange={(e) => handleInputChange('ssn', e.target.value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -482,7 +483,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Date of Birth:
@@ -492,7 +493,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.dateOfBirth}
               onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -502,7 +503,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Previous Employer:
@@ -514,7 +515,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('previousEmployer', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -525,7 +526,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div className='mb-4'>
           <label
             className={`block text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             Employer Address:
@@ -537,7 +538,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             }
             rows={3}
             className={`w-full px-3 py-2 rounded-md border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-brand-cream border-gray-300 text-gray-900'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -548,7 +549,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Employment Dates From:
@@ -560,7 +561,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('employmentDatesFrom', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -570,7 +571,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Employment Dates To:
@@ -582,7 +583,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('employmentDatesTo', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -592,7 +593,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Position Held:
@@ -604,7 +605,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('positionHeld', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -614,12 +615,12 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
         <div
           className={`p-4 rounded-lg mb-4 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+            isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
           }`}
         >
           <p
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             I hereby authorize you to release to Pace Drivers, Inc. all
@@ -635,7 +636,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Driver Signature:
@@ -647,7 +648,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('driverSignature', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -657,7 +658,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Date:
@@ -669,7 +670,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('signatureDate', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -682,7 +683,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Section 2 – To Be Completed by Previous Employer
@@ -692,7 +693,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Company Name:
@@ -702,7 +703,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.companyName}
               onChange={(e) => handleInputChange('companyName', e.target.value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -712,7 +713,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Phone:
@@ -721,7 +722,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.phone}
               onChange={(value) => handleInputChange('phone', value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -732,7 +733,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div className='mb-4'>
           <label
             className={`block text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             Address:
@@ -744,7 +745,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             }
             rows={3}
             className={`w-full px-3 py-2 rounded-md border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-brand-cream border-gray-300 text-gray-900'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -755,7 +756,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Person Completing Form:
@@ -767,7 +768,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('personCompletingForm', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -777,7 +778,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Title:
@@ -787,7 +788,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -797,7 +798,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Date:
@@ -809,7 +810,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 handleInputChange('completionDate', e.target.value)
               }
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -821,7 +822,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div className='mb-6'>
           <h3
             className={`text-lg font-semibold mb-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Employment Verification:
@@ -831,7 +832,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Employment Dates From:
@@ -846,7 +847,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   )
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -856,7 +857,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Employment Dates To:
@@ -868,7 +869,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   handleInputChange('verificationEmploymentTo', e.target.value)
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -879,7 +880,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div className='mb-4'>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Position(s) Held:
@@ -891,7 +892,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               }
               rows={3}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -901,7 +902,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div className='mb-4'>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Eligible for Rehire?
@@ -921,7 +922,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   />
                   <span
                     className={`capitalize ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {option === 'discuss' ? 'Would Discuss' : option}
@@ -934,7 +935,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <div>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Reason for Leaving:
@@ -946,7 +947,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               }
               rows={3}
               className={`w-full px-3 py-2 rounded-md border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -958,7 +959,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div className='mb-6'>
           <h3
             className={`text-lg font-semibold mb-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Accident History (Past 3 Years):
@@ -969,54 +970,54 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               <thead>
                 <tr
                   className={`${
-                    theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+                    isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-100'
                   }`}
                 >
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Date
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Location
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Injuries
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Fatalities
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Hazmat Spill
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Comments
                   </th>
                   <th
                     className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Actions
@@ -1039,7 +1040,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1058,7 +1059,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1077,7 +1078,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1096,7 +1097,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1115,7 +1116,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1134,7 +1135,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                           )
                         }
                         className={`w-full px-2 py-1 rounded border ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-brand-cream border-gray-300 text-gray-900'
                             : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -1145,7 +1146,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                         type='button'
                         onClick={() => removeAccident(index)}
                         className={`px-2 py-1 text-xs rounded ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-red-600 text-white hover:bg-red-700'
                             : 'bg-red-500 text-white hover:bg-red-600'
                         }`}
@@ -1164,7 +1165,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               type='button'
               onClick={addAccident}
               className={`px-4 py-2 rounded-md font-medium ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-teal-700 text-white hover:bg-teal-700/90'
                   : 'bg-teal-700 text-white hover:bg-teal-700/90'
               }`}
@@ -1183,7 +1184,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               />
               <span
                 className={`${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 No DOT-recordable accidents reported.
@@ -1196,7 +1197,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div className='mb-6'>
           <h3
             className={`text-lg font-semibold mb-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Certification by Previous Employer:
@@ -1204,12 +1205,12 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
           <div
             className={`p-4 rounded-lg mb-4 ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}
           >
             <p
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               This information is provided in accordance with 49 CFR § 391.23(d)
@@ -1221,7 +1222,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Signature:
@@ -1233,7 +1234,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   handleInputChange('employerSignature', e.target.value)
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -1243,7 +1244,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Printed Name:
@@ -1255,7 +1256,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   handleInputChange('printedName', e.target.value)
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -1265,7 +1266,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Title:
@@ -1277,7 +1278,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   handleInputChange('employerTitle', e.target.value)
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -1287,7 +1288,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 Date:
@@ -1299,7 +1300,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   handleInputChange('certificationDate', e.target.value)
                 }
                 className={`w-full px-3 py-2 rounded-md border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
@@ -1313,7 +1314,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Section 3 – Record of Attempts (for Employer Use)
@@ -1324,40 +1325,40 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <thead>
               <tr
                 className={`${
-                  theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+                  isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-100'
                 }`}
               >
                 <th
                   className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Date
                 </th>
                 <th
                   className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Method
                 </th>
                 <th
                   className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Contact Person
                 </th>
                 <th
                   className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Result
                 </th>
                 <th
                   className={`border border-gray-300 px-3 py-2 text-left text-sm font-medium ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   Actions
@@ -1380,7 +1381,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                         )
                       }
                       className={`w-full px-2 py-1 rounded border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
@@ -1399,7 +1400,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                         )
                       }
                       className={`w-full px-2 py-1 rounded border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-brand-cream border-gray-300 text-gray-900'
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
@@ -1418,7 +1419,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                         )
                       }
                       className={`w-full px-2 py-1 rounded border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-brand-cream border-gray-300 text-gray-900'
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
@@ -1437,7 +1438,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                         )
                       }
                       className={`w-full px-2 py-1 rounded border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-brand-cream border-gray-300 text-gray-900'
                           : 'bg-white border-gray-300 text-gray-900'
                       }`}
@@ -1448,7 +1449,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                       type='button'
                       onClick={() => removeAttempt(index)}
                       className={`px-2 py-1 text-xs rounded ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-red-600 text-white hover:bg-red-700'
                           : 'bg-red-500 text-white hover:bg-red-600'
                       }`}
@@ -1467,7 +1468,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             type='button'
             onClick={addAttempt}
             className={`px-4 py-2 rounded-md font-medium ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-700 text-white hover:bg-teal-700/90'
                 : 'bg-teal-700 text-white hover:bg-teal-700/90'
             }`}
@@ -1481,7 +1482,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
       <div className='text-center'>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
           }`}
         >
           Form complies with 49 CFR § 391.23 — Revised 2025 Edition.
@@ -1491,11 +1492,11 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
       {/* Submit to Blockchain */}
       <div className='mt-8'>
         <div
-          className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           <h3 className='text-xl font-semibold'>Submit to Blockchain</h3>
           <p
-            className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+            className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}
           >
             We store a SHA-256 hash of this form on Base Sepolia for
             tamper-proof verification. No personal details are stored on-chain.
@@ -1508,7 +1509,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             onClick={handleSubmitToBlockchain}
             disabled={submitting}
             className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-600 text-white hover:bg-teal-500'
                 : 'bg-teal-700 text-white hover:bg-teal-700/90'
             }`}
@@ -1519,7 +1520,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           {txHash && (
             <div
               className={`px-4 py-3 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'border-green-500/50 bg-green-900/20 text-green-300'
                   : 'border-green-200 bg-green-50 text-green-800'
               }`}
@@ -1532,7 +1533,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   target='_blank'
                   rel='noopener noreferrer'
                   className={`${
-                    theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+                    isDarkTheme(theme) ? 'text-blue-300' : 'text-blue-700'
                   } underline text-sm`}
                 >
                   View on BaseScan
@@ -1544,7 +1545,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           {submitError && (
             <div
               className={`px-4 py-3 rounded-lg border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'border-red-500/50 bg-red-900/20 text-red-300'
                   : 'border-red-200 bg-red-50 text-red-700'
               }`}

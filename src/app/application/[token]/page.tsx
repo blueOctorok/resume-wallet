@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import {
@@ -122,14 +123,14 @@ export default function PublicApplicationPage() {
   return (
     <div
       className={`min-h-screen py-8 px-4 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+        isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-50'
       }`}
     >
       <div className='max-w-4xl mx-auto'>
         {/* Header */}
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
               : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
@@ -137,7 +138,7 @@ export default function PublicApplicationPage() {
           <div className='flex items-center gap-4 mb-4'>
             <div
               className={`w-16 h-16 rounded-xl flex items-center justify-center ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gradient-to-br from-teal-600 to-teal-600 shadow-lg shadow-teal-600/50'
                   : 'bg-gradient-to-br from-teal-700 to-teal-950 shadow-lg shadow-teal-900/40'
               }`}
@@ -165,7 +166,7 @@ export default function PublicApplicationPage() {
         {/* Job Details */}
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
               : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
@@ -213,7 +214,7 @@ export default function PublicApplicationPage() {
         {/* Driver Qualifications */}
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
               : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
@@ -282,7 +283,7 @@ export default function PublicApplicationPage() {
         {application.cover_letter && (
           <div
             className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
                 : 'bg-white/80 backdrop-blur-xl border-teal-700'
             }`}
@@ -299,7 +300,7 @@ export default function PublicApplicationPage() {
         {/* Contact & Documents */}
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
               : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
@@ -328,7 +329,7 @@ export default function PublicApplicationPage() {
                   target='_blank'
                   rel='noopener noreferrer'
                   className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gradient-to-r from-teal-600 to-teal-600 text-white'
                       : 'bg-gradient-to-r from-teal-700 to-teal-950 text-white'
                   }`}
@@ -345,13 +346,13 @@ export default function PublicApplicationPage() {
         <div className='text-center py-8'>
           <p
             className={`mb-2 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
             Powered by{' '}
             <span
               className={`font-bold ${
-                theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
               }`}
             >
               Storm
@@ -359,7 +360,7 @@ export default function PublicApplicationPage() {
           </p>
           <p
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
             }`}
           >
             Blockchain-Verified Driver Applications

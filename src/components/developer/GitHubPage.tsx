@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import BackToHubButton from '@/components/ui/BackToHubButton'
@@ -12,7 +13,7 @@ interface GitHubPageProps {
 
 export default function GitHubPage({ userAddress, onBack }: GitHubPageProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const [githubUsername, setGithubUsername] = useState<string | null>(null)
   const [githubConnected, setGithubConnected] = useState(false)
   const [loading, setLoading] = useState(true)

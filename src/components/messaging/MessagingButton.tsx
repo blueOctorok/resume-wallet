@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { MessageSquare, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -40,7 +41,7 @@ export default function MessagingButton({
   const { theme } = useTheme()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const handleClick = async () => {
     setError(null)

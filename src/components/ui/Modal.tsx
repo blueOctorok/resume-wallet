@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef } from 'react'
 // Namespace import: production (e.g. Vercel) can drop named `createPortal` from `react-dom`.
 import * as ReactDOM from 'react-dom'
@@ -59,7 +60,7 @@ export default function Modal({
   panelClassName,
 }: ModalProps) {
   const { theme } = useTheme()
-  const isDarkTheme = theme === 'dark'
+  const isDarkMode = isDarkTheme(theme)
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -109,13 +110,13 @@ export default function Modal({
           panelShape === 'block'
             ? cn(
                 'rounded-xl border shadow-xl ring-1 ring-teal-500/20 dark:ring-teal-500/25',
-                isDarkTheme
+                isDarkMode
                   ? 'border-gray-700 bg-gray-800/95'
                   : 'border-gray-200 bg-white',
               )
             : cn(
                 'rounded-2xl ring-1 ring-white/15 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.45)] dark:ring-white/10 dark:shadow-[0_28px_72px_-8px_rgba(0,0,0,0.75)]',
-                isDarkTheme
+                isDarkMode
                   ? 'bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-600/80'
                   : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90',
               ),
@@ -159,7 +160,7 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: M
     <div
       className={cn(
         'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 sm:p-5 border-b',
-        theme === 'dark'
+        isDarkTheme(theme)
           ? block
             ? 'border-gray-700 bg-gray-900/95 backdrop-blur-sm'
             : 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
@@ -178,13 +179,13 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: M
         <h3
           className={cn(
             'text-base sm:text-lg font-semibold tracking-tight',
-            theme === 'dark' ? 'text-white' : 'text-gray-900',
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900',
           )}
         >
           {title}
         </h3>
         {subtitle && (
-          <p className={cn('text-sm mt-1 leading-snug', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('text-sm mt-1 leading-snug', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600')}>
             {subtitle}
           </p>
         )}
@@ -195,7 +196,7 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: M
         className={cn(
           'shrink-0 p-1.5 transition-colors',
           'rounded-lg',
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'text-gray-400 hover:text-white hover:bg-gray-700'
             : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
         )}

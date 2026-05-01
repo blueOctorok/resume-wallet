@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -16,7 +17,7 @@ import Modal, { ModalHeader } from '@/components/ui/Modal'
  */
 export default function StormiContextModal() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const onboarding = useHubBlocksStore((s) => s.onboarding)
   const closeStormiContextModal = useHubBlocksStore((s) => s.closeStormiContextModal)

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
@@ -316,7 +317,7 @@ export default function DeveloperHub({
       className={`p-4 rounded-xl border text-left transition-all ${
         onClick ? 'hover:scale-[1.02] cursor-pointer' : 'cursor-default'
       } ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
           : 'bg-white/70 border-gray-200 hover:border-gray-300'
       }`}
@@ -327,18 +328,18 @@ export default function DeveloperHub({
         </div>
         <div>
           <p
-            className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             {value}
           </p>
           <p
-            className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
           >
             {label}
           </p>
           {subValue && (
             <p
-              className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+              className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
             >
               {subValue}
             </p>
@@ -367,7 +368,7 @@ export default function DeveloperHub({
   }) => (
     <div
       className={`text-center py-12 px-6 rounded-xl border-2 border-dashed ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'border-gray-700 bg-gray-800/30'
           : 'border-gray-300 bg-gray-50/50'
       }`}
@@ -376,19 +377,19 @@ export default function DeveloperHub({
         <Icon className={`w-8 h-8 ${iconClassName ?? 'text-white'}`} />
       </div>
       <h3
-        className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+        className={`text-lg font-semibold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
       >
         {title}
       </h3>
       <p
-        className={`text-sm mb-4 max-w-sm mx-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+        className={`text-sm mb-4 max-w-sm mx-auto ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
       >
         {description}
       </p>
       <button
         onClick={onAction}
         className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium transition-all ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'border-gray-600 bg-indigo-500/20 text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/30'
             : 'border-gray-300 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100'
         }`}
@@ -403,7 +404,7 @@ export default function DeveloperHub({
   const ProjectCard = ({ project }: { project: Project }) => (
     <div
       className={`p-3 rounded-lg border ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-700/50 border-gray-600'
           : 'bg-gray-50 border-gray-200'
       }`}
@@ -413,7 +414,7 @@ export default function DeveloperHub({
           <div className='flex items-center gap-2'>
             <h4
               className={`font-medium truncate ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               {project.title}
@@ -425,7 +426,7 @@ export default function DeveloperHub({
           {project.description && (
             <p
               className={`text-sm truncate ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
               }`}
             >
               {project.description}
@@ -437,7 +438,7 @@ export default function DeveloperHub({
                 <span
                   key={tech}
                   className={`px-1.5 py-0.5 rounded text-xs ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-600 text-gray-300'
                       : 'bg-gray-200 text-gray-700'
                   }`}
@@ -448,7 +449,7 @@ export default function DeveloperHub({
               {project.techStack.length > 3 && (
                 <span
                   className={`text-xs ${
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                   }`}
                 >
                   +{project.techStack.length - 3}
@@ -464,10 +465,10 @@ export default function DeveloperHub({
               target='_blank'
               rel='noopener noreferrer'
               className={`p-1 rounded ${
-                theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                isDarkTheme(theme) ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
               }`}
             >
-              <Globe className={`w-4 h-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              <Globe className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`} />
             </a>
           )}
           {project.repoUrl && (
@@ -476,7 +477,7 @@ export default function DeveloperHub({
               target='_blank'
               rel='noopener noreferrer'
               className={`p-1 rounded ${
-                theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                isDarkTheme(theme) ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
               }`}
             >
               <Github className='w-4 h-4' />
@@ -497,10 +498,10 @@ export default function DeveloperHub({
         <div className='text-center'>
           <Loader2
             className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+              isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             Loading your developer hub...
           </p>
         </div>
@@ -517,7 +518,7 @@ export default function DeveloperHub({
     <div className='max-w-6xl mx-auto space-y-6 px-4 pb-8'>
       {/* Header — matches DriverHub pattern with avatar + personalized title */}
       <div className={`p-6 rounded-2xl border ${
-        theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
+        isDarkTheme(theme) ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
       }`}>
         <div className='flex items-center gap-4'>
           <AvatarUpload
@@ -533,7 +534,7 @@ export default function DeveloperHub({
           />
           <div className='flex-1 min-w-0'>
             <div className='flex items-center gap-2'>
-              <h1 className={`text-2xl sm:text-3xl font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h1 className={`text-2xl sm:text-3xl font-bold truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 {profileDisplayName ? `${profileDisplayName}'s Developer Hub` : 'Developer Hub'}
               </h1>
               <button
@@ -543,7 +544,7 @@ export default function DeveloperHub({
                 className={`p-1.5 rounded-lg flex-shrink-0 transition-all ${
                   isLoading
                     ? 'opacity-50 cursor-not-allowed'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                       ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                       : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -552,11 +553,11 @@ export default function DeveloperHub({
               </button>
             </div>
             {profile?.headline ? (
-              <p className={`text-sm mt-0.5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
+              <p className={`text-sm mt-0.5 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}>
                 {profile.headline}
               </p>
             ) : (
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Showcase your work, connect with employers
               </p>
             )}
@@ -567,7 +568,7 @@ export default function DeveloperHub({
       {/* Profile Completeness */}
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
         }`}
@@ -575,22 +576,22 @@ export default function DeveloperHub({
         <div className='flex items-center justify-between mb-3'>
           <div className='flex items-center gap-2'>
             <User
-              className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
+              className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
             />
             <span
-              className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               Profile Completeness
             </span>
           </div>
           <span
-            className={`text-lg font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
+            className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
           >
             {stats.profileCompleteness}%
           </span>
         </div>
         <div
-          className={`h-3 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
+          className={`h-3 rounded-full overflow-hidden ${isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'}`}
         >
           <div
             className='h-full bg-indigo-500/50 rounded-full transition-all duration-500'
@@ -598,7 +599,7 @@ export default function DeveloperHub({
           />
         </div>
         <p
-          className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           <TrendingUp className='w-4 h-4 inline mr-1' />
           {getCompletenessHint()}
@@ -608,18 +609,18 @@ export default function DeveloperHub({
       {/* Profile setup prompt — shown when dev has no name yet */}
       {!profile?.firstName && !profile?.lastName && !profile?.displayName && (
         <div className={`p-4 rounded-2xl border-l-4 border-l-indigo-500 flex items-center gap-4 ${
-          theme === 'dark' ? 'bg-gray-800/50' : 'bg-white border border-gray-200'
+          isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-white border border-gray-200'
         }`}>
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+            isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-100'
           }`}>
-            <Sparkles className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            <Sparkles className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`} />
           </div>
           <div className='flex-1 min-w-0'>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               Who are you? Set up your profile
             </h3>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
               Name, headline, and GitHub — under a minute. Employers need this to find you.
             </p>
           </div>
@@ -643,8 +644,8 @@ export default function DeveloperHub({
               ? `${stats.featuredProjects} featured`
               : 'in portfolio'
           }
-          color={theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}
-          iconClassName={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
+          color={isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-50'}
+          iconClassName={isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}
           onClick={() => onNavigate('portfolio')}
         />
         <StatCard
@@ -681,7 +682,7 @@ export default function DeveloperHub({
       {/* Storm Tokens (Coming Soon) */}
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
         }`}
@@ -693,19 +694,19 @@ export default function DeveloperHub({
             </div>
             <div>
               <p
-                className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Storm Tokens
               </p>
               <p
-                className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
               >
                 Coming Soon — Earn tokens for verified work
               </p>
             </div>
           </div>
           <span
-            className={`text-2xl font-bold ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}
+            className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-600'}`}
           >
             0
           </span>
@@ -734,7 +735,7 @@ export default function DeveloperHub({
         {/* Portfolio Section */}
         <div
           className={`p-4 sm:p-6 rounded-xl border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800/50 border-gray-700'
               : 'bg-white/70 border-gray-200'
           }`}
@@ -742,10 +743,10 @@ export default function DeveloperHub({
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
               <Folder
-                className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
+                className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
               />
               <h2
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Portfolio
               </h2>
@@ -756,7 +757,7 @@ export default function DeveloperHub({
                 disabled={refreshingPortfolio}
                 title='Refresh portfolio'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingPortfolio ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingPortfolio ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -766,7 +767,7 @@ export default function DeveloperHub({
               <button
                 onClick={() => onNavigate('portfolio')}
                 className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -783,8 +784,8 @@ export default function DeveloperHub({
               description='Add your projects, side hustles, and case studies. Show employers what you can build.'
               actionLabel='Add Project'
               onAction={() => onNavigate('portfolio')}
-              color={theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}
-              iconClassName={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
+              color={isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-50'}
+              iconClassName={isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}
             />
           ) : (
             <div className='space-y-2'>
@@ -795,7 +796,7 @@ export default function DeveloperHub({
                 <button
                   onClick={() => onNavigate('portfolio')}
                   className={`w-full rounded-lg border py-2 text-center text-sm font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                       : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
@@ -810,7 +811,7 @@ export default function DeveloperHub({
         {/* Resume Section */}
         <div
           className={`p-4 sm:p-6 rounded-xl border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800/50 border-gray-700'
               : 'bg-white/70 border-gray-200'
           }`}
@@ -818,10 +819,10 @@ export default function DeveloperHub({
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
               <FileText
-                className={`w-5 h-5 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}
+                className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-purple-400' : 'text-purple-600'}`}
               />
               <h2
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Tech Resume
               </h2>
@@ -832,7 +833,7 @@ export default function DeveloperHub({
                 disabled={refreshingResumes}
                 title='Refresh resumes'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -842,7 +843,7 @@ export default function DeveloperHub({
               <button
                 onClick={() => setShowUploadResumeModal(true)}
                 className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -857,7 +858,7 @@ export default function DeveloperHub({
                     setShowResumeBuilder(true)
                   }}
                   className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                       : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
@@ -887,7 +888,7 @@ export default function DeveloperHub({
                 <div
                   key={resume.id}
                   className={`p-4 rounded-xl border ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500'
                       : 'bg-gray-50 border-gray-200 hover:border-gray-300'
                   } transition-colors`}
@@ -897,7 +898,7 @@ export default function DeveloperHub({
                       <div className='flex items-center gap-2'>
                         <h3
                           className={`font-medium ${
-                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                           }`}
                         >
                           {resume.title}
@@ -911,7 +912,7 @@ export default function DeveloperHub({
                       </div>
                       <p
                         className={`text-xs mt-1 ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         Created{' '}
@@ -922,7 +923,7 @@ export default function DeveloperHub({
                       <button
                         onClick={() => setPreviewResume(resume)}
                         className={`p-2 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-600 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-600'
                         }`}
@@ -936,7 +937,7 @@ export default function DeveloperHub({
                           setShowResumeBuilder(true)
                         }}
                         className={`p-2 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-600 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-600'
                         }`}
@@ -964,7 +965,7 @@ export default function DeveloperHub({
         {/* GitHub Section */}
         <div
           className={`p-4 sm:p-6 rounded-xl border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800/50 border-gray-700'
               : 'bg-white/70 border-gray-200'
           }`}
@@ -972,10 +973,10 @@ export default function DeveloperHub({
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
               <Github
-                className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}
+                className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-700'}`}
               />
               <h2
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 GitHub
               </h2>
@@ -986,7 +987,7 @@ export default function DeveloperHub({
                 disabled={refreshingGithub}
                 title='Refresh GitHub'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingGithub ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingGithub ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1006,27 +1007,27 @@ export default function DeveloperHub({
             <div className='space-y-3'>
               <div
                 className={`flex items-center gap-3 p-3 rounded-lg ${
-                  theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+                  isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-100'
                 }`}
               >
                 <Github
-                  className={`w-8 h-8 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                 />
                 <div>
                   <p
-                    className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                   >
                     @{profile.githubUsername}
                   </p>
                   <p
-                    className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+                    className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
                   >
                     Private repos included on Career Card
                   </p>
                 </div>
               </div>
               <p
-                className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
               >
                 Your GitHub is connected! Your Career Card now shows private
                 repo stats and full contribution data.
@@ -1040,13 +1041,13 @@ export default function DeveloperHub({
                 <Github className='w-8 h-8 text-white' />
               </div>
               <h3
-                className={`font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`font-semibold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Connect GitHub
               </h3>
               <p
                 className={`text-sm mb-4 max-w-xs mx-auto ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 Link your GitHub to show private repos, real contribution stats,
@@ -1065,7 +1066,7 @@ export default function DeveloperHub({
                 Connect GitHub
               </button>
               <p
-                className={`text-xs mt-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+                className={`text-xs mt-3 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
               >
                 We only read repo data — we never modify anything
               </p>
@@ -1076,7 +1077,7 @@ export default function DeveloperHub({
         {/* Job Applications Section */}
         <div
           className={`p-4 sm:p-6 rounded-xl border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800/50 border-gray-700'
               : 'bg-white/70 border-gray-200'
           }`}
@@ -1084,10 +1085,10 @@ export default function DeveloperHub({
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
               <Briefcase
-                className={`w-5 h-5 ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}
+                className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-emerald-400' : 'text-emerald-600'}`}
               />
               <h2
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Job Applications
               </h2>
@@ -1098,7 +1099,7 @@ export default function DeveloperHub({
                 disabled={refreshingJobApps}
                 title='Refresh job applications'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1107,7 +1108,7 @@ export default function DeveloperHub({
               </button>
               <button
                 onClick={() => onNavigate('jobs')}
-                className={`text-sm font-medium ${theme === 'dark' ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'}`}
+                className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'}`}
               >
                 Browse Jobs →
               </button>
@@ -1134,13 +1135,13 @@ export default function DeveloperHub({
       {/* Quick Links */}
       <div
         className={`p-4 rounded-xl border ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/30 border-gray-700'
             : 'bg-gray-50 border-gray-200'
         }`}
       >
         <h3
-          className={`text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm font-semibold mb-3 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Quick Links
         </h3>
@@ -1155,7 +1156,7 @@ export default function DeveloperHub({
               key={page}
               onClick={() => onNavigate(page)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
               }`}

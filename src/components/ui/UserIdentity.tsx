@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Wallet, Pencil, Check, X, Loader2, Copy } from 'lucide-react'
@@ -117,7 +118,7 @@ export default function UserIdentity({
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 className={`px-2 py-0.5 rounded border ${sizes.name} font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 border-gray-600 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
@@ -138,7 +139,7 @@ export default function UserIdentity({
               <button
                 onClick={cancelEdit}
                 className={`p-1 rounded transition-colors ${
-                  theme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'
+                  isDarkTheme(theme) ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
                 title='Cancel'
               >
@@ -148,7 +149,7 @@ export default function UserIdentity({
           ) : (
             <>
               <span className={`font-semibold truncate ${sizes.name} ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               } ${!name ? 'opacity-50 italic' : ''}`}>
                 {displayName}
               </span>
@@ -156,7 +157,7 @@ export default function UserIdentity({
                 <button
                   onClick={startEdit}
                   className={`p-1 rounded opacity-50 hover:opacity-100 transition-opacity flex-shrink-0 ${
-                    theme === 'dark' ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'
+                    isDarkTheme(theme) ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'
                   }`}
                   title='Edit name'
                 >
@@ -169,7 +170,7 @@ export default function UserIdentity({
 
         {/* Email row */}
         {showEmail && email && (
-          <p className={`${sizes.meta} truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`${sizes.meta} truncate ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             {email}
           </p>
         )}
@@ -178,7 +179,7 @@ export default function UserIdentity({
         {showWallet && walletAddress && (
           <div
             className={`flex items-center gap-1.5 ${sizes.meta} ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
             } ${copyWalletOnClick ? 'cursor-pointer hover:text-gray-400' : ''}`}
             onClick={copyWalletOnClick ? copyWallet : undefined}
             title={copyWalletOnClick ? (copied ? 'Copied!' : 'Click to copy') : walletAddress}

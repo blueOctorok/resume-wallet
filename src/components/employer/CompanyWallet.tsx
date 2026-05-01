@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import WalletInfo from '@/components/WalletInfo'
@@ -30,6 +31,8 @@ export function CompanyWalletContent({
 }: CompanyWalletContentProps) {
   const { theme } = useTheme()
   const isRail = layout === 'rail'
+  const ink = theme === 'ink'
+  const dark = isDarkTheme(theme)
 
   return (
     <div className={cn(isRail ? 'space-y-3' : 'space-y-5')}>
@@ -37,9 +40,11 @@ export function CompanyWalletContent({
         <div
           className={cn(
             'rounded-xl border overflow-hidden',
-            theme === 'dark'
-              ? 'border-teal-500/25 bg-gradient-to-br from-teal-500/15 via-gray-900/40 to-cyan-500/10'
-              : 'border-teal-200/60 bg-gradient-to-br from-teal-50 via-white to-cyan-50/80',
+            ink
+              ? 'border-zinc-600/50 bg-gradient-to-br from-zinc-800/55 via-zinc-900/70 to-zinc-950/80'
+              : dark
+                ? 'border-teal-500/25 bg-gradient-to-br from-teal-500/15 via-gray-900/40 to-cyan-500/10'
+                : 'border-teal-200/60 bg-gradient-to-br from-teal-50 via-white to-cyan-50/80',
           )}
         >
           <div className={cn('flex items-center gap-3', isRail ? 'p-3' : 'p-4')}>
@@ -47,7 +52,7 @@ export function CompanyWalletContent({
               className={cn(
                 'rounded-xl shadow-sm flex items-center justify-center shrink-0',
                 isRail ? 'p-2.5' : 'p-3',
-                theme === 'dark' ? 'bg-gray-800/90 text-teal-300' : 'bg-white text-teal-700',
+                ink ? 'bg-zinc-800/95 text-zinc-200' : dark ? 'bg-gray-800/90 text-teal-300' : 'bg-white text-teal-700',
               )}
             >
               <Wallet className={isRail ? 'w-5 h-5' : 'w-6 h-6'} />
@@ -55,7 +60,8 @@ export function CompanyWalletContent({
             <div className="min-w-0">
               <h2
                 className={cn(
-                  'font-bold tracking-tight text-gray-900 dark:text-gray-100',
+                  'font-bold tracking-tight',
+                  ink ? 'text-zinc-50' : 'text-gray-900 dark:text-gray-100',
                   isRail ? 'text-base' : 'text-lg',
                 )}
               >
@@ -63,7 +69,8 @@ export function CompanyWalletContent({
               </h2>
               <p
                 className={cn(
-                  'text-gray-600 dark:text-gray-400 truncate',
+                  'truncate',
+                  ink ? 'text-zinc-400' : 'text-gray-600 dark:text-gray-400',
                   isRail ? 'text-xs' : 'text-sm',
                 )}
                 title={companyName}
@@ -77,7 +84,7 @@ export function CompanyWalletContent({
 
       <p
         className={cn(
-          'text-gray-600 dark:text-gray-300 leading-snug',
+          ink ? 'text-zinc-400' : 'text-gray-600 dark:text-gray-300 leading-snug',
           isRail ? 'text-xs' : 'text-sm',
         )}
       >
@@ -89,12 +96,14 @@ export function CompanyWalletContent({
       <div
         className={cn(
           'flex gap-2 p-3 rounded-xl text-xs border',
-          theme === 'dark'
-            ? 'bg-gray-800/60 border-gray-700 text-gray-300'
-            : 'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-800/60 dark:border-gray-700 dark:text-gray-300',
+          ink
+            ? 'bg-zinc-800/70 border-zinc-600/60 text-zinc-300'
+            : dark
+              ? 'bg-gray-800/60 border-gray-700 text-gray-300'
+              : 'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-800/60 dark:border-gray-700 dark:text-gray-300',
         )}
       >
-        <Info className="w-4 h-4 shrink-0 mt-0.5 text-teal-600 dark:text-teal-400" />
+        <Info className={cn('w-4 h-4 shrink-0 mt-0.5', ink ? 'text-zinc-400' : 'text-teal-600 dark:text-teal-400')} />
         <p>
           Your personal wallet is unchanged. This smart account keeps company USDC and STORM rewards
           in one place.
@@ -102,7 +111,7 @@ export function CompanyWalletContent({
       </div>
 
       {walletProvisioning && (
-        <p className="flex items-center gap-2 text-sm text-teal-600 dark:text-teal-300">
+        <p className={cn('flex items-center gap-2 text-sm', ink ? 'text-zinc-300' : 'text-teal-600 dark:text-teal-300')}>
           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
           Setting up your company wallet…
         </p>

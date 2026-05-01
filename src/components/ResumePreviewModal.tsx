@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React from 'react'
 import { X, Download, Loader2, Edit, Shield, Trash2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
@@ -141,17 +142,17 @@ export default function ResumePreviewModal({
         {/* Header with title and actions */}
         <div
           className={`sticky top-0 z-10 p-4 border-b ${
-            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               {title}
             </h3>
             <button
               onClick={onClose}
               className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                isDarkTheme(theme) ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -166,7 +167,7 @@ export default function ResumePreviewModal({
                 onClick={onDownloadProp}
                 disabled={isDownloading}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-teal-500 text-gray-900 hover:bg-teal-400'
                     : 'bg-teal-600 text-white hover:bg-teal-700'
                 }`}
@@ -185,7 +186,7 @@ export default function ResumePreviewModal({
               <button
                 onClick={onEdit}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30'
                     : 'bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100'
                 }`}
@@ -201,7 +202,7 @@ export default function ResumePreviewModal({
                 onClick={onVerify}
                 disabled={isVerifying}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-green-500/20 text-green-400 border border-green-500/40 hover:bg-green-500/30'
                     : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'
                 }`}
@@ -220,7 +221,7 @@ export default function ResumePreviewModal({
               <button
                 onClick={onDelete}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'text-red-400 border border-red-500/40 hover:bg-red-500/20'
                     : 'text-red-600 border border-red-200 hover:bg-red-50'
                 }`}
@@ -237,14 +238,14 @@ export default function ResumePreviewModal({
           {/* Resume preview content - matches ReviewStep styling */}
           <div
             className={`rounded-lg border p-6 ${
-              theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
             }`}
           >
             {/* Personal Information */}
             <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
               <h5
                 className={`text-xl font-bold mb-2 ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 {personalInfo.firstName || personalInfo.lastName
@@ -253,7 +254,7 @@ export default function ResumePreviewModal({
               </h5>
               <div
                 className={`text-sm space-y-1 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 {personalInfo.email && <p>{personalInfo.email}</p>}
@@ -267,7 +268,7 @@ export default function ResumePreviewModal({
               {personalInfo.professionalSummary && (
                 <p
                   className={`mt-3 text-sm leading-relaxed ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                   }`}
                 >
                   {personalInfo.professionalSummary}
@@ -280,14 +281,14 @@ export default function ResumePreviewModal({
               <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
                 <h5
                   className={`text-base font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   CDL & License Information
                 </h5>
                 <div
                   className={`text-sm space-y-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                   }`}
                 >
                   {cdlInfo.cdlState && (
@@ -319,7 +320,7 @@ export default function ResumePreviewModal({
               <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
                 <h5
                   className={`text-base font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Professional Experience
@@ -331,14 +332,14 @@ export default function ResumePreviewModal({
                         <div>
                           <p
                             className={`font-semibold ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
+                              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                             }`}
                           >
                             {emp.position || 'Position'}
                           </p>
                           <p
                             className={`text-sm ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                             }`}
                           >
                             {emp.companyName || 'Company'} {emp.location && `• ${emp.location}`}
@@ -346,7 +347,7 @@ export default function ResumePreviewModal({
                         </div>
                         <p
                           className={`text-sm mt-1 sm:mt-0 ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
                           {formatDate(emp.startDate)} – {emp.isCurrent ? 'Present' : formatDate(emp.endDate)}
@@ -355,7 +356,7 @@ export default function ResumePreviewModal({
                       {emp.responsibilities && emp.responsibilities.length > 0 && (
                         <ul
                           className={`mt-2 ml-4 list-disc text-sm space-y-1 ${
-                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                           }`}
                         >
                           {emp.responsibilities.map((resp, i) => (
@@ -374,7 +375,7 @@ export default function ResumePreviewModal({
               <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
                 <h5
                   className={`text-base font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Education & Training
@@ -384,14 +385,14 @@ export default function ResumePreviewModal({
                     <div key={edu.id || idx}>
                       <p
                         className={`font-semibold ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                         }`}
                       >
                         {edu.degree || 'Degree'} {edu.field && `in ${edu.field}`}
                       </p>
                       <p
                         className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         {edu.school} {edu.year && `• ${edu.year}`}
@@ -399,7 +400,7 @@ export default function ResumePreviewModal({
                       {edu.certifications && edu.certifications.length > 0 && (
                         <p
                           className={`text-sm mt-1 ${
-                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                           }`}
                         >
                           Certifications: {edu.certifications.join(', ')}
@@ -416,7 +417,7 @@ export default function ResumePreviewModal({
               <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
                 <h5
                   className={`text-base font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Skills & Equipment
@@ -430,14 +431,14 @@ export default function ResumePreviewModal({
                       <div key={category.value}>
                         <p
                           className={`text-sm font-medium ${
-                            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                           }`}
                         >
                           {category.label}:
                         </p>
                         <p
                           className={`text-sm ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
                           {categorySkills.map((s) => s.name).filter(Boolean).join(', ')}
@@ -454,7 +455,7 @@ export default function ResumePreviewModal({
               <section>
                 <h5
                   className={`text-base font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Professional References
@@ -464,14 +465,14 @@ export default function ResumePreviewModal({
                     <div key={ref.id || idx}>
                       <p
                         className={`font-semibold ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                         }`}
                       >
                         {ref.name || 'Name'}
                       </p>
                       <p
                         className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         {ref.title} {ref.company && `at ${ref.company}`}
@@ -479,7 +480,7 @@ export default function ResumePreviewModal({
                       {ref.phone && (
                         <p
                           className={`text-xs ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
                           {ref.phone}
@@ -488,7 +489,7 @@ export default function ResumePreviewModal({
                       {ref.email && (
                         <p
                           className={`text-xs ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
                           {ref.email}
@@ -508,7 +509,7 @@ export default function ResumePreviewModal({
               references.length === 0 && (
                 <div
                   className={`text-center py-8 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   <p>No resume data available.</p>

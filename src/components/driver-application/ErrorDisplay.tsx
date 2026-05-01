@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React from 'react'
 import { ValidationError, ValidationResult } from '@/lib/validation'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -24,7 +25,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       {validation.errors.length > 0 && (
         <div
           className={`border rounded-md p-4 ${
-            theme !== 'dark'
+            !isDarkTheme(theme)
               ? 'bg-red-50 border-red-200'
               : 'bg-red-500/10 border-red-500/30'
           }`}
@@ -46,14 +47,14 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             <div className='ml-3'>
               <h3
                 className={`text-sm font-medium ${
-                  theme !== 'dark' ? 'text-red-800' : 'text-red-300'
+                  !isDarkTheme(theme) ? 'text-red-800' : 'text-red-300'
                 }`}
               >
                 Please fix the following errors:
               </h3>
               <ul
                 className={`mt-2 text-sm list-disc list-inside space-y-1 ${
-                  theme !== 'dark' ? 'text-red-700' : 'text-red-300'
+                  !isDarkTheme(theme) ? 'text-red-700' : 'text-red-300'
                 }`}
               >
                 {validation.errors.map((error, index) => (
@@ -69,7 +70,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       {validation.warnings.length > 0 && (
         <div
           className={`border rounded-md p-4 ${
-            theme !== 'dark'
+            !isDarkTheme(theme)
               ? 'bg-yellow-50 border-yellow-200'
               : 'bg-yellow-500/10 border-yellow-500/30'
           }`}
@@ -91,14 +92,14 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             <div className='ml-3'>
               <h3
                 className={`text-sm font-medium ${
-                  theme !== 'dark' ? 'text-yellow-800' : 'text-yellow-300'
+                  !isDarkTheme(theme) ? 'text-yellow-800' : 'text-yellow-300'
                 }`}
               >
                 Please review the following warnings:
               </h3>
               <ul
                 className={`mt-2 text-sm list-disc list-inside space-y-1 ${
-                  theme !== 'dark' ? 'text-yellow-700' : 'text-yellow-300/80'
+                  !isDarkTheme(theme) ? 'text-yellow-700' : 'text-yellow-300/80'
                 }`}
               >
                 {validation.warnings.map((warning, index) => (
@@ -140,7 +141,7 @@ export const FieldError: React.FC<FieldErrorProps> = ({
         <p
           key={index}
           className={`text-sm flex items-center ${
-            theme !== 'dark' ? 'text-red-600' : 'text-red-300'
+            !isDarkTheme(theme) ? 'text-red-600' : 'text-red-300'
           }`}
         >
           <svg
@@ -161,7 +162,7 @@ export const FieldError: React.FC<FieldErrorProps> = ({
         <p
           key={index}
           className={`text-sm flex items-center ${
-            theme !== 'dark' ? 'text-yellow-600' : 'text-yellow-300'
+            !isDarkTheme(theme) ? 'text-yellow-600' : 'text-yellow-300'
           }`}
         >
           <svg
@@ -203,7 +204,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
   return (
     <div
       className={`border rounded-lg p-4 ${
-        theme !== 'dark'
+        !isDarkTheme(theme)
           ? 'bg-white border-gray-200'
           : 'bg-gray-800/50 border-gray-700'
       } ${className}`}
@@ -241,10 +242,10 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
             <h3
               className={`text-sm font-medium ${
                 validation.errors.length > 0
-                  ? theme !== 'dark'
+                  ? !isDarkTheme(theme)
                     ? 'text-red-800'
                     : 'text-red-300'
-                  : theme !== 'dark'
+                  : !isDarkTheme(theme)
                     ? 'text-yellow-800'
                     : 'text-yellow-300'
               }`}
@@ -257,7 +258,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
               validation.errors.length === 0 && (
                 <p
                   className={`text-sm mt-1 ${
-                    theme !== 'dark' ? 'text-yellow-700' : 'text-yellow-300/80'
+                    !isDarkTheme(theme) ? 'text-yellow-700' : 'text-yellow-300/80'
                   }`}
                 >
                   You can proceed, but please review the warnings below.
@@ -269,7 +270,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
           <button
             onClick={onDismiss}
             className={`${
-              theme !== 'dark'
+              !isDarkTheme(theme)
                 ? 'text-gray-500 hover:text-gray-700'
                 : 'text-brand-cream/50 hover:text-brand-cream/70'
             }`}

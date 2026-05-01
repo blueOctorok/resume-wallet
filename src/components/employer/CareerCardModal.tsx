@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, type ReactNode } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -336,12 +337,12 @@ export default function CareerCardModal({
             title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               mvrOrderSuccess
-                ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+                ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
                 : consentReady
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
                     : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
@@ -369,7 +370,7 @@ export default function CareerCardModal({
     <>
       {employerExtras?.existingApplication ? (
         <span className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm ${
-          theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700'
+          isDarkTheme(theme) ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700'
         }`}>
           <CheckCircle className="w-4 h-4" />
           Already Applied ({employerExtras.existingApplication.status})
@@ -400,7 +401,7 @@ export default function CareerCardModal({
 
       {employerExtras && employerExtras.pendingRequests.length > 0 && (
         <span className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
-          theme === 'dark' ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+          isDarkTheme(theme) ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
         }`}>
           <Clock className="w-4 h-4" />
           {employerExtras.pendingRequests.length} pending request{employerExtras.pendingRequests.length !== 1 ? 's' : ''}
@@ -428,7 +429,7 @@ export default function CareerCardModal({
         className={cn(
           'sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 border-b',
           'backdrop-blur-md border-gray-200/90 dark:border-gray-700/80',
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-950/85'
             : 'bg-white/90',
         )}
@@ -441,7 +442,7 @@ export default function CareerCardModal({
           <div
             className={cn(
               'rounded-full ring-2 ring-offset-2 shrink-0',
-              theme === 'dark' ? 'ring-teal-400/40 ring-offset-gray-950' : 'ring-teal-500/30 ring-offset-white',
+              isDarkTheme(theme) ? 'ring-teal-400/40 ring-offset-gray-950' : 'ring-teal-500/30 ring-offset-white',
             )}
           >
             <Avatar
@@ -455,7 +456,7 @@ export default function CareerCardModal({
             <p
               className={cn(
                 'text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5',
-                theme === 'dark' ? 'text-teal-400/80' : 'text-teal-700/80',
+                isDarkTheme(theme) ? 'text-teal-400/80' : 'text-teal-700/80',
               )}
             >
               Talent · Career card
@@ -463,7 +464,7 @@ export default function CareerCardModal({
             <h3
               className={cn(
                 'font-bold text-lg tracking-tight truncate',
-                theme === 'dark' ? 'text-white' : 'text-gray-900',
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900',
               )}
             >
               {loading ? 'Loading…' : card?.name || 'Career card'}
@@ -490,16 +491,16 @@ export default function CareerCardModal({
       <div
         className={cn(
           'p-4 sm:p-6',
-          theme === 'dark' ? 'bg-gray-950/40' : 'bg-slate-50/40',
+          isDarkTheme(theme) ? 'bg-gray-950/40' : 'bg-slate-50/40',
         )}
       >
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className={`w-10 h-10 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+            <Loader2 className={`w-10 h-10 animate-spin ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
           </div>
         )}
         {error && (
-          <div className={`p-6 rounded-xl text-center ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+          <div className={`p-6 rounded-xl text-center ${isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
             <AlertCircle className="w-10 h-10 mx-auto mb-2" />
             <p>{error}</p>
           </div>
@@ -510,13 +511,13 @@ export default function CareerCardModal({
               <div
                 className={cn(
                   'mb-4 rounded-xl border px-3 py-2.5',
-                  theme === 'dark' ? 'border-gray-700/80 bg-gray-900/40' : 'border-gray-200 bg-white/80',
+                  isDarkTheme(theme) ? 'border-gray-700/80 bg-gray-900/40' : 'border-gray-200 bg-white/80',
                 )}
               >
                 <p
                   className={cn(
                     'text-[10px] font-semibold uppercase tracking-wider mb-2',
-                    theme === 'dark' ? 'text-gray-500' : 'text-gray-500',
+                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500',
                   )}
                 >
                   Requests
@@ -547,7 +548,7 @@ export default function CareerCardModal({
       />
       <div className="p-6 space-y-4">
         <div>
-          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
             Select Job Posting *
           </label>
           {jobsLoading ? (
@@ -555,7 +556,7 @@ export default function CareerCardModal({
               <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
             </div>
           ) : jobPostings.length === 0 ? (
-            <p className={`text-sm py-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`text-sm py-3 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
               No active job postings. Create one first.
             </p>
           ) : (
@@ -567,17 +568,17 @@ export default function CareerCardModal({
                   onClick={() => setSelectedJobId(job.id)}
                   className={`w-full text-left p-3 rounded-lg border transition-all cursor-pointer ${
                     selectedJobId === job.id
-                      ? theme === 'dark' ? 'border-teal-500 bg-teal-500/10' : 'border-teal-500 bg-teal-50'
-                      : theme === 'dark' ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-gray-300'
+                      ? isDarkTheme(theme) ? 'border-teal-500 bg-teal-500/10' : 'border-teal-500 bg-teal-50'
+                      : isDarkTheme(theme) ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedJobId === job.id ? 'border-teal-500 bg-teal-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-400'
+                      selectedJobId === job.id ? 'border-teal-500 bg-teal-500' : isDarkTheme(theme) ? 'border-gray-500' : 'border-gray-400'
                     }`}>
                       {selectedJobId === job.id && <div className="w-2 h-2 rounded-full bg-white" />}
                     </div>
-                    <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{job.title}</span>
+                    <span className={isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}>{job.title}</span>
                   </div>
                 </button>
               ))}
@@ -585,7 +586,7 @@ export default function CareerCardModal({
           )}
         </div>
         <div>
-          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
             Message to Candidate (optional)
           </label>
           <textarea
@@ -594,20 +595,20 @@ export default function CareerCardModal({
             placeholder="Why you think they'd be a great fit..."
             rows={3}
             className={`w-full px-3 py-2 rounded-lg border resize-none ${
-              theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+              isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
             }`}
           />
         </div>
-        <div className={`p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+        <div className={`p-3 rounded-lg text-sm ${isDarkTheme(theme) ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
           This will create an application for the candidate and notify them via email.
         </div>
       </div>
-      <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
+      <div className={`p-6 border-t ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-100'}`}>
         <div className="flex gap-3">
           <button
             onClick={() => setShowRecruitModal(false)}
             className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-              theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Cancel
@@ -748,13 +749,13 @@ function MvrOrderModal({
   }
 
   const inputClass = `w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
   }`
 
   const labelClass = `block text-xs font-medium mb-1 ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
   }`
 
   return (
@@ -768,11 +769,11 @@ function MvrOrderModal({
       {/* Success */}
       {success ? (
           <div className="p-8 text-center">
-            <CheckCircle className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-500'}`} />
-            <h4 className={`text-lg font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <CheckCircle className={`w-12 h-12 mx-auto mb-3 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
+            <h4 className={`text-lg font-semibold mb-1 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               MVR Order Submitted
             </h4>
-            <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
               Results will appear on the candidate&apos;s career card once processed.
             </p>
             <button
@@ -786,14 +787,14 @@ function MvrOrderModal({
           <div className="p-5 space-y-4">
             {/* Pre-fill notice */}
             {fd && (
-              <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
+              <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-400/70' : 'text-teal-600'}`}>
                 Pre-filled from signed disclosure — edit if needed
               </p>
             )}
 
             {/* Personal Information */}
-            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <div className={`rounded-xl border p-4 space-y-3 ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>
                 Personal Information
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -828,8 +829,8 @@ function MvrOrderModal({
             </div>
 
             {/* Driver License */}
-            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <div className={`rounded-xl border p-4 space-y-3 ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>
                 Driver License
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -845,8 +846,8 @@ function MvrOrderModal({
             </div>
 
             {/* Address */}
-            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <div className={`rounded-xl border p-4 space-y-3 ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>
                 Address
               </p>
               <div>
@@ -871,32 +872,32 @@ function MvrOrderModal({
 
             {/* Status messages */}
             {error && (
-              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             {loading && (
-              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${isDarkTheme(theme) ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Submitting MVR order...
               </div>
             )}
 
             {/* Payment */}
-            <div className={`rounded-xl border p-4 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-              <p className={`text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+            <div className={`rounded-xl border p-4 ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>
                 Payment
               </p>
               {isPaymentComplete ? (
-                <div className={`flex items-center gap-2 p-3 rounded-lg ${theme === 'dark' ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                  <CheckCircle className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-500'}`} />
-                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>Payment confirmed</span>
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                  <CheckCircle className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
+                  <span className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'}`}>Payment confirmed</span>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {!isFormValid && (
-                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                       Fill out all required fields to enable payment
                     </p>
                   )}
@@ -945,7 +946,7 @@ function ActionButton({
   if (disabled && !isPending) {
     return (
       <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
-        theme === 'dark' ? 'bg-gray-700/50 text-gray-500' : 'bg-gray-100 text-gray-400'
+        isDarkTheme(theme) ? 'bg-gray-700/50 text-gray-500' : 'bg-gray-100 text-gray-400'
       }`}>
         <CheckCircle className="w-3 h-3" />
         {label}
@@ -956,7 +957,7 @@ function ActionButton({
   if (isPending) {
     return (
       <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
-        theme === 'dark' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+        isDarkTheme(theme) ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
       }`}>
         {resendLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3" />}
         <span>Pending</span>
@@ -977,7 +978,7 @@ function ActionButton({
       onClick={onClick}
       disabled={loading}
       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        theme === 'dark' ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+        isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
       }`}
     >
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}

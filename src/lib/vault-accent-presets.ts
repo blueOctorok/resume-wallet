@@ -207,36 +207,6 @@ export function getVaultAccentLayers(preset: VaultAccentPreset): VaultAccentLaye
   return PRESETS[preset] ?? TEAL
 }
 
-/**
- * Kindle-style sepia cream shell, no teal/violet rim glow — easy on the eyes.
- * Used when `data-theme='sepia'`.
- */
-export const SEPIA_KINDLE_VAULT_SHELL: VaultAccentLayers = {
-  rimLight:
-    'linear-gradient(135deg, rgba(188,170,148,0.28) 0%, rgba(250,243,230,0.55) 42%, transparent 62%, rgba(168,155,138,0.18) 100%)',
-  rimDark: TEAL.rimDark,
-  stripLight: 'linear-gradient(90deg, transparent, rgba(150,138,122,0.22), transparent)',
-  stripDark: TEAL.stripDark,
-  conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(140,128,112,0.1) 90deg, transparent 220deg, rgba(130,118,104,0.06) 300deg, transparent 360deg)',
-  conicDark: TEAL.conicDark,
-  chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(148,136,120,0.22) 0%, transparent 72%)',
-  chamferDark: TEAL.chamferDark,
-  sweepLight: 'linear-gradient(to right, transparent, rgba(130,120,108,0.12), transparent)',
-  sweepDark: TEAL.sweepDark,
-  filterPanelLight:
-    'drop-shadow(0 10px 26px rgba(52,46,40,0.06)) drop-shadow(0 2px 8px rgba(52,46,40,0.035))',
-  filterPanelDark: TEAL.filterPanelDark,
-  filterNavLight:
-    'drop-shadow(0 12px 28px rgba(52,46,40,0.07)) drop-shadow(0 2px 10px rgba(52,46,40,0.04))',
-  filterNavDark: TEAL.filterNavDark,
-  innerBgLight:
-    'linear-gradient(175deg, rgba(252,247,236,0.99) 0%, rgba(244,234,218,0.98) 38%, rgba(238,226,208,0.97) 72%, rgba(232,220,198,0.98) 100%)',
-  innerBgDark: TEAL.innerBgDark,
-  sheenLightClassName: 'bg-gradient-to-r from-transparent via-amber-100/20 to-transparent',
-}
-
 /** Grey newsprint hub shell — no teal/violet; cool neutral ink on stock. */
 export const PAPER_NEWSPRINT_VAULT_SHELL: VaultAccentLayers = {
   rimLight:
@@ -264,39 +234,29 @@ export const PAPER_NEWSPRINT_VAULT_SHELL: VaultAccentLayers = {
   sheenLightClassName: 'bg-gradient-to-r from-transparent via-zinc-200/25 to-transparent',
 }
 
-/** Business classic: flat white, subtle slate rim, professional blue hint — no teal/violet. */
-export const BUSINESS_CLASSIC_VAULT_SHELL: VaultAccentLayers = {
-  rimLight:
-    'linear-gradient(135deg, rgba(59,130,246,0.14) 0%, rgba(255,255,255,0.72) 40%, transparent 58%, rgba(148,163,184,0.2) 100%)',
-  rimDark: TEAL.rimDark,
-  stripLight: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.2), rgba(148,163,184,0.12), transparent)',
-  stripDark: TEAL.stripDark,
-  conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(59,130,246,0.06) 90deg, transparent 220deg, rgba(148,163,184,0.05) 300deg, transparent 360deg)',
-  conicDark: TEAL.conicDark,
-  chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(59,130,246,0.16) 0%, transparent 72%)',
-  chamferDark: TEAL.chamferDark,
-  sweepLight: 'linear-gradient(to right, transparent, rgba(59,130,246,0.08), transparent)',
-  sweepDark: TEAL.sweepDark,
-  filterPanelLight:
-    'drop-shadow(0 8px 24px rgba(15,23,42,0.06)) drop-shadow(0 2px 6px rgba(15,23,42,0.04))',
-  filterPanelDark: TEAL.filterPanelDark,
-  filterNavLight:
-    'drop-shadow(0 10px 26px rgba(15,23,42,0.07)) drop-shadow(0 2px 8px rgba(15,23,42,0.045))',
-  filterNavDark: TEAL.filterNavDark,
-  innerBgLight:
-    'linear-gradient(180deg, rgba(255,255,255,0.998) 0%, rgba(248,250,252,0.99) 45%, rgba(241,245,249,0.985) 100%)',
-  innerBgDark: TEAL.innerBgDark,
-  sheenLightClassName: 'bg-gradient-to-r from-transparent via-slate-100/35 to-transparent',
+/** Quiet dark — zinc graphite vault chrome, no teal/violet (`data-theme='ink'`). */
+export const INK_QUIET_VAULT_SHELL: VaultAccentLayers = {
+  ...PAPER_NEWSPRINT_VAULT_SHELL,
+  rimDark:
+    'linear-gradient(135deg, rgba(82,82,91,0.32) 0%, rgba(39,39,42,0.75) 50%, rgba(24,24,27,0.95) 100%)',
+  stripDark: 'linear-gradient(90deg, transparent, rgba(113,113,122,0.28), transparent)',
+  conicDark:
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(113,113,122,0.14) 42deg, transparent 200deg, rgba(82,82,91,0.12) 300deg, transparent 360deg)',
+  chamferDark:
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(161,161,170,0.15) 0%, transparent 72%)',
+  sweepDark: 'linear-gradient(to right, transparent, rgba(113,113,122,0.18), transparent)',
+  filterPanelDark:
+    'drop-shadow(0 10px 26px rgba(0,0,0,0.48)) drop-shadow(0 2px 10px rgba(0,0,0,0.32))',
+  filterNavDark: 'drop-shadow(0 12px 30px rgba(0,0,0,0.5))',
+  innerBgDark:
+    'linear-gradient(175deg, rgba(30,30,34,0.97) 0%, rgba(18,18,22,0.98) 48%, rgba(12,12,15,0.99) 100%)',
 }
 
 export function getVaultAccentLayersForTheme(
   preset: VaultAccentPreset,
-  theme: 'light' | 'dark' | 'sepia' | 'paper' | 'business',
+  theme: string,
 ): VaultAccentLayers {
-  if (theme === 'sepia') return SEPIA_KINDLE_VAULT_SHELL
   if (theme === 'paper') return PAPER_NEWSPRINT_VAULT_SHELL
-  if (theme === 'business') return BUSINESS_CLASSIC_VAULT_SHELL
+  if (theme === 'ink') return INK_QUIET_VAULT_SHELL
   return getVaultAccentLayers(preset)
 }

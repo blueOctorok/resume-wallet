@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
 import USDCBalance from './USDCBalance'
@@ -73,7 +74,7 @@ export default function UserStatusModal({
 
   // Consistent card styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'
   }`
@@ -81,22 +82,22 @@ export default function UserStatusModal({
   const tabClass = (isActive: boolean) =>
     `flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 justify-center rounded-t-lg ${
       isActive
-        ? theme === 'dark'
+        ? isDarkTheme(theme)
           ? 'text-indigo-400 bg-gray-800/50 border-b-2 border-indigo-400'
           : 'text-indigo-600 bg-white/70 border-b-2 border-indigo-600'
-        : theme === 'dark'
+        : isDarkTheme(theme)
           ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/30'
           : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
     }`
 
   const buttonPrimary = `w-full px-4 py-3 font-semibold rounded-xl transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
       : 'bg-indigo-600 hover:bg-indigo-700 text-white'
   }`
 
   const buttonSecondary = `w-full px-4 py-3 font-semibold rounded-xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-600 text-gray-200 hover:border-indigo-500/50 hover:text-indigo-400'
       : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600'
   }`
@@ -105,7 +106,7 @@ export default function UserStatusModal({
     <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={100}>
       <div
         className={`flex flex-col max-h-[90vh] overflow-hidden ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-900'
             : 'bg-gray-50'
         }`}
@@ -113,34 +114,34 @@ export default function UserStatusModal({
           {/* Header */}
           <div
             className={`flex items-center justify-between p-4 sm:p-5 border-b ${
-              theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+              isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
             }`}
           >
             <div className='flex items-center gap-3'>
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-indigo-500/20 border border-indigo-500/30'
                     : 'bg-indigo-50 border border-indigo-200'
                 }`}
               >
                 <Wallet
                   className={`w-5 h-5 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 />
               </div>
               <div>
                 <h2
                   className={`text-lg font-semibold ${
-                    theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'
                   }`}
                 >
                   Wallet
                 </h2>
                 <p
                   className={`text-xs ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   Base Network
@@ -150,7 +151,7 @@ export default function UserStatusModal({
             <button
               onClick={onClose}
               className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-200'
                   : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
               }`}
@@ -163,7 +164,7 @@ export default function UserStatusModal({
           {user.address && (
             <div
               className={`flex overflow-x-auto scrollbar-hide border-b ${
-                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+                isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
               }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
@@ -214,14 +215,14 @@ export default function UserStatusModal({
                   <div className='flex items-center gap-3 mb-4'>
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-indigo-500/20'
                           : 'bg-indigo-50'
                       }`}
                     >
                       <User
                         className={`w-6 h-6 ${
-                          theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                          isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                         }`}
                       />
                     </div>
@@ -229,7 +230,7 @@ export default function UserStatusModal({
                       {user.email && (
                         <p
                           className={`text-sm truncate ${
-                            theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                            isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
                           }`}
                         >
                           {user.email}
@@ -238,7 +239,7 @@ export default function UserStatusModal({
                       {userRole && (
                         <p
                           className={`text-xs ${
-                            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                           }`}
                         >
                           {userRole === 'driver'
@@ -259,12 +260,12 @@ export default function UserStatusModal({
                   {user.address && (
                     <div
                       className={`flex items-center gap-2 p-3 rounded-xl ${
-                        theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
+                        isDarkTheme(theme) ? 'bg-gray-900/50' : 'bg-gray-100'
                       }`}
                     >
                       <code
                         className={`flex-1 text-xs font-mono truncate ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                         }`}
                       >
                         {user.address}
@@ -272,7 +273,7 @@ export default function UserStatusModal({
                       <button
                         onClick={copyAddress}
                         className={`p-1.5 rounded-lg transition-colors ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-700 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-500'
                         }`}
@@ -288,7 +289,7 @@ export default function UserStatusModal({
                         target='_blank'
                         rel='noopener noreferrer'
                         className={`p-1.5 rounded-lg transition-colors ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-700 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-500'
                         }`}
@@ -304,7 +305,7 @@ export default function UserStatusModal({
                   <div className='space-y-3'>
                     <h3
                       className={`text-sm font-medium ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       Token Balances
@@ -354,7 +355,7 @@ export default function UserStatusModal({
                 <div className={`${cardClass} p-4`}>
                   <p
                     className={`text-sm font-medium mb-3 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     Select token to send
@@ -365,10 +366,10 @@ export default function UserStatusModal({
                       onClick={() => setSendToken('usdc')}
                       className={`p-3 rounded-xl border-2 transition-all ${
                         sendToken === 'usdc'
-                          ? theme === 'dark'
+                          ? isDarkTheme(theme)
                             ? 'border-blue-500 bg-blue-500/10'
                             : 'border-blue-500 bg-blue-50'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'border-gray-700 hover:border-gray-600'
                             : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -376,7 +377,7 @@ export default function UserStatusModal({
                       <div className='flex items-center gap-2'>
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+                            isDarkTheme(theme) ? 'bg-blue-500/20' : 'bg-blue-100'
                           }`}
                         >
                           <span className='text-lg'>💵</span>
@@ -384,14 +385,14 @@ export default function UserStatusModal({
                         <div className='text-left'>
                           <p
                             className={`text-sm font-semibold ${
-                              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                              isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
                             }`}
                           >
                             USDC
                           </p>
                           <p
                             className={`text-xs ${
-                              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
                             }`}
                           >
                             Sepolia
@@ -405,10 +406,10 @@ export default function UserStatusModal({
                       onClick={() => setSendToken('storm')}
                       className={`p-3 rounded-xl border-2 transition-all ${
                         sendToken === 'storm'
-                          ? theme === 'dark'
+                          ? isDarkTheme(theme)
                             ? 'border-yellow-500 bg-yellow-500/10'
                             : 'border-yellow-500 bg-yellow-50'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'border-gray-700 hover:border-gray-600'
                             : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -418,14 +419,14 @@ export default function UserStatusModal({
                         <div className='text-left'>
                           <p
                             className={`text-sm font-semibold ${
-                              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                              isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
                             }`}
                           >
                             STORM
                           </p>
                           <p
                             className={`text-xs ${
-                              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
                             }`}
                           >
                             Sepolia

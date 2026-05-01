@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useCallback } from 'react'
 import { useAccount, useSmartAccountClient } from '@account-kit/react'
 import { encodeFunctionData } from 'viem'
@@ -515,22 +516,22 @@ export default function ResumeUploadWithVerification({
     return (
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
             : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
         } border-t-4 ${
-          theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
+          isDarkTheme(theme) ? 'border-teal-500' : 'border-teal-700'
         }`}
       >
         <div className='text-center py-8'>
           <div
             className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+              isDarkTheme(theme) ? 'bg-blue-500/20' : 'bg-blue-100'
             }`}
           >
             <svg
               className={`w-8 h-8 ${
-                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                isDarkTheme(theme) ? 'text-blue-400' : 'text-blue-600'
               }`}
               fill='none'
               stroke='currentColor'
@@ -546,14 +547,14 @@ export default function ResumeUploadWithVerification({
           </div>
           <h3
             className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Authentication Required
           </h3>
           <p
             className={`text-sm sm:text-base md:text-lg ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
             }`}
           >
             Please sign in to upload and verify your resume.
@@ -566,11 +567,11 @@ export default function ResumeUploadWithVerification({
   const outerClass = embedInParent
     ? 'space-y-6'
     : `max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
           : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
       } border-t-4 ${
-        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
+        isDarkTheme(theme) ? 'border-teal-500' : 'border-teal-700'
       }`
 
   return (
@@ -583,7 +584,7 @@ export default function ResumeUploadWithVerification({
             <div className='mb-6'>
               <h3
                 className={`text-xl sm:text-2xl md:text-3xl font-bold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                 }`}
               >
                 📄 Resume Upload
@@ -595,7 +596,7 @@ export default function ResumeUploadWithVerification({
       <div className='mb-6'>
         <label
           className={`block text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Select Resume (PDF only)
@@ -622,7 +623,7 @@ export default function ResumeUploadWithVerification({
                 ${
                   uploading
                     ? 'opacity-50 cursor-not-allowed'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                     ? 'border-teal-500/50 bg-teal-600/5 hover:border-teal-500 hover:bg-teal-600/10 text-white'
                     : 'border-teal-700/50 bg-teal-700/5 hover:border-teal-700 hover:bg-teal-700/10 text-gray-700'
                 }
@@ -630,7 +631,7 @@ export default function ResumeUploadWithVerification({
             >
               <Paperclip
                 className={`w-5 h-5 ${
-                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                 }`}
               />
               <span className='font-medium text-base'>
@@ -643,7 +644,7 @@ export default function ResumeUploadWithVerification({
                 flex items-center justify-between gap-4 w-full px-6 py-4 rounded-xl
                 border-2 transition-all duration-200
                 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-green-500/50 bg-green-500/10 text-white'
                     : 'border-green-500/50 bg-green-50 text-gray-700'
                 }
@@ -652,14 +653,14 @@ export default function ResumeUploadWithVerification({
               <div className='flex items-center gap-3 flex-1 min-w-0'>
                 <FileText
                   className={`w-5 h-5 flex-shrink-0 ${
-                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                    isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
                   }`}
                 />
                 <div className='flex-1 min-w-0'>
                   <p className='font-medium text-base truncate'>{file.name}</p>
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -681,7 +682,7 @@ export default function ResumeUploadWithVerification({
                   className={`
                     p-2 rounded-lg transition-colors duration-200
                     hover:bg-red-500/20 flex-shrink-0
-                    ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}
+                    ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}
                   `}
                   aria-label='Remove file'
                 >
@@ -708,7 +709,7 @@ export default function ResumeUploadWithVerification({
       {parseLoading && (
         <div
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-            theme === 'dark' ? 'border-teal-500/30 bg-teal-500/10 text-teal-100' : 'border-teal-200 bg-teal-50 text-teal-900'
+            isDarkTheme(theme) ? 'border-teal-500/30 bg-teal-500/10 text-teal-100' : 'border-teal-200 bg-teal-50 text-teal-900'
           }`}
         >
           Analyzing your resume — smart import runs after upload (may take a few seconds)…
@@ -718,7 +719,7 @@ export default function ResumeUploadWithVerification({
       {parseError && !parseModalOpen && (
         <div
           className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-            theme === 'dark' ? 'border-amber-500/30 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-900'
+            isDarkTheme(theme) ? 'border-amber-500/30 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-900'
           }`}
         >
           {parseError}
@@ -731,7 +732,7 @@ export default function ResumeUploadWithVerification({
           <div
             key={step.id}
             className={`rounded-lg p-4 border-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 border-gray-700'
                 : 'bg-gray-50 border-gray-200'
             }`}
@@ -741,7 +742,7 @@ export default function ResumeUploadWithVerification({
                 <span className='text-lg'>{getStatusIcon(step.status)}</span>
                 <span
                   className={`font-medium ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   } ${getStatusColor(step.status)}`}
                 >
                   Step {index + 1}: {step.name}
@@ -760,7 +761,7 @@ export default function ResumeUploadWithVerification({
             {step.data && (
               <div
                 className={`p-3 rounded text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-900 text-gray-300'
                     : 'bg-gray-100 text-gray-700'
                 }`}
@@ -774,7 +775,7 @@ export default function ResumeUploadWithVerification({
             {step.error && (
               <div
                 className={`p-3 rounded text-sm ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-red-900/20 text-red-400'
                     : 'bg-red-50 text-red-700'
                 }`}
@@ -790,21 +791,21 @@ export default function ResumeUploadWithVerification({
       {finalResult && (
         <div
           className={`mt-6 p-4 rounded-lg border-2 mb-6 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-green-900/20 border-green-500/50'
               : 'bg-green-50 border-green-200'
           }`}
         >
           <h4
             className={`font-medium mb-3 ${
-              theme === 'dark' ? 'text-green-400' : 'text-green-800'
+              isDarkTheme(theme) ? 'text-green-400' : 'text-green-800'
             }`}
           >
             🎉 Upload Complete!
           </h4>
           <div
             className={`space-y-2 text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             <div>
@@ -866,7 +867,7 @@ export default function ResumeUploadWithVerification({
       {/* Wallet Status */}
       <div
         className={`mt-4 text-sm ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
         }`}
       >
         {account?.address ? (
@@ -891,7 +892,7 @@ export default function ResumeUploadWithVerification({
             {parsedExtraction ? (
               <ul
                 className={`text-sm space-y-1.5 list-disc pl-5 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 {parsedExtraction.personalInfo?.firstName || parsedExtraction.personalInfo?.lastName ? (
@@ -913,7 +914,7 @@ export default function ResumeUploadWithVerification({
               </ul>
             ) : null}
             {parseError ? (
-              <p className={`text-sm ${theme === 'dark' ? 'text-red-400' : 'text-red-700'}`}>{parseError}</p>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-700'}`}>{parseError}</p>
             ) : null}
             <div className='flex flex-wrap gap-2'>
               <Button

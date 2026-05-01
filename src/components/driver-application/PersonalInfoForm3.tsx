@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal from '@/components/ui/Modal'
@@ -869,7 +870,7 @@ export default function PersonalInfoForm3({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-2xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           EMPLOYMENT HISTORY
         </h2>
@@ -890,25 +891,25 @@ export default function PersonalInfoForm3({
         />
         <div
           className={`p-4 rounded-lg border-2 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
               : 'rounded-xl border border-gray-200 bg-gray-50/80'
           }`}
         >
           <p
-            className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`text-sm font-semibold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             ⚠️ DOT § 383.35 - 10-Year Employment History Requirement
           </p>
           <p
-            className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
           >
             <strong>
               Federal regulation requires 10 years of employment history:
             </strong>
           </p>
           <ul
-            className={`text-sm mt-2 space-y-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+            className={`text-sm mt-2 space-y-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
           >
             <li>
               • <strong>Last 3 years:</strong> Must be verified by employers
@@ -1088,23 +1089,23 @@ export default function PersonalInfoForm3({
             return (
               <div className={`mt-4 p-4 rounded-lg border-2 ${
                 isComplete
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-green-900/20 border-green-500/50'
                     : 'bg-green-50 border-green-200'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-yellow-900/20 border-yellow-500/50'
                     : 'bg-yellow-50 border-yellow-200'
               }`}>
                 {/* Show total history entered */}
-                <p className={`text-sm mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                <p className={`text-sm mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
                   📋 Employment history entered: <strong>{totalHistoryYears.toFixed(1)} years</strong>
                 </p>
                 
                 {/* Main status message */}
                 <p className={`text-sm font-medium ${
                   isComplete
-                    ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
-                    : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                    ? isDarkTheme(theme) ? 'text-green-400' : 'text-green-800'
+                    : isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-800'
                 }`}>
                   {isComplete
                     ? `✓ Requirement met! Last 10 years are accounted for.`
@@ -1116,17 +1117,17 @@ export default function PersonalInfoForm3({
                 
                 {/* Helpful hint for gaps */}
                 {!isComplete && hasRecentGap && (
-                  <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-xs mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                     💡 Tip: If you&apos;re still employed there, change the end date to &quot;Present&quot;. Otherwise, add your current status (new job, unemployment, etc.)
                   </p>
                 )}
                 
                 {/* Collapsible breakdown */}
                 <details className="mt-3">
-                  <summary className={`text-xs cursor-pointer ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <summary className={`text-xs cursor-pointer ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                     📋 Show detailed breakdown
                   </summary>
-                  <div className={`text-xs mt-2 p-2 rounded ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <div className={`text-xs mt-2 p-2 rounded ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                     <p className="mb-2">The DOT requires documentation of the <strong>last 10 years</strong> leading up to today.</p>
                     <ul className="space-y-1">
                       {formData.employers.map((emp, idx) => {
@@ -1156,19 +1157,19 @@ export default function PersonalInfoForm3({
         })()}
         {errors.employmentYearsCoverage && (
           <div className={`mt-2 p-4 rounded-lg border-2 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-red-900/20 border-red-500/50'
               : 'bg-red-50 border-red-200'
           }`}>
             <p className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-red-400' : 'text-red-800'
+              isDarkTheme(theme) ? 'text-red-400' : 'text-red-800'
             }`}>
               {errors.employmentYearsCoverage}
             </p>
           </div>
         )}
         <p
-          className={`text-sm mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm mt-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Start with your most recent position and work backwards. Include
           complete mailing addresses with street number, city, state, zip for
@@ -1179,12 +1180,12 @@ export default function PersonalInfoForm3({
       {/* Show message if no entries yet */}
       {formData.employers.length === 0 && (
         <div className={`p-8 rounded-xl border-2 border-dashed text-center ${
-          theme === 'dark' ? 'border-gray-600 bg-gray-800/30' : 'border-gray-300 bg-gray-50'
+          isDarkTheme(theme) ? 'border-gray-600 bg-gray-800/30' : 'border-gray-300 bg-gray-50'
         }`}>
-          <p className={`text-lg mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className={`text-lg mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
             No history entries yet
           </p>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
             Click &quot;+ Add History Entry&quot; below to start documenting your 10-year history
           </p>
         </div>
@@ -1198,18 +1199,18 @@ export default function PersonalInfoForm3({
         
         return (
         <div key={index} className={`rounded-xl border-2 overflow-hidden ${
-          theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'
+          isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'
         }`}>
           {/* Entry Header with Type Badge */}
           <div className={`flex items-center justify-between p-4 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+            isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
           }`}>
             <div className='flex items-center gap-3'>
               <div className={`w-10 h-10 rounded-lg ${typeInfo.color} flex items-center justify-center`}>
                 <TypeIcon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                   {index === 0 ? 'Most Recent' : `Entry ${index + 1}`} — {typeInfo.label}
                 </h3>
                 {entryType === 'employment' && index < 3 && (
@@ -1223,7 +1224,7 @@ export default function PersonalInfoForm3({
               type='button'
               onClick={() => removeEmployer(index)}
               className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'hover:bg-red-900/50 text-red-400'
                   : 'hover:bg-red-50 text-red-500'
               }`}
@@ -1251,7 +1252,7 @@ export default function PersonalInfoForm3({
                 <>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                         FROM <span className="text-red-500">*</span>
                       </label>
                       <MonthYearPicker
@@ -1264,7 +1265,7 @@ export default function PersonalInfoForm3({
                       />
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                         TO <span className="text-red-500">*</span>
                       </label>
                       <MonthYearPicker
@@ -1280,14 +1281,14 @@ export default function PersonalInfoForm3({
                   </div>
                   {dateOrderError && (
                     <div className={`p-3 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
+                      isDarkTheme(theme) ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
                     }`}>
                       ⚠️ "To" date must be after "From" date
                     </div>
                   )}
                   {index === 0 && !employer.toDate && (
                     <div className={`p-3 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'
+                      isDarkTheme(theme) ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'
                     }`}>
                       💡 Start with your most recent/current position. Select "Present" if you're still here.
                     </div>
@@ -1302,7 +1303,7 @@ export default function PersonalInfoForm3({
                 {/* Company Name, Phone, Email */}
                 <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                   <div className='md:col-span-2'>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       EMPLOYER NAME <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1310,7 +1311,7 @@ export default function PersonalInfoForm3({
                       value={employer.name}
                       onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       } ${errors[`employer${index}Name`] ? 'border-red-500' : ''}`}
@@ -1320,21 +1321,21 @@ export default function PersonalInfoForm3({
                     )}
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       PHONE
                     </label>
                     <PhoneInput
                       value={employer.phone}
                       onChange={(formatted) => handleInputChange('employers', { phone: formatted }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
                     />
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       EMAIL <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1343,7 +1344,7 @@ export default function PersonalInfoForm3({
                       onChange={(e) => handleInputChange('employers', { email: e.target.value }, index)}
                       placeholder="hr@company.com"
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       } ${errors[`employer${index}Email`] ? 'border-red-500' : ''}`}
@@ -1356,7 +1357,7 @@ export default function PersonalInfoForm3({
 
                 {/* Address */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     ADDRESS <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -1365,7 +1366,7 @@ export default function PersonalInfoForm3({
                     rows={2}
                     placeholder="Street, City, State, ZIP"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1375,7 +1376,7 @@ export default function PersonalInfoForm3({
                 {/* Position and Salary */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       POSITION HELD <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1383,14 +1384,14 @@ export default function PersonalInfoForm3({
                       value={employer.positionHeld}
                       onChange={(e) => handleInputChange('employers', { positionHeld: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
                     />
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       SALARY
                     </label>
                     <input
@@ -1399,7 +1400,7 @@ export default function PersonalInfoForm3({
                       onChange={(e) => handleInputChange('employers', { salary: e.target.value }, index)}
                       placeholder="e.g., $50,000/year"
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
@@ -1409,7 +1410,7 @@ export default function PersonalInfoForm3({
 
                 {/* Description of Duties */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     DESCRIPTION OF DUTIES
                   </label>
                   <textarea
@@ -1418,7 +1419,7 @@ export default function PersonalInfoForm3({
                     rows={2}
                     placeholder="e.g., OTR freight hauling, pre-trip inspections, load securing..."
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1427,7 +1428,7 @@ export default function PersonalInfoForm3({
 
                 {/* Reason for Leaving */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     REASON FOR LEAVING <span className="text-red-500">*</span>
                     <span className="text-xs ml-2 opacity-60">(DOT § 383.35)</span>
                   </label>
@@ -1436,7 +1437,7 @@ export default function PersonalInfoForm3({
                     value={employer.reasonForLeaving}
                     onChange={(e) => handleInputChange('employers', { reasonForLeaving: e.target.value }, index)}
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1445,8 +1446,8 @@ export default function PersonalInfoForm3({
 
                 {/* FMCSR Questions */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                    <label className={`block text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <label className={`block text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       Subject to FMCSR? <span className="text-red-500">*</span>
                     </label>
                     <div className='flex gap-4'>
@@ -1460,15 +1461,15 @@ export default function PersonalInfoForm3({
                             onChange={(e) => handleInputChange('employers', { subjectToFMCSR: e.target.value }, index)}
                             className="mr-2 accent-indigo-500"
                           />
-                          <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                          <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                             {val.toUpperCase()}
                           </span>
                         </label>
                       ))}
                     </div>
                   </div>
-                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                    <label className={`block text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <label className={`block text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       Safety-sensitive function? <span className="text-red-500">*</span>
                     </label>
                     <div className='flex gap-4'>
@@ -1482,7 +1483,7 @@ export default function PersonalInfoForm3({
                             onChange={(e) => handleInputChange('employers', { safetySensitiveFunction: e.target.value }, index)}
                             className="mr-2 accent-indigo-500"
                           />
-                          <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                          <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                             {val.toUpperCase()}
                           </span>
                         </label>
@@ -1495,12 +1496,12 @@ export default function PersonalInfoForm3({
             
             {/* UNEMPLOYMENT-specific fields */}
             {entryType === 'unemployment' && (
-              <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-yellow-900/20 border border-yellow-700/30' : 'bg-yellow-50 border border-yellow-200'}`}>
-                <p className={`text-sm ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
+              <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-yellow-900/20 border border-yellow-700/30' : 'bg-yellow-50 border border-yellow-200'}`}>
+                <p className={`text-sm ${isDarkTheme(theme) ? 'text-yellow-300' : 'text-yellow-700'}`}>
                   <strong>Unemployment Period</strong> — This entry accounts for time between jobs. Only dates are required.
                 </p>
                 <div className="mt-3">
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     Optional: Explanation
                   </label>
                   <input
@@ -1509,7 +1510,7 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { gapsInEmployment: e.target.value }, index)}
                     placeholder="e.g., Looking for work, Personal reasons"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1522,7 +1523,7 @@ export default function PersonalInfoForm3({
             {entryType === 'school' && (
               <>
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     SCHOOL NAME <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1531,14 +1532,14 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
                     placeholder="Name of school or institution"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     COURSE OF STUDY
                   </label>
                   <input
@@ -1547,7 +1548,7 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
                     placeholder="e.g., High School Diploma, Associate Degree"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1560,7 +1561,7 @@ export default function PersonalInfoForm3({
             {entryType === 'drivingSchool' && (
               <>
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     DRIVING SCHOOL NAME <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1569,14 +1570,14 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
                     placeholder="Name of CDL/driving school"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     CDL/CERTIFICATION OBTAINED
                   </label>
                   <input
@@ -1585,7 +1586,7 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
                     placeholder="e.g., Class A CDL, Hazmat endorsement"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1599,14 +1600,14 @@ export default function PersonalInfoForm3({
               <>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       BRANCH OF SERVICE <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={employer.militaryBranch || ''}
                       onChange={(e) => handleInputChange('employers', { militaryBranch: e.target.value, name: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
@@ -1623,14 +1624,14 @@ export default function PersonalInfoForm3({
                     </select>
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       DISCHARGE TYPE
                     </label>
                     <select
                       value={employer.dischargeType || ''}
                       onChange={(e) => handleInputChange('employers', { dischargeType: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
@@ -1644,7 +1645,7 @@ export default function PersonalInfoForm3({
                   </div>
                 </div>
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                     POSITION / MOS
                   </label>
                   <input
@@ -1653,7 +1654,7 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { positionHeld: e.target.value }, index)}
                     placeholder="e.g., 88M Motor Transport Operator"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
@@ -1672,7 +1673,7 @@ export default function PersonalInfoForm3({
           type='button'
           onClick={() => setShowTypeSelector(true)}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
@@ -1687,7 +1688,7 @@ export default function PersonalInfoForm3({
           <div className='p-6'>
             <div className="flex items-center justify-between mb-6">
               <h3 className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-800'
               }`}>
                 Select History Type
               </h3>
@@ -1695,7 +1696,7 @@ export default function PersonalInfoForm3({
                 type="button"
                 onClick={() => setShowTypeSelector(false)}
                 className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                  isDarkTheme(theme) ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
                 }`}
               >
                 <X className="w-5 h-5" />
@@ -1703,7 +1704,7 @@ export default function PersonalInfoForm3({
             </div>
             
             <p className={`text-sm mb-4 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}>
               What type of history entry would you like to add?
             </p>
@@ -1715,7 +1716,7 @@ export default function PersonalInfoForm3({
                   type="button"
                   onClick={() => addHistoryEntry(value)}
                   className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-100'
                       : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
                   }`}
@@ -1737,7 +1738,7 @@ export default function PersonalInfoForm3({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-2xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           EDUCATION
         </h2>
@@ -1747,7 +1748,7 @@ export default function PersonalInfoForm3({
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
-              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               EDUCATION {index + 1}
             </h3>
@@ -1756,7 +1757,7 @@ export default function PersonalInfoForm3({
                 type='button'
                 onClick={() => removeEducation(index)}
                 className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
@@ -1769,7 +1770,7 @@ export default function PersonalInfoForm3({
           <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
             <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 SCHOOL TYPE
               </label>
@@ -1783,7 +1784,7 @@ export default function PersonalInfoForm3({
                   )
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
@@ -1800,7 +1801,7 @@ export default function PersonalInfoForm3({
             </div>
             <div className='md:col-span-2 flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 NAME & LOCATION
               </label>
@@ -1815,7 +1816,7 @@ export default function PersonalInfoForm3({
                   )
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
@@ -1823,7 +1824,7 @@ export default function PersonalInfoForm3({
             </div>
             <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 COURSE OF STUDY
               </label>
@@ -1838,7 +1839,7 @@ export default function PersonalInfoForm3({
                   )
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
@@ -1846,7 +1847,7 @@ export default function PersonalInfoForm3({
             </div>
             <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 YEARS
               </label>
@@ -1861,7 +1862,7 @@ export default function PersonalInfoForm3({
                   )
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
@@ -1869,7 +1870,7 @@ export default function PersonalInfoForm3({
             </div>
             <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 GRADUATE (Y/N)
               </label>
@@ -1887,10 +1888,10 @@ export default function PersonalInfoForm3({
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                    className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
                   />
                   <span
-                    className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     Y
                   </span>
@@ -1908,10 +1909,10 @@ export default function PersonalInfoForm3({
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                    className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
                   />
                   <span
-                    className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     N
                   </span>
@@ -1923,7 +1924,7 @@ export default function PersonalInfoForm3({
           {/* Details field - full width */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+              className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
             >
               DETAILS
             </label>
@@ -1938,7 +1939,7 @@ export default function PersonalInfoForm3({
                 )
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                   : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
               }`}
@@ -1953,7 +1954,7 @@ export default function PersonalInfoForm3({
           type='button'
           onClick={addEducation}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
@@ -1965,12 +1966,12 @@ export default function PersonalInfoForm3({
       {/* Other Qualifications */}
       <div className='space-y-4'>
         <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           OTHER QUALIFICATIONS
         </h3>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Please list any other qualifications that you have and which you
           believe should be considered.
@@ -1982,7 +1983,7 @@ export default function PersonalInfoForm3({
           }
           rows={6}
           className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
               : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
           }`}
@@ -1995,7 +1996,7 @@ export default function PersonalInfoForm3({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-2xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           TO BE READ AND SIGNED BY APPLICANT
         </h2>
@@ -2023,7 +2024,7 @@ export default function PersonalInfoForm3({
             })
           }
           className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10'
               : 'border-indigo-500/40 text-indigo-600 hover:bg-indigo-500/10'
           }`}
@@ -2036,7 +2037,7 @@ export default function PersonalInfoForm3({
       {/* White "legal document" container - use dark text since bg is always light */}
       <div
         className={`p-6 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-white border-gray-300'
             : 'bg-gray-50 border-gray-200'
         }`}
@@ -2114,21 +2115,21 @@ export default function PersonalInfoForm3({
 
       <div
         className={`p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
             : 'rounded-xl border border-gray-200 bg-gray-50/80'
         }`}
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.21(d) Disclosure — Safety Performance History Investigation
         </p>
         <p
           className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           The motor carrier will use the employment information you provide to investigate your safety performance history under 49 CFR 391.23. We must also remind you of your due-process rights (review, correct, and rebut) regarding any information obtained.
@@ -2141,14 +2142,14 @@ export default function PersonalInfoForm3({
               handleInputChange('safetyPerformanceHistoryAcknowledgement', e.target.checked)
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-600 bg-transparent accent-indigo-500'
                 : 'border-gray-300 bg-white accent-indigo-500'
             }`}
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge that my safety performance history will be investigated and that I have been notified of my rights under 49 CFR 391.23(i).
@@ -2163,21 +2164,21 @@ export default function PersonalInfoForm3({
 
       <div
         className={`p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
             : 'rounded-xl border border-gray-200 bg-gray-50/80'
         }`}
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.23 Consent — Previous Employer &amp; Clearinghouse Investigations
         </p>
         <p
           className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           By granting consent, you authorize us to request motor vehicle records, contact prior DOT-regulated employers about accidents and drug/alcohol program results, and query the FMCSA Drug &amp; Alcohol Clearinghouse as required. We will only use the information for hiring decisions and protect it as mandated by 49 CFR 391.23(k).
@@ -2190,14 +2191,14 @@ export default function PersonalInfoForm3({
               handleInputChange('safetyPerformanceInquiryConsent', e.target.checked)
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-600 bg-transparent accent-indigo-500'
                 : 'border-gray-300 bg-white accent-indigo-500'
             }`}
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I authorize the prospective motor carrier to investigate my driving record, prior DOT employment safety performance, drug/alcohol program history, and the FMCSA Clearinghouse as required by 49 CFR 391.23.
@@ -2212,21 +2213,21 @@ export default function PersonalInfoForm3({
 
       <div
         className={`p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
             : 'rounded-xl border border-gray-200 bg-gray-50/80'
         }`}
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.31 Road Test Requirement
         </p>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           You must successfully complete a carrier-administered road test covering pre-trip inspections, coupling, vehicle control, traffic operations, turning, braking, and backing. We'll document the results and issue the required certificate before you operate equipment for us.
@@ -2240,14 +2241,14 @@ export default function PersonalInfoForm3({
               handleInputChange('roadTestAcknowledgement', e.target.checked)
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-600 bg-transparent accent-indigo-500'
                 : 'border-gray-300 bg-white accent-indigo-500'
             }`}
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge that I must pass the road test described in 49 CFR 391.31 before driving for this carrier.
@@ -2262,7 +2263,7 @@ export default function PersonalInfoForm3({
         <div className='space-y-3'>
           <p
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
             }`}
           >
             Have you already completed a road test (with certificate) that meets FMCSA requirements in the past 12 months?
@@ -2279,12 +2280,12 @@ export default function PersonalInfoForm3({
                     handleInputChange('hasPreviousRoadTest', e.target.value)
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   } accent-indigo-500`}
                 />
                 <span
                   className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   {value.toUpperCase()}
@@ -2301,7 +2302,7 @@ export default function PersonalInfoForm3({
           <div className='mt-4'>
             <label
               className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
               }`}
             >
               Provide details about the prior road test (date, examiner, equipment type, miles, certificate location)
@@ -2314,7 +2315,7 @@ export default function PersonalInfoForm3({
               className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 errors.previousRoadTestDetails
                   ? 'border-red-500'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
               }`}
@@ -2330,21 +2331,21 @@ export default function PersonalInfoForm3({
 
       <div
         className={`mt-6 p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
             : 'rounded-xl border border-gray-200 bg-gray-50/80'
         }`}
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Road Test Equivalent (49 CFR 391.33)
         </p>
         <p
           className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           If you already hold a valid CDL for the assigned vehicle class or have a road test certificate issued in the last 3 years, we can accept that documentation instead of retesting. Upload clear copies so we can retain them in your driver qualification file per § 391.33(b).
@@ -2353,7 +2354,7 @@ export default function PersonalInfoForm3({
         <div className='space-y-3'>
           <p
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
             }`}
           >
             Do you currently hold a CDL that covers the equipment we'll assign?
@@ -2368,12 +2369,12 @@ export default function PersonalInfoForm3({
                   checked={formData.hasValidCDL === value}
                   onChange={(e) => handleInputChange('hasValidCDL', e.target.value)}
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   } accent-indigo-500`}
                 />
                 <span
                   className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}
                 >
                   {value.toUpperCase()}
@@ -2389,7 +2390,7 @@ export default function PersonalInfoForm3({
         <div className='mt-4 space-y-2'>
           <label
             className={`block text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
             }`}
           >
             Upload CDL copy or most recent road test certificate (PDF or image)
@@ -2403,7 +2404,7 @@ export default function PersonalInfoForm3({
               handleInputChange('roadTestCertificateFiles', files)
             }}
             className={`block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'file:bg-indigo-500 file:text-white'
                 : 'file:bg-indigo-600 file:text-white'
             }`}
@@ -2417,7 +2418,7 @@ export default function PersonalInfoForm3({
           ) : null}
           <p
             className={`text-xs ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
             We'll store these documents securely to satisfy § 391.33(b). If you prefer to provide them later, let us know during onboarding.
@@ -2427,21 +2428,21 @@ export default function PersonalInfoForm3({
 
       <div
         className={`mt-6 p-4 rounded-lg border-2 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'rounded-xl border border-gray-700/50 bg-gray-700/30'
             : 'rounded-xl border border-gray-200 bg-gray-50/80'
         }`}
       >
         <p
           className={`text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Driver Qualification File Checklist (49 CFR 391.51)
         </p>
         <p
           className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           We must maintain a complete driver qualification file. Confirm each item below so we can log compliance and follow up if anything is missing.
@@ -2455,14 +2456,14 @@ export default function PersonalInfoForm3({
               handleInputChange('dqFileAcknowledgement', e.target.checked)
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-600 bg-transparent accent-indigo-500'
                 : 'border-gray-300 bg-white accent-indigo-500'
             }`}
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
+              isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge the carrier will maintain my driver qualification file and that I will provide requested documents promptly.
@@ -2478,7 +2479,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Employment application and background (391.51(b)(1)-(5))
@@ -2495,12 +2496,12 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasApplicationComplete', e.target.value)
                     }
                     className={`mr-1 ${
-                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                     } accent-indigo-500`}
                   />
                   <span
                     className={`${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {value.toUpperCase()}
@@ -2518,7 +2519,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Road test, CDL, or equivalent documents (391.51(b)(3))
@@ -2535,12 +2536,12 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasRoadTestDocs', e.target.value)
                     }
                     className={`mr-1 ${
-                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                     } accent-indigo-500`}
                   />
                   <span
                     className={`${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {value.toUpperCase()}
@@ -2558,7 +2559,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Medical certificates, variances, and examiner verification (391.51(b)(6)-(8))
@@ -2575,12 +2576,12 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasMedicalDocs', e.target.value)
                     }
                     className={`mr-1 ${
-                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                     } accent-indigo-500`}
                   />
                   <span
                     className={`${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {value.toUpperCase()}
@@ -2598,7 +2599,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               I understand records stay on file during employment plus 3 years (391.51(c)-(d))
@@ -2615,12 +2616,12 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqUnderstandsRetention', e.target.value)
                     }
                     className={`mr-1 ${
-                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                     } accent-indigo-500`}
                   />
                   <span
                     className={`${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     {value.toUpperCase()}
@@ -2639,12 +2640,12 @@ export default function PersonalInfoForm3({
 
       {/* ── FCRA Summary of Rights Acknowledgment ─────────────────── */}
       <div className={`p-4 rounded-xl border-2 ${
-        theme === 'dark' ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-indigo-300 bg-indigo-50'
+        isDarkTheme(theme) ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-indigo-300 bg-indigo-50'
       }`}>
-        <p className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-800'}`}>
+        <p className={`text-sm font-semibold mb-2 ${isDarkTheme(theme) ? 'text-indigo-300' : 'text-indigo-800'}`}>
           Federal FCRA Summary of Rights Acknowledgment
         </p>
-        <p className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+        <p className={`text-sm mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
           You have been provided a copy of the Summary of Your Rights under the Fair Credit Reporting Act (FCRA) in connection with this application. By checking below, you acknowledge receipt of the FCRA Summary of Rights.
         </p>
         <label className='flex items-start gap-3 cursor-pointer'>
@@ -2653,10 +2654,10 @@ export default function PersonalInfoForm3({
             checked={Boolean(formData.fcraAcknowledgement)}
             onChange={(e) => handleInputChange('fcraAcknowledgement', e.target.checked)}
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              theme === 'dark' ? 'border-gray-600 bg-transparent accent-indigo-500' : 'border-gray-300 bg-white accent-indigo-500'
+              isDarkTheme(theme) ? 'border-gray-600 bg-transparent accent-indigo-500' : 'border-gray-300 bg-white accent-indigo-500'
             }`}
           />
-          <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>
+          <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'}`}>
             I acknowledge receipt of the Federal FCRA Summary of Rights.
           </span>
         </label>
@@ -2667,15 +2668,15 @@ export default function PersonalInfoForm3({
 
       {/* ── Electronic Signature ────────────────────────────────────── */}
       <div className={`p-5 rounded-xl border-2 ${
-        theme === 'dark' ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+        isDarkTheme(theme) ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
       }`}>
-        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+        <p className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
           By signing below, I agree to use an electronic signature to demonstrate my consent. An electronic signature is as legally binding as an ink signature. This certifies that this application was completed by me, and that all entries on it and information in it are true and complete to the best of my knowledge.
         </p>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
           <div>
-            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
               Signature (type your full name)
             </label>
             <input
@@ -2684,13 +2685,13 @@ export default function PersonalInfoForm3({
               onChange={(e) => handleInputChange('applicantSignature', e.target.value)}
               placeholder='Full legal name'
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent italic ${
-                theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
+                isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
             {errors.applicantSignature && <p className='mt-1 text-sm text-red-600'>{errors.applicantSignature}</p>}
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
               Date
             </label>
             <input
@@ -2698,7 +2699,7 @@ export default function PersonalInfoForm3({
               value={formData.signatureDate}
               onChange={(e) => handleInputChange('signatureDate', e.target.value)}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
+                isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
             {errors.signatureDate && <p className='mt-1 text-sm text-red-600'>{errors.signatureDate}</p>}
@@ -2706,7 +2707,7 @@ export default function PersonalInfoForm3({
         </div>
 
         <div className='mt-4'>
-          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
             Printed Name
           </label>
           <input
@@ -2715,14 +2716,14 @@ export default function PersonalInfoForm3({
             onChange={(e) => handleInputChange('applicantNamePrinted', e.target.value)}
             placeholder='Print your full name'
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-              theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
+              isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
             }`}
           />
         </div>
 
         {/* Read-only metadata — populated automatically */}
         <div className={`mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs ${
-          theme === 'dark' ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'
+          isDarkTheme(theme) ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'
         }`}>
           <div>
             <span className='font-medium'>Signed Date/Time: </span>
@@ -2743,7 +2744,7 @@ export default function PersonalInfoForm3({
   return (
     <div
       className={`max-w-4xl mx-auto relative z-10 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
           : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
       }`}
@@ -2751,33 +2752,33 @@ export default function PersonalInfoForm3({
       {/* Header */}
       <div
         className={`text-center py-8 px-6 border-b ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <h1
           className={`text-2xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           DRIVER EMPLOYMENT APPLICATION
         </h1>
         <p
           className={`text-lg ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           [COMPANY NAME, ADDRESS, PHONE NUMBER, AND EMAIL]
         </p>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+            isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'
           }`}
         >
           An Equal Opportunity Employer
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
           }`}
         >
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
@@ -2793,7 +2794,7 @@ export default function PersonalInfoForm3({
             type='button'
             onClick={fillTestData}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
                 : 'bg-yellow-500 text-white hover:bg-yellow-400'
             }`}
@@ -2810,14 +2811,14 @@ export default function PersonalInfoForm3({
         <div className='flex items-center justify-between mb-4'>
           <div
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Step {currentStep} of {STEPS.length}
           </div>
           <div
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
             {Math.round((currentStep / STEPS.length) * 100)}% Complete
@@ -2825,12 +2826,12 @@ export default function PersonalInfoForm3({
         </div>
         <div
           className={`w-full bg-gray-200 rounded-full h-2 ${
-            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+            isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
           }`}
         >
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-indigo-500'
                 : 'bg-indigo-600'
             }`}
@@ -2845,7 +2846,7 @@ export default function PersonalInfoForm3({
       {/* Navigation */}
       <div
         className={`flex justify-between items-center px-6 py-8 border-t-2 ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <button
@@ -2854,7 +2855,7 @@ export default function PersonalInfoForm3({
           className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
             currentStep === 1
               ? 'opacity-50 cursor-not-allowed'
-              : theme === 'dark'
+              : isDarkTheme(theme)
                 ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
           }`}
@@ -2868,10 +2869,10 @@ export default function PersonalInfoForm3({
               key={step.id}
               className={`w-3 h-3 rounded-full ${
                 step.id <= currentStep
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-indigo-500'
                     : 'bg-indigo-600'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-600'
                     : 'bg-gray-300'
               }`}
@@ -2882,7 +2883,7 @@ export default function PersonalInfoForm3({
         <button
           onClick={nextStep}
           className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}

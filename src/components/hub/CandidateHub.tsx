@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import Image from 'next/image'
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
@@ -59,7 +60,7 @@ function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
 
 export default function CandidateHub() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)

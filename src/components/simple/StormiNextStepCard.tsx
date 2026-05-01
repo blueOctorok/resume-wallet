@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * StormiNextStepCard — Stormi's proactive "do this next" card.
  *
@@ -83,7 +84,7 @@ export default function StormiNextStepCard({
   isCardLoading = false,
 }: StormiNextStepCardProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const step: NextStep | null = useMemo(() => {
     // Card data still loading — null signals the thinking state below.

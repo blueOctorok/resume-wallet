@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useState } from 'react'
 import { Check, Loader2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,7 @@ export default function BlockPickerBlockRow({
   onAddBlock,
 }: BlockPickerBlockRowProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const colors = getBlockColor(block.id)
   const Illustration = getBlockIllustration(block.id)
   const hint = complexityLabel[block.complexity] ?? complexityLabel.moderate

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import {
   getUSDCBalanceMainnet,
@@ -95,7 +96,7 @@ export default function USDCBalance({
 
   // Card styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'
   }`
@@ -106,7 +107,7 @@ export default function USDCBalance({
         <div className='flex items-center gap-3'>
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-50'
+              isDarkTheme(theme) ? 'bg-blue-500/20' : 'bg-blue-50'
             }`}
           >
             <span className='text-lg'>💵</span>
@@ -114,12 +115,12 @@ export default function USDCBalance({
           <div className='flex-1'>
             <div
               className={`h-4 w-20 rounded animate-pulse ${
-                theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
               }`}
             />
             <div
               className={`h-3 w-16 rounded animate-pulse mt-2 ${
-                theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
               }`}
             />
           </div>
@@ -132,7 +133,7 @@ export default function USDCBalance({
     return (
       <div
         className={`${cardClass} p-4 ${
-          theme === 'dark' ? 'border-red-500/30' : 'border-red-200'
+          isDarkTheme(theme) ? 'border-red-500/30' : 'border-red-200'
         }`}
       >
         <div className='flex items-center justify-between'>
@@ -140,7 +141,7 @@ export default function USDCBalance({
             <span className='text-red-500'>❌</span>
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-red-300' : 'text-red-700'
+                isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'
               }`}
             >
               {error}
@@ -149,7 +150,7 @@ export default function USDCBalance({
           <button
             onClick={handleRefresh}
             className={`p-1.5 rounded-lg transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'hover:bg-gray-700 text-gray-400'
                 : 'hover:bg-gray-200 text-gray-500'
             }`}
@@ -167,14 +168,14 @@ export default function USDCBalance({
         <div className='flex items-center gap-3'>
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-50'
+              isDarkTheme(theme) ? 'bg-blue-500/20' : 'bg-blue-50'
             }`}
           >
             <span className='text-lg'>💵</span>
           </div>
           <span
             className={`font-semibold ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+              isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
             }`}
           >
             USDC
@@ -183,7 +184,7 @@ export default function USDCBalance({
         <button
           onClick={handleRefresh}
           className={`p-1.5 rounded-lg transition-colors ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
               : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
           }`}
@@ -198,18 +199,18 @@ export default function USDCBalance({
         {/* Base Mainnet */}
         <div
           className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-green-500/10' : 'bg-green-50'
+            isDarkTheme(theme) ? 'bg-green-500/10' : 'bg-green-50'
           }`}
         >
           <div className='flex items-center gap-2'>
             <div
               className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-green-400' : 'bg-green-500'
+                isDarkTheme(theme) ? 'bg-green-400' : 'bg-green-500'
               }`}
             />
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Mainnet
@@ -217,7 +218,7 @@ export default function USDCBalance({
           </div>
           <span
             className={`text-sm font-bold ${
-              theme === 'dark' ? 'text-green-400' : 'text-green-600'
+              isDarkTheme(theme) ? 'text-green-400' : 'text-green-600'
             }`}
           >
             ${balanceMainnet}
@@ -227,18 +228,18 @@ export default function USDCBalance({
         {/* Base Sepolia */}
         <div
           className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-blue-500/10' : 'bg-blue-50'
+            isDarkTheme(theme) ? 'bg-blue-500/10' : 'bg-blue-50'
           }`}
         >
           <div className='flex items-center gap-2'>
             <div
               className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500'
+                isDarkTheme(theme) ? 'bg-blue-400' : 'bg-blue-500'
               }`}
             />
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Sepolia
@@ -246,7 +247,7 @@ export default function USDCBalance({
           </div>
           <span
             className={`text-sm font-bold ${
-              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              isDarkTheme(theme) ? 'text-blue-400' : 'text-blue-600'
             }`}
           >
             ${balanceSepolia}
@@ -259,10 +260,10 @@ export default function USDCBalance({
         <div
           className={`mt-3 p-2.5 rounded-xl ${
             hasSufficient
-              ? theme === 'dark'
+              ? isDarkTheme(theme)
                 ? 'bg-green-500/10'
                 : 'bg-green-50'
-              : theme === 'dark'
+              : isDarkTheme(theme)
                 ? 'bg-yellow-500/10'
                 : 'bg-yellow-50'
           }`}
@@ -272,10 +273,10 @@ export default function USDCBalance({
             <span
               className={`text-xs ${
                 hasSufficient
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'text-green-300'
                     : 'text-green-700'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'text-yellow-300'
                     : 'text-yellow-700'
               }`}

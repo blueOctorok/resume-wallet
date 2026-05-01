@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useState, useCallback } from 'react'
 import { Users, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -17,7 +18,7 @@ interface ReferralStats {
 
 export default function ReferralBanner() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
 
   const [referralCode, setReferralCode] = useState<string | null>(null)

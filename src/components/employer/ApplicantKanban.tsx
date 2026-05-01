@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -96,7 +97,7 @@ export default function ApplicantKanban({
   isRemoving,
 }: ApplicantKanbanProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)

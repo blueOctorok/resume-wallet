@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -19,7 +20,7 @@ import Modal from '@/components/ui/Modal'
  */
 export default function HubOnboardingForm() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [occupation, setOccupation] = useState('')
   const [seekingReason, setSeekingReason] = useState('')

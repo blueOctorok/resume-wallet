@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import {
   CheckCircle,
   Clock,
@@ -19,7 +20,8 @@ interface VerificationStatusBadgeProps {
   attemptCount?: number
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
-  theme?: 'light' | 'dark'
+  /** App appearance — `dark` + `ink` use dark badge tokens. */
+  theme?: string
 }
 
 const STATUS_CONFIG: Record<VerificationStatus, {
@@ -137,7 +139,7 @@ export default function VerificationStatusBadge({
   const sizeConfig = SIZE_CONFIG[size]
   const Icon = config.icon
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const bg = isDark ? config.bgDark : config.bgLight
   const text = isDark ? config.textDark : config.textLight
   const border = isDark ? config.borderDark : config.borderLight

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import Modal from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -74,7 +75,7 @@ export default function ProfileConflictModal({
       <div className="p-6">
         <h3
           className={`text-xl font-semibold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
           Profile Conflict Detected
@@ -82,7 +83,7 @@ export default function ProfileConflictModal({
 
         <p
           className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-brand-cream/70' : 'text-gray-600'
           }`}
         >
           This resume appears to be for a different person than your existing
@@ -92,7 +93,7 @@ export default function ProfileConflictModal({
         {/* Conflicts List */}
         <div
           className={`mb-4 p-4 rounded-lg border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-700/50 border-gray-600'
               : 'bg-gray-50 border-gray-200'
           }`}
@@ -101,7 +102,7 @@ export default function ProfileConflictModal({
             <div
               key={idx}
               className={`text-sm mb-2 ${
-                theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+                isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-700'
               }`}
             >
               ⚠️ {conflictText}
@@ -114,21 +115,21 @@ export default function ProfileConflictModal({
           {/* Existing Profile */}
           <div
             className={`p-3 rounded-lg border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700/50 border-gray-600'
                 : 'bg-gray-50 border-gray-200'
             }`}
           >
             <div
               className={`text-xs font-semibold mb-1 ${
-                theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+                isDarkTheme(theme) ? 'text-brand-cream/50' : 'text-gray-500'
               }`}
             >
               EXISTING PROFILE
             </div>
             <div
               className={`text-sm ${
-                theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'
+                isDarkTheme(theme) ? 'text-brand-cream' : 'text-gray-800'
               }`}
             >
               {conflict.existing.name || 'No name'}
@@ -136,7 +137,7 @@ export default function ProfileConflictModal({
             {conflict.existing.cdlNumber && (
               <div
                 className={`text-xs mt-1 ${
-                  theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-brand-cream/60' : 'text-gray-600'
                 }`}
               >
                 CDL: {conflict.existing.cdlNumber}
@@ -145,7 +146,7 @@ export default function ProfileConflictModal({
             {conflict.existing.lastUpdatedFrom && (
               <div
                 className={`text-xs mt-1 ${
-                  theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-brand-cream/50' : 'text-gray-500'
                 }`}
               >
                 From: {conflict.existing.lastUpdatedFrom}
@@ -156,21 +157,21 @@ export default function ProfileConflictModal({
           {/* New Resume */}
           <div
             className={`p-3 rounded-lg border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-amber-500/10 border-amber-500/30'
                 : 'bg-amber-50 border-amber-200'
             }`}
           >
             <div
               className={`text-xs font-semibold mb-1 ${
-                theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
+                isDarkTheme(theme) ? 'text-amber-300/70' : 'text-amber-700'
               }`}
             >
               NEW RESUME
             </div>
             <div
               className={`text-sm ${
-                theme === 'dark' ? 'text-amber-300' : 'text-amber-800'
+                isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-800'
               }`}
             >
               {conflict.incoming.name || 'No name'}
@@ -178,7 +179,7 @@ export default function ProfileConflictModal({
             {conflict.incoming.cdlNumber && (
               <div
                 className={`text-xs mt-1 ${
-                  theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
+                  isDarkTheme(theme) ? 'text-amber-300/70' : 'text-amber-700'
                 }`}
               >
                 CDL: {conflict.incoming.cdlNumber}
@@ -192,7 +193,7 @@ export default function ProfileConflictModal({
           <button
             onClick={onKeepExisting}
             className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700 text-white hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}

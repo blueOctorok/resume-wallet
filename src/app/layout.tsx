@@ -103,23 +103,25 @@ export default function RootLayout({
                 try {
                   var SK = 'stormchain-theme';
                   var SCHEMA = 'stormchain-theme-schema';
-                  var VER = '2';
+                  var VER = '4';
                   var schema = localStorage.getItem(SCHEMA);
                   var saved = localStorage.getItem(SK);
                   var t = 'light';
-                  if (schema !== VER) {
-                    if (saved === 'paper') {
+                  if (saved === 'sepia' || saved === 'business') {
+                    localStorage.setItem(SCHEMA, VER);
+                    localStorage.setItem(SK, 'light');
+                    t = 'light';
+                  } else if (schema !== VER) {
+                    if (saved === 'light' || saved === 'dark' || saved === 'paper' || saved === 'ink') {
                       localStorage.setItem(SCHEMA, VER);
-                      localStorage.setItem(SK, 'sepia');
-                      t = 'sepia';
-                    } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'business') {
-                      localStorage.setItem(SCHEMA, VER);
+                      localStorage.setItem(SK, saved);
                       t = saved;
                     } else {
                       localStorage.setItem(SCHEMA, VER);
+                      localStorage.setItem(SK, 'light');
                       t = 'light';
                     }
-                  } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'paper' || saved === 'business') {
+                  } else if (saved === 'light' || saved === 'dark' || saved === 'paper' || saved === 'ink') {
                     t = saved;
                   }
                   document.documentElement.setAttribute('data-theme', t);

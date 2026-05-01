@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useCallback, useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -23,7 +24,7 @@ import BlockPickerBlockRow from './BlockPickerBlockRow'
  */
 export default function BlockPickerModal() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const isOpen = useIsPickerOpen()
   const installedBlocks = useInstalledBlocks()

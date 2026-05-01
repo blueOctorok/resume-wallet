@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Shareable public career card: Share tab (link, downloads, caption; QR via overlay) + Embed tab (iframe, email sig, badge).
  * Uses GET/POST /api/career-card/share — public view at /card/[token].
@@ -93,7 +94,7 @@ export default function CareerCardShareModal({
   onShareUpdated,
 }: CareerCardShareModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [panel, setPanel] = useState<SharePanel>('share')
   const [shareToken, setShareToken] = useState<string | null>(null)

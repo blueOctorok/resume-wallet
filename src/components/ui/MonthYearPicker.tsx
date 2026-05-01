@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useRef } from 'react'
 // Namespace import: Vercel/Next production bundles can drop named `createPortal` from `react-dom`.
 import * as ReactDOM from 'react-dom'
@@ -25,7 +26,8 @@ export interface MonthYearPickerProps {
   placeholder?: string
   allowPresent?: boolean
   error?: boolean
-  theme?: 'dark' | 'light'
+  /** App appearance — any `StoredTheme`; dark styling when `dark` or `ink`. */
+  theme?: string
   /** MM/YYYY — earliest selectable month */
   minDate?: string
   /** MM/YYYY or omit — latest is current month when unset */
@@ -42,7 +44,7 @@ export function MonthYearPicker({
   placeholder = 'Select date',
   allowPresent = false,
   error = false,
-  theme = 'dark',
+  theme = 'light',
   minDate,
   maxDate,
 }: MonthYearPickerProps) {
@@ -139,7 +141,7 @@ export function MonthYearPicker({
         zIndex: 9999,
       }}
       className={`rounded-lg shadow-xl border-2 ${
-        theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+        isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
       }`}
     >
       {allowPresent && (
@@ -148,10 +150,10 @@ export function MonthYearPicker({
           onClick={handlePresentSelect}
           className={`w-full px-4 py-3 text-left font-semibold flex items-center gap-3 rounded-t-lg ${
             isPresent
-              ? theme === 'dark'
+              ? isDarkTheme(theme)
                 ? 'bg-indigo-500 text-white'
                 : 'bg-indigo-600 text-white'
-              : theme === 'dark'
+              : isDarkTheme(theme)
                 ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
                 : 'bg-indigo-500/20 text-indigo-600 hover:bg-indigo-500/30'
           }`}
@@ -159,10 +161,10 @@ export function MonthYearPicker({
           <span
             className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
               isPresent
-                ? theme === 'dark'
+                ? isDarkTheme(theme)
                   ? 'bg-gray-900/20'
                   : 'bg-white/30'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                   ? 'bg-indigo-500/30'
                   : 'bg-indigo-500/30'
             }`}
@@ -176,19 +178,19 @@ export function MonthYearPicker({
       {allowPresent && (
         <div
           className={`px-4 py-2 text-xs text-center ${
-            theme === 'dark' ? 'text-gray-500 bg-gray-800/50' : 'text-gray-400 bg-gray-50'
+            isDarkTheme(theme) ? 'text-gray-500 bg-gray-800/50' : 'text-gray-400 bg-gray-50'
           }`}
         >
           — or select a specific date —
         </div>
       )}
 
-      <div className={`px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className={`px-3 py-2 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
           className={`w-full px-2 py-1 rounded ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-700 text-gray-100 border-gray-600'
               : 'bg-gray-100 text-gray-900 border-gray-300'
           } border`}
@@ -216,10 +218,10 @@ export function MonthYearPicker({
                 disabled
                   ? 'text-gray-400 cursor-not-allowed opacity-40'
                   : isSelected
-                    ? theme === 'dark'
+                    ? isDarkTheme(theme)
                       ? 'bg-indigo-500 text-white font-medium'
                       : 'bg-indigo-600 text-white font-medium'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                       ? 'text-gray-100 hover:bg-gray-700'
                       : 'text-gray-700 hover:bg-gray-100'
               }`}
@@ -241,7 +243,7 @@ export function MonthYearPicker({
         className={`w-full px-4 py-3 border-2 rounded-md text-left flex items-center justify-between ${
           error
             ? 'border-red-500'
-            : theme === 'dark'
+            : isDarkTheme(theme)
               ? 'bg-gray-700 text-gray-100 border-gray-600'
               : 'bg-white border-gray-300 text-gray-900'
         } ${!value ? 'text-gray-400' : ''}`}

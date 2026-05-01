@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -102,10 +103,10 @@ export default function DeveloperResumePreviewModal({
   }
 
   const sectionClass = `mb-6 p-4 rounded-xl ${
-    theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+    isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
   }`
   const sectionTitleClass = `text-lg font-semibold mb-3 flex items-center gap-2 ${
-    theme === 'dark' ? 'text-white' : 'text-gray-900'
+    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
   }`
 
   return (
@@ -114,14 +115,14 @@ export default function DeveloperResumePreviewModal({
         {/* Header */}
         <div
           className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-900 border-gray-800'
               : 'bg-white border-gray-200'
           }`}
         >
           <div>
             <h2
-              className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               {resume.title}
             </h2>
@@ -135,7 +136,7 @@ export default function DeveloperResumePreviewModal({
           <button
             onClick={onClose}
             className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+              isDarkTheme(theme) ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             }`}
           >
             <X className='w-5 h-5' />
@@ -146,13 +147,13 @@ export default function DeveloperResumePreviewModal({
         {!viewOnly && (
         <div
           className={`flex flex-wrap gap-2 p-4 border-b ${
-            theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
+            isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'
           }`}
         >
               <button
                 onClick={onEdit}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-800 text-white hover:bg-gray-700'
                     : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                 }`}
@@ -198,7 +199,7 @@ export default function DeveloperResumePreviewModal({
             </h3>
             <div className='space-y-2'>
               <p
-                className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 {data.personalInfo.firstName} {data.personalInfo.lastName}
               </p>
@@ -206,7 +207,7 @@ export default function DeveloperResumePreviewModal({
                 <p className='text-teal-600 dark:text-teal-400'>{data.personalInfo.headline}</p>
               )}
               <div
-                className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
               >
                 {data.personalInfo.email && <p>{data.personalInfo.email}</p>}
                 {data.personalInfo.phone && <p>{data.personalInfo.phone}</p>}
@@ -216,7 +217,7 @@ export default function DeveloperResumePreviewModal({
               </div>
               {data.personalInfo.summary && (
                 <p
-                  className={`mt-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                  className={`mt-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   {data.personalInfo.summary}
                 </p>
@@ -268,7 +269,7 @@ export default function DeveloperResumePreviewModal({
                   <span
                     key={skill.id}
                     className={`px-3 py-1 rounded-lg text-sm ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 text-gray-300'
                         : 'bg-gray-200 text-gray-700'
                     }`}
@@ -297,33 +298,33 @@ export default function DeveloperResumePreviewModal({
                     className='border-l-2 border-teal-500/30 pl-4'
                   >
                     <p
-                      className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                      className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                     >
                       {exp.title}
                     </p>
                     <p
                       className={
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }
                     >
                       {exp.company} {exp.location && `• ${exp.location}`}
                     </p>
                     <p
-                      className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                      className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                     >
                       {exp.startDate} -{' '}
                       {exp.isCurrent ? 'Present' : exp.endDate}
                     </p>
                     {exp.description && (
                       <p
-                        className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                        className={`mt-2 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                       >
                         {exp.description}
                       </p>
                     )}
                     {exp.achievements.filter(Boolean).length > 0 && (
                       <ul
-                        className={`mt-2 text-sm list-disc list-inside ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                        className={`mt-2 text-sm list-disc list-inside ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                       >
                         {exp.achievements.filter(Boolean).map((a, i) => (
                           <li key={i}>{a}</li>
@@ -349,7 +350,7 @@ export default function DeveloperResumePreviewModal({
                     className='border-l-2 border-teal-500/30 pl-4'
                   >
                     <p
-                      className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                      className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                     >
                       {project.name}
                       {project.role && (
@@ -360,7 +361,7 @@ export default function DeveloperResumePreviewModal({
                     </p>
                     {project.description && (
                       <p
-                        className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                        className={`mt-1 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                       >
                         {project.description}
                       </p>
@@ -403,19 +404,19 @@ export default function DeveloperResumePreviewModal({
                 {data.education.map((edu) => (
                   <div key={edu.id}>
                     <p
-                      className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                      className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                     >
                       {edu.degree} {edu.field && `in ${edu.field}`}
                     </p>
                     <p
                       className={
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                       }
                     >
                       {edu.institution}
                     </p>
                     <p
-                      className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                      className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                     >
                       {edu.startDate} - {edu.endDate}{' '}
                       {edu.gpa && `• GPA: ${edu.gpa}`}
@@ -440,12 +441,12 @@ export default function DeveloperResumePreviewModal({
                   >
                     <div>
                       <p
-                        className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                        className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                       >
                         {cert.name}
                       </p>
                       <p
-                        className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                        className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
                       >
                         {cert.issuer} {cert.date && `• ${cert.date}`}
                       </p>
@@ -473,12 +474,12 @@ export default function DeveloperResumePreviewModal({
         <Modal onClose={() => setShowDeleteConfirm(false)} maxWidth="max-w-sm" zIndex={1100}>
           <div className='p-6'>
             <h3
-              className={`text-lg font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-lg font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               Delete Resume?
             </h3>
             <p
-              className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+              className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
             >
               This action cannot be undone. The resume will be permanently
               deleted.
@@ -487,7 +488,7 @@ export default function DeveloperResumePreviewModal({
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-white hover:bg-gray-600'
                     : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                 }`}

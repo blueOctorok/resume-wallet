@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Send, Mail, Trash2 } from 'lucide-react'
 import type { AdminTabProps, AdminOutreach } from '@/components/admin/admin-types'
@@ -53,7 +54,7 @@ export default function OutreachTab({
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               outreachFilter === status
                 ? 'bg-teal-500 text-white'
-                : theme === 'dark'
+                : isDarkTheme(theme)
                 ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -66,7 +67,7 @@ export default function OutreachTab({
       {/* Outreach Table */}
       <div className='overflow-x-auto'>
         <table className='w-full'>
-          <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+          <thead className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}>
             <tr>
               <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
               <th className={`${tableHeaderClass} px-4 py-3`}>Company</th>
@@ -78,18 +79,18 @@ export default function OutreachTab({
               <th className={`${tableHeaderClass} px-4 py-3`}>Actions</th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
+          <tbody className={`divide-y ${isDarkTheme(theme) ? 'divide-gray-700' : 'divide-gray-200'}`}>
             {outreach.map((invite) => (
               <tr
                 key={invite.id}
-                className={`${theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
+                className={`${isDarkTheme(theme) ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
               >
                 <td className={tableCellClass}>
                   <div>
-                    <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    <p className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                       {invite.candidateName || 'Unnamed'}
                     </p>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                       {invite.candidateEmail || '—'}
                     </p>
                   </div>
@@ -99,7 +100,7 @@ export default function OutreachTab({
                     <p className='truncate max-w-[120px]' title={invite.companyName}>
                       {invite.companyName}
                     </p>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                       {invite.createdByEmail || invite.createdByWallet?.slice(0, 10) + '...'}
                     </p>
                   </div>
@@ -167,9 +168,9 @@ export default function OutreachTab({
       {outreach.length === 0 && (
         <div className='text-center py-12'>
           <Send className={`w-12 h-12 mx-auto mb-4 ${
-            theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+            isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'
           }`} />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             No outreach invites found
           </p>
         </div>

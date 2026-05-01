@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * MobileTabBar — animated bottom tab bar for phones (< md).
  *
@@ -61,7 +62,7 @@ const ICONS: Record<MobileGuidedTab, () => JSX.Element> = {
 
 export default function MobileTabBar() {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const mobileTab = useSimpleModeStore((s) => s.mobileTab)
   const setMobileTab = useSimpleModeStore((s) => s.setMobileTab)
   const hasJob = useSimpleModeStore((s) => !!s.selectedJobSnapshot)

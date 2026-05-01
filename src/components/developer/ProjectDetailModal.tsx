@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
@@ -186,7 +187,7 @@ export default function ProjectDetailModal({
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       !showLivePreview
                         ? 'bg-indigo-500 text-white'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'bg-gray-700 text-gray-300'
                           : 'bg-gray-100 text-gray-700'
                     }`}
@@ -198,7 +199,7 @@ export default function ProjectDetailModal({
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       showLivePreview
                         ? 'bg-indigo-500 text-white'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'bg-gray-700 text-gray-300'
                           : 'bg-gray-100 text-gray-700'
                     }`}
@@ -212,7 +213,7 @@ export default function ProjectDetailModal({
               {/* Content */}
               <div
                 className={`rounded-xl overflow-hidden border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-700 bg-gray-800'
                     : 'border-gray-200 bg-gray-100'
                 }`}
@@ -246,7 +247,7 @@ export default function ProjectDetailModal({
             <div className='space-y-2'>
               <h3
                 className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 <Play className='w-4 h-4 inline mr-1' />
@@ -254,7 +255,7 @@ export default function ProjectDetailModal({
               </h3>
               <div
                 className={`rounded-xl overflow-hidden border ${
-                  theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+                  isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
                 }`}
               >
                 <div className='aspect-video'>
@@ -285,14 +286,14 @@ export default function ProjectDetailModal({
             <div className='space-y-2'>
               <h3
                 className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 About This Project
               </h3>
               <p
                 className={`text-base leading-relaxed ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
                 {project.longDescription || project.description}
@@ -305,7 +306,7 @@ export default function ProjectDetailModal({
             <div className='space-y-2'>
               <h3
                 className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 <Code className='w-4 h-4 inline mr-1' />
@@ -316,7 +317,7 @@ export default function ProjectDetailModal({
                   <span
                     key={tech}
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-indigo-500/20 text-indigo-300'
                         : 'bg-indigo-100 text-indigo-700'
                     }`}
@@ -333,7 +334,7 @@ export default function ProjectDetailModal({
             <div className='space-y-2'>
               <h3
                 className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
                 <Github className='w-4 h-4 inline mr-1' />
@@ -348,7 +349,7 @@ export default function ProjectDetailModal({
                 <div className='flex flex-wrap gap-4'>
                   <div
                     className={`flex items-center gap-1.5 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     <Star className='w-4 h-4 text-yellow-500' />
@@ -357,7 +358,7 @@ export default function ProjectDetailModal({
                   </div>
                   <div
                     className={`flex items-center gap-1.5 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     <GitFork className='w-4 h-4 text-blue-500' />
@@ -366,7 +367,7 @@ export default function ProjectDetailModal({
                   </div>
                   <div
                     className={`flex items-center gap-1.5 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
                     <Eye className='w-4 h-4 text-green-500' />
@@ -378,7 +379,7 @@ export default function ProjectDetailModal({
                   {githubStats.language && (
                     <div
                       className={`flex items-center gap-1.5 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       <span className='w-3 h-3 rounded-full bg-indigo-500' />
@@ -399,11 +400,11 @@ export default function ProjectDetailModal({
             {roleLabel && (
               <div className='flex items-center gap-2'>
                 <Users
-                  className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+                  className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
                 />
                 <span
                   className={
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }
                 >
                   {roleLabel}
@@ -416,11 +417,11 @@ export default function ProjectDetailModal({
             {(project.startDate || project.isOngoing) && (
               <div className='flex items-center gap-2'>
                 <Calendar
-                  className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+                  className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
                 />
                 <span
                   className={
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }
                 >
                   {formatDate(project.startDate)}
@@ -454,7 +455,7 @@ export default function ProjectDetailModal({
                 target='_blank'
                 rel='noopener noreferrer'
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-white hover:bg-gray-600'
                     : 'bg-gray-800 text-white hover:bg-gray-700'
                 }`}
@@ -470,7 +471,7 @@ export default function ProjectDetailModal({
                 target='_blank'
                 rel='noopener noreferrer'
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 text-white hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}

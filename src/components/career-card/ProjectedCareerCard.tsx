@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLink } from 'lucide-react'
@@ -190,7 +191,7 @@ export default function ProjectedCareerCard({
   onCardMutation,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const onChainList = data.onChainCredentials ?? []
   const onChainCount = data.onChainCredentialCount ?? onChainList.length
   const employerList = data.employerConfirmations ?? []

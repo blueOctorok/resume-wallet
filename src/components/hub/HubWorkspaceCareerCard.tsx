@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useState } from 'react'
 import { Loader2, AlertCircle, Pencil, Share2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -27,7 +28,7 @@ export interface HubWorkspaceCareerCardProps {
  */
 export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCareerCardProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -123,10 +124,10 @@ export default function MvrStatusIndicator({
 
   const cardThemeClasses =
     placement === 'nav-mobile'
-      ? theme !== 'dark'
+      ? !isDarkTheme(theme)
         ? 'text-white bg-teal-600 hover:bg-teal-700 border-teal-600 hover:border-teal-700'
         : 'text-white bg-teal-600/80 hover:bg-teal-700 border-teal-500/50 hover:border-teal-500'
-      : theme !== 'dark'
+      : !isDarkTheme(theme)
         ? 'bg-white/90 backdrop-blur-sm border-gray-300'
         : 'bg-gray-800/80 backdrop-blur-xl border-teal-500/50'
 
@@ -192,7 +193,7 @@ export default function MvrStatusIndicator({
             {placement === 'sidebar' && (
               <div
                 className={`text-sm font-semibold mb-0.5 ${
-                  theme !== 'dark' ? 'text-gray-900' : 'text-brand-cream'
+                  !isDarkTheme(theme) ? 'text-gray-900' : 'text-brand-cream'
                 }`}
               >
                 MVR Status
@@ -204,7 +205,7 @@ export default function MvrStatusIndicator({
                 className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
                   placement === 'nav-mobile'
                     ? ''
-                    : theme !== 'dark' ? 'text-gray-700' : 'text-gray-300'
+                    : !isDarkTheme(theme) ? 'text-gray-700' : 'text-gray-300'
                 }`}
               >
                 {placement === 'nav-mobile' ? 'MVR: Checking...' : 'Checking...'}
@@ -214,7 +215,7 @@ export default function MvrStatusIndicator({
                 className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
                   placement === 'nav-mobile'
                     ? ''
-                    : theme !== 'dark' ? 'text-red-700' : 'text-red-400'
+                    : !isDarkTheme(theme) ? 'text-red-700' : 'text-red-400'
                 }`}
               >
                 {placement === 'nav-mobile' ? 'MVR: Error' : 'Error'}
@@ -224,7 +225,7 @@ export default function MvrStatusIndicator({
                 className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} ${placement === 'nav-mobile' ? 'font-medium' : 'font-semibold'} ${
                   placement === 'nav-mobile'
                     ? ''
-                    : theme !== 'dark' ? 'text-orange-700' : 'text-orange-400'
+                    : !isDarkTheme(theme) ? 'text-orange-700' : 'text-orange-400'
                 }`}
               >
                 {placement === 'nav-mobile' ? 'MVR: Payment Pending' : 'Payment Pending'}
@@ -235,7 +236,7 @@ export default function MvrStatusIndicator({
                   className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} ${placement === 'nav-mobile' ? 'font-medium' : 'font-semibold'} ${
                     placement === 'nav-mobile'
                       ? ''
-                      : theme !== 'dark' ? 'text-gray-900' : 'text-gray-200'
+                      : !isDarkTheme(theme) ? 'text-gray-900' : 'text-gray-200'
                   }`}
                 >
                   {placement === 'nav-mobile'
@@ -253,7 +254,7 @@ export default function MvrStatusIndicator({
                 {placement === 'sidebar' && mvrStatus.result?.licenseNumber && (
                   <div
                     className={`text-xs mt-0.5 ${
-                      theme !== 'dark' ? 'text-gray-600' : 'text-gray-400'
+                      !isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'
                     }`}
                   >
                     {mvrStatus.result.licenseState} • {mvrStatus.result.licenseNumber.slice(0, 4)}...
@@ -265,7 +266,7 @@ export default function MvrStatusIndicator({
                 className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
                   placement === 'nav-mobile'
                     ? ''
-                    : theme !== 'dark' ? 'text-gray-700' : 'text-gray-300'
+                    : !isDarkTheme(theme) ? 'text-gray-700' : 'text-gray-300'
                 }`}
               >
                 {placement === 'nav-mobile' ? 'MVR: No Order' : 'No MVR'}

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -600,17 +601,17 @@ export default function DeveloperResumeBuilder({
 
   // Styling helpers
   const inputClass = `w-full px-4 py-3 rounded-xl border transition-colors ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
   } focus:outline-none focus:ring-2 focus:ring-teal-500/20`
 
   const labelClass = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
   }`
 
   const cardClass = `p-4 rounded-xl border ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-gray-50 border-gray-200'
   }`
@@ -742,7 +743,7 @@ export default function DeveloperResumeBuilder({
 
       <div className='border-t border-gray-700 pt-6'>
         <h3
-          className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`text-lg font-semibold mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           Online Presence
         </h3>
@@ -860,7 +861,7 @@ export default function DeveloperResumeBuilder({
         {SKILL_CATEGORIES.map(({ value, label }) => (
           <div key={value} className={cardClass}>
             <h3
-              className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`font-medium mb-3 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               {label}
             </h3>
@@ -874,7 +875,7 @@ export default function DeveloperResumeBuilder({
                     className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                       isAdded
                         ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/50'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
@@ -893,7 +894,7 @@ export default function DeveloperResumeBuilder({
         {data.skills.length > 0 && (
           <div className={cardClass}>
             <h3
-              className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`font-medium mb-3 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               Your Skills ({data.skills.length})
             </h3>
@@ -902,12 +903,12 @@ export default function DeveloperResumeBuilder({
                 <div
                   key={skill.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    theme === 'dark' ? 'bg-gray-700/50' : 'bg-white'
+                    isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-white'
                   }`}
                 >
                   <span
                     className={
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                     }
                   >
                     {skill.name}
@@ -922,7 +923,7 @@ export default function DeveloperResumeBuilder({
                         })
                       }
                       className={`text-sm px-2 py-1 rounded border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'bg-gray-800 border-gray-600 text-gray-300'
                           : 'bg-gray-50 border-gray-300 text-gray-700'
                       }`}
@@ -949,7 +950,7 @@ export default function DeveloperResumeBuilder({
         {/* Custom skill input */}
         <div className={cardClass}>
           <h3
-            className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`font-medium mb-3 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             Add Custom Skill
           </h3>
@@ -1028,7 +1029,7 @@ export default function DeveloperResumeBuilder({
           <div key={exp.id} className={cardClass}>
             <div className='flex items-center justify-between mb-4'>
               <h3
-                className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Experience {idx + 1}
               </h3>
@@ -1120,7 +1121,7 @@ export default function DeveloperResumeBuilder({
                     />
                     <span
                       className={
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                       }
                     >
                       Current Job
@@ -1211,7 +1212,7 @@ export default function DeveloperResumeBuilder({
         <button
           onClick={addExperience}
           className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
               : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
           }`}
@@ -1262,7 +1263,7 @@ export default function DeveloperResumeBuilder({
     return (
       <div className='space-y-6'>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Showcase your best work — personal projects, open source
           contributions, or side projects that demonstrate your skills.
@@ -1272,7 +1273,7 @@ export default function DeveloperResumeBuilder({
           <div key={project.id} className={cardClass}>
             <div className='flex items-center justify-between mb-4'>
               <h3
-                className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Project {idx + 1}
               </h3>
@@ -1423,7 +1424,7 @@ export default function DeveloperResumeBuilder({
         <button
           onClick={addProject}
           className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
               : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
           }`}
@@ -1512,7 +1513,7 @@ export default function DeveloperResumeBuilder({
         {/* Education Section */}
         <div>
           <h3
-            className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`text-lg font-semibold mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             Education
           </h3>
@@ -1521,7 +1522,7 @@ export default function DeveloperResumeBuilder({
             <div key={edu.id} className={`${cardClass} mb-4`}>
               <div className='flex items-center justify-between mb-4'>
                 <h4
-                  className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                 >
                   Education {idx + 1}
                 </h4>
@@ -1617,7 +1618,7 @@ export default function DeveloperResumeBuilder({
           <button
             onClick={addEducation}
             className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
                 : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
             }`}
@@ -1630,7 +1631,7 @@ export default function DeveloperResumeBuilder({
         {/* Certifications Section */}
         <div>
           <h3
-            className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            className={`text-lg font-semibold mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
           >
             Certifications
           </h3>
@@ -1639,7 +1640,7 @@ export default function DeveloperResumeBuilder({
             <div key={cert.id} className={`${cardClass} mb-4`}>
               <div className='flex items-center justify-between mb-4'>
                 <h4
-                  className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                 >
                   Certification {idx + 1}
                 </h4>
@@ -1725,7 +1726,7 @@ export default function DeveloperResumeBuilder({
           <button
             onClick={addCertification}
             className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
                 : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
             }`}
@@ -1750,7 +1751,7 @@ export default function DeveloperResumeBuilder({
 
     const sectionClass = `mb-6 ${cardClass}`
     const sectionTitleClass = `text-lg font-semibold mb-3 flex items-center gap-2 ${
-      theme === 'dark' ? 'text-white' : 'text-gray-900'
+      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
     }`
 
     return (
@@ -1762,21 +1763,21 @@ export default function DeveloperResumeBuilder({
           </h3>
           <div className='space-y-2'>
             <p
-              className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               {personalInfo.firstName} {personalInfo.lastName}
             </p>
             {personalInfo.headline && (
               <p
                 className={
-                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-600 dark:text-teal-400'
+                  isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-600 dark:text-teal-400'
                 }
               >
                 {personalInfo.headline}
               </p>
             )}
             <div
-              className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+              className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
             >
               {personalInfo.email && <p>{personalInfo.email}</p>}
               {personalInfo.phone && <p>{personalInfo.phone}</p>}
@@ -1784,7 +1785,7 @@ export default function DeveloperResumeBuilder({
             </div>
             {personalInfo.summary && (
               <p
-                className={`mt-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`mt-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 {personalInfo.summary}
               </p>
@@ -1836,7 +1837,7 @@ export default function DeveloperResumeBuilder({
                 <span
                   key={skill.id}
                   className={`px-3 py-1 rounded-lg text-sm ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-gray-700 text-gray-300'
                       : 'bg-gray-200 text-gray-700'
                   }`}
@@ -1864,32 +1865,32 @@ export default function DeveloperResumeBuilder({
                   className='border-l-2 border-teal-500/30 pl-4'
                 >
                   <p
-                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                   >
                     {exp.title}
                   </p>
                   <p
                     className={
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }
                   >
                     {exp.company} {exp.location && `• ${exp.location}`}
                   </p>
                   <p
-                    className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                   >
                     {exp.startDate} - {exp.isCurrent ? 'Present' : exp.endDate}
                   </p>
                   {exp.description && (
                     <p
-                      className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                      className={`mt-2 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                     >
                       {exp.description}
                     </p>
                   )}
                   {exp.achievements.filter(Boolean).length > 0 && (
                     <ul
-                      className={`mt-2 text-sm list-disc list-inside ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                      className={`mt-2 text-sm list-disc list-inside ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                     >
                       {exp.achievements.filter(Boolean).map((a, i) => (
                         <li key={i}>{a}</li>
@@ -1898,7 +1899,7 @@ export default function DeveloperResumeBuilder({
                   )}
                   {exp.technologies.length > 0 && (
                     <p
-                      className={`mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                      className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                     >
                       Tech: {exp.technologies.join(', ')}
                     </p>
@@ -1922,7 +1923,7 @@ export default function DeveloperResumeBuilder({
                   className='border-l-2 border-teal-500/30 pl-4'
                 >
                   <p
-                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                   >
                     {project.name}
                     {project.role && (
@@ -1933,7 +1934,7 @@ export default function DeveloperResumeBuilder({
                   </p>
                   {project.description && (
                     <p
-                      className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                      className={`mt-1 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
                     >
                       {project.description}
                     </p>
@@ -1962,7 +1963,7 @@ export default function DeveloperResumeBuilder({
                   </div>
                   {project.technologies.length > 0 && (
                     <p
-                      className={`mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                      className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                     >
                       Tech: {project.technologies.join(', ')}
                     </p>
@@ -1983,19 +1984,19 @@ export default function DeveloperResumeBuilder({
               {education.map((edu) => (
                 <div key={edu.id}>
                   <p
-                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                    className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                   >
                     {edu.degree} {edu.field && `in ${edu.field}`}
                   </p>
                   <p
                     className={
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }
                   >
                     {edu.institution}
                   </p>
                   <p
-                    className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
+                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}
                   >
                     {edu.startDate} - {edu.endDate}{' '}
                     {edu.gpa && `• GPA: ${edu.gpa}`}
@@ -2020,12 +2021,12 @@ export default function DeveloperResumeBuilder({
                 >
                   <div>
                     <p
-                      className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                      className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                     >
                       {cert.name}
                     </p>
                     <p
-                      className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                      className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
                     >
                       {cert.issuer} {cert.date && `• ${cert.date}`}
                     </p>
@@ -2074,12 +2075,12 @@ export default function DeveloperResumeBuilder({
 
   return (
     <div
-      className={`h-full flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+      className={`h-full flex flex-col overflow-hidden ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-50'}`}
     >
       {/* Header - fixed at top, no scroll */}
       <div
         className={`flex-shrink-0 z-10 border-b ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-900/95 border-gray-800'
             : 'bg-white/95 border-gray-200'
         } backdrop-blur-sm`}
@@ -2104,7 +2105,7 @@ export default function DeveloperResumeBuilder({
                 type='button'
                 onClick={fillTestData}
                 className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl font-medium transition-all ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700'
                     : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
                 }`}
@@ -2147,10 +2148,10 @@ export default function DeveloperResumeBuilder({
                     isActive
                       ? 'text-teal-600 dark:text-teal-400'
                       : isCompleted
-                        ? theme === 'dark'
+                        ? isDarkTheme(theme)
                           ? 'text-gray-400'
                           : 'text-gray-600'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'text-gray-600'
                           : 'text-gray-400'
                   }`}
@@ -2161,7 +2162,7 @@ export default function DeveloperResumeBuilder({
                         ? 'bg-teal-600/20 border-2 border-teal-500'
                         : isCompleted
                           ? 'bg-teal-600/10 border border-teal-500/50'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'bg-gray-800 border border-gray-700'
                             : 'bg-gray-100 border border-gray-300'
                     }`}
@@ -2183,13 +2184,13 @@ export default function DeveloperResumeBuilder({
           {/* Step Content */}
           <div
             className={`rounded-2xl border p-6 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800/50 border-gray-700'
                 : 'bg-white border-gray-200'
             }`}
           >
             <h2
-              className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              className={`text-2xl font-bold mb-6 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               {STEPS[currentStep].name}
             </h2>
@@ -2205,7 +2206,7 @@ export default function DeveloperResumeBuilder({
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-colors ${
                 currentStep === 0
                   ? 'opacity-50 cursor-not-allowed'
-                  : theme === 'dark'
+                  : isDarkTheme(theme)
                     ? 'bg-gray-800 text-white hover:bg-gray-700'
                     : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
               }`}

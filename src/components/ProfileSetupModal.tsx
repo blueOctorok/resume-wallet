@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -41,7 +42,7 @@ export default function ProfileSetupModal({
   userEmail,
 }: ProfileSetupModalProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [form, setForm] = useState<ProfileData>({
     firstName: '',

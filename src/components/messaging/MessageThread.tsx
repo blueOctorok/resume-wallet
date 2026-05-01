@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Loader2, AlertCircle, MessageSquare } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -56,7 +57,7 @@ function timeLabel(dateString: string): string {
  */
 export default function MessageThread({ threadId, walletAddress, onBack }: MessageThreadProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [thread, setThread] = useState<ThreadData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React from 'react'
 import {
   X,
@@ -54,7 +55,7 @@ export default function UserDetailModal({
               <div>
                 <h3
                   className={`text-xl font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   {user.user.displayName || 'Unnamed User'}
@@ -66,7 +67,7 @@ export default function UserDetailModal({
                 </h3>
                 <p
                   className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                   }`}
                 >
                   <code>{user.user.wallet_address}</code>
@@ -74,7 +75,7 @@ export default function UserDetailModal({
                 {user.user.displayEmail && (
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
                     {user.user.displayEmail}
@@ -84,7 +85,7 @@ export default function UserDetailModal({
               <button
                 onClick={onClose}
                 className={`p-2 rounded-lg ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'hover:bg-gray-700'
                     : 'hover:bg-gray-100'
                 }`}
@@ -100,7 +101,7 @@ export default function UserDetailModal({
                   <div className='flex items-center justify-between mb-3'>
                     <h4
                       className={`font-semibold ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                       }`}
                     >
                       Driver Profile
@@ -120,7 +121,7 @@ export default function UserDetailModal({
                   </div>
                   <div
                     className={`p-4 rounded-lg ${
-                      theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
+                      isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'
                     }`}
                   >
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
@@ -153,7 +154,7 @@ export default function UserDetailModal({
               <div className='mb-6'>
                 <h4
                   className={`font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   DOT Applications ({user.dotApps.length})
@@ -161,7 +162,7 @@ export default function UserDetailModal({
                 {user.dotApps.length === 0 ? (
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                     }`}
                   >
                     No DOT applications
@@ -172,7 +173,7 @@ export default function UserDetailModal({
                       <div
                         key={app.id}
                         className={`flex items-center justify-between p-3 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700/50'
                             : 'bg-gray-50'
                         }`}
@@ -194,7 +195,7 @@ export default function UserDetailModal({
                           </span>
                           <span
                             className={`text-xs ${
-                              theme === 'dark'
+                              isDarkTheme(theme)
                                 ? 'text-gray-500'
                                 : 'text-gray-400'
                             }`}
@@ -224,7 +225,7 @@ export default function UserDetailModal({
               <div className='mb-6'>
                 <h4
                   className={`font-semibold mb-3 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   Resumes ({user.resumes.length})
@@ -232,7 +233,7 @@ export default function UserDetailModal({
                 {user.resumes.length === 0 ? (
                   <p
                     className={`text-sm ${
-                      theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                     }`}
                   >
                     No resumes
@@ -243,7 +244,7 @@ export default function UserDetailModal({
                       <div
                         key={resume.id}
                         className={`flex items-center justify-between p-3 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700/50'
                             : 'bg-gray-50'
                         }`}
@@ -299,7 +300,7 @@ export default function UserDetailModal({
                   <div className='flex items-center justify-between mb-3'>
                     <h4
                       className={`font-semibold flex items-center gap-2 ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                       }`}
                     >
                       <Code className='w-4 h-4 text-teal-500' />
@@ -320,7 +321,7 @@ export default function UserDetailModal({
                   </div>
                   <div
                     className={`p-4 rounded-lg ${
-                      theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
+                      isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'
                     }`}
                   >
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
@@ -382,7 +383,7 @@ export default function UserDetailModal({
                 <div className='mb-6'>
                   <h4
                     className={`font-semibold mb-3 flex items-center gap-2 ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                     }`}
                   >
                     <FolderGit2 className='w-4 h-4 text-cyan-500' />
@@ -393,7 +394,7 @@ export default function UserDetailModal({
                       <div
                         key={project.id}
                         className={`flex items-center justify-between p-3 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700/50'
                             : 'bg-gray-50'
                         }`}

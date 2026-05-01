@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Alchemy Smart Wallets Authentication
  *
@@ -52,7 +53,7 @@ export default function AlchemyAuth({
   mode = 'general',
 }: AlchemyAuthProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const { openAuthModal } = useAuthModal()
   const { isConnected, isInitializing } = useSignerStatus()
   const user = useUser()

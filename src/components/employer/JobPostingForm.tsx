@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -15,6 +16,9 @@ import {
   Users,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
 
 interface JobPostingFormProps {
   walletAddress: string
@@ -136,36 +140,33 @@ export default function JobPostingForm({
     }
   }
 
-  const cardClass = theme === 'dark'
-    ? 'bg-gray-800/50 border-gray-700'
-    : 'bg-white border-gray-200'
-
   const inputClass = `w-full px-4 py-3 rounded-xl border transition-colors ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
   } focus:outline-none focus:ring-1 focus:ring-teal-500`
 
   const labelClass = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
   }`
 
   if (success) {
     return (
-      <div className='max-w-2xl mx-auto py-12 px-4'>
-        <div className={`rounded-2xl border p-12 text-center ${cardClass}`}>
-          <div className='w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center'>
-            <CheckCircle className='w-8 h-8 text-green-500' />
-          </div>
-          <h2 className={`text-xl font-semibold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Job Posted Successfully!
-          </h2>
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-            Your job is now live and candidates can apply.
-          </p>
-        </div>
+      <div className='mx-auto max-w-2xl px-4 py-12'>
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+          <BlockCard
+            variant='embed'
+            icon={CheckCircle}
+            title='Job posted'
+            description='Your listing is live — candidates can apply from Find Talent and your pipeline.'
+          >
+            <div className='flex justify-center py-4'>
+              <div className='flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20'>
+                <CheckCircle className='h-8 w-8 text-green-500' />
+              </div>
+            </div>
+          </BlockCard>
+        </HubSectionPanel>
       </div>
     )
   }
@@ -180,19 +181,19 @@ export default function JobPostingForm({
       {/* Header */}
       <div className='mb-8'>
         <h1 className={`text-2xl font-bold ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}>
           Post a New Job
         </h1>
-        <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
           Create a job posting to attract qualified candidates
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className='space-y-6'>
-        {/* Target Role Selection */}
-        <div className={`rounded-2xl border p-6 ${cardClass}`}>
-          <label className={labelClass}>What type of role is this?</label>
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+          <BlockCard variant='embed' icon={Users} title='Role type' description='What kind of hire is this?'>
+          <label className={labelClass}>Select role category</label>
           <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
             {TARGET_ROLES.map(role => {
               const Icon = role.icon
@@ -205,18 +206,18 @@ export default function JobPostingForm({
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
                     isSelected
                       ? 'border-teal-500 bg-teal-500/10'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'border-gray-700 hover:border-gray-600'
                         : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Icon className={`w-6 h-6 ${
-                    isSelected ? 'text-teal-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isSelected ? 'text-teal-500' : isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`} />
                   <span className={`text-sm font-medium ${
                     isSelected
                       ? 'text-teal-500'
-                      : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      : isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
                   }`}>
                     {role.label}
                   </span>
@@ -224,17 +225,11 @@ export default function JobPostingForm({
               )
             })}
           </div>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
 
-        {/* Basic Info */}
-        <div className={`rounded-2xl border p-6 ${cardClass}`}>
-          <div className='flex items-center gap-2 mb-4'>
-            <Briefcase className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Job Details
-            </h2>
-          </div>
-
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+          <BlockCard variant='embed' icon={Briefcase} title='Job details' description='Title, description, and employment basics.'>
           <div className='space-y-4'>
             <div>
               <label className={labelClass}>Job Title *</label>
@@ -298,17 +293,12 @@ export default function JobPostingForm({
               </div>
             </div>
           </div>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
 
-        {/* Driver-specific: Route Type */}
         {targetRole === 'driver' && (
-          <div className={`rounded-2xl border p-6 ${cardClass}`}>
-            <div className='flex items-center gap-2 mb-4'>
-              <Car className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-              <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Driver Details
-              </h2>
-            </div>
+          <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+            <BlockCard variant='embed' icon={Car} title='Driver details' description='Route type for CDL and logistics roles.'>
             <div>
               <label className={labelClass}>Route Type</label>
               <select
@@ -322,18 +312,13 @@ export default function JobPostingForm({
                 ))}
               </select>
             </div>
-          </div>
+            </BlockCard>
+          </HubSectionPanel>
         )}
 
-        {/* Developer-specific: Remote */}
         {targetRole === 'developer' && (
-          <div className={`rounded-2xl border p-6 ${cardClass}`}>
-            <div className='flex items-center gap-2 mb-4'>
-              <Code className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-              <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Developer Details
-              </h2>
-            </div>
+          <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+            <BlockCard variant='embed' icon={Code} title='Developer details' description='Remote policy for tech roles.'>
             <label className='flex items-center gap-3 cursor-pointer'>
               <input
                 type='checkbox'
@@ -341,21 +326,16 @@ export default function JobPostingForm({
                 onChange={e => setRemoteAllowed(e.target.checked)}
                 className='w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500'
               />
-              <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+              <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 Remote work allowed
               </span>
             </label>
-          </div>
+            </BlockCard>
+          </HubSectionPanel>
         )}
 
-        {/* Location */}
-        <div className={`rounded-2xl border p-6 ${cardClass}`}>
-          <div className='flex items-center gap-2 mb-4'>
-            <MapPin className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Location
-            </h2>
-          </div>
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+          <BlockCard variant='embed' icon={MapPin} title='Location' description='Where the role is based.'>
           <div className='grid grid-cols-2 gap-4'>
             <div>
               <label className={labelClass}>City</label>
@@ -381,16 +361,11 @@ export default function JobPostingForm({
               </select>
             </div>
           </div>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
 
-        {/* Compensation */}
-        <div className={`rounded-2xl border p-6 ${cardClass}`}>
-          <div className='flex items-center gap-2 mb-4'>
-            <DollarSign className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Compensation
-            </h2>
-          </div>
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent='teal'>
+          <BlockCard variant='embed' icon={DollarSign} title='Compensation' description='Optional salary band — shown to candidates when set.'>
           <div className='grid grid-cols-2 gap-4'>
             <div>
               <label className={labelClass}>Salary Min ($/year)</label>
@@ -413,10 +388,11 @@ export default function JobPostingForm({
               />
             </div>
           </div>
-          <p className={`mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+          <p className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
             Leave blank if you prefer not to disclose salary range
           </p>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
 
         {/* Error */}
         {error && (
@@ -425,36 +401,23 @@ export default function JobPostingForm({
           </div>
         )}
 
-        {/* Submit */}
         <div className='flex gap-4'>
-          <button
-            type='button'
-            onClick={onBack}
-            className={`flex-1 py-3 rounded-xl font-semibold border transition-colors ${
-              theme === 'dark'
-                ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
+          <Button type='button' variant='secondary' size='md' className='flex-1' onClick={onBack}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type='submit'
+            variant='primary'
+            size='md'
+            className='flex-1'
             disabled={submitting || !title.trim()}
-            className='flex-1 py-3 rounded-xl font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+            isLoading={submitting}
           >
-            {submitting ? (
-              <>
-                <Loader2 className='w-5 h-5 animate-spin' />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Briefcase className='w-5 h-5' />
-                Post Job
-              </>
-            )}
-          </button>
+            <>
+              <Briefcase className='h-5 w-5' />
+              Post job
+            </>
+          </Button>
         </div>
       </form>
     </div>

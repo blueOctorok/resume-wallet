@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * Shared Stormi chat — clean empty state with robot avatar + prominent "Ask Stormi" title.
  * No auto-welcome call. Suggested prompts as chips. Thread appears after first send.
@@ -267,12 +268,22 @@ export type StormiChatPanelProps =
       /** From employer hub API `avaAutoWelcomeEmployerDone` */
       stormiAutoWelcomeEmployerDone: boolean
       onStormiAutoWelcomeSynced?: () => void
+      /**
+       * Employer hub: parent wraps in `HubSectionPanel` + `BlockCard variant="embed"` (same as candidate).
+       * Skips standalone glow shell and duplicate empty-state hero — header lives on BlockCard.
+       */
+      hubEmbedSurface?: boolean
     }
 
 export default function StormiChatPanel(props: StormiChatPanelProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
-  const hubEmbedSurface = props.mode === 'candidate' && Boolean(props.hubEmbedSurface)
+  const isDark = isDarkTheme(theme)
+  const hubEmbedSurface =
+    props.mode === 'candidate'
+      ? Boolean(props.hubEmbedSurface)
+      : props.mode === 'employer'
+        ? Boolean(props.hubEmbedSurface)
+        : false
   const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
   const walletAddress = props.walletAddress
   const persistenceMode = props.mode
@@ -862,7 +873,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
           {/* Empty-state: suggested prompts above the input */}
           {!hasMessages && (
             <div className='mb-5'>
-              {hubEmbedSurface && props.mode === 'candidate' ? (
+              {hubEmbedSurface ? (
                 usageBadge ? (
                   <div className='mb-4 flex flex-wrap items-center gap-2'>
                     <span

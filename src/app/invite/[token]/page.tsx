@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -99,7 +100,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
     return (
       <div>
         <p className={`text-center text-sm mb-4 font-medium ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}>
           Sign in with the email this invite was sent to:
           <span className='block mt-1 text-indigo-400 font-semibold'>{invite.email}</span>
@@ -116,10 +117,10 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
         <div className='flex items-start gap-3'>
           <AlertCircle className='w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5' />
           <div>
-            <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               Wrong account
             </p>
-            <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
               This invite was sent to <strong>{invite.email}</strong> but you&apos;re signed in as{' '}
               <strong>{connectedEmail}</strong>. Sign out and use the invited email to continue.
             </p>
@@ -133,7 +134,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
   return (
     <div className='space-y-4'>
       <div className={`flex items-center gap-2 p-3 rounded-xl ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-green-500/10 border border-green-500/30'
           : 'bg-green-50 border border-green-200'
       }`}>
@@ -146,7 +147,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
       {/* Name input for new team member */}
       <div>
         <label className={`block text-sm font-medium mb-2 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
         }`}>
           Your Name
         </label>
@@ -156,12 +157,12 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder='Enter your full name'
           className={`w-full px-4 py-3 rounded-xl border transition-colors ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-indigo-500'
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
           } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`}
         />
-        <p className={`text-xs mt-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`text-xs mt-1.5 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
           This is how you&apos;ll appear to other team members
         </p>
       </div>
@@ -234,16 +235,16 @@ export default function InvitePage() {
   }, [token, fetchInvite])
 
   const cardClass = `rounded-2xl border shadow-xl ${
-    theme === 'dark' ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90 border-gray-200'
+    isDarkTheme(theme) ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90 border-gray-200'
   }`
-  const bg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+  const bg = isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-50'
 
   if (loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <Loader2 className='w-12 h-12 animate-spin mx-auto text-teal-600 dark:text-teal-400' />
-          <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Loading invitation...
           </p>
         </div>
@@ -256,10 +257,10 @@ export default function InvitePage() {
       <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <AlertCircle className='w-16 h-16 text-red-500 mx-auto' />
-          <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold mt-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Invalid Invitation
           </h1>
-          <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
+          <p className={`mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
         </div>
       </div>
     )
@@ -270,10 +271,10 @@ export default function InvitePage() {
       <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <Clock className='w-16 h-16 text-yellow-500 mx-auto' />
-          <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold mt-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Invitation Expired
           </h1>
-          <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Please ask your company admin to send a new invitation.
           </p>
         </div>
@@ -286,10 +287,10 @@ export default function InvitePage() {
       <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <CheckCircle className='w-16 h-16 text-green-500 mx-auto' />
-          <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold mt-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Welcome to the Team!
           </h1>
-          <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             You have joined {invite?.company.name} as {getDisplayRole(invite?.role ?? null)}. Redirecting...
           </p>
         </div>
@@ -304,7 +305,7 @@ export default function InvitePage() {
         {/* Company header */}
         <div className='text-center mb-6'>
           <div className={`w-20 h-20 rounded-2xl mx-auto flex items-center justify-center ${
-            theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+            isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-100'
           }`}>
             {invite?.company.logoUrl ? (
               <img src={invite.company.logoUrl} alt={invite.company.name} className='w-16 h-16 rounded-xl object-cover' />
@@ -312,7 +313,7 @@ export default function InvitePage() {
               <Building2 className='w-10 h-10 text-indigo-400' />
             )}
           </div>
-          <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold mt-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Join {invite?.company.name}
           </h1>
           {invite?.company.verified && (
@@ -325,23 +326,23 @@ export default function InvitePage() {
 
         {/* Invite details */}
         <div className={`rounded-xl p-4 mb-6 space-y-2 ${
-          theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+          isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-100'
         }`}>
           <div className='flex justify-between'>
-            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Role</span>
-            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <span className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>Role</span>
+            <span className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               {getDisplayRole(invite?.role ?? null)}
             </span>
           </div>
           <div className='flex justify-between'>
-            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Invited Email</span>
-            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <span className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>Invited Email</span>
+            <span className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               {invite?.email}
             </span>
           </div>
           <div className='flex justify-between'>
-            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Expires</span>
-            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <span className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>Expires</span>
+            <span className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               {invite?.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : '-'}
             </span>
           </div>
@@ -357,7 +358,7 @@ export default function InvitePage() {
           />
         )}
 
-        <p className={`text-center text-xs mt-6 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`text-center text-xs mt-6 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
           By accepting, you agree to join this company and access their employer dashboard.
         </p>
       </div>

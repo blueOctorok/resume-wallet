@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
@@ -260,7 +261,7 @@ export default function CareerCard({
     }
   }
 
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   return (
     <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='relative overflow-hidden'>
@@ -359,7 +360,7 @@ export default function CareerCard({
             <a
               href={`mailto:${data.email}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Mail className="w-4 h-4" />
@@ -370,7 +371,7 @@ export default function CareerCard({
             <a
               href={`tel:${data.phone}`}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Phone className="w-4 h-4" />
@@ -379,7 +380,7 @@ export default function CareerCard({
           )}
           {data.location && (
             <span className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-              theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+              isDarkTheme(theme) ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>
               <MapPin className="w-4 h-4" />
               {data.location}
@@ -387,7 +388,7 @@ export default function CareerCard({
           )}
           {data.memberSince && (
             <span className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-              theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
+              isDarkTheme(theme) ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>
               <Calendar className="w-4 h-4" />
               Member since {new Date(data.memberSince).toLocaleDateString()}
@@ -415,13 +416,13 @@ export default function CareerCard({
           </div>
           {(profile.endorsements?.length || profile.cdl_endorsements?.length) ? (
             <div className="mt-3">
-              <p className={`text-sm mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm mb-2 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Endorsements
               </p>
               <div className="flex flex-wrap gap-2">
                 {(profile.endorsements || profile.cdl_endorsements || []).map((e, i) => (
                   <span key={i} className={`px-2 py-1 rounded text-xs font-medium ${
-                    theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
+                    isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
                   }`}>
                     {e}
                   </span>
@@ -441,7 +442,7 @@ export default function CareerCard({
                 {profile.github_url && (
                   <a href={profile.github_url} target="_blank" rel="noopener noreferrer"
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <Github className="w-4 h-4" />GitHub<ExternalLink className="w-3 h-3" />
@@ -450,7 +451,7 @@ export default function CareerCard({
                 {profile.linkedin_url && (
                   <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer"
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <Linkedin className="w-4 h-4" />LinkedIn<ExternalLink className="w-3 h-3" />
@@ -459,7 +460,7 @@ export default function CareerCard({
                 {profile.portfolio_url && (
                   <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer"
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      isDarkTheme(theme) ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     <Globe className="w-4 h-4" />Portfolio<ExternalLink className="w-3 h-3" />
@@ -473,7 +474,7 @@ export default function CareerCard({
               <div className="flex flex-wrap gap-2">
                 {profile.skills.map((skill, i) => (
                   <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    theme === 'dark' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-700'
+                    isDarkTheme(theme) ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-700'
                   }`}>
                     {typeof skill === 'string' ? skill : skill.name}
                   </span>
@@ -498,7 +499,7 @@ export default function CareerCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`flex items-center gap-1 text-sm ${
-                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                  isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
                 }`}
               >
                 View <ExternalLink className="w-3 h-3" />
@@ -507,7 +508,7 @@ export default function CareerCard({
               <button
                 onClick={() => setShowResumePreview(true)}
                 className={`flex items-center gap-1 text-sm ${
-                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                  isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
                 }`}
               >
                 <Eye className="w-3 h-3" /> Preview
@@ -517,10 +518,10 @@ export default function CareerCard({
         }
       >
         {data.resume ? (
-          <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <div className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-500" />
-              <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+              <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 {data.resume.title || data.resume.filename}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded ${
@@ -536,7 +537,7 @@ export default function CareerCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`flex items-center gap-1 text-xs font-medium ${
-                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                    isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
                   }`}
                 >
                   View on Base <ExternalLink className="w-3 h-3" />
@@ -560,7 +561,7 @@ export default function CareerCard({
         >
           {/* Self-ordered MVR — shareable, shown to everyone */}
           {data.mvr ? (
-            <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-500">
                   <User className="w-3 h-3" />
@@ -579,7 +580,7 @@ export default function CareerCard({
           {/* Company-ordered MVR — private to this employer only */}
           {data.companyMvr ? (
             <div className={`p-4 rounded-lg border ${
-              theme === 'dark' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+              isDarkTheme(theme) ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
             } ${data.mvr ? 'mt-3' : ''}`}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-500">
@@ -600,15 +601,15 @@ export default function CareerCard({
           {!data.mvr && !data.companyMvr && (
             data.hasBgcheckConsent ? (
               <div className={`p-4 rounded-lg border ${
-                theme === 'dark' ? 'bg-teal-500/10 border-teal-500/30' : 'bg-teal-50 border-teal-200'
+                isDarkTheme(theme) ? 'bg-teal-500/10 border-teal-500/30' : 'bg-teal-50 border-teal-200'
               }`}>
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle className="w-4 h-4 text-teal-500" />
-                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
+                  <span className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-800'}`}>
                     Disclosure signed
                   </span>
                 </div>
-                <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
+                <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-400/70' : 'text-teal-600'}`}>
                   Signed {data.bgcheckConsentSignedAt
                     ? new Date(data.bgcheckConsentSignedAt).toLocaleDateString()
                     : ''} — MVR order can be initiated
@@ -632,7 +633,7 @@ export default function CareerCard({
               <button
                 onClick={openDotPreview}
                 className={`flex items-center gap-1 text-sm ${
-                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                  isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
                 }`}
               >
                 <Eye className="w-3 h-3" /> Preview
@@ -642,14 +643,14 @@ export default function CareerCard({
         >
           {data.driverApplication ? (
             <div className={`p-3 rounded-lg flex items-center gap-2 ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
             }`}>
               {data.driverApplication.isComplete ? (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               ) : (
                 <Clock className="w-4 h-4 text-yellow-500" />
               )}
-              <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+              <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 {data.driverApplication.isComplete ? 'Complete' : 'In Progress'}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded ${
@@ -665,7 +666,7 @@ export default function CareerCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`flex items-center gap-1 text-xs font-medium ${
-                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                    isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
                   }`}
                 >
                   View on Base <ExternalLink className="w-3 h-3" />
@@ -684,7 +685,7 @@ export default function CareerCard({
         icon={<Briefcase className="w-4 h-4" />}
         theme={theme}
         action={
-          <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+          <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
             {data.verifiedJobsCount > 0
               ? `${data.verifiedJobsCount} employer-confirmed`
               : 'No employer confirmations'}
@@ -700,16 +701,16 @@ export default function CareerCard({
                   normEmploymentField(v.position) === normEmploymentField(job.position),
               )
               return (
-                <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div key={i} className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      <p className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                         {job.position || 'Unknown Position'}
                       </p>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                         {job.companyName || 'Unknown Company'}
                       </p>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                      <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                         {job.startDate || '?'} – {job.isCurrent ? 'Present' : job.endDate || '?'}
                       </p>
                     </div>
@@ -730,7 +731,7 @@ export default function CareerCard({
               )
             })}
             {data.workHistory.length > 5 && (
-              <p className={`text-sm text-center ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+              <p className={`text-sm text-center ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                 +{data.workHistory.length - 5} more entries
               </p>
             )}
@@ -762,11 +763,11 @@ export default function CareerCard({
           <div className="overflow-y-auto max-h-[75vh]">
             {dotAppLoading && (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className={`w-6 h-6 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+                <Loader2 className={`w-6 h-6 animate-spin ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
               </div>
             )}
             {dotAppError && (
-              <div className={`m-6 flex items-center gap-2 p-4 rounded-xl text-sm ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+              <div className={`m-6 flex items-center gap-2 p-4 rounded-xl text-sm ${isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
                 <AlertCircle className="w-4 h-4 flex-shrink-0" /> {dotAppError}
               </div>
             )}
@@ -833,7 +834,7 @@ export function Section({
   children: React.ReactNode
   theme: string
 }) {
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -863,16 +864,16 @@ function DotField({ label, value, theme }: { label: string; value?: string | nul
   if (!value) return null
   return (
     <div>
-      <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
-      <p className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>{value}</p>
+      <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+      <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>{value}</p>
     </div>
   )
 }
 
 function DotSection({ title, children, theme }: { title: string; children: React.ReactNode; theme: string }) {
   return (
-    <div className={`border-b px-6 py-5 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{title}</p>
+    <div className={`border-b px-6 py-5 ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-100'}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>{title}</p>
       {children}
     </div>
   )
@@ -903,12 +904,12 @@ function DotAppPreviewContent({
   return (
     <div>
       {/* Status banner */}
-      <div className={`px-6 py-4 flex items-center gap-3 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
+      <div className={`px-6 py-4 flex items-center gap-3 border-b ${isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
         {data.isComplete
           ? <CheckCircle className="w-4 h-4 text-green-500" />
           : <Clock className="w-4 h-4 text-yellow-500" />
         }
-        <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+        <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
           {data.isComplete ? 'Complete' : 'In Progress'} · Submitted {fmt(data.createdAt)}
         </span>
       </div>
@@ -940,7 +941,7 @@ function DotAppPreviewContent({
             <DotSection title="Driver's Licenses" theme={theme}>
               <div className="space-y-3">
                 {f1.currentLicenses.map((lic, i) => (
-                  <div key={i} className={`p-3 rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-3 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div key={i} className={`p-3 rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-3 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                     <DotField label="State" value={lic.state} theme={theme} />
                     <DotField label="License #" value={lic.licenseNumber} theme={theme} />
                     <DotField label="Class" value={lic.typeClass} theme={theme} />
@@ -962,9 +963,9 @@ function DotAppPreviewContent({
                   { q: 'Mobile device violation?',   v: f1.disqualificationHistory.hasMobileDeviceViolation, detail: f1.disqualificationHistory.mobileDeviceViolationDetails },
                 ].map(({ q, v, detail }) => (
                   <div key={q} className="flex gap-3">
-                    <span className={`flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{q}</span>
+                    <span className={`flex-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{q}</span>
                     <span><YesNo value={v} /></span>
-                    {detail && <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{detail}</span>}
+                    {detail && <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>{detail}</span>}
                   </div>
                 ))}
               </div>
@@ -993,8 +994,8 @@ function DotAppPreviewContent({
               <div className="space-y-2">
                 {f2.drivingExperience.map((exp, i) => (
                   <div key={i} className="flex justify-between text-sm">
-                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>{exp.equipmentType}</span>
-                    <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>{exp.yearsOfExperience} yrs</span>
+                    <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>{exp.equipmentType}</span>
+                    <span className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}>{exp.yearsOfExperience} yrs</span>
                   </div>
                 ))}
               </div>
@@ -1003,11 +1004,11 @@ function DotAppPreviewContent({
 
           <DotSection title="Accident History (Past 5 Years)" theme={theme}>
             {f2.hasNoAccidents || !f2.accidents?.length ? (
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No accidents reported</p>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>No accidents reported</p>
             ) : (
               <div className="space-y-3">
                 {f2.accidents.map((acc, i) => (
-                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div key={i} className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <DotField label="Date" value={fmt(acc.date)} theme={theme} />
                       <DotField label="Nature" value={acc.nature} theme={theme} />
@@ -1028,13 +1029,13 @@ function DotAppPreviewContent({
                 <span className={`text-sm font-medium px-3 py-1 rounded-full ${
                   f2.drugTestPositive === 'yes'
                     ? 'bg-red-500/20 text-red-500'
-                    : theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                    : isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
                 }`}>
                   {f2.drugTestPositive === 'yes' ? 'YES — Positive / Refused' : 'NO'}
                 </span>
               </div>
               {f2.drugTestPositiveExplain && (
-                <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{f2.drugTestPositiveExplain}</p>
+                <p className={`mt-2 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{f2.drugTestPositiveExplain}</p>
               )}
             </DotSection>
           )}
@@ -1046,13 +1047,13 @@ function DotAppPreviewContent({
                 <span className={`text-sm font-medium px-3 py-1 rounded-full ${
                   f2.cfr391ConvictedYesNo === 'yes'
                     ? 'bg-red-500/20 text-red-500'
-                    : theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                    : isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
                 }`}>
                   {f2.cfr391ConvictedYesNo === 'yes' ? 'YES — Convicted' : 'NO'}
                 </span>
               </div>
               {f2.cfr391ConvictedYesNo === 'yes' && f2.cfr391ConvictedOffenses && f2.cfr391ConvictedOffenses.length > 0 && (
-                <ul className={`text-sm space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                <ul className={`text-sm space-y-1 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                   {f2.cfr391ConvictedOffenses.map((key, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="text-red-500 mt-0.5">•</span>
@@ -1062,18 +1063,18 @@ function DotAppPreviewContent({
                 </ul>
               )}
               {f2.cfr391ConvictedExplain && (
-                <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{f2.cfr391ConvictedExplain}</p>
+                <p className={`mt-2 text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{f2.cfr391ConvictedExplain}</p>
               )}
             </DotSection>
           )}
 
           <DotSection title="Traffic Convictions (Past 3 Years)" theme={theme}>
             {f2.hasNoConvictions || !f2.convictions?.length ? (
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No convictions reported</p>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>No convictions reported</p>
             ) : (
               <div className="space-y-3">
                 {f2.convictions.map((c, i) => (
-                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div key={i} className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <DotField label="Date" value={fmt(c.dateConvicted)} theme={theme} />
                       <DotField label="Violation" value={c.violation} theme={theme} />
@@ -1095,13 +1096,13 @@ function DotAppPreviewContent({
             <DotSection title="Employment History (10 Years)" theme={theme}>
               <div className="space-y-4">
                 {f3.employers.filter(e => !e.isUnemployment).map((emp, i) => (
-                  <div key={i} className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div key={i} className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{emp.positionHeld}</p>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{emp.name}</p>
+                        <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>{emp.positionHeld}</p>
+                        <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>{emp.name}</p>
                       </div>
-                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                         {emp.fromDate} – {emp.toDate || 'Present'}
                       </span>
                     </div>
@@ -1122,7 +1123,7 @@ function DotAppPreviewContent({
             <DotSection title="Education & Training" theme={theme}>
               <div className="space-y-3">
                 {f3.education.map((edu, i) => (
-                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div key={i} className={`p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
                     <div className="grid grid-cols-2 gap-3">
                       <DotField label="Type" value={edu.schoolType} theme={theme} />
                       <DotField label="School / Location" value={edu.nameAndLocation} theme={theme} />
@@ -1151,7 +1152,7 @@ function DotAppPreviewContent({
                 )}
                 {f3.ipAddress && <DotField label="IP Address" value={f3.ipAddress} theme={theme} />}
                 {f3.fcraAcknowledgement && (
-                  <div className={`flex items-center gap-1 text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                  <div className={`flex items-center gap-1 text-xs ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-700'}`}>
                     <CheckCircle className="w-3 h-3" /> FCRA Rights Acknowledged
                   </div>
                 )}
@@ -1167,7 +1168,7 @@ function DotAppPreviewContent({
 export function PreviewSection({ title, children, theme }: { title: string; children: React.ReactNode; theme: string }) {
   return (
     <div>
-      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{title}</p>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>{title}</p>
       {children}
     </div>
   )
@@ -1176,8 +1177,8 @@ export function PreviewSection({ title, children, theme }: { title: string; chil
 export function InfoItem({ label, value, theme }: { label: string; value: string; theme: string }) {
   return (
     <div>
-      <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>{label}</p>
-      <p className={theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}>{value}</p>
+      <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>{label}</p>
+      <p className={isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}>{value}</p>
     </div>
   )
 }
@@ -1185,15 +1186,15 @@ export function InfoItem({ label, value, theme }: { label: string; value: string
 export function Badge({ label, color, theme }: { label: string; color: 'green' | 'yellow' | 'red'; theme: string }) {
   const colors = {
     green:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-400/25'
         : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/15',
     yellow:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25'
         : 'bg-amber-50 text-amber-900 ring-1 ring-amber-600/15',
     red:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-red-500/15 text-red-400 ring-1 ring-red-400/25'
         : 'bg-red-50 text-red-800 ring-1 ring-red-600/15',
   }
@@ -1205,7 +1206,7 @@ export function Badge({ label, color, theme }: { label: string; color: 'green' |
 }
 
 export function EmptyState({ message, subtext, theme }: { message: string; subtext?: string; theme: string }) {
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   return (
     <div
       className={cn(

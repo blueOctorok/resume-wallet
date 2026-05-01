@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import Image from 'next/image'
 import { useState, useCallback } from 'react'
 import { X } from 'lucide-react'
@@ -33,7 +34,7 @@ export default function StormiWalkthrough({
   onBrowseBlocks,
 }: StormiWalkthroughProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
 
   const [index, setIndex] = useState(0)
   const [dontShowAgain, setDontShowAgain] = useState(false)

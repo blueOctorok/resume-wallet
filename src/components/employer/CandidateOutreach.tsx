@@ -1,9 +1,13 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+import { cn } from '@/lib/utils'
 import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
 import { buildCandidateInviteSmsBody } from '@/lib/invite-sms-body'
 import QRCode from 'qrcode'
@@ -202,8 +206,8 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
     typeof navigator !== 'undefined' &&
     Boolean(navigator.clipboard?.write && typeof ClipboardItem !== 'undefined')
 
-  const muted = theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-  const sub = theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+  const muted = isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
+  const sub = isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600'
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-sm">
@@ -569,60 +573,66 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const canSubmit = selectedBlockType !== null
 
   // ── Shared styling shortcuts ───────────────────────────────────────────────
-  const card = theme === 'dark'
-    ? 'bg-gray-800/50 border-gray-700'
-    : 'bg-white/80 border-gray-200'
-
   const inputBase = `w-full px-3 py-2 rounded-lg text-sm border transition-colors outline-none focus:ring-2 focus:ring-teal-500/50 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
   }`
 
-  const label = `block text-xs font-medium mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`
+  const label = `block text-xs font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`
 
   return (
     <>
-      <div className={`rounded-2xl border shadow-lg ${card}`}>
-        {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 ${
-          !isCollapsed ? `border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}` : ''
-        }`}>
-          <button onClick={onToggle} className="flex items-center gap-3 text-left group min-w-0">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-teal-900/40' : 'bg-teal-100'}`}>
-              <Link2 className="w-5 h-5 text-teal-500" />
-            </div>
-            <div className="min-w-0">
-              <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Candidate Outreach
-              </h3>
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber">
+        <BlockCard
+          variant="embed"
+          icon={Link2}
+          title="Candidate outreach"
+          description={
+            !isCollapsed
+              ? `${activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'} · Send invite links to candidates`
+              : 'Expand to create and manage invite links.'
+          }
+          headerActions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {!isCollapsed && (
-                <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'}
-                  {' · '}Send invite links to candidates
-                </p>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    setShowForm(true)
+                    setError(null)
+                    resetForm()
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  New outreach
+                </Button>
               )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onToggle}
+                aria-expanded={!isCollapsed}
+                aria-label={isCollapsed ? 'Expand candidate outreach' : 'Collapse candidate outreach'}
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-200',
+                    isCollapsed && '-rotate-90',
+                  )}
+                />
+              </Button>
             </div>
-            <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-            } ${isCollapsed ? '-rotate-90' : ''}`} />
-          </button>
-          {!isCollapsed && (
-            <button
-              onClick={() => { setShowForm(true); setError(null); resetForm() }}
-              className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Outreach
-            </button>
-          )}
-        </div>
-
+          }
+        >
         {/* Create form */}
         {!isCollapsed && showForm && (
-          <div className={`px-6 py-5 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
+          <div className={`px-6 py-5 border-b ${isDarkTheme(theme) ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
             <div className="flex items-center justify-between mb-4">
-              <h4 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h4 className={`font-semibold text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 Create Outreach Link
               </h4>
               <button
@@ -645,13 +655,13 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                   />
                 ) : (
                   <div className={`rounded-xl border overflow-hidden ${
-                    theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
+                    isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
                   }`}>
                     <div className="max-h-56 overflow-y-auto">
                       {blocksByCategory.map(({ category, blocks }) => (
                         <div key={category.id}>
                           <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider sticky top-0 z-10 ${
-                            theme === 'dark' ? 'bg-gray-800 text-gray-500 border-b border-gray-700' : 'bg-gray-50 text-gray-400 border-b border-gray-200'
+                            isDarkTheme(theme) ? 'bg-gray-800 text-gray-500 border-b border-gray-700' : 'bg-gray-50 text-gray-400 border-b border-gray-200'
                           }`}>
                             {category.label}
                           </div>
@@ -660,21 +670,21 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                               key={block.id}
                               onClick={() => setSelectedBlockType(block.id)}
                               className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                                theme === 'dark'
+                                isDarkTheme(theme)
                                   ? 'hover:bg-gray-700/50 border-b border-gray-700/50'
                                   : 'hover:bg-gray-50 border-b border-gray-100'
                               }`}
                             >
                               <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                theme === 'dark' ? 'bg-teal-900/40' : 'bg-teal-100'
+                                isDarkTheme(theme) ? 'bg-teal-900/40' : 'bg-teal-100'
                               }`}>
                                 <Package className="w-3.5 h-3.5 text-teal-500" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                                   {block.label}
                                 </p>
-                                <p className={`text-xs truncate ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                <p className={`text-xs truncate ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                                   {block.description}
                                 </p>
                               </div>
@@ -691,24 +701,24 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
             <div className="mb-3" ref={profileSearchRef}>
               <label className={label}>
                 Search existing Storm profiles
-                <span className={`ml-1 font-normal ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                <span className={`ml-1 font-normal ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
                   — connects invite for in-app notifications
                 </span>
               </label>
 
               {selectedProfile ? (
                 <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-teal-900/30 border-teal-700/50'
                     : 'bg-teal-50 border-teal-200'
                 }`}>
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
                     <div>
-                      <p className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-700'}`}>
+                      <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}>
                         {selectedProfile.full_name || selectedProfile.email}
                       </p>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-teal-500' : 'text-teal-500'}`}>
+                      <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500' : 'text-teal-500'}`}>
                         Connected to Storm · In-app notification will fire when email is sent
                       </p>
                     </div>
@@ -716,7 +726,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                   <button
                     onClick={handleClearProfile}
                     className={`text-xs font-medium flex items-center gap-1 cursor-pointer ${
-                      theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                      isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
                     }`}
                   >
                     <X className="w-3 h-3" />
@@ -727,7 +737,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                 <div className="relative">
                   <div className="relative">
                     <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
-                      theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                     }`} />
                     <input
                       type="text"
@@ -744,28 +754,28 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
                   {showProfileDropdown && profileResults.length > 0 && (
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${
-                      theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                      isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                     }`}>
                       {profileResults.map((profile, index) => (
                         <button
                           key={profile.user_id || `profile-${index}`}
                           onClick={() => handleSelectProfile(profile)}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-b last:border-b-0 cursor-pointer ${
-                            theme === 'dark'
+                            isDarkTheme(theme)
                               ? 'hover:bg-gray-700 border-gray-700/60'
                               : 'hover:bg-gray-50 border-gray-100'
                           }`}
                         >
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            theme === 'dark' ? 'bg-teal-900/50' : 'bg-teal-100'
+                            isDarkTheme(theme) ? 'bg-teal-900/50' : 'bg-teal-100'
                           }`}>
                             <UserCheck className="w-3.5 h-3.5 text-teal-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                            <p className={`text-sm font-medium truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                               {profile.full_name || profile.email || 'Unknown'}
                             </p>
-                            <div className={`flex items-center gap-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                            <div className={`flex items-center gap-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                               {profile.cdl_class && <span>CDL-{profile.cdl_class}</span>}
                               {(profile.city || profile.state) && (
                                 <span className="flex items-center gap-0.5">
@@ -777,13 +787,13 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                             </div>
                           </div>
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                            theme === 'dark' ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
+                            isDarkTheme(theme) ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
                           }`}>
                             Storm
                           </span>
                         </button>
                       ))}
-                      <div className={`px-3 py-2 text-xs ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                      <div className={`px-3 py-2 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
                         Or fill in name and email below for someone not on Storm
                       </div>
                     </div>
@@ -791,7 +801,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
                   {showProfileDropdown && profileQuery.trim().length >= 2 && !isSearchingProfiles && profileResults.length === 0 && (
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
-                      theme === 'dark' ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
+                      isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
                     }`}>
                       No Storm profiles found — fill in name and email below for an email-only invite
                     </div>
@@ -874,7 +884,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               <button
                 onClick={() => { setShowForm(false); setError(null); resetForm() }}
                 className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  isDarkTheme(theme) ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 Cancel
@@ -888,15 +898,15 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
           {loading ? (
             <div className="flex items-center justify-center py-10 gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
-              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Loading outreach…</span>
+              <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>Loading outreach…</span>
             </div>
           ) : invites.length === 0 ? (
             <div className="py-10 text-center">
-              <Link2 className={`w-10 h-10 mx-auto mb-3 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-300'}`} />
-              <p className={`font-medium text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              <Link2 className={`w-10 h-10 mx-auto mb-3 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}`} />
+              <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                 No outreach yet
               </p>
-              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+              <p className={`text-xs mt-1 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
                 Create your first invite link to bring candidates into your pipeline
               </p>
             </div>
@@ -933,17 +943,18 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
         {/* Show more */}
         {!isCollapsed && !loading && invites.length > 6 && (
-          <div className={`px-6 py-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className={`px-6 py-3 border-t ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               onClick={() => setShowAll(v => !v)}
-              className={`flex items-center gap-1 text-xs font-medium ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`}
+              className={`flex items-center gap-1 text-xs font-medium ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`}
             >
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAll ? 'rotate-180' : ''}`} />
               {showAll ? 'Show less' : `Show ${invites.length - 6} more`}
             </button>
           </div>
         )}
-      </div>
+        </BlockCard>
+      </HubSectionPanel>
 
       {/* QR modal */}
       {qrInvite && (
@@ -965,21 +976,21 @@ function SelectedBlockPill({ blockType, theme, onClear }: { blockType: string; t
 
   return (
     <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-teal-900/30 border-teal-700/50'
         : 'bg-teal-50 border-teal-200'
     }`}>
       <div className="flex items-center gap-2.5">
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-          theme === 'dark' ? 'bg-teal-900/50' : 'bg-teal-100'
+          isDarkTheme(theme) ? 'bg-teal-900/50' : 'bg-teal-100'
         }`}>
           <Package className="w-3.5 h-3.5 text-teal-500" />
         </div>
         <div>
-          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-700'}`}>
+          <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}>
             {block.label}
           </p>
-          <p className={`text-xs ${theme === 'dark' ? 'text-teal-500/80' : 'text-teal-500'}`}>
+          <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500/80' : 'text-teal-500'}`}>
             {block.description}
           </p>
         </div>
@@ -987,7 +998,7 @@ function SelectedBlockPill({ blockType, theme, onClear }: { blockType: string; t
       <button
         onClick={onClear}
         className={`text-xs font-medium flex items-center gap-1 ${
-          theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+          isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         <ArrowLeft className="w-3 h-3" />
@@ -1059,7 +1070,7 @@ function InviteRow({
   }
 
   return (
-    <div className={`px-6 py-4 ${theme === 'dark' ? 'hover:bg-gray-700/20' : 'hover:bg-gray-50/60'} transition-colors`}>
+    <div className={`px-6 py-4 ${isDarkTheme(theme) ? 'hover:bg-gray-700/20' : 'hover:bg-gray-50/60'} transition-colors`}>
       <div className="flex items-start justify-between gap-3">
         {/* Left: info */}
         <div className="flex-1 min-w-0">
@@ -1067,26 +1078,26 @@ function InviteRow({
             <TypeBadge targetBlockType={invite.targetBlockType} />
             <StatusBadge status={invite.status} />
             {invite.jobTitle && (
-              <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                 · {invite.jobTitle}
               </span>
             )}
           </div>
 
           {/* Candidate info */}
-          <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             {invite.candidateName || invite.candidateEmail || (
-              <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>Anonymous invite</span>
+              <span className={isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}>Anonymous invite</span>
             )}
           </p>
           {invite.candidateName && invite.candidateEmail && (
-            <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
               {invite.candidateEmail}
             </p>
           )}
 
           {/* Meta */}
-          <div className={`flex items-center gap-3 mt-1.5 text-xs ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+          <div className={`flex items-center gap-3 mt-1.5 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
             <span>{timeAgo(invite.createdAt)}</span>
             {invite.viewCount > 0 && <span>{invite.viewCount} view{invite.viewCount !== 1 ? 's' : ''}</span>}
             {invite.emailSentAt && (
@@ -1114,7 +1125,7 @@ function InviteRow({
                 onChange={e => onEmailInputChange(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') onEmailInputSubmit(); if (e.key === 'Escape') onEmailInputCancel() }}
                 className={`flex-1 px-2.5 py-1.5 text-xs rounded-lg border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 }`}
@@ -1144,7 +1155,7 @@ function InviteRow({
             className={`p-1.5 rounded-lg transition-colors ${
               isCopiedLink
                 ? 'text-green-400'
-                : theme === 'dark' ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
             {isCopiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -1157,7 +1168,7 @@ function InviteRow({
             className={`p-1.5 rounded-lg transition-colors ${
               isCopiedMessage
                 ? 'text-green-400'
-                : theme === 'dark' ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
             {isCopiedMessage ? <Check className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
@@ -1168,7 +1179,7 @@ function InviteRow({
             onClick={onShowQr}
             title="Show QR code"
             className={`p-1.5 rounded-lg transition-colors ${
-              theme === 'dark' ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
             <QrCode className="w-4 h-4" />
@@ -1192,8 +1203,8 @@ function InviteRow({
                   : isSending
                     ? 'opacity-50 cursor-wait'
                     : invite.emailSentAt
-                      ? theme === 'dark' ? 'text-teal-500 hover:text-teal-300 hover:bg-gray-700' : 'text-teal-500 hover:text-teal-600 hover:bg-gray-100'
-                      : theme === 'dark' ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      ? isDarkTheme(theme) ? 'text-teal-500 hover:text-teal-300 hover:bg-gray-700' : 'text-teal-500 hover:text-teal-600 hover:bg-gray-100'
+                      : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
               }`}
             >
               {isSending ? (
@@ -1214,7 +1225,7 @@ function InviteRow({
               onClick={() => onCancel(invite.id)}
               title="Cancel invite (link stops working, row stays until removed)"
               className={`p-1.5 rounded-lg transition-colors ${
-                theme === 'dark' ? 'text-gray-600 hover:text-red-400 hover:bg-gray-700' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'
+                isDarkTheme(theme) ? 'text-gray-600 hover:text-red-400 hover:bg-gray-700' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'
               }`}
             >
               <XCircle className="w-4 h-4" />
@@ -1227,7 +1238,7 @@ function InviteRow({
             disabled={isRemoving}
             title="Remove from list"
             className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'text-gray-600 hover:text-orange-400 hover:bg-gray-700'
                 : 'text-gray-400 hover:text-orange-600 hover:bg-gray-100'
             }`}

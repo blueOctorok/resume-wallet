@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
@@ -40,7 +41,7 @@ export default function DeleteConfirmModal({
           </div>
           <h3
             className={`text-lg font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             Confirm Delete
@@ -48,7 +49,7 @@ export default function DeleteConfirmModal({
         </div>
         <p
           className={`mb-4 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
           Are you sure you want to delete <strong>{target.name}</strong>? This
@@ -57,7 +58,7 @@ export default function DeleteConfirmModal({
         <div className='mb-4'>
           <label
             className={`block text-sm mb-1 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
             Type DELETE to confirm
@@ -67,7 +68,7 @@ export default function DeleteConfirmModal({
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-800 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:outline-none focus:ring-2 focus:ring-red-500`}
@@ -83,7 +84,7 @@ export default function DeleteConfirmModal({
           <button
             onClick={handleClose}
             className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700 text-white hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}

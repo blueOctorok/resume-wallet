@@ -1,6 +1,8 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import Image from 'next/image'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
@@ -14,6 +16,9 @@ import { useUIStore, useJourneyStore } from '@/stores'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
 import { calculateEmployerProgress, type EmployerProgressData } from '@/lib/journey-progress'
 import EmployerPathSidebar from '@/components/hub/EmployerPathSidebar'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
+import { getBlockColor } from '@/lib/block-registry'
 import {
   Briefcase,
   Users,
@@ -43,15 +48,18 @@ import {
   CreditCard,
   Compass,
   Wallet,
+  LayoutGrid,
+  Coins,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { navControlButtonClass } from '@/lib/navigation-styles'
 import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import STORMBalance from '@/components/STORMBalance'
 import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
+import BlockCard from '@/components/ui/BlockCard'
 
 // ============================================================
 // TYPES
@@ -261,6 +269,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       userRole: data.userRole ?? null,
     }
   }, [data])
+
+  /** Same rim/glow as job-path rail (`EmployerPathSidebar`) so wallet + path rails match */
+  const employerRailVaultGlow = useMemo(() => getBlockColor('general-resume').glowColor, [])
 
   /** Job-path sidebar + Stormi drawer + `useJourneyProgress` (employer) */
   const hiringPayload = useMemo(() => {
@@ -491,9 +502,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+            isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
           }`} />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
             Loading your employer hub...
           </p>
         </div>
@@ -501,28 +512,24 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     )
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className={`text-center p-8 rounded-2xl ${
-          theme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'
-        }`}>
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className={theme === 'dark' ? 'text-red-400' : 'text-red-600'}>
-            {error}
-          </p>
-          <button
-            onClick={fetchHubData}
-            className={`mt-4 px-6 py-2 rounded-lg font-medium ${
-              theme === 'dark'
-                ? 'bg-teal-500 text-white hover:bg-teal-600'
-                : 'bg-teal-600 text-white hover:bg-teal-700'
-            }`}
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="max-w-md w-full">
+          <BlockCard
+            variant="embed"
+            icon={AlertCircle}
+            title="Couldn’t load hub"
+            description="Check your connection and try again."
           >
-            Try Again
-          </button>
-        </div>
+            <p className={`text-center text-sm ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
+            <div className="mt-4 flex justify-center">
+              <Button type="button" variant="primary" size="md" onClick={fetchHubData}>
+                Try again
+              </Button>
+            </div>
+          </BlockCard>
+        </HubSectionPanel>
       </div>
     )
   }
@@ -536,24 +543,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   if (data.employerAccessPending && !data.company) {
     const p = data.employerAccessPending
     return (
-      <div className="flex items-center justify-center min-h-[60vh] px-4">
-        <Card variant="elevated" className="max-w-lg w-full p-8 text-center">
-          <Clock className={`w-12 h-12 mx-auto mb-4 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`} />
-          <h2 className={`text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Employer access pending review
-          </h2>
-          <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Your request to join <strong>{p.companyName}</strong> is in the queue. Storm admin will
-            approve it — you do not need your company owner to send an invite for this step.
-          </p>
-          <p className={`text-xs mb-6 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-            Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}
-            {p.submittedAt ? ` · Submitted ${new Date(p.submittedAt).toLocaleString()}` : ''}
-          </p>
-          <Button variant="secondary" onClick={() => fetchHubData()}>
-            Refresh status
-          </Button>
-        </Card>
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="max-w-lg w-full">
+          <BlockCard
+            variant="embed"
+            icon={Clock}
+            title="Employer access pending"
+            description={`Your request to join ${p.companyName} is in the queue. Storm admin will approve it.`}
+          >
+            <p className={`mb-4 text-center text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
+              Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}
+              {p.submittedAt ? ` · Submitted ${new Date(p.submittedAt).toLocaleString()}` : ''}
+            </p>
+            <div className="flex justify-center">
+              <Button variant="secondary" onClick={() => fetchHubData()}>
+                Refresh status
+              </Button>
+            </div>
+          </BlockCard>
+        </HubSectionPanel>
       </div>
     )
   }
@@ -570,43 +578,56 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         {data.company &&
           (walletRailOpen ? (
             <aside
-              className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 xl:col-start-1 xl:row-start-1 xl:self-start rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-900/90'
-                  : 'border-gray-200 bg-white/90'
-              }`}
+              className="hidden xl:block w-80 shrink-0 self-start sticky top-24 p-0 xl:col-start-1 xl:row-start-1 xl:self-start"
               aria-label="Company wallet"
             >
-              <div className="absolute top-2 left-2 z-10">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="!p-1.5 h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-600/80 shadow-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
-                  onClick={() => persistWalletRail(false)}
-                  aria-label="Collapse company wallet panel"
-                  title="Collapse company wallet"
-                >
-                  <ChevronLeft className="w-4 h-4" aria-hidden />
-                </Button>
-              </div>
-              <div className="pl-10">
-                <CompanyWalletContent
-                  layout="rail"
-                  companyName={data.company.name}
-                  companyWalletAddress={data.company.walletAddress ?? null}
-                  walletProvisioning={companyWalletProvisioning}
-                />
-              </div>
+              <VaultCredentialChrome
+                isDark={isDarkTheme(theme)}
+                glowColor={employerRailVaultGlow}
+                hasRoute
+                showSigil={false}
+                className="w-full max-w-full min-w-0"
+                style={{
+                  filter:
+                    isDarkTheme(theme)
+                      ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
+                      : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
+                }}
+              >
+                <div className="relative flex min-h-0 min-w-0 flex-col gap-3 pl-10 pr-3.5 pb-[14px] pt-3.5">
+                  <div className="absolute left-3 top-3 z-20">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        '!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm',
+                        navControlButtonClass(isDarkTheme(theme), theme),
+                      )}
+                      onClick={() => persistWalletRail(false)}
+                      aria-label="Collapse company wallet panel"
+                      title="Collapse company wallet"
+                    >
+                      <ChevronLeft className="w-4 h-4" aria-hidden />
+                    </Button>
+                  </div>
+                  <CompanyWalletContent
+                    layout="rail"
+                    companyName={data.company.name}
+                    companyWalletAddress={data.company.walletAddress ?? null}
+                    walletProvisioning={companyWalletProvisioning}
+                  />
+                </div>
+              </VaultCredentialChrome>
             </aside>
           ) : (
             <aside
               className={cn(
                 'hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-1 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
-                'relative overflow-hidden rounded-2xl border border-gray-200/90 dark:border-gray-600/70',
-                'bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/95 dark:to-gray-950/90',
-                'backdrop-blur-md shadow-[0_8px_28px_-14px_rgba(13,148,136,0.12)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)]',
-                'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+                'rounded-2xl border shadow-sm backdrop-blur-sm',
+                theme === 'ink'
+                  ? 'border-zinc-600/80 bg-zinc-900/95'
+                  : 'border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90',
               )}
               aria-label="Company wallet collapsed"
             >
@@ -619,7 +640,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 title="Expand company wallet"
               >
                 <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-6">
-                  <Wallet className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                  <Wallet
+                    className={cn(
+                      'h-4 w-4 shrink-0',
+                      theme === 'ink' ? 'text-zinc-300' : 'text-teal-600 dark:text-teal-400',
+                    )}
+                    aria-hidden
+                  />
                   <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
                     Wallet
                   </span>
@@ -630,161 +657,194 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         {/* xl:contents removes this flex box from layout so the inner column is a direct grid item — avoids extra formatting context that was shifting the job-path rail down vs the company card */}
         <div className="w-full min-w-0 flex flex-1 flex-col justify-center xl:contents">
           <div className="w-full min-w-0 space-y-8 xl:max-w-7xl xl:col-start-2 xl:row-start-1 xl:justify-self-center xl:min-w-0">
-      {/* Company Header */}
-      <Card variant="elevated" className="p-6 sm:p-7 mb-8">
-        <div className="flex items-center gap-4">
-          <div
-            className={cn(
-              'w-16 h-16 rounded-xl flex items-center justify-center shrink-0',
-              'bg-gradient-to-br from-teal-500/20 to-cyan-500/10 dark:from-teal-400/25 dark:to-violet-500/15',
-              'ring-1 ring-teal-500/25 dark:ring-teal-400/30 shadow-sm',
-            )}
-          >
-            <Building2
-              className={cn(
-                'w-8 h-8',
-                theme === 'dark' ? 'text-teal-400' : 'text-teal-600',
-              )}
-            />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className={`text-2xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {data.company?.name || 'Your Company'}
-              </h1>
-              {/* Role badge: applied per wallet in this company; only admins can change it */}
+      {/* Company profile — vault panel + embed block (candidate hub parity) */}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
+        <BlockCard
+          variant="embed"
+          icon={Building2}
+          title={data.company?.name || 'Your Company'}
+          description={
+            [
+              data.company?.city && data.company?.state
+                ? `${data.company.city}, ${data.company.state}`
+                : 'Location not set',
+              data.company?.dotNumber ? `DOT #${data.company.dotNumber}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Add location and DOT in company profile.'
+          }
+          headerActions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {data.userRole && (
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                  data.userRole === 'owner'
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
-                    : data.userRole === 'admin'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                      : data.userRole === 'viewer'
-                        ? 'bg-gray-500/20 text-gray-400 border border-gray-500/40'
-                        : 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
-                }`}>
+                <span
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                    data.userRole === 'owner'
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                      : data.userRole === 'admin'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                        : data.userRole === 'viewer'
+                          ? 'bg-gray-500/20 text-gray-400 border border-gray-500/40'
+                          : 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
+                  }`}
+                >
                   {getDisplayRole(data.userRole)}
                 </span>
               )}
-              {/* Manual refresh button */}
-              <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
-                className={`p-1.5 rounded-lg transition-all ${
-                  loading
-                    ? 'opacity-50 cursor-not-allowed'
-                    : theme === 'dark'
-                      ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                      : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                } ${isStale ? 'text-amber-500' : ''}`}
-              >
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-              </button>
               {data.company?.verified && (
                 <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-500">
                   <CheckCircle className="w-3 h-3" />
                   Verified
                 </span>
               )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={triggerRefresh}
+                disabled={loading}
+                title={isStale ? 'Data may be stale — refresh' : 'Refresh hub data'}
+                className={cn(isStale && 'text-amber-600 dark:text-amber-400')}
+                aria-label="Refresh hub data"
+              >
+                <RefreshCw className={cn('w-5 h-5', loading && 'animate-spin')} />
+              </Button>
             </div>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              {data.company?.city && data.company?.state 
-                ? `${data.company.city}, ${data.company.state}` 
-                : 'Location not set'}
-              {data.company?.dotNumber && ` • DOT #${data.company.dotNumber}`}
-            </p>
-          </div>
-          <div className={`text-right text-sm shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            <p>Member since</p>
-            <p className="font-medium">{formatDate(data.memberSince || '')}</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Stats band */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          icon={<Users className="w-5 h-5" />}
-          label="In Pipeline"
-          value={data.stats.totalApplicants}
-          subValue={data.stats.pendingReview > 0 ? `${data.stats.pendingReview} need review` : 'All reviewed'}
-          theme={theme}
-          highlight={data.stats.pendingReview > 0}
-        />
-        <StatCard
-          icon={<Briefcase className="w-5 h-5" />}
-          label="Active Jobs"
-          value={data.stats.activeJobs}
-          subValue={`${data.stats.totalJobs} total`}
-          theme={theme}
-        />
-        <StatCard
-          icon={<MessageSquare className="w-5 h-5" />}
-          label="Contacted"
-          value={data.stats.contacted}
-          theme={theme}
-        />
-        <StatCard
-          icon={<UserX className="w-5 h-5" />}
-          label="Archived"
-          value={data.stats.archived}
-          subValue={
-            data.stats.archivedThisMonth != null && data.stats.archivedThisMonth > 0
-              ? `${data.stats.archivedThisMonth} this month`
-              : 'Closed / not pursuing'
           }
-          theme={theme}
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <Card variant="elevated" className="p-3 sm:p-4 mb-8 flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          onClick={() => document.getElementById('candidate-outreach')?.scrollIntoView({ behavior: 'smooth' })}
         >
-          <Link2 className="w-4 h-4" />
-          New Outreach
-        </Button>
-        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('talent-search')}>
-          <Search className="w-4 h-4" />
-          Find Talent
-        </Button>
-        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('post-job')}>
-          <Plus className="w-4 h-4" />
-          Post Job
-        </Button>
-        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('applicants')}>
-          <Users className="w-4 h-4" />
-          Applicants
-        </Button>
-        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('company-profile')}>
-          <Building2 className="w-4 h-4" />
-          Company
-        </Button>
-        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('team')}>
-          <Shield className="w-4 h-4" />
-          Team
-        </Button>
-      </Card>
+          <div
+            className={cn(
+              'flex flex-col gap-1 border-t border-slate-200/80 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-gray-700/50',
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600',
+            )}
+          >
+            <span className="text-xs text-slate-500 dark:text-gray-500">
+              Verification and company details shown to candidates you recruit.
+            </span>
+            <div className="text-right shrink-0">
+              <p>Member since</p>
+              <p className={cn('font-medium', isDarkTheme(theme) ? 'text-white' : 'text-gray-900')}>
+                {formatDate(data.memberSince || '')}
+              </p>
+            </div>
+          </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Same Stormi chat shell as candidate hub; server uses employer system prompt + context */}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
+        <BlockCard
+          variant="embed"
+          icon={Users}
+          title="Activity snapshot"
+          description="Pipeline, jobs, and outreach at a glance."
+        >
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard
+              icon={<Users className="w-5 h-5" />}
+              label="In Pipeline"
+              value={data.stats.totalApplicants}
+              subValue={data.stats.pendingReview > 0 ? `${data.stats.pendingReview} need review` : 'All reviewed'}
+              theme={theme}
+              highlight={data.stats.pendingReview > 0}
+            />
+            <StatCard
+              icon={<Briefcase className="w-5 h-5" />}
+              label="Active Jobs"
+              value={data.stats.activeJobs}
+              subValue={`${data.stats.totalJobs} total`}
+              theme={theme}
+            />
+            <StatCard
+              icon={<MessageSquare className="w-5 h-5" />}
+              label="Contacted"
+              value={data.stats.contacted}
+              theme={theme}
+            />
+            <StatCard
+              icon={<UserX className="w-5 h-5" />}
+              label="Archived"
+              value={data.stats.archived}
+              subValue={
+                data.stats.archivedThisMonth != null && data.stats.archivedThisMonth > 0
+                  ? `${data.stats.archivedThisMonth} this month`
+                  : 'Closed / not pursuing'
+              }
+              theme={theme}
+            />
+          </div>
+        </BlockCard>
+      </HubSectionPanel>
+
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
+        <BlockCard
+          variant="embed"
+          icon={LayoutGrid}
+          title="Quick actions"
+          description="Jump to outreach, talent search, jobs, and team settings."
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={() => document.getElementById('candidate-outreach')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <Link2 className="w-4 h-4" />
+              New Outreach
+            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('talent-search')}>
+              <Search className="w-4 h-4" />
+              Find Talent
+            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('post-job')}>
+              <Plus className="w-4 h-4" />
+              Post Job
+            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('applicants')}>
+              <Users className="w-4 h-4" />
+              Applicants
+            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('company-profile')}>
+              <Building2 className="w-4 h-4" />
+              Company
+            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('team')}>
+              <Shield className="w-4 h-4" />
+              Team
+            </Button>
+          </div>
+        </BlockCard>
+      </HubSectionPanel>
+
+      {/* Same HubSectionPanel + BlockCard embed as candidate Ask Stormi */}
       {employerStormiContext && (
-        <div className='mb-8'>
-          <StormiChatPanel
-            mode='employer'
-            walletAddress={walletAddress}
-            employerContext={employerStormiContext}
-            stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
-            onStormiAutoWelcomeSynced={() =>
-              setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
-            }
-          />
+        <div className="mb-8">
+          <HubSectionPanel isDark={isDarkTheme(theme)} accent="violet">
+            <BlockCard
+              variant="embed"
+              headerIconSlot={
+                <Image
+                  src="/ava-robot.png"
+                  alt=""
+                  width={36}
+                  height={36}
+                  className={cn('object-contain', !isDarkTheme(theme) && 'invert')}
+                />
+              }
+              title="Ask Stormi"
+              description="Hiring coach for your company — pipeline, talent search, and what to do next."
+            >
+              <StormiChatPanel
+                mode="employer"
+                walletAddress={walletAddress}
+                employerContext={employerStormiContext}
+                stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
+                onStormiAutoWelcomeSynced={() =>
+                  setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
+                }
+                hubEmbedSurface
+              />
+            </BlockCard>
+          </HubSectionPanel>
         </div>
       )}
 
@@ -799,80 +859,89 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         onToggle={() => toggleSection('jobs')}
       />
 
-      {/* Hiring Pipeline — full-width kanban */}
-      <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
-        theme === 'dark'
-          ? 'bg-gray-800/50 border-gray-700'
-          : 'bg-white/70 border-gray-200'
-      }`}>
-        <div className={`flex items-center justify-between ${openSections.pipeline ? 'mb-4' : ''}`}>
-          <button
-            onClick={() => toggleSection('pipeline')}
-            className="flex items-center gap-2 text-left group"
-          >
-            <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Hiring Pipeline
-            </h2>
-            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-            } ${!openSections.pipeline ? '-rotate-90' : ''}`} />
-          </button>
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
+        <BlockCard
+          variant="embed"
+          icon={Users}
+          title="Hiring pipeline"
+          description="Move applicants between New, Contacted, and Archived."
+          headerActions={
+            <div className="flex items-center gap-1">
+              {openSections.pipeline && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshPipeline}
+                  disabled={refreshingPipeline}
+                  title="Refresh pipeline"
+                  aria-label="Refresh pipeline"
+                  className={cn(isStale && 'text-amber-600 dark:text-amber-400')}
+                >
+                  <RefreshCw className={cn('w-4 h-4', refreshingPipeline && 'animate-spin')} />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleSection('pipeline')}
+                aria-expanded={openSections.pipeline}
+                aria-label={openSections.pipeline ? 'Collapse hiring pipeline' : 'Expand hiring pipeline'}
+              >
+                <ChevronDown
+                  className={cn(
+                    'w-4 h-4 transition-transform duration-200',
+                    !openSections.pipeline && '-rotate-90',
+                  )}
+                />
+              </Button>
+            </div>
+          }
+        >
           {openSections.pipeline && (
-            <button
-              onClick={refreshPipeline}
-              disabled={refreshingPipeline}
-              title="Refresh pipeline"
-              className={`p-2 rounded-lg transition-all ${
-                refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-              } ${isStale ? 'text-amber-500' : ''}`}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="-mx-2 mt-0">
+              {data.applicants.length === 0 ? (
+                <EmptyState
+                  icon={<Users className="w-12 h-12" />}
+                  title="No applicants yet"
+                  description="Use New Outreach to invite candidates, or Find Talent to pull them in directly"
+                  actionLabel="Find Talent"
+                  onAction={() => onNavigate('talent-search')}
+                  theme={theme}
+                />
+              ) : (
+                <ApplicantKanban
+                  applicants={data.applicants.map((a) => ({
+                    applicationId: a.applicationId,
+                    status: a.status,
+                    appliedAt: a.appliedAt,
+                    applicantUserId: a.applicantUserId,
+                    applicantName: a.applicantName,
+                    applicantRole: a.applicantRole,
+                    avatarUrl: a.avatarUrl ?? null,
+                    jobTitle: a.jobTitle,
+                    jobPostingId: a.jobPostingId,
+                    hasResume: a.hasResume ?? false,
+                    resumeVerified: a.resumeVerified ?? false,
+                  }))}
+                  walletAddress={walletAddress}
+                  onStatusChange={handleStatusChange}
+                  onSelectApplicant={(applicant) => {
+                    const fullApplicant = data.applicants.find(
+                      (x) => x.applicationId === applicant.applicationId,
+                    )
+                    if (fullApplicant) setSelectedApplicant(fullApplicant)
+                  }}
+                  onRemoveFromPipeline={handleRemoveFromPipeline}
+                  isUpdating={updatingApplicationId}
+                  isRemoving={removingApplicationId}
+                />
+              )}
+            </div>
           )}
-        </div>
-
-        {openSections.pipeline && <div className="-mx-2 mt-2">
-          {data.applicants.length === 0 ? (
-            <EmptyState
-              icon={<Users className="w-12 h-12" />}
-              title="No applicants yet"
-              description="Use New Outreach to invite candidates, or Find Talent to pull them in directly"
-              actionLabel="Find Talent"
-              onAction={() => onNavigate('talent-search')}
-              theme={theme}
-            />
-          ) : (
-            <ApplicantKanban
-              applicants={data.applicants.map(a => ({
-                applicationId: a.applicationId,
-                status: a.status,
-                appliedAt: a.appliedAt,
-                applicantUserId: a.applicantUserId,
-                applicantName: a.applicantName,
-                applicantRole: a.applicantRole,
-                avatarUrl: a.avatarUrl ?? null,
-                jobTitle: a.jobTitle,
-                jobPostingId: a.jobPostingId,
-                hasResume: a.hasResume ?? false,
-                resumeVerified: a.resumeVerified ?? false,
-              }))}
-              walletAddress={walletAddress}
-              onStatusChange={handleStatusChange}
-              onSelectApplicant={(applicant) => {
-                const fullApplicant = data.applicants.find(
-                  a => a.applicationId === applicant.applicationId
-                )
-                if (fullApplicant) setSelectedApplicant(fullApplicant)
-              }}
-              onRemoveFromPipeline={handleRemoveFromPipeline}
-              isUpdating={updatingApplicationId}
-              isRemoving={removingApplicationId}
-            />
-          )}
-        </div>}
-      </div>
+        </BlockCard>
+      </HubSectionPanel>
 
 
       {/* Candidate Outreach */}
@@ -897,18 +966,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             onClose={() => setSelectedApplicant(null)}
           />
           {/* Career Card quick-action row */}
-          <div className={`flex items-center gap-2 px-4 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-            <button
+          <div className={`flex items-center gap-2 px-4 py-2 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-100'}`}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => setCareerCardApplicantId(selectedApplicant.applicantUserId)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
-              }`}
+              className="border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 dark:border-teal-500/30 dark:bg-teal-500/20 dark:text-teal-200 dark:hover:bg-teal-500/30"
             >
               <CreditCard className="w-3.5 h-3.5" />
               View Career Card
-            </button>
+            </Button>
             <MessagingButton
               otherUserId={selectedApplicant.applicantUserId}
               applicationId={selectedApplicant.applicationId}
@@ -949,13 +1017,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
       )}
 
-      {/* ── STORM Token Footer ── */}
-      <div className='pt-4'>
-        <STORMBalance
-          walletAddress={walletAddress}
-          onReadWhitepaper={() => onNavigate('stormchain')}
-        />
-      </div>
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="indigo" className="pt-4">
+        <BlockCard
+          variant="embed"
+          icon={Coins}
+          title="STORM token"
+          description="Your wallet balance on Base — Sepolia and mainnet."
+        >
+          <STORMBalance
+            walletAddress={walletAddress}
+            onReadWhitepaper={() => onNavigate('stormchain')}
+            hubEmbed
+          />
+        </BlockCard>
+      </HubSectionPanel>
 
           </div>
         </div>
@@ -976,7 +1051,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           />
         ) : (
           <aside
-            className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-3 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90`}
+            className={cn(
+              'hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-3 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm',
+              theme === 'ink'
+                ? 'border-zinc-600/80 bg-zinc-900/95'
+                : 'border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90',
+            )}
             aria-label="Job path collapsed"
           >
             <Button
@@ -988,7 +1068,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               title="Expand job path"
             >
               <span className="flex items-center gap-2 rotate-90 whitespace-nowrap py-6">
-                <Compass className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                <Compass
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    theme === 'ink' ? 'text-zinc-300' : 'text-teal-600 dark:text-teal-400',
+                  )}
+                  aria-hidden
+                />
                 <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
                   Job path
                 </span>
@@ -1053,7 +1139,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
           'rounded-none rounded-l-2xl border border-r-0 border-gray-300/40 dark:border-gray-600/50',
           'shadow-lg !p-0 touch-manipulation active:opacity-90',
-          '!bg-teal-600 hover:!bg-teal-500 dark:!bg-teal-600 dark:hover:!bg-teal-500 !text-white',
+          theme === 'ink'
+            ? '!bg-zinc-600 hover:!bg-zinc-500 dark:!bg-zinc-600 dark:hover:!bg-zinc-500 !text-white'
+            : '!bg-teal-600 hover:!bg-teal-500 dark:!bg-teal-600 dark:hover:!bg-teal-500 !text-white',
         )}
         aria-label="Open job path"
       >
@@ -1085,33 +1173,37 @@ function StatCard({
   theme: string
   highlight?: boolean
 }) {
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
+  const ink = theme === 'ink'
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl p-4 transition-all duration-300',
-        'border border-gray-200/90 dark:border-gray-600/70',
-        'bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90',
-        'shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)]',
-        'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
-        'hover:border-teal-500/25 dark:hover:border-teal-400/30',
+        'relative overflow-hidden rounded-xl p-4 transition-all duration-300 border',
+        ink
+          ? 'border-zinc-600/70 bg-gradient-to-b from-zinc-900/95 to-zinc-950/95 shadow-[0_8px_28px_-14px_rgba(0,0,0,0.5)] ring-1 ring-zinc-500/[0.14] hover:border-zinc-500/45'
+          : 'border-gray-200/90 dark:border-gray-600/70 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)] ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08] hover:border-teal-500/25 dark:hover:border-teal-400/30',
       )}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/28"
+        className={
+          ink
+            ? 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-400/35 to-transparent'
+            : 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/28'
+        }
       />
       <div className="flex items-center gap-2 mb-2">
         <div
           className={cn(
-            'p-1.5 rounded-lg',
-            'bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10',
-            'ring-1 ring-teal-500/20 dark:ring-teal-400/25',
+            'p-1.5 rounded-lg ring-1',
+            ink
+              ? 'bg-gradient-to-br from-zinc-700/45 to-zinc-800/35 ring-zinc-500/30'
+              : 'bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10 ring-teal-500/20 dark:ring-teal-400/25',
           )}
         >
-          <span className={isDark ? 'text-teal-400' : 'text-teal-600'}>{icon}</span>
+          <span className={ink ? 'text-zinc-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>{icon}</span>
         </div>
-        <span className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>
+        <span className={cn('text-sm font-medium', ink ? 'text-zinc-400' : isDark ? 'text-gray-400' : 'text-gray-600')}>
           {label}
         </span>
       </div>
@@ -1119,16 +1211,20 @@ function StatCard({
         className={cn(
           'text-2xl font-bold tracking-tight',
           highlight
-            ? 'text-orange-500 dark:text-orange-400'
-            : isDark
-              ? 'text-white'
-              : 'text-gray-900',
+            ? ink
+              ? 'text-amber-200'
+              : 'text-orange-500 dark:text-orange-400'
+            : ink
+              ? 'text-zinc-50'
+              : isDark
+                ? 'text-white'
+                : 'text-gray-900',
         )}
       >
         {value}
       </p>
       {subValue && (
-        <p className={cn('text-xs mt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
+        <p className={cn('text-xs mt-1', ink ? 'text-zinc-500' : isDark ? 'text-gray-500' : 'text-gray-400')}>
           {subValue}
         </p>
       )}
@@ -1154,25 +1250,25 @@ function Section({
 }) {
   return (
     <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-gray-800/50 border-gray-700'
         : 'bg-white/70 border-gray-200'
     }`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${
-            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+            isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
           }`}>
-            <span className={theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}>
+            <span className={isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}>
               {icon}
             </span>
           </div>
-          <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             {title}
           </h3>
           {count !== undefined && (
             <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${
-              theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+              isDarkTheme(theme) ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
             }`}>
               {count}
             </span>
@@ -1202,28 +1298,21 @@ function EmptyState({
 }) {
   return (
     <div className={`text-center py-8 px-4 rounded-xl border-2 border-dashed ${
-      theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
+      isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
     }`}>
-      <div className={`mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+      <div className={`mb-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
         {icon}
       </div>
-      <h4 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+      <h4 className={`font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
         {title}
       </h4>
-      <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+      <p className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
         {description}
       </p>
       {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            theme === 'dark'
-              ? 'bg-teal-500 text-white hover:bg-teal-600'
-              : 'bg-teal-600 text-white hover:bg-teal-700'
-          }`}
-        >
+        <Button type="button" variant="primary" size="sm" onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -1244,31 +1333,31 @@ function ApplicantRow({
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'hover:bg-gray-700/50'
           : 'hover:bg-gray-50'
       }`}
     >
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+        isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
       }`}>
         <span className={`text-sm font-bold ${
-          theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+          isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
         }`}>
           {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+        <p className={`font-medium truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
           {name}
         </p>
-        <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm truncate ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
           {applicant.jobTitle}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={applicant.status} theme={theme} />
-        <ChevronRight className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+        <ChevronRight className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`} />
       </div>
     </button>
   )
@@ -1296,9 +1385,9 @@ function ApplicantDetailContent({
   const [changingStatus, setChangingStatus] = useState(false)
 
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
   }`
-  const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+  const valueClass = `text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === applicant.status) return
@@ -1314,13 +1403,13 @@ function ApplicantDetailContent({
     <div className="space-y-4">
       {/* Status Section */}
       <div className={`p-4 rounded-xl ${
-        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+        isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
       }`}>
         <div className="flex items-center justify-between">
           <div>
             <p className={labelClass}>Application Status</p>
             <p className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}>
               {getStatusConfig(applicant.status).label}
             </p>
@@ -1332,7 +1421,7 @@ function ApplicantDetailContent({
             className={`px-3 py-2 text-sm rounded-lg border ${
               changingStatus ? 'opacity-50 cursor-not-allowed' : ''
             } ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-900 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
@@ -1358,7 +1447,7 @@ function ApplicantDetailContent({
           <a
             href={`mailto:${applicant.applicantEmail}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -1371,7 +1460,7 @@ function ApplicantDetailContent({
           <a
             href={`tel:${applicant.applicantPhone}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -1402,14 +1491,14 @@ function ApplicantDetailContent({
         {applicant.hasResume ? (
           <div className="flex items-center gap-2 mt-1">
             <FileText className={`w-4 h-4 ${
-              applicant.resumeVerified ? 'text-green-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              applicant.resumeVerified ? 'text-green-500' : isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
             }`} />
             <span className={valueClass}>
               {applicant.resumeVerified ? 'Verified Resume' : 'Resume Attached'}
             </span>
           </div>
         ) : (
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
             No resume attached
           </p>
         )}
@@ -1420,7 +1509,7 @@ function ApplicantDetailContent({
         <div>
           <p className={labelClass}>Cover Letter</p>
           <p className={`${valueClass} mt-1 p-3 rounded-lg ${
-            theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+            isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
           }`}>
             {applicant.coverLetter}
           </p>

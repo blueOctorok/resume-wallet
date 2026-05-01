@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { ChevronUp } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -37,7 +38,7 @@ export default function ScrollToTop() {
     <button
       onClick={scrollToTop}
       className={`fixed bottom-6 right-6 z-40 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-teal-600 text-white hover:bg-teal-500'
           : 'bg-teal-600 text-white hover:bg-teal-700'
       }`}

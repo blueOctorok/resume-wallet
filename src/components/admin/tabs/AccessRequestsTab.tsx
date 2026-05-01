@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Clock,
@@ -60,39 +61,39 @@ export default function AccessRequestsTab({
       {/* Stats */}
       <div className='flex flex-wrap gap-2 mb-6'>
         <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-          theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+          isDarkTheme(theme) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
         }`}>
           <Clock className='w-4 h-4' />
           <span>Pending</span>
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            theme === 'dark' ? 'bg-yellow-500/30' : 'bg-yellow-200'
+            isDarkTheme(theme) ? 'bg-yellow-500/30' : 'bg-yellow-200'
           }`}>{accessRequestsStats.pending}</span>
         </div>
         <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-          theme === 'dark' ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-700'
+          isDarkTheme(theme) ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-700'
         }`}>
           <AlertTriangle className='w-4 h-4' />
           <span>AI Flagged</span>
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            theme === 'dark' ? 'bg-orange-500/30' : 'bg-orange-200'
+            isDarkTheme(theme) ? 'bg-orange-500/30' : 'bg-orange-200'
           }`}>{accessRequestsStats.flagged}</span>
         </div>
         <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-          theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+          isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
         }`}>
           <CheckCircle2 className='w-4 h-4' />
           <span>Approved</span>
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            theme === 'dark' ? 'bg-green-500/30' : 'bg-green-200'
+            isDarkTheme(theme) ? 'bg-green-500/30' : 'bg-green-200'
           }`}>{accessRequestsStats.approved + (accessRequestsStats.auto_approved || 0)}</span>
         </div>
         <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-          theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700'
+          isDarkTheme(theme) ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700'
         }`}>
           <XCircle className='w-4 h-4' />
           <span>Rejected / Blocked</span>
           <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-            theme === 'dark' ? 'bg-red-500/30' : 'bg-red-200'
+            isDarkTheme(theme) ? 'bg-red-500/30' : 'bg-red-200'
           }`}>{accessRequestsStats.rejected + (accessRequestsStats.blocked || 0)}</span>
         </div>
       </div>
@@ -101,7 +102,7 @@ export default function AccessRequestsTab({
       {accessRequests.length === 0 ? (
         <div className='text-center py-12'>
           <UserPlus className='w-12 h-12 mx-auto mb-4 opacity-30' />
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}>
             No access requests
           </p>
         </div>
@@ -112,14 +113,14 @@ export default function AccessRequestsTab({
               key={req.id}
               className={`rounded-xl border p-5 ${
                 req.status === 'pending'
-                  ? theme === 'dark'
+                  ? isDarkTheme(theme)
                     ? 'bg-yellow-500/5 border-yellow-500/30'
                     : 'bg-yellow-50 border-yellow-200'
                   : req.status === 'flagged'
-                    ? theme === 'dark'
+                    ? isDarkTheme(theme)
                       ? 'bg-orange-500/5 border-orange-500/30'
                       : 'bg-orange-50 border-orange-200'
-                    : theme === 'dark'
+                    : isDarkTheme(theme)
                       ? 'bg-gray-800/50 border-gray-700'
                       : 'bg-white border-gray-200'
               }`}
@@ -128,7 +129,7 @@ export default function AccessRequestsTab({
                 <div className='flex-1 min-w-0'>
                   <div className='flex items-center gap-2 mb-1 flex-wrap'>
                     <h3 className={`font-semibold ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                     }`}>
                       {req.company_name}
                     </h3>
@@ -174,11 +175,11 @@ export default function AccessRequestsTab({
                       return null
                     })()}
                   </div>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                     Requested by: <strong>{req.name}</strong>
                   </p>
                   {req.email && (
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                    <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                       {req.email}
                     </p>
                   )}
@@ -186,9 +187,9 @@ export default function AccessRequestsTab({
                   {/* Description / Role explanation */}
                   {req.description && (
                     <div className={`mt-2 p-2 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-700'
+                      isDarkTheme(theme) ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      <p className={`text-xs font-medium mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <p className={`text-xs font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                         Role & Authorization:
                       </p>
                       {req.description}
@@ -199,10 +200,10 @@ export default function AccessRequestsTab({
                   {req.ai_reason && (
                     <div className={`mt-2 p-2 rounded-lg text-xs flex items-start gap-2 ${
                       req.ai_decision === 'approve'
-                        ? theme === 'dark' ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'
+                        ? isDarkTheme(theme) ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'
                         : req.ai_decision === 'flag'
-                          ? theme === 'dark' ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-700'
-                          : theme === 'dark' ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
+                          ? isDarkTheme(theme) ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-700'
+                          : isDarkTheme(theme) ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
                     }`}>
                       <span className='font-medium shrink-0'>Stormi:</span>
                       <span>{req.ai_reason}</span>
@@ -212,11 +213,11 @@ export default function AccessRequestsTab({
                     </div>
                   )}
 
-                  <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-2 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                     Submitted: {new Date(req.created_at).toLocaleDateString()} at{' '}
                     {new Date(req.created_at).toLocaleTimeString()}
                   </p>
-                  <p className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                  <p className={`text-xs font-mono ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
                     Wallet: {req.wallet_address.slice(0, 10)}...{req.wallet_address.slice(-6)}
                   </p>
                 </div>
@@ -286,7 +287,7 @@ export default function AccessRequestsTab({
                         }}
                         disabled={processingRequestId === req.id}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         } disabled:opacity-50`}
@@ -320,7 +321,7 @@ export default function AccessRequestsTab({
                     }}
                     disabled={processingRequestId === req.id}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 disabled:opacity-50 ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }`}

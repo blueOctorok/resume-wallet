@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { CheckCircle, Clock, Trash2 } from 'lucide-react'
 import type { AdminTabProps, BgcheckRequest } from '@/components/admin/admin-types'
@@ -44,7 +45,7 @@ export default function BgcheckRequestsTab({
   return (
     <div className='overflow-x-auto'>
       <table className='w-full'>
-        <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+        <thead className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}>
           <tr>
             <th className={`${tableHeaderClass} px-4 py-3`}>Company</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
@@ -60,7 +61,7 @@ export default function BgcheckRequestsTab({
             <tr
               key={req.id}
               className={
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'hover:bg-gray-800/50'
                   : 'hover:bg-gray-50'
               }

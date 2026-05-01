@@ -73,7 +73,12 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
         {url}
       </p>
       {showPreview && (
-        <div className='mt-3 rounded-lg border overflow-hidden bg-white'>
+        <div
+          className={cn(
+            'mt-3 rounded-lg border overflow-hidden',
+            isDark ? 'border-zinc-600 bg-zinc-950' : 'border-gray-200 bg-zinc-100',
+          )}
+        >
           <iframe
             src={url}
             title='Portfolio preview'

@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Themes — Quiet ink (monochrome dark) + Galactic void label** (May 2026)
+
+- **Product:** **`ink`** — dark analogue of **Paper**: zinc/grey void, no teal–violet chrome; easy on the eyes. Colorful dark is still **`dark`** but labeled **Galactic void** in `ThemePicker`.
+- **Persistence:** `StoredTheme` = `'light' | 'dark' | 'paper' | 'ink'`; schema **`4`** in `theme-storage.ts` + root `layout.tsx` inline script. `toggleTheme` / `LIGHT_APPEARANCE_KEY` / `DARK_APPEARANCE_KEY` remember last variant in each family (`dark` vs `ink`, `light` vs `paper`).
+- **Tailwind:** `darkMode` includes `[data-theme="ink"]` so `dark:` utilities apply in both dark appearances.
+- **UI / tokens:** `globals.css` (`[data-theme='ink']` surfaces, body, glass panel, teal→zinc remaps like paper, scrollbars, `akui-*`), `navigation-styles` (quiet nav chrome for `ink`), `Button` (ink neutral variants), `ThemePicker` (four options), `StormBackground` / `VaultDarkCanvasTexture` quiet mode, `vault-accent-presets` quiet vault shell for `ink`. Bulk `theme === 'dark'` → `isDarkTheme(theme)` (embed page skipped — local `theme` is only `light` | `dark`). Legacy `sepia` / `business` still map to **`light`**. `VaultLightFrostTexture` / hub vault shells: icy + newsprint + galactic + quiet ink presets.
+- **Ink readability pass:** Brighter `--text-secondary`; global remaps for `text-slate-*` / `text-gray-*` and light `bg-white` / `bg-slate-50` / borders so embeds match quiet dark; `.storm-light-panel` under ink; `Card` / `BlockCard` / `LoadingScreen` use neutral chrome when `theme === 'ink'`; portfolio iframe wrapper uses zinc (not pure white).
+- **Employer hub (Quiet ink):** `CompanyWallet` hero + info callout use zinc gradients and icons (no teal strip). `MiniEmployerHiringCard` stat tiles, wrapper, and CTAs use zinc / light zinc primary for Post job. `PathGuidance` step strip + headline use zinc active/inactive states instead of teal. `WalletInfo` (inside wallet modal) uses zinc panel chrome when `ink`.
+
+## **Employer UI — hub + shell pages use vault panels** (May 2026)
+
+- **`EmployerHub`:** Main column sections use `HubSectionPanel` + `BlockCard variant="embed"` (company profile, activity snapshot, quick actions, hiring pipeline, Ask Stormi, STORM). Wallet rail uses `VaultCredentialChrome` like job path; collapsed wallet matches job path strip. Pending-access and hub **error** states use the same panel pattern. Applicant modal “View Career Card” uses `Button`.
+- **`STORMBalance`:** New `hubEmbed` prop renders balance rows only (no outer `VaultHorizontalVaultShell` / header duplicate) when nested under a parent `BlockCard`; inline refresh when embedded.
+- **`StormiChatPanel`:** `hubEmbedSurface` supported on `mode: 'employer'` (embed empty state like candidate).
+- **Employer feature pages:** `JobPostingsSection`, `CandidateOutreach`, `ApplicantsPage`, `TalentSearchPage`, `JobPostingForm`, and `TeamManagement` replace ad-hoc `rounded-2xl` / `Card` shells with `HubSectionPanel` + `BlockCard` (accent: teal / sky for talent / amber for outreach & pending invites / indigo for STORM block on hub). Primary actions converted to `Button` where touched (filters, load more, job form submit, team refresh/invite, job posting header).
+
 ## **Career card pagination + reorder + Stormi** (April 2026)
 
 - **`hub_blocks.config.cardPage`:** `PATCH /api/hub/blocks/[id]/config` merges JSON; `hub-blocks-store.patchBlockConfig`; `readCardPage` / `CARD_PAGE_MAX` in `hub-block-config.ts`; `buildProjectedCareerCard` selects `id, block_type, config` and sets `CareerCardSection.hubBlockId` + `cardPage` (storm forced page 1).

@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, type ReactNode } from 'react'
 import { Inbox, Bell, Building2, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -60,7 +61,7 @@ export default function HubInboxSection({
   onNavigateToDotApp,
 }: HubInboxSectionProps) {
   const { theme } = useTheme()
-  const isDark = theme === 'dark'
+  const isDark = isDarkTheme(theme)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const [tab, setTab] = useState<InboxTab>('alerts')
 

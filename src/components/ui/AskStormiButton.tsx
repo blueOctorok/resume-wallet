@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { HelpCircle } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useJourneyStore } from '@/stores'
@@ -36,7 +37,7 @@ export default function AskStormiButton({
           onClick={handleClick}
           className={cn(
             'inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer',
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-gray-800 text-gray-100 hover:bg-gray-700'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
           )}

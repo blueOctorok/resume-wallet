@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
@@ -674,13 +675,13 @@ export default function DriverHub({
 
   // Card styling: match employment verification (color-mix semi-transparent gray)
   const cardClass = `rounded-2xl border shadow-lg transition-all duration-200 ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
       : 'bg-white/70 border-gray-200 hover:border-gray-300'
   }`
 
   const sectionHeaderClass = `text-lg font-bold flex items-center gap-3 mb-4 ${
-    theme === 'dark' ? 'text-white' : 'text-gray-900'
+    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
   }`
 
   if (loading) {
@@ -689,10 +690,10 @@ export default function DriverHub({
         <div className='text-center'>
           <Loader2
             className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+              isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           />
-          <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
+          <p className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}>
             Loading your Driver Hub...
           </p>
         </div>
@@ -705,7 +706,7 @@ export default function DriverHub({
       <div className='min-h-[60vh] flex items-center justify-center'>
         <div
           className={`text-center p-8 rounded-2xl ${
-            theme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'
+            isDarkTheme(theme) ? 'bg-red-900/20' : 'bg-red-50'
           }`}
         >
           <AlertCircle className='w-12 h-12 text-red-500 mx-auto mb-4' />
@@ -713,7 +714,7 @@ export default function DriverHub({
           <button
             onClick={fetchHubData}
             className={`mt-4 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
                 : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
             }`}
@@ -795,7 +796,7 @@ export default function DriverHub({
               <div className='flex items-center gap-2'>
                 <h1
                   className={`text-2xl sm:text-3xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                   }`}
                 >
                   {displayName}'s Driver Hub
@@ -808,7 +809,7 @@ export default function DriverHub({
                   className={`p-1.5 rounded-lg transition-all ${
                     loading
                       ? 'opacity-50 cursor-not-allowed'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                         : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                   } ${isStale ? 'text-amber-500' : ''}`}
@@ -819,7 +820,7 @@ export default function DriverHub({
               {cdlSummary && (
                 <p
                   className={`text-sm mt-1 ${
-                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 >
                   {cdlSummary}
@@ -828,7 +829,7 @@ export default function DriverHub({
               {!cdlSummary && (
                 <p
                   className={`text-sm mt-1 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   Your professional driver profile
@@ -842,7 +843,7 @@ export default function DriverHub({
             <div className='flex items-center justify-between mb-2'>
               <span
                 className={`text-sm font-semibold ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
                 Profile Completeness
@@ -853,7 +854,7 @@ export default function DriverHub({
                     ? 'text-green-500'
                     : data.stats.profileCompleteness >= 50
                       ? 'text-yellow-500'
-                      : theme === 'dark'
+                      : isDarkTheme(theme)
                         ? 'text-gray-400'
                         : 'text-gray-500'
                 }`}
@@ -863,7 +864,7 @@ export default function DriverHub({
             </div>
             <div
               className={`h-3 rounded-full overflow-hidden ${
-                theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
               }`}
             >
               <div
@@ -880,7 +881,7 @@ export default function DriverHub({
             {data.stats.profileCompleteness < 100 && (
               <p
                 className={`text-xs mt-2 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
                 {getCompletenessHint(data)}
@@ -897,15 +898,15 @@ export default function DriverHub({
         <div className={`${cardClass} p-4 border-l-4 border-l-teal-500`}>
           <div className='flex items-center gap-4'>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+              isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
             }`}>
-              <Sparkles className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+              <Sparkles className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
             </div>
             <div className='flex-1 min-w-0'>
-              <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                 Who are you? Set up your profile
               </h3>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 A quick form so employers can find you. Name, contact, and CDL — under a minute.
               </p>
             </div>
@@ -988,18 +989,18 @@ export default function DriverHub({
             <StormTokenMark size='lg' />
             <div>
               <h2
-                className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
                 Storm Tokens
               </h2>
               <div className='flex items-center gap-2 mt-1'>
                 <span
-                  className={`text-3xl font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
+                  className={`text-3xl font-bold ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
                 >
                   0
                 </span>
                 <span
-                  className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+                  className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
                 >
                   STORM
                 </span>
@@ -1011,7 +1012,7 @@ export default function DriverHub({
             {/* Coming Soon Badge */}
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
                   : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
               }`}
@@ -1024,7 +1025,7 @@ export default function DriverHub({
             <button
               onClick={() => onNavigate('stormchain')}
               className={`text-sm font-medium transition-colors cursor-pointer ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'text-indigo-400 hover:text-indigo-300'
                   : 'text-indigo-600 hover:text-indigo-500'
               }`}
@@ -1036,7 +1037,7 @@ export default function DriverHub({
 
         {/* Teaser info */}
         <p
-          className={`mt-4 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+          className={`mt-4 text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
         >
           Earn STORM tokens every time you verify your resume or use premium
           features. Early adopters earn the most rewards!
@@ -1082,7 +1083,7 @@ export default function DriverHub({
             <h2 className={sectionHeaderClass}>
               <div
                 className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+                  isDarkTheme(theme) ? 'bg-blue-500/20' : 'bg-blue-100'
                 }`}
               >
                 <FileText className='w-5 h-5 text-blue-500' />
@@ -1091,7 +1092,7 @@ export default function DriverHub({
               {data.resumes.length > 0 && (
                 <span
                   className={`text-sm font-normal ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   ({data.resumes.length})
@@ -1104,7 +1105,7 @@ export default function DriverHub({
                 disabled={refreshingResumes}
                 title='Refresh resumes'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1114,7 +1115,7 @@ export default function DriverHub({
               <button
                 onClick={() => setShowUploadResumeModal(true)}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -1125,7 +1126,7 @@ export default function DriverHub({
               <button
                 onClick={() => onNavigate('resume')}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -1162,7 +1163,7 @@ export default function DriverHub({
                   <div
                     key={resume.id}
                     className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 hover:bg-gray-600/50'
                         : 'bg-gray-50 hover:bg-gray-100'
                     }`}
@@ -1171,7 +1172,7 @@ export default function DriverHub({
                       <div className='flex items-center gap-2'>
                         <p
                           className={`font-medium truncate ${
-                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                           }`}
                         >
                           {resume.title || resume.filename}
@@ -1185,7 +1186,7 @@ export default function DriverHub({
                         {resume.resumeType === 'built' && !isVerified && (
                           <span
                             className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
-                              theme === 'dark'
+                              isDarkTheme(theme)
                                 ? 'bg-indigo-500/20 text-indigo-400'
                                 : 'bg-indigo-50 text-indigo-600'
                             }`}
@@ -1196,7 +1197,7 @@ export default function DriverHub({
                       </div>
                       <p
                         className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         Created {formatDate(resume.createdAt)}
@@ -1207,7 +1208,7 @@ export default function DriverHub({
                       <button
                         onClick={() => handleSelectResume(resume)}
                         className={`p-2 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-600 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-600'
                         }`}
@@ -1223,7 +1224,7 @@ export default function DriverHub({
                             onNavigate('resume')
                           }}
                           className={`p-2 rounded-lg ${
-                            theme === 'dark'
+                            isDarkTheme(theme)
                               ? 'hover:bg-gray-600 text-gray-400'
                               : 'hover:bg-gray-200 text-gray-600'
                           }`}
@@ -1250,7 +1251,7 @@ export default function DriverHub({
                 <button
                   onClick={() => onNavigate('resume')}
                   className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                       : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
@@ -1268,7 +1269,7 @@ export default function DriverHub({
             <h2 className={sectionHeaderClass}>
               <div
                 className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'
+                  isDarkTheme(theme) ? 'bg-purple-500/20' : 'bg-purple-100'
                 }`}
               >
                 <ClipboardList className='w-5 h-5 text-purple-500' />
@@ -1277,7 +1278,7 @@ export default function DriverHub({
               {data.dotApplications.length > 0 && (
                 <span
                   className={`text-sm font-normal ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   ({data.dotApplications.length})
@@ -1290,7 +1291,7 @@ export default function DriverHub({
                 disabled={refreshingDotApps}
                 title='Refresh DOT applications'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingDotApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingDotApps ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1300,7 +1301,7 @@ export default function DriverHub({
               <button
                 onClick={onStartDotApp || (() => onNavigate('dotapp'))}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -1342,7 +1343,7 @@ export default function DriverHub({
                   <div
                     key={app.id}
                     className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-                      theme === 'dark'
+                      isDarkTheme(theme)
                         ? 'bg-gray-700/50 hover:bg-gray-600/50'
                         : 'bg-gray-50 hover:bg-gray-100'
                     }`}
@@ -1351,7 +1352,7 @@ export default function DriverHub({
                       <div className='flex items-center gap-2'>
                         <p
                           className={`font-medium truncate ${
-                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                            isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                           }`}
                         >
                           {appTitle}
@@ -1365,7 +1366,7 @@ export default function DriverHub({
                         {!app.isComplete && (
                           <span
                             className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
-                              theme === 'dark'
+                              isDarkTheme(theme)
                                 ? 'bg-indigo-500/20 text-indigo-400'
                                 : 'bg-indigo-50 text-indigo-600'
                             }`}
@@ -1376,7 +1377,7 @@ export default function DriverHub({
                       </div>
                       <p
                         className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         {app.isInProgress
@@ -1389,7 +1390,7 @@ export default function DriverHub({
                       <button
                         onClick={() => setSelectedDotApp(app)}
                         className={`p-2 rounded-lg ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'hover:bg-gray-600 text-gray-400'
                             : 'hover:bg-gray-200 text-gray-600'
                         }`}
@@ -1402,7 +1403,7 @@ export default function DriverHub({
                         <button
                           onClick={() => onNavigate('dotapp')}
                           className={`p-2 rounded-lg ${
-                            theme === 'dark'
+                            isDarkTheme(theme)
                               ? 'hover:bg-gray-600 text-gray-400'
                               : 'hover:bg-gray-200 text-gray-600'
                           }`}
@@ -1427,7 +1428,7 @@ export default function DriverHub({
                           onClick={() => handleDiscardInProgressDotApp(app)}
                           disabled={deletingInProgressDotApp}
                           className={`p-2 rounded-lg ${
-                            theme === 'dark'
+                            isDarkTheme(theme)
                               ? 'hover:bg-red-900/30 text-red-400 disabled:opacity-50'
                               : 'hover:bg-red-50 text-red-500 disabled:opacity-50'
                           }`}
@@ -1444,7 +1445,7 @@ export default function DriverHub({
                 <button
                   onClick={() => onNavigate('dotapp')}
                   className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                       : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
@@ -1462,7 +1463,7 @@ export default function DriverHub({
             <h2 className={sectionHeaderClass}>
               <div
                 className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'bg-orange-500/20' : 'bg-orange-100'
+                  isDarkTheme(theme) ? 'bg-orange-500/20' : 'bg-orange-100'
                 }`}
               >
                 <Car className='w-5 h-5 text-orange-500' />
@@ -1471,7 +1472,7 @@ export default function DriverHub({
               {data.mvrRecords.length > 0 && (
                 <span
                   className={`text-sm font-normal ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   ({data.mvrRecords.length})
@@ -1484,7 +1485,7 @@ export default function DriverHub({
                 disabled={refreshingMvr}
                 title='Refresh MVR records'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingMvr ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingMvr ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1494,7 +1495,7 @@ export default function DriverHub({
               <button
                 onClick={() => onNavigate('mvr')}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -1541,7 +1542,7 @@ export default function DriverHub({
             <h2 className={sectionHeaderClass}>
               <div
                 className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
+                  isDarkTheme(theme) ? 'bg-green-500/20' : 'bg-green-100'
                 }`}
               >
                 <Briefcase className='w-5 h-5 text-green-500' />
@@ -1550,7 +1551,7 @@ export default function DriverHub({
               {data.jobApplications.length > 0 && (
                 <span
                   className={`text-sm font-normal ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
                   ({data.jobApplications.length})
@@ -1563,7 +1564,7 @@ export default function DriverHub({
                 disabled={refreshingJobApps}
                 title='Refresh job applications'
                 className={`p-2 rounded-lg transition-all ${
-                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : isDarkTheme(theme)
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
@@ -1573,7 +1574,7 @@ export default function DriverHub({
               <button
                 onClick={() => onNavigate('jobs')}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                     : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
@@ -1612,7 +1613,7 @@ export default function DriverHub({
                 <button
                   onClick={() => onNavigate('applications')}
                   className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
                       : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
@@ -1636,7 +1637,7 @@ export default function DriverHub({
           <h2 className={sectionHeaderClass}>
             <div
               className={`p-2 rounded-lg ${
-                theme === 'dark' ? 'bg-gray-500/20' : 'bg-gray-100'
+                isDarkTheme(theme) ? 'bg-gray-500/20' : 'bg-gray-100'
               }`}
             >
               <CreditCard className='w-5 h-5 text-gray-500' />
@@ -1645,7 +1646,7 @@ export default function DriverHub({
             {(data.transactions ?? []).length > 0 && (
               <span
                 className={`text-sm font-normal ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
                 ({(data.transactions ?? []).length} transactions)
@@ -1655,7 +1656,7 @@ export default function DriverHub({
           <ChevronRight
             className={`w-5 h-5 transition-transform ${
               showPaymentHistory ? 'rotate-90' : ''
-            } ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+            } ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
           />
         </button>
 
@@ -1664,7 +1665,7 @@ export default function DriverHub({
             {(data.transactions ?? []).length === 0 ? (
               <p
                 className={`text-sm text-center py-4 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
                 No transactions yet
@@ -1674,20 +1675,20 @@ export default function DriverHub({
                 <div
                   key={tx.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
+                    isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'
                   }`}
                 >
                   <div>
                     <p
                       className={`font-medium ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
                       }`}
                     >
                       {tx.description}
                     </p>
                     <p
                       className={`text-xs ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                       }`}
                     >
                       {formatDate(tx.createdAt)}
@@ -1697,7 +1698,7 @@ export default function DriverHub({
                     {tx.amount !== null ? (
                       <p
                         className={`font-bold ${
-                          theme === 'dark'
+                          isDarkTheme(theme)
                             ? 'text-indigo-400'
                             : 'text-indigo-600'
                         }`}
@@ -1709,7 +1710,7 @@ export default function DriverHub({
                     ) : (
                       <p
                         className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
                         }`}
                       >
                         —
@@ -1718,10 +1719,10 @@ export default function DriverHub({
                     <span
                       className={`text-xs px-2 py-0.5 rounded ${
                         tx.status === 'COMPLETED'
-                          ? theme === 'dark'
+                          ? isDarkTheme(theme)
                             ? 'bg-green-900/30 text-green-400'
                             : 'bg-green-100 text-green-700'
-                          : theme === 'dark'
+                          : isDarkTheme(theme)
                             ? 'bg-yellow-900/30 text-yellow-400'
                             : 'bg-yellow-100 text-yellow-700'
                       }`}
@@ -1775,14 +1776,14 @@ export default function DriverHub({
           <div className='p-6'>
             <h3
               className={`text-lg font-bold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
               }`}
             >
               Delete Resume?
             </h3>
             <p
               className={`text-sm mb-6 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
               Are you sure you want to delete "
@@ -1794,7 +1795,7 @@ export default function DriverHub({
                 onClick={() => setDeletingResume(null)}
                 disabled={deleteLoading}
                 className={`flex-1 px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-700 hover:bg-gray-600 text-white'
                     : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                 }`}
@@ -1874,19 +1875,19 @@ function QuickStatCard({
 }) {
   const colorClasses = {
     blue:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-blue-500/20 text-blue-400'
         : 'bg-blue-100 text-blue-600',
     purple:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-purple-500/20 text-purple-400'
         : 'bg-purple-100 text-purple-600',
     green:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-green-500/20 text-green-400'
         : 'bg-green-100 text-green-600',
     orange:
-      theme === 'dark'
+      isDarkTheme(theme)
         ? 'bg-orange-500/20 text-orange-400'
         : 'bg-orange-100 text-orange-600',
   }
@@ -1894,7 +1895,7 @@ function QuickStatCard({
   return (
     <div
       className={`rounded-xl p-4 ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-800/50 border border-gray-700'
           : 'bg-white/70 border border-gray-200 shadow-sm'
       }`}
@@ -1904,14 +1905,14 @@ function QuickStatCard({
         <div>
           <p
             className={`text-2xl font-bold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
             }`}
           >
             {value}
           </p>
           <p
             className={`text-xs ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
             {label}
@@ -1921,7 +1922,7 @@ function QuickStatCard({
       {subValue && (
         <p
           className={`text-xs mt-2 ${
-            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
           }`}
         >
           {subValue}
@@ -1949,12 +1950,12 @@ function EmptyState({
   return (
     <div
       className={`text-center py-8 px-4 rounded-xl border-2 border-dashed ${
-        theme === 'dark' ? 'border-gray-700' : 'border-gray-300'
+        isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-300'
       }`}
     >
       <div
         className={`inline-flex p-3 rounded-xl mb-3 ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'bg-gray-800/50 border border-gray-700 text-indigo-400'
             : 'bg-indigo-50 text-indigo-600'
         }`}
@@ -1963,14 +1964,14 @@ function EmptyState({
       </div>
       <h3
         className={`font-semibold mb-1 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
+          isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
         }`}
       >
         {title}
       </h3>
       <p
         className={`text-sm mb-4 ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+          isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
         }`}
       >
         {description}
@@ -1978,7 +1979,7 @@ function EmptyState({
       <button
         onClick={onAction}
         className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-          theme === 'dark'
+          isDarkTheme(theme)
             ? 'border-gray-600 bg-indigo-500/20 text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/30'
             : 'border-gray-300 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100'
         }`}
@@ -2011,7 +2012,7 @@ function ItemRow({
 }) {
   const statusConfig = getStatusConfig(status)
   const rowClass = `flex items-center justify-between p-3 rounded-xl transition-all ${
-    theme === 'dark'
+    isDarkTheme(theme)
       ? 'bg-gray-700/50 hover:bg-gray-600/50'
       : 'bg-gray-50 hover:bg-gray-100'
   }`
@@ -2020,14 +2021,14 @@ function ItemRow({
     <div className='flex-1 text-left min-w-0'>
       <div className='flex items-center gap-2'>
         <p
-          className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+          className={`font-medium truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
           {title}
         </p>
         {badge && (
           <span
             className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-indigo-500/20 text-indigo-400'
                 : 'bg-indigo-50 text-indigo-600'
             }`}
@@ -2037,7 +2038,7 @@ function ItemRow({
         )}
       </div>
       <p
-        className={`text-xs truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+        className={`text-xs truncate ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
       >
         {subtitle}
       </p>
@@ -2053,7 +2054,7 @@ function ItemRow({
         {statusConfig.label}
       </span>
       <ChevronRight
-        className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+        className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}
       />
     </div>
   )
@@ -2078,7 +2079,7 @@ function ItemRow({
             disabled={deleteDisabled}
             title='Discard in-progress application'
             className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'hover:bg-red-900/30 text-red-400 disabled:opacity-50'
                 : 'hover:bg-red-50 text-red-500 disabled:opacity-50'
             }`}
@@ -2140,9 +2141,9 @@ function DotAppDetailContent({
   isDeleting?: boolean
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
   }`
-  const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+  const valueClass = `text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`
 
   // Check if this app can be edited (complete but not yet submitted to blockchain)
   const canEdit =
@@ -2165,10 +2166,10 @@ function DotAppDetailContent({
         <div
           className={`p-3 rounded-lg text-sm ${
             actionMessage.type === 'success'
-              ? theme === 'dark'
+              ? isDarkTheme(theme)
                 ? 'bg-green-900/30 border border-green-500/30 text-green-400'
                 : 'bg-green-50 border border-green-200 text-green-800'
-              : theme === 'dark'
+              : isDarkTheme(theme)
                 ? 'bg-red-900/30 border border-red-500/30 text-red-400'
                 : 'bg-red-50 border border-red-200 text-red-800'
           }`}
@@ -2203,7 +2204,7 @@ function DotAppDetailContent({
           <p className={valueClass}>Form {dotApp.currentStep} of 3</p>
           <div
             className={`mt-2 h-2 rounded-full overflow-hidden ${
-              theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+              isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'
             }`}
           >
             <div
@@ -2216,7 +2217,7 @@ function DotAppDetailContent({
             <button
               onClick={() => onNavigate('dotapp')}
               className={`mt-4 w-full py-3 rounded-lg font-semibold transition-all ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
                   : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
               }`}
@@ -2231,21 +2232,21 @@ function DotAppDetailContent({
       {canVerify && (
         <div
           className={`p-4 rounded-lg border ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-yellow-900/20 border-yellow-500/30'
               : 'bg-yellow-50 border-yellow-200'
           }`}
         >
           <p
             className={`text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+              isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-800'
             }`}
           >
             Ready to Verify
           </p>
           <p
             className={`text-xs mb-3 ${
-              theme === 'dark' ? 'text-yellow-400/70' : 'text-yellow-700'
+              isDarkTheme(theme) ? 'text-yellow-400/70' : 'text-yellow-700'
             }`}
           >
             Submit your application to the blockchain to make it permanent and
@@ -2255,7 +2256,7 @@ function DotAppDetailContent({
             onClick={onVerify}
             disabled={isVerifying}
             className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${
-              theme === 'dark'
+              isDarkTheme(theme)
                 ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
                 : 'bg-yellow-500 text-white hover:bg-yellow-600'
             }`}
@@ -2280,7 +2281,7 @@ function DotAppDetailContent({
         <button
           onClick={() => onNavigate('dotapp')}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
               : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
           }`}
@@ -2296,7 +2297,7 @@ function DotAppDetailContent({
           onClick={onDelete}
           disabled={isDeleting}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${
-            theme === 'dark'
+            isDarkTheme(theme)
               ? 'bg-red-900/20 text-red-400 border border-red-500/30 hover:bg-red-900/30'
               : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
           }`}

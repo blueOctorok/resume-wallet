@@ -1,5 +1,6 @@
 'use client'
 
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -18,6 +19,10 @@ import {
   User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from './CareerCardModal'
 import { BLOCK_CATEGORIES, getBlocksByCategory } from '@/lib/block-registry'
@@ -226,25 +231,21 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
             Find Talent
           </h1>
-          <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
             Search for qualified candidates who match your criteria
           </p>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className={`rounded-2xl p-4 mb-4 ${
-        theme === 'dark'
-          ? 'bg-gray-800/50 border border-gray-700'
-          : 'bg-white border border-gray-200 shadow-sm'
-      }`}>
-        <div className="flex gap-3">
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="sky" className="mb-4">
+        <BlockCard variant="embed" icon={Search} title="Search" description="Name, city, or email — then refine with filters.">
+          <div className="flex gap-3">
           <div className="flex-1 relative">
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
             }`} />
             <input
               type="text"
@@ -252,55 +253,50 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               className={`w-full pl-12 pr-4 py-3 rounded-xl border ${
-                theme === 'dark'
+                isDarkTheme(theme)
                   ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-500'
                   : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'
               } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
             />
           </div>
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            className={cn(
+              'shrink-0 gap-2 rounded-xl py-3',
+              activeFilterCount > 0 && 'ring-2 ring-teal-500/50',
+            )}
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-colors ${
-              theme === 'dark'
-                ? 'bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800'
-                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-            } ${activeFilterCount > 0 ? 'ring-2 ring-teal-500/50' : ''}`}
           >
-            <Filter className="w-5 h-5" />
+            <Filter className="h-5 w-5" />
             <span className="hidden sm:inline">Filters</span>
             {activeFilterCount > 0 && (
-              <span className="bg-teal-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {activeFilterCount}
-              </span>
+              <span className="rounded-full bg-teal-500 px-2 py-0.5 text-xs text-white">{activeFilterCount}</span>
             )}
-            <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
+            <ChevronDown className={cn('h-4 w-4 transition-transform', showFilters && 'rotate-180')} />
+          </Button>
         </div>
-      </div>
+        </BlockCard>
+      </HubSectionPanel>
 
-      {/* Filters Panel */}
       {showFilters && (
-        <div className={`rounded-2xl p-6 mb-6 ${
-          theme === 'dark'
-            ? 'bg-gray-800/50 border border-gray-700'
-            : 'bg-white border border-gray-200 shadow-sm'
-        }`}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Search Filters
-            </h2>
-            <button
-              onClick={clearFilters}
-              className={`text-sm ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              Clear All
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent="sky" className="mb-6">
+          <BlockCard
+            variant="embed"
+            icon={Filter}
+            title="Filters"
+            description="Location, experience, and hub blocks candidates must have."
+            headerActions={
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                Clear all
+              </Button>
+            }
+          >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* State */}
             <div>
-              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                 State
               </label>
               <input
@@ -309,7 +305,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 value={filters.state}
                 onChange={(e) => setFilters({ ...filters, state: e.target.value.toUpperCase().slice(0, 2) })}
                 className={`w-full px-4 py-2.5 rounded-xl border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-900 border-gray-700 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
@@ -318,7 +314,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 
             {/* Min Experience */}
             <div>
-              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                 Min Experience (years)
               </label>
               <input
@@ -328,7 +324,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 value={filters.minExperience}
                 onChange={(e) => setFilters({ ...filters, minExperience: e.target.value })}
                 className={`w-full px-4 py-2.5 rounded-xl border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-900 border-gray-700 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
@@ -337,7 +333,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 
             {/* Career focus + blocks (registry-driven — scales when new categories are added) */}
             <div className="md:col-span-2 lg:col-span-3">
-              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                 Career focus
               </label>
               <select
@@ -350,7 +346,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                   })
                 }
                 className={`w-full max-w-md px-4 py-2.5 rounded-xl border ${
-                  theme === 'dark'
+                  isDarkTheme(theme)
                     ? 'bg-gray-900 border-gray-700 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
@@ -363,7 +359,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 ))}
               </select>
               {filters.careerCategoryId ? (
-                <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                <p className={`text-xs mt-2 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                   Candidates must have <strong>all</strong> checked blocks installed in their hub.
                 </p>
               ) : null}
@@ -373,7 +369,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                     <label
                       key={b.id}
                       className={`flex items-center gap-2 text-sm cursor-pointer px-3 py-2 rounded-lg border ${
-                        theme === 'dark'
+                        isDarkTheme(theme)
                           ? 'border-gray-600 bg-gray-900/80'
                           : 'border-gray-200 bg-gray-50'
                       }`}
@@ -398,83 +394,93 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
               ) : null}
             </div>
           </div>
-        </div>
+          </BlockCard>
+        </HubSectionPanel>
       )}
 
-      {/* Results */}
-      {loading && candidates.length === 0 && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className={`w-12 h-12 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-        </div>
-      )}
-
-      {error && (
-        <div className={`p-6 rounded-xl text-center ${
-          theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
-        }`}>
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && candidates.length === 0 && (
-        <div className={`p-12 rounded-2xl text-center ${
-          theme === 'dark' ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50'
-        }`}>
-          <Users className={`w-16 h-16 mx-auto mb-4 ${
-            theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
-          }`} />
-          <p className={`text-lg font-semibold mb-2 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            No candidates found
-          </p>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-            Try adjusting your search criteria or filters
-          </p>
-        </div>
-      )}
-
-      {candidates.length > 0 && (
-        <>
-          <div className="mb-4 flex items-center justify-between">
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Found {candidates.length}{hasMore ? '+' : ''} candidate{candidates.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          
-          <div className="space-y-3">
-            {candidates.map(candidate => (
-              <CandidateCard
-                key={candidate.userId}
-                candidate={candidate}
-                onClick={() => setSelectedCandidateId(candidate.userId)}
-                onAddToPipeline={e => openQuickRecruit(e, candidate.userId)}
-                theme={theme}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="sky" className="mb-6">
+        <BlockCard
+          variant="embed"
+          icon={Users}
+          title="Results"
+          description="Verified-forward profiles — tap a row for the full career card."
+        >
+          {loading && candidates.length === 0 && (
+            <div className="flex justify-center py-12">
+              <Loader2
+                className={`h-12 w-12 animate-spin ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`}
               />
-            ))}
-          </div>
-
-          {hasMore && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={loadMore}
-                disabled={loading}
-                className={`px-8 py-3 rounded-xl font-medium transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                } disabled:opacity-50`}
-              >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-                ) : (
-                  'Load More'
-                )}
-              </button>
             </div>
           )}
-        </>
-      )}
+
+          {error && (
+            <div
+              className={`rounded-xl p-6 text-center ${
+                isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'
+              }`}
+            >
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && candidates.length === 0 && (
+            <div
+              className={`rounded-xl p-12 text-center ${
+                isDarkTheme(theme) ? 'border border-gray-700 bg-gray-800/50' : 'bg-gray-50'
+              }`}
+            >
+              <Users
+                className={`mx-auto mb-4 h-16 w-16 ${
+                  isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'
+                }`}
+              />
+              <p
+                className={`mb-2 text-lg font-semibold ${
+                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                No candidates found
+              </p>
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
+                Try adjusting your search criteria or filters
+              </p>
+            </div>
+          )}
+
+          {candidates.length > 0 && (
+            <>
+              <p className={`mb-4 text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+                Found {candidates.length}
+                {hasMore ? '+' : ''} candidate{candidates.length !== 1 ? 's' : ''}
+              </p>
+
+              <div className="space-y-3">
+                {candidates.map((candidate) => (
+                  <CandidateCard
+                    key={candidate.userId}
+                    candidate={candidate}
+                    onClick={() => setSelectedCandidateId(candidate.userId)}
+                    onAddToPipeline={(e) => openQuickRecruit(e, candidate.userId)}
+                    theme={theme}
+                  />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="mt-6 text-center">
+                  <Button type="button" variant="secondary" size="md" onClick={loadMore} disabled={loading}>
+                    {loading ? (
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                    ) : (
+                      'Load more'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </BlockCard>
+      </HubSectionPanel>
 
       {/* Career Card Modal */}
       {selectedCandidateId && (
@@ -499,10 +505,10 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
               {quickRecruitResult === 'success' ? (
                 <div className="flex flex-col items-center gap-3 py-4 text-center">
                   <CheckCircle className="w-10 h-10 text-green-500" />
-                  <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  <p className={`font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                     Added to pipeline!
                   </p>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                     {useTalentPool
                       ? 'Saved to your Talent Pool for future opportunities.'
                       : 'They\'ll appear in your Hiring Pipeline under "New".'}
@@ -515,25 +521,25 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                     onClick={() => { setUseTalentPool(true); setQuickJobId(null) }}
                     className={`w-full text-left p-3 rounded-xl border transition-all mb-3 ${
                       useTalentPool
-                        ? theme === 'dark'
+                        ? isDarkTheme(theme)
                           ? 'border-purple-500 bg-purple-500/10'
                           : 'border-purple-500 bg-purple-50'
-                        : theme === 'dark'
+                        : isDarkTheme(theme)
                           ? 'border-gray-700 hover:border-gray-600'
                           : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        useTalentPool ? 'border-purple-500 bg-purple-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-300'
+                        useTalentPool ? 'border-purple-500 bg-purple-500' : isDarkTheme(theme) ? 'border-gray-500' : 'border-gray-300'
                       }`}>
                         {useTalentPool && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
                       <div>
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        <span className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                           Save to Talent Pool
                         </span>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
                           No specific job yet — save for future opportunities
                         </p>
                       </div>
@@ -543,9 +549,9 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                   {/* Divider */}
                   {jobs.filter(j => j.is_active).length > 0 && (
                     <div className="flex items-center gap-3 mb-3">
-                      <div className={`flex-1 h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`} />
-                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>or select a job</span>
-                      <div className={`flex-1 h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                      <div className={`flex-1 h-px ${isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                      <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>or select a job</span>
+                      <div className={`flex-1 h-px ${isDarkTheme(theme) ? 'bg-gray-700' : 'bg-gray-200'}`} />
                     </div>
                   )}
 
@@ -558,21 +564,21 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                           onClick={() => { setQuickJobId(job.id); setUseTalentPool(false) }}
                           className={`w-full text-left p-3 rounded-xl border transition-all ${
                             quickJobId === job.id
-                              ? theme === 'dark'
+                              ? isDarkTheme(theme)
                                 ? 'border-teal-500 bg-teal-500/10'
                                 : 'border-teal-500 bg-teal-50'
-                              : theme === 'dark'
+                              : isDarkTheme(theme)
                                 ? 'border-gray-700 hover:border-gray-600'
                                 : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                              quickJobId === job.id ? 'border-teal-500 bg-teal-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-300'
+                              quickJobId === job.id ? 'border-teal-500 bg-teal-500' : isDarkTheme(theme) ? 'border-gray-500' : 'border-gray-300'
                             }`}>
                               {quickJobId === job.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                             </div>
-                            <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                            <span className={`text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                               {job.title}
                             </span>
                           </div>
@@ -633,7 +639,7 @@ function CandidateCard({
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}
       className={`w-full text-left p-4 rounded-xl transition-all duration-200 cursor-pointer ${
-        theme === 'dark'
+        isDarkTheme(theme)
           ? 'bg-gray-800/50 border border-gray-700 hover:bg-gray-800 hover:border-gray-600'
           : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
       }`}
@@ -641,9 +647,9 @@ function CandidateCard({
       <div className="flex items-start gap-4">
         {/* Avatar — neutral teal for all candidates */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+          isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
         }`}>
-          <User className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+          <User className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
         </div>
 
         {/* Info */}
@@ -651,7 +657,7 @@ function CandidateCard({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className={`font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`font-semibold truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                   {candidate.name}
                 </h3>
                 {candidate.hasApplied && (
@@ -663,7 +669,7 @@ function CandidateCard({
 
               <div className="flex items-center gap-4 mt-2 text-xs flex-wrap">
                 {candidate.location && (
-                  <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                  <span className={`flex items-center gap-1 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
                     <MapPin className="w-3 h-3" />
                     {candidate.location}
                   </span>
@@ -699,7 +705,7 @@ function CandidateCard({
                 <TrendingUp className="w-4 h-4" />
                 <span className="font-semibold">{candidate.completenessScore}%</span>
               </div>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
                 Profile Score
               </p>
               {/* Add to Pipeline button — stopPropagation so it doesn't open the modal */}
@@ -707,7 +713,7 @@ function CandidateCard({
                 <button
                   onClick={onAddToPipeline}
                   className={`mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    theme === 'dark'
+                    isDarkTheme(theme)
                       ? 'bg-teal-600 text-white hover:bg-teal-700'
                       : 'bg-teal-600 text-white hover:bg-teal-700'
                   }`}
