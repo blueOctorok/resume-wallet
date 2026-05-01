@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles } from 'lucide-react'
+import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles, CalendarClock } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
@@ -15,6 +15,7 @@ interface NotificationBellProps {
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   application_status:     <BriefcaseBusiness className='w-4 h-4' />,
+  application_follow_up:  <CalendarClock className='w-4 h-4' />,
   candidate_request:      <UserCheck className='w-4 h-4' />,
   employment_verification:<ShieldCheck className='w-4 h-4' />,
   team_invite:            <Users className='w-4 h-4' />,
@@ -26,6 +27,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 
 const TYPE_COLOR: Record<string, string> = {
   application_status:      'bg-teal-500/20 text-teal-400',
+  application_follow_up:   'bg-violet-500/20 text-violet-400',
   candidate_request:       'bg-blue-500/20 text-blue-400',
   employment_verification: 'bg-green-500/20 text-green-400',
   team_invite:             'bg-purple-500/20 text-purple-400',

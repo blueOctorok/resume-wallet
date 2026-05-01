@@ -41,11 +41,11 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 
-const ApplyWithStormChainModal = dynamic(() => import('@/components/ApplyWithStormChainModal'), {
+const StormApplyBridge = dynamic(() => import('@/components/apply/StormApplyBridge'), {
   ssr: false,
 })
 
-/** Shape expected by ApplyWithStormChainModal `job` prop */
+/** Shape expected by StormApplyBridge `job` prop */
 function toApplyModalJob(j: StormiJobSuggestion) {
   return {
     id: j.id,
@@ -1224,7 +1224,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
       )}
 
       {props.mode === 'candidate' && (
-        <ApplyWithStormChainModal
+        <StormApplyBridge
           isOpen={applyJob != null}
           onClose={() => setApplyJob(null)}
           job={applyJob}

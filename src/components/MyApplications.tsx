@@ -26,6 +26,7 @@ interface Application {
   job_salary_min: number | null
   job_salary_max: number | null
   status: string
+  candidate_status: string | null
   created_at: string
   view_count: number
   last_viewed_at: string | null
@@ -139,6 +140,34 @@ export default function MyApplications({
     const url = `${window.location.origin}/application/${token}`
     navigator.clipboard.writeText(url)
     alert('Application link copied to clipboard!')
+  }
+
+  const candidateStatusOptions = [
+    { value: 'waiting', label: 'Waiting to hear back', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' },
+    { value: 'interview', label: 'Got an interview', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
+    { value: 'offer', label: 'Received offer', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' },
+    { value: 'rejected', label: 'Got a rejection', color: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' },
+    { value: 'no_response', label: 'No response yet', color: 'bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' },
+  ]
+
+  const updateCandidateStatus = async (appId: string, status: string) => {
+    try {
+      const res = await fetch('/api/applications/status', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress ?? '',
+        },
+        body: JSON.stringify({ applicationId: appId, candidateStatus: status }),
+      })
+      if (res.ok) {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, candidate_status: status } : a)),
+        )
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err)
+    }
   }
 
   const cardClass = isDark
@@ -279,6 +308,30 @@ export default function MyApplications({
                       <ExternalLink className='w-3.5 h-3.5' />
                     </a>
                   )}
+                </div>
+
+                {/* Candidate self-reported outcome */}
+                <div className={`mt-4 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+                  <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    What happened?
+                  </p>
+                  <div className='flex flex-wrap gap-2'>
+                    {candidateStatusOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateCandidateStatus(app.id, opt.value)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                          app.candidate_status === opt.value
+                            ? opt.color
+                            : isDark
+                              ? 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                              : 'border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}

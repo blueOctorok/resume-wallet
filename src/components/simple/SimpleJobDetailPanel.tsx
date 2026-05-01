@@ -11,7 +11,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
  * uses LLM-extracted requirements (Adzuna) or heuristics (StormChain).
  */
 
-import { Briefcase, Building2, MapPin, ExternalLink, DollarSign, Star, ChevronDown, LogIn } from 'lucide-react'
+import { Briefcase, Building2, MapPin, DollarSign, Star, ChevronDown, LogIn } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useMemo, useState } from 'react'
 import { useInstalledBlocks } from '@/stores/hub-blocks-store'
@@ -28,6 +28,11 @@ import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
 
 const ApplyWithStormChainModal = dynamic(
   () => import('@/components/ApplyWithStormChainModal'),
+  { ssr: false },
+)
+
+const StormApplyBridge = dynamic(
+  () => import('@/components/apply/StormApplyBridge'),
   { ssr: false },
 )
 
@@ -349,17 +354,24 @@ export default function SimpleJobDetailPanel({ userAddress }: SimpleJobDetailPan
               'flex-1 transition-all',
               applyReady && 'shadow-[0_0_20px_-4px_rgba(20,184,166,0.45)]',
             )}
-            onClick={() => snap.redirectUrl && window.open(snap.redirectUrl, '_blank', 'noopener,noreferrer')}
-            disabled={!snap.redirectUrl}
+            onClick={() => setApplyOpen(true)}
           >
-            <ExternalLink className='w-3.5 h-3.5 mr-1' />
-            Apply on employer site
+            Apply with career card
           </Button>
         )}
       </div>
 
       {snap.isStormChain && (
         <ApplyWithStormChainModal
+          isOpen={applyOpen}
+          onClose={() => setApplyOpen(false)}
+          job={toApplyModalJob(snap)}
+          userAddress={userAddress}
+        />
+      )}
+
+      {!snap.isStormChain && (
+        <StormApplyBridge
           isOpen={applyOpen}
           onClose={() => setApplyOpen(false)}
           job={toApplyModalJob(snap)}

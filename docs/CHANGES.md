@@ -4,6 +4,39 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Storm Apply Bridge — career card for external jobs** (May 2026)
+
+- **Problem:** Adzuna (external) jobs used `window.open` to dump users on the employer site with nothing from their career card. The verified identity Storm builds became useless at the most critical moment — application time.
+- **Solution:** `StormApplyBridge` modal intercepts all external job "Apply" clicks and prepares a toolkit before sending the user to the employer site:
+  - **Career card share URL** with copy button ("paste into Portfolio URL / Personal Website")
+  - **Resume PDF download** (IPFS-hosted, from lens-tailored resume)
+  - **AI cover letter** (reuses `/api/ai/cover-letter`, optional Stormi generation)
+  - **Screener answers** (name, email, phone, location, years of experience, CDL class, skills — all derived from `ProjectedCareerCard` via `src/lib/screener-answers.ts`)
+  - **"Go apply on employer site"** — opens redirect URL + records application in one click
+- **Application tracking:** External applications now tracked identically to StormChain ones. Candidate can self-report outcomes via `candidate_status` column (waiting / interview / rejected / offer / no_response).
+- **Stormi follow-ups:** Daily cron (`/api/cron/application-follow-ups`) nudges users 7 days after applying if they haven't reported an outcome. New `application_follow_up` notification type.
+- **Stormi tool:** `update_application_status` chat tool lets Stormi record outcomes from conversation.
+
+### New files
+- `src/components/apply/StormApplyBridge.tsx` — bridge modal (uses `Modal panelShape="block"`)
+- `src/lib/screener-answers.ts` — derives common ATS screener answers from career card
+- `src/app/api/applications/status/route.ts` — PATCH endpoint for candidate self-reported status
+- `src/app/api/cron/application-follow-ups/route.ts` — daily follow-up cron
+
+### Modified files
+- `src/components/simple/SimpleJobDetailPanel.tsx` — external jobs open bridge instead of `window.open`
+- `src/components/simple/SimpleCardPanel.tsx` — same: `handleApply` routes through bridge for external jobs
+- `src/components/stormi/StormiChatPanel.tsx` — Stormi job suggestions use `StormApplyBridge` instead of `ApplyWithStormChainModal`
+- `src/components/MyApplications.tsx` — added candidate status update controls per application card
+- `src/app/api/applications/list/route.ts` — returns `candidate_status` field
+- `src/lib/create-notification.ts` — added `application_follow_up` notification type
+- `src/components/ui/NotificationBell.tsx` — icon + color for `application_follow_up`
+- `src/lib/ava-job-chat-tools.ts` — added `update_application_status` tool definition + handler
+- `src/lib/ava-context.ts` — Stormi context includes application follow-up coaching instructions
+
+### Database
+- `supabase/migrations/070_storm_apply_bridge.sql` — adds `candidate_status` + `last_followed_up_at` columns to `applications` table
+
 ## **Themes — Quiet ink (monochrome dark) + Galactic void label** (May 2026)
 
 - **Product:** **`ink`** — dark analogue of **Paper**: zinc/grey void, no teal–violet chrome; easy on the eyes. Colorful dark is still **`dark`** but labeled **Galactic void** in `ThemePicker`.

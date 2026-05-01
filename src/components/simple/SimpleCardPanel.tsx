@@ -51,6 +51,11 @@ const ApplyWithStormChainModal = dynamic(
   { ssr: false },
 )
 
+const StormApplyBridge = dynamic(
+  () => import('@/components/apply/StormApplyBridge'),
+  { ssr: false },
+)
+
 function toApplyModalJob(snap: NonNullable<ReturnType<typeof useSimpleModeStore.getState>['selectedJobSnapshot']>) {
   return {
     id: snap.id,
@@ -220,11 +225,7 @@ export default function SimpleCardPanel() {
 
   const handleApply = useCallback(() => {
     if (!snap) return
-    if (snap.isStormChain) {
-      setApplyOpen(true)
-    } else if (snap.redirectUrl) {
-      window.open(snap.redirectUrl, '_blank', 'noopener,noreferrer')
-    }
+    setApplyOpen(true)
   }, [snap])
 
   // Apply mode has no chat — "deeper help" routes to Construct mode where Stormi
@@ -570,6 +571,15 @@ export default function SimpleCardPanel() {
 
       {snap?.isStormChain && (
         <ApplyWithStormChainModal
+          isOpen={applyOpen}
+          onClose={() => setApplyOpen(false)}
+          job={toApplyModalJob(snap)}
+          userAddress={walletAddress}
+        />
+      )}
+
+      {snap && !snap.isStormChain && (
+        <StormApplyBridge
           isOpen={applyOpen}
           onClose={() => setApplyOpen(false)}
           job={toApplyModalJob(snap)}

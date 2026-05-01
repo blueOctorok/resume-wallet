@@ -2,6 +2,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 export type NotificationType =
   | 'application_status'
+  | 'application_follow_up'
   | 'candidate_request'
   | 'employment_verification'
   | 'team_invite'

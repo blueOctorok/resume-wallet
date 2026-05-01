@@ -1,5 +1,20 @@
 # Storm — Complete Project Roadmap
 
+## 🌉 **Storm Apply Bridge — career card for external jobs** (May 2026 — Done)
+
+**Product principle:** The career card must travel with every application — even external ones. The bridge modal is the missing link between "I built a verified identity" and "I actually used it to apply."
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **StormApplyBridge modal** | ✅ Done | `Modal panelShape="block"`; share URL copy, resume download, AI cover letter, screener answers, go-apply + record in one click. |
+| **Screener answers lib** | ✅ Done | `deriveScreenerAnswers()` extracts name, email, phone, location, career card URL, occupation, years of experience, skills, CDL data from `ProjectedCareerCard`. |
+| **Wire into panels** | ✅ Done | `SimpleJobDetailPanel`, `SimpleCardPanel`, `StormiChatPanel` all route external job applies through the bridge. |
+| **Candidate status tracking** | ✅ Done | `candidate_status` column (waiting / interview / rejected / offer / no_response) + PATCH API + UI controls in My Applications. |
+| **Stormi follow-ups** | ✅ Done | Daily cron nudges after 7 days; `application_follow_up` notification type; `update_application_status` Stormi chat tool. |
+| **Phase 2 — Browser extension** | 🔲 Deferred | Collect `applications.redirect_url` data to identify top 5 destination ATSs, then build autofill extension. |
+
+---
+
 ## 🎂 **Hub-as-Card — Workspace hub = the career card** (April 2026 — Done)
 
 **Product principle:** The card is the cake; everything else is icing. Workspace is **self-driven** identity building (no job target), distinct from Guided Mode’s job-first flow. Users always see the live projected card and launch block pages from it; verifications reflect immediately from `/api/career-card` refetches.

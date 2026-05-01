@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         job_salary_max: jobPosting?.pay_range_max,
         job_url: jobPosting?.redirect_url,
         status: app.status,
+        candidate_status: app.candidate_status ?? null,
         created_at: app.applied_at,
         view_count: app.view_count || 0,
         last_viewed_at: app.last_viewed_at,

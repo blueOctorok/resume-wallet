@@ -71,6 +71,26 @@ export const STORMI_JOB_CHAT_TOOLS = [
       required: ['keywords'],
     },
   },
+  {
+    name: 'update_application_status',
+    description:
+      'Record the candidate\'s self-reported outcome for a past application. Use when the user tells you they heard back (interview, rejection, offer) or when they say nothing happened yet. If they mention a specific company or job title, match it to an application and update it.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        application_id: {
+          type: 'string',
+          description: 'The application UUID. Required.',
+        },
+        candidate_status: {
+          type: 'string',
+          enum: ['waiting', 'interview', 'rejected', 'offer', 'no_response'],
+          description: 'The outcome: waiting, interview, rejected, offer, or no_response.',
+        },
+      },
+      required: ['application_id', 'candidate_status'],
+    },
+  },
 ]
 
 export interface StormiJobToolContext {
@@ -358,6 +378,48 @@ export async function executeStormiJobChatTool(params: {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('[Stormi job tool] save_job_alert:', msg)
       return { toolResult: JSON.stringify({ ok: false, error: 'Could not save alert.' }) }
+    }
+  }
+
+  if (name === 'update_application_status') {
+    const obj = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+    const applicationId = typeof obj.application_id === 'string' ? obj.application_id.trim() : ''
+    const candidateStatus = typeof obj.candidate_status === 'string' ? obj.candidate_status.trim() : ''
+
+    const validStatuses = ['waiting', 'interview', 'rejected', 'offer', 'no_response']
+    if (!applicationId || !validStatuses.includes(candidateStatus)) {
+      return { toolResult: JSON.stringify({ ok: false, error: 'application_id and valid candidate_status required.' }) }
+    }
+
+    try {
+      const { error: updateError } = await ctx.supabase
+        .from('applications')
+        .update({ candidate_status: candidateStatus })
+        .eq('id', applicationId)
+        .eq('applicant_user_id', ctx.userId)
+
+      if (updateError) {
+        return { toolResult: JSON.stringify({ ok: false, error: 'Could not update — check the application ID.' }) }
+      }
+
+      const statusLabels: Record<string, string> = {
+        waiting: 'waiting to hear back',
+        interview: 'got an interview',
+        rejected: 'got a rejection',
+        offer: 'received an offer',
+        no_response: 'no response yet',
+      }
+
+      return {
+        toolResult: JSON.stringify({
+          ok: true,
+          message: `Updated to "${statusLabels[candidateStatus]}". This info helps me coach you better on what's working.`,
+        }),
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[Stormi job tool] update_application_status:', msg)
+      return { toolResult: JSON.stringify({ ok: false, error: 'Status update failed.' }) }
     }
   }
 
