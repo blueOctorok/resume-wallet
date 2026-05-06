@@ -25,6 +25,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { getBlockDefinition } from '@/lib/block-registry'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
+import PspDisclosureForm from '@/components/PspDisclosureForm'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import BlockCard from '@/components/ui/BlockCard'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
@@ -33,6 +34,7 @@ interface CandidateRequest {
   id: string
   requestType:
     | 'mvr_order'
+    | 'psp_order'
     | 'document_upload'
     | 'verification'
     | 'profile_completion'
@@ -68,6 +70,13 @@ const REQUEST_TYPE_CONFIG = {
     description: 'This employer is requesting your authorization to run a background check & MVR',
     color: 'text-teal-500',
     bgColor: 'bg-teal-500/10',
+  },
+  psp_order: {
+    icon: Shield,
+    label: 'Background Check & PSP Request',
+    description: 'This employer is requesting your authorization before ordering an FMCSA PSP report',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10',
   },
   document_upload: {
     icon: FileText,
@@ -119,11 +128,19 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-gray-400 text-white' },
 }
 
-/** FCRA background-check / MVR consent flow (DB uses `mvr_order`, or legacy `block_request` + driver-mvr). */
-function isMvrConsentFlow(request: Pick<CandidateRequest, 'requestType' | 'targetBlockType'>): boolean {
+/** MVR / general FCRA disclosure (BackgroundCheckDisclosure). */
+function isMvrBgcheckConsentFlow(request: Pick<CandidateRequest, 'requestType' | 'targetBlockType'>): boolean {
   return (
     request.requestType === 'mvr_order' ||
     (request.requestType === 'block_request' && request.targetBlockType === 'driver-mvr')
+  )
+}
+
+/** FMCSA PSP standalone disclosure (PspDisclosureForm). */
+function isPspFmcsaConsentFlow(request: Pick<CandidateRequest, 'requestType' | 'targetBlockType'>): boolean {
+  return (
+    request.requestType === 'psp_order' ||
+    (request.requestType === 'block_request' && request.targetBlockType === 'driver-psp')
   )
 }
 
@@ -133,7 +150,10 @@ function getRequestVisualConfig(request: CandidateRequest): RequestVisualConfig 
     return DEFAULT_REQUEST_VISUAL
   }
 
-  if (isMvrConsentFlow(request)) {
+  if (isPspFmcsaConsentFlow(request)) {
+    return REQUEST_TYPE_CONFIG.psp_order ?? DEFAULT_REQUEST_VISUAL
+  }
+  if (isMvrBgcheckConsentFlow(request)) {
     return REQUEST_TYPE_CONFIG.mvr_order ?? DEFAULT_REQUEST_VISUAL
   }
 
@@ -178,10 +198,14 @@ export default function CandidateRequestsSection({
   const [pendingCount, setPendingCount] = useState(0)
   const [selectedRequest, setSelectedRequest] = useState<CandidateRequest | null>(null)
   const [updating, setUpdating] = useState(false)
-  // Controls whether the full-screen disclosure form is shown
-  const [showDisclosure, setShowDisclosure] = useState(false)
-  // Controls whether we're viewing a previously signed consent
-  const [viewingConsent, setViewingConsent] = useState<{ requestId: string; consentId: string; companyName: string } | null>(null)
+  /** Which standalone legal form is open from the request detail modal */
+  const [disclosureModal, setDisclosureModal] = useState<null | 'mvr' | 'psp'>(null)
+  const [viewingConsent, setViewingConsent] = useState<{
+    mode: 'mvr' | 'psp'
+    requestId: string
+    consentId: string
+    companyName: string
+  } | null>(null)
 
   const fetchRequests = useCallback(async () => {
     if (!userAddress) {
@@ -395,7 +419,8 @@ export default function CandidateRequestsSection({
                   {completedRequests.slice(0, 5).map(request => {
                     const config = getRequestVisualConfig(request)
                     const statusConfig = getStatusRowConfig(request.status)
-                    const canViewConsent = isMvrConsentFlow(request) && request.consentId
+                    const canViewConsent =
+                      (isMvrBgcheckConsentFlow(request) || isPspFmcsaConsentFlow(request)) && request.consentId
 
                     return (
                       <div
@@ -417,11 +442,19 @@ export default function CandidateRequestsSection({
                             </span>
                             {canViewConsent && (
                               <button
-                                onClick={() => setViewingConsent({
-                                  requestId: request.id,
-                                  consentId: request.consentId!,
-                                  companyName: request.company?.name || 'the employer',
-                                })}
+                                onClick={() =>
+                                  setViewingConsent({
+                                    mode:
+                                      request.requestType === 'psp_order' ||
+                                      (request.requestType === 'block_request' &&
+                                        request.targetBlockType === 'driver-psp')
+                                        ? 'psp'
+                                        : 'mvr',
+                                    requestId: request.id,
+                                    consentId: request.consentId!,
+                                    companyName: request.company?.name || 'the employer',
+                                  })
+                                }
                                 className='flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-colors'
                               >
                                 <FileText className='w-3 h-3' />
@@ -503,13 +536,24 @@ export default function CandidateRequestsSection({
                 </div>
               )}
 
-              {isMvrConsentFlow(selectedRequest) && (
+              {isMvrBgcheckConsentFlow(selectedRequest) && (
                 <div className={`p-4 rounded-xl border ${isDarkTheme(theme) ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
                   <p className={`text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-800'}`}>
                     Your rights are protected
                   </p>
                   <p className={`text-sm ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-700'}`}>
                     Under the Fair Credit Reporting Act (FCRA), you must review and sign a Background Check Disclosure before this employer can order a report. Click "Review & Sign Disclosure" to read the full form and authorize.
+                  </p>
+                </div>
+              )}
+
+              {isPspFmcsaConsentFlow(selectedRequest) && (
+                <div className={`p-4 rounded-xl border ${isDarkTheme(theme) ? 'border-amber-500/30 bg-amber-500/10' : 'border-amber-200 bg-amber-50'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkTheme(theme) ? 'text-amber-200' : 'text-amber-900'}`}>
+                    FMCSA PSP authorization required
+                  </p>
+                  <p className={`text-sm ${isDarkTheme(theme) ? 'text-amber-100/90' : 'text-amber-900/90'}`}>
+                    Before this employer can order your Pre-Employment Screening Program (PSP) report, you must review and sign the federal PSP Disclosure & Authorization form exactly as provided by FMCSA. This is a separate stand-alone document.
                   </p>
                 </div>
               )}
@@ -528,7 +572,8 @@ export default function CandidateRequestsSection({
                 <div className='flex gap-3'>
                   {(selectedRequest.requestType === 'document_upload' ||
                     (selectedRequest.requestType === 'block_request' &&
-                      !isMvrConsentFlow(selectedRequest))) &&
+                      !isMvrBgcheckConsentFlow(selectedRequest) &&
+                      !isPspFmcsaConsentFlow(selectedRequest))) &&
                     onNavigateToResume && (
                     <button
                       type='button'
@@ -563,10 +608,10 @@ export default function CandidateRequestsSection({
                     </button>
                   )}
 
-                  {isMvrConsentFlow(selectedRequest) && (
+                  {isMvrBgcheckConsentFlow(selectedRequest) && (
                     <button
                       type='button'
-                      onClick={() => setShowDisclosure(true)}
+                      onClick={() => setDisclosureModal('mvr')}
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
                       <Shield className='w-4 h-4' />
@@ -574,11 +619,23 @@ export default function CandidateRequestsSection({
                     </button>
                   )}
 
+                  {isPspFmcsaConsentFlow(selectedRequest) && (
+                    <button
+                      type='button'
+                      onClick={() => setDisclosureModal('psp')}
+                      className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors'
+                    >
+                      <Shield className='w-4 h-4' />
+                      Review & Sign FMCSA PSP Form
+                    </button>
+                  )}
+
                   {(selectedRequest.requestType === 'verification' ||
                     selectedRequest.requestType === 'custom' ||
                     (selectedRequest.requestType === 'block_request' &&
                       !selectedRequest.targetBlockType &&
-                      !isMvrConsentFlow(selectedRequest))) && (
+                      !isMvrBgcheckConsentFlow(selectedRequest) &&
+                      !isPspFmcsaConsentFlow(selectedRequest))) && (
                     <button
                       type='button'
                       onClick={() => updateRequestStatus(selectedRequest.id, 'completed')}
@@ -626,23 +683,48 @@ export default function CandidateRequestsSection({
       )}
 
       {/* Full-screen FCRA disclosure form — shown when driver opens an MVR request */}
-      {showDisclosure && selectedRequest && (
+      {disclosureModal === 'mvr' && selectedRequest && (
         <BackgroundCheckDisclosure
           requestId={selectedRequest.id}
           companyName={selectedRequest.company?.name || 'the employer'}
           userAddress={userAddress || ''}
-          onClose={() => setShowDisclosure(false)}
+          onClose={() => setDisclosureModal(null)}
           onConsentSigned={async () => {
-            setShowDisclosure(false)
+            setDisclosureModal(null)
             setSelectedRequest(null)
             await fetchRequests()
           }}
         />
       )}
 
-      {/* View previously signed consent */}
-      {viewingConsent && (
+      {disclosureModal === 'psp' && selectedRequest && (
+        <PspDisclosureForm
+          requestId={selectedRequest.id}
+          companyName={selectedRequest.company?.name || 'the employer'}
+          userAddress={userAddress || ''}
+          onClose={() => setDisclosureModal(null)}
+          onConsentSigned={async () => {
+            setDisclosureModal(null)
+            setSelectedRequest(null)
+            await fetchRequests()
+          }}
+        />
+      )}
+
+      {viewingConsent?.mode === 'mvr' && (
         <BackgroundCheckDisclosure
+          requestId={viewingConsent.requestId}
+          companyName={viewingConsent.companyName}
+          userAddress={userAddress || ''}
+          onClose={() => setViewingConsent(null)}
+          onConsentSigned={() => setViewingConsent(null)}
+          viewMode
+          consentId={viewingConsent.consentId}
+        />
+      )}
+
+      {viewingConsent?.mode === 'psp' && (
+        <PspDisclosureForm
           requestId={viewingConsent.requestId}
           companyName={viewingConsent.companyName}
           userAddress={userAddress || ''}

@@ -69,6 +69,9 @@ export interface BlockProgressData {
   mvrComplete: boolean
   /** User placed an MVR order (may still be processing) */
   hasMvrOrder: boolean
+  /** PSP order finished (result stored / review) */
+  pspComplete: boolean
+  hasPspOrder: boolean
   hasAppliedToJobs: boolean
   jobApplicationCount: number
   /** Portfolio URL set (block_dev_portfolio.portfolio_url) — drives journey step completion */
@@ -217,6 +220,28 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
         label: 'Order MVR',
         description: 'Add your driving record to boost your profile',
         target: 'mvr',
+        priority: 'medium',
+      }
+    },
+  },
+
+  'driver-psp': {
+    resolve: (d) => [{
+      id: 'driver-psp',
+      label: 'PSP Report',
+      description: 'Order your FMCSA crash and inspection history',
+      status: d.pspComplete ? 'complete' : d.hasPspOrder ? 'in_progress' : 'pending',
+      action: !d.pspComplete
+        ? { label: d.hasPspOrder ? 'View PSP status' : 'Order PSP', target: 'psp' }
+        : undefined,
+      isOptional: true,
+    }],
+    nextAction: (d) => {
+      if (d.pspComplete || d.hasPspOrder) return null
+      return {
+        label: 'Order PSP',
+        description: 'Add federal safety history for carriers that require it',
+        target: 'psp',
         priority: 'medium',
       }
     },

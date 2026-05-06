@@ -12,6 +12,7 @@ import {
   FileText,
   ClipboardCheck,
   Car,
+  FileWarning,
 } from 'lucide-react'
 import Avatar from './ui/Avatar'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
@@ -33,6 +34,7 @@ interface CareerPreview {
   hasResume: boolean
   hasDriverApp: boolean
   hasMvr: boolean
+  hasPsp: boolean
   completenessScore: number
 }
 
@@ -123,6 +125,7 @@ export default function ShareProfileCard({
               sectionTypes.has('general-resume'),
             hasDriverApp: sectionTypes.has('driver-dot-application'),
             hasMvr: sectionTypes.has('driver-mvr'),
+            hasPsp: sectionTypes.has('driver-psp'),
             completenessScore: cc.sections?.length ?? 0,
           })
         }
@@ -266,6 +269,12 @@ export default function ShareProfileCard({
                   icon={<Car className='w-3 h-3' />}
                   label='MVR'
                   done={preview.hasMvr}
+                  isDark={isDark}
+                />
+                <CredentialChip
+                  icon={<FileWarning className='w-3 h-3' />}
+                  label='PSP'
+                  done={preview.hasPsp}
                   isDark={isDark}
                 />
               </div>

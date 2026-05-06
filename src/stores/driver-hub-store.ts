@@ -3,6 +3,7 @@ import type {
   ResumeData,
   DotApplicationRecord,
   MvrRecord,
+  PspRecord,
   JobApplication,
   DriverHubStats,
 } from './types'
@@ -44,6 +45,7 @@ interface DriverHubState {
   resumes: ResumeData[]
   dotApplications: DotApplicationRecord[]
   mvrRecords: MvrRecord[]
+  pspRecords: PspRecord[]
   jobApplications: JobApplication[]
   /** Portfolio URL from block_dev_portfolio (for My Files + Stormi journey) */
   portfolio: { portfolioUrl: string | null } | null
@@ -77,6 +79,7 @@ interface DriverHubActions {
   setResumes: (resumes: ResumeData[]) => void
   setDotApplications: (apps: DotApplicationRecord[]) => void
   setMvrRecords: (records: MvrRecord[]) => void
+  setPspRecords: (records: PspRecord[]) => void
   setJobApplications: (apps: JobApplication[]) => void
   setStats: (stats: DriverHubStats | null) => void
   setPortfolio: (portfolio: { portfolioUrl: string | null } | null) => void
@@ -112,6 +115,7 @@ interface DriverHubActions {
     resumes?: ResumeData[]
     dotApplications?: DotApplicationRecord[]
     mvrRecords?: MvrRecord[]
+    pspRecords?: PspRecord[]
     jobApplications?: JobApplication[]
     stats?: DriverHubStats | null
     portfolio?: { portfolioUrl: string | null } | null
@@ -147,6 +151,7 @@ const initialState: DriverHubState = {
   resumes: [],
   dotApplications: [],
   mvrRecords: [],
+  pspRecords: [],
   jobApplications: [],
   portfolio: null,
   github: null,
@@ -177,6 +182,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
     }),
     setDotApplications: (apps) => set({ dotApplications: apps }),
     setMvrRecords: (records) => set({ mvrRecords: records }),
+    setPspRecords: (records) => set({ pspRecords: records }),
     setJobApplications: (apps) => set({ jobApplications: apps }),
     setStats: (stats) => set({ stats }),
     setPortfolio: (portfolio) => set({ portfolio }),
@@ -254,6 +260,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
       resumes: data.resumes ?? get().resumes,
       dotApplications: data.dotApplications ?? get().dotApplications,
       mvrRecords: data.mvrRecords ?? get().mvrRecords,
+      pspRecords: data.pspRecords ?? get().pspRecords,
       jobApplications: data.jobApplications ?? get().jobApplications,
       stats: data.stats ?? get().stats,
       portfolio: data.portfolio ?? get().portfolio,

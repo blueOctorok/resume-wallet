@@ -15,6 +15,7 @@ import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import type { PageType } from '@/stores/types'
 import type { HubDocument } from '@/lib/hub-document-types'
 import MvrViewModal from '@/components/MvrViewModal'
+import PspViewModal from '@/components/PspViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
@@ -32,6 +33,7 @@ export function useHubDocuments(refreshKey: number): {
   confirmDelete: string | null
   setConfirmDelete: (id: string | null) => void
   setMvrViewOrderId: (id: string | null) => void
+  setPspViewOrderId: (id: string | null) => void
   setDotAppPreviewApplicationId: (id: string | null) => void
   setResumeFilePreview: (v: { title: string; url: string } | null) => void
   setDriverResumePreview: (v: { title: string; structuredData: Record<string, unknown> } | null) => void
@@ -54,6 +56,7 @@ export function useHubDocuments(refreshKey: number): {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [mvrViewOrderId, setMvrViewOrderId] = useState<string | null>(null)
+  const [pspViewOrderId, setPspViewOrderId] = useState<string | null>(null)
   const [hubUserId, setHubUserId] = useState<string | null>(null)
   const [dotAppPreviewApplicationId, setDotAppPreviewApplicationId] = useState<string | null>(null)
   const [driverResumePreview, setDriverResumePreview] = useState<{
@@ -72,13 +75,14 @@ export function useHubDocuments(refreshKey: number): {
   )
   const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
   const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
+  const hasPspBlock = installedBlocks.some((b) => b.blockType === 'driver-psp')
   const hasPortfolioBlock = installedBlocks.some((b) => b.blockType === 'developer-portfolio')
   const hasGithubBlock = installedBlocks.some((b) => b.blockType === 'developer-github')
   const hasEmploymentVerificationBlock = installedBlocks.some(
     (b) => b.blockType === 'general-employment-verification',
   )
   const needsHubData =
-    hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPortfolioBlock || hasGithubBlock
+    hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPspBlock || hasPortfolioBlock || hasGithubBlock
   const hasAnyFileSectionBlock = needsHubData || hasEmploymentVerificationBlock
 
   const fetchDocuments = useCallback(async () => {
@@ -243,6 +247,39 @@ export function useHubDocuments(refreshKey: number): {
           })
         }
 
+        if (hasPspBlock && data.pspRecords) {
+          for (const psp of data.pspRecords) {
+            const isComplete = psp.orderStatus === 'completed' || psp.orderStatus === 'needs_review'
+            docs.push({
+              id: psp.id,
+              type: 'psp',
+              title: 'PSP Report',
+              subtitle: psp.licenseState,
+              status: isComplete ? 'complete' : 'processing',
+              verified: false,
+              txHash: null,
+              canVerify: false,
+              canDelete: false,
+              editPage: isComplete ? null : 'psp',
+            })
+          }
+        }
+
+        if (hasPspBlock && (!data.pspRecords || data.pspRecords.length === 0)) {
+          docs.push({
+            id: 'psp-hub-placeholder',
+            type: 'psp',
+            title: 'PSP Report',
+            subtitle: 'Not ordered yet',
+            status: 'empty',
+            verified: false,
+            txHash: null,
+            canVerify: false,
+            canDelete: false,
+            editPage: 'psp',
+          })
+        }
+
         if (hasPortfolioBlock) {
           const portfolioUrl = data.portfolio?.portfolioUrl ?? null
           docs.push({
@@ -315,6 +352,7 @@ export function useHubDocuments(refreshKey: number): {
     hasResumeBlock,
     hasDotAppBlock,
     hasMvrBlock,
+    hasPspBlock,
     hasPortfolioBlock,
     hasGithubBlock,
     hasEmploymentVerificationBlock,
@@ -394,6 +432,12 @@ export function useHubDocuments(refreshKey: number): {
         walletAddress={walletAddress ?? ''}
         orderId={mvrViewOrderId}
       />
+      <PspViewModal
+        isOpen={pspViewOrderId !== null}
+        onClose={() => setPspViewOrderId(null)}
+        walletAddress={walletAddress ?? ''}
+        orderId={pspViewOrderId}
+      />
       <DotAppPreviewModal
         isOpen={dotAppPreviewApplicationId !== null}
         onClose={() => setDotAppPreviewApplicationId(null)}
@@ -455,6 +499,7 @@ export function useHubDocuments(refreshKey: number): {
     confirmDelete,
     setConfirmDelete,
     setMvrViewOrderId,
+    setPspViewOrderId,
     setDotAppPreviewApplicationId,
     setResumeFilePreview,
     setDriverResumePreview,

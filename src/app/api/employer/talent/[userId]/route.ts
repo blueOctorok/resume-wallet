@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { buildProjectedCareerCard, toMvrDataFromOrderRow } from '@/lib/projected-career-card'
-import type { MvrData } from '@/types/career-card'
+import { buildProjectedCareerCard, toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
+import type { MvrData, PspData } from '@/types/career-card'
 
 /**
  * GET /api/employer/talent/[userId]
@@ -112,6 +112,28 @@ export async function GET(
 
     card.employerCompanyMvr = companyMvrData
 
+    let companyPspData: PspData | null = null
+    const { data: companyPsp } = await supabase
+      .from('psp_orders')
+      .select('id, status, dl_state, created_at, completed_at')
+      .eq('driver_user_id', userId)
+      .eq('ordered_by_company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (companyPsp) {
+      const { data: companyPspResult } = await supabase
+        .from('psp_results')
+        .select('result_status')
+        .eq('psp_order_id', companyPsp.id)
+        .maybeSingle()
+
+      companyPspData = toPspDataFromOrderRow(companyPsp, companyPspResult)
+    }
+
+    card.employerCompanyPsp = companyPspData
+
     // Append-only: log that this employer opened this candidate's card (insights for the candidate)
     try {
       const { error: viewLogError } = await supabase.from('career_card_views').insert({
@@ -135,6 +157,15 @@ export async function GET(
 
     const { data: bgcheckConsent } = await supabase
       .from('bgcheck_consents')
+      .select('id, signed_at, form_data')
+      .eq('company_id', companyId)
+      .eq('driver_user_id', userId)
+      .order('signed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const { data: pspFmcsaConsent } = await supabase
+      .from('psp_consents')
       .select('id, signed_at, form_data')
       .eq('company_id', companyId)
       .eq('driver_user_id', userId)
@@ -179,6 +210,7 @@ export async function GET(
     const completionFlags = {
       hasResume: Boolean(careerRow.has_resume),
       hasMvr: Boolean(careerRow.has_mvr),
+      hasPsp: Boolean((careerRow as Record<string, unknown>).has_psp),
       hasDriverApp: Boolean(careerRow.has_driver_app),
       hasProfile: Boolean(careerRow.has_profile),
       hasWorkHistory: Boolean(careerRow.has_work_history),
@@ -197,6 +229,9 @@ export async function GET(
       hasBgcheckConsent: !!bgcheckConsent,
       bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
       bgcheckConsentFormData: bgcheckConsent?.form_data || null,
+      hasPspFmcsaConsent: !!pspFmcsaConsent,
+      pspFmcsaConsentSignedAt: pspFmcsaConsent?.signed_at || null,
+      pspFmcsaConsentFormData: pspFmcsaConsent?.form_data || null,
       completionFlags,
       completenessScore: careerRow.completeness_score ?? 0,
       verifiedJobsCount: careerRow.verified_jobs_count ?? 0,

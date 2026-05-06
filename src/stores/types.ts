@@ -19,6 +19,7 @@ export type PageType =
   | 'hunt-desk'
   | 'applications'
   | 'mvr'
+  | 'psp'
   | 'hub'
   | 'stormchain'
   | 'applicants'
@@ -102,6 +103,20 @@ export interface MvrRecord {
   violationCount: number | null
   /** Present when hub API merged an MVR result row */
   hasResult?: boolean
+}
+
+export interface PspRecord {
+  id: string
+  orderStatus: string
+  licenseState: string
+  createdAt: string
+  completedAt: string | null
+  feeAmount: number | null
+  feeCurrency: string | null
+  orderedAt: string | null
+  hasResult?: boolean
+  resultId?: string | null
+  resultStatus?: string | null
 }
 
 export interface JobApplication {

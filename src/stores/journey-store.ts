@@ -4,7 +4,7 @@ import { useAuthStore } from './auth-store'
 import { useDriverHubStore } from './driver-hub-store'
 import { useHubBlocksStore } from './hub-blocks-store'
 import { useDotApplicationStore } from './dot-application-store'
-import type { MvrRecord, ResumeData } from './types'
+import type { MvrRecord, PspRecord, ResumeData } from './types'
 import {
   type JourneyProgress,
   type BlockProgressData,
@@ -137,6 +137,11 @@ export function useJourneyProgress(): JourneyProgress {
     m.orderStatus === 'needs_review' ||
     Boolean(m.hasResult)
 
+  const pspTerminal = (p: PspRecord) =>
+    p.orderStatus === 'completed' ||
+    p.orderStatus === 'needs_review' ||
+    Boolean(p.hasResult)
+
   const resumes = hubStore.resumes as ResumeData[]
   const hasDriverResume = resumes.some((r) => r.sourceRole === 'driver')
   const hasDeveloperResume = resumes.some((r) => r.sourceRole === 'developer')
@@ -159,6 +164,8 @@ export function useJourneyProgress(): JourneyProgress {
         currentForm > 1),
     mvrComplete: hubStore.mvrRecords.some(mvrTerminal),
     hasMvrOrder: hubStore.mvrRecords.length > 0,
+    pspComplete: hubStore.pspRecords.some(pspTerminal),
+    hasPspOrder: hubStore.pspRecords.length > 0,
     hasAppliedToJobs: hubStore.jobApplications.length > 0,
     jobApplicationCount: hubStore.jobApplications.length,
     hasPortfolioUrl: Boolean(hubStore.portfolio?.portfolioUrl?.trim()),

@@ -21,6 +21,7 @@ import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
+import PspPaymentButton from '@/components/PspPaymentButton'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition } from '@/lib/block-registry'
 
@@ -41,6 +42,10 @@ interface EmployerTalentExtras {
   hasBgcheckConsent: boolean
   bgcheckConsentSignedAt: string | null
   bgcheckConsentFormData: Record<string, unknown> | null
+  /** FMCSA PSP Disclosure & Authorization (separate from MVR bgcheck consent) */
+  hasPspFmcsaConsent: boolean
+  pspFmcsaConsentSignedAt: string | null
+  pspFmcsaConsentFormData: Record<string, unknown> | null
 }
 
 interface CareerCardModalProps {
@@ -79,10 +84,13 @@ export default function CareerCardModal({
   const [recruitMessage, setRecruitMessage] = useState('')
   const [recruitLoading, setRecruitLoading] = useState(false)
 
-  const [showMvrOrderModal, setShowMvrOrderModal] = useState(false)
-  const [mvrOrderLoading, setMvrOrderLoading] = useState(false)
-  const [mvrOrderError, setMvrOrderError] = useState<string | null>(null)
-  const [mvrOrderSuccess, setMvrOrderSuccess] = useState(false)
+  /** Employer-paid Accio order (MVR or PSP) — one modal; product picks API + payment rail */
+  const [showAccioOrderModal, setShowAccioOrderModal] = useState(false)
+  const [accioOrderProduct, setAccioOrderProduct] = useState<'mvr' | 'psp'>('mvr')
+  const [accioOrderLoading, setAccioOrderLoading] = useState(false)
+  const [accioOrderError, setAccioOrderError] = useState<string | null>(null)
+  const [mvrEmployerOrderDone, setMvrEmployerOrderDone] = useState(false)
+  const [pspEmployerOrderDone, setPspEmployerOrderDone] = useState(false)
 
   const [employerCompany, setEmployerCompany] = useState<{
     id: string
@@ -128,6 +136,9 @@ export default function CareerCardModal({
         hasBgcheckConsent: Boolean(data.hasBgcheckConsent),
         bgcheckConsentSignedAt: data.bgcheckConsentSignedAt ?? null,
         bgcheckConsentFormData: (data.bgcheckConsentFormData ?? null) as Record<string, unknown> | null,
+        hasPspFmcsaConsent: Boolean(data.hasPspFmcsaConsent),
+        pspFmcsaConsentSignedAt: data.pspFmcsaConsentSignedAt ?? null,
+        pspFmcsaConsentFormData: (data.pspFmcsaConsentFormData ?? null) as Record<string, unknown> | null,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
@@ -150,6 +161,13 @@ export default function CareerCardModal({
       return {
         requestType: 'mvr_order' as const,
         targetBlockType: 'driver-mvr',
+        message,
+      }
+    }
+    if (blockType === 'driver-psp') {
+      return {
+        requestType: 'psp_order' as const,
+        targetBlockType: 'driver-psp',
         message,
       }
     }
@@ -214,6 +232,9 @@ export default function CareerCardModal({
       (blockType === 'driver-mvr' &&
         (r.request_type === 'mvr_order' ||
           (r.request_type === 'block_request' && r.target_block_type === 'driver-mvr'))) ||
+      (blockType === 'driver-psp' &&
+        (r.request_type === 'psp_order' ||
+          (r.request_type === 'block_request' && r.target_block_type === 'driver-psp'))) ||
       (blockType === 'driver-dot-application' && r.request_type === 'profile_completion')
     ) || null
 
@@ -259,14 +280,18 @@ export default function CareerCardModal({
     }
   }
 
-  // ── MVR order (payment → API call) ─────────────────────────────────────────
+  // ── Employer Accio orders (MVR / PSP): payment → API call ─────────────────
 
-  const handleMvrOrder = async (txHash: string, fields: MvrOrderFields) => {
-    setMvrOrderLoading(true)
-    setMvrOrderError(null)
+  const handleAccioEmployerOrder = async (txHash: string, fields: MvrOrderFields) => {
+    setAccioOrderLoading(true)
+    setAccioOrderError(null)
+
+    const endpoint =
+      accioOrderProduct === 'mvr' ? '/api/employer/mvr/order' : '/api/employer/psp/order'
+    const productLabel = accioOrderProduct === 'mvr' ? 'MVR' : 'PSP'
 
     try {
-      const response = await fetch('/api/employer/mvr/order', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
         body: JSON.stringify({
@@ -278,15 +303,16 @@ export default function CareerCardModal({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Failed to place MVR order')
+        throw new Error(data.error || `Failed to place ${productLabel} order`)
       }
 
-      setMvrOrderSuccess(true)
+      if (accioOrderProduct === 'mvr') setMvrEmployerOrderDone(true)
+      else setPspEmployerOrderDone(true)
       await fetchCareerCard()
     } catch (err) {
-      setMvrOrderError(err instanceof Error ? err.message : 'Failed to place MVR order')
+      setAccioOrderError(err instanceof Error ? err.message : `Failed to place ${productLabel} order`)
     } finally {
-      setMvrOrderLoading(false)
+      setAccioOrderLoading(false)
     }
   }
 
@@ -308,8 +334,9 @@ export default function CareerCardModal({
     // Hide if the block's deliverable is already complete (career_cards aggregates)
     if (def.completionField && employerExtras?.completionFlags[def.completionField]) return null
 
-    // No duplicate "order" flow when this company already has a private MVR on file
+    // No duplicate "order" flow when this company already has a private MVR / PSP on file
     if (blockId === 'driver-mvr' && card?.employerCompanyMvr) return null
+    if (blockId === 'driver-psp' && card?.employerCompanyPsp) return null
 
     const pending = getPendingRequestForBlock(blockId)
 
@@ -325,18 +352,18 @@ export default function CareerCardModal({
       />
     )
 
-    // MVR special case: add the paid "Order MVR" button
+    // MVR / PSP: same FCRA consent gate + company-wallet payment before Accio submit
     if (blockId === 'driver-mvr') {
       const consentReady = employerExtras?.hasBgcheckConsent === true
       return (
         <div className="flex items-center gap-2">
           {actionButton}
           <button
-            onClick={() => setShowMvrOrderModal(true)}
-            disabled={!consentReady || mvrOrderSuccess}
+            onClick={() => { setAccioOrderProduct('mvr'); setShowAccioOrderModal(true) }}
+            disabled={!consentReady || mvrEmployerOrderDone}
             title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              mvrOrderSuccess
+              mvrEmployerOrderDone
                 ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
                 : consentReady
                   ? isDarkTheme(theme)
@@ -347,10 +374,41 @@ export default function CareerCardModal({
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {mvrOrderSuccess ? (
+            {mvrEmployerOrderDone ? (
               <><CheckCircle className="w-3 h-3" /> Ordered</>
             ) : (
               <><CreditCard className="w-3 h-3" /> Order MVR</>
+            )}
+          </button>
+        </div>
+      )
+    }
+
+    if (blockId === 'driver-psp') {
+      const consentReady = employerExtras?.hasPspFmcsaConsent === true
+      return (
+        <div className="flex items-center gap-2">
+          {actionButton}
+          <button
+            onClick={() => { setAccioOrderProduct('psp'); setShowAccioOrderModal(true) }}
+            disabled={!consentReady || pspEmployerOrderDone}
+            title={consentReady ? 'Order PSP' : 'Waiting for candidate to sign FMCSA PSP disclosure'}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pspEmployerOrderDone
+                ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+                : consentReady
+                  ? isDarkTheme(theme)
+                    ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 cursor-pointer'
+                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 cursor-pointer'
+                  : isDarkTheme(theme)
+                    ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {pspEmployerOrderDone ? (
+              <><CheckCircle className="w-3 h-3" /> Ordered</>
+            ) : (
+              <><CreditCard className="w-3 h-3" /> Order PSP</>
             )}
           </button>
         </div>
@@ -630,17 +688,20 @@ export default function CareerCardModal({
 
   // ── MVR order sub-modal ──────────────────────────────────────────────────
 
-  const mvrOrderModalContent = showMvrOrderModal ? (
+  const accioOrderModalContent = showAccioOrderModal ? (
     <MvrOrderModal
+      key={accioOrderProduct}
+      orderProduct={accioOrderProduct}
       walletAddress={walletAddress}
       employerCompany={employerCompany}
       candidateName={card?.name}
       bgcheckConsentFormData={employerExtras?.bgcheckConsentFormData ?? null}
-      loading={mvrOrderLoading}
-      error={mvrOrderError}
-      success={mvrOrderSuccess}
-      onOrder={handleMvrOrder}
-      onClose={() => { setShowMvrOrderModal(false); setMvrOrderError(null) }}
+      pspFmcsaConsentFormData={employerExtras?.pspFmcsaConsentFormData ?? null}
+      loading={accioOrderLoading}
+      error={accioOrderError}
+      success={accioOrderProduct === 'mvr' ? mvrEmployerOrderDone : pspEmployerOrderDone}
+      onOrder={handleAccioEmployerOrder}
+      onClose={() => { setShowAccioOrderModal(false); setAccioOrderError(null) }}
       theme={theme}
     />
   ) : null
@@ -649,7 +710,7 @@ export default function CareerCardModal({
     <>
       {modalContent}
       {recruitModalContent}
-      {mvrOrderModalContent}
+      {accioOrderModalContent}
     </>
   )
 }
@@ -675,10 +736,12 @@ interface MvrOrderFields {
 // candidate's MvrOrderForm layout so employers see the same fields.
 
 function MvrOrderModal({
+  orderProduct = 'mvr',
   walletAddress,
   employerCompany,
   candidateName,
   bgcheckConsentFormData,
+  pspFmcsaConsentFormData,
   loading,
   error,
   success,
@@ -686,10 +749,12 @@ function MvrOrderModal({
   onClose,
   theme,
 }: {
+  orderProduct?: 'mvr' | 'psp'
   walletAddress: string
   employerCompany: { id: string; walletAddress: string | null } | null
   candidateName?: string
   bgcheckConsentFormData: Record<string, unknown> | null
+  pspFmcsaConsentFormData: Record<string, unknown> | null
   loading: boolean
   error: string | null
   success: boolean
@@ -697,7 +762,9 @@ function MvrOrderModal({
   onClose: () => void
   theme: string
 }) {
-  const fd = bgcheckConsentFormData as {
+  const consentSnapshot =
+    orderProduct === 'psp' ? pspFmcsaConsentFormData : bgcheckConsentFormData
+  const fd = consentSnapshot as {
     firstName?: string
     lastName?: string
     email?: string
@@ -758,10 +825,12 @@ function MvrOrderModal({
     isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
   }`
 
+  const productTitle = orderProduct === 'mvr' ? 'MVR' : 'PSP'
+
   return (
     <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={10001}>
       <ModalHeader
-        title="Order MVR"
+        title={orderProduct === 'mvr' ? 'Order MVR' : 'Order PSP'}
         subtitle={candidateName || 'Candidate'}
         onClose={onClose}
       />
@@ -771,10 +840,12 @@ function MvrOrderModal({
           <div className="p-8 text-center">
             <CheckCircle className={`w-12 h-12 mx-auto mb-3 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
             <h4 className={`text-lg font-semibold mb-1 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-              MVR Order Submitted
+              {productTitle} order submitted
             </h4>
             <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-              Results will appear on the candidate&apos;s career card once processed.
+              {orderProduct === 'mvr'
+                ? "Results will appear on the candidate's career card once processed."
+                : 'This order is private to your company (FCRA). The candidate’s public card is not updated.'}
             </p>
             <button
               onClick={onClose}
@@ -788,7 +859,9 @@ function MvrOrderModal({
             {/* Pre-fill notice */}
             {fd && (
               <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-400/70' : 'text-teal-600'}`}>
-                Pre-filled from signed disclosure — edit if needed
+                {orderProduct === 'psp'
+                  ? 'Pre-filled from signed FMCSA PSP disclosure — edit if needed'
+                  : 'Pre-filled from signed disclosure — edit if needed'}
               </p>
             )}
 
@@ -880,7 +953,7 @@ function MvrOrderModal({
             {loading && (
               <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${isDarkTheme(theme) ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting MVR order...
+                Submitting {productTitle} order...
               </div>
             )}
 
@@ -901,16 +974,29 @@ function MvrOrderModal({
                       Fill out all required fields to enable payment
                     </p>
                   )}
-                  <MvrPaymentButton
-                    userAddress={walletAddress}
-                    payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
-                    companyWalletAddress={employerCompany?.walletAddress ?? undefined}
-                    companyId={employerCompany?.id}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={(msg) => console.error('[MVR PAYMENT]', msg)}
-                    disabled={!isFormValid || loading}
-                    userType="employer"
-                  />
+                  {orderProduct === 'mvr' ? (
+                    <MvrPaymentButton
+                      userAddress={walletAddress}
+                      payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
+                      companyWalletAddress={employerCompany?.walletAddress ?? undefined}
+                      companyId={employerCompany?.id}
+                      onPaymentSuccess={handlePaymentSuccess}
+                      onPaymentError={(msg) => console.error('[MVR PAYMENT]', msg)}
+                      disabled={!isFormValid || loading}
+                      userType="employer"
+                    />
+                  ) : (
+                    <PspPaymentButton
+                      userAddress={walletAddress}
+                      payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
+                      companyWalletAddress={employerCompany?.walletAddress ?? undefined}
+                      companyId={employerCompany?.id}
+                      onPaymentSuccess={handlePaymentSuccess}
+                      onPaymentError={(msg) => console.error('[PSP PAYMENT]', msg)}
+                      disabled={!isFormValid || loading}
+                      userType="employer"
+                    />
+                  )}
                 </div>
               )}
             </div>

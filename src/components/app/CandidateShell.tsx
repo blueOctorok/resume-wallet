@@ -27,6 +27,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'general-resume',
   'employment-verification',
   'mvr',
+  'psp',
   'portfolio',
   'github',
   // 'jobs' intentionally omitted — legacy nav targets get redirected to
@@ -77,6 +78,11 @@ const CandidateHuntDesk = dynamic(
 const MvrOrderForm = dynamic(
   () => import('@/components/MvrOrderForm').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading MVR order form...' fullScreen={false} /> }
+)
+
+const PspOrderForm = dynamic(
+  () => import('@/components/PspOrderForm').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Loading PSP order form...' fullScreen={false} /> }
 )
 
 const PortfolioPage = dynamic(
@@ -216,6 +222,14 @@ export default function CandidateShell() {
     return (
       <div className='max-w-2xl mx-auto'>
         <MvrOrderForm userAddress={user?.address ?? ''} onBack={goBack} />
+      </div>
+    )
+  }
+
+  if (currentPage === 'psp') {
+    return (
+      <div className='max-w-2xl mx-auto'>
+        <PspOrderForm userAddress={user?.address ?? ''} onBack={goBack} />
       </div>
     )
   }

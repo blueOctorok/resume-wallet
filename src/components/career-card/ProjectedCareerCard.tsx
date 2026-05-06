@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLink } from 'lucide-react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLink, FileWarning } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
@@ -19,13 +19,14 @@ import type {
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import CareerCardDynamicSections from '@/components/career-card/CareerCardDynamicSections'
-import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
+import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
 import {
   ResumeSection,
   DotAppSection,
   MvrSection,
+  PspSection,
   CdlSection,
   PortfolioSection,
   GitHubSection,
@@ -660,6 +661,42 @@ export default function ProjectedCareerCard({
           </div>
         )}
 
+        {mode === 'employer' && data.employerCompanyPsp && (
+          <div
+            className={cn(
+              'rounded-xl border p-4',
+              isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200',
+            )}
+          >
+            <div className='mb-3 flex items-center gap-2'>
+              <FileWarning className={cn('h-4 w-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                PSP — private to your company
+              </h3>
+            </div>
+            <div className='grid grid-cols-2 gap-3 text-sm sm:grid-cols-3'>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Order status</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyPsp.orderStatus}
+                </p>
+              </div>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>DL state</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyPsp.licenseState}
+                </p>
+              </div>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Vendor</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyPsp.resultSummary?.resultStatus ?? 'Pending'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Empty state (self / construct) ── */}
         {(mode === 'self' || mode === 'construct') && data.sections.length === 0 && (
           <div
@@ -687,7 +724,10 @@ export default function ProjectedCareerCard({
         )}
 
         {/* ── Empty state: employer viewing candidate with no hub blocks on card ── */}
-        {mode === 'employer' && data.sections.length === 0 && !data.employerCompanyMvr && (
+        {mode === 'employer' &&
+          data.sections.length === 0 &&
+          !data.employerCompanyMvr &&
+          !data.employerCompanyPsp && (
           <div
             className={cn(
               'rounded-2xl border border-dashed p-8 text-center',
@@ -779,6 +819,16 @@ function SectionRenderer({
       return (
         <MvrSection
           data={section.data as MvrData}
+          mode={mode}
+          isDark={isDark}
+          walletAddress={walletAddress}
+          onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
+        />
+      )
+    case 'driver-psp':
+      return (
+        <PspSection
+          data={section.data as PspData}
           mode={mode}
           isDark={isDark}
           walletAddress={walletAddress}

@@ -18,6 +18,7 @@ import {
   Link,
   GitBranch,
   Mail,
+  FileWarning,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -103,6 +104,18 @@ function MvrIllustration({ accentText, isDark }: IllustrationProps) {
         <div className='absolute -bottom-0.5 -right-1 rounded-full bg-green-500 p-0.5'>
           <Check className='h-2.5 w-2.5 text-white' />
         </div>
+      </div>
+    </IllustrationFrame>
+  )
+}
+
+/** FMCSA crash / inspection history — distinct from DMV MVR shield */
+function PspIllustration({ accentText, isDark }: IllustrationProps) {
+  const ring = isDark ? 'ring-amber-400/35' : 'ring-amber-500/25'
+  return (
+    <IllustrationFrame accentText={accentText} isDark={isDark}>
+      <div className={cn('relative rounded-xl p-1 ring-1', ring)}>
+        <FileWarning className={cn('h-9 w-9 drop-shadow-sm', accentText)} />
       </div>
     </IllustrationFrame>
   )
@@ -195,6 +208,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'developer-resume':       ResumeIllustration,
   'driver-dot-application': DotAppIllustration,
   'driver-mvr':             MvrIllustration,
+  'driver-psp':             PspIllustration,
   'driver-cdl-credentials': CdlIllustration,
   'developer-portfolio':    PortfolioIllustration,
   'developer-github':       GithubIllustration,

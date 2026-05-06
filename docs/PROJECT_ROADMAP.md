@@ -1,6 +1,158 @@
-# Storm — Complete Project Roadmap
+# Storm — Project Roadmap
 
-## 🌉 **Storm Apply Bridge — career card for external jobs** (May 2026 — Done)
+## Strategic Direction (May 2026)
+
+### What Storm IS
+
+Storm is a **portable, composable DQ (Driver Qualification) file platform**. Drivers build their compliance file once and take it everywhere. Staffing agencies and carriers receive pre-assembled, partially-verified DQ files instead of starting from scratch with every driver.
+
+**Employer-focused first, candidate second.** Revenue and product decisions prioritize what staffing agencies (Pace Drivers) and carriers need. Candidates benefit because a better DQ file = faster placement = more job opportunities.
+
+### The three product layers
+
+| Layer | Audience | Purpose |
+|-------|----------|---------|
+| **DQ File** | Carriers & staffing agencies | Complete federal compliance package — DOT app, MVR, employment verifications, medical cert, road test cert, ELDT, annual certifications. The actual product that saves carriers 2-4 weeks of onboarding. |
+| **Career Card** | Employers discovering candidates | Live verified profile behind a QR code / link. What employers see when they want more than a resume. Trust layer showing verification status. |
+| **Resume PDF** | External job sites & ATSs | Distribution vehicle. A normal resume that speaks every ATS's language, with a QR code + link back to the career card. The Trojan horse that gets Storm into the hiring pipeline. |
+
+### Blockchain policy — honest usage only
+
+Blockchain is an immutable timestamp ledger. It proves data existed at a time and hasn't been altered. It does NOT make data true.
+
+**Use blockchain ONLY when all three conditions are met:**
+1. Data came from a **third-party source** (not the candidate)
+2. There's a **real incentive** for someone to alter the result after the fact
+3. An employer needs to **independently verify** the result without trusting Storm
+
+| Blockchain YES | Blockchain NO |
+|----------------|---------------|
+| MVR results (Accio/DMV pull) | Resume PDF (self-reported) |
+| Employment verification answers (previous employer responses) | DOT application form (self-reported) |
+| Future: CDLIS CDL lookup results | Self-reported CDL info |
+| Future: FMCSA Clearinghouse query results | Education, skills, references |
+| Future: PSP crash/inspection data | Any candidate-entered data |
+
+**Language rules:**
+- NEVER say "blockchain-verified" for self-reported data
+- Say "third-party verified, tamper-proof on-chain" for MVR + employment verification
+- Say "on-file" or "submitted" for DOT app, resume, certificates
+- The pitch: "Storm can't edit your MVR results even if we wanted to. Here's the proof."
+
+### CRA compliance — the iron-clad rule
+
+Storm is NOT a Consumer Reporting Agency (CRA). To stay that way:
+
+| Who ordered the report | Who can see it | Goes on career card? | Storm API serves it? |
+|------------------------|---------------|---------------------|---------------------|
+| **Driver self-orders** (driver pays) | Driver + anyone driver shares with | ✅ Yes | ✅ Yes (driver authorizes) |
+| **Employer orders** (employer pays) | That employer ONLY | ❌ Never | ❌ Never |
+
+**If an employer (Pace, a carrier, anyone) orders an MVR, PSP, or any background check on a driver, that report is scoped to that employer permanently.** It cannot appear on the driver's career card, cannot be shown to other employers, and cannot be served through any Storm API to third parties. Violating this makes Storm a CRA under FCRA.
+
+The driver's portable DQ file only contains **driver-owned** data: self-ordered MVR, self-initiated employment verifications, their DOT app, their uploaded certificates.
+
+### The DQ file — what's required (49 CFR 391.51)
+
+| # | DQ Component | CFR | Storm status | Effort remaining |
+|---|---|---|---|---|
+| 1 | Employment Application | §391.21 | ✅ **Done** | Full 3-form DOT app wizard, PDF export, bidirectional mapper |
+| 2 | Motor Vehicle Record | §391.23 | ✅ **Done** | Accio/KeyBackground integration, real state DMV pull |
+| 3 | Previous Employer Safety Performance History | §391.23 | ✅ **Done** | 3-attempt email outreach, token portal, 6 FMCSA questions |
+| 3b | FMCSA PSP (crash / inspection) via Accio | §391.23 | 🟡 **In progress** | Standalone `driver-psp` block, orders + webhook; **FMCSA PSP Disclosure & Authorization** (`psp_consents` + `PspDisclosureForm`) before live orders; **result XML parser deferred** (stored raw, `needs_review`) |
+| 4 | Road Test Certificate or CDL Equivalent | §391.31/33 | 🔲 **Upload needed** | File upload + metadata (examiner, date, vehicle, result) |
+| 5 | Medical Examiner's Certificate | §391.43 | 🔲 **Upload needed** | File upload + metadata (examiner, registry ID, expiration) |
+| 6 | Annual MVR Review | §391.25 | 🔲 **Build** | Re-order MVR annually + reviewer signature |
+| 7 | Annual Certificate of Violations | §391.27 | 🔲 **Build** | Simple annual form (driver self-certifies) |
+| 8 | SPE Certificate | §391.49 | 🔲 **Upload** | Conditional — only if driver has a waiver |
+| 9 | Medical Variance Documentation | §391.41(b) | 🔲 **Upload** | Conditional — only if driver has exemption |
+| 10 | ELDT Certificate | §380.503 | 🔲 **Upload** | Conditional — CDLs issued after Feb 2022 |
+
+Items 1-3 (the hard ones) are done. Items 4-10 are document uploads and simple forms.
+
+### Revenue model
+
+| Service | Who pays | Price range |
+|---------|----------|-------------|
+| DQ file access (driver-owned data) | Carrier or agency | $50-100 per pull |
+| Fresh MVR pull (facilitated) | Carrier or agency (or driver) | $30-50 |
+| Employment verification (new outreach) | Carrier or agency | $25-50 per employer |
+| Driver self-orders MVR | Driver | $20-40 |
+| Annual DQ file renewal (fresh MVR + certs) | Driver or carrier | $30-50/year |
+| Stormi AI credits | Driver | $1-5 packs |
+| STORM token rewards | Platform (engagement) | Earned, not purchased |
+
+### Long-term vision: Storm as the DQ file API
+
+Once enough drivers have complete DQ files in Storm:
+- Carriers/agencies hit Storm API to pull a driver's DQ file (with driver consent)
+- Driver gets notification → approves access → carrier receives complete compliance package
+- Fresh MVR can be facilitated on demand (Storm orders through Accio, result goes to carrier)
+- Storm becomes the **Plaid of DQ files** — the infrastructure layer that connects verified driver data to hiring systems
+
+### Competitive positioning
+
+| What Storm IS | What Storm is NOT |
+|---------------|-------------------|
+| Portable DQ file builder | A job board competing with Indeed |
+| Verification layer (MVR, employment, future CDLIS) | "Blockchain-verified resumes" (marketing that falls apart) |
+| Staffing agency compliance tool | A LinkedIn clone with a feed |
+| Resume generator with career card QR link | A career card that replaces resumes |
+| Fill-once DOT app (TurboTax for DQ files) | A mass-apply automation tool |
+
+### Pace Drivers as the wedge
+
+Pace is the initial customer. Everything built should answer: "Does this help Pace place drivers faster?"
+
+- Pace onboards drivers → drivers build DQ files in Storm
+- Pace sees compliance status across their driver pool
+- Pace sends carriers a Storm link → carrier sees pre-assembled DQ file
+- Carrier trusts Pace placements more → Pace closes faster → more drivers join
+
+### DOT app "fill once, use everywhere"
+
+The DOT employment application's value is **portability**, not verification. A driver fills out the federal 3-form application once in Storm and uses it for every carrier. Storm already has:
+- Full 3-form wizard (`DotApplicationFlow`) with all FMCSA-required fields
+- Bidirectional profile ↔ form mappers (`dot-form-mapper.ts`)
+- PDF export (`/api/driver-applications/[id]/export-pdf`)
+- AI prefill from resume upload
+- MVR data auto-fills accident/violation sections
+
+**Next:** PDF export needs to match standard DOT form layout that carriers expect (not a Storm-branded document).
+
+### Resume as distribution vehicle
+
+The resume is NOT the product — it's the distribution mechanism for the career card.
+
+- Storm generates a professional resume PDF from career card block data
+- Every resume has a QR code + link to the full career card at the bottom
+- Candidate uploads this resume to Indeed, ZipRecruiter, company ATSs — it works everywhere
+- Employer opens resume, sees QR → lands on career card → sees verified DQ file
+- For Storm-native employers (Pace), they skip the resume and go straight to the DQ file
+
+Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS text) with QR code. Needs rework to output a standard resume format instead of a "career card export."
+
+---
+
+## 🚧 Next Up — DQ File Completion (May–June 2026)
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **Phase 1 — Language cleanup** | 🔲 Todo | Remove "blockchain-verified" from self-reported data UI. Rebrand resume/DOT verification status labels. Update meta tags, homepage copy, Stormi prompts. |
+| **Phase 2 — Document upload blocks** | 🔲 Todo | Medical cert, road test cert, ELDT cert, SPE cert, medical variance — each a small block with file upload + metadata fields. |
+| **Phase 3 — Annual compliance forms** | 🔲 Todo | Annual certificate of violations (simple form). Annual MVR review trigger (re-order via Accio + reviewer field). |
+| **Phase 4 — DOT app PDF format** | 🔲 Todo | Rework export to match standard DOT form layout carriers expect. |
+| **Phase 5 — Resume PDF rework** | 🔲 Todo | Generate a real resume (not career card export) from block data, with QR code footer linking to career card. |
+| **Phase 6 — Agency dashboard** | 🔲 Todo | Pace-specific view: multi-candidate compliance status, DQ file completeness per driver, share links for carriers. |
+| **Phase 7 — CDL verification API** | 🔲 Future | Investigate Accio/SambaSafety CDLIS lookup. Turns self-reported CDL into confirmed CDL. |
+| **Phase 8 — FMCSA Clearinghouse** | 🔲 Future | Requires employer credentials. Facilitate query through Pace's Clearinghouse account. |
+| **Phase 9 — DQ file API** | 🔲 Future | External API for carriers to pull driver-owned DQ files with consent. The long-term product. |
+
+---
+
+## ✅ Completed Work (reference)
+
+### 🌉 **Storm Apply Bridge — career card for external jobs** (May 2026 — Done)
 
 **Product principle:** The career card must travel with every application — even external ones. The bridge modal is the missing link between "I built a verified identity" and "I actually used it to apply."
 

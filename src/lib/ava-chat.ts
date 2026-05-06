@@ -64,6 +64,7 @@ function deriveBlockStatus(
     resumes: Array<{ sourceRole?: string }>
     dotApplications: Array<{ isComplete?: boolean }>
     mvrRecords: Array<{ orderStatus?: string }>
+    pspRecords: Array<{ orderStatus?: string }>
     portfolio: { portfolioUrl: string | null } | null
     github: { username: string | null } | null
   },
@@ -87,6 +88,13 @@ function deriveBlockStatus(
       const processing = hubStore.mvrRecords.length > 0
       return completed ? 'complete' : processing ? 'in-progress' : 'empty'
     }
+    case 'driver-psp': {
+      const completed = hubStore.pspRecords.some(
+        (p) => p.orderStatus === 'completed' || p.orderStatus === 'needs_review'
+      )
+      const processing = hubStore.pspRecords.length > 0
+      return completed ? 'complete' : processing ? 'in-progress' : 'empty'
+    }
     case 'developer-portfolio':
       return hubStore.portfolio?.portfolioUrl ? 'complete' : 'empty'
     case 'developer-github':
@@ -104,11 +112,12 @@ export function useHubContext(): HubContext {
   const resumes = useDriverHubStore((s) => s.resumes)
   const dotApplications = useDriverHubStore((s) => s.dotApplications)
   const mvrRecords = useDriverHubStore((s) => s.mvrRecords)
+  const pspRecords = useDriverHubStore((s) => s.pspRecords)
   const portfolio = useDriverHubStore((s) => s.portfolio)
   const github = useDriverHubStore((s) => s.github)
   const stats = useDriverHubStore((s) => s.stats)
 
-  const hubStore = { resumes, dotApplications, mvrRecords, portfolio, github }
+  const hubStore = { resumes, dotApplications, mvrRecords, pspRecords, portfolio, github }
 
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState<number | null | undefined>(undefined)
   useEffect(() => {
@@ -142,15 +151,16 @@ export function useHubContext(): HubContext {
               : 'Empty — add the main details employers expect.',
         }
       })
-  }, [installedBlocks, resumes, dotApplications, mvrRecords, portfolio, github])
+  }, [installedBlocks, resumes, dotApplications, mvrRecords, pspRecords, portfolio, github])
 
   const verifiedBlockCount = useMemo(() => {
     let n = 0
     if (resumes.some((r) => String(r.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
     if (dotApplications.some((a) => String(a.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
     if (mvrRecords.some((m) => m.orderStatus === 'completed' || m.orderStatus === 'needs_review')) n += 1
+    if (pspRecords.some((p) => p.orderStatus === 'completed' || p.orderStatus === 'needs_review')) n += 1
     return n
-  }, [resumes, dotApplications, mvrRecords])
+  }, [resumes, dotApplications, mvrRecords, pspRecords])
 
   return {
     occupation: onboarding?.occupation,

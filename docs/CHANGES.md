@@ -4,6 +4,41 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Strategic Pivot — Portable DQ File Platform** (May 2026)
+
+**Decision:** Storm is no longer positioning as a "blockchain-verified career platform" competing with Indeed/LinkedIn. It is a **portable, composable DQ (Driver Qualification) file platform** focused on staffing agencies and carriers.
+
+### Key strategic decisions:
+
+1. **Employer-focused first, candidate second.** Revenue and product decisions prioritize what Pace Drivers (staffing agency) and carriers need. Candidates benefit indirectly.
+
+2. **DQ file is the product.** The career card is the verification layer behind a QR code. The resume PDF is the distribution vehicle into ATSs. The DQ file (DOT app + MVR + employment verifications + certificates) is what carriers actually pay for.
+
+3. **Blockchain only for third-party verification results.** Self-reported data (resume, DOT app, CDL info, education, skills) is NOT "blockchain-verified" — it's "on-file" or "submitted." Only MVR results (Accio/DMV), employment verification answers (previous employer responses), and future CRA lookups get hashed on-chain. The value is tamper-proofing: proving Storm didn't alter a third-party result.
+
+4. **CRA compliance is non-negotiable.** Employer-ordered reports (MVR, PSP, background checks) NEVER appear on the candidate's career card or get served to other employers. Only driver-self-ordered/paid verifications flow into the portable DQ file. Violating this makes Storm a CRA under FCRA.
+
+5. **Resume is the Trojan horse.** External job sites expect resume PDFs. Storm generates a professional resume from career card data with a QR code linking to the full career card. The career card is what employers discover after the resume gets them through the ATS.
+
+6. **DOT app value is portability, not verification.** "Fill once, use everywhere" — a driver fills out the federal DOT employment application once and exports it to any carrier. The PDF export needs to match the standard form layout carriers expect.
+
+7. **Long-term: Storm as the DQ file API.** Once enough drivers have complete DQ files, carriers/agencies can pull them via API (with driver consent). Storm becomes infrastructure, not a job board.
+
+### No code changes in this entry — strategic direction only. See `PROJECT_ROADMAP.md` for full plan.
+
+---
+
+## **PSP (FMCSA) order block** (May 2026)
+
+- **Composable hub:** `driver-psp` block (`block-registry`), hub illustration, journey step, My Files / construct hub docs (`psp` row type), Accio XML + dedicated `/api/psp/webhook` (raw XML → `psp_results`; skips `block_driver_psp` when `ordered_by_company_id` is set — FCRA).
+- **Data:** `psp_orders`, `psp_results`, `block_driver_psp` (migration `071`); `candidate_requests` allows `psp_order`.
+- **FMCSA consent (migration `073`):** `psp_consents` stores the stand-alone PSP Disclosure & Authorization (mandated wording). **GET/POST** `/api/psp/consent` (`?self=1` for unconsumed self-order), **GET** `/api/psp/consent/[id]` for view/PDF. Self-orders pass `pspConsentId` into **POST** `/api/psp/order` (consent row is **consumed** on successful submit). Employer **POST** `/api/employer/psp/order` requires a company-scoped `psp_consents` row (no longer `bgcheck_consents`). Candidate inbox **PSP** requests use **`PspDisclosureForm`**; **MVR** requests still use **`BackgroundCheckDisclosure`** (`/api/candidate/bgcheck-consent`). Talent API exposes **`hasPspFmcsaConsent`** + **`pspFmcsaConsentFormData`** for employer order prefill.
+- **APIs:** `/api/psp/order`, `/api/psp/payment`, `/api/psp/status/[orderId]`, `/api/employer/psp/order`, `/api/wallet/psp-config`; hub returns **self-ordered** PSP rows only (`ordered_by_company_id IS NULL`).
+- **Career card:** `PspSection`, projected fetch, employer talent modal (request + company-wallet order like MVR), `employerCompanyPsp` panel on read-only employer card.
+- **DB view:** Migration `072` adds `has_psp` / `psp_count` and driver completeness weight on `career_cards` (drop/recreate view + `search_talent`).
+
+---
+
 ## **Storm Apply Bridge — career card for external jobs** (May 2026)
 
 - **Problem:** Adzuna (external) jobs used `window.open` to dump users on the employer site with nothing from their career card. The verified identity Storm builds became useless at the most critical moment — application time.

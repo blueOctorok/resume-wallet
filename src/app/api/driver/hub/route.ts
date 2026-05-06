@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         resumes: [],
         dotApplications: [],
         mvrRecords: [],
+        pspRecords: [],
         portfolio: null,
         github: null,
         jobApplications: [],
@@ -89,6 +90,8 @@ export async function GET(request: NextRequest) {
       dotAppsResult,
       mvrOrdersResult,
       mvrResultsResult,
+      pspOrdersResult,
+      pspResultsResult,
       jobAppsResult,
       paymentsResult,
       portfolioRow,
@@ -137,6 +140,20 @@ export async function GET(request: NextRequest) {
       supabase
         .from('mvr_results')
         .select('id, mvr_order_id, license_state, license_status, total_points, violation_count, result_status, received_at')
+        .eq('driver_user_id', user.id)
+        .order('received_at', { ascending: false }),
+
+      // 13b. PSP orders
+      supabase
+        .from('psp_orders')
+        .select('id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at')
+        .eq('driver_user_id', user.id)
+        .is('ordered_by_company_id', null)
+        .order('created_at', { ascending: false }),
+
+      supabase
+        .from('psp_results')
+        .select('id, psp_order_id, result_status, received_at')
         .eq('driver_user_id', user.id)
         .order('received_at', { ascending: false }),
 
@@ -259,6 +276,24 @@ export async function GET(request: NextRequest) {
 
     // Process MVR records (combine orders with results)
     const mvrResults = mvrResultsResult.data || []
+    const pspResults = pspResultsResult.data || []
+    const pspRecords = (pspOrdersResult.data || []).map((order) => {
+      const result = pspResults.find((r) => r.psp_order_id === order.id)
+      return {
+        id: order.id,
+        orderStatus: order.status,
+        licenseState: order.dl_state,
+        createdAt: order.created_at,
+        completedAt: order.completed_at,
+        feeAmount: order.fee_amount,
+        feeCurrency: order.fee_currency || 'USD',
+        orderedAt: order.ordered_at,
+        hasResult: !!result,
+        resultId: result?.id || null,
+        resultStatus: result?.result_status || null,
+      }
+    })
+
     const mvrRecords = (mvrOrdersResult.data || []).map(order => {
       const result = mvrResults.find(r => r.mvr_order_id === order.id)
       return {
@@ -306,6 +341,18 @@ export async function GET(request: NextRequest) {
       })
     })
 
+    pspRecords.forEach((psp) => {
+      transactions.push({
+        id: `psp-${psp.id}`,
+        type: 'PSP_ORDER',
+        description: `PSP Report - ${psp.licenseState}`,
+        amount: psp.feeAmount ? parseFloat(String(psp.feeAmount)) : null,
+        currency: psp.feeCurrency,
+        status: psp.orderStatus === 'completed' || psp.orderStatus === 'needs_review' ? 'COMPLETED' : 'PENDING',
+        createdAt: psp.orderedAt || psp.createdAt,
+      })
+    })
+
     // Add paid resume transactions
     resumes.filter(r => r.isPaid).forEach(resume => {
       transactions.push({
@@ -350,7 +397,7 @@ export async function GET(request: NextRequest) {
     const displayNameFallback = profileName ?? latestAppWithName?.applicantName ?? null
 
     // Calculate profile completeness
-    const profileCompleteness = calculateProfileCompleteness(profile, resumes, dotApplications, mvrRecords)
+    const profileCompleteness = calculateProfileCompleteness(profile, resumes, dotApplications, mvrRecords, pspRecords)
 
     const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString()
     const [{ count: cardViewsWeek }, { count: cardViewsTotal }] = await Promise.all([
@@ -410,6 +457,7 @@ export async function GET(request: NextRequest) {
       resumes,
       dotApplications,
       mvrRecords,
+      pspRecords,
       portfolio,
       github,
       jobApplications,
@@ -436,7 +484,8 @@ function calculateProfileCompleteness(
   profile: any,
   resumes: any[],
   dotApplications: any[],
-  mvrRecords: any[]
+  mvrRecords: any[],
+  pspRecords: any[] = [],
 ): number {
   let score = 0
   const weights = {
@@ -448,6 +497,7 @@ function calculateProfileCompleteness(
     dotApplication: 15,    // Completed DOT application
     verifiedDotApp: 5,     // Bonus for verified DOT app
     mvr: 5,                // Has MVR record
+    psp: 3,                // Has PSP record
   }
 
   // Basic profile exists
@@ -487,6 +537,10 @@ function calculateProfileCompleteness(
   // Has MVR record
   if (mvrRecords.length > 0 && mvrRecords.some(m => m.hasResult || m.orderStatus === 'completed')) {
     score += weights.mvr
+  }
+
+  if (pspRecords.length > 0 && pspRecords.some((p) => p.hasResult || p.orderStatus === 'completed')) {
+    score += weights.psp
   }
 
   return Math.min(100, score)

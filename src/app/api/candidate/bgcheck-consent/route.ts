@@ -5,9 +5,10 @@ import { createNotification } from '@/lib/create-notification'
 /**
  * POST /api/candidate/bgcheck-consent
  *
- * Records a driver's signed authorization for a background check.
+ * Records a driver's signed authorization for the general FCRA / MVR disclosure.
  * - Stores the consent record in bgcheck_consents
  * - Marks the corresponding candidate_requests entry as 'completed'
+ * PSP / driver-psp requests use POST /api/psp/consent (FMCSA stand-alone form), not this route.
  *
  * Body: {
  *   requestId: string     — candidate_requests.id being fulfilled
@@ -56,13 +57,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Request not found' }, { status: 404 })
   }
 
-  const isMvrConsentRequest =
+  // PSP uses FMCSA-only consent via POST /api/psp/consent — never store PSP on bgcheck_consents.
+  const isBgcheckConsentRequest =
     candidateRequest.request_type === 'mvr_order' ||
-    (candidateRequest.request_type === 'block_request' &&
-      candidateRequest.target_block_type === 'driver-mvr')
+    (candidateRequest.request_type === 'block_request' && candidateRequest.target_block_type === 'driver-mvr')
 
-  if (!isMvrConsentRequest) {
-    return NextResponse.json({ error: 'Consent only applies to MVR / background check requests' }, { status: 400 })
+  if (!isBgcheckConsentRequest) {
+    return NextResponse.json(
+      { error: 'This disclosure applies to MVR / driver-mvr requests only. PSP uses the FMCSA PSP form.' },
+      { status: 400 },
+    )
   }
 
   if (!['pending', 'viewed'].includes(candidateRequest.status)) {

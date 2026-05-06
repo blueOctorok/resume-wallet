@@ -12,6 +12,7 @@ import type {
   ResumeData,
   DotAppData,
   MvrData,
+  PspData,
   CdlData,
   PortfolioData,
   GitHubData,
@@ -44,6 +45,14 @@ const EMPTY_SECTION_DATA: Record<string, unknown> = {
   'general-resume': EMPTY_STORM_RESUME_CARD,
   'driver-dot-application': { id: '', status: 'empty', isComplete: false, createdAt: '' } satisfies DotAppData,
   'driver-mvr': { orderId: '', orderStatus: 'none', licenseState: '', orderedAt: '', completedAt: null, results: null } satisfies MvrData,
+  'driver-psp': {
+    orderId: '',
+    orderStatus: 'none',
+    licenseState: '',
+    orderedAt: '',
+    completedAt: null,
+    resultSummary: null,
+  } satisfies PspData,
   'driver-cdl-credentials': { cdlNumber: null, cdlState: null, cdlClass: null, cdlExpiration: null, endorsements: [], restrictions: [] } satisfies CdlData,
   'developer-portfolio': { portfolioUrl: null } satisfies PortfolioData,
   'developer-github': { username: null, avatarUrl: null, bio: null, publicRepos: 0, followers: 0, languages: {}, topRepos: [] } satisfies GitHubData,
@@ -292,7 +301,15 @@ async function fetchSectionData(
   blockType: SectionBlockType,
   userAvatarUrl: string | null,
 ): Promise<
-  ResumeData | DotAppData | MvrData | CdlData | PortfolioData | GitHubData | ProjectsData | null
+  | ResumeData
+  | DotAppData
+  | MvrData
+  | PspData
+  | CdlData
+  | PortfolioData
+  | GitHubData
+  | ProjectsData
+  | null
 > {
   switch (blockType) {
     case 'storm-resume':
@@ -305,6 +322,8 @@ async function fetchSectionData(
       return fetchDotAppData(supabase, userId)
     case 'driver-mvr':
       return fetchMvrData(supabase, userId)
+    case 'driver-psp':
+      return fetchPspData(supabase, userId)
     case 'driver-cdl-credentials':
       return fetchCdlData(supabase, userId)
     case 'developer-portfolio':
@@ -390,6 +409,40 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     blockchainTxHash: data.blockchain_tx_hash,
+  }
+}
+
+async function fetchPspData(supabase: SupabaseClient, userId: string): Promise<PspData | null> {
+  const { data: orders } = await supabase
+    .from('psp_orders')
+    .select('id, status, dl_state, created_at, completed_at')
+    .eq('driver_user_id', userId)
+    .is('ordered_by_company_id', null)
+    .order('created_at', { ascending: false })
+    .limit(8)
+
+  if (!orders?.length) return null
+
+  const ids = orders.map((o) => o.id)
+  const { data: resultRows } = await supabase
+    .from('psp_results')
+    .select('psp_order_id, result_status')
+    .in('psp_order_id', ids)
+
+  const resultByOrderId = new Map((resultRows ?? []).map((r) => [r.psp_order_id as string, r]))
+
+  const terminal = (s: string) => s === 'completed' || s === 'needs_review'
+  const order =
+    orders.find((o) => terminal(o.status) && resultByOrderId.has(o.id)) ?? orders[0]
+
+  const row = resultByOrderId.get(order.id)
+  return {
+    orderId: order.id,
+    orderStatus: order.status,
+    licenseState: order.dl_state,
+    orderedAt: order.created_at,
+    completedAt: order.completed_at,
+    resultSummary: row ? { resultStatus: row.result_status } : null,
   }
 }
 
@@ -638,5 +691,26 @@ export function toMvrDataFromOrderRow(order: {
           violationCount: results.violation_count,
         }
       : null,
+  }
+}
+
+/** Company-scoped PSP row for employer talent modal (raw result status only until XML parse). */
+export function toPspDataFromOrderRow(
+  order: {
+    id: string
+    status: string
+    dl_state: string
+    created_at: string
+    completed_at: string | null
+  },
+  result: { result_status: string } | null,
+): PspData {
+  return {
+    orderId: order.id,
+    orderStatus: order.status,
+    licenseState: order.dl_state,
+    orderedAt: order.created_at,
+    completedAt: order.completed_at,
+    resultSummary: result ? { resultStatus: result.result_status } : null,
   }
 }

@@ -52,7 +52,7 @@ export async function POST(
       )
     }
 
-    const validTypes = ['mvr_order', 'document_upload', 'verification', 'profile_completion', 'custom', 'block_request']
+    const validTypes = ['mvr_order', 'psp_order', 'document_upload', 'verification', 'profile_completion', 'custom', 'block_request']
     if (!requestType || !validTypes.includes(requestType)) {
       return NextResponse.json(
         { error: `requestType must be one of: ${validTypes.join(', ')}` },
@@ -164,10 +164,18 @@ export async function POST(
       requestType === 'mvr_order' ||
       (requestType === 'block_request' && targetBlockType === 'driver-mvr')
 
+    const isPspConsentPipeline =
+      requestType === 'psp_order' ||
+      (requestType === 'block_request' && targetBlockType === 'driver-psp')
+
     if (isMvrConsentPipeline) {
       // `mvr_order` and legacy `block_request`+driver-mvr are the same FCRA inbox item
       dupeQuery = dupeQuery.or(
         'request_type.eq.mvr_order,and(request_type.eq.block_request,target_block_type.eq.driver-mvr)',
+      )
+    } else if (isPspConsentPipeline) {
+      dupeQuery = dupeQuery.or(
+        'request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-psp)',
       )
     } else if (requestType === 'block_request' && targetBlockType) {
       dupeQuery = dupeQuery.eq('target_block_type', targetBlockType)
@@ -249,6 +257,7 @@ export async function POST(
 
     const requestLabels: Record<string, string> = {
       mvr_order: 'Background Check & MVR Request',
+      psp_order: 'Background Check & PSP Request',
       document_upload: 'Document Upload Request',
       verification: 'Employment Verification Request',
       profile_completion: 'Profile Completion Request',
@@ -285,7 +294,7 @@ export async function POST(
         candidateEmail,
         candidateName,
         companyName,
-        requestType: requestType as 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request',
+        requestType: requestType as 'mvr_order' | 'psp_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request',
         documentType: documentType || null,
         message: message || null,
         blockLabel: blockDef?.label ?? null,

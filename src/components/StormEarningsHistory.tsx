@@ -82,6 +82,7 @@ export default function StormEarningsHistory({
   const formatPaymentType = (type: string) => {
     const labels: Record<string, string> = {
       MVR_ORDER: 'MVR Report',
+      PSP_ORDER: 'PSP Report',
       RESUME_VERIFICATION: 'Resume Verification',
       SUBSCRIPTION: 'Subscription',
       BACKGROUND_CHECK: 'Background Check',

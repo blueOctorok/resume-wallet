@@ -20,7 +20,7 @@ export interface CandidateRequestNotificationParams {
   candidateEmail: string
   candidateName: string
   companyName: string
-  requestType: 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request'
+  requestType: 'mvr_order' | 'psp_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request'
   documentType?: string | null
   message?: string | null
   /** Block label from the registry (e.g. "Driver Resume"). Used for block_request emails. */
@@ -101,6 +101,7 @@ export async function sendNewCompanyNotification(
 
 const REQUEST_TYPE_LABELS: Record<string, string | ((p: CandidateRequestNotificationParams) => string)> = {
   mvr_order: 'Background Check & MVR Request',
+  psp_order: 'Background Check & PSP Request',
   document_upload: 'Resume Request',
   verification: 'Employment Verification Request',
   profile_completion: 'DOT Application Request',
@@ -117,6 +118,8 @@ function resolveLabel(requestType: string, params: CandidateRequestNotificationP
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
   mvr_order: () =>
     'They would like to order your Motor Vehicle Record (MVR). Log in to Storm to review and sign the required FCRA disclosure before the MVR can be ordered.',
+  psp_order: () =>
+    'They would like to order an FMCSA PSP (crash and inspection history) for you. Log in to Storm to review and sign the required FCRA disclosure before the PSP can be ordered.',
   document_upload: (p) =>
     p.documentType === 'resume'
       ? 'They are requesting your resume. Log in to Storm to upload or create one.'

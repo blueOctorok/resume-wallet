@@ -4,7 +4,7 @@ import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 /** Artifact row for hub block management (formerly “Block files”). */
 export interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp' | 'mvr' | 'portfolio' | 'github' | 'employment_verifications'
+  type: 'resume' | 'dotapp' | 'mvr' | 'psp' | 'portfolio' | 'github' | 'employment_verifications'
   title: string
   subtitle?: string
   createdAt?: string
@@ -43,6 +43,9 @@ export function pickHubDocForCareerBlock(documents: HubDocument[], blockType: st
   }
   if (blockType === 'driver-mvr') {
     return documents.find((d) => d.type === 'mvr') ?? null
+  }
+  if (blockType === 'driver-psp') {
+    return documents.find((d) => d.type === 'psp') ?? null
   }
   if (blockType === 'developer-portfolio') {
     return documents.find((d) => d.type === 'portfolio') ?? null

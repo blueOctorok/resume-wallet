@@ -1,6 +1,7 @@
 export { default as ResumeSection } from './ResumeSection'
 export { default as DotAppSection } from './DotAppSection'
 export { default as MvrSection } from './MvrSection'
+export { default as PspSection } from './PspSection'
 export { default as CdlSection } from './CdlSection'
 export { default as PortfolioSection } from './PortfolioSection'
 export { default as GitHubSection } from './GitHubSection'

@@ -63,6 +63,19 @@ export interface MvrRow {
   updated_at: string
 }
 
+/** Hub cache for FMCSA PSP / crash-inspection (candidate self-orders only). */
+export interface PspRow {
+  id: string
+  user_id: string
+  order_id: string | null
+  result_id: string | null
+  expires_at: string | null
+  report_status: string | null
+  last_ordered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface EmergencyRow {
   id: string
   user_id: string
@@ -186,6 +199,15 @@ export async function getMvrData(supabase: SupabaseClient, userId: string): Prom
   return data as MvrRow | null
 }
 
+export async function getPspData(supabase: SupabaseClient, userId: string): Promise<PspRow | null> {
+  const { data } = await supabase
+    .from('block_driver_psp')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  return data as PspRow | null
+}
+
 export async function getEmergencyContact(supabase: SupabaseClient, userId: string): Promise<EmergencyRow | null> {
   const { data } = await supabase
     .from('block_driver_emergency')
@@ -289,6 +311,14 @@ export async function saveMvrData(
   data: Partial<Omit<MvrRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
 ): Promise<void> {
   await upsert(supabase, 'block_driver_mvr', userId, data)
+}
+
+export async function savePspData(
+  supabase: SupabaseClient,
+  userId: string,
+  data: Partial<Omit<PspRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
+): Promise<void> {
+  await upsert(supabase, 'block_driver_psp', userId, data)
 }
 
 export async function saveEmergencyContact(

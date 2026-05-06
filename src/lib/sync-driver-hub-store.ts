@@ -17,6 +17,7 @@ export async function syncDriverHubFromApi(walletAddress: string): Promise<void>
       resumes: data.resumes ?? [],
       dotApplications: data.dotApplications ?? [],
       mvrRecords: data.mvrRecords ?? [],
+      pspRecords: data.pspRecords ?? [],
       jobApplications: data.jobApplications ?? [],
       stats: data.stats ?? null,
       portfolio: data.portfolio ?? null,

@@ -47,6 +47,16 @@ export interface MvrData {
   } | null
 }
 
+/** FMCSA PSP / crash-inspection — summary until Accio result XML is parsed. */
+export interface PspData {
+  orderId: string
+  orderStatus: string
+  licenseState: string
+  orderedAt: string
+  completedAt: string | null
+  resultSummary: { resultStatus: string | null } | null
+}
+
 export interface CdlData {
   cdlClass: string | null
   cdlState: string | null
@@ -112,6 +122,7 @@ export type SectionDataMap = {
   'general-resume': ResumeData
   'driver-dot-application': DotAppData
   'driver-mvr': MvrData
+  'driver-psp': PspData
   'driver-cdl-credentials': CdlData
   'developer-portfolio': PortfolioData
   'developer-github': GitHubData
@@ -189,6 +200,11 @@ export interface ProjectedCareerCard {
    * Omitted for self/public; never shown to the candidate or other employers.
    */
   employerCompanyMvr?: MvrData | null
+  /**
+   * Employer talent view only — this company's paid PSP (FCRA).
+   * Omitted for self/public; never merged into candidate-owned projection.
+   */
+  employerCompanyPsp?: PspData | null
   /**
    * The lens used to project this card. Always present in self/public views;
    * the default "Full profile" lens is returned when no specific one is

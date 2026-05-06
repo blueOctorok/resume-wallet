@@ -61,8 +61,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 })
     }
 
-    // Get consent IDs for completed MVR requests
-    const completedMvrRequestIds = (requests || [])
+    const completedBgcheckRequestIds = (requests || [])
       .filter(
         r =>
           r.status === 'completed' &&
@@ -71,15 +70,36 @@ export async function GET(request: NextRequest) {
       )
       .map(r => r.id)
 
-    let consentMap: Map<string, string> = new Map()
-    if (completedMvrRequestIds.length > 0) {
+    const completedPspRequestIds = (requests || [])
+      .filter(
+        r =>
+          r.status === 'completed' &&
+          (r.request_type === 'psp_order' ||
+            (r.request_type === 'block_request' && r.target_block_type === 'driver-psp')),
+      )
+      .map(r => r.id)
+
+    let bgcheckConsentMap: Map<string, string> = new Map()
+    if (completedBgcheckRequestIds.length > 0) {
       const { data: consents } = await supabase
         .from('bgcheck_consents')
         .select('id, request_id')
-        .in('request_id', completedMvrRequestIds)
+        .in('request_id', completedBgcheckRequestIds)
 
       if (consents) {
-        consentMap = new Map(consents.map(c => [c.request_id, c.id]))
+        bgcheckConsentMap = new Map(consents.map(c => [c.request_id, c.id]))
+      }
+    }
+
+    let pspConsentMap: Map<string, string> = new Map()
+    if (completedPspRequestIds.length > 0) {
+      const { data: pspConsents } = await supabase
+        .from('psp_consents')
+        .select('id, request_id')
+        .in('request_id', completedPspRequestIds)
+
+      if (pspConsents) {
+        pspConsentMap = new Map(pspConsents.map(c => [c.request_id, c.id]))
       }
     }
 
@@ -108,7 +128,7 @@ export async function GET(request: NextRequest) {
             logoUrl: company.logo_url,
             ownerUserId: company.employer_user_id,
           } : null,
-          consentId: consentMap.get(r.id) || null,
+          consentId: bgcheckConsentMap.get(r.id) || pspConsentMap.get(r.id) || null,
         }
       }),
       pendingCount,

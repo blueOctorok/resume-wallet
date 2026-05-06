@@ -216,6 +216,16 @@ export default function ConstructSectionWrapper({
                   <Eye className='w-3 h-3' /> View
                 </button>
               )}
+              {doc?.type === 'psp' && doc.editPage && doc.status !== 'complete' && (
+                <button type='button' onClick={() => setCurrentPage('psp')} className={cn(btn, tealBtn)}>
+                  {doc.status === 'empty' ? 'Order PSP' : 'Open'}
+                </button>
+              )}
+              {doc?.status !== 'processing' && doc?.type === 'psp' && doc.status === 'complete' && (
+                <button type='button' onClick={() => hub.setPspViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
+                  <Eye className='w-3 h-3' /> View
+                </button>
+              )}
               {doc?.canVerify && (
                 <button
                   type='button'

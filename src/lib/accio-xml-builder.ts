@@ -167,6 +167,133 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
   return xml
 }
 
+/** Same subject envelope as MVR, but only the FMCSA PSP / crash-inspection subOrder (standalone order). */
+export interface AccioPspOrderData {
+  firstName: string
+  middleName?: string
+  lastName: string
+  suffix?: string
+  email: string
+  phone?: string
+  ssn: string
+  dob: string
+  gender?: 'M' | 'F' | 'U'
+  race?: string
+  address: string
+  city: string
+  state: string
+  zip: string
+  jobState?: string
+  dlNumber: string
+  dlState: string
+  orderNumber: string
+  suppressApplicantEmail?: boolean
+  webhookUrl?: string
+  webhookGuid?: string
+}
+
+export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
+  const {
+    firstName,
+    middleName,
+    lastName,
+    suffix,
+    email,
+    phone,
+    ssn,
+    dob,
+    gender = 'U',
+    race = 'U',
+    address,
+    city,
+    state,
+    zip,
+    jobState,
+    dlNumber,
+    dlState,
+    orderNumber,
+    suppressApplicantEmail = true,
+    webhookUrl,
+    webhookGuid,
+  } = data
+
+  const account = process.env.ACCIO_ACCOUNT || ''
+  const username = process.env.ACCIO_USERNAME || ''
+  const password = process.env.ACCIO_PASSWORD || ''
+  const mode = process.env.ACCIO_MODE || 'PROD'
+  const dobFormatted = dob.replace(/-/g, '').substring(0, 8)
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Accio_Order>
+    <mode>${mode}</mode>
+    <login>
+        <account>${escapeXml(account)}</account>
+        <username>${escapeXml(username)}</username>
+        <password>${escapeXml(password)}</password>
+    </login>
+    <placeOrder number="${orderNumber}">
+        <mode>${mode}</mode>
+        <SuppressApplicantPortalEmail>${suppressApplicantEmail ? 'Y' : 'N'}</SuppressApplicantPortalEmail>
+        <orderInfo>
+            <requester_name use_default="Y"/>
+            <requester_phone use_default="Y"/>
+            <requester_fax use_default="Y"/>
+            <requester_email use_default="Y"/>
+            <requester_billingdata/>
+            <requester_billingdata2/>
+            <requester_billingdata3/>
+        </orderInfo>
+        <package>A LA CARTE</package>
+        <subject>
+            <name_first>${escapeXml(firstName)}</name_first>
+            ${middleName ? `<name_middle>${escapeXml(middleName)}</name_middle>` : '<name_middle/>'}
+            <name_last>${escapeXml(lastName)}</name_last>
+            ${suffix ? `<name_suffix>${escapeXml(suffix)}</name_suffix>` : '<name_suffix/>'}
+            <email>${escapeXml(email)}</email>
+            <ssn>${escapeXml(ssn)}</ssn>
+            <dob>${dobFormatted}</dob>
+            <gender>${gender}</gender>
+            <race>${race}</race>
+            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number>555-555-5555</phone_number>'}
+            <address>${escapeXml(address)}</address>
+            <city>${escapeXml(city)}</city>
+            <state>${escapeXml(state)}</state>
+            <zip>${escapeXml(zip)}</zip>
+            ${jobState ? `<jobstate>${escapeXml(jobState)}</jobstate>` : `<jobstate>${escapeXml(state)}</jobstate>`}
+            <citizenship_status>A citizen of the United States</citizenship_status>
+            <FCRAPurpose>Employment by Hire or Contract</FCRAPurpose>
+            <ApplicantID/>
+            <RequisitionNumber/>
+            <managerName/>
+            <position_requested/>
+            <drugscreen>N</drugscreen>
+            <has_admitted_convictions>N</has_admitted_convictions>
+            <admitted_conviction_details/>
+            <portalfromapplicant>Y</portalfromapplicant>
+        </subject>`
+
+  if (webhookUrl && webhookGuid) {
+    xml += `
+        <postBackInfo>
+            <URL>${escapeXml(webhookUrl)}</URL>
+            <guID>${escapeXml(webhookGuid)}</guID>
+            <account>${escapeXml(account)}</account>
+            <username>${escapeXml(username)}</username>
+            <postback_types>CETA::IPC::EXP::CNF::OCR::RDC</postback_types>
+        </postBackInfo>`
+  }
+
+  xml += `
+        <subOrder type='fmcsa_crash_inspection'>
+            <dlnum>${escapeXml(dlNumber)}</dlnum>
+            <dlstate>${escapeXml(dlState)}</dlstate>
+        </subOrder>
+    </placeOrder>
+</Accio_Order>`
+
+  return xml
+}
+
 /**
  * Escape XML special characters
  */
