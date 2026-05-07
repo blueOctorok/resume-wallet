@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
     }
     if (!description?.trim()) {
-      return NextResponse.json({ error: 'Please describe your role and authorization' }, { status: 400 })
+      return NextResponse.json({ error: 'Please select your role and authorization' }, { status: 400 })
     }
     if (!email?.trim() || !email.includes('@')) {
       return NextResponse.json({ error: 'A valid company email is required' }, { status: 400 })
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
         designated_owner_email: email.toLowerCase(),
         status: 'active',
         approved_at: new Date().toISOString(),
-        onboarding_completed: false,
+        onboarding_completed: true,
       })
       .select('id')
       .single()

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { companyHasEmployerBlock } from '@/lib/employer-company-access'
+import { companyCanOrderMvr } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 
 /**
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    if (!(await companyHasEmployerBlock(supabase, companyId, 'employer-mvr-orders'))) {
+    if (!(await companyCanOrderMvr(supabase, companyId))) {
       return NextResponse.json(
         {
           error:

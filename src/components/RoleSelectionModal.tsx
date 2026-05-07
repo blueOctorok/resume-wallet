@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Loader2, CheckCircle, AlertCircle, Building2, Clock, Info, Lock } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle, Building2, Clock, Lock } from 'lucide-react'
 
 const MAX_REVIEW_NOTE_CHARS = 400
 
@@ -18,6 +18,29 @@ function truncateReviewNote(text: string, max = MAX_REVIEW_NOTE_CHARS) {
 const EMPLOYER_WHITELIST_WALLETS = [
   '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3',
 ].map(w => w.toLowerCase())
+
+/**
+ * Two-tier access model:
+ *   company_owner → full control (blocks, team, company profile)
+ *   team_member   → use features only; lower permissions in Storm
+ *
+ * The label is sent as `description` for Stormi + admin audit. An optional
+ * job-title field provides additional context without cluttering the choice.
+ */
+const EMPLOYER_AUTH_TIERS = [
+  {
+    id: 'company_owner',
+    label: 'Company Owner',
+    description: 'I\'m authorized to set up and manage this company on Storm.',
+  },
+  {
+    id: 'team_member',
+    label: 'Team Member',
+    description: 'My company is already on Storm — I\'m joining the team.',
+  },
+] as const
+
+type EmployerAuthTierId = (typeof EMPLOYER_AUTH_TIERS)[number]['id']
 
 interface EmployerAccessStatus {
   hasAccess: boolean
@@ -61,7 +84,10 @@ export default function RoleSelectionModal({
   const [requestLastName, setRequestLastName] = useState('')
   const [requestEmail, setRequestEmail] = useState(userEmail ?? '')
   const [requestCompanyName, setRequestCompanyName] = useState('')
-  const [requestDescription, setRequestDescription] = useState('')
+  /** Two-tier access: company_owner vs team_member — drives Stormi eval + audit. */
+  const [employerAuthTier, setEmployerAuthTier] = useState<EmployerAuthTierId | null>(null)
+  /** Optional job title for Stormi context (e.g. "Fleet Manager", "Recruiter"). */
+  const [employerJobTitle, setEmployerJobTitle] = useState('')
   const [submittingRequest, setSubmittingRequest] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
@@ -126,12 +152,20 @@ export default function RoleSelectionModal({
     }
   }, [walletAddress])
 
+  const resolvedRoleDescription = (): string => {
+    if (!employerAuthTier) return ''
+    const tier = EMPLOYER_AUTH_TIERS.find(t => t.id === employerAuthTier)
+    if (!tier) return ''
+    const title = employerJobTitle.trim()
+    return title ? `${tier.label} (${title})` : tier.label
+  }
+
   const isRequestFormValid =
     !!requestFirstName.trim() &&
     !!requestLastName.trim() &&
     !!requestEmail.trim() && requestEmail.includes('@') &&
     !!requestCompanyName.trim() &&
-    !!requestDescription.trim()
+    !!employerAuthTier
 
   const handleSubmitRequest = async () => {
     if (!walletAddress || !isRequestFormValid) return
@@ -151,7 +185,7 @@ export default function RoleSelectionModal({
           lastName: requestLastName.trim(),
           email: requestEmail.trim(),
           companyName: requestCompanyName.trim(),
-          description: requestDescription.trim(),
+          description: resolvedRoleDescription().trim(),
         }),
       })
 
@@ -547,46 +581,80 @@ export default function RoleSelectionModal({
                           />
                         </div>
 
-                        <div>
-                          <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Your Role & Authorization <span className='text-red-400'>*</span>
-                          </label>
-                          <textarea
-                            value={requestDescription}
-                            onChange={(e) => setRequestDescription(e.target.value)}
-                            placeholder='e.g., "I am the Fleet Manager at Acme Trucking..."'
-                            rows={3}
-                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
-                          />
-                        </div>
+                        <fieldset className='space-y-2'>
+                          <legend className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Your Role <span className='text-red-400'>*</span>
+                          </legend>
+
+                          <div className='space-y-2'>
+                            {EMPLOYER_AUTH_TIERS.map(({ id, label, description }) => (
+                              <label
+                                key={id}
+                                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-sm transition-colors ${
+                                  employerAuthTier === id
+                                    ? isDark
+                                      ? 'border-teal-500/60 bg-teal-500/10'
+                                      : 'border-teal-500 bg-teal-50'
+                                    : isDark
+                                      ? 'border-gray-600 hover:border-gray-500'
+                                      : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <input
+                                  type='radio'
+                                  name='employer-auth-tier'
+                                  checked={employerAuthTier === id}
+                                  onChange={() => setEmployerAuthTier(id)}
+                                  className='mt-0.5 border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-900 dark:focus:ring-teal-500'
+                                />
+                                <div>
+                                  <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{label}</span>
+                                  <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+
+                          <div className='pt-1'>
+                            <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Job title <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>(optional)</span>
+                            </label>
+                            <input
+                              type='text'
+                              value={employerJobTitle}
+                              onChange={(e) => setEmployerJobTitle(e.target.value)}
+                              placeholder='e.g., Fleet Manager, HR Director'
+                              className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
+                            />
+                          </div>
+                        </fieldset>
 
                         <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'}`}>
-                          <strong>Important:</strong> If this company is new to Storm, you will become its <strong>owner/admin</strong>. If it already exists, you&apos;ll be added to the team.
+                          <strong>Owners</strong> get full control — manage blocks, team, and company settings.{' '}
+                          <strong>Team members</strong> can use features but cannot manage the company. Choose the option that matches your role.
                         </div>
 
                         {requestError && <p className='text-sm text-red-500'>{requestError}</p>}
 
                         <div className='flex gap-2 pt-2'>
-                          <button
+                          <Button
+                            type='button'
+                            variant='secondary'
+                            className='flex-1'
                             onClick={() => setShowRequestForm(false)}
-                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
                           >
                             Cancel
-                          </button>
-                          <button
-                            onClick={handleSubmitRequest}
+                          </Button>
+                          <Button
+                            type='button'
+                            variant='primary'
+                            className='flex-1'
+                            isLoading={submittingRequest}
                             disabled={submittingRequest || !isRequestFormValid}
-                            className='flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                            onClick={handleSubmitRequest}
                           >
-                            {submittingRequest ? (
-                              <span className='flex items-center justify-center gap-2'>
-                                <Loader2 className='w-4 h-4 animate-spin' />
-                                Submitting...
-                              </span>
-                            ) : 'Submit Request'}
-                          </button>
+                            Submit Request
+                          </Button>
                         </div>
                       </div>
 

@@ -331,10 +331,12 @@ export default function CareerCardModal({
     if (!def?.employerRequestable) return null
 
     const employerBlocks = employerExtras?.installedEmployerBlocks ?? []
-    if (blockId === 'driver-mvr' && !employerBlocks.includes('employer-mvr-orders')) {
+    const hasMvrCapability = employerBlocks.includes('employer-mvr-orders') || employerBlocks.includes('employer-psp-mvr-bundle')
+    const hasPspCapability = employerBlocks.includes('employer-psp-mvr-bundle')
+    if (blockId === 'driver-mvr' && !hasMvrCapability) {
       return null
     }
-    if (blockId === 'driver-psp' && !employerBlocks.includes('employer-psp-orders')) {
+    if (blockId === 'driver-psp' && !hasPspCapability) {
       return null
     }
 

@@ -28,9 +28,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer onboarding flow** (May 2026)
+
+- **Role selection:** `RoleSelectionModal` — "Your Role" is a **two-tier radio** (**Company Owner** = full control, **Team Member** = use features only) with an optional **Job title** text field for Stormi + admin audit context. Cancel/Submit use shared **`Button`**.
+- **Skip duplicate form:** Auto-approved new companies from **`POST /api/employer/access-request`** now set **`onboarding_completed: true`** so users are not forced through **`CompanyOnboarding`** immediately after access request (address/phone still via **Company profile** in the hub).
+- **Defense in depth:** **`POST /api/employer/company`** runs the same **`evaluateEmployerRequest`** (Stormi) as the access-request path — **block** → 400; **flag** → `employer_access_requests` + `reviewRequired`; **fuzzy `existingMatch`** → domain-verified **auto-join** or flagged review (mirrors access-request). Exact **`ilike`** duplicate check remains as a second line of defense.
+- **PSP + MVR bundle:** `employer-psp-orders` renamed to **`employer-psp-mvr-bundle`** — one block grants **both** MVR and PSP capability (business rule: PSP is never ordered alone). Standalone **`employer-mvr-orders`** remains for MVR-only companies. API guards use new helpers `companyCanOrderMvr` / `companyCanOrderPsp`; `CareerCardModal` checks either block for MVR, bundle-only for PSP. Migration `075` renames existing rows.
+
+---
+
 ## **Composable employer hub (MVR/PSP gating)** (May 2026)
 
-- **Data:** Migration `074` — tightens `employer_hub_blocks` RLS (owner/admin + legacy company owner), adds append-only **`employer_block_audit`**, seeds **Pace Drivers** with `employer-mvr-orders` + `employer-psp-orders`.
+- **Data:** Migration `074` — tightens `employer_hub_blocks` RLS (owner/admin + legacy company owner), adds append-only **`employer_block_audit`**, seeds **Pace Drivers** with `employer-mvr-orders` + `employer-psp-mvr-bundle` (renamed from `employer-psp-orders` in migration `075`).
 - **Registry:** `src/lib/employer-block-registry.ts` — installable definitions; helpers `getEmployerBlockDefinition` / `getInstallableEmployerBlockDefinitions`.
 - **Employer APIs:** `GET/POST` `/api/employer/hub/blocks`, `DELETE` `/api/employer/hub/blocks/[id]` — owner/admin only for mutations; writes audit rows. **Talent** `GET /api/employer/talent/[userId]` returns **`installedEmployerBlocks`**; **MVR/PSP employer order** routes require the matching employer block.
 - **Admin APIs:** `GET/POST` `/api/admin/companies/[id]/blocks`, `DELETE /api/admin/companies/[id]/blocks/[blockId]` (reason required); **`GET /api/admin/companies/[id]`** includes `installedEmployerBlocks` + `recentEmployerBlockAudit` (last 5).

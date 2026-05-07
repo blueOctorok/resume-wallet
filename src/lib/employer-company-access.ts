@@ -73,3 +73,30 @@ export async function companyHasEmployerBlock(
     .maybeSingle()
   return Boolean(data)
 }
+
+/**
+ * MVR capability check: company has standalone MVR block OR the PSP+MVR bundle.
+ * PSP always ships with MVR, so the bundle is a superset of standalone MVR.
+ */
+export async function companyCanOrderMvr(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('employer_hub_blocks')
+    .select('id')
+    .eq('company_id', companyId)
+    .in('block_type', ['employer-mvr-orders', 'employer-psp-mvr-bundle'])
+    .limit(1)
+  return Boolean(data?.length)
+}
+
+/**
+ * PSP capability check: company has the PSP+MVR bundle only (PSP is never standalone).
+ */
+export async function companyCanOrderPsp(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<boolean> {
+  return companyHasEmployerBlock(supabase, companyId, 'employer-psp-mvr-bundle')
+}

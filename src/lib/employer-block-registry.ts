@@ -29,9 +29,9 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
     pricingNote: 'Per-order USDC pricing at checkout.',
   },
   {
-    id: 'employer-psp-orders',
-    label: 'PSP (FMCSA) ordering',
-    description: 'Pre-employment screening (crash/inspection history) orders for commercial drivers.',
+    id: 'employer-psp-mvr-bundle',
+    label: 'PSP + MVR screening',
+    description: 'Bundled motor vehicle reports and FMCSA pre-employment screening (crash/inspection history). PSP always includes MVR.',
     icon: ShieldAlert,
     categoryId: 'drivers',
     suggestedOrder: 1,
