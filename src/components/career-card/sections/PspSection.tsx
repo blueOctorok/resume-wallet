@@ -1,12 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { FileWarning, Clock } from 'lucide-react'
+import { FileWarning, Clock, Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PspData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import PspViewModal from '@/components/PspViewModal'
 import Button from '@/components/ui/Button'
+
+function formatOrderDate(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString()
+}
+
+const STATUS_DISPLAY: Record<string, { label: string; icon: 'clock' | 'loader' | 'check' }> = {
+  pending:      { label: 'Pending — waiting for processing', icon: 'clock' },
+  processing:   { label: 'Processing — Accio is running the report', icon: 'loader' },
+  needs_review: { label: 'Report received — under review', icon: 'check' },
+  completed:    { label: 'Report complete', icon: 'check' },
+  failed:       { label: 'Order failed — contact support', icon: 'clock' },
+}
+
+function statusIcon(key: 'clock' | 'loader' | 'check') {
+  if (key === 'loader') return <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
+  if (key === 'check') return <CheckCircle className="h-5 w-5 text-green-500" />
+  return <Clock className="h-5 w-5 text-yellow-500" />
+}
 
 interface PspSectionProps {
   data: PspData
@@ -26,6 +46,8 @@ export default function PspSection({
   const [open, setOpen] = useState(false)
 
   const isComplete = data.orderStatus === 'completed' || data.orderStatus === 'needs_review'
+  const hasOrder = Boolean(data.orderId && data.orderStatus !== 'none')
+  const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
   const handlePrimary = () => {
     if (isComplete) {
@@ -38,6 +60,8 @@ export default function PspSection({
   const showSelfButton =
     isCareerCardOwnerMode(mode) &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
+
+  const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 
   return (
     <div
@@ -71,22 +95,35 @@ export default function PspSection({
               </>
             )}
           </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            {data.licenseState} · Ordered {new Date(data.orderedAt).toLocaleDateString()}
-          </p>
+          {(data.licenseState || dateStr) && (
+            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+              {[data.licenseState, dateStr && `Ordered ${dateStr}`].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
-      ) : (
+      ) : hasOrder ? (
         <div className="flex items-center gap-3">
-          <Clock className="h-5 w-5 text-yellow-500" />
+          {statusIcon(display.icon)}
           <div>
             <p className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
-              PSP {data.orderStatus === 'pending' ? 'pending' : 'ordered'}
+              {display.label}
             </p>
-            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-              {data.licenseState} · Ordered {new Date(data.orderedAt).toLocaleDateString()}
-            </p>
+            {(data.licenseState || dateStr) && (
+              <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                {[data.licenseState, dateStr && `Ordered ${dateStr}`].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
         </div>
+      ) : (
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          No PSP report ordered yet.{' '}
+          {isCareerCardOwnerMode(mode) && onNavigateToOrder && (
+            <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
+              Order one
+            </button>
+          )}
+        </p>
       )}
 
       {open && walletAddress && (

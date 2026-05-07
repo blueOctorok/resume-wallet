@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { parseAccioMvrResult, mvrResultToJsonb } from '@/lib/accio-xml-parser'
 import { saveMvrData } from '@/lib/block-data'
+import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
 
 /**
  * Convert YYYYMMDD date format to ISO date string for database storage
@@ -278,6 +279,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const previousOrderStatus = mvrOrder.status
+
     // 2. Check if result already exists (idempotency)
     const { data: existingResult } = await supabaseService
       .from('mvr_results')
@@ -393,6 +396,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[MVR WEBHOOK] MVR result processed successfully:', mvrResult.id)
+
+    void notifyScreeningReportDelivered(supabaseService, {
+      kind: 'mvr',
+      previousStatus: previousOrderStatus,
+      driverUserId: mvrOrder.driver_user_id,
+      ordered_by_company_id: mvrOrder.ordered_by_company_id,
+      ordered_by_user_id: mvrOrder.ordered_by_user_id,
+      ordered_by_employer: mvrOrder.ordered_by_employer,
+      employer_company_id: mvrOrder.employer_company_id,
+      employer_user_id: mvrOrder.employer_user_id,
+    }).catch((err) => console.warn('[MVR WEBHOOK] Screening notify non-fatal:', err))
 
     return NextResponse.json({
       success: true,

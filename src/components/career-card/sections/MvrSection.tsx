@@ -1,17 +1,36 @@
 'use client'
 
 import { useState } from 'react'
-import { Car, Clock } from 'lucide-react'
+import { Car, Clock, Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MvrData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import MvrViewModal from '@/components/MvrViewModal'
 
+function formatOrderDate(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString()
+}
+
+const STATUS_DISPLAY: Record<string, { label: string; icon: 'clock' | 'loader' | 'check' }> = {
+  pending:      { label: 'Pending — waiting for processing', icon: 'clock' },
+  processing:   { label: 'Processing — Accio is running the report', icon: 'loader' },
+  needs_review: { label: 'Report received — under review', icon: 'check' },
+  completed:    { label: 'Report complete', icon: 'check' },
+  failed:       { label: 'Order failed — contact support', icon: 'clock' },
+}
+
+function statusIcon(key: 'clock' | 'loader' | 'check') {
+  if (key === 'loader') return <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
+  if (key === 'check') return <CheckCircle className="h-5 w-5 text-green-500" />
+  return <Clock className="h-5 w-5 text-yellow-500" />
+}
+
 interface MvrSectionProps {
   data: MvrData
   mode: CareerCardMode
   isDark: boolean
-  /** Self-view: go to MVR order form when user still needs to order / continue */
   onNavigateToOrder?: () => void
   walletAddress?: string | null
 }
@@ -25,9 +44,10 @@ export default function MvrSection({
 }: MvrSectionProps) {
   const [showMvrViewer, setShowMvrViewer] = useState(false)
 
-  // Align with hub / My Files: needs_review is a terminal success state for display
   const isComplete =
     data.orderStatus === 'completed' || data.orderStatus === 'needs_review'
+  const hasOrder = Boolean(data.orderId && data.orderStatus !== 'none')
+  const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
   const handlePrimaryClick = () => {
     if (isComplete) {
@@ -40,6 +60,8 @@ export default function MvrSection({
   const showSelfButton =
     isCareerCardOwnerMode(mode) &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
+
+  const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 
   return (
     <div className={cn(
@@ -58,7 +80,7 @@ export default function MvrSection({
             type='button'
             onClick={handlePrimaryClick}
             className={cn(
-              'text-xs px-3 py-1 rounded-lg transition-colors',
+              'text-xs px-3 py-1 rounded-lg transition-colors cursor-pointer',
               isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
             )}
           >
@@ -88,18 +110,29 @@ export default function MvrSection({
             </p>
           </div>
         </div>
-      ) : (
+      ) : hasOrder ? (
         <div className='flex items-center gap-3'>
-          <Clock className='w-5 h-5 text-yellow-500' />
+          {statusIcon(display.icon)}
           <div>
             <p className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
-              MVR {data.orderStatus === 'pending' ? 'Pending' : 'Ordered'}
+              {display.label}
             </p>
-            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-              {data.licenseState} &middot; Ordered {new Date(data.orderedAt).toLocaleDateString()}
-            </p>
+            {(data.licenseState || dateStr) && (
+              <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                {[data.licenseState, dateStr && `Ordered ${dateStr}`].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
         </div>
+      ) : (
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          No MVR ordered yet.{' '}
+          {isCareerCardOwnerMode(mode) && onNavigateToOrder && (
+            <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
+              Order one
+            </button>
+          )}
+        </p>
       )}
 
       {showMvrViewer && walletAddress && (

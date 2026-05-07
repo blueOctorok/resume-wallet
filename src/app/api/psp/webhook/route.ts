@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { extractPspWebhookFields } from '@/lib/accio-psp-webhook'
 import { savePspData } from '@/lib/block-data'
+import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
 
 /**
  * POST /api/psp/webhook — Accio results for standalone PSP (fmcsa_crash_inspection) orders.
@@ -98,6 +99,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'PSP order not found' }, { status: 404 })
     }
 
+    const previousOrderStatus = pspOrder.status
+
     const { data: existingResult } = await supabaseService
       .from('psp_results')
       .select('id')
@@ -149,6 +152,15 @@ export async function POST(request: NextRequest) {
         result_xml: xmlBody,
       })
       .eq('id', pspOrder.id)
+
+    void notifyScreeningReportDelivered(supabaseService, {
+      kind: 'psp',
+      previousStatus: previousOrderStatus,
+      driverUserId: pspOrder.driver_user_id,
+      ordered_by_company_id: pspOrder.ordered_by_company_id,
+      ordered_by_user_id: pspOrder.ordered_by_user_id,
+      ordered_by_employer: pspOrder.ordered_by_employer,
+    }).catch((err) => console.warn('[PSP WEBHOOK] Screening notify non-fatal:', err))
 
     // FCRA: never mirror employer-ordered PSP onto the candidate hub cache.
     if (!pspOrder.ordered_by_company_id) {

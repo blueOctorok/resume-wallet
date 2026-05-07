@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: PSP + MVR career card "Invalid Date" + missing status states** (May 2026)
+
+`PspSection` and `MvrSection` both did `new Date(data.orderedAt).toLocaleDateString()` without guarding against empty/null `orderedAt`. The empty-section fallback in `projected-career-card.ts` sets `orderedAt: ''`, so `new Date('')` produced "Invalid Date". Status text also only showed "ordered" or "pending" — no "processing", "under review", or "failed".
+
+### What changed
+
+- **`PspSection.tsx` + `MvrSection.tsx`:** Added `formatOrderDate()` helper that returns `null` for empty / unparseable dates. Renders date only when valid, falls back to `completedAt`. Added `STATUS_DISPLAY` map with proper status labels + icons (`Clock` for pending, `Loader2` spinning for processing, `CheckCircle` for complete/needs_review). Added a third render branch for "no order yet" with an inline "Order one" link.
+- **`use-hub-documents.tsx`:** Passes `createdAt: psp.orderedAt || psp.createdAt` (and same for MVR) so construct mode inline cards also have a date to display.
+
+---
+
+## **MVR + PSP completion: email + in-app notifications** (May 2026)
+
+When Accio posted terminal results, `/api/mvr/webhook` and `/api/psp/webhook` only persisted XML / JSON and updated order status — **candidates and employers were not emailed** and received no in-app notification.
+
+### What changed
+
+- **`send-admin-notification.ts`:** `sendCandidateScreeningReadyEmail` and `sendEmployerScreeningReadyEmail` — Resend templates with CTA deep links (`/?onboard=mvr` | `psp` for candidates; `/?onboard=applicants` for employers). Copy states that full reports are **not** attached to email (FCRA / employer isolation).
+- **`notify-screening-complete.ts`:** Loads candidate + employer emails from `users` / `user_profiles` / `companies`, resolves employer recipient (`ordered_by_user_id` → `companies.employer_user_id` fallback), sends both channels, and writes **`notifications`** rows (`type: 'system'`) for candidate and employer when applicable.
+- **`/api/mvr/webhook`** and **`/api/psp/webhook`:** After a successful completion write, fire-and-forget `notifyScreeningReportDelivered`. **Idempotency:** only runs when the order’s prior status was `pending`, so Accio retries after `completed` / `needs_review` do not duplicate emails.
+
+### Who gets what
+
+| Audience | Self-order | Employer-initiated order |
+|----------|------------|---------------------------|
+| Candidate | Email (if `users.email` set) + in-app | Same |
+| Employer | — | Email + in-app to resolved employer user |
+
+---
+
 ## **Fix: fulfill-screening 500 on PSP insert (schema mismatch)** (May 2026)
 
 `/api/candidate/fulfill-screening` was 500ing for PSP orders because the insert payload included `order_type`, `mvr_search_type`, and `applicant_portal_url` — columns that exist on `mvr_orders` but **not** on `psp_orders`.

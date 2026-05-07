@@ -276,3 +276,151 @@ export async function sendApplicationStatusNotification(
     return { ok: false, error: message }
   }
 }
+
+// ─── Screening complete (MVR / PSP) — candidate + employer ───────────────────
+
+const SCREENING_READY_COPY = {
+  mvr: {
+    candidateTitle: 'Your MVR is ready',
+    candidatePreheader: 'Your motor vehicle record has arrived on Storm',
+    candidateLead:
+      'Your <strong>Motor Vehicle Record (MVR)</strong> has been processed and is available in your Storm account.',
+    employerTitle: (candidateName: string) => `MVR ready: ${candidateName}`,
+    employerPreheader: 'A requested motor vehicle record is available on Storm',
+    employerLead: (candidateName: string, companyName: string) =>
+      `The <strong>MVR</strong> you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Storm.`,
+  },
+  psp: {
+    candidateTitle: 'Your PSP report is ready',
+    candidatePreheader: 'Your FMCSA PSP screening has arrived on Storm',
+    candidateLead:
+      'Your <strong>FMCSA PSP</strong> (crash and inspection history) report has been processed and is available in your Storm account.',
+    employerTitle: (candidateName: string) => `PSP report ready: ${candidateName}`,
+    employerPreheader: 'A requested FMCSA PSP report is available on Storm',
+    employerLead: (candidateName: string, companyName: string) =>
+      `The <strong>FMCSA PSP</strong> report you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Storm.`,
+  },
+} as const
+
+/**
+ * Email to the candidate when Accio returns a completed MVR or PSP.
+ */
+export async function sendCandidateScreeningReadyEmail(params: {
+  kind: 'mvr' | 'psp'
+  candidateEmail: string
+  candidateFirstName: string
+  ctaUrl: string
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!resend) {
+    console.warn('[SCREENING READY] RESEND_API_KEY not set, skipping candidate email')
+    return { ok: false, error: 'Email not configured' }
+  }
+
+  const { kind, candidateEmail, candidateFirstName, ctaUrl } = params
+  const copy = SCREENING_READY_COPY[kind]
+  const first = candidateFirstName.trim() || 'there'
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      ${copy.candidateLead}
+    </p>
+    ${infoBox(`
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
+        Log in to review the result in your screening block. If anything looks incorrect, contact support through Storm.
+      </p>
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: copy.candidatePreheader,
+    headerEyebrow: 'Storm',
+    headerTitle: copy.candidateTitle,
+    greeting: `Hi ${first},`,
+    bodyHtml,
+    ctaLabel: kind === 'mvr' ? 'View MVR' : 'View PSP report',
+    ctaUrl,
+    footerNote: `You're receiving this because a motor vehicle or FMCSA screening tied to your account completed. Reply to this email with questions.`,
+  })
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: candidateEmail,
+      subject: `[Storm] ${copy.candidateTitle}`,
+      html,
+    })
+    if (error) {
+      console.error('[SCREENING READY] Candidate Resend error:', error)
+      return { ok: false, error: error.message }
+    }
+    console.log('[SCREENING READY] Candidate email sent. Resend id:', data?.id)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[SCREENING READY] Candidate send failed:', err)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Email to the employer contact when a company-requested MVR or PSP completes.
+ * Does not attach report content — only in-app access per FCRA isolation.
+ */
+export async function sendEmployerScreeningReadyEmail(params: {
+  kind: 'mvr' | 'psp'
+  employerEmail: string
+  employerFirstName: string
+  companyName: string
+  candidateDisplayName: string
+  ctaUrl: string
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!resend) {
+    console.warn('[SCREENING READY] RESEND_API_KEY not set, skipping employer email')
+    return { ok: false, error: 'Email not configured' }
+  }
+
+  const { kind, employerEmail, employerFirstName, companyName, candidateDisplayName, ctaUrl } = params
+  const copy = SCREENING_READY_COPY[kind]
+  const first = employerFirstName.trim() || 'there'
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      ${copy.employerLead(candidateDisplayName, companyName)}
+    </p>
+    ${infoBox(`
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
+        Open Storm to view the report in your hiring workflow. Full report details stay inside Storm — we never send the screening document by email.
+      </p>
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: copy.employerPreheader,
+    headerEyebrow: companyName,
+    headerTitle: copy.employerTitle(candidateDisplayName),
+    greeting: `Hi ${first},`,
+    bodyHtml,
+    ctaLabel: 'Open Storm',
+    ctaUrl,
+    footerNote: `You're receiving this because your company requested this screening on Storm.`,
+  })
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: employerEmail,
+      subject: `[Storm] ${copy.employerTitle(candidateDisplayName)}`,
+      html,
+    })
+    if (error) {
+      console.error('[SCREENING READY] Employer Resend error:', error)
+      return { ok: false, error: error.message }
+    }
+    console.log('[SCREENING READY] Employer email sent. Resend id:', data?.id)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[SCREENING READY] Employer send failed:', err)
+    return { ok: false, error: message }
+  }
+}
