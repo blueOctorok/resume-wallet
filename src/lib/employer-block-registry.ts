@@ -2,7 +2,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   ClipboardList,
   FileSearch,
-  FileText,
   Folder,
   ShieldAlert,
 } from 'lucide-react'
@@ -24,20 +23,14 @@ export interface EmployerBlockDefinition {
 }
 
 export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
-  // ── General ───────────────────────────────────────────────────────────────
   // Each employer block enables exactly one candidate-side request type.
   // 1:1 mapping keeps the outreach picker honest — install this block, get
   // exactly this request option. No surprise developer concepts on a driver
   // employer's hub, and vice versa.
-  {
-    id: 'employer-resume-requests',
-    label: 'Resume requests',
-    description: 'Request resumes from candidates. Universal — every employer needs this.',
-    icon: FileText,
-    categoryId: 'general',
-    suggestedOrder: -10,
-    installable: true,
-  },
+  //
+  // Resume is NOT here — storm-resume is a core block auto-installed on
+  // every candidate's hub, so there's nothing to "request."
+  //
   // ── Developers ────────────────────────────────────────────────────────────
   {
     id: 'employer-portfolio-requests',

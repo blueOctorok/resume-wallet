@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getBlockDefinition } from '@/lib/block-registry'
 
 /**
  * GET /api/invite/[token]
@@ -141,10 +142,10 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get the invite
+    // Get the invite (include company + block info for screening request creation)
     const { data: invite, error: fetchError } = await supabase
       .from('application_invites')
-      .select('id, status, expires_at')
+      .select('id, status, expires_at, company_id, created_by_user_id, target_block_type')
       .eq('token', token)
       .single()
 
@@ -171,7 +172,7 @@ export async function POST(
     }
 
     // Update invite status
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status: 'in_progress',
     }
     if (userId) {
@@ -187,6 +188,54 @@ export async function POST(
     if (updateError) {
       console.error('[INVITE START] Update error:', updateError)
       return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
+    }
+
+    // For screening blocks (MVR, PSP), create a candidate_requests record
+    // so the FCRA disclosure gate fires when the candidate lands on the form.
+    // Without this, invite-based MVR/PSP deep-links bypass disclosure entirely.
+    const screeningBlocks = ['driver-mvr', 'driver-psp']
+    const targetBlock = invite.target_block_type
+    if (userId && targetBlock && screeningBlocks.includes(targetBlock)) {
+      const requestType =
+        targetBlock === 'driver-mvr' ? 'mvr_order'
+        : targetBlock === 'driver-psp' ? 'psp_order'
+        : 'block_request'
+
+      const blockDef = getBlockDefinition(targetBlock)
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30)
+
+      // Only create if no pending request already exists (idempotent)
+      const { data: existing } = await supabase
+        .from('candidate_requests')
+        .select('id')
+        .eq('candidate_user_id', userId)
+        .eq('company_id', invite.company_id)
+        .eq('request_type', requestType)
+        .in('status', ['pending', 'viewed'])
+        .maybeSingle()
+
+      if (!existing) {
+        const { error: reqError } = await supabase
+          .from('candidate_requests')
+          .insert({
+            company_id: invite.company_id,
+            requested_by_user_id: invite.created_by_user_id,
+            candidate_user_id: userId,
+            request_type: requestType,
+            target_block_type: targetBlock,
+            message: `Invited via outreach to complete ${blockDef?.label ?? targetBlock}`,
+            status: 'pending',
+            expires_at: expiresAt.toISOString(),
+          })
+
+        if (reqError) {
+          // Non-fatal — the form still works, just without the disclosure gate
+          console.error('[INVITE START] Failed to create screening request:', reqError)
+        } else {
+          console.log(`[INVITE START] Created ${requestType} candidate_request for invite ${invite.id}`)
+        }
+      }
     }
 
     return NextResponse.json({ 

@@ -48,3 +48,13 @@ WHERE block_type = 'employer-talent-outreach';
 UPDATE employer_block_audit
 SET block_type = 'employer-resume-requests'
 WHERE block_type = 'employer-talent-outreach';
+
+-- Step 3: Remove employer-resume-requests entirely ────────────────────────
+-- storm-resume is a core block auto-installed on every candidate's hub,
+-- so requesting it is redundant. No employer block should gate it.
+
+DELETE FROM employer_hub_blocks
+WHERE block_type = 'employer-resume-requests';
+
+-- Keep audit rows — they're historical records of install/remove actions.
+-- The block just won't appear in the registry anymore.

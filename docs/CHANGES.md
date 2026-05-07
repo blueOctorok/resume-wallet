@@ -28,6 +28,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach cleanup + invite disclosure wiring** (May 2026)
+
+Three fixes to the employer outreach system:
+
+1. **Storm Resume removed from outreach dropdown.** `storm-resume` is a core block auto-installed on every candidate's hub — requesting it is redundant. Set `employerRequestable: false`, removed `employer-resume-requests` employer block entirely from registry, migration `077` cleans up any installed rows.
+
+2. **PSP label now says "PSP + MVR"** in the outreach dropdown (was "PSP Report"). Matches the employer block name (`employer-psp-mvr-bundle`) so the 1:1 mirror is consistent.
+
+3. **FCRA disclosure now fires for invite-based MVR/PSP onboarding.** Previously, when an employer sent an MVR/PSP outreach invite and the candidate clicked the email link → onboard → land on MVR form, no `candidate_requests` record existed, so the disclosure hook (`usePendingScreeningRequest`) found nothing and the form loaded without disclosure. Fix: `POST /api/invite/[token]` now creates a `candidate_requests` record (type `mvr_order` / `psp_order`) for screening blocks. The record is created *before* the redirect to `/?onboard=mvr`, so MvrOrderForm/PspOrderForm mounts, the hook finds the pending request, and the FCRA disclosure banner appears. Idempotent — skips creation if a pending request already exists.
+
+---
+
 ## **True 1:1 employer block ↔ outreach mapping** (May 2026)
 
 **Bug:** `employer-talent-outreach` gated **both** `storm-resume` and `developer-portfolio`. A driver staffing employer (Pace) installing it for resumes would unintentionally see "Portfolio" — a developer-only concept — in their outreach dropdown. 4 installed blocks → 5 dropdown options. Not a true mirror.
