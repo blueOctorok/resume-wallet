@@ -19,6 +19,7 @@ import {
   ChevronRight,
   FolderGit2,
   Car,
+  ShieldCheck,
   Building2,
   Briefcase,
   UserPlus,
@@ -37,6 +38,7 @@ import CandidatesTab from './tabs/CandidatesTab'
 import DotAppsTab from './tabs/DotAppsTab'
 import ResumesTab from './tabs/ResumesTab'
 import MvrTab from './tabs/MvrTab'
+import PspTab from './tabs/PspTab'
 import VerificationsTab from './tabs/VerificationsTab'
 import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
@@ -144,6 +146,7 @@ function AdminDashboardContent() {
         devProject: `/api/admin/dev-projects/${deleteTarget.id}`,
         verification: `/api/admin/verifications/${deleteTarget.id}`,
         mvr: `/api/admin/mvr/${deleteTarget.id}`,
+        psp: `/api/admin/psp/${deleteTarget.id}`,
         bgcheckRequest: `/api/admin/bgcheck-requests/${deleteTarget.id}`,
         application: `/api/admin/applications/${deleteTarget.id}`,
         outreach: `/api/admin/outreach/${deleteTarget.id}`,
@@ -201,6 +204,7 @@ function AdminDashboardContent() {
         { id: 'dotApps', label: 'DOT Apps', icon: <ClipboardList className='w-4 h-4' /> },
         { id: 'resumes', label: 'Resumes', icon: <FileText className='w-4 h-4' /> },
         { id: 'mvr', label: 'MVR Orders', icon: <Car className='w-4 h-4' /> },
+        { id: 'psp', label: 'PSP Orders', icon: <ShieldCheck className='w-4 h-4' /> },
         { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
         { id: 'devProjects', label: 'Projects', icon: <FolderGit2 className='w-4 h-4' /> },
       ],
@@ -291,6 +295,8 @@ function AdminDashboardContent() {
         return <ResumesTab key={refreshKey} {...tabProps} />
       case 'mvr':
         return <MvrTab key={refreshKey} {...tabProps} />
+      case 'psp':
+        return <PspTab key={refreshKey} {...tabProps} />
       case 'verifications':
         return <VerificationsTab key={refreshKey} {...tabProps} />
       case 'devProjects':

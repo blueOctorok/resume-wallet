@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Central admin: PSP Orders tab + employer-source visibility on MVR/PSP** (May 2026)
+
+Central admin had no PSP visibility at all and the existing MVR Orders tab gave no signal that employer-initiated screening orders even existed (no "ordered by" context). Storm operators couldn't tell self-orders apart from CRA-isolated employer orders without dropping into SQL.
+
+### What changed
+
+- **New `/api/admin/psp` (list)** and **`/api/admin/psp/[id]` (detail + delete)** — mirror the MVR admin endpoints. Returns driver, company (when employer-initiated), Accio order numbers, status, results.
+- **New `PspTab.tsx`** under the `Candidates` sidebar group ("PSP Orders" with `ShieldCheck` icon). Same shape as `MvrTab` — table + detail modal + raw XML toggles.
+- **New "Ordered By" column** on both MVR and PSP tables. Renders a blue "Self-order" pill or an amber pill with the company name for employer-initiated orders.
+- **`MvrRow` + `PspRow` types** carry a discriminated `orderedBy: { type: 'self' } | { type: 'employer'; companyId; companyName }` so the FCRA isolation boundary is explicit in the type system, not just the database.
+- **Delete endpoint map** in `AdminDashboardShell` now includes `psp` so the shared `DeleteConfirmModal` works for PSP rows.
+
+### Why it matters
+
+FCRA requires that employer-ordered MVR/PSP reports stay scoped to the ordering company — they never appear on the candidate's career card and never get served to other employers. Storm central admin needs to see *both* sides (the driver's full screening history AND who ordered each report) to investigate disputes, audit compliance, and support customers — without the column we were effectively flying blind on the employer side.
+
+---
+
 ## **Combined disclosure + order form for employer-initiated screening** (May 2026)
 
 When an employer sends an MVR or PSP request via outreach email, the candidate now sees ONE combined form — the disclosure document plus all the personal info needed to submit the order. Previously there were two separate steps: sign disclosure → fill self-order form (which confusingly asked for USDC payment the candidate didn't owe).

@@ -201,9 +201,36 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   //   Step 1: General Background Check Disclosure (FCRA)
   //   Step 2: PSP FMCSA Disclosure & Authorization (which also submits the order)
   const [pspEmployerStep, setPspEmployerStep] = useState<'bg-disclosure' | 'psp-disclosure'>('bg-disclosure')
+  // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
+  const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
 
-  // Employer-initiated flow: two-step disclosure wizard
-  if (pendingEmployerRequest) {
+  // Employer-initiated flow: two-step disclosure wizard OR success screen
+  if (pendingEmployerRequest || employerOrderComplete) {
+    if (employerOrderComplete) {
+      return (
+        <div className='w-full p-4 sm:p-6 lg:p-8'>
+          <div className='max-w-2xl mx-auto'>
+            <div className={`${cardClass} p-8 text-center`}>
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                isDarkTheme(theme) ? 'bg-green-500/20' : 'bg-green-50'
+              }`}>
+                <CheckCircle className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
+              </div>
+              <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
+                PSP + MVR Order Submitted
+              </h3>
+              <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                Both disclosures have been signed and your order has been submitted to Accio. Results typically arrive within 24–48 hours.
+              </p>
+              <Button variant='primary' onClick={onBack}>
+                Back to Hub
+              </Button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className='w-full p-4 sm:p-6 lg:p-8'>
         <div className='max-w-3xl mx-auto'>
@@ -260,10 +287,11 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               fulfillOrder
               onClose={onBack}
               onConsentSigned={() => void refreshPendingRequest()}
-              onOrderPlaced={async () => {
-                const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
-                void syncDriverHubFromApi(userAddress)
-              }}
+            onOrderPlaced={async () => {
+              setEmployerOrderComplete(true)
+              const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+              void syncDriverHubFromApi(userAddress)
+            }}
             />
           )}
         </div>

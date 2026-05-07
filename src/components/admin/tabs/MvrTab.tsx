@@ -83,6 +83,7 @@ export default function MvrTab({
           >
             <tr>
               <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
+              <th className={`${tableHeaderClass} px-4 py-3`}>Ordered By</th>
               <th className={`${tableHeaderClass} px-4 py-3`}>Status</th>
               <th className={`${tableHeaderClass} px-4 py-3`}>DL State</th>
               <th className={`${tableHeaderClass} px-4 py-3`}>License Status</th>
@@ -109,6 +110,20 @@ export default function MvrTab({
                       {mvr.walletAddress.slice(0, 8)}...{mvr.walletAddress.slice(-4)}
                     </code>
                   </div>
+                </td>
+                <td className={tableCellClass}>
+                  {mvr.orderedBy.type === 'self' ? (
+                    <span className='inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'>
+                      Self-order
+                    </span>
+                  ) : (
+                    <span
+                      className='inline-flex items-center px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                      title={`Company ID: ${mvr.orderedBy.companyId}`}
+                    >
+                      {mvr.orderedBy.companyName ?? 'Employer'}
+                    </span>
+                  )}
                 </td>
                 <td className={tableCellClass}>
                   <span

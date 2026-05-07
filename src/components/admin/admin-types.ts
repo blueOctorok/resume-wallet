@@ -11,10 +11,16 @@ export type TabId =
   | 'dotApps'
   | 'resumes'
   | 'mvr'
+  | 'psp'
   | 'bgcheckRequests'
   | 'devProjects'
   | 'verifications'
   | 'tools'
+
+/** Who placed a screening order (MVR / PSP). Drives FCRA isolation in the UI. */
+export type ScreeningOrderedBy =
+  | { type: 'self' }
+  | { type: 'employer'; companyId: string; companyName: string | null }
 
 export interface AdminTabProps {
   theme: 'light' | 'dark'
@@ -218,10 +224,26 @@ export interface MvrRow {
   orderedAt: string | null
   createdAt: string
   accioOrderNumber: string | null
+  orderedBy: ScreeningOrderedBy
   licenseStatus: string | null
   totalPoints: number | null
   violationCount: number | null
   resultStatus: string | null
+}
+
+export interface PspRow {
+  id: string
+  driverUserId: string
+  walletAddress: string
+  driverName: string
+  status: string
+  dlState: string | null
+  orderedAt: string | null
+  createdAt: string
+  accioOrderNumber: string | null
+  orderedBy: ScreeningOrderedBy
+  resultStatus: string | null
+  resultReceivedAt: string | null
 }
 
 export interface BgcheckRequest {

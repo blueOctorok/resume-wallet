@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
 
     const { data: orders, error, count } = await supabase
       .from('mvr_orders')
-      .select('id, driver_user_id, status, dl_state, ordered_at, created_at, accio_order_number', { count: 'exact' })
+      .select(
+        'id, driver_user_id, status, dl_state, ordered_at, created_at, accio_order_number, ordered_by_company_id, ordered_by_employer',
+        { count: 'exact' },
+      )
       .order('ordered_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -32,6 +35,18 @@ export async function GET(request: NextRequest) {
     }
 
     const fixedUserIds = [...new Set((orders || []).map((o: { driver_user_id: string }) => o.driver_user_id))]
+    const companyIds = [
+      ...new Set(
+        (orders || [])
+          .map((o: { ordered_by_company_id: string | null }) => o.ordered_by_company_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ]
+
+    const { data: companies } = companyIds.length > 0
+      ? await supabase.from('companies').select('id, company_name').in('id', companyIds)
+      : { data: [] }
+    const companyMap = new Map((companies || []).map(c => [c.id, c.company_name]))
 
     const { data: users } = await supabase
       .from('users')
@@ -67,6 +82,8 @@ export async function GET(request: NextRequest) {
       const wallet = userMap.get(o.driver_user_id as string) || 'Unknown'
       const driverName = profileMap.get(o.driver_user_id as string) || 'Unknown'
       const result = resultByOrderId.get(o.id as string)
+      const companyId = o.ordered_by_company_id as string | null
+      const orderedByCompanyName = companyId ? companyMap.get(companyId) ?? null : null
       return {
         id: o.id,
         driverUserId: o.driver_user_id,
@@ -77,6 +94,11 @@ export async function GET(request: NextRequest) {
         orderedAt: o.ordered_at,
         createdAt: o.created_at,
         accioOrderNumber: o.accio_order_number,
+        // FCRA-relevant: who placed this order? Self-orders go to the candidate's hub;
+        // employer-orders are CRA-isolated and only visible to the ordering company.
+        orderedBy: companyId
+          ? { type: 'employer' as const, companyId, companyName: orderedByCompanyName }
+          : { type: 'self' as const },
         licenseStatus: result?.license_status ?? null,
         totalPoints: result?.total_points ?? null,
         violationCount: result?.violation_count ?? null,
