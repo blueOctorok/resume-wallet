@@ -38,7 +38,7 @@ export async function getEmployerCompanyAccess(
       employerUserId: user.id,
       companyId: membership.company_id,
       companyRole: r,
-      canManageEmployerBlocks: r === 'owner' || r === 'admin',
+      canManageEmployerBlocks: true,
     }
   }
 

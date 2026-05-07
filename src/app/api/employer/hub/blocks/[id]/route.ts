@@ -25,7 +25,7 @@ export async function DELETE(
     const supabase = await getAdminSupabaseClient()
     const access = await getEmployerCompanyAccess(supabase, walletAddress)
     if (!access?.canManageEmployerBlocks) {
-      return NextResponse.json({ error: 'Only company owners and admins can remove blocks' }, { status: 403 })
+      return NextResponse.json({ error: 'Only active company members can remove blocks' }, { status: 403 })
     }
 
     const { data: row, error: fetchErr } = await supabase

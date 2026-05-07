@@ -387,7 +387,7 @@ const HomeContent = () => {
           onBrowseGuided={enterGuidedMode}
           mvrWalletAddress={user?.address || null}
           walletAddress={walletAddress ?? null}
-          onSwitchRole={() => setShowRoleSelection(true)}
+          onSwitchRole={userRole === 'employer' ? undefined : () => setShowRoleSelection(true)}
         />
 
         {/* User Status Modal */}

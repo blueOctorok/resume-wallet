@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
     const access = await getEmployerCompanyAccess(supabase, walletAddress)
     if (!access?.canManageEmployerBlocks) {
-      return NextResponse.json({ error: 'Only company owners and admins can install blocks' }, { status: 403 })
+      return NextResponse.json({ error: 'Only active company members can install blocks' }, { status: 403 })
     }
 
     const { count } = await supabase
