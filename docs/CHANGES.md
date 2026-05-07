@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: PSP wizard race + auto-fill across PSP disclosure steps** (May 2026)
+
+Two related bugs in the employer-initiated PSP flow:
+
+1. **Wizard unmounted mid-flow.** When the candidate signed Step 2 (FMCSA PSP), `/api/psp/consent` immediately marked the `candidate_requests` row as `'completed'`. We were calling `refreshPendingRequest()` from the disclosure's `onConsentSigned` callback, which would null out `pendingEmployerRequest` *before* `onOrderPlaced` fired. The component briefly fell through to the self-order form (with the misleading "Order PSP (0.01 USDC)" button) before flipping to the success screen. Same race existed in `MvrOrderForm`.
+2. **Two PSP forms re-asked the same questions.** Candidate had to re-type firstName / lastName / DOB / DL# / address on the FMCSA form even though they'd just typed them in the BG check form one screen earlier. Confusing and friction-y.
+
+### What changed
+
+- **`MvrOrderForm` + `PspOrderForm`** now capture `pendingEmployerRequest` into local `capturedRequest` state on first render. The wizard render condition uses the captured copy, so the wizard can't unmount until the candidate explicitly hits "Back to Hub" from the success screen.
+- **Removed `refreshPendingRequest()` from disclosure `onConsentSigned` callbacks.** It only runs in `onOrderPlaced` now, *after* the wizard has flipped to the success screen.
+- **`BackgroundCheckDisclosure.onConsentSigned(profile?)`** — callback now receives the captured form data so the parent can prefill downstream forms.
+- **`PspDisclosureForm` gains `initialProfile?: Record<string, string>`.** When provided, the form seeds its `profile` state and `ssn` directly and skips the `/api/candidate/profile-info` fetch (which would clobber the prefill).
+- **`PspOrderForm`** wires Step 1 → `setBgFormProfile(profile)` → Step 2 `initialProfile={bgFormProfile}`. Candidate types name/DL/DOB once.
+
+### Why this is FCRA-compliant
+
+The two PSP documents (FCRA general background check + FMCSA PSP) are separate legal disclosures and each requires its own typed signature. **Pre-filling shared identity fields between them is standard CRA practice** (Sterling, HireRight, Accurate, etc. all do this). Only the signature/typed-name field per document is what binds the candidate to *that specific document's* terms — the underlying personal info can be shared freely across forms in the same flow.
+
+### Pattern worth remembering
+
+When a child component fires multiple lifecycle callbacks in sequence (`onConsentSigned` then `onOrderPlaced`), and one of them triggers a parent refetch that could remove the child from the tree, the parent must own a captured copy of the state that keeps the child mounted until the entire flow resolves. **Don't refetch upstream state in the middle of a child's flow** — only after the flow's terminal callback.
+
+---
+
 ## **Central admin: PSP Orders tab + employer-source visibility on MVR/PSP** (May 2026)
 
 Central admin had no PSP visibility at all and the existing MVR Orders tab gave no signal that employer-initiated screening orders even existed (no "ordered by" context). Storm operators couldn't tell self-orders apart from CRA-isolated employer orders without dropping into SQL.

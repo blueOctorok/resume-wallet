@@ -44,6 +44,12 @@ export interface PspDisclosureFormProps {
   fulfillOrder?: boolean
   /** Called when the order has been successfully placed (only relevant with fulfillOrder) */
   onOrderPlaced?: (result: { orderId: string; orderNumber: string }) => void
+  /**
+   * Optional prefill from a prior step in the same flow (e.g. BG disclosure).
+   * Pre-filling shared identity fields across two FCRA disclosures is standard
+   * CRA practice — only the SIGNATURE per document must be unique.
+   */
+  initialProfile?: Record<string, string> | null
 }
 
 /** html2canvas: force SVG strokes to rgb for reliable capture (same idea as BackgroundCheckDisclosure). */
@@ -129,21 +135,24 @@ export default function PspDisclosureForm({
   renderInline = false,
   fulfillOrder = false,
   onOrderPlaced,
+  initialProfile,
 }: PspDisclosureFormProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
+  // Seed from initialProfile (e.g. BG disclosure step) so candidates don't
+  // re-type identical fields. Falls back to whatever fetchDriverProfile() returns.
   const [profile, setProfile] = useState<DriverProfileInfo>({
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    dlNumber: '',
-    dlState: '',
-    email: '',
+    firstName: initialProfile?.firstName ?? '',
+    lastName: initialProfile?.lastName ?? '',
+    dateOfBirth: initialProfile?.dateOfBirth ?? '',
+    address: initialProfile?.address ?? '',
+    city: initialProfile?.city ?? '',
+    state: initialProfile?.state ?? '',
+    zip: initialProfile?.zip ?? '',
+    dlNumber: initialProfile?.dlNumber ?? '',
+    dlState: initialProfile?.dlState ?? '',
+    email: initialProfile?.email ?? '',
   })
   const [profileLoading, setProfileLoading] = useState(true)
   const [viewCompanyName, setViewCompanyName] = useState(companyName)
@@ -159,8 +168,9 @@ export default function PspDisclosureForm({
   const [error, setError] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
 
-  // SSN (last 4) — only collected when fulfillOrder mode is active
-  const [ssn, setSsn] = useState('')
+  // SSN (last 4) — only collected when fulfillOrder mode is active.
+  // Seed from initialProfile so the candidate doesn't re-type it across the wizard.
+  const [ssn, setSsn] = useState(initialProfile?.ssn ?? '')
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [orderPlacing, setOrderPlacing] = useState(false)
 
@@ -169,10 +179,16 @@ export default function PspDisclosureForm({
   useEffect(() => {
     if (viewMode && consentId) {
       void fetchSignedConsent()
+    } else if (initialProfile) {
+      // Wizard prefilled us — skip the profile fetch entirely so we don't
+      // clobber what the candidate just typed in the BG step.
+      const printed = `${initialProfile.firstName ?? ''} ${initialProfile.lastName ?? ''}`.trim()
+      if (printed) setPrintedName(printed)
+      setProfileLoading(false)
     } else {
       void fetchDriverProfile()
     }
-  }, [userAddress, viewMode, consentId])
+  }, [userAddress, viewMode, consentId, initialProfile])
 
   const fetchSignedConsent = async () => {
     if (!consentId) return

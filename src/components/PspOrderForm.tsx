@@ -204,8 +204,26 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
   const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
 
+  // Capture the request the moment we see it. The PSP consent endpoint marks the
+  // candidate_request 'completed' as soon as Step 2 is signed, which would unmount
+  // this wizard before the order is placed. Capturing keeps the wizard alive.
+  const [capturedRequest, setCapturedRequest] = useState(pendingEmployerRequest)
+  useEffect(() => {
+    if (pendingEmployerRequest && !capturedRequest) {
+      setCapturedRequest(pendingEmployerRequest)
+    }
+  }, [pendingEmployerRequest, capturedRequest])
+
+  // Profile data captured from the BG disclosure (Step 1) — used to prefill the
+  // PSP FMCSA form (Step 2) so the candidate doesn't re-type identical fields.
+  // Pre-fill of shared data fields is FCRA-compliant; only the SIGNATURE per
+  // document must be unique. (Standard practice across Sterling/HireRight/etc.)
+  const [bgFormProfile, setBgFormProfile] = useState<Record<string, string> | null>(null)
+
+  const activeEmployerRequest = capturedRequest || pendingEmployerRequest
+
   // Employer-initiated flow: two-step disclosure wizard OR success screen
-  if (pendingEmployerRequest || employerOrderComplete) {
+  if (activeEmployerRequest || employerOrderComplete) {
     if (employerOrderComplete) {
       return (
         <div className='w-full p-4 sm:p-6 lg:p-8'>
@@ -269,29 +287,38 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
 
           {pspEmployerStep === 'bg-disclosure' && (
             <BackgroundCheckDisclosure
-              requestId={pendingEmployerRequest.id}
-              companyName={pendingEmployerRequest.companyName}
+              requestId={activeEmployerRequest!.id}
+              companyName={activeEmployerRequest!.companyName}
               userAddress={userAddress}
               renderInline
               onClose={onBack}
-              onConsentSigned={() => setPspEmployerStep('psp-disclosure')}
+              // Capture profile so Step 2 prefills, then advance the wizard.
+              onConsentSigned={(profile) => {
+                if (profile) setBgFormProfile(profile)
+                setPspEmployerStep('psp-disclosure')
+              }}
             />
           )}
 
           {pspEmployerStep === 'psp-disclosure' && (
             <PspDisclosureForm
               userAddress={userAddress}
-              companyName={pendingEmployerRequest.companyName}
-              requestId={pendingEmployerRequest.id}
+              companyName={activeEmployerRequest!.companyName}
+              requestId={activeEmployerRequest!.id}
               renderInline
               fulfillOrder
+              initialProfile={bgFormProfile}
               onClose={onBack}
-              onConsentSigned={() => void refreshPendingRequest()}
-            onOrderPlaced={async () => {
-              setEmployerOrderComplete(true)
-              const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
-              void syncDriverHubFromApi(userAddress)
-            }}
+              // Don't refresh pendingRequest here — the consent endpoint marks
+              // it 'completed' immediately, which would unmount this wizard
+              // before onOrderPlaced fires. The wizard owns its lifecycle.
+              onConsentSigned={() => {}}
+              onOrderPlaced={async () => {
+                setEmployerOrderComplete(true)
+                void refreshPendingRequest()
+                const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+                void syncDriverHubFromApi(userAddress)
+              }}
             />
           )}
         </div>

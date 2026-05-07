@@ -36,7 +36,13 @@ interface BackgroundCheckDisclosureProps {
   companyName: string
   userAddress: string
   onClose: () => void
-  onConsentSigned: () => void
+  /**
+   * Called once the FCRA consent is saved.
+   * `profile` is the candidate-typed/edited form data — useful for prefilling
+   * a downstream form (e.g. PSP Step 2) so the candidate doesn't re-type
+   * identical name/DL/DOB fields.
+   */
+  onConsentSigned: (profile?: Record<string, string>) => void
   /** Read-only mode for viewing a previously signed consent */
   viewMode?: boolean
   /** Consent ID to fetch for read-only viewing */
@@ -286,7 +292,7 @@ export default function BackgroundCheckDisclosure({
       }
 
       setSigned(true)
-      onConsentSigned()
+      onConsentSigned({ ...profile, ssn: ssn.trim() })
 
       // Step 2: If fulfillOrder mode, place the Accio order immediately after consent
       if (fulfillOrder) {

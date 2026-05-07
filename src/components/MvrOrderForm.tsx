@@ -174,8 +174,21 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
   const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
 
+  // Capture the request the moment we see it, so the wizard owns its lifecycle.
+  // Without this: signing the disclosure marks the candidate_request as 'completed',
+  // refreshPendingRequest() returns null, and the component briefly renders the
+  // self-order form between the sign callback and onOrderPlaced firing.
+  const [capturedRequest, setCapturedRequest] = useState(pendingEmployerRequest)
+  useEffect(() => {
+    if (pendingEmployerRequest && !capturedRequest) {
+      setCapturedRequest(pendingEmployerRequest)
+    }
+  }, [pendingEmployerRequest, capturedRequest])
+
+  const activeEmployerRequest = capturedRequest || pendingEmployerRequest
+
   // Employer-initiated flow: render the combined disclosure + order form as the full page
-  if (pendingEmployerRequest || employerOrderComplete) {
+  if (activeEmployerRequest || employerOrderComplete) {
     if (employerOrderComplete) {
       return (
         <div className='w-full p-4 sm:p-6 lg:p-8'>
@@ -208,15 +221,20 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             <BackToHubButton onClick={onBack} />
           </div>
           <BackgroundCheckDisclosure
-            requestId={pendingEmployerRequest!.id}
-            companyName={pendingEmployerRequest!.companyName}
+            requestId={activeEmployerRequest!.id}
+            companyName={activeEmployerRequest!.companyName}
             userAddress={userAddress}
             renderInline
             fulfillOrder
             onClose={onBack}
-            onConsentSigned={() => void refreshPendingRequest()}
+            // Don't refresh pendingRequest here — the consent endpoint marks the
+            // request 'completed' immediately, which would unmount this wizard
+            // before onOrderPlaced fires. The wizard owns its lifecycle via
+            // capturedRequest + employerOrderComplete.
+            onConsentSigned={() => {}}
             onOrderPlaced={async () => {
               setEmployerOrderComplete(true)
+              void refreshPendingRequest()
               const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
               void syncDriverHubFromApi(userAddress)
             }}
