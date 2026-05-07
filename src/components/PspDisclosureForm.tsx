@@ -38,6 +38,12 @@ export interface PspDisclosureFormProps {
   requestId?: string | null
   viewMode?: boolean
   consentId?: string
+  /** When true, renders inline (no Modal wrapper) — used as the main page content */
+  renderInline?: boolean
+  /** When true, adds SSN field and auto-submits the Accio PSP order after consent is saved */
+  fulfillOrder?: boolean
+  /** Called when the order has been successfully placed (only relevant with fulfillOrder) */
+  onOrderPlaced?: (result: { orderId: string; orderNumber: string }) => void
 }
 
 /** html2canvas: force SVG strokes to rgb for reliable capture (same idea as BackgroundCheckDisclosure). */
@@ -120,6 +126,9 @@ export default function PspDisclosureForm({
   requestId,
   viewMode = false,
   consentId,
+  renderInline = false,
+  fulfillOrder = false,
+  onOrderPlaced,
 }: PspDisclosureFormProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
@@ -149,6 +158,11 @@ export default function PspDisclosureForm({
   const [signed, setSigned] = useState(viewMode)
   const [error, setError] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+
+  // SSN (last 4) — only collected when fulfillOrder mode is active
+  const [ssn, setSsn] = useState('')
+  const [orderPlaced, setOrderPlaced] = useState(false)
+  const [orderPlacing, setOrderPlacing] = useState(false)
 
   const employerDisplay = viewCompanyName.trim() || companyName.trim() || 'Self-Request'
 
@@ -244,6 +258,10 @@ export default function PspDisclosureForm({
       setError("Driver's license number is required.")
       return
     }
+    if (fulfillOrder && (!ssn.trim() || ssn.trim().length < 4)) {
+      setError('Last 4 digits of SSN are required to submit the order.')
+      return
+    }
 
     setError(null)
     setSubmitting(true)
@@ -254,6 +272,7 @@ export default function PspDisclosureForm({
         printedName: printedName.trim(),
       }
 
+      // Step 1: Save PSP consent
       const response = await fetch('/api/psp/consent', {
         method: 'POST',
         headers: {
@@ -276,8 +295,48 @@ export default function PspDisclosureForm({
       const data = await response.json()
       setSigned(true)
       onConsentSigned({ consentId: data.consentId as string })
+
+      // Step 2: If fulfillOrder mode, place the Accio PSP order
+      if (fulfillOrder && requestId) {
+        setOrderPlacing(true)
+        const orderRes = await fetch('/api/candidate/fulfill-screening', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': userAddress,
+          },
+          body: JSON.stringify({
+            requestId,
+            type: 'psp',
+            formData: {
+              firstName: profile.firstName.trim(),
+              lastName: profile.lastName.trim(),
+              dob: profile.dateOfBirth.trim(),
+              ssn: ssn.trim(),
+              dlNumber: profile.dlNumber.trim(),
+              dlState: profile.dlState.trim(),
+              address: profile.address.trim(),
+              city: profile.city.trim(),
+              state: profile.state.trim(),
+              zip: profile.zip.trim(),
+              email: profile.email.trim(),
+            },
+          }),
+        })
+
+        if (!orderRes.ok) {
+          const orderData = await orderRes.json()
+          throw new Error(orderData.error || 'Consent saved but failed to submit PSP order')
+        }
+
+        const orderData = await orderRes.json()
+        setOrderPlaced(true)
+        setOrderPlacing(false)
+        onOrderPlaced?.({ orderId: orderData.order.id, orderNumber: orderData.order.orderNumber })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred. Please try again.')
+      setOrderPlacing(false)
     } finally {
       setSubmitting(false)
     }
@@ -354,15 +413,28 @@ export default function PspDisclosureForm({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900'
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
 
-  return (
-    <Modal onClose={onClose} maxWidth="max-w-full" zIndex={10002} disableBackdropClose panelShape="block">
-      <div className={`flex flex-col max-h-[90vh] ${overlayBg}`}>
-        <ModalHeader
-          title="PSP Disclosure & Authorization (FMCSA)"
-          subtitle={`Prospective Employer: ${employerDisplay}`}
-          onClose={onClose}
-          variant="block"
-        />
+  const content = (
+      <div className={`flex flex-col ${renderInline ? 'h-full' : 'max-h-[90vh]'} ${overlayBg}`}>
+        {renderInline ? (
+          <div className={`flex items-center gap-3 px-6 py-4 border-b ${footerBg}`}>
+            <div className={`p-2.5 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+              <FileWarning className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <h2 className={`font-semibold ${textPrimary}`}>
+                {fulfillOrder ? 'PSP + MVR Report — Disclosure & Order' : 'PSP Disclosure & Authorization (FMCSA)'}
+              </h2>
+              <p className={`text-sm ${textSecondary}`}>Prospective Employer: {employerDisplay}</p>
+            </div>
+          </div>
+        ) : (
+          <ModalHeader
+            title={fulfillOrder ? 'PSP + MVR Report — Disclosure & Order' : 'PSP Disclosure & Authorization (FMCSA)'}
+            subtitle={`Prospective Employer: ${employerDisplay}`}
+            onClose={onClose}
+            variant="block"
+          />
+        )}
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto py-8 px-4">
@@ -478,6 +550,18 @@ export default function PspDisclosureForm({
                       type="email"
                       autoComplete="email"
                     />
+                    {fulfillOrder && !viewMode && (
+                      <ReadOnlyOrInput
+                        label="SSN (last 4 digits)"
+                        value={ssn}
+                        onChange={v => setSsn(v.replace(/\D/g, '').slice(0, 4))}
+                        inputMode="numeric"
+                        pattern="[0-9]{4}"
+                        maxLength={4}
+                        placeholder="1234"
+                        required
+                      />
+                    )}
                   </div>
                 )}
 
@@ -529,7 +613,13 @@ export default function PspDisclosureForm({
               <>
                 <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                   <CheckCircle className="w-4 h-4" />
-                  {viewMode ? 'Signed PSP authorization on file' : 'PSP authorization recorded'}
+                  {orderPlaced
+                    ? 'PSP order submitted — your report will be processed shortly'
+                    : orderPlacing
+                      ? 'Submitting order...'
+                      : viewMode
+                        ? 'Signed PSP authorization on file'
+                        : 'PSP authorization recorded'}
                 </div>
                 <div className="flex-1 min-w-[1rem]" />
                 <Button
@@ -572,7 +662,7 @@ export default function PspDisclosureForm({
                   isLoading={submitting}
                 >
                   <PenLine className="w-4 h-4 mr-2 inline" />
-                  Sign & Authorize
+                  {fulfillOrder ? 'Sign & Submit Order' : 'Sign & Authorize'}
                 </Button>
               </>
             )}
@@ -585,6 +675,13 @@ export default function PspDisclosureForm({
           </div>
         </div>
       </div>
+  )
+
+  if (renderInline) return content
+
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-full" zIndex={10002} disableBackdropClose panelShape="block">
+      {content}
     </Modal>
   )
 }

@@ -4,6 +4,35 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Combined disclosure + order form for employer-initiated screening** (May 2026)
+
+When an employer sends an MVR or PSP request via outreach email, the candidate now sees ONE combined form — the disclosure document plus all the personal info needed to submit the order. Previously there were two separate steps: sign disclosure → fill self-order form (which confusingly asked for USDC payment the candidate didn't owe).
+
+### What changed:
+
+- **`BackgroundCheckDisclosure`** gains `renderInline`, `fulfillOrder`, and `onOrderPlaced` props. When `fulfillOrder=true`, it adds an SSN (last 4) field and auto-submits the Accio order after consent is saved. When `renderInline=true`, it renders without a Modal wrapper (used as the main page content, not an overlay).
+
+- **`PspDisclosureForm`** gets the same treatment — `renderInline`, `fulfillOrder`, `onOrderPlaced`.
+
+- **`MvrOrderForm`** now early-returns the inline `BackgroundCheckDisclosure` (with `fulfillOrder`) when a pending employer request exists. The self-order form (USDC payment) only renders when there's no employer request.
+
+- **`PspOrderForm`** same pattern — inline `PspDisclosureForm` for employer requests.
+
+- **New endpoint `POST /api/candidate/fulfill-screening`:** Called by the disclosure form after consent is signed. Takes the form data (personal info + SSN), verifies consent exists, looks up the company from `candidate_requests`, and places the Accio order directly. No USDC payment step — the CRA bills the employer account.
+
+### Flow:
+1. Employer sends MVR/PSP outreach → invite created → `candidate_requests` record created
+2. Candidate clicks email → onboards → lands on MVR/PSP page
+3. Page detects pending employer request → renders inline disclosure form (not self-order form)
+4. **MVR:** Candidate fills single combined form (BG disclosure + info + SSN), signs → order placed
+5. **PSP:** Two-step wizard — Step 1: BG Disclosure (sign) → Step 2: FMCSA PSP Disclosure (sign + SSN → order placed). Both legally required, kept as separate documents.
+6. Candidate sees "Order submitted" confirmation
+
+### Self-order flow unchanged:
+Candidates who order their own MVR/PSP still see the standard self-order form with USDC payment.
+
+---
+
 ## **Strategic Pivot — Portable DQ File Platform** (May 2026)
 
 **Decision:** Storm is no longer positioning as a "blockchain-verified career platform" competing with Indeed/LinkedIn. It is a **portable, composable DQ (Driver Qualification) file platform** focused on staffing agencies and carriers.

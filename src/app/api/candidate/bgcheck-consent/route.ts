@@ -57,14 +57,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Request not found' }, { status: 404 })
   }
 
-  // PSP uses FMCSA-only consent via POST /api/psp/consent — never store PSP on bgcheck_consents.
+  // Both MVR and PSP orders require the general background check disclosure.
+  // PSP additionally requires the FMCSA PSP form (via /api/psp/consent), but the
+  // general BG disclosure is a prerequisite for both.
   const isBgcheckConsentRequest =
     candidateRequest.request_type === 'mvr_order' ||
-    (candidateRequest.request_type === 'block_request' && candidateRequest.target_block_type === 'driver-mvr')
+    candidateRequest.request_type === 'psp_order' ||
+    (candidateRequest.request_type === 'block_request' &&
+      (candidateRequest.target_block_type === 'driver-mvr' || candidateRequest.target_block_type === 'driver-psp'))
 
   if (!isBgcheckConsentRequest) {
     return NextResponse.json(
-      { error: 'This disclosure applies to MVR / driver-mvr requests only. PSP uses the FMCSA PSP form.' },
+      { error: 'This disclosure applies to MVR / PSP screening requests only.' },
       { status: 400 },
     )
   }
@@ -90,15 +94,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to store consent' }, { status: 500 })
   }
 
-  // Mark the candidate_requests record as completed
+  // For MVR-only requests, mark completed immediately since this is the only disclosure.
+  // For PSP requests, the FMCSA PSP form (Step 2) still needs to be signed, so just mark as 'viewed'.
+  const isPspRequest = candidateRequest.request_type === 'psp_order' ||
+    (candidateRequest.request_type === 'block_request' && candidateRequest.target_block_type === 'driver-psp')
+
+  const newStatus = isPspRequest ? 'viewed' : 'completed'
+  const updatePayload: Record<string, string> = { status: newStatus }
+  if (newStatus === 'completed') {
+    updatePayload.completed_at = new Date().toISOString()
+  }
+
   const { error: updateError } = await supabase
     .from('candidate_requests')
-    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq('id', requestId)
 
   if (updateError) {
     console.error('[BGCHECK CONSENT] Status update error:', updateError)
-    // Consent was stored — this is non-fatal, log and continue
   }
 
   // Notify the employer who requested the background check

@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin, Shield, Building2 } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
 import BackToHubButton from './ui/BackToHubButton'
@@ -51,7 +51,6 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // here straight from the bell notification (`?onboard=mvr`), bypassing the inbox entirely.
   const { pendingRequest: pendingEmployerRequest, refresh: refreshPendingRequest } =
     usePendingScreeningRequest('mvr', userAddress)
-  const [showEmployerDisclosure, setShowEmployerDisclosure] = useState(false)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
@@ -172,6 +171,32 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
     isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
   }`
 
+  // Employer-initiated flow: render the combined disclosure + order form as the full page
+  if (pendingEmployerRequest) {
+    return (
+      <div className='w-full p-4 sm:p-6 lg:p-8'>
+        <div className='max-w-3xl mx-auto'>
+          <div className="mb-4">
+            <BackToHubButton onClick={onBack} />
+          </div>
+          <BackgroundCheckDisclosure
+            requestId={pendingEmployerRequest.id}
+            companyName={pendingEmployerRequest.companyName}
+            userAddress={userAddress}
+            renderInline
+            fulfillOrder
+            onClose={onBack}
+            onConsentSigned={() => void refreshPendingRequest()}
+            onOrderPlaced={async () => {
+              const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+              void syncDriverHubFromApi(userAddress)
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className='w-full p-4 sm:p-6 lg:p-8'>
       <div className='max-w-2xl mx-auto space-y-6'>
@@ -212,75 +237,6 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             </div>
           </div>
         </div>
-
-        {/* Employer-requested MVR — FCRA disclosure gate.
-            Renders only when there's a pending employer request. The candidate must
-            sign the company-scoped FCRA disclosure here so the employer's order
-            endpoint can proceed (see /api/employer/mvr/order). */}
-        {pendingEmployerRequest && (
-          <div
-            className={`rounded-2xl border-2 p-5 ${
-              isDarkTheme(theme)
-                ? 'bg-amber-500/10 border-amber-500/40'
-                : 'bg-amber-50 border-amber-300'
-            }`}
-          >
-            <div className='flex items-start gap-3'>
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  isDarkTheme(theme) ? 'bg-amber-500/20' : 'bg-amber-100'
-                }`}
-              >
-                <Shield
-                  className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-amber-400' : 'text-amber-700'}`}
-                />
-              </div>
-              <div className='flex-1 min-w-0'>
-                <h3
-                  className={`text-sm font-semibold mb-1 ${
-                    isDarkTheme(theme) ? 'text-amber-200' : 'text-amber-900'
-                  }`}
-                >
-                  Action required: FCRA disclosure for {pendingEmployerRequest.companyName}
-                </h3>
-                <p
-                  className={`text-sm mb-3 ${
-                    isDarkTheme(theme) ? 'text-amber-200/80' : 'text-amber-800'
-                  }`}
-                >
-                  <Building2 className='inline w-3.5 h-3.5 mr-1 -mt-0.5' />
-                  {pendingEmployerRequest.companyName} requested your MVR. Federal law (FCRA)
-                  requires you to review and sign their disclosure form before they can order.
-                  You don&apos;t need to fill out the form below — they handle the order on
-                  their end after you sign.
-                </p>
-                <Button
-                  type='button'
-                  variant='primary'
-                  size='sm'
-                  onClick={() => setShowEmployerDisclosure(true)}
-                >
-                  <Shield className='w-3.5 h-3.5' />
-                  Review &amp; sign disclosure
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Disclosure modal — same one used in the inbox flow */}
-        {showEmployerDisclosure && pendingEmployerRequest && (
-          <BackgroundCheckDisclosure
-            requestId={pendingEmployerRequest.id}
-            companyName={pendingEmployerRequest.companyName}
-            userAddress={userAddress}
-            onClose={() => setShowEmployerDisclosure(false)}
-            onConsentSigned={() => {
-              setShowEmployerDisclosure(false)
-              void refreshPendingRequest()
-            }}
-          />
-        )}
 
         {/* Success Message */}
         {success && orderResult && (

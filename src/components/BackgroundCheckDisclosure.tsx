@@ -41,6 +41,12 @@ interface BackgroundCheckDisclosureProps {
   viewMode?: boolean
   /** Consent ID to fetch for read-only viewing */
   consentId?: string
+  /** When true, renders inline (no Modal wrapper) — used as the main page content */
+  renderInline?: boolean
+  /** When true, adds SSN field and auto-submits the Accio order after consent is saved */
+  fulfillOrder?: boolean
+  /** Called when the order has been successfully placed (only relevant with fulfillOrder) */
+  onOrderPlaced?: (result: { orderId: string; orderNumber: string }) => void
 }
 
 /**
@@ -137,6 +143,9 @@ export default function BackgroundCheckDisclosure({
   onConsentSigned,
   viewMode = false,
   consentId,
+  renderInline = false,
+  fulfillOrder = false,
+  onOrderPlaced,
 }: BackgroundCheckDisclosureProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
@@ -170,6 +179,12 @@ export default function BackgroundCheckDisclosure({
   const [generatingPdf, setGeneratingPdf] = useState(false)
   /** Restore collapsible state after PDF capture */
   const pdfOpenStateRef = useRef({ stateNotices: false, fcraRights: false })
+
+  // SSN (last 4) — only collected when fulfillOrder mode is active
+  const [ssn, setSsn] = useState('')
+  // Order placement status (for fulfillOrder mode)
+  const [orderPlaced, setOrderPlaced] = useState(false)
+  const [orderPlacing, setOrderPlacing] = useState(false)
 
   useEffect(() => {
     if (viewMode && consentId) {
@@ -241,11 +256,16 @@ export default function BackgroundCheckDisclosure({
       setError("Driver's license number is required.")
       return
     }
+    if (fulfillOrder && (!ssn.trim() || ssn.trim().length < 4)) {
+      setError('Last 4 digits of SSN are required to submit the order.')
+      return
+    }
 
     setError(null)
     setSubmitting(true)
 
     try {
+      // Step 1: Save the disclosure consent
       const response = await fetch('/api/candidate/bgcheck-consent', {
         method: 'POST',
         headers: {
@@ -267,8 +287,48 @@ export default function BackgroundCheckDisclosure({
 
       setSigned(true)
       onConsentSigned()
+
+      // Step 2: If fulfillOrder mode, place the Accio order immediately after consent
+      if (fulfillOrder) {
+        setOrderPlacing(true)
+        const orderRes = await fetch('/api/candidate/fulfill-screening', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': userAddress,
+          },
+          body: JSON.stringify({
+            requestId,
+            type: 'mvr',
+            formData: {
+              firstName: profile.firstName.trim(),
+              lastName: profile.lastName.trim(),
+              dob: profile.dateOfBirth.trim(),
+              ssn: ssn.trim(),
+              dlNumber: profile.dlNumber.trim(),
+              dlState: profile.dlState.trim(),
+              address: profile.address.trim(),
+              city: profile.city.trim(),
+              state: profile.state.trim(),
+              zip: profile.zip.trim(),
+              email: profile.email.trim(),
+            },
+          }),
+        })
+
+        if (!orderRes.ok) {
+          const orderData = await orderRes.json()
+          throw new Error(orderData.error || 'Consent saved but failed to submit order')
+        }
+
+        const orderData = await orderRes.json()
+        setOrderPlaced(true)
+        setOrderPlacing(false)
+        onOrderPlaced?.({ orderId: orderData.order.id, orderNumber: orderData.order.orderNumber })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred. Please try again.')
+      setOrderPlacing(false)
     } finally {
       setSubmitting(false)
     }
@@ -434,9 +494,8 @@ export default function BackgroundCheckDisclosure({
   const textPrimary = isDark ? 'text-white' : 'text-gray-900'
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
 
-  return (
-    <Modal onClose={onClose} maxWidth="max-w-full" zIndex={10002} disableBackdropClose>
-    <div className={`flex flex-col max-h-[90vh] ${overlayBg}`}>
+  const content = (
+    <div className={`flex flex-col ${renderInline ? 'h-full' : 'max-h-[90vh]'} ${overlayBg}`}>
       {/* Header */}
       <div className={`flex items-center justify-between px-6 py-4 border-b ${headerBg}`}>
         <div className="flex items-center gap-3">
@@ -444,16 +503,20 @@ export default function BackgroundCheckDisclosure({
             <Shield className="w-5 h-5 text-teal-500" />
           </div>
           <div>
-            <h2 className={`font-semibold ${textPrimary}`}>Background Check Disclosure & Authorization</h2>
+            <h2 className={`font-semibold ${textPrimary}`}>
+              {fulfillOrder ? 'MVR Background Check — Disclosure & Order' : 'Background Check Disclosure & Authorization'}
+            </h2>
             <p className={`text-sm ${textSecondary}`}>Requested by {viewCompanyName}</p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {!renderInline && (
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Scrollable Content */}
@@ -681,6 +744,18 @@ export default function BackgroundCheckDisclosure({
                         type="email"
                         autoComplete="email"
                       />
+                      {fulfillOrder && !viewMode && (
+                        <ReadOnlyOrInput
+                          label="SSN (last 4 digits)"
+                          value={ssn}
+                          onChange={v => setSsn(v.replace(/\D/g, '').slice(0, 4))}
+                          inputMode="numeric"
+                          pattern="[0-9]{4}"
+                          maxLength={4}
+                          placeholder="1234"
+                          required
+                        />
+                      )}
                     </div>
                   )}
 
@@ -776,7 +851,13 @@ export default function BackgroundCheckDisclosure({
             <>
               <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                 <CheckCircle className="w-4 h-4" />
-                {viewMode ? `Signed consent for ${viewCompanyName}` : `Authorization sent to ${viewCompanyName}`}
+                {orderPlaced
+                  ? 'Order submitted — your MVR will be processed shortly'
+                  : orderPlacing
+                    ? 'Submitting order...'
+                    : viewMode
+                      ? `Signed consent for ${viewCompanyName}`
+                      : `Authorization sent to ${viewCompanyName}`}
               </div>
               <div className="flex-1" />
               <button
@@ -849,13 +930,20 @@ export default function BackgroundCheckDisclosure({
                 ) : (
                   <FileCheck className="w-4 h-4" />
                 )}
-                Sign & Authorize
+                {fulfillOrder ? 'Sign & Submit Order' : 'Sign & Authorize'}
               </button>
             </>
           )}
         </div>
       </div>
     </div>
+  )
+
+  if (renderInline) return content
+
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-full" zIndex={10002} disableBackdropClose>
+      {content}
     </Modal>
   )
 }
