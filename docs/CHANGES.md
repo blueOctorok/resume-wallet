@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP product always orders MVR + FMCSA in one Accio bundle** (May 2026)
+
+Storm’s PSP offering is **MVR + PSP (FMCSA crash/inspection)** in a single `placeOrder`, with **one** postback URL (`/api/mvr/webhook`). Accio only allows one `postBackInfo` URL per order, so FMCSA completion posts must be handled on the same route as MVR posts.
+
+### What changed
+
+- **`accio-xml-builder`:** `buildAccioPspWithMvrBundleOrderXml` + `parseAccioPlaceOrderBundleIds` (already present) drive all PSP placement paths.
+- **`place-psp-mvr-bundle-db`:** Inserts **`mvr_orders`** then **`psp_orders`** with the same `accio_order_number`, distinct suborder IDs, shared `order_xml` / portal URL; optional **`payment_id`** / **`payment_tx_hash`** on **both** rows when the candidate or employer paid via `payments`.
+- **`/api/candidate/fulfill-screening`** (type `psp`), **`/api/psp/order`**, **`/api/employer/psp/order`:** All use the bundle XML, **`webhookUrl` → `/api/mvr/webhook`**, and `insertPspMvrBundleOrders`. Fulfill-screening JSON still exposes **`order.id`** as the PSP row id for existing UI callbacks, plus `mvrOrderId` / `pspOrderId`.
+- **`/api/mvr/webhook`:** After treating the payload as a completion notification, if **`isFmcsaPostResultsWebhookXml`**, delegates to **`processPspAccioWebhookCompletion`** instead of the MVR parser.
+- **`/api/psp/webhook`:** Thin wrapper around **`processPspAccioWebhookCompletion`** so legacy Accio URLs and the shared processor stay in sync.
+
+### Teaching note
+
+Multi-product background orders from CRAs are often modeled as **one parent order + multiple suborders**. Your webhook URL is per **parent** order, so the handler must **branch on suborder type** (MVR XML vs FMCSA XML) or you will try to parse FMCSA as MVR and lose results.
+
+---
+
 ## **Fix: PSP + MVR career card "Invalid Date" + missing status states** (May 2026)
 
 `PspSection` and `MvrSection` both did `new Date(data.orderedAt).toLocaleDateString()` without guarding against empty/null `orderedAt`. The empty-section fallback in `projected-career-card.ts` sets `orderedAt: ''`, so `new Date('')` produced "Invalid Date". Status text also only showed "ordered" or "pending" — no "processing", "under review", or "failed".

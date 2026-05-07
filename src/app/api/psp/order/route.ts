@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { buildAccioPspOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
-import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import {
+  buildAccioPspWithMvrBundleOrderXml,
+  generateOrderNumber,
+  generateWebhookGuid,
+  parseAccioPlaceOrderBundleIds,
+} from '@/lib/accio-xml-builder'
+import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
+import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 
 /**
- * POST /api/psp/order — candidate self-order FMCSA PSP (Accio fmcsa_crash_inspection).
+ * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -191,9 +197,9 @@ export async function POST(request: NextRequest) {
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/psp/webhook`
+    const webhookUrl = `${baseUrl}/api/mvr/webhook`
 
-    const orderXml = buildAccioPspOrderXml({
+    const orderXml = buildAccioPspWithMvrBundleOrderXml({
       firstName,
       middleName,
       lastName,
@@ -206,7 +212,7 @@ export async function POST(request: NextRequest) {
       city,
       state,
       zip,
-      jobState,
+      jobState: jobState ?? state,
       dlNumber,
       dlState,
       orderNumber,
@@ -232,53 +238,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit PSP order to Accio', details: msg }, { status: 500 })
     }
 
-    let accioOrderId: string | null = null
-    for (const pattern of [
-      /<order[^>]*orderID=["']([^"']+)["']/i,
-      /<completeOrder[^>]*remote_number=["']([^"']+)["']/i,
-      /<completeOrder[^>]*number=["']([^"']+)["']/i,
-    ]) {
-      const match = accioResponse.match(pattern)
-      if (match) {
-        accioOrderId = match[1]
-        break
-      }
+    const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+    const inserted = await insertPspMvrBundleOrders(supabaseService, {
+      driverUserId: user.id,
+      orderNumber,
+      orderXml,
+      accioOrderId: bundle.accioOrderId,
+      mvrSuborderId: bundle.mvrSuborderId,
+      fmcsaSuborderId: bundle.fmcsaSuborderId,
+      applicantPortalUrl: bundle.applicantPortalUrl,
+      dlNumber,
+      dlState: dlState.toUpperCase(),
+      expiresAtIso: expiresAt,
+      paymentId: payment.id,
+      paymentTxHash,
+    })
+
+    if ('error' in inserted) {
+      console.error('[PSP ORDER] DB insert:', inserted.error)
+      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
     }
 
-    let subOrderId: string | null = null
-    for (const pattern of [
-      /<subOrder[^>]*type=["']fmcsa_crash_inspection["'][^>]*suborderID=["']([^"']+)["']/i,
-      /<subOrder[^>]*suborderID=["']([^"']+)["'][^>]*type=["']fmcsa_crash_inspection["']/i,
-    ]) {
-      const match = accioResponse.match(pattern)
-      if (match) {
-        subOrderId = match[1]
-        break
-      }
-    }
-
-    const { data: pspOrder, error: orderError } = await supabaseService
+    const { data: pspOrder } = await supabaseService
       .from('psp_orders')
-      .insert({
-        driver_user_id: user.id,
-        payment_id: payment.id,
-        payment_tx_hash: paymentTxHash,
-        accio_order_number: orderNumber,
-        accio_suborder_number: subOrderId,
-        accio_remote_order_number: accioOrderId,
-        accio_remote_suborder_number: subOrderId,
-        dl_number: dlNumber,
-        dl_state: dlState.toUpperCase(),
-        status: 'pending',
-        order_xml: orderXml,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .select()
+      .select('id, accio_order_number, accio_suborder_number, status, ordered_at')
+      .eq('id', inserted.pspOrderId)
       .single()
 
-    if (orderError) {
-      console.error('[PSP ORDER] DB insert:', orderError)
-      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
+    if (!pspOrder) {
+      return NextResponse.json({ error: 'Failed to load PSP order after insert' }, { status: 500 })
     }
 
     const { error: consumeErr } = await supabaseService
@@ -294,6 +284,7 @@ export async function POST(request: NextRequest) {
       success: true,
       order: {
         id: pspOrder.id,
+        mvrOrderId: inserted.mvrOrderId,
         orderNumber: pspOrder.accio_order_number,
         subOrderNumber: pspOrder.accio_suborder_number,
         status: pspOrder.status,

@@ -31,7 +31,9 @@ export interface AccioOrderData {
   mvrSearchType?: 'standard' | 'comprehensive'
   suppressApplicantEmail?: boolean // Suppress Accio's applicant portal email
   includeFmcsaCrashInspection?: boolean // Include FMCSA crash/inspection report
-  
+  /** When true, sets portalfromapplicant=Y (PSP / candidate-initiated flows). Default N for MVR-only. */
+  portalFromApplicant?: boolean
+
   // Optional: Webhook Configuration
   webhookUrl?: string
   webhookGuid?: string
@@ -63,6 +65,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
     mvrSearchType = 'standard',
     suppressApplicantEmail = true,
     includeFmcsaCrashInspection = false,
+    portalFromApplicant = false,
     webhookUrl,
     webhookGuid
   } = data
@@ -126,7 +129,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <drugscreen>N</drugscreen>
             <has_admitted_convictions>N</has_admitted_convictions>
             <admitted_conviction_details/>
-            <portalfromapplicant>N</portalfromapplicant>
+            <portalfromapplicant>${portalFromApplicant ? 'Y' : 'N'}</portalfromapplicant>
         </subject>`
 
   // Add webhook configuration if provided
@@ -167,7 +170,10 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
   return xml
 }
 
-/** Same subject envelope as MVR, but only the FMCSA PSP / crash-inspection subOrder (standalone order). */
+/**
+ * FMCSA-only Accio order (single subOrder). Storm’s PSP **product** uses
+ * `buildAccioPspWithMvrBundleOrderXml` (MVR + FMCSA in one placeOrder) instead.
+ */
 export interface AccioPspOrderData {
   firstName: string
   middleName?: string
@@ -292,6 +298,50 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
 </Accio_Order>`
 
   return xml
+}
+
+/**
+ * Storm PSP product = **one** Accio `placeOrder` with **MVR + FMCSA PSP** subOrders.
+ * Postback URL must be `/api/mvr/webhook` — FMCSA completion posts are routed to PSP storage from there.
+ */
+export function buildAccioPspWithMvrBundleOrderXml(data: AccioOrderData): string {
+  return buildAccioMvrOrderXml({
+    ...data,
+    includeFmcsaCrashInspection: true,
+    portalFromApplicant: true,
+  })
+}
+
+/** Parses Accio `placeOrder` XML response for bundled MVR + FMCSA suborder IDs. */
+export function parseAccioPlaceOrderBundleIds(responseXml: string): {
+  accioOrderId: string | null
+  mvrSuborderId: string | null
+  fmcsaSuborderId: string | null
+  applicantPortalUrl: string | null
+} {
+  const accioOrderId = responseXml.match(/orderID=["'](\d+)["']/i)?.[1] ?? null
+
+  const subId = (typeLiteral: string): string | null => {
+    const esc = typeLiteral.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    let m = responseXml.match(
+      new RegExp(`<subOrder[^>]*type=["']${esc}["'][^>]*suborderID=["']([^"']+)["']`, 'i'),
+    )
+    if (m?.[1]) return m[1]
+    m = responseXml.match(
+      new RegExp(`<subOrder[^>]*suborderID=["']([^"']+)["'][^>]*type=["']${esc}["']`, 'i'),
+    )
+    return m?.[1] ?? null
+  }
+
+  const mvrSuborderId = subId('MVR')
+  const fmcsaSuborderId = subId('fmcsa_crash_inspection')
+
+  const portalMatch =
+    responseXml.match(/<applicantPortalURL><!\[CDATA\[(.*?)\]\]><\/applicantPortalURL>/) ||
+    responseXml.match(/<applicantPortalURL>(.*?)<\/applicantPortalURL>/)
+  const applicantPortalUrl = portalMatch?.[1] ?? null
+
+  return { accioOrderId, mvrSuborderId, fmcsaSuborderId, applicantPortalUrl }
 }
 
 /**

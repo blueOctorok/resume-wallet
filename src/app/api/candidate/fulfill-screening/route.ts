@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { buildAccioMvrOrderXml, buildAccioPspOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import {
+  buildAccioMvrOrderXml,
+  buildAccioPspWithMvrBundleOrderXml,
+  generateOrderNumber,
+  generateWebhookGuid,
+  parseAccioPlaceOrderBundleIds,
+} from '@/lib/accio-xml-builder'
+import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 
 /**
  * POST /api/candidate/fulfill-screening
@@ -15,7 +22,7 @@ import { buildAccioMvrOrderXml, buildAccioPspOrderXml, generateOrderNumber, gene
  *
  * Body:
  *   requestId    string   — candidate_requests.id being fulfilled
- *   type         'mvr' | 'psp'
+ *   type         'mvr' | 'psp'  — `psp` places **MVR + FMCSA PSP** in one Accio order (product bundle).
  *   formData: {
  *     firstName, lastName, middleName?, dob, ssn (last 4),
  *     dlNumber, dlState, address, city, state, zip, email?, phone?
@@ -161,8 +168,9 @@ export async function POST(request: NextRequest) {
         webhookGuid,
       })
     } else {
-      webhookUrl = `${baseUrl}/api/psp/webhook`
-      orderXml = buildAccioPspOrderXml({
+      // PSP product = MVR + FMCSA in one placeOrder; postbacks hit /api/mvr/webhook (FMCSA routed to PSP).
+      webhookUrl = `${baseUrl}/api/mvr/webhook`
+      orderXml = buildAccioPspWithMvrBundleOrderXml({
         firstName: firstName.trim(),
         middleName,
         lastName: lastName.trim(),
@@ -211,7 +219,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit screening order', details: msg }, { status: 500 })
     }
 
-    // Parse response
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+    if (type === 'psp') {
+      const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
+      console.log(`[FULFILL SCREENING] Accio bundle response:`, bundle)
+
+      const inserted = await insertPspMvrBundleOrders(supabase, {
+        driverUserId: user.id,
+        orderNumber,
+        orderXml,
+        accioOrderId: bundle.accioOrderId,
+        mvrSuborderId: bundle.mvrSuborderId,
+        fmcsaSuborderId: bundle.fmcsaSuborderId,
+        applicantPortalUrl: bundle.applicantPortalUrl,
+        dlNumber: dlNumber.trim(),
+        dlState: dlState.trim().toUpperCase(),
+        expiresAtIso: expiresAt,
+        orderedByCompanyId: candidateRequest.company_id,
+        orderedByUserId: candidateRequest.requested_by_user_id,
+        orderedByEmployer: true,
+      })
+
+      if ('error' in inserted) {
+        return NextResponse.json({ error: 'Failed to store orders', details: inserted.error }, { status: 500 })
+      }
+
+      await supabase
+        .from('candidate_requests')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', requestId)
+        .neq('status', 'completed')
+
+      console.log(`[FULFILL SCREENING] PSP+MVR bundle created:`, inserted)
+
+      return NextResponse.json({
+        success: true,
+        order: {
+          id: inserted.pspOrderId,
+          mvrOrderId: inserted.mvrOrderId,
+          pspOrderId: inserted.pspOrderId,
+          orderNumber,
+          status: 'pending',
+          type: 'psp',
+        },
+      })
+    }
+
     const accioOrderId = accioResponse.match(/orderID="(\d+)"/)?.[1] ?? null
     const subOrderId = accioResponse.match(/suborderID="(\d+)"/)?.[1] ?? null
     const portalMatch =
@@ -221,11 +275,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[FULFILL SCREENING] Accio response:`, { accioOrderId, subOrderId })
 
-    // Store the order record.
-    // mvr_orders and psp_orders have DIFFERENT schemas — psp_orders has no
-    // `order_type`, `mvr_search_type`, or `applicant_portal_url` columns.
-    // Build the row per-table to avoid "column does not exist" 500s.
-    const table = type === 'mvr' ? 'mvr_orders' : 'psp_orders'
     const sharedRow = {
       driver_user_id: user.id,
       accio_order_number: orderNumber,
@@ -239,34 +288,26 @@ export async function POST(request: NextRequest) {
       ordered_by_company_id: candidateRequest.company_id,
       ordered_by_user_id: candidateRequest.requested_by_user_id,
       ordered_by_employer: true,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: expiresAt,
     }
 
-    const orderRow: Record<string, unknown> =
-      type === 'mvr'
-        ? {
-            ...sharedRow,
-            order_type: 'MVR',
-            mvr_search_type: 'standard',
-            applicant_portal_url: applicantPortalUrl,
-          }
-        : sharedRow
+    const orderRow: Record<string, unknown> = {
+      ...sharedRow,
+      order_type: 'MVR',
+      mvr_search_type: 'standard',
+      applicant_portal_url: applicantPortalUrl,
+    }
 
-    const { data: order, error: orderError } = await supabase
-      .from(table)
-      .insert(orderRow)
-      .select()
-      .single()
+    const { data: order, error: orderError } = await supabase.from('mvr_orders').insert(orderRow).select().single()
 
     if (orderError) {
-      console.error(`[FULFILL SCREENING] DB insert error (${table}):`, orderError)
+      console.error(`[FULFILL SCREENING] DB insert error (mvr_orders):`, orderError)
       return NextResponse.json(
         { error: 'Failed to store order', details: orderError.message },
         { status: 500 },
       )
     }
 
-    // Mark the candidate_request as completed (if not already done by the consent endpoint)
     await supabase
       .from('candidate_requests')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
@@ -281,7 +322,7 @@ export async function POST(request: NextRequest) {
         id: order.id,
         orderNumber,
         status: 'pending',
-        type,
+        type: 'mvr',
       },
     })
   } catch (err) {

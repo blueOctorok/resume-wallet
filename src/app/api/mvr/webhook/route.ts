@@ -3,6 +3,10 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { parseAccioMvrResult, mvrResultToJsonb } from '@/lib/accio-xml-parser'
 import { saveMvrData } from '@/lib/block-data'
 import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
+import {
+  isFmcsaPostResultsWebhookXml,
+  processPspAccioWebhookCompletion,
+} from '@/lib/process-psp-accio-webhook'
 
 /**
  * Convert YYYYMMDD date format to ISO date string for database storage
@@ -80,19 +84,28 @@ export async function POST(request: NextRequest) {
         type: isInProgressStatus ? 'in_progress' : isConfirmation ? 'confirmation' : 'unknown'
       })
     }
-    
-    console.log('[MVR WEBHOOK] Processing completion notification')
 
     console.log('[MVR WEBHOOK] Processing completion notification')
 
-    // Parse XML result
+    // PSP+MVR bundle uses this URL for all Accio postbacks; FMCSA suborder posts are not MVR XML.
+    if (isFmcsaPostResultsWebhookXml(xmlBody)) {
+      const supabaseService = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      )
+      const outcome = await processPspAccioWebhookCompletion(supabaseService, xmlBody)
+      return NextResponse.json(outcome.body, { status: outcome.status })
+    }
+
+    // Parse XML result (MVR suborder or bundled payload Accio labels as MVR)
     let parsedResult
     try {
       parsedResult = parseAccioMvrResult(xmlBody)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown parse error'
       console.error('[MVR WEBHOOK] Error parsing XML:', error)
       return NextResponse.json(
-        { error: 'Failed to parse XML result', details: error.message },
+        { error: 'Failed to parse XML result', details: message },
         { status: 400 }
       )
     }
@@ -415,10 +428,11 @@ export async function POST(request: NextRequest) {
       subOrderNumber
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[MVR WEBHOOK] Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: message },
       { status: 500 }
     )
   }

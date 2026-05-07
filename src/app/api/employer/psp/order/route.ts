@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { companyCanOrderPsp } from '@/lib/employer-company-access'
-import { buildAccioPspOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import {
+  buildAccioPspWithMvrBundleOrderXml,
+  generateOrderNumber,
+  generateWebhookGuid,
+  parseAccioPlaceOrderBundleIds,
+} from '@/lib/accio-xml-builder'
+import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 
 /**
- * POST /api/employer/psp/order — employer-paid PSP for a candidate (company-scoped, FCRA).
+ * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -146,9 +152,9 @@ export async function POST(request: NextRequest) {
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/psp/webhook`
+    const webhookUrl = `${baseUrl}/api/mvr/webhook`
 
-    const orderXml = buildAccioPspOrderXml({
+    const orderXml = buildAccioPspWithMvrBundleOrderXml({
       firstName,
       middleName,
       lastName,
@@ -187,42 +193,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit PSP order', details: msg }, { status: 500 })
     }
 
-    const accioOrderId = accioResponse.match(/orderID="(\d+)"/)?.[1] ?? null
-    const subOrderId =
-      accioResponse.match(
-        /<subOrder[^>]*type=["']fmcsa_crash_inspection["'][^>]*suborderID=["']([^"']+)["']/i,
-      )?.[1] ?? null
+    const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    const { data: pspOrder, error: orderError } = await supabase
+    const inserted = await insertPspMvrBundleOrders(supabase, {
+      driverUserId: candidateUserId,
+      orderNumber,
+      orderXml,
+      accioOrderId: bundle.accioOrderId,
+      mvrSuborderId: bundle.mvrSuborderId,
+      fmcsaSuborderId: bundle.fmcsaSuborderId,
+      applicantPortalUrl: bundle.applicantPortalUrl,
+      dlNumber,
+      dlState,
+      expiresAtIso: expiresAt,
+      orderedByCompanyId: companyId,
+      orderedByUserId: employer.id,
+      orderedByEmployer: true,
+      paymentId: payment.id,
+      paymentTxHash,
+    })
+
+    if ('error' in inserted) {
+      console.error('[EMPLOYER PSP] DB insert:', inserted.error)
+      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
+    }
+
+    const { data: pspOrder } = await supabase
       .from('psp_orders')
-      .insert({
-        driver_user_id: candidateUserId,
-        payment_id: payment.id,
-        payment_tx_hash: paymentTxHash,
-        accio_order_number: orderNumber,
-        accio_suborder_number: subOrderId,
-        accio_remote_order_number: accioOrderId,
-        accio_remote_suborder_number: subOrderId,
-        dl_number: dlNumber,
-        dl_state: dlState,
-        status: 'pending',
-        order_xml: orderXml,
-        ordered_by_company_id: companyId,
-        ordered_by_user_id: employer.id,
-        ordered_by_employer: true,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .select()
+      .select('id, accio_order_number, status')
+      .eq('id', inserted.pspOrderId)
       .single()
 
-    if (orderError) {
-      console.error('[EMPLOYER PSP] DB insert:', orderError)
-      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
+    if (!pspOrder) {
+      return NextResponse.json({ error: 'Failed to load PSP order after insert' }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      order: { id: pspOrder.id, orderNumber: pspOrder.accio_order_number, status: pspOrder.status },
+      order: {
+        id: pspOrder.id,
+        mvrOrderId: inserted.mvrOrderId,
+        orderNumber: pspOrder.accio_order_number,
+        status: pspOrder.status,
+      },
     })
   } catch (err) {
     console.error('[EMPLOYER PSP] Unexpected:', err)
