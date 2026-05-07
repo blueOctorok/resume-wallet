@@ -50,6 +50,7 @@ import {
   Wallet,
   LayoutGrid,
   Coins,
+  Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
@@ -60,6 +61,10 @@ import STORMBalance from '@/components/STORMBalance'
 import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
+import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
+import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
+import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
+import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 
 // ============================================================
 // TYPES
@@ -197,6 +202,18 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [companyWalletProvisioning, setCompanyWalletProvisioning] = useState(false)
   const [companyWalletModalOpen, setCompanyWalletModalOpen] = useState(false)
   const companyEnsureAttemptedId = useRef<string | null>(null)
+
+  const employerInstalledBlocks = useEmployerBlocksStore((s) => s.installedBlocks)
+  const employerCanManageBlocks = useEmployerBlocksStore((s) => s.canManageEmployerBlocks)
+  const employerPickerOpen = useEmployerBlocksStore((s) => s.isPickerOpen)
+  const openEmployerBlockPicker = useEmployerBlocksStore((s) => s.openPicker)
+  const closeEmployerBlockPicker = useEmployerBlocksStore((s) => s.closePicker)
+  const fetchEmployerBlocks = useEmployerBlocksStore((s) => s.fetchEmployerBlocks)
+  const installEmployerBlock = useEmployerBlocksStore((s) => s.installBlock)
+  const removeEmployerBlock = useEmployerBlocksStore((s) => s.removeBlock)
+  const employerRecentAudit = useEmployerBlocksStore((s) => s.recentAudit)
+
+  const [employerBlockToRemove, setEmployerBlockToRemove] = useState<{ id: string; label: string } | null>(null)
 
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
@@ -412,6 +429,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       fetchHubData()
     }
   }, [walletAddress, fetchHubData])
+
+  useEffect(() => {
+    if (!walletAddress || !data?.company?.id) return
+    void fetchEmployerBlocks(walletAddress)
+  }, [walletAddress, data?.company?.id, fetchEmployerBlocks])
 
   // Auto-refresh when tab becomes visible (solves stale data after changes in other tabs)
   const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
@@ -814,6 +836,104 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           </div>
         </BlockCard>
       </HubSectionPanel>
+
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="mb-8">
+        <BlockCard
+          variant="embed"
+          icon={Package}
+          title="Employer blocks"
+          description="Turn on paid integrations like MVR and PSP ordering for your team. Jobs, applicants, and talent search stay available without installing anything."
+          headerActions={
+            employerCanManageBlocks ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => openEmployerBlockPicker()}>
+                <Plus className="h-4 w-4" />
+                Add block
+              </Button>
+            ) : undefined
+          }
+        >
+          {employerInstalledBlocks.length === 0 ? (
+            <div className="py-6 text-center">
+              <p className={cn('text-sm', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600')}>
+                No industry blocks installed yet. Add MVR or PSP when your company needs them.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {employerInstalledBlocks.map((row) => {
+                const label = getEmployerBlockDefinition(row.blockType)?.label ?? row.blockType
+                return (
+                  <li
+                    key={row.id}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm',
+                      isDarkTheme(theme)
+                        ? 'border-gray-700/80 bg-gray-900/40 text-gray-200'
+                        : 'border-gray-200 bg-white text-gray-900',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">{label}</p>
+                      <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
+                        Added {new Date(row.addedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {employerCanManageBlocks && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                        onClick={() => setEmployerBlockToRemove({ id: row.id, label })}
+                        aria-label={`Remove ${label}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          {employerRecentAudit.length > 0 && (
+            <div className={cn('mt-4 border-t pt-3', isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200')}>
+              <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
+                Recent activity
+              </p>
+              <ul className="space-y-1 text-xs">
+                {employerRecentAudit.slice(0, 5).map((a) => (
+                  <li key={a.id} className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{a.block_type}</span>
+                    {' · '}
+                    {a.action}
+                    {' · '}
+                    {new Date(a.created_at).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </BlockCard>
+      </HubSectionPanel>
+
+      <EmployerBlockPickerModal
+        open={employerPickerOpen}
+        onClose={() => closeEmployerBlockPicker()}
+        installedTypes={new Set(employerInstalledBlocks.map((b) => b.blockType))}
+        canInstall={employerCanManageBlocks}
+        onInstallBlock={async (blockType) => installEmployerBlock(walletAddress, blockType, null)}
+      />
+
+      <BlockRemovalConfirmModal
+        open={Boolean(employerBlockToRemove)}
+        onClose={() => setEmployerBlockToRemove(null)}
+        blockLabel={employerBlockToRemove?.label ?? ''}
+        onConfirm={async (reason) => {
+          if (!employerBlockToRemove) return
+          const ok = await removeEmployerBlock(walletAddress, employerBlockToRemove.id, reason)
+          if (!ok) throw new Error('Remove failed')
+        }}
+      />
 
       {/* Same HubSectionPanel + BlockCard embed as candidate Ask Stormi */}
       {employerStormiContext && (

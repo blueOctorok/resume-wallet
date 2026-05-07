@@ -59,7 +59,17 @@ Blocks signal what sections appear on a candidate's career card.
   ```
   If your block adds a new career card section, gate it on the block type being present.
 
-- **`src/app/api/employer/talent/[userId]/route.ts`**: Already returns `installedBlockTypes` from `hub_blocks`. No changes needed unless the block stores data in a new table that the career card needs.
+- **`src/app/api/employer/talent/[userId]/route.ts`**: Returns `installedBlockTypes` from `hub_blocks` and **`installedEmployerBlocks`** from `employer_hub_blocks` (company-scoped). Use the latter to gate employer-only capabilities (e.g. MVR/PSP ordering).
+
+---
+
+## Employer blocks (company-scoped)
+
+**Audience split:** Candidate blocks live in `hub_blocks` + `block-registry.ts`. **Employer product blocks** (e.g. `employer-mvr-orders`, `employer-psp-orders`) live in **`employer_hub_blocks`** + **`employer-block-registry.ts`**, keyed by **`company_id`**. Universal employer features (jobs, applicants, talent search, messaging) are **not** employer blocks.
+
+**Mutations:** Install/remove is **owner/admin** only (RLS + API guards). **Storm central admin** can also install/remove via `/api/admin/companies/[id]/blocks/*` with a required **reason** on admin-initiated removals.
+
+**Data preservation:** Uninstalling an employer block (or a candidate `hub_blocks` row) **must not delete** paid artifacts — `mvr_orders`, `psp_orders`, consents, `block_*` caches, etc. stay in the database; reinstalling only reveals the UI again. **`employer_block_audit`** is append-only for compliance/ops history.
 
 ## 5. Employer Outreach (Automatic)
 

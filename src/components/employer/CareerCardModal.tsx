@@ -36,6 +36,8 @@ interface PendingCandidateRequest {
 
 interface EmployerTalentExtras {
   installedBlockTypes: string[]
+  /** Company-scoped composable hub — gates MVR/PSP employer actions */
+  installedEmployerBlocks: string[]
   pendingRequests: PendingCandidateRequest[]
   existingApplication: { id: string; job_posting_id: string; status: string; created_at: string } | null
   completionFlags: Record<string, boolean>
@@ -130,6 +132,7 @@ export default function CareerCardModal({
       setEmployerCompany(data.employerCompany ?? null)
       setEmployerExtras({
         installedBlockTypes: data.installedBlockTypes ?? [],
+        installedEmployerBlocks: data.installedEmployerBlocks ?? [],
         pendingRequests: data.pendingRequests ?? [],
         existingApplication: data.existingApplication ?? null,
         completionFlags: data.completionFlags ?? {},
@@ -326,6 +329,14 @@ export default function CareerCardModal({
   const buildBlockAction = (blockId: string): ReactNode => {
     const def = getBlockDefinition(blockId)
     if (!def?.employerRequestable) return null
+
+    const employerBlocks = employerExtras?.installedEmployerBlocks ?? []
+    if (blockId === 'driver-mvr' && !employerBlocks.includes('employer-mvr-orders')) {
+      return null
+    }
+    if (blockId === 'driver-psp' && !employerBlocks.includes('employer-psp-orders')) {
+      return null
+    }
 
     // Only show if candidate has the block installed (hub is source of truth)
     const installed = employerExtras?.installedBlockTypes?.includes(blockId)

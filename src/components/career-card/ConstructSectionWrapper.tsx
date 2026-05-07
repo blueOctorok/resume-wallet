@@ -5,7 +5,7 @@
  * Mirrors Block Picker row chrome; actions reuse former “Block files” behavior.
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Eye, Loader2, Pencil, ShieldCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
@@ -18,6 +18,7 @@ import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
 
 const btn =
   'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors'
@@ -46,7 +47,7 @@ export default function ConstructSectionWrapper({
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const removeBlock = useHubBlocksStore((s) => s.removeBlock)
   const installedBlocks = useInstalledBlocks()
-  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [removeModalOpen, setRemoveModalOpen] = useState(false)
 
   const colors = getBlockColor(blockType)
   const Illustration = getBlockIllustration(blockType)
@@ -63,11 +64,13 @@ export default function ConstructSectionWrapper({
   const core = isCoreBlock(blockType)
   const installed = installedBlocks.find((b) => b.blockType === blockType)
 
-  const handleRemoveBlock = async () => {
-    if (!installed || !walletAddress || core) return
-    await removeBlock(installed.id, walletAddress)
-    setConfirmRemove(false)
-  }
+  const handleConfirmRemove = useCallback(
+    async (_reason: string | null) => {
+      if (!installed || !walletAddress || core) return
+      await removeBlock(installed.id, walletAddress)
+    },
+    [installed, walletAddress, core, removeBlock],
+  )
 
   const openResumeEditor = (d: HubDocument) => {
     if (d.id !== 'resume-hub-placeholder') setEditingResumeId(d.id)
@@ -244,7 +247,7 @@ export default function ConstructSectionWrapper({
               {!core && installed && (
                 <button
                   type='button'
-                  onClick={() => setConfirmRemove(true)}
+                  onClick={() => setRemoveModalOpen(true)}
                   className={cn(btn, dangerBtn)}
                 >
                   <X className='w-3 h-3' /> Remove
@@ -253,34 +256,16 @@ export default function ConstructSectionWrapper({
             </div>
           </div>
 
-          {confirmRemove && (
-            <div
-              className={cn(
-                'flex flex-col gap-2 rounded-xl px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between',
-                isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200',
-              )}
-            >
-              <span className={isDark ? 'text-red-400' : 'text-red-600'}>
-                Remove this block from your card?
-              </span>
-              <div className='flex gap-2'>
-                <button
-                  type='button'
-                  onClick={() => setConfirmRemove(false)}
-                  className={cn('px-2 py-1 rounded', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')}
-                >
-                  Cancel
-                </button>
-                <button type='button' onClick={handleRemoveBlock} className='rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600'>
-                  Remove
-                </button>
-              </div>
-            </div>
-          )}
-
           <div className='min-w-0'>{children}</div>
         </div>
       </div>
+
+      <BlockRemovalConfirmModal
+        open={removeModalOpen}
+        onClose={() => setRemoveModalOpen(false)}
+        blockLabel={getBlockDefinition(blockType)?.label ?? blockType}
+        onConfirm={handleConfirmRemove}
+      />
     </div>
   )
 }

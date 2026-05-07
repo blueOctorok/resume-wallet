@@ -1,0 +1,126 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { getInstallableEmployerBlockDefinitions, getEmployerBlockDefinition } from '@/lib/employer-block-registry'
+import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
+
+/**
+ * GET /api/employer/hub/blocks — installed employer blocks + permission flag
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    if (!access) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    const [{ data: blocks, error: blocksErr }, { data: auditRows }] = await Promise.all([
+      supabase
+        .from('employer_hub_blocks')
+        .select('id, block_type, position, config, added_at')
+        .eq('company_id', access.companyId)
+        .order('position', { ascending: true }),
+      supabase
+        .from('employer_block_audit')
+        .select('id, block_type, action, actor_kind, reason, created_at')
+        .eq('company_id', access.companyId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+    ])
+
+    if (blocksErr) {
+      console.error('[EMPLOYER HUB BLOCKS] GET:', blocksErr.message)
+      return NextResponse.json({ error: 'Failed to load blocks' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      canManageEmployerBlocks: access.canManageEmployerBlocks,
+      blocks: blocks ?? [],
+      recentAudit: auditRows ?? [],
+    })
+  } catch (e) {
+    console.error('[EMPLOYER HUB BLOCKS] GET unexpected:', e)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/employer/hub/blocks — install (owner/admin only)
+ * Body: { blockType: string, reason?: string }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const blockType = typeof body.blockType === 'string' ? body.blockType.trim() : ''
+    const reason = typeof body.reason === 'string' ? body.reason : null
+
+    const allowedIds = new Set(getInstallableEmployerBlockDefinitions().map((b) => b.id))
+    if (!blockType || !allowedIds.has(blockType)) {
+      return NextResponse.json({ error: 'Invalid or non-installable block type' }, { status: 400 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    if (!access?.canManageEmployerBlocks) {
+      return NextResponse.json({ error: 'Only company owners and admins can install blocks' }, { status: 403 })
+    }
+
+    const { count } = await supabase
+      .from('employer_hub_blocks')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', access.companyId)
+
+    const position = count ?? 0
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('employer_hub_blocks')
+      .insert({
+        company_id: access.companyId,
+        block_type: blockType,
+        position,
+        config: {},
+      })
+      .select('id, block_type, position, config, added_at')
+      .single()
+
+    if (insErr) {
+      if (insErr.code === '23505') {
+        return NextResponse.json({ error: 'This block is already installed' }, { status: 409 })
+      }
+      console.error('[EMPLOYER HUB BLOCKS] POST insert:', insErr.message)
+      return NextResponse.json({ error: 'Failed to install block' }, { status: 500 })
+    }
+
+    const actorKind = access.companyRole === 'owner' ? 'company_owner' : 'company_admin'
+
+    await logEmployerBlockAudit(supabase, {
+      companyId: access.companyId,
+      blockType,
+      action: 'installed',
+      actorUserId: access.employerUserId,
+      actorKind,
+      reason,
+    })
+
+    return NextResponse.json({
+      success: true,
+      block: inserted,
+      definition: getEmployerBlockDefinition(blockType) ?? null,
+    })
+  } catch (e) {
+    console.error('[EMPLOYER HUB BLOCKS] POST unexpected:', e)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

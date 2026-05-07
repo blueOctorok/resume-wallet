@@ -13,8 +13,13 @@ import {
   UserPlus,
   Loader2,
   Trash2,
+  Plus,
 } from 'lucide-react'
 import type { AdminTabProps, AdminCompany, CompanyMember } from '@/components/admin/admin-types'
+import Button from '@/components/ui/Button'
+import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
+import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
+import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 
 interface CompaniesTabProps extends AdminTabProps {
   onCreateCompany: () => void
@@ -37,6 +42,27 @@ export default function CompaniesTab({
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+
+  type AdminEmployerHubPayload = {
+    companyId: string
+    blocks: Array<{ id: string; block_type: string; added_at: string }>
+    recentAudit: Array<{
+      id: string
+      blockType: string
+      action: string
+      actorKind: string
+      actorEmail: string | null
+      createdAt: string
+      reason: string | null
+    }>
+  }
+  const [companyEmployerHub, setCompanyEmployerHub] = useState<AdminEmployerHubPayload | null>(null)
+  const [employerPickerCompanyId, setEmployerPickerCompanyId] = useState<string | null>(null)
+  const [adminEmployerRemove, setAdminEmployerRemove] = useState<{
+    companyId: string
+    blockId: string
+    label: string
+  } | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!walletAddress) return
@@ -64,12 +90,37 @@ export default function CompaniesTab({
     if (!walletAddress) return
     setLoadingMembers(true)
     try {
-      const res = await fetch(`/api/admin/companies/${companyId}/members`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-      const data = await res.json()
-      if (data.success) {
-        setCompanyMembers(data.members)
+      const [memRes, hubRes] = await Promise.all([
+        fetch(`/api/admin/companies/${companyId}/members`, {
+          headers: { 'x-wallet-address': walletAddress },
+        }),
+        fetch(`/api/admin/companies/${companyId}/blocks`, {
+          headers: { 'x-wallet-address': walletAddress },
+        }),
+      ])
+      const memData = await memRes.json()
+      if (memData.success) {
+        setCompanyMembers(memData.members)
+      }
+      const hubData = await hubRes.json()
+      if (hubRes.ok && hubData.success) {
+        setCompanyEmployerHub({
+          companyId,
+          blocks: hubData.blocks ?? [],
+          recentAudit: (hubData.recentAudit ?? []).map(
+            (r: Record<string, unknown>) => ({
+              id: String(r.id),
+              blockType: String(r.block_type ?? ''),
+              action: String(r.action ?? ''),
+              actorKind: String(r.actor_kind ?? ''),
+              actorEmail: (r.actorEmail as string | null | undefined) ?? null,
+              createdAt: String(r.created_at ?? ''),
+              reason: (r.reason as string | null | undefined) ?? null,
+            }),
+          ),
+        })
+      } else {
+        setCompanyEmployerHub(null)
       }
     } catch (err) {
       console.error('Failed to fetch company members:', err)
@@ -236,6 +287,7 @@ export default function CompaniesTab({
                     if (expandedCompanyId === company.id) {
                       setExpandedCompanyId(null)
                       setCompanyMembers([])
+                      setCompanyEmployerHub(null)
                     } else {
                       setExpandedCompanyId(company.id)
                       fetchCompanyMembers(company.id)
@@ -448,12 +500,149 @@ export default function CompaniesTab({
                       ))}
                     </div>
                   )}
+
+                  {companyEmployerHub?.companyId === company.id && (
+                    <div className='mt-6 border-t border-gray-200 pt-4 dark:border-gray-700'>
+                      <div className='mb-2 flex items-center justify-between gap-2'>
+                        <h4
+                          className={`text-sm font-medium ${
+                            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
+                          }`}
+                        >
+                          Employer blocks
+                        </h4>
+                        <Button
+                          type='button'
+                          variant='secondary'
+                          size='sm'
+                          onClick={() => setEmployerPickerCompanyId(company.id)}
+                        >
+                          <Plus className='h-3.5 w-3.5' />
+                          Install block
+                        </Button>
+                      </div>
+                      {companyEmployerHub.blocks.length === 0 ? (
+                        <p className='text-sm text-gray-500 dark:text-gray-400'>No blocks installed.</p>
+                      ) : (
+                        <ul className='mb-3 space-y-2'>
+                          {companyEmployerHub.blocks.map((b) => {
+                            const label = getEmployerBlockDefinition(b.block_type)?.label ?? b.block_type
+                            return (
+                              <li
+                                key={b.id}
+                                className={`flex items-center justify-between gap-2 rounded-lg p-2 text-sm ${
+                                  isDarkTheme(theme) ? 'bg-gray-700/40 text-gray-200' : 'bg-gray-50 text-gray-900'
+                                }`}
+                              >
+                                <div className='min-w-0'>
+                                  <p className='font-medium'>{label}</p>
+                                  <p className='text-xs text-gray-500'>Added {new Date(b.added_at).toLocaleString()}</p>
+                                </div>
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  className='shrink-0 text-red-600 dark:text-red-400'
+                                  onClick={() =>
+                                    setAdminEmployerRemove({ companyId: company.id, blockId: b.id, label })
+                                  }
+                                  aria-label={`Remove ${label}`}
+                                >
+                                  <Trash2 className='h-4 w-4' />
+                                </Button>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                      {companyEmployerHub.recentAudit.length > 0 && (
+                        <div>
+                          <p className='mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500'>
+                            Recent audit
+                          </p>
+                          <ul className='space-y-1 text-xs text-gray-600 dark:text-gray-400'>
+                            {companyEmployerHub.recentAudit.slice(0, 5).map((a) => (
+                              <li key={a.id}>
+                                <span className='font-medium text-gray-800 dark:text-gray-200'>{a.blockType}</span>
+                                {' · '}
+                                {a.action}
+                                {' · '}
+                                {a.actorKind}
+                                {a.actorEmail ? ` · ${a.actorEmail}` : ''}
+                                {' · '}
+                                {new Date(a.createdAt).toLocaleString()}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      <EmployerBlockPickerModal
+        open={Boolean(employerPickerCompanyId && walletAddress)}
+        onClose={() => setEmployerPickerCompanyId(null)}
+        installedTypes={
+          new Set(
+            companyEmployerHub?.companyId === employerPickerCompanyId
+              ? companyEmployerHub.blocks.map((b) => b.block_type)
+              : [],
+          )
+        }
+        canInstall
+        onInstallBlock={async (blockType) => {
+          if (!walletAddress || !employerPickerCompanyId) return false
+          const res = await fetch(`/api/admin/companies/${employerPickerCompanyId}/blocks`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-wallet-address': walletAddress,
+            },
+            body: JSON.stringify({ blockType }),
+          })
+          const j = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            alert((j as { error?: string }).error ?? 'Install failed')
+            return false
+          }
+          await fetchCompanyMembers(employerPickerCompanyId)
+          return true
+        }}
+      />
+
+      <BlockRemovalConfirmModal
+        open={Boolean(adminEmployerRemove)}
+        onClose={() => setAdminEmployerRemove(null)}
+        blockLabel={adminEmployerRemove?.label ?? ''}
+        requireReason
+        minReasonLength={3}
+        confirmLabel='Remove block'
+        onConfirm={async (reason) => {
+          if (!walletAddress || !adminEmployerRemove) return
+          const { companyId, blockId } = adminEmployerRemove
+          const res = await fetch(`/api/admin/companies/${companyId}/blocks/${blockId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-wallet-address': walletAddress,
+            },
+            body: JSON.stringify({ reason: reason ?? '' }),
+          })
+          const j = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            alert((j as { error?: string }).error ?? 'Remove failed')
+            throw new Error('Remove failed')
+          }
+          setAdminEmployerRemove(null)
+          await fetchCompanyMembers(companyId)
+        }}
+      />
 
       {/* Add Company Button */}
       <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>

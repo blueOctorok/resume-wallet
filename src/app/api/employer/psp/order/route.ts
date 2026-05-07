@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { companyHasEmployerBlock } from '@/lib/employer-company-access'
 import { buildAccioPspOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 
 /**
@@ -82,6 +83,16 @@ export async function POST(request: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    if (!(await companyHasEmployerBlock(supabase, companyId, 'employer-psp-orders'))) {
+      return NextResponse.json(
+        {
+          error:
+            'PSP ordering is not enabled for your company. A company owner or admin must install the PSP ordering block (or contact Storm support).',
+        },
+        { status: 403 },
+      )
     }
 
     const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash

@@ -173,12 +173,13 @@ export async function GET(
       .limit(1)
       .maybeSingle()
 
-    const { data: hubBlocks } = await supabase
-      .from('hub_blocks')
-      .select('block_type')
-      .eq('user_id', userId)
+    const [{ data: hubBlocks }, { data: employerHubRows }] = await Promise.all([
+      supabase.from('hub_blocks').select('block_type').eq('user_id', userId),
+      supabase.from('employer_hub_blocks').select('block_type').eq('company_id', companyId),
+    ])
 
     const installedBlockTypes = (hubBlocks || []).map((b) => b.block_type)
+    const installedEmployerBlocks = (employerHubRows || []).map((b) => b.block_type)
 
     const { data: companyJobs } = await supabase
       .from('job_postings')
@@ -224,6 +225,7 @@ export async function GET(
       },
       card,
       installedBlockTypes,
+      installedEmployerBlocks,
       pendingRequests: pendingRequests || [],
       existingApplication,
       hasBgcheckConsent: !!bgcheckConsent,

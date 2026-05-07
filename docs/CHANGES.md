@@ -28,6 +28,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Composable employer hub (MVR/PSP gating)** (May 2026)
+
+- **Data:** Migration `074` — tightens `employer_hub_blocks` RLS (owner/admin + legacy company owner), adds append-only **`employer_block_audit`**, seeds **Pace Drivers** with `employer-mvr-orders` + `employer-psp-orders`.
+- **Registry:** `src/lib/employer-block-registry.ts` — installable definitions; helpers `getEmployerBlockDefinition` / `getInstallableEmployerBlockDefinitions`.
+- **Employer APIs:** `GET/POST` `/api/employer/hub/blocks`, `DELETE` `/api/employer/hub/blocks/[id]` — owner/admin only for mutations; writes audit rows. **Talent** `GET /api/employer/talent/[userId]` returns **`installedEmployerBlocks`**; **MVR/PSP employer order** routes require the matching employer block.
+- **Admin APIs:** `GET/POST` `/api/admin/companies/[id]/blocks`, `DELETE /api/admin/companies/[id]/blocks/[blockId]` (reason required); **`GET /api/admin/companies/[id]`** includes `installedEmployerBlocks` + `recentEmployerBlockAudit` (last 5).
+- **UI:** `EmployerHub` employer-blocks panel + `EmployerBlockPickerModal`; **Companies** admin tab expanded row — install/remove + audit snippet; **`BlockRemovalConfirmModal`** (data-preservation copy) for employer + central admin removals; **ConstructSectionWrapper** uses it for candidate block removal.
+- **State:** `src/stores/employer-blocks-store.ts`.
+
+---
+
 ## **PSP (FMCSA) order block** (May 2026)
 
 - **Composable hub:** `driver-psp` block (`block-registry`), hub illustration, journey step, My Files / construct hub docs (`psp` row type), Accio XML + dedicated `/api/psp/webhook` (raw XML → `psp_results`; skips `block_driver_psp` when `ordered_by_company_id` is set — FCRA).

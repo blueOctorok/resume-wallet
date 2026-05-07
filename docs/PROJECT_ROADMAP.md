@@ -59,7 +59,7 @@ The driver's portable DQ file only contains **driver-owned** data: self-ordered 
 | 1 | Employment Application | §391.21 | ✅ **Done** | Full 3-form DOT app wizard, PDF export, bidirectional mapper |
 | 2 | Motor Vehicle Record | §391.23 | ✅ **Done** | Accio/KeyBackground integration, real state DMV pull |
 | 3 | Previous Employer Safety Performance History | §391.23 | ✅ **Done** | 3-attempt email outreach, token portal, 6 FMCSA questions |
-| 3b | FMCSA PSP (crash / inspection) via Accio | §391.23 | 🟡 **In progress** | Standalone `driver-psp` block, orders + webhook; **FMCSA PSP Disclosure & Authorization** (`psp_consents` + `PspDisclosureForm`) before live orders; **result XML parser deferred** (stored raw, `needs_review`) |
+| 3b | FMCSA PSP (crash / inspection) via Accio | §391.23 | 🟡 **In progress** | Standalone `driver-psp` block, orders + webhook; **FMCSA PSP Disclosure & Authorization** (`psp_consents` + `PspDisclosureForm`) before live orders; **result XML parser deferred** (stored raw, `needs_review`); **employer-side:** company must install **`employer-psp-orders`** (composable employer hub) before PSP request/order UI and APIs — same for MVR + **`employer-mvr-orders`**; **central admin** manages installs + **`employer_block_audit`** trail |
 | 4 | Road Test Certificate or CDL Equivalent | §391.31/33 | 🔲 **Upload needed** | File upload + metadata (examiner, date, vehicle, result) |
 | 5 | Medical Examiner's Certificate | §391.43 | 🔲 **Upload needed** | File upload + metadata (examiner, registry ID, expiration) |
 | 6 | Annual MVR Review | §391.25 | 🔲 **Build** | Re-order MVR annually + reviewer signature |

@@ -110,6 +110,47 @@ export async function GET(
       return [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim() || null
     }
 
+    const [{ data: employerBlocks }, { data: employerBlockAudit }] = await Promise.all([
+      supabase
+        .from('employer_hub_blocks')
+        .select('id, block_type, position, added_at')
+        .eq('company_id', id)
+        .order('position', { ascending: true }),
+      supabase
+        .from('employer_block_audit')
+        .select('id, block_type, action, actor_kind, actor_user_id, reason, created_at')
+        .eq('company_id', id)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
+
+    const auditActorIds = [
+      ...new Set((employerBlockAudit ?? []).map((r) => r.actor_user_id).filter(Boolean)),
+    ] as string[]
+    let auditActorEmails = new Map<string, string>()
+    if (auditActorIds.length > 0) {
+      const { data: auditUsers } = await supabase.from('users').select('id, email').in('id', auditActorIds)
+      auditActorEmails = new Map((auditUsers ?? []).map((u) => [u.id, u.email ?? '']))
+    }
+
+    const recentEmployerBlockAudit = (employerBlockAudit ?? []).map((row) => ({
+      id: row.id,
+      blockType: row.block_type,
+      action: row.action,
+      actorKind: row.actor_kind,
+      actorUserId: row.actor_user_id,
+      actorEmail: row.actor_user_id ? auditActorEmails.get(row.actor_user_id) ?? null : null,
+      reason: row.reason,
+      createdAt: row.created_at,
+    }))
+
+    const installedEmployerBlocks = (employerBlocks ?? []).map((b) => ({
+      id: b.id,
+      blockType: b.block_type,
+      position: b.position,
+      addedAt: b.added_at,
+    }))
+
     return NextResponse.json({
       success: true,
       company: {
@@ -168,6 +209,8 @@ export async function GET(
         }
       }),
       statusHistory: statusHistory || [],
+      installedEmployerBlocks,
+      recentEmployerBlockAudit,
     })
 
   } catch (error) {

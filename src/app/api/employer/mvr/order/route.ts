@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { companyHasEmployerBlock } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 
 /**
@@ -102,6 +103,16 @@ export async function POST(request: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    if (!(await companyHasEmployerBlock(supabase, companyId, 'employer-mvr-orders'))) {
+      return NextResponse.json(
+        {
+          error:
+            'MVR ordering is not enabled for your company. A company owner or admin must install the MVR ordering block (or contact Storm support).',
+        },
+        { status: 403 },
+      )
     }
 
     // Validate the USDC payment was recorded before allowing the order.
