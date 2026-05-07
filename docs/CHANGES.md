@@ -28,14 +28,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **True 1:1 employer block ↔ outreach mapping** (May 2026)
+
+**Bug:** `employer-talent-outreach` gated **both** `storm-resume` and `developer-portfolio`. A driver staffing employer (Pace) installing it for resumes would unintentionally see "Portfolio" — a developer-only concept — in their outreach dropdown. 4 installed blocks → 5 dropdown options. Not a true mirror.
+
+**Fix:** Split into 1:1 employer blocks so the dropdown literally mirrors what's installed.
+- `employer-talent-outreach` → **deleted** (no longer in registry).
+- New `employer-resume-requests` (`general` category) → enables **Resume** request only.
+- New `employer-portfolio-requests` (`developers` category) → enables **Portfolio** request only.
+- `storm-resume.requiredEmployerBlocks` → `['employer-resume-requests']`.
+- `developer-portfolio.requiredEmployerBlocks` → `['employer-portfolio-requests']`.
+- **Migration `077`:** Renames existing `employer-talent-outreach` rows in `employer_hub_blocks` and `employer_block_audit` to `employer-resume-requests`. (Resume is the universal default; Portfolio is opt-in per company — Pace stays driver-pure.)
+
+**Result:** Pace's 4 installed blocks (`employer-resume-requests`, `employer-dot-screening`, `employer-mvr-orders`, `employer-psp-mvr-bundle`) now produce exactly 4 outreach options (Resume, DOT App, MVR, PSP). PSP+MVR bundle showing both MVR and PSP is the documented bundle exception (per business rule: PSP is never ordered alone).
+
+---
+
+## **FCRA disclosure gate on MVR/PSP order forms** (May 2026)
+
+**Critical compliance fix.** Employer-requested MVR and PSP previously skipped the candidate-side FCRA disclosure when the candidate clicked the bell notification — the deep-link (`?onboard=mvr` / `?onboard=psp`) landed on the **self-order** form, which does not enforce employer-scoped consent. The disclosure was only being signed when candidates went through the **inbox** flow.
+
+- **New hook:** `usePendingScreeningRequest(kind, walletAddress)` in `src/hooks/use-pending-screening-request.ts`. Fetches `/api/candidate/requests`, returns the most recent pending `mvr_order` (or `psp_order` / `block_request` + matching `targetBlockType`).
+- **`MvrOrderForm`:** When a pending employer MVR request exists, renders an amber "Action required: FCRA disclosure for {Company}" banner above the self-order form. The banner explains the employer will handle the order on their end after disclosure is signed. Button opens `BackgroundCheckDisclosure` modal with the employer's `requestId` — same modal used in the inbox flow, same `bgcheck_consents` row created.
+- **`PspOrderForm`:** Mirror of the MVR pattern with `PspDisclosureForm` (FMCSA-specific copy + `psp_consents` row).
+- **Defense in depth:** Server-side `/api/employer/mvr/order` and `/api/employer/psp/order` already required matching consent rows before submit, so this fix closes the **UX gap** without changing the API contract.
+- **Outreach picker visual link:** Each block in the outreach dropdown now shows a `via {EmployerBlockLabel}` tag (e.g. "MVR · via MVR ordering"), making the cause-and-effect between installed employer blocks and available outreach options visually obvious.
+
+---
+
 ## **Fully dynamic employer outreach gating** (May 2026)
 
 - **Registry-driven gating:** Added `requiredEmployerBlocks: string[] | null` field to candidate `BlockDefinition`. Every `employerRequestable` block now declares which employer block(s) must be installed for the request button to appear (OR logic — any one match suffices). `employerCanRequest()` helper encapsulates the check.
-- **New employer blocks:** `employer-talent-outreach` (Resume + Portfolio requests), `employer-dot-screening` (DOT Application requests) added to `employer-block-registry.ts`. These join existing `employer-mvr-orders` and `employer-psp-mvr-bundle`.
+- **New employer blocks:** `employer-talent-outreach` (Resume + Portfolio requests) and `employer-dot-screening` (DOT Application requests) added to `employer-block-registry.ts`. These join existing `employer-mvr-orders` and `employer-psp-mvr-bundle`. *Note: `employer-talent-outreach` was later split into `employer-resume-requests` + `employer-portfolio-requests` for true 1:1 mapping — see entry above.*
 - **CareerCardModal:** Replaced 6-line hardcoded `if (blockId === 'driver-mvr')` / `if (blockId === 'driver-psp')` checks with single generic `if (!employerCanRequest(def, employerBlocks)) return null`. Adding a new requestable block now requires zero changes to CareerCardModal.
 - **CandidateOutreach:** Block picker now filters only `employerRequestable` blocks through `employerCanRequest()`, so only blocks the company can actually request appear. Empty state when no employer blocks are installed. New `embedded` prop for rendering without its own panel wrapper.
 - **Unified hub section:** Employer blocks + Candidate outreach merged into one **"Blocks & outreach"** section in `EmployerHub`. Install blocks at the top → outreach dropdown below mirrors only installed capabilities. Outreach hidden entirely until at least one block is installed, making the cause-and-effect relationship unmistakable.
-- **Migration `076`:** Seeds Pace Drivers with `employer-talent-outreach` + `employer-dot-screening` blocks.
+- **Migration `076`:** Seeds Pace Drivers with the resume + DOT screening employer blocks (block IDs updated alongside migration 077).
 
 ---
 

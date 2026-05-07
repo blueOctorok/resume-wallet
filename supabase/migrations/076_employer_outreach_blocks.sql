@@ -1,16 +1,23 @@
 -- ============================================================
--- MIGRATION 076: Seed new employer outreach blocks for Pace Drivers
+-- MIGRATION 076: Seed employer outreach blocks for Pace Drivers
 --
--- Two new employer blocks gate candidate outreach:
---   employer-talent-outreach → Resume + Portfolio requests
---   employer-dot-screening   → DOT Application requests
+-- NOTE: Originally seeded `employer-talent-outreach`, which was later
+-- split in migration 077. This file is kept consistent with the final
+-- block IDs so a fresh install lands in the right state without the
+-- intermediate rename. If 076 already ran on your DB, 077 handles the
+-- migration.
 --
--- Pace Drivers needs both so their existing outreach workflows
--- continue working after the block-gating change.
+-- Pace Drivers gets:
+--   employer-resume-requests → Resume request capability
+--   employer-dot-screening   → DOT Application request capability
+--
+-- Pace does NOT get employer-portfolio-requests (driver staffing
+-- agency — no developer hiring) or PSP/MVR blocks (already seeded
+-- in earlier migrations).
 -- ============================================================
 
 INSERT INTO employer_hub_blocks (company_id, block_type, position)
-SELECT c.id, 'employer-talent-outreach', -10
+SELECT c.id, 'employer-resume-requests', -10
 FROM companies c
 WHERE c.company_name ILIKE 'Pace Drivers'
 LIMIT 1

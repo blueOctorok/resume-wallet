@@ -10,6 +10,7 @@ import BlockCard from '@/components/ui/BlockCard'
 import { cn } from '@/lib/utils'
 import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
+import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { buildCandidateInviteSmsBody } from '@/lib/invite-sms-body'
 import QRCode from 'qrcode'
 import {
@@ -693,31 +694,52 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                           }`}>
                             {category.label}
                           </div>
-                          {blocks.map(block => (
-                            <button
-                              key={block.id}
-                              onClick={() => setSelectedBlockType(block.id)}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                                isDarkTheme(theme)
-                                  ? 'hover:bg-gray-700/50 border-b border-gray-700/50'
-                                  : 'hover:bg-gray-50 border-b border-gray-100'
-                              }`}
-                            >
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                isDarkTheme(theme) ? 'bg-teal-900/40' : 'bg-teal-100'
-                              }`}>
-                                <Package className="w-3.5 h-3.5 text-teal-500" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-                                  {block.label}
-                                </p>
-                                <p className={`text-xs truncate ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-                                  {block.description}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
+                          {blocks.map(block => {
+                            // Show which employer block enables this option — makes
+                            // the "blocks ↔ outreach" link visually obvious.
+                            const enabledByBlock = block.requiredEmployerBlocks?.find(eb =>
+                              installedEmployerBlockTypes.includes(eb),
+                            )
+                            const enabledByLabel = enabledByBlock
+                              ? getEmployerBlockDefinition(enabledByBlock)?.label ?? enabledByBlock
+                              : null
+                            return (
+                              <button
+                                key={block.id}
+                                onClick={() => setSelectedBlockType(block.id)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                                  isDarkTheme(theme)
+                                    ? 'hover:bg-gray-700/50 border-b border-gray-700/50'
+                                    : 'hover:bg-gray-50 border-b border-gray-100'
+                                }`}
+                              >
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  isDarkTheme(theme) ? 'bg-teal-900/40' : 'bg-teal-100'
+                                }`}>
+                                  <Package className="w-3.5 h-3.5 text-teal-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+                                      {block.label}
+                                    </p>
+                                    {enabledByLabel && (
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                        isDarkTheme(theme)
+                                          ? 'bg-amber-500/20 text-amber-300'
+                                          : 'bg-amber-100 text-amber-700'
+                                      }`}>
+                                        via {enabledByLabel}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className={`text-xs truncate ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    {block.description}
+                                  </p>
+                                </div>
+                              </button>
+                            )
+                          })}
                         </div>
                       ))}
                     </div>

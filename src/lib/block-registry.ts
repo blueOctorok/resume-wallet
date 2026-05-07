@@ -192,7 +192,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'Resume',
     completionField: 'hasResume',
-    requiredEmployerBlocks: ['employer-talent-outreach'],
+    requiredEmployerBlocks: ['employer-resume-requests'],
     /** Mandatory first step — not pickable; auto-installed for every hub. */
     hiddenFromBlockPicker: true,
     coreBlock: true,
@@ -373,7 +373,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'Portfolio',
     completionField: null,
-    requiredEmployerBlocks: ['employer-talent-outreach'],
+    requiredEmployerBlocks: ['employer-portfolio-requests'],
   },
   {
     id: 'developer-projects',

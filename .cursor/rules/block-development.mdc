@@ -83,7 +83,7 @@ Employer request buttons are **data-driven from the block registry**. When you s
 | `employerRequestable` | Whether employers can request this block from a candidate | `true` |
 | `requestLabel` | CTA text shown to employers ("Request {requestLabel}") | `'Resume'` |
 | `completionField` | Career card field to check — hides button when complete | `'hasResume'` |
-| `requiredEmployerBlocks` | Employer block(s) that grant this capability (OR logic) | `['employer-talent-outreach']` |
+| `requiredEmployerBlocks` | Employer block(s) that grant this capability (OR logic). **Use 1:1 mapping** — one employer block per requestable candidate block — so the outreach dropdown literally mirrors what's installed. | `['employer-resume-requests']` |
 
 ### What's automatic (zero code changes)
 

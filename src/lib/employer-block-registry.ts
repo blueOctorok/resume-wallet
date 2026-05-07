@@ -1,5 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
-import { ClipboardList, FileSearch, ShieldAlert, UserSearch } from 'lucide-react'
+import {
+  ClipboardList,
+  FileSearch,
+  FileText,
+  Folder,
+  ShieldAlert,
+} from 'lucide-react'
 
 export type EmployerBlockCategoryId = 'general' | 'drivers' | 'developers'
 
@@ -18,14 +24,28 @@ export interface EmployerBlockDefinition {
 }
 
 export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
-  // ── General outreach ──────────────────────────────────────────────────────
+  // ── General ───────────────────────────────────────────────────────────────
+  // Each employer block enables exactly one candidate-side request type.
+  // 1:1 mapping keeps the outreach picker honest — install this block, get
+  // exactly this request option. No surprise developer concepts on a driver
+  // employer's hub, and vice versa.
   {
-    id: 'employer-talent-outreach',
-    label: 'Talent outreach',
-    description: 'Request resumes and portfolios from candidates. The foundation for any candidate engagement.',
-    icon: UserSearch,
+    id: 'employer-resume-requests',
+    label: 'Resume requests',
+    description: 'Request resumes from candidates. Universal — every employer needs this.',
+    icon: FileText,
     categoryId: 'general',
     suggestedOrder: -10,
+    installable: true,
+  },
+  // ── Developers ────────────────────────────────────────────────────────────
+  {
+    id: 'employer-portfolio-requests',
+    label: 'Portfolio requests',
+    description: 'Request portfolio links from developer candidates (GitHub, personal sites, deployed projects).',
+    icon: Folder,
+    categoryId: 'developers',
+    suggestedOrder: -8,
     installable: true,
   },
   // ── Drivers ───────────────────────────────────────────────────────────────

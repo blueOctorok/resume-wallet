@@ -2,12 +2,13 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin, Shield, Building2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import PspPaymentButton from './PspPaymentButton'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
+import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 
 interface PspOrderFormProps {
   userAddress: string
@@ -44,6 +45,13 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   /** Self-order: FMCSA PSP Disclosure must be signed before pay; `pspConsentId` is consumed when the order is placed. */
   const [pspConsentId, setPspConsentId] = useState<string | null>(null)
   const [showPspDisclosure, setShowPspDisclosure] = useState(false)
+
+  // Employer-requested PSP (FMCSA gate): same defense-in-depth pattern as MvrOrderForm.
+  // The bell notification deep-links to `?onboard=psp`, which lands here. We must surface
+  // the company-scoped FMCSA PSP disclosure so the employer's order endpoint can proceed.
+  const { pendingRequest: pendingEmployerRequest, refresh: refreshPendingRequest } =
+    usePendingScreeningRequest('psp', userAddress)
+  const [showEmployerDisclosure, setShowEmployerDisclosure] = useState(false)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
@@ -229,6 +237,74 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
             </div>
           </div>
         </div>
+
+        {/* Employer-requested PSP — FMCSA disclosure gate.
+            Mirrors the MVR pattern: when there's a pending psp_order request from a company,
+            the candidate must sign the company-scoped FMCSA PSP disclosure here. */}
+        {pendingEmployerRequest && (
+          <div
+            className={`rounded-2xl border-2 p-5 ${
+              isDarkTheme(theme)
+                ? 'bg-amber-500/10 border-amber-500/40'
+                : 'bg-amber-50 border-amber-300'
+            }`}
+          >
+            <div className='flex items-start gap-3'>
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  isDarkTheme(theme) ? 'bg-amber-500/20' : 'bg-amber-100'
+                }`}
+              >
+                <Shield
+                  className={`w-5 h-5 ${isDarkTheme(theme) ? 'text-amber-400' : 'text-amber-700'}`}
+                />
+              </div>
+              <div className='flex-1 min-w-0'>
+                <h3
+                  className={`text-sm font-semibold mb-1 ${
+                    isDarkTheme(theme) ? 'text-amber-200' : 'text-amber-900'
+                  }`}
+                >
+                  Action required: FMCSA PSP disclosure for {pendingEmployerRequest.companyName}
+                </h3>
+                <p
+                  className={`text-sm mb-3 ${
+                    isDarkTheme(theme) ? 'text-amber-200/80' : 'text-amber-800'
+                  }`}
+                >
+                  <Building2 className='inline w-3.5 h-3.5 mr-1 -mt-0.5' />
+                  {pendingEmployerRequest.companyName} requested your PSP report. FMCSA requires
+                  you to sign the Pre-Employment Screening disclosure before they can pull
+                  your crash and inspection history. You don&apos;t need to fill out the form
+                  below — they handle the order on their end after you sign.
+                </p>
+                <Button
+                  type='button'
+                  variant='primary'
+                  size='sm'
+                  onClick={() => setShowEmployerDisclosure(true)}
+                >
+                  <Shield className='w-3.5 h-3.5' />
+                  Review &amp; sign FMCSA PSP disclosure
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Employer-context PSP disclosure modal (passes requestId so consent ties to the request) */}
+        {showEmployerDisclosure && pendingEmployerRequest && (
+          <PspDisclosureForm
+            userAddress={userAddress}
+            companyName={pendingEmployerRequest.companyName}
+            requestId={pendingEmployerRequest.id}
+            onClose={() => setShowEmployerDisclosure(false)}
+            onConsentSigned={() => {
+              setShowEmployerDisclosure(false)
+              void refreshPendingRequest()
+            }}
+          />
+        )}
 
         {/* Success Message */}
         {success && orderResult && (
