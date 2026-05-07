@@ -28,6 +28,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Editable disclosure forms for edge cases** (May 2026)
+
+`BackgroundCheckDisclosure` and `PspDisclosureForm` previously assumed the candidate had already filled out a DOT application — fields were pre-filled and **read-only** (`<div>` not `<input>`). When an employer sends an MVR/PSP outreach to someone who hasn't completed any DOT paperwork, every field was blank with no way to type.
+
+- **Fields are now fully editable `<input>` elements.** Pre-fills from DOT app / user_profiles / CDL data when available, empty and typeable when not.
+- **View mode stays read-only.** Reviewing a previously signed consent still renders static text (no editing signed legal documents).
+- **Validation before sign:** First name, last name, and DL number are required before "Sign & Authorize" submits. Previously you could sign with entirely blank personal info.
+- **Both forms fixed:** `BackgroundCheckDisclosure.tsx` (MVR background check) and `PspDisclosureForm.tsx` (FMCSA PSP) use the same pattern: `FormField` / `FormRow` accepts `readOnly` + `onChange` props.
+
+---
+
 ## **Outreach cleanup + invite disclosure wiring** (May 2026)
 
 Three fixes to the employer outreach system:

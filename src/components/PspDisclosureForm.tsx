@@ -13,6 +13,7 @@ import {
   FileWarning,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { StateSelect } from '@/components/ui/StateSelect'
 
 interface DriverProfileInfo {
   firstName: string
@@ -123,7 +124,18 @@ export default function PspDisclosureForm({
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
-  const [profile, setProfile] = useState<DriverProfileInfo | null>(null)
+  const [profile, setProfile] = useState<DriverProfileInfo>({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    dlNumber: '',
+    dlState: '',
+    email: '',
+  })
   const [profileLoading, setProfileLoading] = useState(true)
   const [viewCompanyName, setViewCompanyName] = useState(companyName)
 
@@ -171,18 +183,19 @@ export default function PspDisclosureForm({
         setViewCompanyName(c.companyName || companyName)
         if (c.formData && typeof c.formData === 'object') {
           const fd = c.formData as Record<string, string>
-          setProfile({
-            firstName: fd.firstName || '',
-            lastName: fd.lastName || '',
-            dateOfBirth: fd.dateOfBirth || '',
-            address: fd.address || '',
-            city: fd.city || '',
-            state: fd.state || '',
-            zip: fd.zip || '',
-            dlNumber: fd.dlNumber || '',
-            dlState: fd.dlState || '',
-            email: fd.email || '',
-          })
+          setProfile(prev => ({
+            ...prev,
+            firstName: fd.firstName || prev.firstName,
+            lastName: fd.lastName || prev.lastName,
+            dateOfBirth: fd.dateOfBirth || prev.dateOfBirth,
+            address: fd.address || prev.address,
+            city: fd.city || prev.city,
+            state: fd.state || prev.state,
+            zip: fd.zip || prev.zip,
+            dlNumber: fd.dlNumber || prev.dlNumber,
+            dlState: fd.dlState || prev.dlState,
+            email: fd.email || prev.email,
+          }))
         }
       }
     } catch {
@@ -199,10 +212,12 @@ export default function PspDisclosureForm({
       })
       if (response.ok) {
         const data = await response.json()
-        setProfile(data.profile)
-        const p = data.profile as DriverProfileInfo | undefined
-        if (p?.firstName || p?.lastName) {
-          setPrintedName(`${p.firstName} ${p.lastName}`.trim())
+        if (data.profile) {
+          setProfile(prev => ({ ...prev, ...data.profile }))
+          const p = data.profile as DriverProfileInfo | undefined
+          if (p?.firstName || p?.lastName) {
+            setPrintedName(`${p.firstName} ${p.lastName}`.trim())
+          }
         }
       }
     } catch {
@@ -221,13 +236,21 @@ export default function PspDisclosureForm({
       setError('Please enter your name as it should appear printed on the form.')
       return
     }
+    if (!profile.firstName.trim() || !profile.lastName.trim()) {
+      setError('First name and last name are required.')
+      return
+    }
+    if (!profile.dlNumber.trim()) {
+      setError("Driver's license number is required.")
+      return
+    }
 
     setError(null)
     setSubmitting(true)
 
     try {
       const formSnapshot = {
-        ...(profile || {}),
+        ...profile,
         printedName: printedName.trim(),
       }
 
@@ -379,13 +402,82 @@ export default function PspDisclosureForm({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200">
-                    <FormRow label="Last Name, First Name, Middle" value={profile ? `${profile.lastName}, ${profile.firstName}` : ''} />
-                    <FormRow label="Driver's License Number" value={profile?.dlNumber || ''} />
-                    <FormRow label="DL State Issued" value={profile?.dlState || ''} />
-                    <FormRow label="Date of Birth" value={profile?.dateOfBirth || ''} />
-                    <FormRow label="Current Address" value={profile?.address || ''} />
-                    <FormRow label="City / State / ZIP" value={profile ? `${profile.city}, ${profile.state} ${profile.zip}` : ''} />
-                    <FormRow label="Email Address" value={profile?.email || ''} />
+                    <ReadOnlyOrInput
+                      label="First Name"
+                      value={profile.firstName}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, firstName: v }))}
+                      autoComplete="given-name"
+                      required
+                    />
+                    <ReadOnlyOrInput
+                      label="Last Name"
+                      value={profile.lastName}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, lastName: v }))}
+                      autoComplete="family-name"
+                      required
+                    />
+                    <ReadOnlyOrInput
+                      label="Driver's License Number"
+                      value={profile.dlNumber}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, dlNumber: v }))}
+                      required
+                    />
+                    <PspStateField
+                      label="DL State Issued"
+                      value={profile.dlState}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, dlState: v }))}
+                    />
+                    <ReadOnlyOrInput
+                      label="Date of Birth"
+                      value={profile.dateOfBirth}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, dateOfBirth: v }))}
+                      type="date"
+                      autoComplete="bday"
+                    />
+                    <ReadOnlyOrInput
+                      label="Current Address"
+                      value={profile.address}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, address: v }))}
+                      autoComplete="street-address"
+                    />
+                    <ReadOnlyOrInput
+                      label="City"
+                      value={profile.city}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, city: v }))}
+                      autoComplete="address-level2"
+                    />
+                    <PspStateField
+                      label="State"
+                      value={profile.state}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, state: v }))}
+                    />
+                    <ReadOnlyOrInput
+                      label="ZIP Code"
+                      value={profile.zip}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, zip: v }))}
+                      inputMode="numeric"
+                      pattern="[0-9]{5}(-[0-9]{4})?"
+                      maxLength={10}
+                      autoComplete="postal-code"
+                      placeholder="e.g. 44114"
+                    />
+                    <ReadOnlyOrInput
+                      label="Email Address"
+                      value={profile.email}
+                      readOnly={viewMode}
+                      onChange={v => setProfile(p => ({ ...p, email: v }))}
+                      type="email"
+                      autoComplete="email"
+                    />
                   </div>
                 )}
 
@@ -497,13 +589,92 @@ export default function PspDisclosureForm({
   )
 }
 
-function FormRow({ label, value }: { label: string; value: string }) {
+function ReadOnlyOrInput({
+  label,
+  value,
+  readOnly = false,
+  onChange,
+  placeholder,
+  type = 'text',
+  autoComplete,
+  inputMode,
+  pattern,
+  maxLength,
+  required,
+}: {
+  label: string
+  value: string
+  readOnly?: boolean
+  onChange?: (value: string) => void
+  placeholder?: string
+  type?: string
+  autoComplete?: string
+  inputMode?: 'text' | 'numeric' | 'email' | 'tel'
+  pattern?: string
+  maxLength?: number
+  required?: boolean
+}) {
+  if (readOnly) {
+    return (
+      <div>
+        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
+          {value || <span className="text-gray-300 italic">—</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
-      <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
-        {value || <span className="text-gray-300 italic">—</span>}
+      <label className="block text-xs text-gray-500 mb-1">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange?.(e.target.value)}
+        placeholder={placeholder ?? label}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        pattern={pattern}
+        maxLength={maxLength}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+      />
+    </div>
+  )
+}
+
+function PspStateField({
+  label,
+  value,
+  readOnly = false,
+  onChange,
+}: {
+  label: string
+  value: string
+  readOnly?: boolean
+  onChange?: (value: string) => void
+}) {
+  if (readOnly) {
+    return (
+      <div>
+        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
+          {value || <span className="text-gray-300 italic">—</span>}
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <StateSelect
+        value={value}
+        onChange={v => onChange?.(v)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+      />
     </div>
   )
 }

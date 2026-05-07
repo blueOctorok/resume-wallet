@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { StateSelect } from '@/components/ui/StateSelect'
 
 interface DriverProfileInfo {
   firstName: string
@@ -140,7 +141,18 @@ export default function BackgroundCheckDisclosure({
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
-  const [profile, setProfile] = useState<DriverProfileInfo | null>(null)
+  const [profile, setProfile] = useState<DriverProfileInfo>({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    dlNumber: '',
+    dlState: '',
+    email: '',
+  })
   const [profileLoading, setProfileLoading] = useState(true)
   const [viewCompanyName, setViewCompanyName] = useState(companyName)
 
@@ -188,7 +200,7 @@ export default function BackgroundCheckDisclosure({
         )
         setViewCompanyName(consent.companyName || companyName)
         if (consent.formData) {
-          setProfile(consent.formData)
+          setProfile(prev => ({ ...prev, ...consent.formData }))
         }
       }
     } catch {
@@ -205,7 +217,9 @@ export default function BackgroundCheckDisclosure({
       })
       if (response.ok) {
         const data = await response.json()
-        setProfile(data.profile)
+        if (data.profile) {
+          setProfile(prev => ({ ...prev, ...data.profile }))
+        }
       }
     } catch {
       // Profile info is optional — form still works without it
@@ -217,6 +231,14 @@ export default function BackgroundCheckDisclosure({
   const handleSign = async () => {
     if (!signedName.trim()) {
       setError('Please type your full name to sign.')
+      return
+    }
+    if (!profile.firstName.trim() || !profile.lastName.trim()) {
+      setError('First name and last name are required.')
+      return
+    }
+    if (!profile.dlNumber.trim()) {
+      setError("Driver's license number is required.")
       return
     }
 
@@ -583,13 +605,82 @@ export default function BackgroundCheckDisclosure({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      <FormField label="Last Name, First Name, Middle" value={profile ? `${profile.lastName}, ${profile.firstName}` : ''} />
-                      <FormField label="Driver's License Number" value={profile?.dlNumber || ''} />
-                      <FormField label="DL State Issued" value={profile?.dlState || ''} />
-                      <FormField label="Date of Birth" value={profile?.dateOfBirth || ''} />
-                      <FormField label="Current Address" value={profile?.address || ''} />
-                      <FormField label="City / State / ZIP" value={profile ? `${profile.city}, ${profile.state} ${profile.zip}` : ''} />
-                      <FormField label="Email Address" value={profile?.email || ''} />
+                      <ReadOnlyOrInput
+                        label="First Name"
+                        value={profile.firstName}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, firstName: v }))}
+                        autoComplete="given-name"
+                        required
+                      />
+                      <ReadOnlyOrInput
+                        label="Last Name"
+                        value={profile.lastName}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, lastName: v }))}
+                        autoComplete="family-name"
+                        required
+                      />
+                      <ReadOnlyOrInput
+                        label="Driver's License Number"
+                        value={profile.dlNumber}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, dlNumber: v }))}
+                        required
+                      />
+                      <StateField
+                        label="DL State Issued"
+                        value={profile.dlState}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, dlState: v }))}
+                      />
+                      <ReadOnlyOrInput
+                        label="Date of Birth"
+                        value={profile.dateOfBirth}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, dateOfBirth: v }))}
+                        type="date"
+                        autoComplete="bday"
+                      />
+                      <ReadOnlyOrInput
+                        label="Current Address"
+                        value={profile.address}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, address: v }))}
+                        autoComplete="street-address"
+                      />
+                      <ReadOnlyOrInput
+                        label="City"
+                        value={profile.city}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, city: v }))}
+                        autoComplete="address-level2"
+                      />
+                      <StateField
+                        label="State"
+                        value={profile.state}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, state: v }))}
+                      />
+                      <ReadOnlyOrInput
+                        label="ZIP Code"
+                        value={profile.zip}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, zip: v }))}
+                        inputMode="numeric"
+                        pattern="[0-9]{5}(-[0-9]{4})?"
+                        maxLength={10}
+                        autoComplete="postal-code"
+                        placeholder="e.g. 44114"
+                      />
+                      <ReadOnlyOrInput
+                        label="Email Address"
+                        value={profile.email}
+                        readOnly={viewMode}
+                        onChange={v => setProfile(p => ({ ...p, email: v }))}
+                        type="email"
+                        autoComplete="email"
+                      />
                     </div>
                   )}
 
@@ -769,13 +860,92 @@ export default function BackgroundCheckDisclosure({
   )
 }
 
-function FormField({ label, value }: { label: string; value: string }) {
+function ReadOnlyOrInput({
+  label,
+  value,
+  readOnly = false,
+  onChange,
+  placeholder,
+  type = 'text',
+  autoComplete,
+  inputMode,
+  pattern,
+  maxLength,
+  required,
+}: {
+  label: string
+  value: string
+  readOnly?: boolean
+  onChange?: (value: string) => void
+  placeholder?: string
+  type?: string
+  autoComplete?: string
+  inputMode?: 'text' | 'numeric' | 'email' | 'tel'
+  pattern?: string
+  maxLength?: number
+  required?: boolean
+}) {
+  if (readOnly) {
+    return (
+      <div>
+        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
+          {value || <span className="text-gray-300 italic">—</span>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
-      <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
-        {value || <span className="text-gray-300 italic">—</span>}
+      <label className="block text-xs text-gray-500 mb-1">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange?.(e.target.value)}
+        placeholder={placeholder ?? label}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        pattern={pattern}
+        maxLength={maxLength}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500"
+      />
+    </div>
+  )
+}
+
+function StateField({
+  label,
+  value,
+  readOnly = false,
+  onChange,
+}: {
+  label: string
+  value: string
+  readOnly?: boolean
+  onChange?: (value: string) => void
+}) {
+  if (readOnly) {
+    return (
+      <div>
+        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
+          {value || <span className="text-gray-300 italic">—</span>}
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <StateSelect
+        value={value}
+        onChange={v => onChange?.(v)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500"
+      />
     </div>
   )
 }
