@@ -87,6 +87,16 @@ export interface BlockDefinition {
   completionField: string | null
 
   /**
+   * Employer block(s) the company must have installed to see this request button.
+   * Uses OR logic: if the company has ANY one of these employer blocks, the
+   * request is available. null means no gating (not used when employerRequestable
+   * is true — every requestable block should list at least one employer block).
+   *
+   * @example ['employer-mvr-orders', 'employer-psp-mvr-bundle'] — either grants MVR capability
+   */
+  requiredEmployerBlocks: string[] | null
+
+  /**
    * Omit from Add Blocks picker (legacy aliases). Keeps registry + hub_rows working.
    */
   hiddenFromBlockPicker?: boolean
@@ -182,6 +192,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'Resume',
     completionField: 'hasResume',
+    requiredEmployerBlocks: ['employer-talent-outreach'],
     /** Mandatory first step — not pickable; auto-installed for every hub. */
     hiddenFromBlockPicker: true,
     coreBlock: true,
@@ -218,6 +229,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
     hiddenFromBlockPicker: true,
   },
   {
@@ -244,6 +256,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
   },
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
@@ -260,6 +273,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
     hiddenFromBlockPicker: true,
   },
   {
@@ -276,6 +290,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'DOT Application',
     completionField: 'hasDriverApp',
+    requiredEmployerBlocks: ['employer-dot-screening'],
   },
   {
     id: 'driver-mvr',
@@ -291,6 +306,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'MVR',
     completionField: 'hasMvr',
+    requiredEmployerBlocks: ['employer-mvr-orders', 'employer-psp-mvr-bundle'],
   },
   {
     id: 'driver-psp',
@@ -306,6 +322,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'PSP Report',
     completionField: 'hasPsp',
+    requiredEmployerBlocks: ['employer-psp-mvr-bundle'],
   },
   {
     id: 'driver-cdl-credentials',
@@ -321,6 +338,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
   },
 
   // ── Developers ─────────────────────────────────────────────────────────────
@@ -338,6 +356,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
     hiddenFromBlockPicker: true,
   },
   {
@@ -354,6 +373,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'Portfolio',
     completionField: null,
+    requiredEmployerBlocks: ['employer-talent-outreach'],
   },
   {
     id: 'developer-projects',
@@ -369,6 +389,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
   },
   {
     id: 'developer-github',
@@ -384,6 +405,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: false,
     requestLabel: null,
     completionField: null,
+    requiredEmployerBlocks: null,
   },
 ]
 
@@ -519,6 +541,20 @@ export function isCoreBlock(blockType: string): boolean {
 /** All blocks that employers can request from candidates via talent search. */
 export function getRequestableBlocks(): BlockDefinition[] {
   return BLOCK_DEFINITIONS.filter((b) => b.employerRequestable)
+}
+
+/**
+ * Check if a company's installed employer blocks satisfy a candidate block's
+ * outreach requirement. Returns true when:
+ * - The block has no `requiredEmployerBlocks` (null — no gating), OR
+ * - The company has installed at least one of the required employer blocks (OR logic).
+ */
+export function employerCanRequest(
+  blockDef: BlockDefinition,
+  installedEmployerBlocks: string[],
+): boolean {
+  if (!blockDef.requiredEmployerBlocks) return true
+  return blockDef.requiredEmployerBlocks.some((eb) => installedEmployerBlocks.includes(eb))
 }
 
 /** Blocks shown in Add Blocks (excludes legacy aliases). */

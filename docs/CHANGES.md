@@ -28,6 +28,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fully dynamic employer outreach gating** (May 2026)
+
+- **Registry-driven gating:** Added `requiredEmployerBlocks: string[] | null` field to candidate `BlockDefinition`. Every `employerRequestable` block now declares which employer block(s) must be installed for the request button to appear (OR logic — any one match suffices). `employerCanRequest()` helper encapsulates the check.
+- **New employer blocks:** `employer-talent-outreach` (Resume + Portfolio requests), `employer-dot-screening` (DOT Application requests) added to `employer-block-registry.ts`. These join existing `employer-mvr-orders` and `employer-psp-mvr-bundle`.
+- **CareerCardModal:** Replaced 6-line hardcoded `if (blockId === 'driver-mvr')` / `if (blockId === 'driver-psp')` checks with single generic `if (!employerCanRequest(def, employerBlocks)) return null`. Adding a new requestable block now requires zero changes to CareerCardModal.
+- **CandidateOutreach:** Block picker now filters only `employerRequestable` blocks through `employerCanRequest()`, so only blocks the company can actually request appear. Empty state when no employer blocks are installed. New `embedded` prop for rendering without its own panel wrapper.
+- **Unified hub section:** Employer blocks + Candidate outreach merged into one **"Blocks & outreach"** section in `EmployerHub`. Install blocks at the top → outreach dropdown below mirrors only installed capabilities. Outreach hidden entirely until at least one block is installed, making the cause-and-effect relationship unmistakable.
+- **Migration `076`:** Seeds Pace Drivers with `employer-talent-outreach` + `employer-dot-screening` blocks.
+
+---
+
 ## **Employer onboarding flow** (May 2026)
 
 - **Role selection:** `RoleSelectionModal` — "Your Role" is a **two-tier radio** (**Company Owner** = full control, **Team Member** = use features only) with an optional **Job title** text field for Stormi + admin audit context. Cancel/Submit use shared **`Button`**.

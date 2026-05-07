@@ -38,6 +38,7 @@ Add a `BlockDefinition` entry in `src/lib/block-registry.ts`. This is the single
 - `employerRequestable`: Set `true` if employers can request this block from a candidate (see section 5)
 - `requestLabel`: The CTA label (e.g. `'Resume'` → "Request Resume"). Required when `employerRequestable` is `true`.
 - `completionField`: Career card field that hides the button when `true` (e.g. `'hasResume'`). `null` = always show.
+- `requiredEmployerBlocks`: Employer block IDs the company must have installed (OR logic). Required when `employerRequestable` is `true`.
 - Add a `BlockColorSet` entry in `BLOCK_COLORS` for the hub grid tile accent
 
 ## 2. Block Component
@@ -82,6 +83,7 @@ Employer request buttons are **data-driven from the block registry**. When you s
 | `employerRequestable` | Whether employers can request this block from a candidate | `true` |
 | `requestLabel` | CTA text shown to employers ("Request {requestLabel}") | `'Resume'` |
 | `completionField` | Career card field to check — hides button when complete | `'hasResume'` |
+| `requiredEmployerBlocks` | Employer block(s) that grant this capability (OR logic) | `['employer-talent-outreach']` |
 
 ### What's automatic (zero code changes)
 
@@ -228,9 +230,10 @@ Outreach is **registry-driven**. See section 5 for the full rules. Quick referen
 | **Recruit** (`CareerCardModal` → `/api/employer/talent/[userId]/recruit`) | No (application-only) | Yes (notification → `/applications`) | Generic email |
 
 ### Do NOT:
-- Set `employerRequestable: true` without setting `requestLabel`
+- Set `employerRequestable: true` without setting `requestLabel` and `requiredEmployerBlocks`
 - Skip `validOnboardPages` in `page.tsx` when your block has a `pageRoute`
 - Hardcode notification URLs — always derive from `getBlockDefinition(blockType).pageRoute`
+- Hardcode employer block checks in `CareerCardModal` — use `employerCanRequest()` from the registry
 
 ## 13. Removing / Deprecating a Block
 
@@ -295,4 +298,4 @@ These files contain per-block logic that is NOT driven by the registry. When add
 - **Identity is separate.** Name, email, phone, address, avatar live in `user_profiles`, not in block tables. Block tables store role-specific data only.
 - **Every block must surface a file in My Files.** See "My Files Integration" section above. A block with no My Files entry is incomplete.
 - **Every block must have an Stormi journey step** that completes when the block's work is done. See "Stormi Journey Integration" section above. Stormi must have knowledge to track and guide the user.
-- **Outreach is automatic for requestable blocks.** Set `employerRequestable: true` + `requestLabel` on your `BlockDefinition`. The request button, auto-install, deep-link, and email all derive from the registry. See "Employer Outreach" (section 5 + 12).
+- **Outreach is automatic for requestable blocks.** Set `employerRequestable: true` + `requestLabel` + `requiredEmployerBlocks` on your `BlockDefinition`. The request button, auto-install, deep-link, and email all derive from the registry. See "Employer Outreach" (section 5 + 12).

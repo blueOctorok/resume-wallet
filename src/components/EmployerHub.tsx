@@ -837,12 +837,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </BlockCard>
       </HubSectionPanel>
 
+      {/* ── Blocks & Outreach — unified section ─────────────────────────
+           Top: installed employer blocks (what capabilities does this company have?)
+           Bottom: candidate outreach (create invites using those capabilities)
+           The outreach dropdown mirrors only the blocks installed above.
+      ──────────────────────────────────────────────────────────────── */}
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="mb-8">
         <BlockCard
           variant="embed"
           icon={Package}
-          title="Employer blocks"
-          description="Turn on paid integrations like MVR and PSP ordering for your team. Jobs, applicants, and talent search stay available without installing anything."
+          title="Blocks & outreach"
+          description="Install blocks to unlock screening and outreach capabilities, then invite candidates below."
           headerActions={
             employerCanManageBlocks ? (
               <Button type="button" variant="secondary" size="sm" onClick={() => openEmployerBlockPicker()}>
@@ -852,16 +857,22 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             ) : undefined
           }
         >
+          {/* ── Installed blocks ─────────────────────────────────────── */}
           {employerInstalledBlocks.length === 0 ? (
             <div className="py-6 text-center">
-              <p className={cn('text-sm', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600')}>
-                No industry blocks installed yet. Add MVR or PSP when your company needs them.
+              <Package className={cn('w-8 h-8 mx-auto mb-2', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')} />
+              <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500')}>
+                No blocks installed yet
+              </p>
+              <p className={cn('text-xs mt-1', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400')}>
+                Add blocks to unlock candidate outreach and screening features.
               </p>
             </div>
           ) : (
             <ul className="space-y-2">
               {employerInstalledBlocks.map((row) => {
-                const label = getEmployerBlockDefinition(row.blockType)?.label ?? row.blockType
+                const def = getEmployerBlockDefinition(row.blockType)
+                const blockLabel = def?.label ?? row.blockType
                 return (
                   <li
                     key={row.id}
@@ -873,7 +884,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                     )}
                   >
                     <div className="min-w-0">
-                      <p className="font-medium">{label}</p>
+                      <p className="font-medium">{blockLabel}</p>
                       <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
                         Added {new Date(row.addedAt).toLocaleDateString()}
                       </p>
@@ -884,8 +895,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                         variant="ghost"
                         size="sm"
                         className="shrink-0 text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                        onClick={() => setEmployerBlockToRemove({ id: row.id, label })}
-                        aria-label={`Remove ${label}`}
+                        onClick={() => setEmployerBlockToRemove({ id: row.id, label: blockLabel })}
+                        aria-label={`Remove ${blockLabel}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -895,6 +906,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               })}
             </ul>
           )}
+
+          {/* ── Candidate outreach (directly below blocks) ───────────── */}
+          {employerInstalledBlocks.length > 0 && (
+            <div
+              id="candidate-outreach"
+              className={cn(
+                'mt-4 border-t pt-4',
+                isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200',
+              )}
+            >
+              <CandidateOutreach
+                walletAddress={walletAddress}
+                isCollapsed={!openSections.outreach}
+                onToggle={() => toggleSection('outreach')}
+                embedded
+              />
+            </div>
+          )}
+
           {employerRecentAudit.length > 0 && (
             <div className={cn('mt-4 border-t pt-3', isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200')}>
               <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
@@ -1064,14 +1094,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </HubSectionPanel>
 
 
-      {/* Candidate Outreach */}
-      <div id="candidate-outreach" className="mb-8">
-        <CandidateOutreach
-          walletAddress={walletAddress}
-          isCollapsed={!openSections.outreach}
-          onToggle={() => toggleSection('outreach')}
-        />
-      </div>
+      {/* CandidateOutreach is now embedded inside the "Blocks & outreach" section above */}
 
       {/* Candidate card modal — z-index 1000 */}
       {selectedApplicant && (

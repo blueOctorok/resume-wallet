@@ -8,7 +8,8 @@ import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import { cn } from '@/lib/utils'
-import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
+import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
+import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { buildCandidateInviteSmsBody } from '@/lib/invite-sms-body'
 import QRCode from 'qrcode'
 import {
@@ -83,6 +84,8 @@ interface CandidateOutreachProps {
   walletAddress: string
   isCollapsed?: boolean
   onToggle?: () => void
+  /** When true, skips the outer HubSectionPanel/BlockCard wrapper (parent provides the chrome) */
+  embedded?: boolean
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -252,7 +255,7 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CandidateOutreach({ walletAddress, isCollapsed = false, onToggle }: CandidateOutreachProps) {
+export default function CandidateOutreach({ walletAddress, isCollapsed = false, onToggle, embedded = false }: CandidateOutreachProps) {
   const { theme } = useTheme()
 
   const [invites, setInvites] = useState<Invite[]>([])
@@ -292,10 +295,19 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const profileSearchRef = useRef<HTMLDivElement>(null)
 
-  // Group all candidate blocks by category for the picker UI
+  const employerInstalledBlocks = useEmployerBlocksStore((s) => s.installedBlocks)
+  const installedEmployerBlockTypes = useMemo(
+    () => employerInstalledBlocks.map((b) => b.blockType),
+    [employerInstalledBlocks],
+  )
+
+  // Only show candidate blocks the employer can actually request:
+  // must be employerRequestable AND the company must have the required employer block installed
   const blocksByCategory = useMemo(() => {
     const map = new Map<string, typeof BLOCK_DEFINITIONS>()
     for (const block of BLOCK_DEFINITIONS) {
+      if (!block.employerRequestable) continue
+      if (!employerCanRequest(block, installedEmployerBlockTypes)) continue
       const existing = map.get(block.categoryId) ?? []
       existing.push(block)
       map.set(block.categoryId, existing)
@@ -303,7 +315,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     return BLOCK_CATEGORIES
       .filter(cat => map.has(cat.id))
       .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
-  }, [])
+  }, [installedEmployerBlockTypes])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -581,53 +593,57 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   const label = `block text-xs font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`
 
-  return (
-    <>
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber">
-        <BlockCard
-          variant="embed"
-          icon={Link2}
-          title="Candidate outreach"
-          description={
-            !isCollapsed
-              ? `${activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'} · Send invite links to candidates`
-              : 'Expand to create and manage invite links.'
-          }
-          headerActions={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {!isCollapsed && (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    setShowForm(true)
-                    setError(null)
-                    resetForm()
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  New outreach
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onToggle}
-                aria-expanded={!isCollapsed}
-                aria-label={isCollapsed ? 'Expand candidate outreach' : 'Collapse candidate outreach'}
-              >
-                <ChevronDown
-                  className={cn(
-                    'h-4 w-4 transition-transform duration-200',
-                    isCollapsed && '-rotate-90',
-                  )}
-                />
-              </Button>
-            </div>
-          }
+  // ── Outreach inner content (shared between embedded + standalone) ──────────
+  const outreachHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Link2 className={cn('h-4 w-4', isDarkTheme(theme) ? 'text-amber-400' : 'text-amber-600')} />
+        <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800')}>
+          Candidate outreach
+        </h4>
+        {activeInvites.length > 0 && (
+          <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', isDarkTheme(theme) ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700')}>
+            {activeInvites.length} active
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {!isCollapsed && (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setShowForm(true)
+              setError(null)
+              resetForm()
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            New outreach
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          aria-expanded={!isCollapsed}
+          aria-label={isCollapsed ? 'Expand candidate outreach' : 'Collapse candidate outreach'}
         >
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 transition-transform duration-200',
+              isCollapsed && '-rotate-90',
+            )}
+          />
+        </Button>
+      </div>
+    </div>
+  )
+
+  const outreachBody = (
+    <>
         {/* Create form */}
         {!isCollapsed && showForm && (
           <div className={`px-6 py-5 border-b ${isDarkTheme(theme) ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
@@ -653,6 +669,18 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                     theme={theme}
                     onClear={() => setSelectedBlockType(null)}
                   />
+                ) : blocksByCategory.length === 0 ? (
+                  <div className={`rounded-xl border px-4 py-6 text-center ${
+                    isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
+                  }`}>
+                    <Package className={`w-8 h-8 mx-auto mb-2 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}`} />
+                    <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No outreach blocks available
+                    </p>
+                    <p className={`text-xs mt-1 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
+                      Install employer blocks from the hub to enable candidate requests.
+                    </p>
+                  </div>
                 ) : (
                   <div className={`rounded-xl border overflow-hidden ${
                     isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
@@ -953,8 +981,34 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
             </button>
           </div>
         )}
-        </BlockCard>
-      </HubSectionPanel>
+    </>
+  )
+
+  return (
+    <>
+      {embedded ? (
+        // When embedded inside the parent Blocks & Outreach section,
+        // render just header + body — the parent provides the panel chrome.
+        <div>
+          {outreachHeader}
+          {outreachBody}
+        </div>
+      ) : (
+        <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber">
+          <BlockCard
+            variant="embed"
+            icon={Link2}
+            title="Candidate outreach"
+            description={
+              !isCollapsed
+                ? `${activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'} · Send invite links to candidates`
+                : 'Expand to create and manage invite links.'
+            }
+          >
+            {outreachBody}
+          </BlockCard>
+        </HubSectionPanel>
+      )}
 
       {/* QR modal */}
       {qrInvite && (

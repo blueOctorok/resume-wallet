@@ -23,7 +23,7 @@ import MessagingButton from '@/components/messaging/MessagingButton'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
 import PspPaymentButton from '@/components/PspPaymentButton'
 import { useUIStore } from '@/stores'
-import { getRequestableBlocks, getBlockDefinition } from '@/lib/block-registry'
+import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 
 interface PendingCandidateRequest {
   id: string
@@ -331,14 +331,7 @@ export default function CareerCardModal({
     if (!def?.employerRequestable) return null
 
     const employerBlocks = employerExtras?.installedEmployerBlocks ?? []
-    const hasMvrCapability = employerBlocks.includes('employer-mvr-orders') || employerBlocks.includes('employer-psp-mvr-bundle')
-    const hasPspCapability = employerBlocks.includes('employer-psp-mvr-bundle')
-    if (blockId === 'driver-mvr' && !hasMvrCapability) {
-      return null
-    }
-    if (blockId === 'driver-psp' && !hasPspCapability) {
-      return null
-    }
+    if (!employerCanRequest(def, employerBlocks)) return null
 
     // Only show if candidate has the block installed (hub is source of truth)
     const installed = employerExtras?.installedBlockTypes?.includes(blockId)

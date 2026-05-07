@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
-import { FileSearch, ShieldAlert } from 'lucide-react'
+import { ClipboardList, FileSearch, ShieldAlert, UserSearch } from 'lucide-react'
 
-export type EmployerBlockCategoryId = 'drivers' | 'developers' | 'general'
+export type EmployerBlockCategoryId = 'general' | 'drivers' | 'developers'
 
 export interface EmployerBlockDefinition {
   id: string
@@ -18,6 +18,27 @@ export interface EmployerBlockDefinition {
 }
 
 export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
+  // ── General outreach ──────────────────────────────────────────────────────
+  {
+    id: 'employer-talent-outreach',
+    label: 'Talent outreach',
+    description: 'Request resumes and portfolios from candidates. The foundation for any candidate engagement.',
+    icon: UserSearch,
+    categoryId: 'general',
+    suggestedOrder: -10,
+    installable: true,
+  },
+  // ── Drivers ───────────────────────────────────────────────────────────────
+  {
+    id: 'employer-dot-screening',
+    label: 'DOT application screening',
+    description: 'Request FMCSA-compliant DOT applications (Forms 1–3) from driver candidates.',
+    icon: ClipboardList,
+    categoryId: 'drivers',
+    suggestedOrder: -5,
+    installable: true,
+    complianceNote: 'Supports FMCSA driver qualification file requirements.',
+  },
   {
     id: 'employer-mvr-orders',
     label: 'MVR ordering',
