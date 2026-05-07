@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: fulfill-screening 500 on PSP insert (schema mismatch)** (May 2026)
+
+`/api/candidate/fulfill-screening` was 500ing for PSP orders because the insert payload included `order_type`, `mvr_search_type`, and `applicant_portal_url` — columns that exist on `mvr_orders` but **not** on `psp_orders`.
+
+### What changed
+
+- Split the insert payload into a `sharedRow` plus per-table fields. PSP gets only the columns that exist on `psp_orders`; MVR gets the extras.
+- Added `details: orderError.message` to the error response so future schema mismatches surface in the browser instead of dying as a silent 500.
+
+### Pattern worth remembering
+
+When two tables have *similar but not identical* schemas (which is common in domain-specific tables — MVR vs PSP, candidate vs employer profiles), don't try to share a single insert payload across them. Either:
+1. Build the payload per-table with a clear shared base (what we did), OR
+2. Keep two separate insert functions and let the caller pick
+
+The "build a Record then conditionally add fields" pattern looks DRY but hides the schema divergence and produces runtime 500s the type checker can't catch (because `Record<string, unknown>` accepts anything).
+
+---
+
 ## **Fix: PSP wizard race + auto-fill across PSP disclosure steps** (May 2026)
 
 Two related bugs in the employer-initiated PSP flow:

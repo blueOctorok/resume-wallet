@@ -221,29 +221,36 @@ export async function POST(request: NextRequest) {
 
     console.log(`[FULFILL SCREENING] Accio response:`, { accioOrderId, subOrderId })
 
-    // Store the order record
+    // Store the order record.
+    // mvr_orders and psp_orders have DIFFERENT schemas — psp_orders has no
+    // `order_type`, `mvr_search_type`, or `applicant_portal_url` columns.
+    // Build the row per-table to avoid "column does not exist" 500s.
     const table = type === 'mvr' ? 'mvr_orders' : 'psp_orders'
-    const orderRow: Record<string, unknown> = {
+    const sharedRow = {
       driver_user_id: user.id,
       accio_order_number: orderNumber,
       accio_suborder_number: subOrderId,
       accio_remote_order_number: accioOrderId,
       accio_remote_suborder_number: subOrderId,
-      order_type: type.toUpperCase(),
       dl_number: dlNumber.trim(),
       dl_state: dlState.trim().toUpperCase(),
       status: 'pending',
       order_xml: orderXml,
-      applicant_portal_url: applicantPortalUrl,
       ordered_by_company_id: candidateRequest.company_id,
       ordered_by_user_id: candidateRequest.requested_by_user_id,
       ordered_by_employer: true,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }
 
-    if (type === 'mvr') {
-      orderRow.mvr_search_type = 'standard'
-    }
+    const orderRow: Record<string, unknown> =
+      type === 'mvr'
+        ? {
+            ...sharedRow,
+            order_type: 'MVR',
+            mvr_search_type: 'standard',
+            applicant_portal_url: applicantPortalUrl,
+          }
+        : sharedRow
 
     const { data: order, error: orderError } = await supabase
       .from(table)
@@ -253,7 +260,10 @@ export async function POST(request: NextRequest) {
 
     if (orderError) {
       console.error(`[FULFILL SCREENING] DB insert error (${table}):`, orderError)
-      return NextResponse.json({ error: 'Failed to store order' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Failed to store order', details: orderError.message },
+        { status: 500 },
+      )
     }
 
     // Mark the candidate_request as completed (if not already done by the consent endpoint)
