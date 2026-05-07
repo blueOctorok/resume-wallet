@@ -231,7 +231,13 @@ export async function buildProjectedCareerCard(
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
 
-    let sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType, avatarUrl)
+    let sectionData = await fetchSectionData(
+      supabase,
+      userId,
+      blockType as SectionBlockType,
+      avatarUrl,
+      meta.contactMode,
+    )
     let needsSetup = false
     if (!sectionData) {
       const fallback = EMPTY_SECTION_DATA[blockType]
@@ -300,6 +306,7 @@ async function fetchSectionData(
   userId: string,
   blockType: SectionBlockType,
   userAvatarUrl: string | null,
+  contactMode: ProjectedCareerCardContactMode,
 ): Promise<
   | ResumeData
   | DotAppData
@@ -321,9 +328,9 @@ async function fetchSectionData(
     case 'driver-dot-application':
       return fetchDotAppData(supabase, userId)
     case 'driver-mvr':
-      return fetchMvrData(supabase, userId)
+      return fetchMvrData(supabase, userId, contactMode)
     case 'driver-psp':
-      return fetchPspData(supabase, userId)
+      return fetchPspData(supabase, userId, contactMode)
     case 'driver-cdl-credentials':
       return fetchCdlData(supabase, userId)
     case 'developer-portfolio':
@@ -412,14 +419,22 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
   }
 }
 
-async function fetchPspData(supabase: SupabaseClient, userId: string): Promise<PspData | null> {
-  const { data: orders } = await supabase
+async function fetchPspData(
+  supabase: SupabaseClient,
+  userId: string,
+  contactMode: ProjectedCareerCardContactMode,
+): Promise<PspData | null> {
+  // Self hub: candidate must see employer-requested PSP/MVR in progress (fulfill-screening).
+  // Public share + employer talent card: omit company-scoped rows from the shared projection
+  // (employer view uses `employerCompanyPsp` for the viewer's company only).
+  let ordersQuery = supabase
     .from('psp_orders')
     .select('id, status, dl_state, created_at, completed_at')
     .eq('driver_user_id', userId)
-    .is('ordered_by_company_id', null)
-    .order('created_at', { ascending: false })
-    .limit(8)
+  if (contactMode === 'public' || contactMode === 'employer') {
+    ordersQuery = ordersQuery.is('ordered_by_company_id', null)
+  }
+  const { data: orders } = await ordersQuery.order('created_at', { ascending: false }).limit(8)
 
   if (!orders?.length) return null
 
@@ -446,14 +461,19 @@ async function fetchPspData(supabase: SupabaseClient, userId: string): Promise<P
   }
 }
 
-async function fetchMvrData(supabase: SupabaseClient, userId: string): Promise<MvrData | null> {
-  const { data: orders } = await supabase
+async function fetchMvrData(
+  supabase: SupabaseClient,
+  userId: string,
+  contactMode: ProjectedCareerCardContactMode,
+): Promise<MvrData | null> {
+  let ordersQuery = supabase
     .from('mvr_orders')
     .select('id, status, dl_state, created_at, completed_at')
     .eq('driver_user_id', userId)
-    .is('ordered_by_company_id', null)
-    .order('created_at', { ascending: false })
-    .limit(8)
+  if (contactMode === 'public' || contactMode === 'employer') {
+    ordersQuery = ordersQuery.is('ordered_by_company_id', null)
+  }
+  const { data: orders } = await ordersQuery.order('created_at', { ascending: false }).limit(8)
 
   if (!orders?.length) return null
 

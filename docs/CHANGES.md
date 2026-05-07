@@ -20,6 +20,14 @@ Storm’s PSP offering is **MVR + PSP (FMCSA crash/inspection)** in a single `pl
 
 Multi-product background orders from CRAs are often modeled as **one parent order + multiple suborders**. Your webhook URL is per **parent** order, so the handler must **branch on suborder type** (MVR XML vs FMCSA XML) or you will try to parse FMCSA as MVR and lose results.
 
+### Follow-up: hub + career card showed “not ordered” after employer fulfill
+
+`fetchPspData` / `fetchMvrData` in **`projected-career-card.ts`** and PSP rows in **`/api/driver/hub`** filtered with `ordered_by_company_id IS NULL`, so **employer-requested** bundle rows never appeared in **self** construct mode (candidate saw empty PSP / My Files). **Self** `contactMode` now loads all orders for the driver; **`public`** and **`employer`** projection modes keep the filter so shared / cross-company views do not leak another company’s screening context.
+
+### Construct “My Files” row: accurate MVR / PSP status
+
+Inline hub rows (`use-hub-documents` → `ConstructSectionWrapper`) treated every non-terminal Accio order as **`processing`**, so **pending** looked the same as vendor **processing**, and **failed** / **cancelled** / **expired** were wrong. **`hubDocStatusFromScreeningOrder`** maps DB statuses to `HubDocument` states (`in-progress` = pending queue, `processing` = active run, `failed` = terminal error); **`hubScreeningStatusLabel`** + a pill next to the block label show the status on the construct career card. **`pickHubDocForCareerBlock`** prefers the latest non-placeholder MVR/PSP row when multiple orders exist.
+
 ---
 
 ## **Fix: PSP + MVR career card "Invalid Date" + missing status states** (May 2026)

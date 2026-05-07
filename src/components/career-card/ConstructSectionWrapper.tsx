@@ -13,6 +13,7 @@ import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
 import { getBlockColor, getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import { getBlockIllustration } from '@/components/hub/BlockIllustrations'
 import type { HubDocument } from '@/lib/hub-document-types'
+import { hubScreeningStatusLabel } from '@/lib/hub-document-types'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
@@ -112,9 +113,29 @@ export default function ConstructSectionWrapper({
 
         <div className='min-w-0 flex-1 space-y-3'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3'>
-            <p className={cn('text-xs font-semibold', isDark ? 'text-gray-300' : 'text-slate-600')}>
-              {getBlockDefinition(blockType)?.label ?? blockType}
-            </p>
+            <div className='flex flex-wrap items-center gap-2'>
+              <p className={cn('text-xs font-semibold', isDark ? 'text-gray-300' : 'text-slate-600')}>
+                {getBlockDefinition(blockType)?.label ?? blockType}
+              </p>
+              {doc &&
+                (doc.type === 'mvr' || doc.type === 'psp') &&
+                doc.status !== 'empty' && (
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                      doc.status === 'complete' &&
+                        (isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-800'),
+                      doc.status === 'processing' &&
+                        (isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-900'),
+                      doc.status === 'in-progress' &&
+                        (isDark ? 'bg-slate-600/80 text-slate-200' : 'bg-slate-200 text-slate-800'),
+                      doc.status === 'failed' && (isDark ? 'bg-red-500/15 text-red-300' : 'bg-red-100 text-red-800'),
+                    )}
+                  >
+                    {hubScreeningStatusLabel(doc.status)}
+                  </span>
+                )}
+            </div>
             <div className='flex flex-wrap items-center gap-1.5 sm:justify-end'>
               {!doc && (
                 <Button type='button' variant='secondary' size='sm' onClick={() => onNavigateToBlock(blockType)}>
@@ -214,7 +235,7 @@ export default function ConstructSectionWrapper({
                   {doc.status === 'empty' ? 'Order MVR' : 'Open'}
                 </button>
               )}
-              {doc?.status !== 'processing' && doc?.type === 'mvr' && doc.status === 'complete' && (
+              {doc?.type === 'mvr' && doc.status === 'complete' && (
                 <button type='button' onClick={() => hub.setMvrViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
                   <Eye className='w-3 h-3' /> View
                 </button>
@@ -224,7 +245,7 @@ export default function ConstructSectionWrapper({
                   {doc.status === 'empty' ? 'Order PSP' : 'Open'}
                 </button>
               )}
-              {doc?.status !== 'processing' && doc?.type === 'psp' && doc.status === 'complete' && (
+              {doc?.type === 'psp' && doc.status === 'complete' && (
                 <button type='button' onClick={() => hub.setPspViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
                   <Eye className='w-3 h-3' /> View
                 </button>

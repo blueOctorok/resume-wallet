@@ -143,12 +143,11 @@ export async function GET(request: NextRequest) {
         .eq('driver_user_id', user.id)
         .order('received_at', { ascending: false }),
 
-      // 13b. PSP orders
+      // 13b. PSP orders (include employer-requested — candidate hub / My Files is owner-scoped)
       supabase
         .from('psp_orders')
         .select('id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at')
         .eq('driver_user_id', user.id)
-        .is('ordered_by_company_id', null)
         .order('created_at', { ascending: false }),
 
       supabase

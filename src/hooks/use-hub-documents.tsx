@@ -14,6 +14,7 @@ import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import type { PageType } from '@/stores/types'
 import type { HubDocument } from '@/lib/hub-document-types'
+import { hubDocStatusFromScreeningOrder } from '@/lib/hub-document-types'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
@@ -223,7 +224,7 @@ export function useHubDocuments(refreshKey: number): {
               title: 'Motor Vehicle Record',
               subtitle: mvr.licenseState,
               createdAt: mvr.orderedAt || mvr.createdAt,
-              status: isComplete ? 'complete' : 'processing',
+              status: isComplete ? 'complete' : hubDocStatusFromScreeningOrder(mvr.orderStatus),
               verified: false,
               txHash: null,
               canVerify: false,
@@ -257,7 +258,7 @@ export function useHubDocuments(refreshKey: number): {
               title: 'PSP Report',
               subtitle: psp.licenseState,
               createdAt: psp.orderedAt || psp.createdAt,
-              status: isComplete ? 'complete' : 'processing',
+              status: isComplete ? 'complete' : hubDocStatusFromScreeningOrder(psp.orderStatus),
               verified: false,
               txHash: null,
               canVerify: false,
