@@ -4,6 +4,38 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub auto-refresh no longer tears down the UI ("phantom page refresh" fix)** (May 2026)
+
+User reported: "if I leave the screen idle for 5+ min and click a button, the page seems to do a full refresh — happens more on the employer side, especially while a PSP is processing."
+
+### Root cause
+
+`EmployerHub` and `DriverHub` both use `useVisibilityRefresh(fetchHubData, { staleTime: 30000 })` to refresh stale data when the browser window regains focus. Both hubs' `fetchHubData` calls `setLoading(true)` at the start of every fetch, including background refreshes. When focus returned after >30s of staleness, the hub would tear down the entire UI and rebuild from the loading skeleton — visually identical to a hard `window.location.reload()`.
+
+The "5 minutes" wasn't a magic number — that's just how long it took for the user to lose+regain window focus (alt-tab, OS notification, switching to email, opening a PSP modal, etc.). "More on employer side" is because employers context-switch more (looking up candidates in other tabs). "While processing a PSP" is because PSP modals briefly steal/return focus, triggering the rule sooner.
+
+`DeveloperHub` already had the right shape — its `fetchHubData` only sets `setIsLoading` to false (relies on the `useState(true)` default for the initial render). No fix needed there.
+
+### Pattern recognition
+
+Classic stale-while-revalidate mistake: background refreshes should never wipe the UI. The data is already on screen; refresh it in the background and update when ready. `EmployerScreeningsPanel` already had the canonical fix for this — a `silent` parameter that toggles between `setLoading` (initial load) and `setRefreshing` (background poll). The hubs got the polling logic but never got the `silent` parameter.
+
+### Fix
+
+Both hubs now accept `silent` on `fetchHubData`. `useVisibilityRefresh` calls a wrapped `silentRefresh` that always passes `silent=true`, while initial mount, error retries, and explicit "Refresh" button clicks keep the existing loading-skeleton behavior.
+
+| File | Change |
+|---|---|
+| `src/components/EmployerHub.tsx` | `fetchHubData(silent = false)` skips `setLoading` when silent. New `silentRefresh` callback wraps it for `useVisibilityRefresh`. Error-retry button wrapped in `() => fetchHubData()` to prevent React passing the click event as `silent`. |
+| `src/components/DriverHub.tsx` | Same pattern — `silent` param + `silentRefresh` wrapper + error-retry button wrapped. |
+| `src/components/DeveloperHub.tsx` | No change. Already correct — never re-sets `isLoading=true` after initial mount. |
+
+### Subtle bug avoided
+
+When you change a function from `() => void` to `(silent = false) => void`, you cannot pass it directly to `onClick` anymore. React passes the `MouseEvent` as the first argument, which is a truthy object → `silent` becomes `true` → the loading state never fires when users click the button. TypeScript caught this in two places (`EmployerHub` "Try again" button, `DriverHub` "Retry" button). Always wrap in an arrow function: `onClick={() => fetchHubData()}`.
+
+---
+
 ## **PSP/MVR `unfilled` status fix + email dedup hardening** (May 2026)
 
 Real-world bug surfaced by Jason Peterson's PSP order (placed via Pace Drivers employer account on Accio's `testaccount`). The order showed `pending` in the hub forever AND triggered three duplicate "report ready" emails to the employer. Database forensics showed Accio actually returned a complete result with `filledStatus="unfilled" filledCode="unknown"` — meaning the test account couldn't actually fulfill the FMCSA query and gave up.

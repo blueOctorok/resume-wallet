@@ -435,10 +435,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   }, [data?.company?.id, data?.company?.walletAddress, data?.needsCompanySetup, walletAddress])
 
-  // Fetch hub data
-  const fetchHubData = useCallback(async () => {
+  // Fetch hub data.
+  //
+  // `silent` skips the loading skeleton — used for background refreshes
+  // (visibility/focus, polling) so the entire hub UI doesn't tear down and
+  // rebuild every 30s, which felt like a "full page refresh" to users.
+  // Initial load and explicit Refresh-button clicks pass silent=false so the
+  // loading skeleton still appears when there's no existing data to show.
+  const fetchHubData = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       setError(null)
 
       const response = await fetch('/api/employer/hub', {
@@ -457,7 +463,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       console.error('Error fetching employer hub data:', err)
       setError('Failed to load your hub data. Please try again.')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [walletAddress])
 
@@ -500,9 +506,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     void fetchEmployerBlocks(walletAddress)
   }, [walletAddress, data?.company?.id, fetchEmployerBlocks])
 
-  // Auto-refresh when tab becomes visible (solves stale data after changes in other tabs)
-  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
-    staleTime: 30000, // Consider data stale after 30 seconds
+  // Auto-refresh when tab becomes visible (solves stale data after changes in
+  // other tabs). Always silent — we don't want a focus event to wipe the hub
+  // and show a loading skeleton; the user keeps seeing the existing data
+  // while it refreshes in the background.
+  const silentRefresh = useCallback(() => fetchHubData(true), [fetchHubData])
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(silentRefresh, {
+    staleTime: 30000,
     enabled: !!walletAddress,
   })
 
@@ -624,7 +634,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           >
             <p className={`text-center text-sm ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
             <div className="mt-4 flex justify-center">
-              <Button type="button" variant="primary" size="md" onClick={fetchHubData}>
+              <Button type="button" variant="primary" size="md" onClick={() => fetchHubData()}>
                 Try again
               </Button>
             </div>

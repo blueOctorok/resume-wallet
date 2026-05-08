@@ -471,14 +471,19 @@ export default function DriverHub({
     setSelectedResumeData(null)
   }
 
-  const fetchHubData = useCallback(async () => {
+  // `silent` skips the loading skeleton — used for background refreshes
+  // (visibility/focus) so the hub doesn't tear down and rebuild every 30s,
+  // which felt like a "full page refresh" to users. Initial load and explicit
+  // retries pass silent=false so the skeleton still appears when there's no
+  // existing data to show.
+  const fetchHubData = useCallback(async (silent = false) => {
     if (!userAddress) {
-      setLoading(false)
+      if (!silent) setLoading(false)
       return
     }
 
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       setError(null)
 
       const response = await fetch('/api/driver/hub', {
@@ -520,7 +525,7 @@ export default function DriverHub({
       console.error('Error fetching hub data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [userAddress])
 
@@ -667,9 +672,11 @@ export default function DriverHub({
     fetchHubData()
   }, [fetchHubData])
 
-  // Auto-refresh when tab becomes visible (solves stale data after admin changes in other tabs)
-  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
-    staleTime: 30000, // Consider data stale after 30 seconds
+  // Auto-refresh when tab becomes visible (solves stale data after admin changes
+  // in other tabs). Always silent — focus events shouldn't tear down the hub.
+  const silentRefresh = useCallback(() => fetchHubData(true), [fetchHubData])
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(silentRefresh, {
+    staleTime: 30000,
     enabled: !!userAddress,
   })
 
@@ -712,7 +719,7 @@ export default function DriverHub({
           <AlertCircle className='w-12 h-12 text-red-500 mx-auto mb-4' />
           <p className='text-red-500 font-medium'>{error}</p>
           <button
-            onClick={fetchHubData}
+            onClick={() => fetchHubData()}
             className={`mt-4 px-4 py-2 rounded-lg font-medium ${
               isDarkTheme(theme)
                 ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
