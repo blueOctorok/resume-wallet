@@ -438,7 +438,7 @@ async function fetchPspData(
   // (employer view uses `employerCompanyPsp` for the viewer's company only).
   let ordersQuery = supabase
     .from('psp_orders')
-    .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
+    .select('id, status, result_outcome, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
   if (contactMode === 'public' || contactMode === 'employer') {
     ordersQuery = ordersQuery.is('ordered_by_company_id', null)
@@ -465,6 +465,7 @@ async function fetchPspData(
   return {
     orderId: order.id,
     orderStatus: order.status,
+    resultOutcome: (order as { result_outcome?: PspData['resultOutcome'] }).result_outcome ?? null,
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,
@@ -480,7 +481,7 @@ async function fetchMvrData(
 ): Promise<MvrData | null> {
   let ordersQuery = supabase
     .from('mvr_orders')
-    .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
+    .select('id, status, result_outcome, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
   if (contactMode === 'public' || contactMode === 'employer') {
     ordersQuery = ordersQuery.is('ordered_by_company_id', null)
@@ -507,6 +508,7 @@ async function fetchMvrData(
   return {
     orderId: order.id,
     orderStatus: order.status,
+    resultOutcome: (order as { result_outcome?: MvrData['resultOutcome'] }).result_outcome ?? null,
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,
@@ -703,6 +705,7 @@ async function fetchProjectsData(supabase: SupabaseClient, userId: string): Prom
 export function toMvrDataFromOrderRow(order: {
   id: string
   status: string
+  result_outcome?: MvrData['resultOutcome']
   dl_state: string
   created_at: string
   completed_at: string | null
@@ -715,6 +718,7 @@ export function toMvrDataFromOrderRow(order: {
   return {
     orderId: order.id,
     orderStatus: order.status,
+    resultOutcome: order.result_outcome ?? null,
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,
@@ -734,6 +738,7 @@ export function toPspDataFromOrderRow(
   order: {
     id: string
     status: string
+    result_outcome?: PspData['resultOutcome']
     dl_state: string
     created_at: string
     completed_at: string | null
@@ -743,6 +748,7 @@ export function toPspDataFromOrderRow(
   return {
     orderId: order.id,
     orderStatus: order.status,
+    resultOutcome: order.result_outcome ?? null,
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,

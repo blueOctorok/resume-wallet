@@ -57,9 +57,9 @@ The driver's portable DQ file only contains **driver-owned** data: self-ordered 
 | # | DQ Component | CFR | Storm status | Effort remaining |
 |---|---|---|---|---|
 | 1 | Employment Application | §391.21 | ✅ **Done** | Full 3-form DOT app wizard, PDF export, bidirectional mapper |
-| 2 | Motor Vehicle Record | §391.23 | ✅ **Done** | Accio/KeyBackground integration, real state DMV pull |
+| 2 | Motor Vehicle Record | §391.23 | ✅ **Done** | Accio/KeyBackground integration, real state DMV pull. **Pipeline overhaul (May 2026):** centralized Accio `filledCode` mapping ([`accio-result-status.ts`](../src/lib/accio-result-status.ts)), full-SSN orders, webhook-base-URL hardening, `result_outcome` column + outcome chips across UI, **server-rendered Storm-branded PDF** ([`MvrReportPdf.tsx`](../src/lib/pdf/MvrReportPdf.tsx)). Backfill migration `079` re-derives status for existing rows. |
 | 3 | Previous Employer Safety Performance History | §391.23 | ✅ **Done** | 3-attempt email outreach, token portal, 6 FMCSA questions |
-| 3b | FMCSA PSP (crash / inspection) via Accio | §391.23 | 🟡 **In progress** | Standalone `driver-psp` block, orders + webhook; **FMCSA PSP Disclosure & Authorization** (`psp_consents` + `PspDisclosureForm`) before live orders; **result XML parser deferred** (stored raw, `needs_review`); **employer-side:** company must install **`employer-psp-mvr-bundle`** (PSP+MVR bundled — PSP never ordered alone) before PSP request/order UI and APIs; MVR-only via **`employer-mvr-orders`**; **central admin** manages installs + **`employer_block_audit`** trail |
+| 3b | FMCSA PSP (crash / inspection) via Accio | §391.23 | ✅ **Done** | Standalone `driver-psp` block, orders + webhook; **FMCSA PSP Disclosure & Authorization** (`psp_consents` + `PspDisclosureForm`) before live orders; **structured XML parser** ([`accio-psp-parser.ts`](../src/lib/accio-psp-parser.ts)) extracts crash / inspection / OOS counts, plus raw `<text>` fallback. Webhook + UI use **`accio-result-status.ts`** outcome mapping (no more `needs_review` for clean reports). **Server-side branded PDF** via `@react-pdf/renderer` ([`PspReportPdf.tsx`](../src/lib/pdf/PspReportPdf.tsx)). **Employer-side:** company must install **`employer-psp-mvr-bundle`** (PSP+MVR bundled — PSP never ordered alone); MVR-only via **`employer-mvr-orders`**; **central admin** manages installs + **`employer_block_audit`** trail |
 | 4 | Road Test Certificate or CDL Equivalent | §391.31/33 | 🔲 **Upload needed** | File upload + metadata (examiner, date, vehicle, result) |
 | 5 | Medical Examiner's Certificate | §391.43 | 🔲 **Upload needed** | File upload + metadata (examiner, registry ID, expiration) |
 | 6 | Annual MVR Review | §391.25 | 🔲 **Build** | Re-order MVR annually + reviewer signature |
@@ -147,6 +147,7 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 | **Phase 7 — CDL verification API** | 🔲 Future | Investigate Accio/SambaSafety CDLIS lookup. Turns self-reported CDL into confirmed CDL. |
 | **Phase 8 — FMCSA Clearinghouse** | 🔲 Future | Requires employer credentials. Facilitate query through Pace's Clearinghouse account. |
 | **Phase 9 — DQ file API** | 🔲 Future | External API for carriers to pull driver-owned DQ files with consent. The long-term product. |
+| **Phase 10 — IPFS / on-chain PDF archival** | 🔲 Future | Server-rendered MVR + PSP PDFs (shipped May 2026 via `@react-pdf/renderer`) are streamed on demand. Next step: upload each finalized PDF to IPFS, anchor the CID on-chain alongside the existing MVR result hash, and surface a `verified on-chain` link in the PDF footer. Lets a third party verify the exact PDF bytes a candidate shared without trusting Storm. |
 
 ---
 

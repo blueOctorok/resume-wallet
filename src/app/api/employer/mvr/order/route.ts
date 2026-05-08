@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { companyCanOrderMvr } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/employer/mvr/order
@@ -188,16 +189,26 @@ export async function POST(request: NextRequest) {
 
     const orderNumber  = generateOrderNumber()
     const webhookGuid  = generateWebhookGuid()
-    const baseUrl      = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl   = `${baseUrl}/api/mvr/webhook`
+    let webhookUrl: string
+    try {
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[EMPLOYER MVR] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
+    // Send full SSN — Accio is FCRA compliant and the state DMV identity match
+    // needs all 9 digits. See src/app/api/mvr/order/route.ts for context.
     const orderXml = buildAccioMvrOrderXml({
       firstName,
       middleName,
       lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: ssn.slice(-4),
+      ssn,
       dob,
       gender,
       address,

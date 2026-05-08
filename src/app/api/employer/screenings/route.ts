@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('mvr_orders')
         .select(
-          'id, driver_user_id, status, dl_state, ordered_at, created_at, completed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, ordered_at, created_at, completed_at, fee_amount',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('psp_orders')
         .select(
-          'id, driver_user_id, status, dl_state, ordered_at, created_at, completed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, ordered_at, created_at, completed_at, fee_amount',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -81,6 +81,8 @@ export async function GET(request: NextRequest) {
           candidateName,
           avatarUrl: c?.avatarUrl ?? null,
           status: o.status as string,
+          // Accio outcome (clear/hits/etc) from src/lib/accio-result-status.ts
+          resultOutcome: (o.result_outcome as string | null) ?? null,
           dlState: o.dl_state as string | null,
           orderedAt: (o.ordered_at as string | null) ?? (o.created_at as string),
           completedAt: o.completed_at as string | null,

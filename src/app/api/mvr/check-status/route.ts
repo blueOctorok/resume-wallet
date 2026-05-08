@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         id,
         accio_order_number,
         status,
+        result_outcome,
         ordered_at,
         payment_id,
         mvr_results (
@@ -138,6 +139,8 @@ export async function GET(request: NextRequest) {
         id: latestOrder.id,
         orderNumber: latestOrder.accio_order_number,
         status: latestOrder.status,
+        // Accio-derived outcome (clear/hits/etc) — see src/lib/accio-result-status.ts
+        resultOutcome: latestOrder.result_outcome ?? null,
         orderedAt: latestOrder.ordered_at,
         paymentId: latestOrder.payment_id,
       } : null,

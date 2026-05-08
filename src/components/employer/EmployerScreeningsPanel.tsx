@@ -12,6 +12,11 @@ import Avatar from '@/components/ui/Avatar'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import { hubDocStatusFromScreeningOrder, hubScreeningStatusLabel } from '@/lib/hub-document-types'
+import {
+  outcomeBadgeClasses,
+  outcomeLabel,
+  type ScreeningOutcome,
+} from '@/lib/accio-result-status'
 
 /**
  * Employer hub: lists company-purchased MVR + PSP screenings with status pills and a
@@ -27,6 +32,8 @@ interface ScreeningRow {
   candidateName: string | null
   avatarUrl: string | null
   status: string
+  /** Accio-derived outcome (clear/hits/no_hits/...). Only set when status === 'completed'. */
+  resultOutcome: ScreeningOutcome
   dlState: string | null
   orderedAt: string
   completedAt: string | null
@@ -255,6 +262,17 @@ function ScreeningRowItem({
             >
               {hubScreeningStatusLabel(docStatus)}
             </span>
+            {/* Outcome chip (Clear / Hits / etc.) — only shown once Accio returned a verdict. */}
+            {ready && row.resultOutcome ? (
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                  outcomeBadgeClasses(row.resultOutcome),
+                )}
+              >
+                {outcomeLabel(row.resultOutcome)}
+              </span>
+            ) : null}
           </div>
           <p className={cn('mt-0.5 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
             {[row.dlState, `Ordered ${formatWhen(row.orderedAt)}`].filter(Boolean).join(' · ')}

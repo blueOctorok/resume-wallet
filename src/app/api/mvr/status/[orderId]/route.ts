@@ -73,6 +73,8 @@ function jsonFromMvrOrderRow(mvrOrder: Record<string, unknown>) {
       orderNumber: mvrOrder.accio_order_number,
       subOrderNumber: mvrOrder.accio_suborder_number,
       status: mvrOrder.status,
+      // Accio-derived outcome (clear/hits/etc) — see src/lib/accio-result-status.ts
+      resultOutcome: mvrOrder.result_outcome ?? null,
       orderType: mvrOrder.order_type,
       dlNumber: mvrOrder.dl_number,
       dlState: mvrOrder.dl_state,

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import type { MvrData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import MvrViewModal from '@/components/MvrViewModal'
+import { outcomeBadgeClasses, outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
 
 function formatOrderDate(raw: string | null | undefined): string | null {
   if (!raw) return null
@@ -71,11 +72,24 @@ export default function MvrSection({
       isDark ? 'bg-gray-700/50' : 'bg-white/60'
     )}>
       <div className='flex items-center justify-between mb-3'>
-        <div className='flex items-center gap-2'>
-          <Car className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
-          <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+        <div className='flex items-center gap-2 min-w-0'>
+          <Car className={cn('w-4 h-4 shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} />
+          <h3 className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>
             Motor Vehicle Record
           </h3>
+          {/* Outcome chip — derived from Accio filledCode in src/lib/accio-result-status.ts.
+              Hidden until the order is in a terminal state to avoid flashing "Pending review"
+              on freshly placed orders that just haven't returned yet. */}
+          {isComplete && data.resultOutcome ? (
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                outcomeBadgeClasses(data.resultOutcome as ScreeningOutcome),
+              )}
+            >
+              {outcomeLabel(data.resultOutcome as ScreeningOutcome)}
+            </span>
+          ) : null}
         </div>
         {showSelfButton && (
           <button

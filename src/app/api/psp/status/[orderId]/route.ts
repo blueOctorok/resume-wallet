@@ -27,6 +27,8 @@ function jsonFromPspOrder(order: Record<string, unknown>) {
       remoteOrderNumber: order.accio_remote_order_number,
       remoteSubOrderNumber: order.accio_remote_suborder_number,
       status: order.status,
+      // Accio-derived outcome (clear/hits/etc) — see src/lib/accio-result-status.ts
+      resultOutcome: order.result_outcome ?? null,
       dlNumber: order.dl_number,
       dlState: order.dl_state,
       orderedAt: order.ordered_at,

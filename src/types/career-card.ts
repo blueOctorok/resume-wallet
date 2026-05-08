@@ -36,6 +36,12 @@ export interface DotAppData {
 export interface MvrData {
   orderId: string
   orderStatus: string
+  /**
+   * High-level Accio outcome derived from filledCode. Drives the colored
+   * badge in MvrSection / MvrViewModal / EmployerScreeningsPanel.
+   * See `src/lib/accio-result-status.ts` (`ScreeningOutcome`) for the union.
+   */
+  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'pass' | 'fail' | 'unknown' | null
   licenseState: string
   orderedAt: string
   completedAt: string | null
@@ -56,6 +62,8 @@ export interface MvrData {
 export interface PspData {
   orderId: string
   orderStatus: string
+  /** Same semantics as {@link MvrData.resultOutcome}. */
+  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'pass' | 'fail' | 'unknown' | null
   licenseState: string
   orderedAt: string
   completedAt: string | null

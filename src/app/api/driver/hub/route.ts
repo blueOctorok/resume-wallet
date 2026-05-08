@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('mvr_orders')
         .select(
-          'id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
+          'id, status, result_outcome, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
         )
         .eq('driver_user_id', user.id)
         .order('created_at', { ascending: false }),
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('psp_orders')
         .select(
-          'id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
+          'id, status, result_outcome, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
         )
         .eq('driver_user_id', user.id)
         .order('created_at', { ascending: false }),
@@ -285,6 +285,8 @@ export async function GET(request: NextRequest) {
       return {
         id: order.id,
         orderStatus: order.status,
+        // High-level Accio outcome (clear/hits/etc) — see src/lib/accio-result-status.ts
+        resultOutcome: (order as { result_outcome?: string | null }).result_outcome ?? null,
         licenseState: order.dl_state,
         createdAt: order.created_at,
         completedAt: order.completed_at,
@@ -303,6 +305,7 @@ export async function GET(request: NextRequest) {
       return {
         id: order.id,
         orderStatus: order.status,
+        resultOutcome: (order as { result_outcome?: string | null }).result_outcome ?? null,
         licenseState: order.dl_state,
         createdAt: order.created_at,
         completedAt: order.completed_at,

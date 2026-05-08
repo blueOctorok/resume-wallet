@@ -9,6 +9,7 @@ import {
 } from '@/lib/accio-xml-builder'
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
@@ -152,16 +153,25 @@ export async function POST(request: NextRequest) {
 
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/mvr/webhook`
+    let webhookUrl: string
+    try {
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[EMPLOYER PSP] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
+    // Send full SSN — see comment in src/app/api/mvr/order/route.ts.
     const orderXml = buildAccioPspWithMvrBundleOrderXml({
       firstName,
       middleName,
       lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: String(ssn).slice(-4),
+      ssn: String(ssn),
       dob,
       gender,
       address,

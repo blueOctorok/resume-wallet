@@ -130,9 +130,21 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <has_admitted_convictions>N</has_admitted_convictions>
             <admitted_conviction_details/>
             <portalfromapplicant>${portalFromApplicant ? 'Y' : 'N'}</portalfromapplicant>
+            <!--
+              require_ews: when portalfromapplicant=Y Accio defaults this to Y and
+              parks the order waiting for the applicant to sign Accio's release form.
+              We always send N because Storm collects FCRA disclosure on our side
+              (psp_consents / bgcheck_consents) before the order is ever placed.
+            -->
+            <require_ews>N</require_ews>
         </subject>`
 
-  // Add webhook configuration if provided
+  // Add webhook configuration if provided.
+  // postback_types: trimmed from CETA::IPC::EXP::CNF::OCR::RDC down to the three
+  // we actually care about — IPC (in-progress completion), OCR (order completion),
+  // RDC (results-delivery completion). The dropped types were generating noisy
+  // intermediate webhook posts (confirmation, expirations) that we just 200-acked
+  // without doing any work.
   if (webhookUrl && webhookGuid) {
     xml += `
         <postBackInfo>
@@ -140,7 +152,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <guID>${escapeXml(webhookGuid)}</guID>
             <account>${escapeXml(account)}</account>
             <username>${escapeXml(username)}</username>
-            <postback_types>CETA::IPC::EXP::CNF::OCR::RDC</postback_types>
+            <postback_types>IPC::OCR::RDC</postback_types>
         </postBackInfo>`
   }
 
@@ -275,7 +287,8 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
             <drugscreen>N</drugscreen>
             <has_admitted_convictions>N</has_admitted_convictions>
             <admitted_conviction_details/>
-            <portalfromapplicant>Y</portalfromapplicant>
+            <portalfromapplicant>N</portalfromapplicant>
+            <require_ews>N</require_ews>
         </subject>`
 
   if (webhookUrl && webhookGuid) {
@@ -285,7 +298,7 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
             <guID>${escapeXml(webhookGuid)}</guID>
             <account>${escapeXml(account)}</account>
             <username>${escapeXml(username)}</username>
-            <postback_types>CETA::IPC::EXP::CNF::OCR::RDC</postback_types>
+            <postback_types>IPC::OCR::RDC</postback_types>
         </postBackInfo>`
   }
 
@@ -303,12 +316,21 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
 /**
  * Storm PSP product = **one** Accio `placeOrder` with **MVR + FMCSA PSP** subOrders.
  * Postback URL must be `/api/mvr/webhook` — FMCSA completion posts are routed to PSP storage from there.
+ *
+ * IMPORTANT — do NOT re-enable `portalFromApplicant`:
+ * The previous version set portalFromApplicant=true while ALSO suppressing the
+ * applicant-portal email. That parked every PSP+MVR order in Accio's portal
+ * queue waiting for an applicant who never received a link, turning a
+ * minutes-long screening into a 30 min – several hours wait until a Key/Accio
+ * operator manually pushed it through. Storm collects FCRA disclosure on our
+ * side (`psp_consents`) before this function is ever called, so there is
+ * nothing left for Accio's applicant portal to gather.
  */
 export function buildAccioPspWithMvrBundleOrderXml(data: AccioOrderData): string {
   return buildAccioMvrOrderXml({
     ...data,
     includeFmcsaCrashInspection: true,
-    portalFromApplicant: true,
+    portalFromApplicant: false,
   })
 }
 

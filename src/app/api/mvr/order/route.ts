@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * API Route: Order MVR from Accio
@@ -286,33 +287,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Generate order number and webhook GUID
+    // 3. Generate order number + webhook GUID. getScreeningWebhookBaseUrl
+    // hard-fails in production if no real public URL is configured, so we never
+    // accidentally tell Accio to post results to localhost.
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    // Remove trailing slash from base URL to avoid double slashes
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/mvr/webhook`
+    let webhookUrl: string
+    try {
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[MVR ORDER] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
-    // 4. Build Accio XML order
+    // 4. Build Accio XML order. Send the FULL 9-digit SSN — Accio is FCRA
+    // compliant and the state DMV identity match needs the full number. Sending
+    // last-4 was forcing Accio to re-collect identity via the applicant portal,
+    // which is one of the things that made orders take hours instead of minutes.
     const orderXml = buildAccioMvrOrderXml({
       firstName,
       middleName,
       lastName,
       email,
       phone,
-      ssn: ssn.slice(-4), // Only last 4 digits for security
+      ssn,
       dob,
       gender,
       address,
       city,
       state,
       zip,
-      jobState, // Pass through from request (optional)
+      jobState,
       dlNumber,
       dlState,
       orderNumber,
       mvrSearchType,
-      includeFmcsaCrashInspection, // Pass through from request
+      includeFmcsaCrashInspection,
       webhookUrl,
       webhookGuid
     })

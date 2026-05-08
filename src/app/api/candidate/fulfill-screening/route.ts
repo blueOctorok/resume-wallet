@@ -9,6 +9,7 @@ import {
 } from '@/lib/accio-xml-builder'
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/candidate/fulfill-screening
@@ -135,24 +136,35 @@ export async function POST(request: NextRequest) {
 
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
+    let webhookUrl: string
+    try {
+      // PSP product = MVR + FMCSA in one placeOrder; postbacks hit /api/mvr/webhook
+      // (FMCSA routed to PSP from there). Same URL works for both order types.
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[FULFILL SCREENING] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
     const middleName = formData.middleName?.trim() || ''
     const email = formData.email?.trim() || user.email || `order-${orderNumber}@stormchain.ai`
     const phone = formData.phone?.trim() || ''
+    // Send full SSN — see comment in src/app/api/mvr/order/route.ts.
+    const fullSsn = ssn.trim()
 
     let orderXml: string
-    let webhookUrl: string
 
     if (type === 'mvr') {
-      webhookUrl = `${baseUrl}/api/mvr/webhook`
       orderXml = buildAccioMvrOrderXml({
         firstName: firstName.trim(),
         middleName,
         lastName: lastName.trim(),
         email,
         phone,
-        ssn: ssn.trim().slice(-4),
+        ssn: fullSsn,
         dob: dob.trim(),
         gender: 'U',
         address: address.trim(),
@@ -169,15 +181,13 @@ export async function POST(request: NextRequest) {
         webhookGuid,
       })
     } else {
-      // PSP product = MVR + FMCSA in one placeOrder; postbacks hit /api/mvr/webhook (FMCSA routed to PSP).
-      webhookUrl = `${baseUrl}/api/mvr/webhook`
       orderXml = buildAccioPspWithMvrBundleOrderXml({
         firstName: firstName.trim(),
         middleName,
         lastName: lastName.trim(),
         email,
         phone,
-        ssn: ssn.trim().slice(-4),
+        ssn: fullSsn,
         dob: dob.trim(),
         gender: 'U',
         address: address.trim(),

@@ -7,6 +7,7 @@ import type { PspData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import PspViewModal from '@/components/PspViewModal'
 import Button from '@/components/ui/Button'
+import { outcomeBadgeClasses, outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
 
 function formatOrderDate(raw: string | null | undefined): string | null {
   if (!raw) return null
@@ -70,11 +71,22 @@ export default function PspSection({
       className={cn('rounded-xl p-4', isDark ? 'bg-gray-700/50' : 'bg-white/60')}
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileWarning className={cn('h-4 w-4', isDark ? 'text-orange-400' : 'text-orange-600')} />
-          <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileWarning className={cn('h-4 w-4 shrink-0', isDark ? 'text-orange-400' : 'text-orange-600')} />
+          <h3 className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>
             PSP Report
           </h3>
+          {/* Same outcome chip pattern as MvrSection. Hidden until terminal. */}
+          {isComplete && data.resultOutcome ? (
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                outcomeBadgeClasses(data.resultOutcome as ScreeningOutcome),
+              )}
+            >
+              {outcomeLabel(data.resultOutcome as ScreeningOutcome)}
+            </span>
+          ) : null}
         </div>
         {showSelfButton && (
           <Button type="button" variant={isComplete ? 'secondary' : 'primary'} size="sm" onClick={handlePrimary}>

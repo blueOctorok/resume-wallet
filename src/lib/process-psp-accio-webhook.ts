@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { extractPspWebhookFields } from '@/lib/accio-psp-webhook'
 import { savePspData } from '@/lib/block-data'
 import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
+import { deriveScreeningStatus } from '@/lib/accio-result-status'
+import { parsePspResult, pspResultToJsonb } from '@/lib/accio-psp-parser'
 
 export interface PspWebhookProcessOutcome {
   status: number
@@ -118,11 +120,23 @@ export async function processPspAccioWebhookCompletion(
     .eq('psp_order_id', pspOrder.id)
     .maybeSingle()
 
+  // Run the structured PSP parser. If parsing throws (malformed XML) we still
+  // persist the raw XML — losing the report would be worse than losing the
+  // structured fields, and admin can re-derive later from raw_xml.
+  let parsedPsp: ReturnType<typeof parsePspResult> | null = null
+  try {
+    parsedPsp = parsePspResult(xmlBody)
+  } catch (err) {
+    console.error('[PSP WEBHOOK] Structured parse failed, storing raw only:', err)
+  }
+
   const resultPayload = {
     psp_order_id: pspOrder.id,
     driver_user_id: pspOrder.driver_user_id,
     raw_xml: xmlBody,
-    parsed_data: { stub: true, extracted: parsed },
+    parsed_data: parsedPsp
+      ? pspResultToJsonb(parsedPsp)
+      : { parseError: true, extracted: parsed },
     result_status: 'received' as const,
     received_at: new Date().toISOString(),
   }
@@ -149,12 +163,22 @@ export async function processPspAccioWebhookCompletion(
     pspResult = inserted
   }
 
-  const nextStatus = parsed.filledCode === 'verified' ? 'completed' : 'needs_review'
+  // Centralized Accio mapping — see src/lib/accio-result-status.ts.
+  // Prefer the structured-parsed values (parsedPsp) when available — they
+  // include filledStatus AND held_for_review which the lightweight extractor
+  // doesn't surface. Fall back to the extractor for malformed XML so a parse
+  // failure doesn't pin the order at "pending" forever.
+  const { status: nextStatus, outcome: nextOutcome } = deriveScreeningStatus({
+    filledStatus: parsedPsp?.filledStatus ?? 'filled',
+    filledCode: parsedPsp?.filledCode ?? parsed.filledCode,
+    heldForReview: parsedPsp?.heldForReview ?? false,
+  })
 
   await supabase
     .from('psp_orders')
     .update({
       status: nextStatus,
+      result_outcome: nextOutcome,
       accio_remote_order_number: parsed.remoteOrderNumber || pspOrder.accio_remote_order_number,
       accio_remote_suborder_number: parsed.remoteSubOrderNumber || pspOrder.accio_remote_suborder_number,
       processed_at: new Date().toISOString(),
@@ -173,12 +197,26 @@ export async function processPspAccioWebhookCompletion(
   }).catch((err) => console.warn('[PSP WEBHOOK] Screening notify non-fatal:', err))
 
   if (!pspOrder.ordered_by_company_id) {
+    // Surface the parsed summary (crash/inspection/oos counts + brief snippet)
+    // on the candidate's hub block so the career card can show real numbers
+    // instead of just "Report on file".
     savePspData(supabase, pspOrder.driver_user_id, {
       order_id: pspOrder.id,
       result_id: pspResult.id,
       expires_at: pspOrder.expires_at,
       report_status: nextStatus,
       last_ordered_at: pspOrder.ordered_at,
+      crash_count: parsedPsp?.crashCount ?? null,
+      inspection_count: parsedPsp?.inspectionCount ?? null,
+      oos_count: parsedPsp?.oosCount ?? null,
+      report_summary: parsedPsp
+        ? {
+            outcome: nextOutcome,
+            crashCount: parsedPsp.crashCount,
+            inspectionCount: parsedPsp.inspectionCount,
+            oosCount: parsedPsp.oosCount,
+          }
+        : null,
     }).catch((err) => console.warn('[PSP WEBHOOK] block sync non-fatal:', err))
   }
 

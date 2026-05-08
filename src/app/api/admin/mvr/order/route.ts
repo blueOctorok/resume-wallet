@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/admin/mvr/order
@@ -161,17 +162,25 @@ export async function POST(request: NextRequest) {
     // Generate order identifiers
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/mvr/webhook`
+    let webhookUrl: string
+    try {
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[ADMIN MVR] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
-    // Build Accio XML order
+    // Build Accio XML order. Send full SSN — see comment in mvr/order/route.ts.
     const orderXml = buildAccioMvrOrderXml({
       firstName,
       middleName,
       lastName,
-      email: email || `admin-order-${orderNumber}@stormchain.ai`, // Accio may require email
+      email: email || `admin-order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: ssn.slice(-4), // Only last 4 digits
+      ssn,
       dob,
       gender,
       address,

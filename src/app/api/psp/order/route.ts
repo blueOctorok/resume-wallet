@@ -9,6 +9,7 @@ import {
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
@@ -197,16 +198,25 @@ export async function POST(request: NextRequest) {
 
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
-    const webhookUrl = `${baseUrl}/api/mvr/webhook`
+    let webhookUrl: string
+    try {
+      webhookUrl = `${getScreeningWebhookBaseUrl(request)}/api/mvr/webhook`
+    } catch (err) {
+      console.error('[PSP ORDER] Webhook URL resolution failed:', err)
+      return NextResponse.json(
+        { error: 'Server is not configured for screening webhooks. Contact support.' },
+        { status: 500 },
+      )
+    }
 
+    // Send full SSN (see comment in mvr/order/route.ts).
     const orderXml = buildAccioPspWithMvrBundleOrderXml({
       firstName,
       middleName,
       lastName,
       email,
       phone,
-      ssn: ssn.slice(-4),
+      ssn,
       dob,
       gender,
       address,

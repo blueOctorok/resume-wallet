@@ -4,6 +4,72 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Storm Screening Pipeline Overhaul — MVR + PSP** (May 2026)
+
+End-to-end rebuild of the MVR/PSP screening flow. Two correctness bugs were silently breaking every order, the PSP parser was a stub, and the candidate-facing report was a `window.print()` HTML hack. After this change, screenings come back in **minutes** instead of hours, complete as **`completed` + `result_outcome`** (not `needs_review`), and download as a **Storm-branded server-rendered PDF**.
+
+### What was actually broken
+
+1. **`filledCode === 'verified'`** — Accio never sends that code. Per `result_receipt.md` §2.10 valid `filledCode` values are `no hits | hits | clear | unknown | drugpositive | drugnegative | contact MRO | lab-reject | test-canceled | unobtainable | previous-positive | pass | fail`. Every completed order was being stamped `needs_review` because nothing matched. ([`src/app/api/mvr/webhook/route.ts`](src/app/api/mvr/webhook/route.ts), [`src/lib/process-psp-accio-webhook.ts`](src/lib/process-psp-accio-webhook.ts))
+2. **`portalfromapplicant=Y` + `SuppressApplicantPortalEmail=Y`** on the PSP+MVR bundle — order was queued for Accio's applicant portal but the candidate received no email and never finished. Order sat in Accio's queue until a human noticed and pushed it through manually. That's the 30 min – several hours. ([`src/lib/accio-xml-builder.ts`](src/lib/accio-xml-builder.ts))
+3. **Last-4 SSN** instead of full 9-digit — Accio is FCRA-compliant; with last-4 only they bounce orders to the slow applicant-portal identity-verification path, even when not configured to.
+4. **`process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'`** in production — webhooks would silently target localhost if the env var was missing.
+
+### Phase 1 — Correctness fixes
+
+- **[`src/lib/accio-result-status.ts`](src/lib/accio-result-status.ts)** — new single source of truth. `deriveScreeningStatus({ filledStatus, filledCode, heldForReview })` returns `{ status, outcome }` per Accio spec. Both webhooks ([MVR](src/app/api/mvr/webhook/route.ts) + [PSP via `process-psp-accio-webhook.ts`](src/lib/process-psp-accio-webhook.ts)) replaced the `=== 'verified'` check with this.
+- **`supabase/migrations/078_screening_result_outcome.sql`** — adds **`result_outcome TEXT`** to `mvr_orders` + `psp_orders` with a `CHECK` constraint and composite `(status, result_outcome)` indices.
+- **[`src/lib/accio-xml-builder.ts`](src/lib/accio-xml-builder.ts)** — bundle no longer sets `portalFromApplicant: true`; **always emits `<require_ews>N</require_ews>`** (Storm collects signed disclosure → stored in `psp_consents`); trims `<postback_types>` from `CETA::IPC::EXP::CNF::OCR::RDC` → **`IPC::OCR::RDC`** to drop noisy intermediate webhooks.
+- **All six order routes** — send **full 9-digit SSN** (not `ssn.slice(-4)`); switched to **[`getScreeningWebhookBaseUrl()`](src/lib/app-url.ts)** which **hard-fails in production** if it would resolve to a localhost URL. Routes touched: [`mvr/order`](src/app/api/mvr/order/route.ts), [`psp/order`](src/app/api/psp/order/route.ts), [`employer/mvr/order`](src/app/api/employer/mvr/order/route.ts), [`employer/psp/order`](src/app/api/employer/psp/order/route.ts), [`admin/mvr/order`](src/app/api/admin/mvr/order/route.ts), [`candidate/fulfill-screening`](src/app/api/candidate/fulfill-screening/route.ts).
+- **[`src/lib/accio-xml-parser.ts`](src/lib/accio-xml-parser.ts)** — `findMvrSubOrder` now propagates `heldForReview` / `heldForReleaseForm` from subOrder attrs into the parsed result so the new status mapper works.
+- **`supabase/migrations/079_backfill_screening_status.sql`** — one-shot SQL backfill: defines `storm_derive_screening_status()` PL/pgSQL helper that mirrors the TS logic, regex-extracts `filledStatus` / `filledCode` / `held_for_review` from existing `result_xml`, and **`UPDATE`s every `pending`/`needs_review` row that already has a result XML**. Existing customers' broken orders go "green" on the next page load. Helper is dropped after use.
+
+### Phase 2 — Real PSP parser
+
+PSP was previously a stub (`{ stub: true, extracted: { filledCode } }`). Replaced with a defensive multi-shape parser:
+
+- **[`src/lib/accio-psp-parser.ts`](src/lib/accio-psp-parser.ts)** — extracts driver identity, 5-year crash history, 5-year inspection history (with violations and OOS markers), summary counts (**`crashCount`**, **`inspectionCount`**, **`oosCount`**), and always preserves the raw `<text>` block as `reportText` so nothing is lost on schema drift. Why defensive: Accio's `result_receipt.md` documents MVR thoroughly but **does not** publish the FMCSA crash/inspection schema, and at write time we had **zero filled PSP results** in the database (every PSP was stuck in the bundle bug above). On the first real fill we re-tighten selectors against actual XML.
+- **[`src/lib/process-psp-accio-webhook.ts`](src/lib/process-psp-accio-webhook.ts)** — webhook now calls `parsePspResult` and writes the structured `pspResultToJsonb` shape to `psp_results.parsed_data`. `savePspData` also writes summary counts to the candidate hub cache.
+- **`supabase/migrations/080_block_driver_psp_summary.sql`** — adds **`crash_count INTEGER`**, **`inspection_count INTEGER`**, **`oos_count INTEGER`**, **`report_summary JSONB`** to `block_driver_psp` so the career card can render real numbers without re-parsing XML.
+
+### Phase 3 — Storm-branded server PDF
+
+Replaces the previous `window.print()` HTML popup (which produced an unsaveable browser print sheet, not a real artifact).
+
+- **`@react-pdf/renderer`** — added as a dependency. Bundle ~600KB, runs on Vercel Node runtime, **no Chromium needed** (Puppeteer was rejected for that reason).
+- **[`src/lib/pdf/StormPdfChrome.tsx`](src/lib/pdf/StormPdfChrome.tsx)** — shared `StormPdfDocument`, `StormPdfHeader`, `StormPdfFooter`, `StormPdfPage`, `Section`, `KeyValue`, `OutcomeChip`, `STORM_COLORS` (Tailwind tokens) and a `stormPdfStyles` `StyleSheet`. Every PDF the platform generates from now on should compose these primitives so reports stay visually consistent.
+- **[`src/lib/pdf/MvrReportPdf.tsx`](src/lib/pdf/MvrReportPdf.tsx)** — full Key-style MVR layout: cover with outcome chip, personal information, license history, violations, accidents, suspensions, medical certificate panel, source footer with Storm order ID and `verified on-chain` link slot.
+- **[`src/lib/pdf/PspReportPdf.tsx`](src/lib/pdf/PspReportPdf.tsx)** — cover summary (crash / inspection / OOS counts), 5-year crash table, 5-year inspection table with violations expanded per row, fallback `reportText` block for raw vendor output.
+- **[`GET /api/mvr/[orderId]/pdf`](src/app/api/mvr/[orderId]/pdf/route.ts)** + **[`GET /api/psp/[orderId]/pdf`](src/app/api/psp/[orderId]/pdf/route.ts)** — Node runtime, parses XML, renders with `renderToBuffer`, streams `application/pdf` with `Content-Disposition: attachment`. Same auth gate as `/api/mvr/status/[orderId]` (candidate owns order, OR employer wallet's company paid for it via `ordered_by_company_id`). The route casts the component element through `unknown` to satisfy `renderToBuffer`'s strict `DocumentProps` signature; runtime is unaffected because `StormPdfDocument` is a `<Document>`.
+- **[`MvrViewModal`](src/components/MvrViewModal.tsx) / [`PspViewModal`](src/components/PspViewModal.tsx)** — `Download PDF` button now navigates to the new routes. Old `openMvrPrintWindow` / `openPspPrintWindow` HTML-printing helpers and `htmlEscape` utility deleted.
+
+### Phase 4 — Outcome badges everywhere
+
+Once `result_outcome` exists, employers + candidates see the verdict consistently across the app via `outcomeBadgeClasses(outcome)` + `outcomeLabel(outcome)`:
+
+- **`MvrViewModal`** + **`PspViewModal`** — large "Report Outcome" banner near the top, only when `status === 'completed'` and `resultOutcome` is set.
+- **`PspViewModal`** — also surfaces **crash / inspection / OOS counts** as a 3-column tile when the parser populated them; the legacy `filledCodeBadge` is now a neutral mono chip so it never disagrees with the canonical outcome.
+- **[`MvrSection`](src/components/career-card/sections/MvrSection.tsx)** + **[`PspSection`](src/components/career-card/sections/PspSection.tsx)** — small uppercase chip next to the report title (career card).
+- **[`EmployerScreeningsPanel`](src/components/employer/EmployerScreeningsPanel.tsx)** — outcome chip next to the status pill in the row list.
+- All status APIs (`/api/mvr/status/[orderId]`, `/api/psp/status/[orderId]`, `/api/mvr/check-status`, `/api/employer/screenings`, `/api/driver/hub`) now return **`resultOutcome`** so client code never has to re-query.
+
+### Why this matters
+
+This is the **most critical pipeline in Storm**. Before this PR, every Storm-ordered MVR / PSP looked broken to the candidate (stuck `needs_review`), looked broken to the employer (no verdict, no good PDF), and took hours to land. After this PR they look indistinguishable from a Key portal report — except the data is the same vendor, the report layout is Storm-branded, and the outcome is mapped consistently from the same Accio source of truth.
+
+### Migrations to apply (in order)
+
+1. `supabase/migrations/078_screening_result_outcome.sql`
+2. `supabase/migrations/079_backfill_screening_status.sql`
+3. `supabase/migrations/080_block_driver_psp_summary.sql`
+
+### Validation
+
+- TypeScript baseline (`npx tsc --noEmit`) holds at the same pre-existing 211 errors — **zero new TS errors** introduced by this PR. None of the modified files report lints.
+- End-to-end Accio order validation requires real DL/SSN test data and a live test driver; deferred to staging smoke. Backfill migration was authored against actual `mvr_orders.result_xml` shape so existing rows will flip on next page load without a code deploy lag.
+
+---
+
 ## **Employer hub: collapsible Stormi rail + nav-driven shortcuts** (May 2026)
 
 **Defaults:** Wallet and Stormi rails now **default to collapsed** on desktop (`useState(false)`). Preferences use **`employer-hub-rail-wallet-open-v2`** / **`employer-hub-rail-stormi-open-v2`** so the new default applies once (old `*-open` keys are ignored). **Vertical alignment:** Employer hub desktop grid no longer uses **`display:contents`** on a wrapper around the middle column — wallet, priority block, Stormi, and “rest” are **four direct children** of the same `xl:grid` so row-1 column tops share one layout box (contents flattening had been misaligning the rails vs the center column in production). **`xl:gap-y-8`** separates row 1 from row 2; mobile **`pb-28`** moved onto the grid container after removing the inner wrapper.

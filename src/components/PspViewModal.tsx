@@ -2,11 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
-import { Loader2, AlertCircle, FileText, Hash, Truck, Download } from 'lucide-react'
+import { Loader2, AlertCircle, FileText, Hash, Truck, Download, Shield } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { isDarkTheme } from '@/lib/theme-storage'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
+import {
+  outcomeBadgeClasses,
+  outcomeLabel,
+  type ScreeningOutcome,
+} from '@/lib/accio-result-status'
 
 interface PspViewModalProps {
   isOpen: boolean
@@ -17,8 +22,14 @@ interface PspViewModalProps {
   employerCandidateUserId?: string | null
 }
 
-/** Shape of `psp_results.parsed_data` from webhook processing (stub + Accio extract). */
+/**
+ * Shape of `psp_results.parsed_data`. We accept both the legacy stub format
+ * (rows persisted before src/lib/accio-psp-parser.ts shipped) and the new
+ * structured shape from `pspResultToJsonb` so the modal renders correctly
+ * during the rollout window.
+ */
 interface PspParsedStub {
+  // Legacy stub fields (kept for backward compatibility with existing rows).
   stub?: boolean
   extracted?: {
     orderNumber?: string | null
@@ -29,6 +40,13 @@ interface PspParsedStub {
     dlState?: string | null
     filledCode?: string | null
   }
+
+  // New structured fields from accio-psp-parser.ts.
+  filledCode?: string | null
+  filledStatus?: string | null
+  crashCount?: number | null
+  inspectionCount?: number | null
+  oosCount?: number | null
 }
 
 interface PspOrderPayload {
@@ -38,6 +56,8 @@ interface PspOrderPayload {
   remoteOrderNumber: string | null
   remoteSubOrderNumber: string | null
   status: string
+  /** Accio-derived outcome (clear/hits/no_hits/...). Only set when status === 'completed'. */
+  resultOutcome: ScreeningOutcome
   dlNumber: string | null
   dlState: string | null
   orderedAt: string | null
@@ -82,150 +102,22 @@ function sectionTitle(isDark: boolean) {
   )
 }
 
-function filledCodeBadge(code: string | null | undefined, isDark: boolean) {
-  const c = (code ?? '').toLowerCase()
-  const verified = c === 'verified'
+// Vendor `filledCode` chip — neutral/literal display of whatever Accio returned
+// (e.g. `clear`, `hits`, `no hits`, `unknown`). The semantic green/amber badge
+// lives separately as the "Report Outcome" chip above the Order section, driven
+// by `resultOutcome` from accio-result-status.ts. This one is intentionally
+// neutral so it never disagrees with the canonical outcome.
+function filledCodeBadge(_code: string | null | undefined, isDark: boolean) {
   return cn(
-    'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
-    verified
-      ? isDark
-        ? 'bg-emerald-500/20 text-emerald-300'
-        : 'bg-emerald-100 text-emerald-900'
-      : isDark
-        ? 'bg-amber-500/20 text-amber-200'
-        : 'bg-amber-100 text-amber-900',
+    'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-mono',
+    isDark ? 'bg-gray-700/60 text-gray-200' : 'bg-gray-100 text-gray-800',
   )
 }
 
-/** Tiny escape so PSP IDs / status / error notes can't break out of generated HTML. */
-function htmlEscape(input: string | null | undefined): string {
-  return String(input ?? '—')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-/**
- * Open a print-friendly PSP summary in a new window and trigger the browser's
- * Save-as-PDF / Print dialog. Mirrors `MvrViewModal`'s flow so employers (and the
- * candidate when they paid for it) get a consistent download UX without us
- * pulling in a PDF generator dependency.
- */
-function openPspPrintWindow(
-  order: PspOrderPayload,
-  result: PspResultPayload | null,
-  extracted: PspParsedStub['extracted'] | undefined,
-) {
-  const w = window.open('', '_blank')
-  if (!w) {
-    alert('Please allow popups to download the PSP report')
-    return
-  }
-
-  const filledCode = extracted?.filledCode ?? null
-  const filledColor = String(filledCode ?? '').toLowerCase() === 'verified' ? '#059669' : '#b45309'
-  const fileTitleSuffix = order.orderNumber ? ` - ${order.orderNumber}` : ''
-
-  const fmt = (iso: string | null | undefined): string => {
-    if (!iso) return '—'
-    const d = new Date(iso)
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
-  }
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>PSP Report${fileTitleSuffix}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; line-height: 1.5; padding: 40px; max-width: 800px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #b45309; padding-bottom: 20px; margin-bottom: 28px; }
-    .header h1 { font-size: 22px; color: #b45309; }
-    .header .meta { text-align: right; font-size: 12px; color: #6b7280; }
-    .meta .order-num { font-family: monospace; }
-    .section { margin-bottom: 22px; }
-    .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #374151; margin-bottom: 10px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
-    .grid .full { grid-column: 1 / -1; }
-    .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
-    .value { font-size: 14px; color: #111827; font-weight: 500; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: ${filledColor}; background: ${filledColor}1A; }
-    .ids { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; font-family: monospace; font-size: 12px; }
-    .ids div + div { margin-top: 6px; }
-    .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #92400e; margin-top: 18px; }
-    .note.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-    .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; text-align: center; }
-    .footer .brand { color: #0d9488; font-weight: 600; margin-top: 6px; }
-    @media print {
-      body { padding: 20px; }
-      .no-print { display: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <h1>PSP Report Summary</h1>
-      <p style="font-size:13px;color:#6b7280;margin-top:4px">FMCSA crash &amp; inspection history (Pre-Employment Screening Program)</p>
-    </div>
-    <div class="meta">
-      <div>Generated ${new Date().toLocaleString()}</div>
-      ${order.orderNumber ? `<div class="order-num">Order ${htmlEscape(order.orderNumber)}</div>` : ''}
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Order</h2>
-    <div class="grid">
-      <div><div class="label">Storm status</div><div class="value">${htmlEscape(order.status)}</div></div>
-      <div><div class="label">Vendor code (FMCSA)</div><div class="value"><span class="badge">${htmlEscape(filledCode || '—')}</span></div></div>
-      <div><div class="label">Result in vault</div><div class="value">${htmlEscape(result?.resultStatus)}</div></div>
-      <div><div class="label">License (state)</div><div class="value">${htmlEscape(extracted?.dlState || order.dlState)}</div></div>
-      <div class="full"><div class="label">License number</div><div class="value">${htmlEscape(maskDl(extracted?.dlNumber ?? order.dlNumber))}</div></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Accio references</h2>
-    <div class="ids">
-      <div>Our order #: ${htmlEscape(order.orderNumber)}</div>
-      <div>FMCSA suborder #: ${htmlEscape(order.subOrderNumber)}</div>
-      ${order.remoteOrderNumber ? `<div>Accio remote order: ${htmlEscape(order.remoteOrderNumber)}</div>` : ''}
-      ${order.remoteSubOrderNumber ? `<div>Accio remote suborder: ${htmlEscape(order.remoteSubOrderNumber)}</div>` : ''}
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Timeline</h2>
-    <div class="grid">
-      <div class="full"><div class="label">Ordered</div><div class="value">${fmt(order.orderedAt)}</div></div>
-      <div><div class="label">Vendor received</div><div class="value">${fmt(result?.receivedAt)}</div></div>
-      <div><div class="label">Completed</div><div class="value">${fmt(order.completedAt)}</div></div>
-      ${order.expiresAt ? `<div class="full"><div class="label">Access window (expires)</div><div class="value">${fmt(order.expiresAt)}</div></div>` : ''}
-    </div>
-  </div>
-
-  ${order.errorMessage ? `<div class="note error"><strong>Order note: </strong>${htmlEscape(order.errorMessage)}</div>` : ''}
-
-  <div class="note">
-    Crash and inspection line items are not yet broken out in this summary while we map Accio&apos;s PSP XML.
-    The fields above (IDs, vendor code, timeline) are the trustworthy summary for support and recordkeeping.
-  </div>
-
-  <div class="footer">
-    <div>Storm — Blockchain-Verified Career Platform</div>
-    <div class="brand">Generated from Storm Hub · For employer / driver use only</div>
-  </div>
-
-  <script>window.onload = function() { window.print(); };</script>
-</body>
-</html>`
-
-  w.document.write(html)
-  w.document.close()
-}
+// PSP PDF generation moved server-side to /api/psp/[orderId]/pdf — see
+// src/lib/pdf/PspReportPdf.tsx for the new branded layout. The previous
+// window.print() popup produced an unsaveable browser print sheet, not a real
+// archivable artifact, and didn't surface crash/inspection structure at all.
 
 /**
  * PSP result viewer — shows everything we reliably persist today (order IDs, vendor code, DL
@@ -278,13 +170,23 @@ export default function PspViewModal({
     }
   }, [isOpen, orderId, walletAddress, employerCandidateUserId])
 
-  const extracted = payload?.result?.parsedData?.extracted
-  const filledCode = extracted?.filledCode ?? null
+  // parsed_data carries either the legacy stub shape (extracted.filledCode) or
+  // the new structured shape from accio-psp-parser.ts (filledCode at the top
+  // level + counts). Fall back gracefully so old rows still render.
+  const parsed = payload?.result?.parsedData ?? null
+  const extracted = parsed?.extracted
+  const filledCode = parsed?.filledCode ?? extracted?.filledCode ?? null
+  const crashCount = parsed?.crashCount ?? null
+  const inspectionCount = parsed?.inspectionCount ?? null
+  const oosCount = parsed?.oosCount ?? null
+  const hasCounts = crashCount !== null || inspectionCount !== null || oosCount !== null
   const canDownload = Boolean(payload && !loading && !error)
 
   const handleDownloadPDF = () => {
-    if (!payload) return
-    openPspPrintWindow(payload.order, payload.result, extracted)
+    if (!payload || !orderId) return
+    const params = new URLSearchParams({ walletAddress })
+    if (employerCandidateUserId) params.set('employerCandidateUserId', employerCandidateUserId)
+    window.location.href = `/api/psp/${orderId}/pdf?${params.toString()}`
   }
 
   if (!isOpen) return null
@@ -325,6 +227,79 @@ export default function PspViewModal({
         )}
         {!loading && !error && payload && (
           <>
+            {/* Outcome banner — Clear / Hits / etc. Same pattern as the MVR
+                modal so employers + candidates see one consistent verdict. */}
+            {payload.order.status === 'completed' && payload.order.resultOutcome && (
+              <div
+                className={cn(
+                  'flex items-center justify-between rounded-xl border px-4 py-3',
+                  isDark ? 'border-gray-700/60 bg-gray-800/40' : 'border-gray-200 bg-white',
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className={cn('h-5 w-5', isDark ? 'text-amber-400' : 'text-amber-600')} />
+                  <div>
+                    <p className={cn('text-xs uppercase tracking-wider', muted(isDark))}>
+                      Report Outcome
+                    </p>
+                    <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                      {outcomeLabel(payload.order.resultOutcome)}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide',
+                    outcomeBadgeClasses(payload.order.resultOutcome),
+                  )}
+                >
+                  {outcomeLabel(payload.order.resultOutcome)}
+                </span>
+              </div>
+            )}
+
+            {/* Summary counts surface as soon as the parser writes them. We
+                show the banner regardless of values (zeros are meaningful — a
+                clean PSP). */}
+            {hasCounts && (
+              <div
+                className={cn(
+                  'grid grid-cols-3 gap-3 rounded-xl border p-3 text-center',
+                  isDark ? 'border-gray-700/60 bg-gray-800/40' : 'border-gray-200 bg-white',
+                )}
+              >
+                <div>
+                  <p className={cn('text-xs uppercase tracking-wider', muted(isDark))}>Crashes</p>
+                  <p className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+                    {crashCount ?? 0}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs uppercase tracking-wider', muted(isDark))}>Inspections</p>
+                  <p className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+                    {inspectionCount ?? 0}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs uppercase tracking-wider', muted(isDark))}>Out of service</p>
+                  <p
+                    className={cn(
+                      'text-lg font-bold',
+                      (oosCount ?? 0) > 0
+                        ? isDark
+                          ? 'text-red-300'
+                          : 'text-red-700'
+                        : isDark
+                          ? 'text-white'
+                          : 'text-gray-900',
+                    )}
+                  >
+                    {oosCount ?? 0}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {payload.order.orderedByEmployer && (
               <p
                 className={cn(

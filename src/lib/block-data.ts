@@ -72,6 +72,17 @@ export interface PspRow {
   expires_at: string | null
   report_status: string | null
   last_ordered_at: string | null
+  // Summary fields populated from accio-psp-parser. NULL when the PSP is still
+  // pending or when the structured parse failed (raw_xml is the source of truth).
+  crash_count: number | null
+  inspection_count: number | null
+  oos_count: number | null
+  /**
+   * Free-form roll-up the career card / hub uses to render badges + headline
+   * stats without joining psp_results. Shape:
+   *   { outcome, crashCount, inspectionCount, oosCount }
+   */
+  report_summary: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }

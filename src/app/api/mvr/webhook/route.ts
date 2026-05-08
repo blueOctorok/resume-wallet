@@ -7,6 +7,7 @@ import {
   isFmcsaPostResultsWebhookXml,
   processPspAccioWebhookCompletion,
 } from '@/lib/process-psp-accio-webhook'
+import { deriveScreeningStatus } from '@/lib/accio-result-status'
 
 /**
  * Convert YYYYMMDD date format to ISO date string for database storage
@@ -371,11 +372,20 @@ export async function POST(request: NextRequest) {
       mvrResult = inserted
     }
 
-    // 5. Update MVR order status
+    // 5. Update MVR order status using the centralized Accio mapping.
+    // See src/lib/accio-result-status.ts for why this matters — the previous
+    // `=== 'verified'` check silently routed every report to needs_review.
+    const { status: nextStatus, outcome: nextOutcome } = deriveScreeningStatus({
+      filledStatus: parsedResult.filledStatus,
+      filledCode: parsedResult.filledCode,
+      heldForReview: parsedResult.heldForReview,
+    })
+
     const { error: orderUpdateError } = await supabaseService
       .from('mvr_orders')
       .update({
-        status: parsedResult.filledCode === 'verified' ? 'completed' : 'needs_review',
+        status: nextStatus,
+        result_outcome: nextOutcome,
         accio_remote_order_number: parsedResult.remoteOrderNumber,
         accio_remote_suborder_number: parsedResult.remoteSubOrderNumber,
         processed_at: parsedResult.timeFilled || new Date().toISOString(),
