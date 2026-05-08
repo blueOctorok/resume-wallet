@@ -673,15 +673,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
-      {/* xl+: wallet col1 + priority (row1) + Stormi col3, then rest (row2 col2 only).
-          Implicit grid rows — no `grid-rows` template — so row 1 sizes to its content and
-          row 2 sizes to the rest of main. Rails sit in row 1 only (`xl:row-start-1`, no
-          row-span); without that they were visually pushed below the row-1 main column.
-          Right column width is `auto` when Stormi is collapsed so main claims the freed
-          space. Below xl: flex column = priority → Stormi → rest. */}
+      {/* xl+: 3-column grid — wallet, priority (row 1 col 2), Stormi (row 1 col 3), then
+          rest of hub (row 2 col 2). All four are *direct* children of this grid (no
+          `display:contents` wrapper) so row-1 tops share one formatting context. Mobile:
+          same DOM order as flex column → priority → Stormi → rest. */}
       <div
         className={cn(
-          'flex flex-col gap-8 xl:grid xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0',
+          // Mobile: flex column (wallet hidden on small screens). Desktop: plain 3-column grid
+          // with NO `display:contents` — wallet, priority, Stormi, and rest are *direct* grid
+          // children so row-1 tops share one layout box (contents flattening was leaving the
+          // rails misaligned vs the center column in production).
+          'flex flex-col gap-8 pb-28 max-xl:pb-32 xl:grid xl:items-start xl:gap-x-8 xl:gap-y-8 xl:pb-0',
           stormiRailOpen
             ? 'xl:grid-cols-[auto_minmax(0,1fr)_26rem]'
             : 'xl:grid-cols-[auto_minmax(0,1fr)_auto]',
@@ -690,9 +692,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         {data.company &&
           (walletRailOpen ? (
             <aside
-              // row-start-1 only (NO row-span) — multi-row spanning was visually pushing the
-              // rail down vs the main row-1 column. Sticky keeps it visible while scrolling
-              // the taller row-2 main content underneath.
               className="hidden w-80 shrink-0 self-start p-0 xl:sticky xl:top-24 xl:col-start-1 xl:row-start-1 xl:block xl:self-start"
               aria-label="Company wallet"
             >
@@ -769,8 +768,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               </Button>
             </aside>
           ))}
-        {/* xl:display:contents — priority, Stormi, and rest become direct grid children; mobile keeps flex order priority → Stormi → jobs/STORM. */}
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-8 pb-28 max-xl:pb-32 xl:contents xl:pb-0">
+        {/* Priority column (row 1) — DOM order on mobile: wallet → this → Stormi → rest */}
           <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
       {/* Company profile — vault panel + embed block (candidate hub parity) */}
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
@@ -1010,8 +1008,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           (stormiRailOpen ? (
             <aside
               id="employer-hub-stormi-panel"
-              // row-start-1 only (NO row-span) — same fix as wallet rail. The row-span-2 was
-              // visually offsetting both rails below the row-1 main column.
               className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-3 xl:row-start-1 xl:block xl:self-start"
               aria-label="Ask Stormi hiring coach"
             >
@@ -1304,7 +1300,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </HubSectionPanel>
 
           </div>
-        </div>
       </div>
 
       {data.company && (

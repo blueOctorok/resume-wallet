@@ -6,7 +6,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **Employer hub: collapsible Stormi rail + nav-driven shortcuts** (May 2026)
 
-**Defaults:** Wallet and Stormi rails now **default to collapsed** on desktop (`useState(false)`). Preferences use **`employer-hub-rail-wallet-open-v2`** / **`employer-hub-rail-stormi-open-v2`** so the new default applies once (old `*-open` keys are ignored). **Vertical alignment:** Both rails use **`xl:row-start-1`** only (no `row-span`); spanning row 2 was visually pushing the rails below the row-1 main column. The grid uses implicit row sizing — no `grid-rows-[auto_1fr]` template — so row 1 fits its content and row 2 sits below it. Sticky positioning still keeps each rail visible while scrolling row 1; once row 2 takes over they release naturally.
+**Defaults:** Wallet and Stormi rails now **default to collapsed** on desktop (`useState(false)`). Preferences use **`employer-hub-rail-wallet-open-v2`** / **`employer-hub-rail-stormi-open-v2`** so the new default applies once (old `*-open` keys are ignored). **Vertical alignment:** Employer hub desktop grid no longer uses **`display:contents`** on a wrapper around the middle column — wallet, priority block, Stormi, and “rest” are **four direct children** of the same `xl:grid` so row-1 column tops share one layout box (contents flattening had been misaligning the rails vs the center column in production). **`xl:gap-y-8`** separates row 1 from row 2; mobile **`pb-28`** moved onto the grid container after removing the inner wrapper.
 
 **Employer Hub nav dropdown:** **Go to Hub**, **Journey Tips**, and **Stormi Journey Guide** are hidden for `userRole === 'employer'`; shortcuts + **Switch Role** (when available) remain.
 
