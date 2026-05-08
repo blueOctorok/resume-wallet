@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * POST /api/employer/talent/[userId]/request
@@ -249,6 +250,11 @@ export async function POST(
         })
         console.log(`[CANDIDATE REQUEST] Auto-installed block ${targetBlockType} for candidate ${candidateUserId}`)
       }
+    }
+
+    // PSP product = MVR + FMCSA — hub must show both blocks (My Files + career card sections).
+    if (isPspConsentPipeline) {
+      await ensureHubBlocksForPspMvrBundle(supabase, candidateUserId)
     }
 
     // Deep-link: route to the block's page so the candidate lands right on it

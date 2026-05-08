@@ -24,9 +24,9 @@ Multi-product background orders from CRAs are often modeled as **one parent orde
 
 `fetchPspData` / `fetchMvrData` in **`projected-career-card.ts`** and PSP rows in **`/api/driver/hub`** filtered with `ordered_by_company_id IS NULL`, so **employer-requested** bundle rows never appeared in **self** construct mode (candidate saw empty PSP / My Files). **Self** `contactMode` now loads all orders for the driver; **`public`** and **`employer`** projection modes keep the filter so shared / cross-company views do not leak another company’s screening context.
 
-### Construct “My Files” row: accurate MVR / PSP status
+### Hub: show **both** MVR + PSP after bundle (not only DB rows)
 
-Inline hub rows (`use-hub-documents` → `ConstructSectionWrapper`) treated every non-terminal Accio order as **`processing`**, so **pending** looked the same as vendor **processing**, and **failed** / **cancelled** / **expired** were wrong. **`hubDocStatusFromScreeningOrder`** maps DB statuses to `HubDocument` states (`in-progress` = pending queue, `processing` = active run, `failed` = terminal error); **`hubScreeningStatusLabel`** + a pill next to the block label show the status on the construct career card. **`pickHubDocForCareerBlock`** prefers the latest non-placeholder MVR/PSP row when multiple orders exist.
+Accio bundle correctly inserted **`mvr_orders`** + **`psp_orders`**, but the construct career card / My Files only list **`hub_blocks`**. Employer PSP requests only auto-installed **`driver-psp`**, so the MVR order existed with no **`driver-mvr`** tile. **`ensureHubBlocksForPspMvrBundle`** installs **`driver-mvr`** and **`driver-psp`** if missing — called after successful **`insertPspMvrBundleOrders`** (`fulfill-screening`, **`/api/psp/order`**, **`/api/employer/psp/order`**) and when creating a PSP consent pipeline request (**`psp_order`** or **`block_request` + `driver-psp`**) in **`/api/employer/talent/[userId]/request`**.
 
 ---
 

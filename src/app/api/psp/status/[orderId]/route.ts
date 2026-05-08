@@ -62,6 +62,8 @@ export async function GET(
         id: order.id,
         orderNumber: order.accio_order_number,
         subOrderNumber: order.accio_suborder_number,
+        remoteOrderNumber: order.accio_remote_order_number,
+        remoteSubOrderNumber: order.accio_remote_suborder_number,
         status: order.status,
         dlNumber: order.dl_number,
         dlState: order.dl_state,
@@ -71,6 +73,8 @@ export async function GET(
         expiresAt: order.expires_at,
         feeAmount: order.fee_amount,
         errorMessage: order.error_message,
+        /** True when screening was requested by an employer (FCRA context). */
+        orderedByEmployer: Boolean(order.ordered_by_company_id),
       },
       result: result
         ? {

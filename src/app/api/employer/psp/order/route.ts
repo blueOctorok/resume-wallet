@@ -8,6 +8,7 @@ import {
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
+import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
@@ -218,6 +219,8 @@ export async function POST(request: NextRequest) {
       console.error('[EMPLOYER PSP] DB insert:', inserted.error)
       return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
     }
+
+    await ensureHubBlocksForPspMvrBundle(supabase, candidateUserId)
 
     const { data: pspOrder } = await supabase
       .from('psp_orders')

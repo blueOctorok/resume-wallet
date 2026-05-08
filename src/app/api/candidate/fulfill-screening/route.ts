@@ -8,6 +8,7 @@ import {
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
+import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * POST /api/candidate/fulfill-screening
@@ -244,6 +245,8 @@ export async function POST(request: NextRequest) {
       if ('error' in inserted) {
         return NextResponse.json({ error: 'Failed to store orders', details: inserted.error }, { status: 500 })
       }
+
+      await ensureHubBlocksForPspMvrBundle(supabase, user.id)
 
       await supabase
         .from('candidate_requests')
