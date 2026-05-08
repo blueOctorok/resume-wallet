@@ -16,6 +16,8 @@ import {
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import MvrViewModal from '@/components/MvrViewModal'
+import PspViewModal from '@/components/PspViewModal'
 import type { ProjectedCareerCard as ProjectedCardData } from '@/types/career-card'
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
@@ -93,6 +95,9 @@ export default function CareerCardModal({
   const [accioOrderError, setAccioOrderError] = useState<string | null>(null)
   const [mvrEmployerOrderDone, setMvrEmployerOrderDone] = useState(false)
   const [pspEmployerOrderDone, setPspEmployerOrderDone] = useState(false)
+
+  const [employerMvrViewOrderId, setEmployerMvrViewOrderId] = useState<string | null>(null)
+  const [employerPspViewOrderId, setEmployerPspViewOrderId] = useState<string | null>(null)
 
   const [employerCompany, setEmployerCompany] = useState<{
     id: string
@@ -594,6 +599,18 @@ export default function CareerCardModal({
               mode="employer"
               walletAddress={walletAddress}
               footerSlot={footerActions}
+              onEmployerViewCompanyMvr={
+                card.employerCompanyMvr?.orderId &&
+                ['completed', 'needs_review'].includes(card.employerCompanyMvr.orderStatus)
+                  ? () => setEmployerMvrViewOrderId(card.employerCompanyMvr!.orderId)
+                  : undefined
+              }
+              onEmployerViewCompanyPsp={
+                card.employerCompanyPsp?.orderId &&
+                ['completed', 'needs_review'].includes(card.employerCompanyPsp.orderStatus)
+                  ? () => setEmployerPspViewOrderId(card.employerCompanyPsp!.orderId)
+                  : undefined
+              }
             />
           </>
         )}
@@ -717,6 +734,24 @@ export default function CareerCardModal({
       {modalContent}
       {recruitModalContent}
       {accioOrderModalContent}
+      {employerMvrViewOrderId && (
+        <MvrViewModal
+          isOpen
+          onClose={() => setEmployerMvrViewOrderId(null)}
+          walletAddress={walletAddress}
+          orderId={employerMvrViewOrderId}
+          employerCandidateUserId={candidateUserId}
+        />
+      )}
+      {employerPspViewOrderId && (
+        <PspViewModal
+          isOpen
+          onClose={() => setEmployerPspViewOrderId(null)}
+          walletAddress={walletAddress}
+          orderId={employerPspViewOrderId}
+          employerCandidateUserId={candidateUserId}
+        />
+      )}
     </>
   )
 }

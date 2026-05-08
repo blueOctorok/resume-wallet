@@ -16,6 +16,10 @@ import {
   Home,
   Briefcase,
   Loader2,
+  Search,
+  Plus,
+  Users,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -101,7 +105,7 @@ export default function Navigation({
   const walkthroughDismissed = useHubBlocksStore((s) => s.walkthroughDismissed)
   const setWalkthroughDismissed = useHubBlocksStore((s) => s.setWalkthroughDismissed)
   const requestWalkthrough = useJourneyStore((s) => s.requestWalkthrough)
-  const { navigateToMessages, requestHubRefresh } = useUIStore()
+  const { navigateToMessages, requestHubRefresh, setCurrentPage } = useUIStore()
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
   const isDark = isDarkTheme(theme)
@@ -423,7 +427,12 @@ export default function Navigation({
               {userRole && isAuthenticated && (
                 <div className='relative z-[100] flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-3'>
                   <div className='flex shrink-0 items-center gap-3'>
-                    {userRole === 'candidate' && walletAddress ? (
+                    {/* Hub refresh — candidates AND employers. EmployerHub listens for
+                        `hubRefreshNonce` (same store as CandidateHub) and refetches its
+                        data when this is clicked. `hubBlocksLoading` only tracks candidate
+                        blocks, so it's a candidate-only spinner — for employers we just
+                        leave the icon static (refresh is fast enough to not need one). */}
+                    {(userRole === 'candidate' || userRole === 'employer') && walletAddress ? (
                       <div className={cn(navHubGradientRingClass(theme), 'shrink-0')}>
                         <button
                           type='button'
@@ -431,12 +440,12 @@ export default function Navigation({
                             requestHubRefresh()
                             setIsMenuOpen(false)
                           }}
-                          disabled={hubBlocksLoading}
+                          disabled={userRole === 'candidate' && hubBlocksLoading}
                           className={cn(navHubRefreshInnerButtonClass(theme), 'cursor-pointer')}
-                          title='Refresh hub — pull latest blocks and files'
-                          aria-label='Refresh hub — pull latest blocks and files'
+                          title='Refresh hub — pull latest data'
+                          aria-label='Refresh hub — pull latest data'
                         >
-                          {hubBlocksLoading ? (
+                          {userRole === 'candidate' && hubBlocksLoading ? (
                             <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
                           ) : (
                             <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
@@ -475,18 +484,91 @@ export default function Navigation({
 
                     {isHubDropdownOpen && (
                       <div className={navDropdownPanelClass(isDark)}>
-                        <button
-                          type='button'
-                          onClick={() => {
-                            handleNavigation('hub')
-                            setIsMenuOpen(false)
-                            setIsHubDropdownOpen(false)
-                          }}
-                          className={navDropdownItemClass(isDark)}
-                        >
-                          <LayoutDashboard className='w-4 h-4' />
-                          Go to Hub
-                        </button>
+                        {userRole !== 'employer' && (
+                          <button
+                            type='button'
+                            onClick={() => {
+                              handleNavigation('hub')
+                              setIsMenuOpen(false)
+                              setIsHubDropdownOpen(false)
+                            }}
+                            className={navDropdownItemClass(isDark)}
+                          >
+                            <LayoutDashboard className='w-4 h-4' />
+                            Go to Hub
+                          </button>
+                        )}
+                        {/* Employer-only shortcuts — these were previously a "Quick actions"
+                            row in the EmployerHub itself. Moving them into the dropdown
+                            frees up vertical space in the hub for content that actually
+                            needs to be on the page. We bypass `handleNavigation` (which
+                            only forwards a small whitelist of pages to page.tsx) and call
+                            `setCurrentPage` directly — EmployerShell reads currentPage from
+                            UIStore and renders the matching page component. */}
+                        {userRole === 'employer' && (
+                          <>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setCurrentPage('talent-search')
+                                setIsMenuOpen(false)
+                                setIsHubDropdownOpen(false)
+                              }}
+                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                            >
+                              <Search className='w-4 h-4' />
+                              Find Talent
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setCurrentPage('post-job')
+                                setIsMenuOpen(false)
+                                setIsHubDropdownOpen(false)
+                              }}
+                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                            >
+                              <Plus className='w-4 h-4' />
+                              Post Job
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setCurrentPage('applicants')
+                                setIsMenuOpen(false)
+                                setIsHubDropdownOpen(false)
+                              }}
+                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                            >
+                              <Users className='w-4 h-4' />
+                              Applicants
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setCurrentPage('company-profile')
+                                setIsMenuOpen(false)
+                                setIsHubDropdownOpen(false)
+                              }}
+                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                            >
+                              <Building2 className='w-4 h-4' />
+                              Company Profile
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setCurrentPage('team')
+                                setIsMenuOpen(false)
+                                setIsHubDropdownOpen(false)
+                              }}
+                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                            >
+                              <Shield className='w-4 h-4' />
+                              Team
+                            </button>
+                          </>
+                        )}
                         {onSwitchRole && (
                           <button
                             type='button'
@@ -501,85 +583,89 @@ export default function Navigation({
                             Switch Role
                           </button>
                         )}
-                        <button
-                          type='button'
-                          onClick={() => {
-                            void (async () => {
-                              // Candidates: tips tied to `users.stormi_walkthrough_dismissed_at` (per wallet).
-                              if (userRole === 'candidate' && walletAddress) {
-                                const nextDismissed = !walkthroughDismissed
-                                const res = await fetch('/api/user/profile', {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'x-wallet-address': walletAddress,
-                                  },
-                                  body: JSON.stringify({ walkthrough_dismissed: nextDismissed }),
-                                })
-                                if (res.ok) {
-                                  setWalkthroughDismissed(nextDismissed)
-                                  if (!nextDismissed) {
-                                    requestWalkthrough()
+                        {userRole !== 'employer' && (
+                          <>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                void (async () => {
+                                  // Candidates: tips tied to `users.stormi_walkthrough_dismissed_at` (per wallet).
+                                  if (userRole === 'candidate' && walletAddress) {
+                                    const nextDismissed = !walkthroughDismissed
+                                    const res = await fetch('/api/user/profile', {
+                                      method: 'PATCH',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                        'x-wallet-address': walletAddress,
+                                      },
+                                      body: JSON.stringify({ walkthrough_dismissed: nextDismissed }),
+                                    })
+                                    if (res.ok) {
+                                      setWalkthroughDismissed(nextDismissed)
+                                      if (!nextDismissed) {
+                                        requestWalkthrough()
+                                      }
+                                    }
+                                  } else {
+                                    if (!showJourneyModals) {
+                                      usePreferencesStore.getState().resetCompletedJourneySteps()
+                                    }
+                                    setShowJourneyModals(!showJourneyModals)
                                   }
-                                }
-                              } else {
-                                if (!showJourneyModals) {
-                                  usePreferencesStore.getState().resetCompletedJourneySteps()
-                                }
-                                setShowJourneyModals(!showJourneyModals)
-                              }
-                            })()
-                            setIsHubDropdownOpen(false)
-                            setIsMenuOpen(false)
-                          }}
-                          className={cn(
-                            navDropdownItemClass(isDark),
-                            navDropdownItemBorderClass(isDark),
-                            'justify-between',
-                          )}
-                        >
-                          <span className='flex items-center gap-3'>
-                            <Sparkles className='w-4 h-4' />
-                            Journey Tips
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs px-2 py-0.5 rounded-full font-medium',
-                              (userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
-                                ? isDark
-                                  ? 'bg-teal-500/20 text-teal-400'
-                                  : isPaperLight
-                                    ? 'bg-zinc-200 text-zinc-800'
-                                    : 'bg-teal-100 text-teal-800'
-                                : isDark
-                                  ? 'bg-gray-800 text-gray-400'
-                                  : isPaperLight
-                                    ? 'bg-zinc-100 text-zinc-600'
-                                    : 'bg-slate-100 text-slate-600',
-                            )}
-                          >
-                            {(userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
-                              ? 'On'
-                              : 'Off'}
-                          </span>
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => {
-                            requestWalkthrough()
-                            setIsHubDropdownOpen(false)
-                            setIsMenuOpen(false)
-                          }}
-                          className={cn(
-                            navDropdownItemClass(isDark),
-                            navDropdownItemBorderClass(isDark),
-                            isDark ? 'text-teal-400' : isPaperLight ? 'text-zinc-700' : 'text-teal-700',
-                          )}
-                        >
-                          <HelpCircle className='w-4 h-4' />
-                          <span>Stormi Journey Guide</span>
-                          <span className='ml-auto text-xs opacity-60'>?</span>
-                        </button>
+                                })()
+                                setIsHubDropdownOpen(false)
+                                setIsMenuOpen(false)
+                              }}
+                              className={cn(
+                                navDropdownItemClass(isDark),
+                                navDropdownItemBorderClass(isDark),
+                                'justify-between',
+                              )}
+                            >
+                              <span className='flex items-center gap-3'>
+                                <Sparkles className='w-4 h-4' />
+                                Journey Tips
+                              </span>
+                              <span
+                                className={cn(
+                                  'text-xs px-2 py-0.5 rounded-full font-medium',
+                                  (userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
+                                    ? isDark
+                                      ? 'bg-teal-500/20 text-teal-400'
+                                      : isPaperLight
+                                        ? 'bg-zinc-200 text-zinc-800'
+                                        : 'bg-teal-100 text-teal-800'
+                                    : isDark
+                                      ? 'bg-gray-800 text-gray-400'
+                                      : isPaperLight
+                                        ? 'bg-zinc-100 text-zinc-600'
+                                        : 'bg-slate-100 text-slate-600',
+                                )}
+                              >
+                                {(userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
+                                  ? 'On'
+                                  : 'Off'}
+                              </span>
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => {
+                                requestWalkthrough()
+                                setIsHubDropdownOpen(false)
+                                setIsMenuOpen(false)
+                              }}
+                              className={cn(
+                                navDropdownItemClass(isDark),
+                                navDropdownItemBorderClass(isDark),
+                                isDark ? 'text-teal-400' : isPaperLight ? 'text-zinc-700' : 'text-teal-700',
+                              )}
+                            >
+                              <HelpCircle className='w-4 h-4' />
+                              <span>Stormi Journey Guide</span>
+                              <span className='ml-auto text-xs opacity-60'>?</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

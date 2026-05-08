@@ -132,7 +132,9 @@ export async function GET(request: NextRequest) {
       // 12. All MVR orders (include fee info for transaction history)
       supabase
         .from('mvr_orders')
-        .select('id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at')
+        .select(
+          'id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
+        )
         .eq('driver_user_id', user.id)
         .order('created_at', { ascending: false }),
 
@@ -146,7 +148,9 @@ export async function GET(request: NextRequest) {
       // 13b. PSP orders (include employer-requested — candidate hub / My Files is owner-scoped)
       supabase
         .from('psp_orders')
-        .select('id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at')
+        .select(
+          'id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at, ordered_by_company_id',
+        )
         .eq('driver_user_id', user.id)
         .order('created_at', { ascending: false }),
 
@@ -290,6 +294,7 @@ export async function GET(request: NextRequest) {
         hasResult: !!result,
         resultId: result?.id || null,
         resultStatus: result?.result_status || null,
+        employerPaidScreening: Boolean(order.ordered_by_company_id),
       }
     })
 
@@ -312,6 +317,7 @@ export async function GET(request: NextRequest) {
         totalPoints: result?.total_points || null,
         violationCount: result?.violation_count || 0,
         resultStatus: result?.result_status || null,
+        employerPaidScreening: Boolean(order.ordered_by_company_id),
       }
     })
 

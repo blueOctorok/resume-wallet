@@ -159,6 +159,10 @@ interface ProjectedCareerCardProps {
   hubDocuments?: HubDocumentsHandle
   /** After reorder / card page patch — parent refetches projected card */
   onCardMutation?: () => void
+  /** Employer talent modal: open full MVR the company purchased for this candidate */
+  onEmployerViewCompanyMvr?: () => void
+  /** Employer talent modal: open full PSP the company purchased for this candidate */
+  onEmployerViewCompanyPsp?: () => void
 }
 
 /**
@@ -190,6 +194,8 @@ export default function ProjectedCareerCard({
   selfSectionNav = 'all',
   hubDocuments,
   onCardMutation,
+  onEmployerViewCompanyMvr,
+  onEmployerViewCompanyPsp,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
@@ -197,6 +203,11 @@ export default function ProjectedCareerCard({
   const onChainCount = data.onChainCredentialCount ?? onChainList.length
   const employerList = data.employerConfirmations ?? []
   const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
+
+  const employerScreeningReady = (s: string | undefined) => {
+    const v = String(s || '').toLowerCase()
+    return v === 'completed' || v === 'needs_review'
+  }
 
   const [showAllOnChain, setShowAllOnChain] = useState(false)
   const [showAllEmployer, setShowAllEmployer] = useState(false)
@@ -626,11 +637,19 @@ export default function ProjectedCareerCard({
               isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200',
             )}
           >
-            <div className='flex items-center gap-2 mb-3'>
-              <Lock className={cn('w-4 h-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
-              <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
-                MVR — private to your company
-              </h3>
+            <div className='mb-3 flex flex-wrap items-start justify-between gap-2'>
+              <div className='flex items-center gap-2'>
+                <Lock className={cn('w-4 h-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
+                <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                  MVR — private to your company
+                </h3>
+              </div>
+              {employerScreeningReady(data.employerCompanyMvr.orderStatus) && onEmployerViewCompanyMvr && (
+                <Button type='button' variant='secondary' size='sm' onClick={onEmployerViewCompanyMvr}>
+                  <Eye className='mr-1 h-4 w-4' aria-hidden />
+                  View full report
+                </Button>
+              )}
             </div>
             <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
               <div>
@@ -668,11 +687,19 @@ export default function ProjectedCareerCard({
               isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200',
             )}
           >
-            <div className='mb-3 flex items-center gap-2'>
-              <FileWarning className={cn('h-4 w-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
-              <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
-                PSP — private to your company
-              </h3>
+            <div className='mb-3 flex flex-wrap items-start justify-between gap-2'>
+              <div className='flex items-center gap-2'>
+                <FileWarning className={cn('h-4 w-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
+                <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                  PSP — private to your company
+                </h3>
+              </div>
+              {employerScreeningReady(data.employerCompanyPsp.orderStatus) && onEmployerViewCompanyPsp && (
+                <Button type='button' variant='secondary' size='sm' onClick={onEmployerViewCompanyPsp}>
+                  <Eye className='mr-1 h-4 w-4' aria-hidden />
+                  View full report
+                </Button>
+              )}
             </div>
             <div className='grid grid-cols-2 gap-3 text-sm sm:grid-cols-3'>
               <div>

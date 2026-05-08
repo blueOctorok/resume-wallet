@@ -45,6 +45,11 @@ export interface MvrData {
     totalPoints: number
     violationCount: number
   } | null
+  /**
+   * True when a company paid for this order (`ordered_by_company_id` set).
+   * Candidate hub shows status only; full MVR opens for the purchasing employer.
+   */
+  employerPaidScreening?: boolean
 }
 
 /** FMCSA PSP / crash-inspection — summary until Accio result XML is parsed. */
@@ -55,6 +60,8 @@ export interface PspData {
   orderedAt: string
   completedAt: string | null
   resultSummary: { resultStatus: string | null } | null
+  /** Same semantics as {@link MvrData.employerPaidScreening}. */
+  employerPaidScreening?: boolean
 }
 
 export interface CdlData {

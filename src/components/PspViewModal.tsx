@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
-import { Loader2, AlertCircle, FileText, Hash, Truck } from 'lucide-react'
+import { Loader2, AlertCircle, FileText, Hash, Truck, Download } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { isDarkTheme } from '@/lib/theme-storage'
 import { cn } from '@/lib/utils'
+import Button from '@/components/ui/Button'
 
 interface PspViewModalProps {
   isOpen: boolean
   onClose: () => void
   walletAddress: string | null
   orderId: string | null
+  /** Talent modal: pass with employer wallet so status API authorizes purchaser view. */
+  employerCandidateUserId?: string | null
 }
 
 /** Shape of `psp_results.parsed_data` from webhook processing (stub + Accio extract). */
@@ -94,11 +97,147 @@ function filledCodeBadge(code: string | null | undefined, isDark: boolean) {
   )
 }
 
+/** Tiny escape so PSP IDs / status / error notes can't break out of generated HTML. */
+function htmlEscape(input: string | null | undefined): string {
+  return String(input ?? '—')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Open a print-friendly PSP summary in a new window and trigger the browser's
+ * Save-as-PDF / Print dialog. Mirrors `MvrViewModal`'s flow so employers (and the
+ * candidate when they paid for it) get a consistent download UX without us
+ * pulling in a PDF generator dependency.
+ */
+function openPspPrintWindow(
+  order: PspOrderPayload,
+  result: PspResultPayload | null,
+  extracted: PspParsedStub['extracted'] | undefined,
+) {
+  const w = window.open('', '_blank')
+  if (!w) {
+    alert('Please allow popups to download the PSP report')
+    return
+  }
+
+  const filledCode = extracted?.filledCode ?? null
+  const filledColor = String(filledCode ?? '').toLowerCase() === 'verified' ? '#059669' : '#b45309'
+  const fileTitleSuffix = order.orderNumber ? ` - ${order.orderNumber}` : ''
+
+  const fmt = (iso: string | null | undefined): string => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString()
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>PSP Report${fileTitleSuffix}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; line-height: 1.5; padding: 40px; max-width: 800px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #b45309; padding-bottom: 20px; margin-bottom: 28px; }
+    .header h1 { font-size: 22px; color: #b45309; }
+    .header .meta { text-align: right; font-size: 12px; color: #6b7280; }
+    .meta .order-num { font-family: monospace; }
+    .section { margin-bottom: 22px; }
+    .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #374151; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+    .grid .full { grid-column: 1 / -1; }
+    .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
+    .value { font-size: 14px; color: #111827; font-weight: 500; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: ${filledColor}; background: ${filledColor}1A; }
+    .ids { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; font-family: monospace; font-size: 12px; }
+    .ids div + div { margin-top: 6px; }
+    .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #92400e; margin-top: 18px; }
+    .note.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; text-align: center; }
+    .footer .brand { color: #0d9488; font-weight: 600; margin-top: 6px; }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>PSP Report Summary</h1>
+      <p style="font-size:13px;color:#6b7280;margin-top:4px">FMCSA crash &amp; inspection history (Pre-Employment Screening Program)</p>
+    </div>
+    <div class="meta">
+      <div>Generated ${new Date().toLocaleString()}</div>
+      ${order.orderNumber ? `<div class="order-num">Order ${htmlEscape(order.orderNumber)}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Order</h2>
+    <div class="grid">
+      <div><div class="label">Storm status</div><div class="value">${htmlEscape(order.status)}</div></div>
+      <div><div class="label">Vendor code (FMCSA)</div><div class="value"><span class="badge">${htmlEscape(filledCode || '—')}</span></div></div>
+      <div><div class="label">Result in vault</div><div class="value">${htmlEscape(result?.resultStatus)}</div></div>
+      <div><div class="label">License (state)</div><div class="value">${htmlEscape(extracted?.dlState || order.dlState)}</div></div>
+      <div class="full"><div class="label">License number</div><div class="value">${htmlEscape(maskDl(extracted?.dlNumber ?? order.dlNumber))}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Accio references</h2>
+    <div class="ids">
+      <div>Our order #: ${htmlEscape(order.orderNumber)}</div>
+      <div>FMCSA suborder #: ${htmlEscape(order.subOrderNumber)}</div>
+      ${order.remoteOrderNumber ? `<div>Accio remote order: ${htmlEscape(order.remoteOrderNumber)}</div>` : ''}
+      ${order.remoteSubOrderNumber ? `<div>Accio remote suborder: ${htmlEscape(order.remoteSubOrderNumber)}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Timeline</h2>
+    <div class="grid">
+      <div class="full"><div class="label">Ordered</div><div class="value">${fmt(order.orderedAt)}</div></div>
+      <div><div class="label">Vendor received</div><div class="value">${fmt(result?.receivedAt)}</div></div>
+      <div><div class="label">Completed</div><div class="value">${fmt(order.completedAt)}</div></div>
+      ${order.expiresAt ? `<div class="full"><div class="label">Access window (expires)</div><div class="value">${fmt(order.expiresAt)}</div></div>` : ''}
+    </div>
+  </div>
+
+  ${order.errorMessage ? `<div class="note error"><strong>Order note: </strong>${htmlEscape(order.errorMessage)}</div>` : ''}
+
+  <div class="note">
+    Crash and inspection line items are not yet broken out in this summary while we map Accio&apos;s PSP XML.
+    The fields above (IDs, vendor code, timeline) are the trustworthy summary for support and recordkeeping.
+  </div>
+
+  <div class="footer">
+    <div>Storm — Blockchain-Verified Career Platform</div>
+    <div class="brand">Generated from Storm Hub · For employer / driver use only</div>
+  </div>
+
+  <script>window.onload = function() { window.print(); };</script>
+</body>
+</html>`
+
+  w.document.write(html)
+  w.document.close()
+}
+
 /**
  * PSP result viewer — shows everything we reliably persist today (order IDs, vendor code, DL
  * state, timestamps). Crash/inspection rows wait on Accio XML mapping (same as before).
  */
-export default function PspViewModal({ isOpen, onClose, walletAddress, orderId }: PspViewModalProps) {
+export default function PspViewModal({
+  isOpen,
+  onClose,
+  walletAddress,
+  orderId,
+  employerCandidateUserId,
+}: PspViewModalProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const [loading, setLoading] = useState(false)
@@ -115,9 +254,11 @@ export default function PspViewModal({ isOpen, onClose, walletAddress, orderId }
     setError(null)
     void (async () => {
       try {
-        const res = await fetch(
-          `/api/psp/status/${orderId}?walletAddress=${encodeURIComponent(walletAddress)}`,
-        )
+        const q = new URLSearchParams({ walletAddress })
+        if (employerCandidateUserId) {
+          q.set('employerCandidateUserId', employerCandidateUserId)
+        }
+        const res = await fetch(`/api/psp/status/${orderId}?${q.toString()}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to load PSP order')
         if (!cancelled) {
@@ -135,10 +276,16 @@ export default function PspViewModal({ isOpen, onClose, walletAddress, orderId }
     return () => {
       cancelled = true
     }
-  }, [isOpen, orderId, walletAddress])
+  }, [isOpen, orderId, walletAddress, employerCandidateUserId])
 
   const extracted = payload?.result?.parsedData?.extracted
   const filledCode = extracted?.filledCode ?? null
+  const canDownload = Boolean(payload && !loading && !error)
+
+  const handleDownloadPDF = () => {
+    if (!payload) return
+    openPspPrintWindow(payload.order, payload.result, extracted)
+  }
 
   if (!isOpen) return null
 
@@ -151,6 +298,14 @@ export default function PspViewModal({ isOpen, onClose, walletAddress, orderId }
           isDark ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900',
         )}
       >
+        {canDownload && (
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" size="sm" onClick={handleDownloadPDF}>
+              <Download className="mr-1 h-4 w-4" aria-hidden />
+              Download PDF
+            </Button>
+          </div>
+        )}
         {loading && (
           <div className="flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -174,12 +329,18 @@ export default function PspViewModal({ isOpen, onClose, walletAddress, orderId }
               <p
                 className={cn(
                   'rounded-lg border px-3 py-2 text-xs',
-                  isDark ? 'border-amber-500/30 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-950',
+                  employerCandidateUserId
+                    ? isDark
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                    : isDark
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                      : 'border-amber-200 bg-amber-50 text-amber-950',
                 )}
               >
-                This PSP was ordered as part of an employer screening request. Full vendor XML is
-                retained for compliance; structured crash/inspection rows below will grow as we map
-                Accio&apos;s format.
+                {employerCandidateUserId
+                  ? 'You purchased this screening for your company. Full vendor XML is retained for compliance; structured crash/inspection rows below will grow as we map Accio&apos;s format.'
+                  : 'This PSP was ordered as part of an employer screening request. Full vendor XML is retained for compliance; structured crash/inspection rows below will grow as we map Accio&apos;s format.'}
               </p>
             )}
 

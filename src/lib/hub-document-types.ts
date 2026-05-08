@@ -61,6 +61,8 @@ export interface HubDocument {
   portfolioUrl?: string | null
   githubUsername?: string | null
   stormResumeInitialPanel?: 'upload' | 'general' | 'driver' | 'developer'
+  /** Company-paid screening — candidate sees progress only; full report opens for the employer purchaser. */
+  employerPaidScreening?: boolean
 }
 
 /** Primary My Files row for a career-card block section (best-effort for legacy resume types). */

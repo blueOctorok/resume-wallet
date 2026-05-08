@@ -12,10 +12,9 @@ import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 import MessagingButton from '@/components/messaging/MessagingButton'
-import { useUIStore, useJourneyStore } from '@/stores'
+import { useUIStore } from '@/stores'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
 import { calculateEmployerProgress, type EmployerProgressData } from '@/lib/journey-progress'
-import EmployerPathSidebar from '@/components/hub/EmployerPathSidebar'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
 import { getBlockColor } from '@/lib/block-registry'
@@ -40,15 +39,10 @@ import {
   MessageSquare,
   Phone,
   Mail,
-  Shield,
-  Search,
   Trash2,
   RefreshCw,
-  Link2,
   CreditCard,
-  Compass,
   Wallet,
-  LayoutGrid,
   Coins,
   Package,
 } from 'lucide-react'
@@ -62,8 +56,10 @@ import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
+import EmployerScreeningsPanel from '@/components/employer/EmployerScreeningsPanel'
 import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
+import type { EmployerInstalledHubBlock } from '@/stores/employer-blocks-store'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 
 // ============================================================
@@ -177,6 +173,74 @@ interface EmployerHubProps {
   onNavigate: (view: string) => void
 }
 
+/** Small vault glyph + title — visual inventory only; remove is a single ghost icon (not a full-width CTA). */
+function EmployerInstalledBlockTile({
+  row,
+  theme,
+  canManage,
+  onRemove,
+}: {
+  row: EmployerInstalledHubBlock
+  theme: string
+  canManage: boolean
+  onRemove: () => void
+}) {
+  const isDark = isDarkTheme(theme)
+  const def = getEmployerBlockDefinition(row.blockType)
+  const blockLabel = def?.label ?? row.blockType
+  const registryIdForGlow =
+    def?.categoryId === 'drivers' ? 'driver-mvr' : def?.categoryId === 'developers' ? 'developer-resume' : 'general-resume'
+  const colors = getBlockColor(registryIdForGlow)
+  const Icon = def?.icon ?? Package
+
+  return (
+    <li
+      className={cn(
+        'flex w-[7.75rem] flex-col items-center gap-1 rounded-lg border px-2 pb-2 pt-2.5 text-center sm:w-[8.25rem]',
+        isDark ? 'border-gray-700/70 bg-gray-900/50' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40',
+      )}
+    >
+      <div className="relative h-12 w-12 shrink-0">
+        <VaultCredentialChrome
+          isDark={isDark}
+          glowColor={colors.glowColor}
+          hasRoute
+          showSigil={false}
+          className="h-full min-h-12"
+        >
+          <div className="flex h-full items-center justify-center p-0.5">
+            <Icon className={cn('h-5 w-5', isDark ? colors.iconText.dark : colors.iconText.light)} aria-hidden />
+          </div>
+        </VaultCredentialChrome>
+      </div>
+      <p
+        className={cn(
+          'line-clamp-2 w-full text-[11px] font-semibold leading-snug',
+          isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100',
+        )}
+      >
+        {blockLabel}
+      </p>
+      <p className={cn('text-[10px] leading-none', isDark ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
+        {new Date(row.addedAt).toLocaleDateString()}
+      </p>
+      {canManage && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="mt-0.5 !h-8 !w-8 !p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/15 dark:hover:text-red-400"
+          onClick={onRemove}
+          aria-label={`Remove ${blockLabel}`}
+          title="Remove block"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+        </Button>
+      )}
+    </li>
+  )
+}
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
@@ -184,7 +248,8 @@ interface EmployerHubProps {
 export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubProps) {
   const { theme } = useTheme()
   const { navigateToMessages } = useUIStore()
-  const openJobPathGuide = useJourneyStore((s) => s.openGuide)
+  const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
+  const lastHubRefreshNonce = useRef<number | null>(null)
   const setEmployerHiringPath = useEmployerHiringPathStore((s) => s.setEmployerHiringPath)
   const [data, setData] = useState<HubData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -217,8 +282,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
-  const RAIL_WALLET_LS = 'employer-hub-rail-wallet-open'
-  const RAIL_JOBPATH_LS = 'employer-hub-rail-jobpath-open'
+  // v2 keys: default is now collapsed; old keys are ignored so everyone gets the new default once.
+  const RAIL_WALLET_LS = 'employer-hub-rail-wallet-open-v2'
+  const RAIL_STORMI_LS = 'employer-hub-rail-stormi-open-v2'
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const defaults = { jobs: true, pipeline: true, outreach: false }
@@ -231,16 +297,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   })
 
-  /** Desktop xl+ side rails — default expanded; user can collapse to slim strips (persisted). */
-  const [walletRailOpen, setWalletRailOpen] = useState(true)
-  const [jobPathRailOpen, setJobPathRailOpen] = useState(true)
-
+  /** Desktop xl+ side rails — default collapsed so the hub leads with main work; expand when needed (persisted). */
+  const [walletRailOpen, setWalletRailOpen] = useState(false)
+  const [stormiRailOpen, setStormiRailOpen] = useState(false)
   useEffect(() => {
     try {
       const w = localStorage.getItem(RAIL_WALLET_LS)
       if (w !== null) setWalletRailOpen(w === '1' || w === 'true')
-      const j = localStorage.getItem(RAIL_JOBPATH_LS)
-      if (j !== null) setJobPathRailOpen(j === '1' || j === 'true')
+      const s = localStorage.getItem(RAIL_STORMI_LS)
+      if (s !== null) setStormiRailOpen(s === '1' || s === 'true')
     } catch {
       /* keep defaults */
     }
@@ -255,10 +320,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   }, [])
 
-  const persistJobPathRail = useCallback((open: boolean) => {
-    setJobPathRailOpen(open)
+  const persistStormiRail = useCallback((open: boolean) => {
+    setStormiRailOpen(open)
     try {
-      localStorage.setItem(RAIL_JOBPATH_LS, open ? '1' : '0')
+      localStorage.setItem(RAIL_STORMI_LS, open ? '1' : '0')
     } catch {
       /* ignore */
     }
@@ -287,10 +352,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   }, [data])
 
-  /** Same rim/glow as job-path rail (`EmployerPathSidebar`) so wallet + path rails match */
+  /** Wallet rail rim — neutral glow so it pairs with the main column + Stormi column */
   const employerRailVaultGlow = useMemo(() => getBlockColor('general-resume').glowColor, [])
 
-  /** Job-path sidebar + Stormi drawer + `useJourneyProgress` (employer) */
+  /** Employer hiring snapshot for `useEmployerHiringPathStore` / journey helpers (hub no longer shows job-path rail). */
   const hiringPayload = useMemo(() => {
     if (!data?.company) return null
     const snapshot: EmployerProgressData = {
@@ -440,6 +505,19 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     staleTime: 30000, // Consider data stale after 30 seconds
     enabled: !!walletAddress,
   })
+
+  // Nav-bar hub refresh — Navigation calls `requestHubRefresh()` which bumps `hubRefreshNonce`.
+  // Mirrors `CandidateHub`'s nonce listener so the same nav button works for both roles.
+  useEffect(() => {
+    if (lastHubRefreshNonce.current === null) {
+      lastHubRefreshNonce.current = hubRefreshNonce
+      return
+    }
+    if (hubRefreshNonce === lastHubRefreshNonce.current) return
+    lastHubRefreshNonce.current = hubRefreshNonce
+    if (!walletAddress) return
+    void triggerRefresh()
+  }, [hubRefreshNonce, walletAddress, triggerRefresh])
 
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {
@@ -594,13 +672,27 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   }
 
   return (
-    <div className="w-full">
-      {/* xl+: CSS grid (not flex row) so wallet, main, and job path share row 1 and align to the same top edge — flex + sticky was dropping the job path rail below the company header */}
-      <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[auto_minmax(0,1fr)_20rem] xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0">
+    <div className="w-full max-w-full overflow-x-hidden">
+      {/* xl+: wallet (rows 1–2) | priority (row1) + rest (row2) col2 | Stormi col3 rows 1–2.
+          Right column width is `auto` when Stormi is collapsed so the main column claims the
+          freed space — same behavior as the left wallet rail's `auto` track. Below xl: flex
+          column = priority → Stormi → rest so mobile is usable without scrolling past
+          everything first. */}
+      <div
+        className={cn(
+          'flex flex-col gap-8 xl:grid xl:grid-rows-[auto_1fr] xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0',
+          stormiRailOpen
+            ? 'xl:grid-cols-[auto_minmax(0,1fr)_26rem]'
+            : 'xl:grid-cols-[auto_minmax(0,1fr)_auto]',
+        )}
+      >
         {data.company &&
           (walletRailOpen ? (
             <aside
-              className="hidden xl:block w-80 shrink-0 self-start sticky top-24 p-0 xl:col-start-1 xl:row-start-1 xl:self-start"
+              // Wallet uses VaultCredentialChrome (tile chamfer + drop-shadow filter), which
+              // sits visually a touch lower than HubSectionPanel's flat top. `xl:-mt-1` nudges
+              // it up so its top edge lines up with the company panel in the center column.
+              className="hidden w-80 shrink-0 self-start p-0 xl:-mt-1 xl:sticky xl:top-24 xl:col-start-1 xl:row-span-2 xl:row-start-1 xl:block xl:self-start"
               aria-label="Company wallet"
             >
               <VaultCredentialChrome
@@ -645,7 +737,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           ) : (
             <aside
               className={cn(
-                'hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-1 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-1 xl:row-span-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
                 'rounded-2xl border shadow-sm backdrop-blur-sm',
                 theme === 'ink'
                   ? 'border-zinc-600/80 bg-zinc-900/95'
@@ -670,15 +762,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                     aria-hidden
                   />
                   <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
-                    Wallet
+                    Company wallet
                   </span>
                 </span>
               </Button>
             </aside>
           ))}
-        {/* xl:contents removes this flex box from layout so the inner column is a direct grid item — avoids extra formatting context that was shifting the job-path rail down vs the company card */}
-        <div className="w-full min-w-0 flex flex-1 flex-col justify-center xl:contents">
-          <div className="w-full min-w-0 space-y-8 xl:max-w-7xl xl:col-start-2 xl:row-start-1 xl:justify-self-center xl:min-w-0">
+        {/* xl:display:contents — priority, Stormi, and rest become direct grid children; mobile keeps flex order priority → Stormi → jobs/STORM. */}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-8 pb-28 max-xl:pb-32 xl:contents xl:pb-0">
+          <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
       {/* Company profile — vault panel + embed block (candidate hub parity) */}
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
         <BlockCard
@@ -752,12 +844,124 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </BlockCard>
       </HubSectionPanel>
 
+      {/* ── Blocks & Outreach — unified section ─────────────────────────
+           Top: installed employer blocks (what capabilities does this company have?)
+           Bottom: candidate outreach (create invites using those capabilities)
+           The outreach dropdown mirrors only the blocks installed above.
+      ──────────────────────────────────────────────────────────────── */}
+      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="mb-8">
+        <BlockCard
+          variant="embed"
+          icon={Package}
+          title="Blocks & outreach"
+          description="Install blocks to unlock screening and outreach capabilities, then invite candidates below."
+          headerActions={
+            employerCanManageBlocks ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => openEmployerBlockPicker()}>
+                <Plus className="h-4 w-4" />
+                Add block
+              </Button>
+            ) : undefined
+          }
+        >
+          {/* ── Installed blocks ─────────────────────────────────────── */}
+          {employerInstalledBlocks.length === 0 ? (
+            <div className="py-6 text-center">
+              <Package className={cn('w-8 h-8 mx-auto mb-2', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')} />
+              <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500')}>
+                No blocks installed yet
+              </p>
+              <p className={cn('text-xs mt-1', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400')}>
+                Add blocks to unlock candidate outreach and screening features.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p
+                className={cn(
+                  'mb-3 text-xs font-semibold uppercase tracking-wide',
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
+                )}
+              >
+                Installed capabilities
+              </p>
+              <ul className="flex flex-wrap justify-start gap-2 sm:gap-3">
+                {employerInstalledBlocks.map((row) => {
+                  const blockLabel = getEmployerBlockDefinition(row.blockType)?.label ?? row.blockType
+                  return (
+                    <EmployerInstalledBlockTile
+                      key={row.id}
+                      row={row}
+                      theme={theme}
+                      canManage={employerCanManageBlocks}
+                      onRemove={() => setEmployerBlockToRemove({ id: row.id, label: blockLabel })}
+                    />
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* ── Candidate outreach — inset panel so it reads as its own step, not a cramped footer ─ */}
+          {employerInstalledBlocks.length > 0 && (
+            <div
+              id="candidate-outreach"
+              className={cn(
+                'mt-6 min-w-0 max-w-full overflow-hidden rounded-xl border p-4 sm:mt-8 sm:p-5',
+                isDarkTheme(theme)
+                  ? 'border-amber-500/20 bg-gray-950/50 shadow-[inset_0_1px_0_0_rgba(251,191,36,0.08)]'
+                  : 'border-amber-200/80 bg-amber-50/50 dark:border-amber-500/25 dark:bg-gray-950/40',
+              )}
+            >
+              <p
+                className={cn(
+                  'mb-3 text-xs leading-relaxed sm:mb-4',
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600 dark:text-gray-400',
+                )}
+              >
+                Create invite links for the blocks above. Share by link, text message, QR, or email — each action is labeled on the invite card.
+              </p>
+              <CandidateOutreach
+                walletAddress={walletAddress}
+                isCollapsed={!openSections.outreach}
+                onToggle={() => toggleSection('outreach')}
+                embedded
+              />
+            </div>
+          )}
+
+          {employerRecentAudit.length > 0 && (
+            <div className={cn('mt-4 border-t pt-3', isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200')}>
+              <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
+                Recent activity
+              </p>
+              <ul className="space-y-1 text-xs">
+                {employerRecentAudit.slice(0, 5).map((a) => (
+                  <li key={a.id} className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{a.block_type}</span>
+                    {' · '}
+                    {a.action}
+                    {' · '}
+                    {new Date(a.created_at).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </BlockCard>
+      </HubSectionPanel>
+
+      {/* Purchased screenings — only when the company has the screening capability */}
+      {employerInstalledBlocks.some(
+        (b) => b.blockType === 'employer-mvr-orders' || b.blockType === 'employer-psp-mvr-bundle',
+      ) && <EmployerScreeningsPanel walletAddress={walletAddress} />}
+
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
         <BlockCard
           variant="embed"
           icon={Users}
           title="Activity snapshot"
-          description="Pipeline, jobs, and outreach at a glance."
+          description="Pipeline, jobs, and applicants after outreach and screenings."
         >
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <StatCard
@@ -796,155 +1000,111 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </BlockCard>
       </HubSectionPanel>
 
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
-        <BlockCard
-          variant="embed"
-          icon={LayoutGrid}
-          title="Quick actions"
-          description="Jump to outreach, talent search, jobs, and team settings."
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={() => document.getElementById('candidate-outreach')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              <Link2 className="w-4 h-4" />
-              New Outreach
-            </Button>
-            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('talent-search')}>
-              <Search className="w-4 h-4" />
-              Find Talent
-            </Button>
-            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('post-job')}>
-              <Plus className="w-4 h-4" />
-              Post Job
-            </Button>
-            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('applicants')}>
-              <Users className="w-4 h-4" />
-              Applicants
-            </Button>
-            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('company-profile')}>
-              <Building2 className="w-4 h-4" />
-              Company
-            </Button>
-            <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('team')}>
-              <Shield className="w-4 h-4" />
-              Team
-            </Button>
+      {/* Quick actions removed — these page-level destinations now live in the Employer Hub
+          dropdown in the global nav (Find Talent, Post Job, Applicants, Company, Team). The
+          "New outreach" CTA still lives inside the Blocks & Outreach section above. */}
           </div>
-        </BlockCard>
-      </HubSectionPanel>
 
-      {/* ── Blocks & Outreach — unified section ─────────────────────────
-           Top: installed employer blocks (what capabilities does this company have?)
-           Bottom: candidate outreach (create invites using those capabilities)
-           The outreach dropdown mirrors only the blocks installed above.
-      ──────────────────────────────────────────────────────────────── */}
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="mb-8">
-        <BlockCard
-          variant="embed"
-          icon={Package}
-          title="Blocks & outreach"
-          description="Install blocks to unlock screening and outreach capabilities, then invite candidates below."
-          headerActions={
-            employerCanManageBlocks ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => openEmployerBlockPicker()}>
-                <Plus className="h-4 w-4" />
-                Add block
-              </Button>
-            ) : undefined
-          }
-        >
-          {/* ── Installed blocks ─────────────────────────────────────── */}
-          {employerInstalledBlocks.length === 0 ? (
-            <div className="py-6 text-center">
-              <Package className={cn('w-8 h-8 mx-auto mb-2', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')} />
-              <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500')}>
-                No blocks installed yet
-              </p>
-              <p className={cn('text-xs mt-1', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400')}>
-                Add blocks to unlock candidate outreach and screening features.
-              </p>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {employerInstalledBlocks.map((row) => {
-                const def = getEmployerBlockDefinition(row.blockType)
-                const blockLabel = def?.label ?? row.blockType
-                return (
-                  <li
-                    key={row.id}
-                    className={cn(
-                      'flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm',
-                      isDarkTheme(theme)
-                        ? 'border-gray-700/80 bg-gray-900/40 text-gray-200'
-                        : 'border-gray-200 bg-white text-gray-900',
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium">{blockLabel}</p>
-                      <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
-                        Added {new Date(row.addedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {employerCanManageBlocks && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                        onClick={() => setEmployerBlockToRemove({ id: row.id, label: blockLabel })}
-                        aria-label={`Remove ${blockLabel}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-
-          {/* ── Candidate outreach (directly below blocks) ───────────── */}
-          {employerInstalledBlocks.length > 0 && (
-            <div
-              id="candidate-outreach"
-              className={cn(
-                'mt-4 border-t pt-4',
-                isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200',
-              )}
+        {employerStormiContext &&
+          (stormiRailOpen ? (
+            <aside
+              id="employer-hub-stormi-panel"
+              // No mt — Stormi uses the same HubSectionPanel chrome as the company panel in
+              // the main column, so their top edges line up exactly when both start at row-1.
+              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:block xl:self-start"
+              aria-label="Ask Stormi hiring coach"
             >
-              <CandidateOutreach
-                walletAddress={walletAddress}
-                isCollapsed={!openSections.outreach}
-                onToggle={() => toggleSection('outreach')}
-                embedded
-              />
-            </div>
-          )}
+              <HubSectionPanel
+                isDark={isDarkTheme(theme)}
+                accent="violet"
+                contentClassName="relative pr-10 xl:pr-12"
+              >
+                {/* Collapse handle — desktop only; mirrors wallet rail's collapse-to-edge pattern. */}
+                <div className="hidden xl:block absolute right-3 top-3 z-20">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      '!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm',
+                      navControlButtonClass(isDarkTheme(theme), theme),
+                    )}
+                    onClick={() => persistStormiRail(false)}
+                    aria-label="Collapse Ask Stormi panel"
+                    title="Collapse Ask Stormi"
+                  >
+                    <ChevronRight className="w-4 h-4" aria-hidden />
+                  </Button>
+                </div>
+                <BlockCard
+                  variant="embed"
+                  headerIconSlot={
+                    <Image
+                      src="/ava-robot.png"
+                      alt=""
+                      width={36}
+                      height={36}
+                      className={cn('object-contain', !isDarkTheme(theme) && 'invert')}
+                    />
+                  }
+                  title="Ask Stormi"
+                  description="Hiring coach — outreach, talent search, pipeline, and what to do next."
+                >
+                  <StormiChatPanel
+                    mode="employer"
+                    walletAddress={walletAddress}
+                    employerContext={employerStormiContext}
+                    stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
+                    onStormiAutoWelcomeSynced={() =>
+                      setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
+                    }
+                    hubEmbedSurface
+                  />
+                </BlockCard>
+              </HubSectionPanel>
+            </aside>
+          ) : (
+            <aside
+              id="employer-hub-stormi-panel"
+              className={cn(
+                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'rounded-2xl border shadow-sm backdrop-blur-sm',
+                theme === 'ink'
+                  ? 'border-zinc-600/80 bg-zinc-900/95'
+                  : 'border-violet-200/70 dark:border-violet-700/60 bg-white/90 dark:bg-gray-900/90',
+              )}
+              aria-label="Ask Stormi collapsed"
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => persistStormiRail(true)}
+                className="!p-0 h-auto w-full touch-manipulation"
+                aria-label="Expand Ask Stormi panel"
+                title="Expand Ask Stormi"
+              >
+                {/* Rotated label mirrors collapsed wallet rail. Image inverts on light themes
+                    because the source PNG is white-on-transparent. */}
+                <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-6">
+                  <Image
+                    src="/ava-robot.png"
+                    alt=""
+                    width={16}
+                    height={16}
+                    className={cn(
+                      'h-4 w-4 shrink-0 object-contain',
+                      !isDarkTheme(theme) && 'invert',
+                    )}
+                  />
+                  <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
+                    Stormi
+                  </span>
+                </span>
+              </Button>
+            </aside>
+          ))}
 
-          {employerRecentAudit.length > 0 && (
-            <div className={cn('mt-4 border-t pt-3', isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200')}>
-              <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
-                Recent activity
-              </p>
-              <ul className="space-y-1 text-xs">
-                {employerRecentAudit.slice(0, 5).map((a) => (
-                  <li key={a.id} className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{a.block_type}</span>
-                    {' · '}
-                    {a.action}
-                    {' · '}
-                    {new Date(a.created_at).toLocaleString()}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </BlockCard>
-      </HubSectionPanel>
+          <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-2 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
 
       <EmployerBlockPickerModal
         open={employerPickerOpen}
@@ -964,39 +1124,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           if (!ok) throw new Error('Remove failed')
         }}
       />
-
-      {/* Same HubSectionPanel + BlockCard embed as candidate Ask Stormi */}
-      {employerStormiContext && (
-        <div className="mb-8">
-          <HubSectionPanel isDark={isDarkTheme(theme)} accent="violet">
-            <BlockCard
-              variant="embed"
-              headerIconSlot={
-                <Image
-                  src="/ava-robot.png"
-                  alt=""
-                  width={36}
-                  height={36}
-                  className={cn('object-contain', !isDarkTheme(theme) && 'invert')}
-                />
-              }
-              title="Ask Stormi"
-              description="Hiring coach for your company — pipeline, talent search, and what to do next."
-            >
-              <StormiChatPanel
-                mode="employer"
-                walletAddress={walletAddress}
-                employerContext={employerStormiContext}
-                stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
-                onStormiAutoWelcomeSynced={() =>
-                  setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
-                }
-                hubEmbedSurface
-              />
-            </BlockCard>
-          </HubSectionPanel>
-        </div>
-      )}
 
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
@@ -1177,54 +1304,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
           </div>
         </div>
-
-        {jobPathRailOpen ? (
-          <EmployerPathSidebar
-            variant='sticky'
-            id='employer-hub-job-path-sidebar'
-            className='xl:col-start-3 xl:row-start-1 xl:self-start'
-            onNavigate={onNavigate}
-            progressOverride={hiringPayload?.progress}
-            pathSummary={hiringPayload?.pathSummary}
-            companyName={data.company?.name ?? null}
-            activeJobs={data.stats.activeJobs}
-            totalApplicants={data.stats.totalApplicants}
-            pendingReview={data.stats.pendingReview}
-            onRequestCollapse={() => persistJobPathRail(false)}
-          />
-        ) : (
-          <aside
-            className={cn(
-              'hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-3 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm',
-              theme === 'ink'
-                ? 'border-zinc-600/80 bg-zinc-900/95'
-                : 'border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90',
-            )}
-            aria-label="Job path collapsed"
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => persistJobPathRail(true)}
-              className="!p-0 h-auto w-full touch-manipulation"
-              aria-label="Expand job path panel"
-              title="Expand job path"
-            >
-              <span className="flex items-center gap-2 rotate-90 whitespace-nowrap py-6">
-                <Compass
-                  className={cn(
-                    'h-4 w-4 shrink-0',
-                    theme === 'ink' ? 'text-zinc-300' : 'text-teal-600 dark:text-teal-400',
-                  )}
-                  aria-hidden
-                />
-                <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
-                  Job path
-                </span>
-              </span>
-            </Button>
-          </aside>
-        )}
       </div>
 
       {data.company && (
@@ -1272,27 +1351,37 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </>
       )}
 
-      <Button
-        type="button"
-        variant="primary"
-        onClick={() => openJobPathGuide()}
-        className={cn(
-          'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
-          'right-[max(0px,env(safe-area-inset-right,0px))]',
-          'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
-          'rounded-none rounded-l-2xl border border-r-0 border-gray-300/40 dark:border-gray-600/50',
-          'shadow-lg !p-0 touch-manipulation active:opacity-90',
-          theme === 'ink'
-            ? '!bg-zinc-600 hover:!bg-zinc-500 dark:!bg-zinc-600 dark:hover:!bg-zinc-500 !text-white'
-            : '!bg-teal-600 hover:!bg-teal-500 dark:!bg-teal-600 dark:hover:!bg-teal-500 !text-white',
-        )}
-        aria-label="Open job path"
-      >
-        <span className="flex items-center gap-2 rotate-90 whitespace-nowrap">
-          <Compass className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="text-[11px] font-bold tracking-wide">Job path</span>
-        </span>
-      </Button>
+      {employerStormiContext && (
+        <Button
+          type="button"
+          variant="primary"
+          onClick={() =>
+            document.getElementById('employer-hub-stormi-panel')?.scrollIntoView({ behavior: 'smooth' })
+          }
+          className={cn(
+            'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
+            'right-[max(0px,env(safe-area-inset-right,0px))]',
+            'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
+            'rounded-none rounded-l-2xl border border-r-0 border-gray-300/40 dark:border-gray-600/50',
+            'shadow-lg !p-0 touch-manipulation active:opacity-90',
+            theme === 'ink'
+              ? '!bg-violet-700 hover:!bg-violet-600 dark:!bg-violet-700 dark:hover:!bg-violet-600 !text-white'
+              : '!bg-violet-600 hover:!bg-violet-500 dark:!bg-violet-600 dark:hover:!bg-violet-500 !text-white',
+          )}
+          aria-label="Scroll to Ask Stormi"
+        >
+          <span className="flex items-center gap-2 rotate-90 whitespace-nowrap">
+            <Image
+              src="/ava-robot.png"
+              alt=""
+              width={16}
+              height={16}
+              className={cn('h-4 w-4 shrink-0 object-contain', !isDarkTheme(theme) && 'invert')}
+            />
+            <span className="text-[11px] font-bold tracking-wide">Stormi</span>
+          </span>
+        </Button>
+      )}
     </div>
   )
 }

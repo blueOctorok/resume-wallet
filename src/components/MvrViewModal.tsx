@@ -17,6 +17,11 @@ interface MvrViewModalProps {
   walletAddress: string | null
   /** Load this order directly (My Files → View). Omit to use legacy latest-order check-status flow. */
   orderId?: string | null
+  /**
+   * Talent modal: candidate’s user id. Loads via GET /api/mvr/status/...?employerCandidateUserId=...
+   * (company must have paid for that order).
+   */
+  employerCandidateUserId?: string | null
 }
 
 interface Violation {
@@ -170,7 +175,13 @@ function getStatusBadge(status: string | undefined | null): { bg: string; text: 
   return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
 }
 
-export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: orderIdProp }: MvrViewModalProps) {
+export default function MvrViewModal({
+  isOpen,
+  onClose,
+  walletAddress,
+  orderId: orderIdProp,
+  employerCandidateUserId,
+}: MvrViewModalProps) {
   const { theme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -548,9 +559,11 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
 
         // Explicit order: My Files "View" on a completed MVR (avoids sending users to the order form)
         if (orderIdProp) {
-          const statusResponse = await fetch(
-            `/api/mvr/status/${orderIdProp}?walletAddress=${encodeURIComponent(walletAddress)}`
-          )
+          const q = new URLSearchParams({ walletAddress })
+          if (employerCandidateUserId) {
+            q.set('employerCandidateUserId', employerCandidateUserId)
+          }
+          const statusResponse = await fetch(`/api/mvr/status/${orderIdProp}?${q.toString()}`)
           if (!statusResponse.ok) {
             const errBody = await statusResponse.json().catch(() => ({}))
             throw new Error(errBody.error || 'Failed to load MVR')
@@ -610,7 +623,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
     }
 
     fetchMvrData()
-  }, [isOpen, walletAddress, orderIdProp])
+  }, [isOpen, walletAddress, orderIdProp, employerCandidateUserId])
 
   if (!isOpen) return null
 

@@ -4,6 +4,71 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer hub: collapsible Stormi rail + nav-driven shortcuts** (May 2026)
+
+**Defaults:** Wallet and Stormi rails now **default to collapsed** on desktop (`useState(false)`). Preferences use **`employer-hub-rail-wallet-open-v2`** / **`employer-hub-rail-stormi-open-v2`** so the new default applies once (old `*-open` keys are ignored). **Open rails:** Stormi panel uses identical **`HubSectionPanel`** chrome to the company panel so their top edges align via `items-start` on the grid; wallet rail uses **`VaultCredentialChrome`** (chamfered tile shell with drop-shadow), nudged up with **`xl:-mt-1`** so its top visually matches.
+
+**Employer Hub nav dropdown:** **Go to Hub**, **Journey Tips**, and **Stormi Journey Guide** are hidden for `userRole === 'employer'`; shortcuts + **Switch Role** (when available) remain.
+
+**Stormi rail is collapsible to the right edge** the same way the **company wallet** rail collapses to the left. New `stormiRailOpen` state (persisted to `localStorage` under `employer-hub-rail-stormi-open`) controls whether the right column is the full violet `26rem` panel or a slim `w-11` rotated-label strip. To make the main column claim the freed width when collapsed, the desktop grid template switches between **`xl:grid-cols-[auto_minmax(0,1fr)_26rem]`** (open) and **`xl:grid-cols-[auto_minmax(0,1fr)_auto]`** (collapsed). Collapsed wallet label is now **“Company wallet”** (was just “Wallet”) so the slim rail self-identifies.
+
+**Quick actions section removed** from the main hub. All five page-level destinations (Find Talent, Post Job, Applicants, Company Profile, Team) now live in the **Employer Hub dropdown** in the global nav (`Navigation.tsx`). The dropdown calls `useUIStore.setCurrentPage` directly because page.tsx’s `onNavigate` whitelist only forwards a small set of routes — `EmployerShell`'s `KNOWN_PAGES` effect bounces anything else back to the hub. The `New outreach` CTA already lives inside `CandidateOutreach`, so dropping the duplicate in the hub leaves no orphaned action.
+
+**Hub refresh button** in the nav now renders for **both** candidates and employers. `EmployerHub` adds a `useEffect` that watches `useUIStore.hubRefreshNonce` (same store CandidateHub uses) and calls `triggerRefresh` when it bumps. The candidate-only `hubBlocksLoading` spinner stays gated on role so it doesn’t fire on employers (their refresh is fast and uses the existing `useVisibilityRefresh` flow).
+
+---
+
+## **Employer hub: vertical flow + Stormi rail** (May 2026)
+
+Main column order is **company → blocks & outreach → purchased screenings (if installed) → activity snapshot → quick actions → job postings → hiring pipeline → STORM**. The **job path** desktop rail is **removed** from the hub; **Ask Stormi** uses a **sticky third column** (`26rem`, aligned with candidate Construct hub) with id **`employer-hub-stormi-panel`**. On viewports below `xl`, a **violet edge FAB** scrolls to that panel. **`EmployerPathSidebar`** is still used by **`StormiJourneyGuide`** but is no longer mounted on **`EmployerHub`**.
+
+**Mobile:** The hub body is a **flex column** ordered **priority (company → quick) → Ask Stormi → rest (jobs / pipeline / STORM)** so Stormi is not stranded after the entire scroll. Desktop uses **`display: contents`** + **`grid-rows-[auto_1fr]`** so the same nodes map to **wallet | main row1+2 | Stormi**. **`overflow-x-hidden`** on the page root and **`pb-28 max-xl:pb-32`** on the middle wrapper reduce horizontal bleed and FAB overlap.
+
+---
+
+## **Employer hub: Blocks & outreach layout** (May 2026)
+
+**Installed employer blocks** render as **compact flex-wrapped tiles** (~`3rem` vault glyph, `showSigil={false}`), title + date, and a **ghost icon-only** trash control (not a full-width remove CTA). **Candidate outreach** sits in an **inset panel** with `min-w-0` / `overflow-hidden` so nested content cannot blow the layout. **Invite rows** stack **candidate info then share actions** (no side-by-side flex that overlapped badges); share actions use a **`grid-cols-2` / `sm:grid-cols-3`** of **`Button`** cells with **icon + short label** stacked vertically so rows stay on-screen. Inline email uses **`Button`** for submit/cancel.
+
+**Employer outreach form (embedded):** Header row is **border-separated** from the rest; **create form** is a **rounded bordered card** with internal **Storm search** vs **external invite** sub-panels, an **“or”** divider, **“Optional details”** (job + message), and **`Button`** for create/cancel. **Invite list** gets **`mt-8` + `border-t` + `pt-8`** when the create form is open plus a **“Your invites”** label when the list is non-empty.
+
+---
+
+## **PSP modal: Download PDF** (May 2026)
+
+`MvrViewModal` already supported Download/Print. **`PspViewModal`** now matches: a **Download PDF** button at the top of the body opens a print-friendly summary (same `window.open` + auto-`window.print()` flow as MVR — no PDF dependency added) covering Storm status, vendor (FMCSA) code, Accio order/suborder IDs, license state, masked DL, and timeline. All injected fields are HTML-escaped via a small `htmlEscape` helper before they reach the print window.
+
+The Download button is shown for **both** the candidate (when they paid) and the employer (when their company paid) — same authorization as `View`, since the modal already gates on `employerCandidateUserId` for the employer purchaser path.
+
+---
+
+## **Employer hub: Purchased screenings panel** (May 2026)
+
+The employer’s own hub now lists every MVR + PSP it paid for, with status pills + **View** when complete. Previously the employer had to dig back into the talent search modal of the same candidate to find the report.
+
+### What changed
+
+- **`GET /api/employer/screenings`** — returns this company’s MVR + PSP orders (`ordered_by_company_id = ctx.companyId`) joined to **`user_profiles`** for candidate name/avatar (identity is never duplicated into block tables).
+- **`EmployerScreeningsPanel`** — amber `HubSectionPanel + BlockCard` row list with status pill (reuses **`hubScreeningStatusLabel`** so candidate-side and employer-side wording stays aligned). View opens **`MvrViewModal` / `PspViewModal`** with **`employerCandidateUserId`**, hitting the purchaser branch added below.
+- **`EmployerHub`** — mounts the panel right after Blocks & outreach, only when the company has the **`employer-mvr-orders`** or **`employer-psp-mvr-bundle`** block installed (no point showing it for companies without screening capability).
+
+---
+
+## **Employer-paid MVR/PSP: purchaser view vs candidate status-only** (May 2026)
+
+FCRA-style split: **candidates** track employer-initiated screening on the hub / construct career card (**pending → complete**, no full vendor report). **Purchasing employers** open the same detail modals as before, authorized by company + candidate scope.
+
+### What changed
+
+- **`MvrData` / `PspData`:** optional **`employerPaidScreening`** (true when `ordered_by_company_id` is set) on **self** projection from **`projected-career-card.ts`**; hub API includes the flag on **`mvrRecords` / `pspRecords`**.
+- **`PspSection` / `MvrSection`:** hide View / Order for employer-paid rows; complete state shows a short “employer has the full report” message instead of detailed scores / vendor summary.
+- **`ConstructSectionWrapper` + `HubDocument`:** no Open/View actions when **`employerPaidScreening`**.
+- **`GET /api/mvr/status/[orderId]`** and **`GET /api/psp/status/[orderId]`:** optional query **`employerCandidateUserId`** — resolves employer wallet → company and returns the order only if **`ordered_by_company_id`** matches (same JSON shape as the driver path).
+- **`employer-talent-auth.ts`:** shared **`resolveEmployerCompanyForWallet`** for the new branch.
+- **`CareerCardModal` + `ProjectedCareerCard`:** “MVR / PSP — private to your company” panels include **View full report** when status is **`completed`** or **`needs_review`**, opening **`MvrViewModal` / `PspViewModal`** with **`employerCandidateUserId`** so the status APIs authorize the purchaser.
+
+---
+
 ## **PSP product always orders MVR + FMCSA in one Accio bundle** (May 2026)
 
 Storm’s PSP offering is **MVR + PSP (FMCSA crash/inspection)** in a single `placeOrder`, with **one** postback URL (`/api/mvr/webhook`). Accio only allows one `postBackInfo` URL per order, so FMCSA completion posts must be handled on the same route as MVR posts.

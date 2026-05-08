@@ -230,22 +230,28 @@ export default function ConstructSectionWrapper({
                   {doc.status === 'complete' ? 'Edit' : doc.status === 'empty' ? 'Start' : 'Continue'}
                 </button>
               )}
-              {doc?.type === 'mvr' && doc.editPage && doc.status !== 'complete' && (
-                <button type='button' onClick={() => setCurrentPage('mvr')} className={cn(btn, tealBtn)}>
-                  {doc.status === 'empty' ? 'Order MVR' : 'Open'}
-                </button>
-              )}
-              {doc?.type === 'mvr' && doc.status === 'complete' && (
+              {doc?.type === 'mvr' &&
+                doc.editPage &&
+                doc.status !== 'complete' &&
+                !doc.employerPaidScreening && (
+                  <button type='button' onClick={() => setCurrentPage('mvr')} className={cn(btn, tealBtn)}>
+                    {doc.status === 'empty' ? 'Order MVR' : 'Open'}
+                  </button>
+                )}
+              {doc?.type === 'mvr' && doc.status === 'complete' && !doc.employerPaidScreening && (
                 <button type='button' onClick={() => hub.setMvrViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
                   <Eye className='w-3 h-3' /> View
                 </button>
               )}
-              {doc?.type === 'psp' && doc.editPage && doc.status !== 'complete' && (
-                <button type='button' onClick={() => setCurrentPage('psp')} className={cn(btn, tealBtn)}>
-                  {doc.status === 'empty' ? 'Order PSP' : 'Open'}
-                </button>
-              )}
-              {doc?.type === 'psp' && doc.status === 'complete' && (
+              {doc?.type === 'psp' &&
+                doc.editPage &&
+                doc.status !== 'complete' &&
+                !doc.employerPaidScreening && (
+                  <button type='button' onClick={() => setCurrentPage('psp')} className={cn(btn, tealBtn)}>
+                    {doc.status === 'empty' ? 'Order PSP' : 'Open'}
+                  </button>
+                )}
+              {doc?.type === 'psp' && doc.status === 'complete' && !doc.employerPaidScreening && (
                 <button type='button' onClick={() => hub.setPspViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
                   <Eye className='w-3 h-3' /> View
                 </button>

@@ -230,6 +230,7 @@ export function useHubDocuments(refreshKey: number): {
               canVerify: false,
               canDelete: false,
               editPage: isComplete ? null : 'mvr',
+              employerPaidScreening: Boolean(mvr.employerPaidScreening),
             })
           }
         }
@@ -264,6 +265,7 @@ export function useHubDocuments(refreshKey: number): {
               canVerify: false,
               canDelete: false,
               editPage: isComplete ? null : 'psp',
+              employerPaidScreening: Boolean(psp.employerPaidScreening),
             })
           }
         }

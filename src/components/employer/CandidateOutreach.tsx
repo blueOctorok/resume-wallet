@@ -32,6 +32,7 @@ import {
   ChevronDown,
   Search,
   UserCheck,
+  UserPlus,
   MapPin,
   Package,
   ArrowLeft,
@@ -596,8 +597,8 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   // ── Outreach inner content (shared between embedded + standalone) ──────────
   const outreachHeader = (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <Link2 className={cn('h-4 w-4', isDarkTheme(theme) ? 'text-amber-400' : 'text-amber-600')} />
         <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800')}>
           Candidate outreach
@@ -647,21 +648,36 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     <>
         {/* Create form */}
         {!isCollapsed && showForm && (
-          <div className={`px-6 py-5 border-b ${isDarkTheme(theme) ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h4 className={`font-semibold text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-                Create Outreach Link
+          <div
+            className={cn(
+              'mb-8 rounded-xl border px-4 py-5 sm:px-5 sm:py-6',
+              isDarkTheme(theme)
+                ? 'border-gray-600/80 bg-gray-900/50 shadow-sm'
+                : 'border-gray-200 bg-gray-50/90 dark:border-gray-700 dark:bg-gray-900/45',
+            )}
+          >
+            <div className="mb-5 flex items-center justify-between gap-2 border-b border-gray-200 pb-4 dark:border-gray-700/80">
+              <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-white' : 'text-gray-900 dark:text-gray-100')}>
+                Create outreach link
               </h4>
-              <button
-                onClick={() => { setShowForm(false); setError(null); resetForm() }}
-                className="text-gray-500 hover:text-gray-300"
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="!p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+                onClick={() => {
+                  setShowForm(false)
+                  setError(null)
+                  resetForm()
+                }}
+                aria-label="Close form"
               >
-                <X className="w-4 h-4" />
-              </button>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
 
             {/* Block picker — employer outreach is always block-specific */}
-            <div className="mb-4">
+            <div className="mb-6">
               <p className={label}>Which block should they complete? *</p>
                 {selectedBlockType ? (
                   // Show selected block with a "change" button
@@ -747,21 +763,40 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                 )}
             </div>
 
-            {/* Profile search */}
-            <div className="mb-3" ref={profileSearchRef}>
-              <label className={label}>
-                Search existing Storm profiles
-                <span className={`ml-1 font-normal ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                  — connects invite for in-app notifications
-                </span>
-              </label>
+            {/* Who receives this — two paths: Storm member vs anyone else (visually split so it is not one undifferentiated stack). */}
+            <div
+              className={cn(
+                'mb-6 rounded-xl border p-4 sm:p-5',
+                isDarkTheme(theme) ? 'border-teal-500/20 bg-gray-950/40' : 'border-teal-100 bg-white dark:border-teal-900/30 dark:bg-gray-950/30',
+              )}
+              ref={profileSearchRef}
+            >
+              <div className="mb-1 flex items-center gap-2">
+                <div
+                  className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                    isDarkTheme(theme) ? 'bg-teal-500/15 text-teal-300' : 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200',
+                  )}
+                >
+                  <Search className="h-4 w-4" aria-hidden />
+                </div>
+                <div>
+                  <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
+                    Find someone already on Storm
+                  </h5>
+                  <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
+                    Search by name, email, or city. We attach the invite to their account so they get in-app notifications.
+                  </p>
+                </div>
+              </div>
 
               {selectedProfile ? (
-                <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
-                  isDarkTheme(theme)
-                    ? 'bg-teal-900/30 border-teal-700/50'
-                    : 'bg-teal-50 border-teal-200'
-                }`}>
+                <div
+                  className={cn(
+                    'mt-3 flex items-center justify-between rounded-lg border px-3 py-2',
+                    isDarkTheme(theme) ? 'border-teal-700/50 bg-teal-900/30' : 'border-teal-200 bg-teal-50',
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
                     <div>
@@ -773,18 +808,19 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                       </p>
                     </div>
                   </div>
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs font-medium"
                     onClick={handleClearProfile}
-                    className={`text-xs font-medium flex items-center gap-1 cursor-pointer ${
-                      isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-                    }`}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3 w-3" />
                     Clear
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <div className="relative">
+                <div className="relative mt-3">
                   <div className="relative">
                     <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
                       isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
@@ -844,7 +880,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                         </button>
                       ))}
                       <div className={`px-3 py-2 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Or fill in name and email below for someone not on Storm
+                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on Storm</span> section below.
                       </div>
                     </div>
                   )}
@@ -853,143 +889,245 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
                       isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
                     }`}>
-                      No Storm profiles found — fill in name and email below for an email-only invite
+                      No Storm profiles found — use the section below for name / email (email-only invite).
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Manual name/email */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label className={label}>
-                  Candidate name
-                  {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Optional"
-                  value={form.candidateName}
-                  onChange={e => setForm(f => ({ ...f, candidateName: e.target.value }))}
-                  className={inputBase}
+            <div
+              className="relative my-7"
+              role="separator"
+              aria-label="Alternative: invite someone who is not in Storm search results"
+            >
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <span
+                  className={cn(
+                    'w-full border-t',
+                    isDarkTheme(theme) ? 'border-gray-600/90' : 'border-gray-200 dark:border-gray-700',
+                  )}
                 />
               </div>
-              <div>
-                <label className={label}>
-                  Candidate email
-                  {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
-                </label>
-                <input
-                  type="email"
-                  placeholder="Optional — to send email"
-                  value={form.candidateEmail}
-                  onChange={e => setForm(f => ({ ...f, candidateEmail: e.target.value }))}
-                  className={inputBase}
-                />
-              </div>
-            </div>
-
-            {/* Job picker — always available */}
-            {jobs.length > 0 && (
-              <div className="mb-3">
-                <label className={label}>Link to job posting (optional)</label>
-                <select
-                  value={form.jobPostingId}
-                  onChange={e => setForm(f => ({ ...f, jobPostingId: e.target.value }))}
-                  className={inputBase}
+              <div className="relative flex justify-center px-2">
+                <span
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                    isDarkTheme(theme)
+                      ? 'border-gray-600 bg-gray-900 text-gray-400'
+                      : 'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-400',
+                  )}
                 >
-                  <option value="">No specific job</option>
-                  {jobs.map(job => (
-                    <option key={job.id} value={job.id}>{job.title}</option>
-                  ))}
-                </select>
+                  or
+                </span>
               </div>
-            )}
-
-            <div className="mb-4">
-              <label className={label}>Custom welcome message (optional)</label>
-              <textarea
-                placeholder="Add a personal note to the candidate…"
-                value={form.welcomeMessage}
-                onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                rows={2}
-                className={`${inputBase} resize-none`}
-              />
             </div>
 
-            {error && (
-              <p className="text-red-400 text-sm mb-3">{error}</p>
-            )}
+            <div
+              className={cn(
+                'mb-6 rounded-xl border p-4 sm:p-5',
+                isDarkTheme(theme)
+                  ? 'border-amber-500/25 bg-gray-950/40'
+                  : 'border-amber-100 bg-white dark:border-amber-900/30 dark:bg-gray-950/30',
+              )}
+            >
+              <div className="mb-3 flex items-start gap-2">
+                <div
+                  className={cn(
+                    'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                    isDarkTheme(theme) ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
+                  )}
+                >
+                  <UserPlus className="h-4 w-4" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
+                    Invite someone not on Storm yet
+                  </h5>
+                  <p className={cn('text-xs leading-relaxed', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
+                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add an email if you want Storm to send the invite.
+                  </p>
+                </div>
+              </div>
 
-            <div className="flex gap-2">
-              <button
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={label}>
+                    Candidate name
+                    {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Optional"
+                    value={form.candidateName}
+                    onChange={(e) => setForm((f) => ({ ...f, candidateName: e.target.value }))}
+                    className={inputBase}
+                  />
+                </div>
+                <div>
+                  <label className={label}>
+                    Candidate email
+                    {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Optional — needed to email from Storm"
+                    value={form.candidateEmail}
+                    onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
+                    className={inputBase}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                'border-t pt-5',
+                isDarkTheme(theme) ? 'border-gray-700/70' : 'border-gray-200 dark:border-gray-700',
+              )}
+            >
+              <p
+                className={cn(
+                  'mb-3 text-[10px] font-semibold uppercase tracking-wide',
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
+                )}
+              >
+                Optional details
+              </p>
+              {jobs.length > 0 && (
+                <div className="mb-3">
+                  <label className={label}>Link to job posting (optional)</label>
+                  <select
+                    value={form.jobPostingId}
+                    onChange={(e) => setForm((f) => ({ ...f, jobPostingId: e.target.value }))}
+                    className={inputBase}
+                  >
+                    <option value="">No specific job</option>
+                    {jobs.map((job) => (
+                      <option key={job.id} value={job.id}>
+                        {job.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label className={label}>Custom welcome message (optional)</label>
+                <textarea
+                  placeholder="Add a personal note to the candidate…"
+                  value={form.welcomeMessage}
+                  onChange={(e) => setForm((f) => ({ ...f, welcomeMessage: e.target.value }))}
+                  rows={2}
+                  className={`${inputBase} resize-none`}
+                />
+              </div>
+            </div>
+
+            {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className="w-full flex-1 sm:w-auto"
                 onClick={handleCreate}
                 disabled={creating || !canSubmit}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-medium text-sm transition-colors disabled:opacity-50"
               >
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-                {creating ? 'Creating…' : 'Create & Copy Link'}
-              </button>
-              <button
-                onClick={() => { setShowForm(false); setError(null); resetForm() }}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  isDarkTheme(theme) ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                {creating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4" />
+                )}
+                {creating ? 'Creating…' : 'Create & copy link'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                className="w-full shrink-0 sm:w-auto"
+                onClick={() => {
+                  setShowForm(false)
+                  setError(null)
+                  resetForm()
+                }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Invite list */}
-        {!isCollapsed && <div className="divide-y divide-gray-700/50">
-          {loading ? (
-            <div className="flex items-center justify-center py-10 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
-              <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>Loading outreach…</span>
-            </div>
-          ) : invites.length === 0 ? (
-            <div className="py-10 text-center">
-              <Link2 className={`w-10 h-10 mx-auto mb-3 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}`} />
-              <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                No outreach yet
+        {!isCollapsed && (
+          <div
+            className={cn(
+              'space-y-3',
+              showForm
+                ? 'mt-8 border-t border-gray-200 pt-8 dark:border-gray-700'
+                : 'mt-5',
+            )}
+          >
+            {!loading && invites.length > 0 && (
+              <p
+                className={cn(
+                  'mb-1 text-[10px] font-semibold uppercase tracking-wide',
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
+                )}
+              >
+                Your invites
               </p>
-              <p className={`text-xs mt-1 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                Create your first invite link to bring candidates into your pipeline
-              </p>
-            </div>
-          ) : (
-            displayed.map(invite => (
-              <InviteRow
-                key={invite.id}
-                invite={invite}
-                theme={theme}
-                copiedId={copiedId}
-                copiedMessageId={copiedMessageId}
-                sendingEmailId={sendingEmailId}
-                emailSentId={emailSentId}
-                showEmailInput={showEmailInput}
-                emailInput={emailInput}
-                onCopy={copyToClipboard}
-                onCopyMessage={() => copyInviteTextForSms(invite)}
-                onShowQr={() => setQrInvite(invite)}
-                onCancel={handleCancel}
-                onSendEmail={handleSendEmail}
-                onShowEmailInput={() => {
-                  setShowEmailInput(invite.id)
-                  setEmailInput('')
-                }}
-                onEmailInputChange={setEmailInput}
-                onEmailInputSubmit={() => handleSendEmail(invite, emailInput)}
-                onEmailInputCancel={() => { setShowEmailInput(null); setEmailInput('') }}
-                removingId={removingId}
-                onRemove={handleRemove}
-              />
-            ))
-          )}
-        </div>}
+            )}
+            {loading ? (
+              <div className="flex items-center justify-center gap-2 py-10">
+                <Loader2 className="h-5 w-5 animate-spin text-teal-500" />
+                <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>Loading outreach…</span>
+              </div>
+            ) : invites.length === 0 ? (
+              <div className="py-10 text-center">
+                <Link2 className={`mx-auto mb-3 h-10 w-10 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}`} />
+                <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                  No outreach yet
+                </p>
+                <p className={`mt-1 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
+                  Create your first invite link to bring candidates into your pipeline
+                </p>
+              </div>
+            ) : (
+              displayed.map((invite) => (
+                <InviteRow
+                  key={invite.id}
+                  invite={invite}
+                  theme={theme}
+                  copiedId={copiedId}
+                  copiedMessageId={copiedMessageId}
+                  sendingEmailId={sendingEmailId}
+                  emailSentId={emailSentId}
+                  showEmailInput={showEmailInput}
+                  emailInput={emailInput}
+                  onCopy={copyToClipboard}
+                  onCopyMessage={() => copyInviteTextForSms(invite)}
+                  onShowQr={() => setQrInvite(invite)}
+                  onCancel={handleCancel}
+                  onSendEmail={handleSendEmail}
+                  onShowEmailInput={() => {
+                    setShowEmailInput(invite.id)
+                    setEmailInput('')
+                  }}
+                  onEmailInputChange={setEmailInput}
+                  onEmailInputSubmit={() => handleSendEmail(invite, emailInput)}
+                  onEmailInputCancel={() => {
+                    setShowEmailInput(null)
+                    setEmailInput('')
+                  }}
+                  removingId={removingId}
+                  onRemove={handleRemove}
+                />
+              ))
+            )}
+          </div>
+        )}
 
         {/* Show more */}
         {!isCollapsed && !loading && invites.length > 6 && (
@@ -1011,8 +1149,15 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
       {embedded ? (
         // When embedded inside the parent Blocks & Outreach section,
         // render just header + body — the parent provides the panel chrome.
-        <div>
-          {outreachHeader}
+        <div className="flex min-w-0 w-full max-w-full flex-col">
+          <div
+            className={cn(
+              'mb-5 min-w-0 border-b pb-5',
+              isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200 dark:border-gray-700',
+            )}
+          >
+            {outreachHeader}
+          </div>
           {outreachBody}
         </div>
       ) : (
@@ -1145,182 +1290,198 @@ function InviteRow({
     return `${days}d ago`
   }
 
+  /** Stacked icon + short label so actions fit in a 2×3 grid and never overflow the card. */
+  const shareCell =
+    'flex h-auto min-h-[3.25rem] w-full min-w-0 max-w-full flex-col items-center justify-center gap-1 px-1 py-2 text-center text-[11px] font-semibold leading-tight [&>span]:max-w-full [&>span]:break-words'
+
+  const emailActionLabel = !invite.candidateEmail
+    ? 'Email invite'
+    : invite.emailSentAt
+      ? isSending
+        ? 'Sending…'
+        : isEmailSent
+          ? 'Sent'
+          : 'Resend email'
+      : isSending
+        ? 'Sending…'
+        : isEmailSent
+          ? 'Sent'
+          : 'Email invite'
+
   return (
-    <div className={`px-6 py-4 ${isDarkTheme(theme) ? 'hover:bg-gray-700/20' : 'hover:bg-gray-50/60'} transition-colors`}>
-      <div className="flex items-start justify-between gap-3">
-        {/* Left: info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
+    <div
+      className={cn(
+        'min-w-0 w-full max-w-full overflow-hidden rounded-xl border p-3 transition-colors sm:p-4',
+        isDarkTheme(theme)
+          ? 'border-gray-700/80 bg-gray-900/35 hover:border-gray-600/90'
+          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900/25 dark:hover:border-gray-600',
+      )}
+    >
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="min-w-0">
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             <TypeBadge targetBlockType={invite.targetBlockType} />
             <StatusBadge status={invite.status} />
             {invite.jobTitle && (
-              <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-                · {invite.jobTitle}
-              </span>
+              <span className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>· {invite.jobTitle}</span>
             )}
           </div>
 
-          {/* Candidate info */}
-          <p className={`font-medium text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
             {invite.candidateName || invite.candidateEmail || (
               <span className={isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}>Anonymous invite</span>
             )}
           </p>
           {invite.candidateName && invite.candidateEmail && (
-            <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-              {invite.candidateEmail}
-            </p>
+            <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>{invite.candidateEmail}</p>
           )}
 
-          {/* Meta */}
-          <div className={`flex items-center gap-3 mt-1.5 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
+          <div
+            className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}
+          >
             <span>{timeAgo(invite.createdAt)}</span>
-            {invite.viewCount > 0 && <span>{invite.viewCount} view{invite.viewCount !== 1 ? 's' : ''}</span>}
+            {invite.viewCount > 0 && (
+              <span>
+                {invite.viewCount} view{invite.viewCount !== 1 ? 's' : ''}
+              </span>
+            )}
             {invite.emailSentAt && (
-              <span className="flex items-center gap-1 text-teal-500">
-                <Mail className="w-2.5 h-2.5" />
+              <span className="flex items-center gap-1 text-teal-600 dark:text-teal-400">
+                <Mail className="h-2.5 w-2.5" />
                 Emailed
               </span>
             )}
             {invite.usedByName && (
-              <span className="flex items-center gap-1 text-green-500">
-                <CheckCircle className="w-2.5 h-2.5" />
+              <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <CheckCircle className="h-2.5 w-2.5" />
                 {invite.usedByName}
               </span>
             )}
           </div>
 
-          {/* Inline email input */}
           {showingEmailInput && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 type="email"
                 autoFocus
-                placeholder="Enter email address"
+                placeholder="Candidate email"
                 value={emailInput}
-                onChange={e => onEmailInputChange(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') onEmailInputSubmit(); if (e.key === 'Escape') onEmailInputCancel() }}
-                className={`flex-1 px-2.5 py-1.5 text-xs rounded-lg border ${
+                onChange={(e) => onEmailInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onEmailInputSubmit()
+                  if (e.key === 'Escape') onEmailInputCancel()
+                }}
+                className={`min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 text-xs ${
                   isDarkTheme(theme)
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-500'
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
                 }`}
               />
-              <button
-                onClick={onEmailInputSubmit}
-                disabled={!emailInput}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-medium disabled:opacity-50"
-              >
-                <Send className="w-3 h-3" />
-                Send
-              </button>
-              <button onClick={onEmailInputCancel} className="text-gray-500 hover:text-gray-300">
-                <X className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button type="button" variant="primary" size="sm" onClick={onEmailInputSubmit} disabled={!emailInput.trim()}>
+                  <Send className="h-3.5 w-3.5" />
+                  Send email
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={onEmailInputCancel} aria-label="Cancel">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
-
         </div>
 
-        {/* Right: actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => onCopy(invite.url, invite.id)}
-            title="Copy invite link only"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isCopiedLink
-                ? 'text-green-400'
-                : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
+        <div className="min-w-0 border-t border-gray-200 pt-3 dark:border-gray-700">
+          <p
+            className={cn(
+              'mb-2 text-[10px] font-semibold uppercase tracking-wide',
+              isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
+            )}
           >
-            {isCopiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={onCopyMessage}
-            title="Copy message + link — paste into your texting app (no extra service)"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isCopiedMessage
-                ? 'text-green-400'
-                : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {isCopiedMessage ? <Check className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={onShowQr}
-            title="Show QR code"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-          </button>
-
-          {canAct && (
-            <button
+            Share this invite
+          </p>
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
+            <Button
               type="button"
-              onClick={() => {
-                if (invite.candidateEmail) {
-                  onSendEmail(invite)
-                } else {
-                  onShowEmailInput()
-                }
-              }}
-              disabled={isSending}
-              title={invite.emailSentAt ? 'Re-send email' : 'Send invite email'}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isEmailSent
-                  ? 'text-green-400'
-                  : isSending
-                    ? 'opacity-50 cursor-wait'
-                    : invite.emailSentAt
-                      ? isDarkTheme(theme) ? 'text-teal-500 hover:text-teal-300 hover:bg-gray-700' : 'text-teal-500 hover:text-teal-600 hover:bg-gray-100'
-                      : isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
+              variant="secondary"
+              size="sm"
+              className={cn(shareCell, isCopiedLink && 'border-green-500/40 text-green-700 dark:text-green-400')}
+              onClick={() => onCopy(invite.url, invite.id)}
             >
-              {isSending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isEmailSent ? (
-                <Check className="w-4 h-4" />
-              ) : invite.emailSentAt ? (
-                <RefreshCw className="w-4 h-4" />
-              ) : (
-                <Mail className="w-4 h-4" />
+              {isCopiedLink ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : <Copy className="h-4 w-4 shrink-0" aria-hidden />}
+              <span>{isCopiedLink ? 'Copied' : 'Copy link'}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={cn(shareCell, isCopiedMessage && 'border-green-500/40 text-green-700 dark:text-green-400')}
+              onClick={onCopyMessage}
+              title="Message + link for your texting app"
+            >
+              {isCopiedMessage ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />}
+              <span>{isCopiedMessage ? 'Copied' : 'Copy for text'}</span>
+            </Button>
+
+            <Button type="button" variant="secondary" size="sm" className={shareCell} onClick={onShowQr}>
+              <QrCode className="h-4 w-4 shrink-0" aria-hidden />
+              <span>QR code</span>
+            </Button>
+
+            {canAct && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className={cn(shareCell, isEmailSent && 'border-green-500/40 text-green-700 dark:text-green-400')}
+                disabled={isSending}
+                onClick={() => {
+                  if (invite.candidateEmail) {
+                    onSendEmail(invite)
+                  } else {
+                    onShowEmailInput()
+                  }
+                }}
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : isEmailSent ? (
+                  <Check className="h-4 w-4 shrink-0" aria-hidden />
+                ) : invite.emailSentAt ? (
+                  <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                ) : (
+                  <Mail className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                <span>{emailActionLabel}</span>
+              </Button>
+            )}
+
+            {canAct && (
+              <Button type="button" variant="secondary" size="sm" className={shareCell} onClick={() => onCancel(invite.id)}>
+                <XCircle className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
+                <span>Cancel invite</span>
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={cn(
+                shareCell,
+                'border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/40',
               )}
-            </button>
-          )}
-
-          {canAct && (
-            <button
-              type="button"
-              onClick={() => onCancel(invite.id)}
-              title="Cancel invite (link stops working, row stays until removed)"
-              className={`p-1.5 rounded-lg transition-colors ${
-                isDarkTheme(theme) ? 'text-gray-600 hover:text-red-400 hover:bg-gray-700' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'
-              }`}
+              disabled={isRemoving}
+              onClick={() => onRemove(invite.id)}
             >
-              <XCircle className="w-4 h-4" />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => onRemove(invite.id)}
-            disabled={isRemoving}
-            title="Remove from list"
-            className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-              isDarkTheme(theme)
-                ? 'text-gray-600 hover:text-orange-400 hover:bg-gray-700'
-                : 'text-gray-400 hover:text-orange-600 hover:bg-gray-100'
-            }`}
-          >
-            {isRemoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-          </button>
+              {isRemoving ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              <span>{isRemoving ? '…' : 'Remove'}</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

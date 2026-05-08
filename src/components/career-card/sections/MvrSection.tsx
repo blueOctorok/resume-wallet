@@ -50,6 +50,7 @@ export default function MvrSection({
   const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
   const handlePrimaryClick = () => {
+    if (data.employerPaidScreening) return
     if (isComplete) {
       setShowMvrViewer(true)
       return
@@ -59,6 +60,7 @@ export default function MvrSection({
 
   const showSelfButton =
     isCareerCardOwnerMode(mode) &&
+    !data.employerPaidScreening &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
@@ -89,7 +91,20 @@ export default function MvrSection({
         )}
       </div>
 
-      {isComplete && data.results ? (
+      {isComplete && data.employerPaidScreening ? (
+        <div className='space-y-2'>
+          <p className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>
+            <span className='font-medium text-emerald-500 dark:text-emerald-400'>Complete.</span>{' '}
+            An employer ordered this MVR. They receive the full motor vehicle report; you see status
+            here only.
+          </p>
+          {(data.licenseState || dateStr) && (
+            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+              {[data.licenseState, dateStr && `Ordered ${dateStr}`].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+      ) : isComplete && data.results ? (
         <div className='grid grid-cols-3 gap-3'>
           <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
             <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</p>
@@ -127,7 +142,7 @@ export default function MvrSection({
       ) : (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
           No MVR ordered yet.{' '}
-          {isCareerCardOwnerMode(mode) && onNavigateToOrder && (
+          {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
             <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
               Order one
             </button>

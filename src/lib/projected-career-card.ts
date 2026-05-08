@@ -44,7 +44,15 @@ const EMPTY_SECTION_DATA: Record<string, unknown> = {
   'developer-resume': EMPTY_STORM_RESUME_CARD,
   'general-resume': EMPTY_STORM_RESUME_CARD,
   'driver-dot-application': { id: '', status: 'empty', isComplete: false, createdAt: '' } satisfies DotAppData,
-  'driver-mvr': { orderId: '', orderStatus: 'none', licenseState: '', orderedAt: '', completedAt: null, results: null } satisfies MvrData,
+  'driver-mvr': {
+    orderId: '',
+    orderStatus: 'none',
+    licenseState: '',
+    orderedAt: '',
+    completedAt: null,
+    results: null,
+    employerPaidScreening: false,
+  } satisfies MvrData,
   'driver-psp': {
     orderId: '',
     orderStatus: 'none',
@@ -52,6 +60,7 @@ const EMPTY_SECTION_DATA: Record<string, unknown> = {
     orderedAt: '',
     completedAt: null,
     resultSummary: null,
+    employerPaidScreening: false,
   } satisfies PspData,
   'driver-cdl-credentials': { cdlNumber: null, cdlState: null, cdlClass: null, cdlExpiration: null, endorsements: [], restrictions: [] } satisfies CdlData,
   'developer-portfolio': { portfolioUrl: null } satisfies PortfolioData,
@@ -429,7 +438,7 @@ async function fetchPspData(
   // (employer view uses `employerCompanyPsp` for the viewer's company only).
   let ordersQuery = supabase
     .from('psp_orders')
-    .select('id, status, dl_state, created_at, completed_at')
+    .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
   if (contactMode === 'public' || contactMode === 'employer') {
     ordersQuery = ordersQuery.is('ordered_by_company_id', null)
@@ -451,6 +460,8 @@ async function fetchPspData(
     orders.find((o) => terminal(o.status) && resultByOrderId.has(o.id)) ?? orders[0]
 
   const row = resultByOrderId.get(order.id)
+  const employerPaidScreening =
+    contactMode === 'self' && Boolean((order as { ordered_by_company_id?: string | null }).ordered_by_company_id)
   return {
     orderId: order.id,
     orderStatus: order.status,
@@ -458,6 +469,7 @@ async function fetchPspData(
     orderedAt: order.created_at,
     completedAt: order.completed_at,
     resultSummary: row ? { resultStatus: row.result_status } : null,
+    employerPaidScreening,
   }
 }
 
@@ -468,7 +480,7 @@ async function fetchMvrData(
 ): Promise<MvrData | null> {
   let ordersQuery = supabase
     .from('mvr_orders')
-    .select('id, status, dl_state, created_at, completed_at')
+    .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
   if (contactMode === 'public' || contactMode === 'employer') {
     ordersQuery = ordersQuery.is('ordered_by_company_id', null)
@@ -490,6 +502,8 @@ async function fetchMvrData(
     orders.find((o) => terminal(o.status) && resultByOrderId.has(o.id)) ?? orders[0]
 
   const row = resultByOrderId.get(order.id)
+  const employerPaidScreening =
+    contactMode === 'self' && Boolean((order as { ordered_by_company_id?: string | null }).ordered_by_company_id)
   return {
     orderId: order.id,
     orderStatus: order.status,
@@ -504,6 +518,7 @@ async function fetchMvrData(
           violationCount: row.violation_count,
         }
       : null,
+    employerPaidScreening,
   }
 }
 
