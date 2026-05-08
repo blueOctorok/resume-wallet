@@ -673,14 +673,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
-      {/* xl+: wallet (rows 1–2) | priority (row1) + rest (row2) col2 | Stormi col3 rows 1–2.
-          Right column width is `auto` when Stormi is collapsed so the main column claims the
-          freed space — same behavior as the left wallet rail's `auto` track. Below xl: flex
-          column = priority → Stormi → rest so mobile is usable without scrolling past
-          everything first. */}
+      {/* xl+: wallet col1 + priority (row1) + Stormi col3, then rest (row2 col2 only).
+          Implicit grid rows — no `grid-rows` template — so row 1 sizes to its content and
+          row 2 sizes to the rest of main. Rails sit in row 1 only (`xl:row-start-1`, no
+          row-span); without that they were visually pushed below the row-1 main column.
+          Right column width is `auto` when Stormi is collapsed so main claims the freed
+          space. Below xl: flex column = priority → Stormi → rest. */}
       <div
         className={cn(
-          'flex flex-col gap-8 xl:grid xl:grid-rows-[auto_1fr] xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0',
+          'flex flex-col gap-8 xl:grid xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0',
           stormiRailOpen
             ? 'xl:grid-cols-[auto_minmax(0,1fr)_26rem]'
             : 'xl:grid-cols-[auto_minmax(0,1fr)_auto]',
@@ -689,10 +690,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         {data.company &&
           (walletRailOpen ? (
             <aside
-              // Wallet uses VaultCredentialChrome (tile chamfer + drop-shadow filter), which
-              // sits visually a touch lower than HubSectionPanel's flat top. `xl:-mt-1` nudges
-              // it up so its top edge lines up with the company panel in the center column.
-              className="hidden w-80 shrink-0 self-start p-0 xl:-mt-1 xl:sticky xl:top-24 xl:col-start-1 xl:row-span-2 xl:row-start-1 xl:block xl:self-start"
+              // row-start-1 only (NO row-span) — multi-row spanning was visually pushing the
+              // rail down vs the main row-1 column. Sticky keeps it visible while scrolling
+              // the taller row-2 main content underneath.
+              className="hidden w-80 shrink-0 self-start p-0 xl:sticky xl:top-24 xl:col-start-1 xl:row-start-1 xl:block xl:self-start"
               aria-label="Company wallet"
             >
               <VaultCredentialChrome
@@ -737,7 +738,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           ) : (
             <aside
               className={cn(
-                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-1 xl:row-span-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-1 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
                 'rounded-2xl border shadow-sm backdrop-blur-sm',
                 theme === 'ink'
                   ? 'border-zinc-600/80 bg-zinc-900/95'
@@ -1009,9 +1010,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           (stormiRailOpen ? (
             <aside
               id="employer-hub-stormi-panel"
-              // No mt — Stormi uses the same HubSectionPanel chrome as the company panel in
-              // the main column, so their top edges line up exactly when both start at row-1.
-              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:block xl:self-start"
+              // row-start-1 only (NO row-span) — same fix as wallet rail. The row-span-2 was
+              // visually offsetting both rails below the row-1 main column.
+              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-3 xl:row-start-1 xl:block xl:self-start"
               aria-label="Ask Stormi hiring coach"
             >
               <HubSectionPanel
@@ -1067,7 +1068,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <aside
               id="employer-hub-stormi-panel"
               className={cn(
-                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-3 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
                 'rounded-2xl border shadow-sm backdrop-blur-sm',
                 theme === 'ink'
                   ? 'border-zinc-600/80 bg-zinc-900/95'
