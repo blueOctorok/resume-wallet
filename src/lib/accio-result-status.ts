@@ -8,6 +8,12 @@
  *   contact MRO | lab-reject | test-canceled | unobtainable |
  *   previous-positive | pass | fail
  *
+ * filledStatus values per Accio docs: `filled` (success), `unfilled` (vendor
+ * couldn't fulfill — terminal), `failed` (terminal error), `in progress`
+ * (transient). We treat anything other than `in progress` as terminal so
+ * orders never get stuck pending forever (which also broke email dedup —
+ * see notify-screening-complete.ts).
+ *
  * The previous code checked `filledCode === 'verified'` — a value Accio never
  * sends — so EVERY completed report was being silently stamped `needs_review`.
  * That's the bug this module exists to never let recur.
@@ -61,21 +67,35 @@ function normalize(value?: string | null): string {
   return (value ?? '').trim().toLowerCase()
 }
 
+// Only `in progress` is a transient filledStatus. Everything else
+// (`filled`, `unfilled`, `failed`, missing) is terminal — leaving an order
+// `pending` after a webhook fires breaks both the UI and the email dedup
+// guard (see notify-screening-complete.ts: `previousStatus !== 'pending'`).
+const TRANSIENT_FILLED_STATUSES = new Set(['in progress', 'inprogress'])
+
 export function deriveScreeningStatus(
   input: DeriveScreeningStatusInput,
 ): DeriveScreeningStatusResult {
   const filledStatus = normalize(input.filledStatus)
   const code = normalize(input.filledCode)
 
+  // Only "in progress" keeps the order pending. The webhook handler short-circuits
+  // these before reaching here, but we double-check for safety.
+  if (TRANSIENT_FILLED_STATUSES.has(filledStatus)) {
+    return { status: 'pending', outcome: null }
+  }
+
   // If Accio explicitly says the order failed, mirror that.
   if (filledStatus === 'failed') {
     return { status: 'failed', outcome: code === 'unknown' ? 'unknown' : null }
   }
 
-  // Anything other than `filled` (e.g. "in progress", "unfilled") is still pending.
-  // We only stamp a completion status when Accio confirms the work is done.
-  if (filledStatus && filledStatus !== 'filled') {
-    return { status: 'pending', outcome: null }
+  // `unfilled` = "vendor was unable to fulfill". Terminal, not transient.
+  // Surface as failed/unknown so admin can adjudicate and re-order if needed.
+  // Common cause: FMCSA has no PSP records for the driver (new CDL holder,
+  // no carrier-reported events) or the source rejected the identity match.
+  if (filledStatus === 'unfilled') {
+    return { status: 'failed', outcome: 'unknown' }
   }
 
   // Vendor flagged for human review — keep the order in needs_review even on

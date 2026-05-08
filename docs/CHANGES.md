@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP/MVR `unfilled` status fix + email dedup hardening** (May 2026)
+
+Real-world bug surfaced by Jason Peterson's PSP order (placed via Pace Drivers employer account on Accio's `testaccount`). The order showed `pending` in the hub forever AND triggered three duplicate "report ready" emails to the employer. Database forensics showed Accio actually returned a complete result with `filledStatus="unfilled" filledCode="unknown"` — meaning the test account couldn't actually fulfill the FMCSA query and gave up.
+
+### Two cascading bugs
+
+**Bug #1 — `unfilled` was treated as "still pending"** (`src/lib/accio-result-status.ts`):
+
+The mapper checked `if (filledStatus !== 'filled') return { status: 'pending' }` — based on a wrong assumption that anything non-`filled` was transient. Per Accio docs, only `in progress` is transient; `unfilled` and `failed` are both terminal states. The result was that orders with terminal `unfilled` responses got their result XML saved but never moved out of `pending`.
+
+**Bug #2 — Email dedup guard depended on the broken status flip** (`src/lib/notify-screening-complete.ts`):
+
+The "send once" guard reads `if (params.previousStatus !== 'pending') return`. Because Bug #1 left the row at `pending` forever, every Accio webhook retry read `previousStatus = 'pending'` and fired another email. Three retries → three emails. Classic cascading-failure pattern: the dedup logic was correct in isolation but assumed an upstream invariant that another bug had broken.
+
+### Fixes
+
+| File | Change |
+|---|---|
+| `src/lib/accio-result-status.ts` | Added `TRANSIENT_FILLED_STATUSES` set with only `in progress` / `inprogress`. Explicit branch: `unfilled` → `{ status: 'failed', outcome: 'unknown' }`. Comment block explains why each non-filled status maps the way it does. |
+| `src/lib/process-psp-accio-webhook.ts` | Wrapped `notifyScreeningReportDelivered` call in `if (becameTerminal)` guard at the call site (belt-and-suspenders with the in-function guard). Prevents Accio retries from sending duplicate emails even if the status mapping ever silently maps back to pending again. |
+| `src/app/api/mvr/webhook/route.ts` | Same `becameTerminal` guard at the MVR notify call site. Both screening webhooks now consistent. |
+| `supabase/migrations/082_backfill_unfilled_screenings.sql` | (1) Replaces `storm_derive_screening_status()` PL/pgSQL helper from migration 079 with the corrected mapping. (2) Re-runs the derivation against any `pending` mvr_orders / psp_orders rows whose `result_xml` contains a terminal filledStatus. Idempotent. Unsticks Jason Peterson's order and any other rows hit by the same bug. |
+
+### How to deploy
+
+1. Push commit (Vercel deploys automatically).
+2. **Manually run `082_backfill_unfilled_screenings.sql` in Supabase SQL editor** — MCP is read-only so I can't run it for you.
+3. Verify Jason Peterson's PSP order (`f395e1a9-d5b0-46e6-abc0-86293cc2b608`) now shows `status=failed`, `result_outcome=unknown` instead of stuck pending.
+4. After Key flips you to the prod `pacedrivers` account, real PSP queries should return `filledStatus="filled"` with proper `no hits` / `hits` codes — those flow through the existing happy path. Drivers FMCSA has no data on (new CDL holders, no carrier-reported events) will now correctly surface as failed/unknown rather than stuck pending.
+
+### Pattern recognition for future bugs
+
+This is a textbook **cascading failure**: one logic bug (status mapping) didn't just produce wrong data, it broke an unrelated invariant (the email dedup) that depended on the data being correct. When designing dedup/idempotency guards, ask: "what if the upstream state I'm reading is wrong?" If the answer is "we send duplicates," add a second independent guard. That's why we now have BOTH the in-function guard (`previousStatus !== 'pending'`) AND the call-site guard (`previousStatus === 'pending' && nextStatus !== 'pending'`).
+
+---
+
 ## **MVR report parity with Key — Phase A (parser + UI)** (May 2026)
 
 User shared a real Key Background Screening MVR (Jose Vasquez, Kansas) and noted Storm's MVR rendering was missing big chunks compared to Key's. I queried our actual Accio response for our latest test order and found **Accio is already returning ~90% of what Key shows** — we just weren't parsing or rendering it.

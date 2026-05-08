@@ -420,16 +420,23 @@ export async function POST(request: NextRequest) {
 
     console.log('[MVR WEBHOOK] MVR result processed successfully:', mvrResult.id)
 
-    void notifyScreeningReportDelivered(supabaseService, {
-      kind: 'mvr',
-      previousStatus: previousOrderStatus,
-      driverUserId: mvrOrder.driver_user_id,
-      ordered_by_company_id: mvrOrder.ordered_by_company_id,
-      ordered_by_user_id: mvrOrder.ordered_by_user_id,
-      ordered_by_employer: mvrOrder.ordered_by_employer,
-      employer_company_id: mvrOrder.employer_company_id,
-      employer_user_id: mvrOrder.employer_user_id,
-    }).catch((err) => console.warn('[MVR WEBHOOK] Screening notify non-fatal:', err))
+    // Only notify on the first transition out of `pending`. Guarding at the call
+    // site (in addition to inside notifyScreeningReportDelivered) ensures Accio
+    // webhook retries cannot fire duplicate emails — see PSP webhook for the
+    // bug history (Jason Peterson got 3 "report ready" emails for one stuck order).
+    const becameTerminal = previousOrderStatus === 'pending' && nextStatus !== 'pending'
+    if (becameTerminal) {
+      void notifyScreeningReportDelivered(supabaseService, {
+        kind: 'mvr',
+        previousStatus: previousOrderStatus,
+        driverUserId: mvrOrder.driver_user_id,
+        ordered_by_company_id: mvrOrder.ordered_by_company_id,
+        ordered_by_user_id: mvrOrder.ordered_by_user_id,
+        ordered_by_employer: mvrOrder.ordered_by_employer,
+        employer_company_id: mvrOrder.employer_company_id,
+        employer_user_id: mvrOrder.employer_user_id,
+      }).catch((err) => console.warn('[MVR WEBHOOK] Screening notify non-fatal:', err))
+    }
 
     return NextResponse.json({
       success: true,

@@ -187,14 +187,23 @@ export async function processPspAccioWebhookCompletion(
     })
     .eq('id', pspOrder.id)
 
-  void notifyScreeningReportDelivered(supabase, {
-    kind: 'psp',
-    previousStatus: previousOrderStatus,
-    driverUserId: pspOrder.driver_user_id,
-    ordered_by_company_id: pspOrder.ordered_by_company_id,
-    ordered_by_user_id: pspOrder.ordered_by_user_id,
-    ordered_by_employer: pspOrder.ordered_by_employer,
-  }).catch((err) => console.warn('[PSP WEBHOOK] Screening notify non-fatal:', err))
+  // Only notify on the first transition out of `pending`. We double-check
+  // BOTH conditions here (previous was pending AND we're moving to a
+  // terminal status) so an Accio webhook retry can't fire duplicate emails
+  // even if the status mapping ever silently maps back to `pending` again.
+  // Bug history: when `unfilled` was incorrectly treated as `pending`, every
+  // Accio retry sent another "report ready" email — Jason Peterson got 3.
+  const becameTerminal = previousOrderStatus === 'pending' && nextStatus !== 'pending'
+  if (becameTerminal) {
+    void notifyScreeningReportDelivered(supabase, {
+      kind: 'psp',
+      previousStatus: previousOrderStatus,
+      driverUserId: pspOrder.driver_user_id,
+      ordered_by_company_id: pspOrder.ordered_by_company_id,
+      ordered_by_user_id: pspOrder.ordered_by_user_id,
+      ordered_by_employer: pspOrder.ordered_by_employer,
+    }).catch((err) => console.warn('[PSP WEBHOOK] Screening notify non-fatal:', err))
+  }
 
   if (!pspOrder.ordered_by_company_id) {
     // Surface the parsed summary (crash/inspection/oos counts + brief snippet)
