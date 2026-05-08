@@ -317,15 +317,26 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       }
     }
 
-    // Extract medical certificate info (if present)
-    // First try structured tags
-    result.medicalCertExpiration = extractXmlValue(xml, 'medical_cert_expiration')
-    result.medicalCertStatus = extractXmlValue(xml, 'medical_cert_status')
-    
-    // If not found in structured tags, try to extract from <text> block
-    // Accio puts medical info in plain text like:
-    // "MEDICAL CERTIFICATE INFORMATION   Issue: 06/04/2024   Expiration: 06/02/2026"
-    // "Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE."
+    // Medical certificate info (only meaningful for CDL drivers — DOT med card
+    // is required for CMV operators per 49 CFR §391.41-43).
+    //
+    // Two-step extract:
+    //   1. Try Accio's structured tags (some states populate them directly).
+    //   2. If absent, fall back to the human-readable text block — but ONLY
+    //      after scoping to the "MEDICAL CERTIFICATE INFORMATION" section.
+    //      A previous version ran the regexes against the entire text block,
+    //      which on Class D drivers (no med cert) silently grabbed the
+    //      LICENSE's "Status: VALID" and labelled it the med cert status.
+    //      See `extractMedicalInfoFromText` for details.
+    const rawStructuredStatus = extractXmlValue(xml, 'medical_cert_status')
+    const rawStructuredExpiration = extractXmlValue(xml, 'medical_cert_expiration')
+    if (isMeaningfulMedCertStatus(rawStructuredStatus)) {
+      result.medicalCertStatus = rawStructuredStatus
+    }
+    if (rawStructuredExpiration) {
+      result.medicalCertExpiration = rawStructuredExpiration
+    }
+
     if (!result.medicalCertExpiration || !result.medicalCertStatus) {
       try {
         const textBlock = extractXmlValue(xml, 'text')
@@ -337,15 +348,17 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
           if (medicalInfo.status && !result.medicalCertStatus) {
             result.medicalCertStatus = medicalInfo.status
           }
-          if (medicalInfo.issueDate) {
+          if (medicalInfo.issueDate && !result.medicalCertIssueDate) {
             result.medicalCertIssueDate = medicalInfo.issueDate
           }
-          if (medicalInfo.selfCertification) {
+          if (medicalInfo.selfCertification && !result.medicalCertSelfCertification) {
             result.medicalCertSelfCertification = medicalInfo.selfCertification
           }
         }
       } catch (textParseError) {
-        // Non-critical - just log and continue
+        // Non-critical — log and continue. The structured tags above (when
+        // present) are the canonical source; the text block is only a fallback
+        // for state DMVs that don't populate structured fields.
         console.warn('[ACCIO PARSER] Could not parse medical info from text block:', textParseError)
       }
     }
@@ -696,10 +709,81 @@ function extractMvrSuspensions(xml: string): Suspension[] {
 }
 
 /**
- * Extract medical certificate info from plain text block
- * Parses text like:
- * "MEDICAL CERTIFICATE INFORMATION   Issue: 06/04/2024   Expiration: 06/02/2026"
- * "Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE."
+ * Allow-list of status values that mean "this driver actually has a real DOT
+ * medical certificate." Conservative on purpose — we'd rather hide a med cert
+ * we don't recognize than display the LICENSE's `Status: VALID` as a med card
+ * (the original Class D bug). Add new vocab here as we see it from real
+ * Accio fills.
+ *
+ * NOT in this set on purpose:
+ *  - "VALID" / "SUSPENDED" / "REVOKED" / "CANCELLED" / "EXPIRED" — those are
+ *    license statuses, not med cert statuses. If they show up in the med cert
+ *    field it's the bug we're patching.
+ *  - "NOT CERTIFIED" / "NOT REQUIRED" / "NONE" / "N/A" / "UNKNOWN" — Class D
+ *    and other non-CDL drivers.
+ */
+const VALID_MED_CERT_STATUSES = new Set([
+  'CERTIFIED',
+  'EXEMPT',
+  'EXEMPT INTRASTATE',
+  'EXEMPT INTERSTATE',
+  'VOLUNTARY',
+])
+
+// Plain boolean return (not a type predicate) on purpose: a non-meaningful
+// status is still a string, so we don't want callers' `else` branches to
+// narrow `status` to `never`.
+function isMeaningfulMedCertStatus(value: string | null | undefined): boolean {
+  if (!value) return false
+  const normalized = value.trim().toUpperCase()
+  if (!normalized) return false
+  if (VALID_MED_CERT_STATUSES.has(normalized)) return true
+  // Heuristic: anything starting with "CERT" (CERTIFIED, CERTIFICATE ON FILE,
+  // CERTIFIED-MEDICAL VARIANCE, etc.) is med cert vocabulary. Pulled out so
+  // we don't have to keep enumerating every state's exact phrasing.
+  return normalized.startsWith('CERT')
+}
+
+/**
+ * True iff this driver has a real DOT medical certificate on file. Use this
+ * to gate the entire "Medical Certificate" section in the UI and PDF — for
+ * Class D / non-CDL drivers (and existing rows with bogus "VALID" data left
+ * over from the May 2026 parser bug), this returns false so the section is
+ * hidden instead of misrepresenting license info as a med card.
+ */
+export function hasValidMedicalCert(
+  status: string | null | undefined,
+  expiration: string | null | undefined,
+): boolean {
+  if (isMeaningfulMedCertStatus(status)) return true
+  // Some state DMVs return only the expiration and leave status blank. Accept
+  // a bare expiration only if there's no conflicting bad status (we don't want
+  // to "rescue" a bogus row that has status="VALID" + expiration=license-exp).
+  if (status && status.trim()) return false
+  return Boolean(expiration && expiration.trim())
+}
+
+/**
+ * Extract medical certificate fields from Accio's plain-text report block.
+ *
+ * Accio structures each report as alternating section headers separated by
+ * 100-underscore rules, e.g.:
+ *
+ *   ___________________________________________________________________
+ *      MEDICAL CERTIFICATE INFORMATION
+ *   ___________________________________________________________________
+ *   Description: ...   Issue: 06/04/2024   Expiration: 06/02/2026
+ *   Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE.
+ *   ___________________________________________________________________
+ *      VIOLATIONS
+ *   ...
+ *
+ * We MUST scope every regex to the text BETWEEN the medical header and the
+ * next underscore rule. A previous version ran each regex against the full
+ * text block — on Class D drivers (whose medical section says "NOT CERTIFIED"
+ * with empty Issue/Expiration), the unscoped `Status:` regex grabbed the
+ * LICENSE section's `Status: VALID` instead, falsely showing the driver as
+ * having a valid med card.
  */
 function extractMedicalInfoFromText(text: string): {
   issueDate?: string
@@ -713,32 +797,43 @@ function extractMedicalInfoFromText(text: string): {
     status?: string
     selfCertification?: string
   } = {}
-  
-  // Look for "Issue: MM/DD/YYYY"
-  const issueMatch = text.match(/Issue:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
-  if (issueMatch) {
-    result.issueDate = issueMatch[1]
-  }
-  
-  // Look for "Expiration: MM/DD/YYYY"
-  const expirationMatch = text.match(/Expiration:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
-  if (expirationMatch) {
-    result.expiration = expirationMatch[1]
-  }
-  
-  // Look for "Status: CERTIFIED" or similar
-  // Pattern: "Status:" followed by whitespace and then a word
-  const statusMatch = text.match(/Status:\s*([A-Z]+)/i)
+
+  // 1. Find the medical block. Header line is "MEDICAL CERTIFICATE INFORMATION"
+  //    sandwiched between underscore rules. We grab everything up to the next
+  //    rule of >=20 underscores (real reports use 100 but we're tolerant).
+  const blockMatch = text.match(
+    /MEDICAL CERTIFICATE INFORMATION[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
+  )
+  if (!blockMatch) return result
+  const block = blockMatch[1]
+
+  // 2. Issue: MM/DD/YYYY  (scoped — won't pick up "Issued: ..." from license)
+  const issueMatch = block.match(/Issue:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
+  if (issueMatch) result.issueDate = issueMatch[1]
+
+  // 3. Expiration: MM/DD/YYYY  (scoped — won't pick up "Expires: ..." from license)
+  const expirationMatch = block.match(/Expiration:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
+  if (expirationMatch) result.expiration = expirationMatch[1]
+
+  // 4. Status: ...  Capture multi-word values like "NOT CERTIFIED" by reading
+  //    until either 2+ spaces (Accio's column separator) or end of line. Then
+  //    drop "no med cert" sentinels so we don't render them as a real status.
+  const statusMatch = block.match(/Status:\s+([^\n]*?)(?=\s{2,}\S|\s*$)/im)
   if (statusMatch) {
-    result.status = statusMatch[1]
+    const raw = statusMatch[1].trim()
+    if (isMeaningfulMedCertStatus(raw)) {
+      result.status = raw.toUpperCase()
+    }
   }
-  
-  // Look for "Self Certificate: NON-EXCEPTED INTERSTATE" or similar
-  const selfCertMatch = text.match(/Self Certificate:\s*([A-Z\-\s]+)(?:\.|$)/i)
+
+  // 5. Self Certificate: ... (e.g. "NON-EXCEPTED INTERSTATE"). Empty value on
+  //    Class D drivers — skip when blank.
+  const selfCertMatch = block.match(/Self Certificate:\s*([^\n]*?)(?:\.|\n|$)/i)
   if (selfCertMatch) {
-    result.selfCertification = selfCertMatch[1].trim()
+    const v = selfCertMatch[1].trim()
+    if (v) result.selfCertification = v
   }
-  
+
   return result
 }
 

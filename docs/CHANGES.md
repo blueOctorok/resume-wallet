@@ -4,6 +4,48 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR medical certificate: Class D bug** (May 2026)
+
+Class D (non-CDL) drivers were showing **"Valid medical certificate"** on their MVR. Class D drivers don't carry a DOT med card — the field shouldn't render at all. This was on our end.
+
+### Root cause
+
+`extractMedicalInfoFromText` in [`src/lib/accio-xml-parser.ts`](src/lib/accio-xml-parser.ts) ran four regexes against the **entire** Accio report text block when the structured `<medical_cert_*>` tags were absent. Accio's text block looks like (real production sample, Class D driver):
+
+```
+   LICENSE AND PERMIT INFORMATION
+___________________________________________________________________
+License: PERSONAL    Orig. Issued:     Issued: 11/20/2023    Expires: 09/18/2031
+Status: VALID
+Class: D - OPERATOR
+___________________________________________________________________
+   MEDICAL CERTIFICATE INFORMATION
+___________________________________________________________________
+Description: MEDICAL CERTIFICATE INFORMATION (CDL MED CERT NOT CERTIFIED)   Issue:    Expiration:
+Status:   NOT CERTIFIED   Self Certificate:
+___________________________________________________________________
+```
+
+The medical section's `Issue:` / `Expiration:` are empty, but the unscoped `/Status:\s*([A-Z]+)/i` matched the **first** `Status:` in the text — which is the **license** status `VALID`. We dumped that into `medical_cert_status` and the modal then rendered `(medicalCertStatus || medicalCertExpiration) → render section`, so the LICENSE's `VALID` showed up labeled as the medical cert status. Same bug class as the screening overhaul: **valid but wrong**, no errors thrown.
+
+### Fix (defense in depth)
+
+1. **Scope the parser to the medical block.** `extractMedicalInfoFromText` now finds `MEDICAL CERTIFICATE INFORMATION` followed by an underscore rule, captures everything up to the **next** rule, and runs all four regexes only inside that substring. The status regex now captures multi-word values like `NOT CERTIFIED` (was previously truncating to just `NOT`).
+2. **Allow-list, not deny-list, for valid med cert statuses.** New `isMeaningfulMedCertStatus` recognizes `CERTIFIED`, `EXEMPT`, `EXEMPT INTRASTATE/INTERSTATE`, `VOLUNTARY`, and any value starting with `CERT*`. Anything else — including `VALID`, `SUSPENDED`, `NOT CERTIFIED`, `NONE`, `N/A` — is treated as "no med card on file." Conservative on purpose: hiding an unfamiliar status is better than mislabeling license info as a med card.
+3. **`hasValidMedicalCert(status, expiration)`** exported helper. `MvrViewModal` and `MvrReportPdf` now gate the entire medical section on this helper instead of the loose `(status || expiration)` check.
+4. **Same filter at structured-tag parse time.** When Accio sends `<medical_cert_status>NOT CERTIFIED</medical_cert_status>` we now skip writing it to the result, so the storage layer never holds a sentinel string.
+5. **Backfill migration `081_backfill_mvr_medical_cert.sql`.** Three-pass cleanup of existing `mvr_results` rows: (a) NULL `medical_cert_status` when it equals a license-status word (`VALID`, `SUSPENDED`, `REVOKED`, `CANCELLED`, `EXPIRED`, etc.); (b) NULL `medical_cert_expiration` when it's identical to that row's own `license_expiration_date` (the misattribution fingerprint); (c) NULL "no med cert" sentinels (`NOT CERTIFIED`, `NONE`, `N/A`, etc.) so absence is uniformly represented as `NULL`. Verified against real production data — the one existing offending row has `medical_cert_status="VALID"` matching the row's `license_status="VALID"`, exactly the bug fingerprint.
+
+### Migration to apply
+
+`supabase/migrations/081_backfill_mvr_medical_cert.sql` — runs after the screening overhaul migrations 078–080.
+
+### Why this kept happening
+
+Two related bug-class patterns: (1) **unscoped regex against vendor text** (the medical fix today + the screening status fix earlier this week), and (2) **OR-gated rendering of fields that share a parser** ("show this section if any field is set" — when one of those fields can be silently wrong, the entire section misleads). Going forward: any new vendor text parsing must scope to a known section header, and any conditional UI section that shares a parser with other data must gate on a positive marker (real status value, real on-file flag), not on "any field is non-null."
+
+---
+
 ## **Storm Screening Pipeline Overhaul — MVR + PSP** (May 2026)
 
 End-to-end rebuild of the MVR/PSP screening flow. Two correctness bugs were silently breaking every order, the PSP parser was a stub, and the candidate-facing report was a `window.print()` HTML hack. After this change, screenings come back in **minutes** instead of hours, complete as **`completed` + `result_outcome`** (not `needs_review`), and download as a **Storm-branded server-rendered PDF**.

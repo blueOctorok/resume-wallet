@@ -15,6 +15,7 @@ import {
   outcomeLabel,
   type ScreeningOutcome,
 } from '@/lib/accio-result-status'
+import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 
 interface MvrViewModalProps {
   isOpen: boolean
@@ -662,8 +663,12 @@ export default function MvrViewModal({
                     </div>
                   </div>
 
-                  {/* Medical Certificate */}
-                  {(mvrResult.medicalCertExpiration || mvrResult.medicalCertStatus) && (
+                  {/* Medical Certificate — only render when the driver actually
+                      has a real DOT med cert on file. `hasValidMedicalCert` drops
+                      Class D / non-CDL drivers (status "NOT CERTIFIED" or empty)
+                      so we don't display the LICENSE's "Status: VALID" mislabeled
+                      as a med card. See accio-xml-parser.ts for the rule. */}
+                  {hasValidMedicalCert(mvrResult.medicalCertStatus, mvrResult.medicalCertExpiration) && (
                     <div className={`rounded-xl overflow-hidden ${
                       isDark 
                         ? 'bg-gray-800/50 border border-gray-700/50' 

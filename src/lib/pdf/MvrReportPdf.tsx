@@ -31,6 +31,7 @@ import {
   outcomeLabel,
   type ScreeningOutcome,
 } from '@/lib/accio-result-status'
+import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 
 export interface MvrReportPdfMeta {
   /** Storm internal order id (uuid) — printed in footer + cover. */
@@ -297,11 +298,11 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
           )}
         </Section>
 
-        {/* Medical certificate */}
-        {parsed.medicalCertExpiration ||
-        parsed.medicalCertStatus ||
-        parsed.medicalCertIssueDate ||
-        parsed.medicalCertSelfCertification ? (
+        {/* Medical certificate — only render for drivers who actually hold a
+            real DOT med card. Class D / non-CDL drivers' med section says
+            "NOT CERTIFIED" with empty dates; we hide it instead of relabeling
+            license fields as a med cert. See accio-xml-parser.ts. */}
+        {hasValidMedicalCert(parsed.medicalCertStatus, parsed.medicalCertExpiration) ? (
           <Section heading="Medical Certificate">
             <View style={stormPdfStyles.kvGrid}>
               <KeyValue label="Status" value={parsed.medicalCertStatus} />
