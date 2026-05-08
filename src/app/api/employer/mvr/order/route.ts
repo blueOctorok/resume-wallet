@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { companyCanOrderMvr } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
+import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 /**
  * POST /api/employer/mvr/order
@@ -22,7 +23,7 @@ import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
  *   firstName        string
  *   lastName         string
  *   dob              string   YYYY-MM-DD
- *   ssn              string   last 4 digits only
+ *   ssn              string   full 9-digit SSN (digits only); not persisted
  *   address          string
  *   city             string
  *   state            string
@@ -68,6 +69,14 @@ export async function POST(request: NextRequest) {
       .filter(f => !body[f])
     if (missing.length > 0) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
+    }
+
+    const normalizedSsn = normalizeSsnDigits(String(ssn))
+    if (!isValidSsn(normalizedSsn)) {
+      return NextResponse.json(
+        { error: 'A full 9-digit SSN is required. Last-4 forces Accio onto the slow applicant-portal verification path.' },
+        { status: 400 },
+      )
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -208,7 +217,7 @@ export async function POST(request: NextRequest) {
       lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn,
+      ssn: normalizedSsn,
       dob,
       gender,
       address,

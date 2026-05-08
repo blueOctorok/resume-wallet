@@ -4,6 +4,135 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR report parity with Key — Phase A (parser + UI)** (May 2026)
+
+User shared a real Key Background Screening MVR (Jose Vasquez, Kansas) and noted Storm's MVR rendering was missing big chunks compared to Key's. I queried our actual Accio response for our latest test order and found **Accio is already returning ~90% of what Key shows** — we just weren't parsing or rendering it.
+
+### Gap analysis (against real Accio XML, not docs)
+
+| Field | In Accio XML? | Was rendered? |
+|---|---|---|
+| Sex / Weight / Height / Eyes / Hair / Donor | Yes — text block | **No** |
+| Computed age | Yes — `<dob>` | **No** |
+| DMV "As of" pull timestamp | Yes — text block | **No** |
+| CDL Status (separate from license status) | Sometimes text block | **No** |
+| License `Orig. Issued` | Yes — `<license_orig_issue>` | Parsed but not rendered |
+| Class with full description ("B - CLASS B COMMERCIAL") | Yes — `<license_class>` | Already rendered ✓ |
+| Restrictions with full text | Yes — `<license_restrictions>` | Already rendered ✓ |
+| Violation ACD code + state points | Yes — `<acd_code>`, `<state_points>` | Already rendered ✓ |
+| Medical examiner section (NRCME) | **No** — not in OH MVR response | n/a — needs Kansas test order to verify |
+| Criminal history / sex offender | **No** — separate Accio products | Out of scope (would be a new product) |
+
+### Parser changes — `src/lib/accio-xml-parser.ts`
+
+- New `personalCharacteristics` field on `ParsedMvrResult` (`sex`, `weight`, `height`, `eyes`, `hair`, `donor`, `age`).
+- New `dmvAsOfDate` field — the state DMV's own "As of" timestamp, distinct from Accio/Storm clocks. Employers care about this for staleness ("how fresh is this MVR?").
+- Three new text-block extractors:
+  - `extractPersonalCharacteristicsFromText` — pulls Sex/Weight/Height/Eyes/Hair/Donor from the fixed two-line layout under the address header. Each capture stops at 2+ spaces (Accio's column separator) or end-of-line.
+  - `extractAsOfDateFromText` — captures the verbatim `As of: ...` string (don't normalize timezones — DMV doesn't tell us).
+  - `extractCdlStatusFromText` — promotes the text block's `CDL Status:` line onto the primary license when `<cdl_status>` is empty.
+- New `computeAgeFromYmd` helper — derives age from `<dob>` so the displayed age **stays current as time passes**. The text block has "AGE: 56" but that snapshot would go stale — we ignore it.
+- All extractors are best-effort: they return `undefined` instead of fabricating empty strings, so renderers can cleanly skip missing fields.
+
+#### Bug caught while testing — Donor regex eating separator line
+
+First version used `Donor\s*:\s*(...)` and on **blank Donor values** (the field is the last column on its line and is often empty), the `\s*` after the colon greedily consumed the trailing newline and the regex grabbed the next line's underscore separator (`____...`). Caught by writing a one-shot Node script against the real Accio text we pulled from `mvr_orders.result_xml`.
+
+**Fix:** changed `\s*` after every `:` to `[ \t]*` so the regex can't cross newlines, plus a defense-in-depth check that rejects any captured value matching `/^_+$/`. Re-tested with three samples (real-blank-donor, donor=Y, donor-at-EOF) — all three correct now.
+
+This is the same "valid but wrong" pattern as the medical-cert and PSP bugs from earlier this week. Accio's text block is whitespace-formatted and **a regex that doesn't anchor to a line will eventually read the wrong line**. New rule: always test extractors against the actual XML we're seeing, not just the docs.
+
+#### JSONB serialization
+
+`mvrResultToJsonb` now stores `personalCharacteristics` and `dmvAsOfDate` in `parsed_data`. Existing rows won't have these fields — new orders will. PDF generation re-parses raw XML on the fly so it picks up the new fields for **all** orders (old and new) automatically; only the modal needs new orders to flow through.
+
+### Status-route mapping — `/api/mvr/status/[orderId]`
+
+Added `personalCharacteristics` and `dmvAsOfDate` to the JSON the modal consumes, sourced from `parsed_data` (no new flat columns).
+
+### Modal — `src/components/MvrViewModal.tsx`
+
+- New `Personal Characteristics` card (icon: `User` from lucide) between License Information and Medical Certificate.
+- Card only renders when at least one field is populated, and inside the card each field is independently conditional — partial DMV fills don't show "—" placeholders.
+- "DMV pulled {date}" badge added to the License Information card header (top-right) so the staleness signal is the first thing employers see.
+- License-class rows now show a **second status pill ("CDL: VALID")** alongside the regular license status when `cdlStatus` differs from `status`. Suppressed when they match (no redundant noise).
+
+### PDF — `src/lib/pdf/MvrReportPdf.tsx`
+
+- Cover summary KV grid gains a `DMV As Of` row.
+- New `Personal Characteristics` `Section` between Personal Information and License History — sex / age / height / weight / eyes / hair / organ donor. Section is conditionally rendered (skips entirely when no fields are present).
+
+### What's intentionally NOT in this PR (Phase B + C from the gap analysis)
+
+- **Medical examiner section (NRCME registry).** Not in OH MVR response. Need to test a Kansas order to confirm whether Accio returns it inline or whether it requires a separate `<subOrder>` type. Deferred until we have a Kansas test subject.
+- **Criminal history, federal criminal, sex offender registry.** These are entire separate Accio products that Key bundles into one report. Would require new employer block(s), new fees, FCRA disclosure updates, and ~1 week of work. Treated as a product/pricing decision, not engineering.
+
+---
+
+## **PSP slow-path bug: full SSN required end-to-end** (May 2026)
+
+Latest test order showed MVR coming back in **seconds** while the matching PSP suborder sat at "Awaiting vendor" for 10+ minutes. The screening pipeline overhaul shipped earlier this week looked like it had fixed everything, but one root cause was missed: the SSN never made it past the form layer.
+
+### What was actually being sent to Accio
+
+Inspected `mvr_orders.order_xml` for the failed bundle (Accio order `17782602208495641`, suborders 909977/909978):
+
+```xml
+<ssn>1655</ssn>                          ← only last 4 digits
+<portalfromapplicant>N</portalfromapplicant>   ← already fixed
+<require_ews>N</require_ews>             ← already fixed
+```
+
+`portalfromapplicant` and `require_ews` had been corrected. `ssn` had not.
+
+### Why MVR worked but PSP didn't
+
+State DMVs identify a driver primarily by **DL number + state** — SSN is barely consulted, so MVR completed in ~9 s. **FMCSA PSP** is a federal lookup and requires the full 9-digit SSN to do a direct identity match. With only last-4, Accio routes the suborder onto the slow applicant-portal verification path, which can take hours instead of minutes.
+
+### Why the route fix from earlier this week wasn't enough
+
+The order routes (`/api/mvr/order`, `/api/employer/mvr/order`, `/api/psp/order`, `/api/employer/psp/order`, `/api/admin/mvr/order`, `/api/candidate/fulfill-screening`) were updated to pass through `String(ssn)`, but every form upstream **caps the input at 4 digits** with `maxLength={4}` + `slice(0, 4)` and labels it "SSN (Last 4)". The routes faithfully forwarded the 4 digits they received.
+
+### What changed
+
+**New shared helper:** [`src/lib/ssn.ts`](src/lib/ssn.ts) — `normalizeSsnDigits`, `isValidSsn` (rejects SSA-invalid prefixes 000/666/9xx and 00 group / 0000 serial), `formatSsnDisplay` (`XXX-XX-XXXX`), `maskSsn` (`***-**-NNNN`).
+
+**Forms now collect the full 9-digit SSN with formatted display:**
+
+| File | Old | New |
+|---|---|---|
+| [`src/components/MvrOrderForm.tsx`](src/components/MvrOrderForm.tsx) | `maxLength={4}` "SSN (Last 4)" | `maxLength={11}` "SSN" w/ `XXX-XX-XXXX` mask |
+| [`src/components/PspOrderForm.tsx`](src/components/PspOrderForm.tsx) | same | same |
+| [`src/components/employer/CareerCardModal.tsx`](src/components/employer/CareerCardModal.tsx) | same | same (input widened from `w-32` to `w-44`) |
+| [`src/components/BackgroundCheckDisclosure.tsx`](src/components/BackgroundCheckDisclosure.tsx) | "SSN (last 4 digits)" | "Social Security Number" |
+| [`src/components/PspDisclosureForm.tsx`](src/components/PspDisclosureForm.tsx) | same | same |
+
+**Routes now normalize + validate at the boundary** (belt-and-suspenders):
+
+The DOT app already uses `<SSNInput>` from `MaskedInputs.tsx` which stores `XXX-XX-XXXX` with dashes. Without normalization, those dashes would land in the Accio XML. Every order route now calls `normalizeSsnDigits()` and rejects with a clear 400 if `isValidSsn()` fails:
+
+- [`src/app/api/mvr/order/route.ts`](src/app/api/mvr/order/route.ts)
+- [`src/app/api/employer/mvr/order/route.ts`](src/app/api/employer/mvr/order/route.ts)
+- [`src/app/api/employer/psp/order/route.ts`](src/app/api/employer/psp/order/route.ts) — the bundle route, source of the bug
+- [`src/app/api/psp/order/route.ts`](src/app/api/psp/order/route.ts)
+- [`src/app/api/admin/mvr/order/route.ts`](src/app/api/admin/mvr/order/route.ts)
+- [`src/app/api/candidate/fulfill-screening/route.ts`](src/app/api/candidate/fulfill-screening/route.ts)
+
+**Type signal:** [`src/lib/accio-xml-builder.ts`](src/lib/accio-xml-builder.ts) — the misleading `// Last 4 digits only for security` comment on `AccioOrderData.ssn` and `AccioPspOrderData.ssn` is gone, replaced with a multi-line doc comment explaining why full 9 digits are required and that we **never persist** SSN (verified: `WHERE column_name ILIKE '%ssn%'` returned zero rows in `information_schema.columns`).
+
+### Privacy posture
+
+- **Nothing about storage changed.** The DB still has zero `ssn` columns. SSN is collected at order time, sent to Accio, and forgotten.
+- The employer SSN field on the career-card-modal order form is still asking the employer to type the candidate's SSN — same workflow as before. Long-term that field should disappear in favor of the candidate-driven consent flow (`PspDisclosureForm` already handles this); this PR is the minimal-risk fix to unblock production today.
+
+### Expected behavior after deploy
+
+- New PSP orders should complete in **the same minutes-range as MVR**, not hours.
+- All five SSN entry points display formatted dashes (`123-45-6789`) and reject anything that isn't a syntactically valid 9-digit SSN before payment is taken.
+- Existing "Awaiting vendor" orders placed before this deploy stay stuck — they were sent to Accio with last-4 and `portalfromapplicant=Y`, so Accio is still waiting on an applicant portal step that will never come. Re-order with the new code to clear them.
+
+---
+
 ## **MVR medical certificate: Class D bug** (May 2026)
 
 Class D (non-CDL) drivers were showing **"Valid medical certificate"** on their MVR. Class D drivers don't carry a DOT med card — the field shouldn't render at all. This was on our end.

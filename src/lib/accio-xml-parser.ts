@@ -11,7 +11,16 @@ export interface ParsedMvrResult {
   remoteSubOrderNumber?: string
   timeOrdered?: string
   timeFilled?: string
-  
+
+  /**
+   * The DMV's own "As of" timestamp from the report text block. Distinct from
+   * `timeOrdered` / `timeFilled` (which are Accio's clock) — `dmvAsOfDate` is
+   * when the **state DMV pulled the record**. Employers care about this for
+   * recency ("how stale is this MVR?"). Format mirrors the source text, e.g.
+   * "5/8/2026 1:10:25 PM".
+   */
+  dmvAsOfDate?: string
+
   // Subject Information (personal info from XML subject block)
   subject?: {
     firstName?: string
@@ -29,7 +38,24 @@ export interface ParsedMvrResult {
     country?: string
     gender?: string
   }
-  
+
+  /**
+   * DMV-reported personal characteristics. These come from the text block
+   * (Accio doesn't put them in structured tags) and can be missing on partial
+   * fills. Sex/Weight/Eyes/Height/Hair/Donor are all best-effort — render a
+   * field only when present, never fabricate. `age` is computed from `<dob>`,
+   * NOT scraped from the text, so it stays accurate as time passes.
+   */
+  personalCharacteristics?: {
+    sex?: string
+    weight?: string        // raw DMV string ("165", "220 lbs") — display as-is
+    height?: string        // e.g. `5' 08"`
+    eyes?: string          // e.g. "BROWN", "BRO"
+    hair?: string
+    donor?: string         // organ donor flag — usually "Y"/blank
+    age?: number           // computed from subject.dateOfBirth
+  }
+
   // License Information (from MVR subOrder - dlnum, dlstate, dlexpiration)
   licenseNumber?: string // dlnum
   licenseState?: string // dlstate
@@ -361,6 +387,45 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         // for state DMVs that don't populate structured fields.
         console.warn('[ACCIO PARSER] Could not parse medical info from text block:', textParseError)
       }
+    }
+
+    // Personal characteristics + DMV "As of" date + per-license CDL status all
+    // live ONLY in the text block — Accio doesn't expose them as structured
+    // tags. Same scoping discipline as the medical extractor: be defensive
+    // (text can be empty / partial) and never fabricate values.
+    try {
+      const mvrTextBlock = mvrSubOrder?.content
+        ? extractXmlValue(mvrSubOrder.content, 'text')
+        : extractXmlValue(xml, 'text')
+      if (mvrTextBlock) {
+        const characteristics = extractPersonalCharacteristicsFromText(mvrTextBlock)
+        // Compute age from DOB (subject.dateOfBirth = YYYYMMDD) so it stays
+        // current — using the text's "AGE: 56" would go stale.
+        const age = computeAgeFromYmd(result.subject?.dateOfBirth)
+        if (
+          characteristics.sex ||
+          characteristics.weight ||
+          characteristics.height ||
+          characteristics.eyes ||
+          characteristics.hair ||
+          characteristics.donor ||
+          age !== undefined
+        ) {
+          result.personalCharacteristics = { ...characteristics, age }
+        }
+
+        const asOf = extractAsOfDateFromText(mvrTextBlock)
+        if (asOf) result.dmvAsOfDate = asOf
+
+        // Promote text-block "CDL Status" onto the primary license when the
+        // structured `<cdl_status>` tag is absent (most states leave it blank).
+        const cdlStatus = extractCdlStatusFromText(mvrTextBlock)
+        if (cdlStatus && result.licenses && result.licenses.length > 0 && !result.licenses[0].cdlStatus) {
+          result.licenses[0].cdlStatus = cdlStatus
+        }
+      }
+    } catch (textParseError) {
+      console.warn('[ACCIO PARSER] Could not parse personal/asof/cdl from text block:', textParseError)
     }
 
     return result
@@ -838,6 +903,104 @@ function extractMedicalInfoFromText(text: string): {
 }
 
 /**
+ * Extract DMV-reported personal characteristics from Accio's plain-text block.
+ *
+ * The text block has a fixed two-line layout right under the address header:
+ *
+ *   Sex : MALE      Weight: 165        DOB: 01/05/1970            AGE: 56
+ *   Eyes: BROWN     Height: 5' 08"     Hair: BROWN        Donor:
+ *
+ * Each "Label: VALUE" pair is separated by 2+ spaces from the next pair. We
+ * grab each value up to either 2+ spaces (column boundary) or end-of-line.
+ * All fields are best-effort — return undefined when missing rather than
+ * fabricating empty strings (lets callers cleanly skip rendering).
+ */
+function extractPersonalCharacteristicsFromText(text: string): {
+  sex?: string
+  weight?: string
+  height?: string
+  eyes?: string
+  hair?: string
+  donor?: string
+} {
+  const result: {
+    sex?: string
+    weight?: string
+    height?: string
+    eyes?: string
+    hair?: string
+    donor?: string
+  } = {}
+
+  // Each capture stops at 2+ spaces (Accio's column separator) or end of line.
+  // CRITICAL: use `[ \t]*` (not `\s*`) after `:` so the regex never crosses
+  // newlines. The earlier `\s*` version caused Donor (which is the last
+  // column on its line, often blank) to silently capture the underscore
+  // separator line that follows. Each rule is anchored to its own line.
+  // Donor is allowed to be blank → caller should test truthy before rendering.
+  const rules: Array<[keyof typeof result, RegExp]> = [
+    ['sex', /\bSex[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['weight', /\bWeight[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    // Height includes a quote ("5' 08\"") so we deliberately allow inner quotes.
+    ['height', /\bHeight[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['eyes', /\bEyes[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['hair', /\bHair[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['donor', /\bDonor[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+  ]
+  for (const [key, regex] of rules) {
+    const m = text.match(regex)
+    if (m) {
+      const v = m[1].trim()
+      // Defense in depth: if a future report layout puts these labels next to
+      // an underscore-separator line, never let a row of `____` leak through.
+      if (v && !/^_+$/.test(v)) result[key] = v
+    }
+  }
+  return result
+}
+
+/**
+ * Extract the "As of: M/D/YYYY h:mm:ss AM/PM" timestamp the DMV stamps on the
+ * report. We keep the raw string (don't try to normalize timezones) because
+ * the DMV doesn't tell us what zone it's in — we just display it verbatim.
+ */
+function extractAsOfDateFromText(text: string): string | undefined {
+  const m = text.match(/^\s*As\s*of\s*:\s*([^\n]+?)\s*$/im)
+  return m ? m[1].trim() : undefined
+}
+
+/**
+ * Some states emit a separate "CDL Status: VALID" line in the text block but
+ * don't populate `<cdl_status>` in the structured `<mvr_license>`. This pulls
+ * just that line so the License section can show CDL status alongside the
+ * regular license status.
+ */
+function extractCdlStatusFromText(text: string): string | undefined {
+  const m = text.match(/^\s*CDL\s+Status\s*:\s*([^\n]+?)\s*$/im)
+  return m ? m[1].trim().toUpperCase() : undefined
+}
+
+/**
+ * Compute age in completed years from a YYYYMMDD birth-date string. We use
+ * this instead of scraping "AGE: 56" from the text so the displayed age stays
+ * accurate as time passes (an MVR pulled a year ago should show today's age,
+ * not last year's).
+ */
+function computeAgeFromYmd(ymd?: string): number | undefined {
+  if (!ymd || !/^\d{8}$/.test(ymd)) return undefined
+  const year = Number(ymd.slice(0, 4))
+  const month = Number(ymd.slice(4, 6))
+  const day = Number(ymd.slice(6, 8))
+  const today = new Date()
+  let age = today.getUTCFullYear() - year
+  const beforeBirthdayThisYear =
+    today.getUTCMonth() + 1 < month ||
+    (today.getUTCMonth() + 1 === month && today.getUTCDate() < day)
+  if (beforeBirthdayThisYear) age -= 1
+  return age >= 0 && age < 130 ? age : undefined
+}
+
+/**
  * Extract multiple values from XML (for arrays)
  */
 function extractXmlValues(xml: string, tagName: string): string[] {
@@ -868,6 +1031,8 @@ export function mvrResultToJsonb(result: ParsedMvrResult): any {
     remoteSubOrderNumber: result.remoteSubOrderNumber,
     timeOrdered: result.timeOrdered,
     timeFilled: result.timeFilled,
+    dmvAsOfDate: result.dmvAsOfDate,
+    personalCharacteristics: result.personalCharacteristics,
     subject: result.subject ? {
       // Only store non-sensitive fields (exclude SSN)
       firstName: result.subject.firstName,

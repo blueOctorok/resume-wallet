@@ -10,6 +10,7 @@ import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
+import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 /**
  * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
@@ -177,7 +178,9 @@ export async function POST(request: NextRequest) {
     const middleName = providedMiddleName || form1Data.middleName || ''
     const email = providedEmail || user.email || ''
     const phone = providedPhone || form1Data.phone || ''
-    const ssn = providedSsn || form1Data.ssn || ''
+    // Full 9-digit SSN; the DOT app stores it as `XXX-XX-XXXX`, the screening forms send digits-only.
+    // Normalize so what reaches Accio is always 9 raw digits — last-4 forces FMCSA into the slow path.
+    const ssn = normalizeSsnDigits(providedSsn || form1Data.ssn || '')
     const dob = providedDob || form1Data.dateOfBirth || ''
     const gender = providedGender || form1Data.gender || 'U'
     const address = providedAddress || form1Data.address || ''
@@ -185,11 +188,11 @@ export async function POST(request: NextRequest) {
     const state = providedState || form1Data.state || ''
     const zip = providedZip || form1Data.zip || ''
 
-    if (!firstName || !lastName || !email || !ssn || !dob || !address || !city || !state || !zip) {
+    if (!firstName || !lastName || !email || !isValidSsn(ssn) || !dob || !address || !city || !state || !zip) {
       return NextResponse.json(
         {
           error:
-            'Missing required personal information. Provide all fields or complete your DOT application.',
+            'Missing required personal information. A full 9-digit SSN is required for FMCSA PSP — last-4 forces the order to a slow applicant-portal verification path.',
           requiresPersonalInfo: true,
         },
         { status: 400 },

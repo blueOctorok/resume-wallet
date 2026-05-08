@@ -142,6 +142,8 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
           <KeyValue label="License State" value={parsed.licenseState} />
           <KeyValue label="DOB" value={formatYmd(parsed.subject?.dateOfBirth)} />
           <KeyValue label="License Expires" value={formatYmd(parsed.licenseExpirationDate)} />
+          {/* DMV's own pull date — distinct from Storm/Accio timestamps. */}
+          <KeyValue label="DMV As Of" value={parsed.dmvAsOfDate} />
           <KeyValue label="Time Ordered" value={formatTimestamp(parsed.timeOrdered)} />
           <KeyValue label="Time Filled" value={formatTimestamp(parsed.timeFilled)} />
         </View>
@@ -164,6 +166,36 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
             <KeyValue label="Phone" value={parsed.subject?.phone} />
           </View>
         </Section>
+
+        {/* DMV-reported physical description. Only render the section when at
+            least one field is present (not all states publish all fields). */}
+        {parsed.personalCharacteristics &&
+        (parsed.personalCharacteristics.sex ||
+          parsed.personalCharacteristics.weight ||
+          parsed.personalCharacteristics.height ||
+          parsed.personalCharacteristics.eyes ||
+          parsed.personalCharacteristics.hair ||
+          parsed.personalCharacteristics.donor ||
+          parsed.personalCharacteristics.age !== undefined) ? (
+          <Section heading="Personal Characteristics">
+            <View style={stormPdfStyles.kvGrid}>
+              <KeyValue label="Sex" value={parsed.personalCharacteristics.sex} />
+              <KeyValue
+                label="Age"
+                value={
+                  parsed.personalCharacteristics.age !== undefined
+                    ? String(parsed.personalCharacteristics.age)
+                    : undefined
+                }
+              />
+              <KeyValue label="Height" value={parsed.personalCharacteristics.height} />
+              <KeyValue label="Weight" value={parsed.personalCharacteristics.weight} />
+              <KeyValue label="Eyes" value={parsed.personalCharacteristics.eyes} />
+              <KeyValue label="Hair" value={parsed.personalCharacteristics.hair} />
+              <KeyValue label="Organ Donor" value={parsed.personalCharacteristics.donor} />
+            </View>
+          </Section>
+        ) : null}
 
         {/* Licenses */}
         <Section heading="License History">

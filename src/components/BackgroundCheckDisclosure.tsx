@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { StateSelect } from '@/components/ui/StateSelect'
+import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 interface DriverProfileInfo {
   firstName: string
@@ -186,7 +187,8 @@ export default function BackgroundCheckDisclosure({
   /** Restore collapsible state after PDF capture */
   const pdfOpenStateRef = useRef({ stateNotices: false, fcraRights: false })
 
-  // SSN (last 4) — only collected when fulfillOrder mode is active
+  // SSN — only collected when fulfillOrder mode is active. Full 9 digits required so
+  // Accio can do a direct identity match; never stored in our DB.
   const [ssn, setSsn] = useState('')
   // Order placement status (for fulfillOrder mode)
   const [orderPlaced, setOrderPlaced] = useState(false)
@@ -262,8 +264,8 @@ export default function BackgroundCheckDisclosure({
       setError("Driver's license number is required.")
       return
     }
-    if (fulfillOrder && (!ssn.trim() || ssn.trim().length < 4)) {
-      setError('Last 4 digits of SSN are required to submit the order.')
+    if (fulfillOrder && !isValidSsn(ssn)) {
+      setError('Your full 9-digit Social Security Number is required to submit the order.')
       return
     }
 
@@ -292,7 +294,7 @@ export default function BackgroundCheckDisclosure({
       }
 
       setSigned(true)
-      onConsentSigned({ ...profile, ssn: ssn.trim() })
+      onConsentSigned({ ...profile, ssn: normalizeSsnDigits(ssn) })
 
       // Step 2: If fulfillOrder mode, place the Accio order immediately after consent
       if (fulfillOrder) {
@@ -310,7 +312,7 @@ export default function BackgroundCheckDisclosure({
               firstName: profile.firstName.trim(),
               lastName: profile.lastName.trim(),
               dob: profile.dateOfBirth.trim(),
-              ssn: ssn.trim(),
+              ssn: normalizeSsnDigits(ssn),
               dlNumber: profile.dlNumber.trim(),
               dlState: profile.dlState.trim(),
               address: profile.address.trim(),
@@ -752,13 +754,14 @@ export default function BackgroundCheckDisclosure({
                       />
                       {fulfillOrder && !viewMode && (
                         <ReadOnlyOrInput
-                          label="SSN (last 4 digits)"
-                          value={ssn}
-                          onChange={v => setSsn(v.replace(/\D/g, '').slice(0, 4))}
+                          label="Social Security Number"
+                          value={formatSsnDisplay(ssn)}
+                          onChange={v => setSsn(normalizeSsnDigits(v))}
                           inputMode="numeric"
-                          pattern="[0-9]{4}"
-                          maxLength={4}
-                          placeholder="1234"
+                          pattern="\d{3}-\d{2}-\d{4}"
+                          maxLength={11}
+                          placeholder="123-45-6789"
+                          autoComplete="off"
                           required
                         />
                       )}

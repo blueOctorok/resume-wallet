@@ -10,6 +10,7 @@ import {
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
+import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 /**
  * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
@@ -58,6 +59,17 @@ export async function POST(request: NextRequest) {
     ].filter((f) => !body[f])
     if (missing.length > 0) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
+    }
+
+    // FMCSA PSP needs the full 9-digit SSN to do a direct identity match. Without
+    // it, Accio bounces the bundle to the applicant-portal slow path that can take
+    // hours instead of minutes — even when MVR comes back fast on the same order.
+    const normalizedSsn = normalizeSsnDigits(String(ssn))
+    if (!isValidSsn(normalizedSsn)) {
+      return NextResponse.json(
+        { error: 'A full 9-digit SSN is required for the PSP + MVR bundle (last-4 forces FMCSA into the slow applicant-portal path).' },
+        { status: 400 },
+      )
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -171,7 +183,7 @@ export async function POST(request: NextRequest) {
       lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: String(ssn),
+      ssn: normalizedSsn,
       dob,
       gender,
       address,

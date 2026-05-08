@@ -26,6 +26,7 @@ import MvrPaymentButton from '@/components/MvrPaymentButton'
 import PspPaymentButton from '@/components/PspPaymentButton'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
+import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 interface PendingCandidateRequest {
   id: string
@@ -762,6 +763,7 @@ interface MvrOrderFields {
   firstName: string
   lastName: string
   dob: string
+  /** Full 9-digit SSN (digits only). Sent to Accio for direct identity match; never persisted in our DB. */
   ssn: string
   email: string
   dlNumber: string
@@ -835,7 +837,7 @@ function MvrOrderModal({
 
   const isFormValid = Boolean(
     firstName.trim() && lastName.trim() && email.trim() && dob.trim() &&
-    ssn.trim() && dlNumber.trim() && dlState.trim() &&
+    isValidSsn(ssn) && dlNumber.trim() && dlState.trim() &&
     address.trim() && city.trim() && state.trim() && zip.trim()
   )
 
@@ -845,7 +847,7 @@ function MvrOrderModal({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       dob: dob.trim(),
-      ssn: ssn.trim(),
+      ssn: normalizeSsnDigits(ssn),
       email: email.trim(),
       dlNumber: dlNumber.trim(),
       dlState: dlState.trim().toUpperCase(),
@@ -931,12 +933,12 @@ function MvrOrderModal({
                   <input type="date" value={dob} onChange={e => setDob(e.target.value)} disabled={success} className={inputClass} />
                 </div>
               </div>
-              <div className="w-32">
-                <label className={labelClass}>SSN (last 4) *</label>
+              <div className="w-44">
+                <label className={labelClass}>SSN *</label>
                 <input
-                  type="text" inputMode="numeric" maxLength={4}
-                  value={ssn} onChange={e => setSsn(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="0000" disabled={success}
+                  type="text" inputMode="numeric" autoComplete="off" maxLength={11}
+                  value={formatSsnDisplay(ssn)} onChange={e => setSsn(normalizeSsnDigits(e.target.value))}
+                  placeholder="123-45-6789" disabled={success}
                   className={inputClass}
                 />
               </div>

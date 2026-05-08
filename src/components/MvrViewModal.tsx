@@ -3,11 +3,11 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { 
-  X, FileText, Calendar, MapPin, CreditCard, AlertCircle, 
+import {
+  X, FileText, Calendar, MapPin, CreditCard, AlertCircle,
   Shield, AlertTriangle, Car, Clock, CheckCircle, XCircle,
   Stethoscope, ChevronDown, ExternalLink, Award, Activity,
-  Download, Printer
+  Download, Printer, User as UserIcon,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -76,6 +76,17 @@ interface MvrSubject {
   nameSuffix?: string
 }
 
+/** DMV-reported physical/personal description (best-effort, fields can be missing). */
+interface PersonalCharacteristics {
+  sex?: string
+  weight?: string
+  height?: string
+  eyes?: string
+  hair?: string
+  donor?: string
+  age?: number
+}
+
 interface MvrResult {
   id: string
   subject?: MvrSubject | null
@@ -98,6 +109,10 @@ interface MvrResult {
   medicalCertSelfCertification: string | null
   cdlEndorsements: string[]
   cdlRestrictions: string[]
+  /** DMV's own "As of" timestamp from the report — when the state pulled the record. */
+  dmvAsOfDate: string | null
+  /** Raw DMV physical description block — display only fields that are present. */
+  personalCharacteristics: PersonalCharacteristics | null
   resultStatus: string
   receivedAt: string
   parsedAt: string | null
@@ -532,11 +547,25 @@ export default function MvrViewModal({
                     <div className={`px-5 py-4 border-b ${
                       isDark ? 'border-teal-700/20' : 'border-teal-700/10'
                     }`}>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                          License Information
-                        </h3>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            License Information
+                          </h3>
+                        </div>
+                        {/* DMV "As of" timestamp — when the state actually pulled
+                            this record. Distinct from when Storm/Accio processed
+                            it. Employers care about this for staleness. */}
+                        {mvrResult.dmvAsOfDate && (
+                          <span className={`text-xs px-2.5 py-1 rounded-md ${
+                            isDark
+                              ? 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-400/30'
+                              : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
+                          }`}>
+                            DMV pulled {mvrResult.dmvAsOfDate}
+                          </span>
+                        )}
                       </div>
                     </div>
                     
@@ -642,10 +671,23 @@ export default function MvrViewModal({
                                       )}
                                     </div>
                                   </div>
-                                  <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.status).bg}`}>
-                                    <span className={`text-xs font-medium ${getStatusBadge(license.status).text}`}>
-                                      {license.status || 'Unknown'}
-                                    </span>
+                                  <div className="flex items-center gap-2">
+                                    <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.status).bg}`}>
+                                      <span className={`text-xs font-medium ${getStatusBadge(license.status).text}`}>
+                                        {license.status || 'Unknown'}
+                                      </span>
+                                    </div>
+                                    {/* Some states publish a separate CDL Status (parsed from the
+                                        text block when the structured tag is empty). Only show it
+                                        when it differs from the license status — otherwise it's
+                                        redundant noise. */}
+                                    {license.cdlStatus && license.cdlStatus !== license.status && (
+                                      <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.cdlStatus).bg}`}>
+                                        <span className={`text-xs font-medium ${getStatusBadge(license.cdlStatus).text}`}>
+                                          CDL: {license.cdlStatus}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 {license.restrictions && (
@@ -662,6 +704,90 @@ export default function MvrViewModal({
                       )}
                     </div>
                   </div>
+
+                  {/* Personal Characteristics — DMV's own physical description
+                      (sex/weight/height/eyes/hair/donor/age). Best-effort: only
+                      renders when at least one field is present, and within the
+                      card each field is conditional so partial DMV fills don't
+                      show "—" placeholders. Age is computed from DOB by the
+                      parser so it stays current as time passes. */}
+                  {mvrResult.personalCharacteristics &&
+                    Object.values(mvrResult.personalCharacteristics).some(v => v !== undefined && v !== null && v !== '') && (
+                      <div className={`rounded-xl overflow-hidden ${
+                        isDark
+                          ? 'bg-gray-800/50 border border-gray-700/50'
+                          : 'bg-white border border-gray-200 shadow-sm'
+                      }`}>
+                        <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                          <div className="flex items-center gap-2">
+                            <UserIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                            <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              Personal Characteristics
+                            </h3>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {mvrResult.personalCharacteristics.sex && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Sex</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.sex}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.age !== undefined && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Age</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.age}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.height && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Height</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.height}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.weight && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Weight</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.weight}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.eyes && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Eyes</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.eyes}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.hair && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Hair</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.hair}
+                                </dd>
+                              </div>
+                            )}
+                            {mvrResult.personalCharacteristics.donor && (
+                              <div>
+                                <dt className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Organ Donor</dt>
+                                <dd className={`mt-1 text-sm font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                  {mvrResult.personalCharacteristics.donor}
+                                </dd>
+                              </div>
+                            )}
+                          </dl>
+                        </div>
+                      </div>
+                    )}
 
                   {/* Medical Certificate — only render when the driver actually
                       has a real DOT med cert on file. `hasValidMedicalCert` drops

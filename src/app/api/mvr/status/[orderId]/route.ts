@@ -115,6 +115,12 @@ function jsonFromMvrOrderRow(mvrOrder: Record<string, unknown>) {
             ?.medical?.selfCertification,
           cdlEndorsements: result.cdl_endorsements || [],
           cdlRestrictions: result.cdl_restrictions || [],
+          // DMV-reported "As of" timestamp + personal characteristics live only
+          // in the JSONB blob — flat columns don't exist for them.
+          dmvAsOfDate: (result.parsed_data as { dmvAsOfDate?: string } | null)?.dmvAsOfDate ?? null,
+          personalCharacteristics:
+            (result.parsed_data as { personalCharacteristics?: Record<string, unknown> } | null)
+              ?.personalCharacteristics ?? null,
           resultStatus: result.result_status,
           receivedAt: result.received_at,
           parsedAt: result.parsed_at,

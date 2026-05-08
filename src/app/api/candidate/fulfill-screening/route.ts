@@ -10,6 +10,7 @@ import {
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
+import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 /**
  * POST /api/candidate/fulfill-screening
@@ -26,7 +27,7 @@ import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
  *   requestId    string   — candidate_requests.id being fulfilled
  *   type         'mvr' | 'psp'  — `psp` places **MVR + FMCSA PSP** in one Accio order (product bundle).
  *   formData: {
- *     firstName, lastName, middleName?, dob, ssn (last 4),
+ *     firstName, lastName, middleName?, dob, ssn (full 9-digit, not persisted),
  *     dlNumber, dlState, address, city, state, zip, email?, phone?
  *   }
  */
@@ -53,6 +54,14 @@ export async function POST(request: NextRequest) {
       .filter(f => !formData[f]?.trim())
     if (missing.length > 0) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
+    }
+
+    const fullSsn = normalizeSsnDigits(ssn)
+    if (!isValidSsn(fullSsn)) {
+      return NextResponse.json(
+        { error: 'A full 9-digit SSN is required (last-4 forces Accio onto the slow applicant-portal verification path).' },
+        { status: 400 },
+      )
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -152,8 +161,7 @@ export async function POST(request: NextRequest) {
     const middleName = formData.middleName?.trim() || ''
     const email = formData.email?.trim() || user.email || `order-${orderNumber}@stormchain.ai`
     const phone = formData.phone?.trim() || ''
-    // Send full SSN — see comment in src/app/api/mvr/order/route.ts.
-    const fullSsn = ssn.trim()
+    // `fullSsn` is the normalized 9-digit value validated above — no extra trim/slice here.
 
     let orderXml: string
 

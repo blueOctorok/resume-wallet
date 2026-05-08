@@ -10,6 +10,7 @@ import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
+import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 interface PspOrderFormProps {
   userAddress: string
@@ -58,7 +59,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
     firstName.trim() &&
       lastName.trim() &&
       email.trim() &&
-      ssn.trim() &&
+      isValidSsn(ssn) &&
       dob.trim() &&
       address.trim() &&
       city.trim() &&
@@ -146,7 +147,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
           middleName: middleName.trim(),
           lastName: lastName.trim(),
           email: email.trim(),
-          ssn: ssn.trim(),
+          ssn: normalizeSsnDigits(ssn),
           dob: dob.trim(),
           address: address.trim(),
           city: city.trim(),
@@ -493,14 +494,16 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>SSN (Last 4) *</label>
+                  <label className={labelClass}>SSN *</label>
                   <input
                     type='text'
-                    value={ssn}
-                    onChange={(e) => setSsn(e.target.value.slice(0, 4))}
+                    inputMode='numeric'
+                    autoComplete='off'
+                    value={formatSsnDisplay(ssn)}
+                    onChange={(e) => setSsn(normalizeSsnDigits(e.target.value))}
                     required
-                    placeholder='1234'
-                    maxLength={4}
+                    placeholder='123-45-6789'
+                    maxLength={11}
                     className={inputClass}
                   />
                 </div>

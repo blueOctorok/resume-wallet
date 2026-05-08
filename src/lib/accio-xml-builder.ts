@@ -12,7 +12,14 @@ export interface AccioOrderData {
   suffix?: string
   email: string
   phone?: string
-  ssn: string // Last 4 digits only for security
+  /**
+   * Full 9-digit SSN (digits only, no dashes). Required by Accio for direct
+   * identity verification — sending only the last 4 forces orders down a slow
+   * applicant-portal verification path that can take hours instead of minutes.
+   * Storm collects this at order time and never persists it (no `ssn` column
+   * exists in our schema; verified `WHERE column_name ILIKE '%ssn%'`).
+   */
+  ssn: string
   dob: string // Format: YYYYMMDD
   gender?: 'M' | 'F' | 'U' // M = Male, F = Female, U = Unknown/Unspecified
   race?: string // U = Unknown (default)
@@ -193,6 +200,7 @@ export interface AccioPspOrderData {
   suffix?: string
   email: string
   phone?: string
+  /** Full 9-digit SSN — see comment on `AccioOrderData.ssn`. */
   ssn: string
   dob: string
   gender?: 'M' | 'F' | 'U'

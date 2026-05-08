@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
+import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
 /**
  * API Route: Order MVR from Accio
@@ -252,7 +253,9 @@ export async function POST(request: NextRequest) {
     const middleName = providedMiddleName || form1Data.middleName || ''
     const email = providedEmail || user.email || ''
     const phone = providedPhone || form1Data.phone || ''
-    const ssn = providedSsn || form1Data.ssn || '' // Last 4 digits only
+    // Full 9-digit SSN; the DOT app stores it as `XXX-XX-XXXX` while the screening forms
+    // send digits-only — strip dashes either way so what reaches Accio is consistent.
+    const ssn = normalizeSsnDigits(providedSsn || form1Data.ssn || '')
     const dob = providedDob || form1Data.dateOfBirth || ''
     const gender = providedGender || form1Data.gender || 'U' // M/F/U
     const address = providedAddress || form1Data.address || ''
@@ -261,12 +264,12 @@ export async function POST(request: NextRequest) {
     const zip = providedZip || form1Data.zip || ''
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !ssn || !dob || !address || !city || !state || !zip) {
+    if (!firstName || !lastName || !email || !isValidSsn(ssn) || !dob || !address || !city || !state || !zip) {
       const missingFields = {
         firstName: !firstName,
         lastName: !lastName,
         email: !email,
-        ssn: !ssn,
+        ssn: !isValidSsn(ssn),
         dob: !dob,
         address: !address,
         city: !city,
@@ -279,9 +282,10 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json(
         { 
-          error: 'Missing required personal information. Please provide all required fields (name, DOB, SSN, address) either in this form or by completing your DOT application.',
+          error: 'Missing required personal information. A full 9-digit SSN is required (Accio uses it to do a direct identity match — last-4 routes the order to the slow applicant-portal path).',
           missingFields,
-          requiresPersonalInfo: true
+          requiresPersonalInfo: true,
+          hasIncompleteApp,
         },
         { status: 400 }
       )
