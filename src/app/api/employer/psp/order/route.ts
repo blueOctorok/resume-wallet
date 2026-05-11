@@ -11,6 +11,7 @@ import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
@@ -70,6 +71,16 @@ export async function POST(request: NextRequest) {
         { error: 'A full 9-digit SSN is required for the PSP + MVR bundle (last-4 forces FMCSA into the slow applicant-portal path).' },
         { status: 400 },
       )
+    }
+
+    // Strict pre-flight validation. Same rules as the candidate path —
+    // catches typos in DL number, state code, DOB before Accio is called.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn: normalizedSsn,
+    })
+    // `=== false` narrows the ValidationResult discriminated union — `!` doesn't.
+    if (validation.ok === false) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -154,6 +165,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const dupErr = await checkRecentDuplicateOrder(supabase, {
+      driverUserId: candidateUserId,
+      kind: 'psp',
+    })
+    if (dupErr) {
+      return NextResponse.json({ error: dupErr }, { status: 409 })
+    }
+
     const accioAccount = process.env.ACCIO_ACCOUNT
     const accioUsername = process.env.ACCIO_USERNAME
     const accioPassword = process.env.ACCIO_PASSWORD
@@ -177,22 +196,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Send full SSN — see comment in src/app/api/mvr/order/route.ts.
+    // Use normalized values (uppercase state/DL, YYYYMMDD DOB) from validation.
+    const n = validation.normalized
     const orderXml = buildAccioPspWithMvrBundleOrderXml({
-      firstName,
+      firstName: n.firstName,
       middleName,
-      lastName,
+      lastName: n.lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: normalizedSsn,
-      dob,
+      ssn: n.ssn,
+      dob: n.dob,
       gender,
       address,
       city,
       state,
       zip,
       jobState: jobState || state,
-      dlNumber,
-      dlState,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       orderNumber,
       webhookUrl,
       webhookGuid,
@@ -227,8 +248,8 @@ export async function POST(request: NextRequest) {
       mvrSuborderId: bundle.mvrSuborderId,
       fmcsaSuborderId: bundle.fmcsaSuborderId,
       applicantPortalUrl: bundle.applicantPortalUrl,
-      dlNumber,
-      dlState,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       expiresAtIso: expiresAt,
       orderedByCompanyId: companyId,
       orderedByUserId: employer.id,

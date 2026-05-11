@@ -7,6 +7,7 @@ import type { PspData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import PspViewModal from '@/components/PspViewModal'
 import Button from '@/components/ui/Button'
+import ScreeningFailureBanner from '@/components/ui/ScreeningFailureBanner'
 import { outcomeBadgeClasses, outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
 
 function formatOrderDate(raw: string | null | undefined): string | null {
@@ -47,6 +48,7 @@ export default function PspSection({
   const [open, setOpen] = useState(false)
 
   const isComplete = data.orderStatus === 'completed' || data.orderStatus === 'needs_review'
+  const isFailed = data.orderStatus === 'failed'
   const hasOrder = Boolean(data.orderId && data.orderStatus !== 'none')
   const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
@@ -59,9 +61,12 @@ export default function PspSection({
     onNavigateToOrder?.()
   }
 
+  // Suppress the header button on failed orders — the banner provides
+  // its own clearer "Re-order" CTA.
   const showSelfButton =
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
+    !isFailed &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
@@ -95,7 +100,15 @@ export default function PspSection({
         )}
       </div>
 
-      {isComplete && data.employerPaidScreening ? (
+      {isFailed ? (
+        <ScreeningFailureBanner
+          kind="psp"
+          outcome={data.resultOutcome}
+          isDark={isDark}
+          onRetry={onNavigateToOrder}
+          hideRetry={!isCareerCardOwnerMode(mode) || data.employerPaidScreening || !onNavigateToOrder}
+        />
+      ) : isComplete && data.employerPaidScreening ? (
         <div className="space-y-2">
           <p className={cn('text-sm', isDark ? 'text-gray-300' : 'text-gray-700')}>
             <span className="font-medium text-emerald-500 dark:text-emerald-400">Complete.</span>{' '}

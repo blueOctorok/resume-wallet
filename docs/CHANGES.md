@@ -4,6 +4,74 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP/MVR fail-fast: pre-flight validation, hardened webhook matching, and a real failure UX** (May 2026)
+
+Sparked by a PSP order (`fc7936ec…`) that came back "Failed" in the Storm employer hub even though Key/Pace's Pace portal showed it as fully completed. The user's boss had typed the DL number with a transposed digit (`RL194094` ↔ `RL194049`) and Accio later replayed a stale webhook from an old `testaccount` order. Both went undetected by Storm: we placed the bad order without checking, then matched the stale postback to the wrong row.
+
+The user's mandate: "If the info isn't right, get rejected and shut down right away. Thrown out because it is wrong and the user is forced to redo it with the correct data."
+
+### Three layers of defense
+
+#### Layer 1 — Pre-flight validation (`src/lib/screening-validation.ts`)
+
+Before any of the six order routes calls Accio (which costs real money and takes 30+ minutes to fail) we validate the data Accio cares about. This is shaped as a discriminated-union return so callers either get a normalized payload or a user-safe error string in one shot.
+
+| Field | Rule | Why |
+|---|---|---|
+| `firstName` / `lastName` | Non-empty, ≤ 50 chars | Empty names are a UI bug; oversized names are pasted resumes |
+| `dob` | YYYY-MM-DD or YYYYMMDD; valid calendar date; age 16–100 | Catches `20260105`-style typos that would make the driver -36 years old |
+| `dlState` | Strict 2-letter US state code (50 states + DC) | DMVs reject anything else; better to fail at the door |
+| `dlNumber` | 5–17 alphanumerics + dashes (case-insensitive, normalized to upper) | Per-state regex creates more false positives than typos it catches |
+| `ssn` | 9 digits, passes `isValidSsn()` | Last-4 forces FMCSA into the slow applicant-portal path |
+| (cross-row) | No `pending` or recent `completed` order for the same driver + same kind in the last 24h | Stops accidental double-orders when a user clicks "Place order" twice while a network request is in flight |
+
+Wired into all six order routes: `/api/mvr/order`, `/api/psp/order`, `/api/employer/mvr/order`, `/api/employer/psp/order`, `/api/admin/mvr/order`, `/api/candidate/fulfill-screening`. Each route uses the normalized values (uppercase state/DL, `YYYYMMDD` DOB) for both the Accio XML payload and the DB insert, so what gets persisted always matches what got submitted.
+
+> **Pattern recognition:** Discriminated unions (`{ ok: true, normalized } | { ok: false, error }`) are the cleanest way to model "either succeed with sanitized data or fail with a user-safe message" — but TypeScript narrows them with `=== false`, not `!`. We hit `Property 'error' does not exist` on every site that used `if (!validation.ok)`. Always use `if (validation.ok === false)` for these unions, mirroring the same fix that previously bit us in `check-accio`.
+
+#### Layer 2 — Hardened webhook matching (`src/lib/screening-webhook-match.ts`)
+
+The wrongful-matching bug came from a "Strategy 4: most recent pending order in the same state" fallback in both webhook handlers. When Accio replayed a stale `unfilled` postback from the testaccount era, that fallback grabbed a brand-new legitimate order and stamped it with the stale status — even overwriting `accio_remote_order_number` with the testaccount's remote ID, which permanently broke future postbacks for the real order.
+
+The new matcher tries strategies in strict precedence:
+
+1. `accio_remote_suborder_number` (Accio's own suborder ID — most specific)
+2. `accio_suborder_number` (Storm's suborder ID, set on bundles)
+3. `accio_remote_order_number` (Accio's order ID — almost every healthy order matches here)
+4. `accio_order_number` (Storm's generated number)
+5. **DL+state recovery** — only when status=`pending`, `accio_remote_order_number IS NULL`, ordered within last 24h, and exactly one row matches. Two or more candidates? Refuse. Better to leave the order pending (and surface to admin) than corrupt a different driver's row.
+
+The state-only fallback is **gone**. There is no path that matches a webhook to an order without at least the DL number agreeing.
+
+A companion `buildRemoteIdPatch()` enforces the second half of the lesson: only the DL+state recovery path is ever allowed to write `accio_remote_*` fields, and only when they're already null. Strict-match paths leave them alone — overwriting them is what made the corruption permanent and unrecoverable.
+
+Both `process-psp-accio-webhook.ts` and `/api/mvr/webhook/route.ts` were rewritten on top of this matcher. They now log a single `[WEBHOOK MATCH] Matched order X via <strategy>` line per postback so we can see in production which path is actually being used and tighten further if needed.
+
+#### Layer 3 — Failure UX (`src/components/ui/ScreeningFailureBanner.tsx`)
+
+Failed orders used to show "Order failed — contact support" with a yellow clock icon. Now the MVR / PSP career-card sections render a red banner explaining the most likely cause ("the state DMV couldn't find a matching record — usually means a typo in the DL number, state, or DOB") with a prominent **Re-order with corrected info** button. The order form prefills from the user's existing CDL block, so re-ordering is a 10-second fix. The MVR Management modal got matching treatment so the orders list shows three buckets — `Failed` / `Available` / `Processing` — instead of the old binary view that misleadingly painted failed orders as "Available."
+
+### Recovery migration
+
+`supabase/migrations/083_recover_wrongly_matched_psp.sql` is a focused, idempotent recovery for the original corrupted PSP order (id `fc7936ec…`) and its bundled MVR sibling. It:
+
+1. Resets the row's `status` to `pending` and clears `result_xml`, `result_outcome`, `processed_at`, `completed_at`.
+2. Nulls out the corrupted `accio_remote_*` numbers so the next legitimate Accio postback can match cleanly.
+3. Deletes the bogus `psp_results` / `mvr_results` row that held the stale testaccount XML.
+
+The `WHERE` clause matches the corruption signature (`status='failed' AND result_outcome='unknown' AND result_xml ILIKE '%unfilled%'`) so re-running the migration is a no-op once recovery has happened.
+
+### Files touched
+
+| Area | Files |
+|---|---|
+| Pre-flight validation | `src/lib/screening-validation.ts` (new) + 6 order routes |
+| Webhook matching | `src/lib/screening-webhook-match.ts` (new), `src/lib/process-psp-accio-webhook.ts`, `src/app/api/mvr/webhook/route.ts` |
+| Failure UX | `src/components/ui/ScreeningFailureBanner.tsx` (new), `src/components/career-card/sections/{MvrSection,PspSection}.tsx`, `src/components/MvrManagementModal.tsx`, `src/app/api/mvr/check-status/route.ts` |
+| Recovery | `supabase/migrations/083_recover_wrongly_matched_psp.sql` |
+
+---
+
 ## **Hub auto-refresh no longer tears down the UI ("phantom page refresh" fix)** (May 2026)
 
 User reported: "if I leave the screen idle for 5+ min and click a button, the page seems to do a full refresh — happens more on the employer side, especially while a PSP is processing."

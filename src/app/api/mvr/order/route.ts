@@ -4,6 +4,7 @@ import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from 
 import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * API Route: Order MVR from Accio
@@ -291,6 +292,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Strict pre-flight validation — formats Accio expects + bad-data tripwires.
+    // Anything that fails here means we DON'T spend money calling Accio just to
+    // learn 30+ minutes later that the data was wrong.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn,
+    })
+    // Use `=== false` instead of `!validation.ok` so TypeScript narrows
+    // the discriminated union correctly inside the branch.
+    if (validation.ok === false) {
+      return NextResponse.json(
+        { error: validation.error, requiresPersonalInfo: true },
+        { status: 400 },
+      )
+    }
+
+    // Prevent accidental double-orders (and double-charges) — most often a
+    // user clicking the place-order button twice while waiting for confirmation.
+    const dupErr = await checkRecentDuplicateOrder(supabaseService, {
+      driverUserId: user.id,
+      kind: 'mvr',
+    })
+    if (dupErr) {
+      return NextResponse.json({ error: dupErr }, { status: 409 })
+    }
+
     // 3. Generate order number + webhook GUID. getScreeningWebhookBaseUrl
     // hard-fails in production if no real public URL is configured, so we never
     // accidentally tell Accio to post results to localhost.
@@ -311,22 +337,24 @@ export async function POST(request: NextRequest) {
     // compliant and the state DMV identity match needs the full number. Sending
     // last-4 was forcing Accio to re-collect identity via the applicant portal,
     // which is one of the things that made orders take hours instead of minutes.
+    // Use the normalized values (uppercase state/DL, YYYYMMDD DOB) from validation.
+    const n = validation.normalized
     const orderXml = buildAccioMvrOrderXml({
-      firstName,
+      firstName: n.firstName,
       middleName,
-      lastName,
+      lastName: n.lastName,
       email,
       phone,
-      ssn,
-      dob,
+      ssn: n.ssn,
+      dob: n.dob,
       gender,
       address,
       city,
       state,
       zip,
       jobState,
-      dlNumber,
-      dlState,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       orderNumber,
       mvrSearchType,
       includeFmcsaCrashInspection,
@@ -453,8 +481,8 @@ export async function POST(request: NextRequest) {
         accio_remote_suborder_number: subOrderId || null, // Accio's internal suborder number (same as suborderID)
         order_type: 'MVR',
         mvr_search_type: mvrSearchType,
-        dl_number: dlNumber,
-        dl_state: dlState,
+        dl_number: n.dlNumber,
+        dl_state: n.dlState,
         status: 'pending', // Will be updated to 'processing' when Accio accepts it
         order_xml: orderXml,
         applicant_portal_url: applicantPortalUrl,

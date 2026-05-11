@@ -11,6 +11,7 @@ import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-
 import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
@@ -199,6 +200,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Strict pre-flight validation — see screening-validation.ts. Bad data
+    // here means we don't pay Accio for an order we already know will fail.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn,
+    })
+    // `=== false` narrows the ValidationResult discriminated union — `!` doesn't.
+    if (validation.ok === false) {
+      return NextResponse.json(
+        { error: validation.error, requiresPersonalInfo: true },
+        { status: 400 },
+      )
+    }
+
+    // PSP duplicate-prevention also catches the bundle's MVR — both rows
+    // come from the same placeOrder, so checking either kind is sufficient.
+    const dupErr = await checkRecentDuplicateOrder(supabaseService, {
+      driverUserId: user.id,
+      kind: 'psp',
+    })
+    if (dupErr) {
+      return NextResponse.json({ error: dupErr }, { status: 409 })
+    }
+
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
     let webhookUrl: string
@@ -212,23 +236,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send full SSN (see comment in mvr/order/route.ts).
+    // Send full SSN (see comment in mvr/order/route.ts). Use normalized
+    // values from validation (uppercase state/DL, YYYYMMDD DOB).
+    const n = validation.normalized
     const orderXml = buildAccioPspWithMvrBundleOrderXml({
-      firstName,
+      firstName: n.firstName,
       middleName,
-      lastName,
+      lastName: n.lastName,
       email,
       phone,
-      ssn,
-      dob,
+      ssn: n.ssn,
+      dob: n.dob,
       gender,
       address,
       city,
       state,
       zip,
       jobState: jobState ?? state,
-      dlNumber,
-      dlState,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       orderNumber,
       webhookUrl,
       webhookGuid,
@@ -263,8 +289,8 @@ export async function POST(request: NextRequest) {
       mvrSuborderId: bundle.mvrSuborderId,
       fmcsaSuborderId: bundle.fmcsaSuborderId,
       applicantPortalUrl: bundle.applicantPortalUrl,
-      dlNumber,
-      dlState: dlState.toUpperCase(),
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       expiresAtIso: expiresAt,
       paymentId: payment.id,
       paymentTxHash,

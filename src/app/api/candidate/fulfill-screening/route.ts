@@ -11,6 +11,7 @@ import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * POST /api/candidate/fulfill-screening
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest) {
         { error: 'A full 9-digit SSN is required (last-4 forces Accio onto the slow applicant-portal verification path).' },
         { status: 400 },
       )
+    }
+
+    // Strict pre-flight validation. We're about to bill the company and
+    // call Accio — bad data here means a "complete but useless" report.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn: fullSsn,
+    })
+    // `=== false` narrows the ValidationResult discriminated union — `!` doesn't.
+    if (validation.ok === false) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -132,6 +143,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prevent accidental double-fulfillment of the same employer request.
+    const dupErr = await checkRecentDuplicateOrder(supabase, {
+      driverUserId: user.id,
+      kind: type as 'mvr' | 'psp',
+    })
+    if (dupErr) {
+      return NextResponse.json({ error: dupErr }, { status: 409 })
+    }
+
     // Check Accio credentials
     const accioAccount = process.env.ACCIO_ACCOUNT
     const accioUsername = process.env.ACCIO_USERNAME
@@ -163,25 +183,27 @@ export async function POST(request: NextRequest) {
     const phone = formData.phone?.trim() || ''
     // `fullSsn` is the normalized 9-digit value validated above — no extra trim/slice here.
 
+    // Use normalized values from validation (uppercase state/DL, YYYYMMDD DOB).
+    const n = validation.normalized
     let orderXml: string
 
     if (type === 'mvr') {
       orderXml = buildAccioMvrOrderXml({
-        firstName: firstName.trim(),
+        firstName: n.firstName,
         middleName,
-        lastName: lastName.trim(),
+        lastName: n.lastName,
         email,
         phone,
-        ssn: fullSsn,
-        dob: dob.trim(),
+        ssn: n.ssn,
+        dob: n.dob,
         gender: 'U',
         address: address.trim(),
         city: city.trim(),
         state: state.trim().toUpperCase(),
         zip: zip.trim(),
         jobState: state.trim().toUpperCase(),
-        dlNumber: dlNumber.trim(),
-        dlState: dlState.trim().toUpperCase(),
+        dlNumber: n.dlNumber,
+        dlState: n.dlState,
         orderNumber,
         mvrSearchType: 'standard',
         includeFmcsaCrashInspection: false,
@@ -190,21 +212,21 @@ export async function POST(request: NextRequest) {
       })
     } else {
       orderXml = buildAccioPspWithMvrBundleOrderXml({
-        firstName: firstName.trim(),
+        firstName: n.firstName,
         middleName,
-        lastName: lastName.trim(),
+        lastName: n.lastName,
         email,
         phone,
-        ssn: fullSsn,
-        dob: dob.trim(),
+        ssn: n.ssn,
+        dob: n.dob,
         gender: 'U',
         address: address.trim(),
         city: city.trim(),
         state: state.trim().toUpperCase(),
         zip: zip.trim(),
         jobState: state.trim().toUpperCase(),
-        dlNumber: dlNumber.trim(),
-        dlState: dlState.trim().toUpperCase(),
+        dlNumber: n.dlNumber,
+        dlState: n.dlState,
         orderNumber,
         webhookUrl,
         webhookGuid,
@@ -212,9 +234,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[FULFILL SCREENING] Placing ${type.toUpperCase()} order for:`, {
-      firstName,
-      lastName,
-      dlState,
+      firstName: n.firstName,
+      lastName: n.lastName,
+      dlState: n.dlState,
       companyId: candidateRequest.company_id,
     })
 
@@ -252,8 +274,8 @@ export async function POST(request: NextRequest) {
         mvrSuborderId: bundle.mvrSuborderId,
         fmcsaSuborderId: bundle.fmcsaSuborderId,
         applicantPortalUrl: bundle.applicantPortalUrl,
-        dlNumber: dlNumber.trim(),
-        dlState: dlState.trim().toUpperCase(),
+        dlNumber: n.dlNumber,
+        dlState: n.dlState,
         expiresAtIso: expiresAt,
         orderedByCompanyId: candidateRequest.company_id,
         orderedByUserId: candidateRequest.requested_by_user_id,
@@ -302,8 +324,8 @@ export async function POST(request: NextRequest) {
       accio_suborder_number: subOrderId,
       accio_remote_order_number: accioOrderId,
       accio_remote_suborder_number: subOrderId,
-      dl_number: dlNumber.trim(),
-      dl_state: dlState.trim().toUpperCase(),
+      dl_number: n.dlNumber,
+      dl_state: n.dlState,
       status: 'pending',
       order_xml: orderXml,
       ordered_by_company_id: candidateRequest.company_id,

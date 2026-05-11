@@ -4,6 +4,7 @@ import { savePspData } from '@/lib/block-data'
 import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
 import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { parsePspResult, pspResultToJsonb } from '@/lib/accio-psp-parser'
+import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
 
 export interface PspWebhookProcessOutcome {
   status: number
@@ -65,52 +66,49 @@ export async function processPspAccioWebhookCompletion(
     return { status: 400, body: { error: 'Missing order numbers in result' } }
   }
 
-  let { data: pspOrder } = await supabase
-    .from('psp_orders')
-    .select('*')
-    .eq('accio_order_number', orderNumber)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // Hardened matching — strict ID precedence with no state-only fallback.
+  // The old code had a `state-only` last resort that grabbed the most recent
+  // pending PSP in the same state. When Accio replayed a stale webhook from
+  // an old testaccount order, that fallback corrupted a brand-new legitimate
+  // order (`fc7936ec`) by stamping it with `unfilled` and overwriting its
+  // remote IDs. See src/lib/screening-webhook-match.ts for the full story.
+  const matched = await matchScreeningOrder<{
+    id: string
+    status: string
+    ordered_at: string
+    driver_user_id: string
+    expires_at: string | null
+    ordered_by_company_id: string | null
+    ordered_by_user_id: string | null
+    ordered_by_employer: boolean | null
+    accio_remote_order_number?: string | null
+    accio_remote_suborder_number?: string | null
+  }>(supabase, 'psp_orders', {
+    ourOrderNumber: orderNumber,
+    remoteOrderNumber: parsed.remoteOrderNumber,
+    ourSubOrderNumber: subOrderNumber,
+    remoteSubOrderNumber: parsed.remoteSubOrderNumber,
+    dlNumber: parsed.dlNumber,
+    dlState: parsed.dlState,
+  })
 
-  if (!pspOrder && parsed.remoteOrderNumber) {
-    const { data: remoteMatch } = await supabase
-      .from('psp_orders')
-      .select('*')
-      .eq('accio_remote_order_number', parsed.remoteOrderNumber)
-      .maybeSingle()
-    pspOrder = remoteMatch
-  }
-
-  if (!pspOrder && parsed.dlNumber && parsed.dlState) {
-    const { data: dlMatch } = await supabase
-      .from('psp_orders')
-      .select('*')
-      .eq('status', 'pending')
-      .eq('dl_number', parsed.dlNumber)
-      .eq('dl_state', parsed.dlState)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    pspOrder = dlMatch
-  }
-
-  if (!pspOrder && parsed.dlState) {
-    const { data: stateMatch } = await supabase
-      .from('psp_orders')
-      .select('*')
-      .eq('status', 'pending')
-      .eq('dl_state', parsed.dlState)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    pspOrder = stateMatch
-  }
-
-  if (!pspOrder) {
-    console.error('[PSP WEBHOOK] Order not found', { orderNumber, subOrderNumber, parsed })
+  if (!matched) {
+    console.error('[PSP WEBHOOK] Order not found (returning 404 — Accio will retry):', {
+      orderNumber,
+      subOrderNumber,
+      remoteOrderNumber: parsed.remoteOrderNumber,
+      remoteSubOrderNumber: parsed.remoteSubOrderNumber,
+      dl: parsed.dlNumber,
+      state: parsed.dlState,
+    })
     return { status: 404, body: { error: 'PSP order not found' } }
   }
+
+  const pspOrder = matched.row
+  console.log(
+    `[PSP WEBHOOK] Matched order ${pspOrder.id} via ${matched.matchedBy}` +
+      (matched.warning ? ` (warning: ${matched.warning})` : ''),
+  )
 
   const previousOrderStatus = pspOrder.status
 
@@ -174,13 +172,21 @@ export async function processPspAccioWebhookCompletion(
     heldForReview: parsedPsp?.heldForReview ?? false,
   })
 
+  // Same anti-corruption rule as the MVR webhook: only the DL+state recovery
+  // path is allowed to write the remote IDs (and only when they're still null).
+  // Strict-match paths leave them alone — they already match by definition.
+  const remoteIdPatch = buildRemoteIdPatch(
+    matched,
+    parsed.remoteOrderNumber,
+    parsed.remoteSubOrderNumber,
+  )
+
   await supabase
     .from('psp_orders')
     .update({
       status: nextStatus,
       result_outcome: nextOutcome,
-      accio_remote_order_number: parsed.remoteOrderNumber || pspOrder.accio_remote_order_number,
-      accio_remote_suborder_number: parsed.remoteSubOrderNumber || pspOrder.accio_remote_suborder_number,
+      ...remoteIdPatch,
       processed_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
       result_xml: xmlBody,

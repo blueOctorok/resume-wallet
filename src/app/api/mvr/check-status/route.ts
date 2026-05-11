@@ -103,13 +103,20 @@ export async function GET(request: NextRequest) {
         ? order.mvr_results[0]
         : order.mvr_results
 
+      // A `mvr_results` row exists for both successful AND failed orders
+      // (e.g. unfilled), so derive viewability from order status, not row
+      // existence — otherwise failed orders show "Available" in the modal.
+      const isViewable =
+        !!result && (order.status === 'completed' || order.status === 'needs_review')
+
       return {
         id: order.id,
         orderNumber: order.accio_order_number,
         status: order.status,
+        resultOutcome: order.result_outcome ?? null,
         orderedAt: order.ordered_at,
         paymentId: order.payment_id,
-        hasResult: !!result,
+        hasResult: isViewable,
         result: result ? {
           id: result.id,
           resultStatus: result.result_status,

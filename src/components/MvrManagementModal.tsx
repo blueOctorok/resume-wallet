@@ -27,6 +27,8 @@ interface Order {
   id: string
   orderNumber: string
   status: string
+  /** Accio outcome (clear/hits/unknown/etc) — `unknown` typically means the vendor returned `unfilled`. */
+  resultOutcome: string | null
   orderedAt: string
   paymentId: string | null
   hasResult: boolean
@@ -84,9 +86,10 @@ export default function MvrManagementModal({
             id: order.id,
             orderNumber: order.orderNumber,
             status: order.status,
+            resultOutcome: order.resultOutcome ?? null,
             orderedAt: order.orderedAt,
             paymentId: order.paymentId,
-            hasResult: !!order.hasResult || !!order.result,
+            hasResult: !!order.hasResult,
           })) || [],
         }
 
@@ -471,17 +474,30 @@ export default function MvrManagementModal({
                     Order History
                   </h3>
                   <div className="space-y-3">
-                    {data.orders.map((order) => (
+                    {data.orders.map((order) => {
+                      // Three buckets: failed (terminal, no usable report), available
+                      // (terminal with viewable report), processing (still pending).
+                      const isFailed = order.status === 'failed'
+                      const isAvailable = order.hasResult && !isFailed
+                      const failureReason =
+                        order.resultOutcome === 'unknown'
+                          ? "The state DMV couldn't find a matching record — usually means a typo in the DL number, state, or DOB."
+                          : 'Something went wrong while pulling this report.'
+                      return (
                       <div
                         key={order.id}
                         className={`p-5 rounded-xl border-2 transition-all hover:scale-[1.02] ${
-                          order.hasResult
+                          isFailed
                             ? !isDarkTheme(theme)
-                              ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
-                              : 'bg-gradient-to-r from-emerald-950/30 to-green-950/30 border-emerald-700/40'
-                            : !isDarkTheme(theme)
-                              ? 'bg-white border-gray-300'
-                              : 'bg-gray-800/30 border-gray-700'
+                              ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-300'
+                              : 'bg-gradient-to-r from-red-950/30 to-rose-950/30 border-red-700/40'
+                            : isAvailable
+                              ? !isDarkTheme(theme)
+                                ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-300'
+                                : 'bg-gradient-to-r from-emerald-950/30 to-green-950/30 border-emerald-700/40'
+                              : !isDarkTheme(theme)
+                                ? 'bg-white border-gray-300'
+                                : 'bg-gray-800/30 border-gray-700'
                         }`}
                       >
                         <div className="flex justify-between items-start gap-2 mb-3">
@@ -491,23 +507,29 @@ export default function MvrManagementModal({
                             </span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            {order.hasResult ? (
+                            {isFailed ? (
+                              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                            ) : isAvailable ? (
                               <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
                             ) : (
                               <Clock className="h-5 w-5 text-amber-400 flex-shrink-0" />
                             )}
                             <span
                               className={`text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap flex-shrink-0 ${
-                                order.hasResult
+                                isFailed
                                   ? !isDarkTheme(theme)
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/30'
-                                  : !isDarkTheme(theme)
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : 'bg-amber-900/40 text-amber-400 border border-amber-700/30'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-red-900/40 text-red-400 border border-red-700/30'
+                                  : isAvailable
+                                    ? !isDarkTheme(theme)
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/30'
+                                    : !isDarkTheme(theme)
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-amber-900/40 text-amber-400 border border-amber-700/30'
                               }`}
                             >
-                              {order.hasResult ? 'Available' : 'Processing'}
+                              {isFailed ? 'Failed' : isAvailable ? 'Available' : 'Processing'}
                             </span>
                           </div>
                         </div>
@@ -515,7 +537,27 @@ export default function MvrManagementModal({
                           <Clock className="h-4 w-4" />
                           <span>Ordered: {new Date(order.orderedAt).toLocaleString()}</span>
                         </div>
-                        {order.hasResult && (
+                        {isFailed ? (
+                          <div>
+                            <p className={`text-sm mb-3 ${!isDarkTheme(theme) ? 'text-red-700' : 'text-red-300'}`}>
+                              {failureReason}
+                            </p>
+                            <button
+                              onClick={() => {
+                                onOrderNew()
+                                onClose()
+                              }}
+                              className={`px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 shadow-lg flex items-center gap-2 ${
+                                !isDarkTheme(theme)
+                                  ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white'
+                                  : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 text-white shadow-red-500/30'
+                              }`}
+                            >
+                              <FileText className="h-5 w-5" />
+                              Re-order with corrected info
+                            </button>
+                          </div>
+                        ) : isAvailable && (
                           <button
                             onClick={() => {
                               onViewMvr(order.id)
@@ -532,7 +574,8 @@ export default function MvrManagementModal({
                           </button>
                         )}
                       </div>
-                    ))}
+                      )
+                    })}
                       </div>
                     </div>
                   ) : (

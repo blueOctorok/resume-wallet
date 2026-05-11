@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * POST /api/admin/mvr/order
@@ -108,6 +109,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Strict pre-flight validation. Even admins typo — and a bad order
+    // costs the same as a good one but takes 30+ minutes to fail.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn: normalizedSsn,
+    })
+    // `=== false` narrows the ValidationResult discriminated union — `!` doesn't.
+    if (validation.ok === false) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
     // Get Accio credentials
     const accioAccount = process.env.ACCIO_ACCOUNT
     const accioUsername = process.env.ACCIO_USERNAME
@@ -150,6 +161,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Duplicate-prevention only applies when we know the candidate. Admin can
+    // also place orders for unlinked candidates (where candidateUserId is null).
+    if (candidateUserId) {
+      const dupErr = await checkRecentDuplicateOrder(supabase, {
+        driverUserId: candidateUserId,
+        kind: 'mvr',
+      })
+      if (dupErr) {
+        return NextResponse.json({ error: dupErr }, { status: 409 })
+      }
+    }
+
     // Validate company if provided
     let orderingCompanyName: string | null = null
     if (companyId) {
@@ -183,22 +206,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Build Accio XML order. Send full SSN — see comment in mvr/order/route.ts.
+    // Use normalized values from validation (uppercase state/DL, YYYYMMDD DOB).
+    const n = validation.normalized
     const orderXml = buildAccioMvrOrderXml({
-      firstName,
+      firstName: n.firstName,
       middleName,
-      lastName,
+      lastName: n.lastName,
       email: email || `admin-order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: normalizedSsn,
-      dob,
+      ssn: n.ssn,
+      dob: n.dob,
       gender,
       address,
       city,
       state,
       zip,
-      jobState: jobState || state, // Default to residential state
-      dlNumber,
-      dlState,
+      jobState: jobState || state,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       orderNumber,
       mvrSearchType,
       includeFmcsaCrashInspection,
@@ -206,7 +231,7 @@ export async function POST(request: NextRequest) {
       webhookGuid,
     })
 
-    console.log('[ADMIN MVR] Placing order for:', { firstName, lastName, dlState, orderedBy: auth.walletAddress })
+    console.log('[ADMIN MVR] Placing order for:', { firstName: n.firstName, lastName: n.lastName, dlState: n.dlState, orderedBy: auth.walletAddress })
 
     // Send order to Accio
     let accioResponse: string
@@ -276,8 +301,8 @@ export async function POST(request: NextRequest) {
         // Order details
         order_type: 'MVR',
         mvr_search_type: mvrSearchType,
-        dl_number: dlNumber,
-        dl_state: dlState,
+        dl_number: n.dlNumber,
+        dl_state: n.dlState,
         status: 'pending',
         order_xml: orderXml,
         applicant_portal_url: applicantPortalUrl,

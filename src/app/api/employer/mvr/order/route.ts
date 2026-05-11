@@ -4,6 +4,7 @@ import { companyCanOrderMvr } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 /**
  * POST /api/employer/mvr/order
@@ -77,6 +78,16 @@ export async function POST(request: NextRequest) {
         { error: 'A full 9-digit SSN is required. Last-4 forces Accio onto the slow applicant-portal verification path.' },
         { status: 400 },
       )
+    }
+
+    // Strict pre-flight validation — see screening-validation.ts. Catches
+    // typos in DL/state/DOB before we spend money calling Accio.
+    const validation = validateScreeningOrderInput({
+      firstName, lastName, dob, dlState, dlNumber, ssn: normalizedSsn,
+    })
+    // `=== false` narrows the ValidationResult discriminated union — `!` doesn't.
+    if (validation.ok === false) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -178,6 +189,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prevent accidental double-orders for the same driver within 24h.
+    const dupErr = await checkRecentDuplicateOrder(supabase, {
+      driverUserId: candidateUserId,
+      kind: 'mvr',
+    })
+    if (dupErr) {
+      return NextResponse.json({ error: dupErr }, { status: 409 })
+    }
+
     // Resolve driver CDL block for existence check (driver_profile_id is legacy)
     const { data: cdlBlock } = await supabase
       .from('block_driver_cdl')
@@ -211,22 +231,24 @@ export async function POST(request: NextRequest) {
 
     // Send full SSN — Accio is FCRA compliant and the state DMV identity match
     // needs all 9 digits. See src/app/api/mvr/order/route.ts for context.
+    // Use normalized values from validation (uppercase state/DL, YYYYMMDD DOB).
+    const n = validation.normalized
     const orderXml = buildAccioMvrOrderXml({
-      firstName,
+      firstName: n.firstName,
       middleName,
-      lastName,
+      lastName: n.lastName,
       email: email || candidate.email || `order-${orderNumber}@stormchain.ai`,
       phone,
-      ssn: normalizedSsn,
-      dob,
+      ssn: n.ssn,
+      dob: n.dob,
       gender,
       address,
       city,
       state,
       zip,
       jobState: jobState || state,
-      dlNumber,
-      dlState,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
       orderNumber,
       mvrSearchType,
       includeFmcsaCrashInspection: false,
@@ -234,7 +256,7 @@ export async function POST(request: NextRequest) {
       webhookGuid,
     })
 
-    console.log('[EMPLOYER MVR] Placing order for:', { firstName, lastName, dlState, companyId })
+    console.log('[EMPLOYER MVR] Placing order for:', { firstName: n.firstName, lastName: n.lastName, dlState: n.dlState, companyId })
 
     // Submit to Accio
     let accioResponse: string
@@ -278,8 +300,8 @@ export async function POST(request: NextRequest) {
         accio_remote_suborder_number: subOrderId,
         order_type:                 'MVR',
         mvr_search_type:            mvrSearchType,
-        dl_number:                  dlNumber,
-        dl_state:                   dlState,
+        dl_number:                  n.dlNumber,
+        dl_state:                   n.dlState,
         status:                     'pending',
         order_xml:                  orderXml,
         applicant_portal_url:       applicantPortalUrl,

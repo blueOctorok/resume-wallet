@@ -8,6 +8,7 @@ import {
   processPspAccioWebhookCompletion,
 } from '@/lib/process-psp-accio-webhook'
 import { deriveScreeningStatus } from '@/lib/accio-result-status'
+import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
 
 /**
  * Convert YYYYMMDD date format to ISO date string for database storage
@@ -147,151 +148,50 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // First, log ALL pending orders for debugging
-    const { data: allPendingOrders } = await supabaseService
-      .from('mvr_orders')
-      .select('id, accio_order_number, accio_suborder_number, accio_remote_order_number, dl_number, dl_state, status, created_at')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(10)
-    
-    console.log('[MVR WEBHOOK] All pending orders in DB:', JSON.stringify(allPendingOrders, null, 2))
-    console.log('[MVR WEBHOOK] Looking for match with:', {
-      orderNumber,
-      subOrderNumber,
+    // Find the MVR order using the hardened matcher. The state-only fallback
+    // that used to live here is gone — see src/lib/screening-webhook-match.ts
+    // for the wrongful-matching incident that motivated the rewrite.
+    const matched = await matchScreeningOrder<{
+      id: string
+      status: string
+      ordered_at: string
+      driver_user_id: string | null
+      driver_profile_id: string | null
+      accio_remote_order_number?: string | null
+      accio_remote_suborder_number?: string | null
+      expires_at: string | null
+      ordered_at_ts?: string
+      ordered_by_company_id?: string | null
+      ordered_by_user_id?: string | null
+      ordered_by_employer?: boolean | null
+      employer_company_id?: string | null
+      employer_user_id?: string | null
+    }>(supabaseService, 'mvr_orders', {
+      ourOrderNumber: orderNumber,
       remoteOrderNumber: parsedResult.remoteOrderNumber,
+      ourSubOrderNumber: subOrderNumber,
       remoteSubOrderNumber: parsedResult.remoteSubOrderNumber,
-      licenseNumber: parsedResult.licenseNumber,
-      licenseState: parsedResult.licenseState
+      dlNumber: parsedResult.licenseNumber,
+      dlState: parsedResult.licenseState,
     })
 
-    // 1. Find the MVR order - try multiple matching strategies
-    // Strategy 1: Match by our order number (from reference_number or direct match)
-    // Handle case where accio_suborder_number might be NULL in DB
-    console.log('[MVR WEBHOOK] Strategy 1: Looking for accio_order_number =', orderNumber)
-    let { data: mvrOrder, error: orderError } = await supabaseService
-      .from('mvr_orders')
-      .select('*, driver_user_id, driver_profile_id')
-      .eq('accio_order_number', orderNumber)
-      .or(subOrderNumber 
-        ? `accio_suborder_number.eq.${subOrderNumber},accio_suborder_number.is.null`
-        : 'accio_suborder_number.is.null'
-      )
-      .maybeSingle()
-    
-    if (mvrOrder) {
-      console.log('[MVR WEBHOOK] Strategy 1 SUCCESS: Found order', mvrOrder.id)
-    } else {
-      console.log('[MVR WEBHOOK] Strategy 1 FAILED: No match for accio_order_number =', orderNumber)
-    }
-
-    // Strategy 2: If not found, try matching by Accio's remote_number
-    if (!mvrOrder && parsedResult.remoteOrderNumber) {
-      console.log('[MVR WEBHOOK] Strategy 2: Looking for accio_remote_order_number =', parsedResult.remoteOrderNumber)
-      const { data: remoteMatch, error: remoteError } = await supabaseService
-        .from('mvr_orders')
-        .select('*, driver_user_id, driver_profile_id')
-        .eq('accio_remote_order_number', parsedResult.remoteOrderNumber)
-        .maybeSingle()
-      
-      if (remoteMatch && !remoteError) {
-        console.log('[MVR WEBHOOK] Strategy 2 SUCCESS: Found order', remoteMatch.id)
-        mvrOrder = remoteMatch
-        orderError = null
-      } else {
-        console.log('[MVR WEBHOOK] Strategy 2 FAILED: No match for accio_remote_order_number =', parsedResult.remoteOrderNumber)
-      }
-    }
-
-    // Strategy 3: If still not found, try matching by DL number and state
-    // This handles cases where Accio doesn't populate reference_number or remote_number wasn't stored
-    if (!mvrOrder && parsedResult.licenseNumber && parsedResult.licenseState) {
-      console.log('[MVR WEBHOOK] Strategy 3: Looking for dl_number =', parsedResult.licenseNumber, 'dl_state =', parsedResult.licenseState)
-      const { data: accioMatch, error: accioError } = await supabaseService
-        .from('mvr_orders')
-        .select('*, driver_user_id, driver_profile_id')
-        .eq('status', 'pending')
-        .eq('dl_number', parsedResult.licenseNumber)
-        .eq('dl_state', parsedResult.licenseState)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      
-      if (accioMatch && !accioError) {
-        console.log('[MVR WEBHOOK] Strategy 3 SUCCESS: Found order', accioMatch.id, '- updating remote order numbers')
-        // Update the order with Accio's remote numbers for future matching
-        await supabaseService
-          .from('mvr_orders')
-          .update({
-            accio_remote_order_number: parsedResult.remoteOrderNumber || null,
-            accio_remote_suborder_number: parsedResult.remoteSubOrderNumber || null
-          })
-          .eq('id', accioMatch.id)
-        mvrOrder = accioMatch
-        orderError = null
-      } else {
-        console.log('[MVR WEBHOOK] Strategy 3 FAILED: No match for dl_number =', parsedResult.licenseNumber)
-      }
-    }
-
-    // Strategy 4: Last resort - find most recent pending order by state only
-    // This helps when DL numbers don't match but we have a pending order in the same state
-    if (!mvrOrder && parsedResult.licenseState) {
-      console.log('[MVR WEBHOOK] Strategy 4: Looking for ANY pending order in state =', parsedResult.licenseState)
-      const { data: stateMatch, error: stateError } = await supabaseService
-        .from('mvr_orders')
-        .select('*, driver_user_id, driver_profile_id')
-        .eq('status', 'pending')
-        .eq('dl_state', parsedResult.licenseState)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      
-      if (stateMatch && !stateError) {
-        console.log('[MVR WEBHOOK] Strategy 4 SUCCESS: Found order', stateMatch.id, 'with dl_number =', stateMatch.dl_number, '(webhook had dl =', parsedResult.licenseNumber, ')')
-        // Log warning about DL mismatch
-        console.warn('[MVR WEBHOOK] WARNING: DL number mismatch! Order DL:', stateMatch.dl_number, '!= Webhook DL:', parsedResult.licenseNumber)
-        // Update the order with Accio's remote numbers
-        await supabaseService
-          .from('mvr_orders')
-          .update({
-            accio_remote_order_number: parsedResult.remoteOrderNumber || null,
-            accio_remote_suborder_number: parsedResult.remoteSubOrderNumber || null
-          })
-          .eq('id', stateMatch.id)
-        mvrOrder = stateMatch
-        orderError = null
-      } else {
-        console.log('[MVR WEBHOOK] Strategy 4 FAILED: No pending orders in state =', parsedResult.licenseState)
-      }
-    }
-
-    if (orderError || !mvrOrder) {
-      console.error('[MVR WEBHOOK] MVR order not found after all strategies:', {
+    if (!matched) {
+      console.error('[MVR WEBHOOK] No MVR order matched (returning 404 — Accio will retry):', {
         orderNumber,
         subOrderNumber,
         remoteOrderNumber: parsedResult.remoteOrderNumber,
         remoteSubOrderNumber: parsedResult.remoteSubOrderNumber,
         licenseNumber: parsedResult.licenseNumber,
         licenseState: parsedResult.licenseState,
-        pendingOrdersInDb: allPendingOrders?.map(o => ({ 
-          id: o.id, 
-          accio_order: o.accio_order_number, 
-          dl: o.dl_number, 
-          state: o.dl_state 
-        })),
-        strategiesAttempted: [
-          'Strategy 1: order_number + suborder_number match',
-          'Strategy 2: remote_order_number match',
-          'Strategy 3: DL number + state match',
-          'Strategy 4: Any pending order in same state'
-        ]
       })
-      return NextResponse.json(
-        { error: 'MVR order not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'MVR order not found' }, { status: 404 })
     }
+
+    const mvrOrder = matched.row
+    console.log(
+      `[MVR WEBHOOK] Matched order ${mvrOrder.id} via ${matched.matchedBy}` +
+        (matched.warning ? ` (warning: ${matched.warning})` : ''),
+    )
 
     const previousOrderStatus = mvrOrder.status
 
@@ -381,13 +281,21 @@ export async function POST(request: NextRequest) {
       heldForReview: parsedResult.heldForReview,
     })
 
+    // Only allow remote-ID writes from the DL+state recovery path. For every
+    // other matching path the IDs already match by definition — overwriting
+    // them is what allowed the wrongful-matching corruption.
+    const remoteIdPatch = buildRemoteIdPatch(
+      matched,
+      parsedResult.remoteOrderNumber,
+      parsedResult.remoteSubOrderNumber,
+    )
+
     const { error: orderUpdateError } = await supabaseService
       .from('mvr_orders')
       .update({
         status: nextStatus,
         result_outcome: nextOutcome,
-        accio_remote_order_number: parsedResult.remoteOrderNumber,
-        accio_remote_suborder_number: parsedResult.remoteSubOrderNumber,
+        ...remoteIdPatch,
         processed_at: parsedResult.timeFilled || new Date().toISOString(),
         completed_at: new Date().toISOString(),
         result_xml: xmlBody,
