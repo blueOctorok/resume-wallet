@@ -16,6 +16,12 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
+export type PspConsentSignedResult = {
+  consentId: string
+  /** Applicant profile captured on this screen — used to chain employer PSP+MVR wizard steps. */
+  profileSnapshot?: Record<string, string>
+}
+
 interface DriverProfileInfo {
   firstName: string
   lastName: string
@@ -34,7 +40,7 @@ export interface PspDisclosureFormProps {
   /** Shown in FMCSA blanks: employer legal name, or "Self-Request" for candidate self-order */
   companyName: string
   onClose: () => void
-  onConsentSigned: (result: { consentId: string }) => void
+  onConsentSigned: (result: PspConsentSignedResult) => void
   /** When set, ties consent to employer request and completes `candidate_requests` */
   requestId?: string | null
   viewMode?: boolean
@@ -311,10 +317,26 @@ export default function PspDisclosureForm({
       }
 
       const data = await response.json()
-      setSigned(true)
-      onConsentSigned({ consentId: data.consentId as string })
+      const profileSnapshot: Record<string, string> = {
+        firstName: profile.firstName.trim(),
+        lastName: profile.lastName.trim(),
+        dateOfBirth: profile.dateOfBirth.trim(),
+        address: profile.address.trim(),
+        city: profile.city.trim(),
+        state: profile.state.trim(),
+        zip: profile.zip.trim(),
+        dlNumber: profile.dlNumber.trim(),
+        dlState: profile.dlState.trim(),
+        email: profile.email.trim(),
+      }
+      if (fulfillOrder && isValidSsn(normalizeSsnDigits(ssn))) {
+        profileSnapshot.ssn = normalizeSsnDigits(ssn)
+      }
 
-      // Step 2: If fulfillOrder mode, place the Accio PSP order
+      setSigned(true)
+      onConsentSigned({ consentId: data.consentId as string, profileSnapshot })
+
+      // If fulfillOrder mode, place the Accio PSP order immediately after consent
       if (fulfillOrder && requestId) {
         setOrderPlacing(true)
         const orderRes = await fetch('/api/candidate/fulfill-screening', {

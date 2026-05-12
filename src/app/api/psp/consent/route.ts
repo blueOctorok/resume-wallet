@@ -148,10 +148,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (requestId) {
+      // Do NOT mark `completed` here — the Accio order hasn't been placed yet.
+      // Step 3 (CDLIS + fulfill-screening) is the one that marks it `completed`.
+      // We only advance from `pending` → `viewed` so `usePendingScreeningRequest`
+      // still finds the row and keeps the wizard alive on page reload.
       const { error: updateError } = await supabase
         .from('candidate_requests')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .update({ status: 'viewed' })
         .eq('id', requestId)
+        .in('status', ['pending', 'viewed'])
 
       if (updateError) {
         console.error('[PSP CONSENT] Status update error:', updateError)
@@ -176,8 +181,8 @@ export async function POST(request: NextRequest) {
         createNotification({
           userId: requestingUser.requested_by_user_id,
           type: 'consent_signed',
-          title: 'PSP disclosure signed',
-          body: `${driverName} signed the FMCSA PSP Disclosure & Authorization for ${insertPayload.company_name}.`,
+          title: 'PSP disclosure signed — CDLIS step remaining',
+          body: `${driverName} signed the FMCSA PSP Disclosure & Authorization for ${insertPayload.company_name}. The order will be submitted after the CDLIS consent step.`,
           data: { requestId, driverUserId: user.id, companyName: insertPayload.company_name, kind: 'psp_fmcsa' },
         }).catch(err => console.error('[PSP CONSENT] Employer notification error:', err))
       }
@@ -185,8 +190,8 @@ export async function POST(request: NextRequest) {
       createNotification({
         userId: user.id,
         type: 'consent_signed',
-        title: 'PSP authorization submitted',
-        body: `Your FMCSA PSP Disclosure & Authorization for ${insertPayload.company_name} was recorded.`,
+        title: 'PSP disclosure signed — one step left',
+        body: `Your FMCSA PSP Disclosure for ${insertPayload.company_name} was recorded. Complete the CDLIS consent to submit the order.`,
         data: { requestId, companyName: insertPayload.company_name, kind: 'psp_fmcsa' },
       }).catch(err => console.error('[PSP CONSENT] Driver notification error:', err))
     }

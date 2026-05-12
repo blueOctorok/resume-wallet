@@ -4,6 +4,49 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP + MVR bundle audit: premature completion + missing MVR block on invite path** (May 2026)
+
+End-to-end audit of the employer → candidate PSP + MVR flow uncovered two bugs:
+
+### Bug #1 — `candidate_requests` marked `completed` at step 2 instead of step 3
+
+`POST /api/psp/consent` was setting `candidate_requests.status = 'completed'` the moment FMCSA consent was signed. But the Accio order isn't placed until step 3 (CDLIS + `fulfill-screening`). If the candidate closed the tab between steps 2 and 3, the employer saw "completed" but no order existed.
+
+**Fix:** changed `status` update from `'completed'` → `'viewed'` (mirrors the pattern `bgcheck-consent` already uses for PSP requests). Only `fulfill-screening` (step 3) now marks the request `'completed'`. Updated notification titles to reflect there's one step remaining.
+
+| File | Change |
+|---|---|
+| `src/app/api/psp/consent/route.ts` | `candidate_requests` update: `completed` → `viewed`; added `in('status', ['pending', 'viewed'])` guard; notification titles say "CDLIS step remaining" / "one step left". |
+
+### Bug #2 — Token-onboard path installed only `driver-psp`, not the bundle
+
+When a candidate arrived via `/apply/[token]` → `/onboard/[token]`, the onboard page installed only the single `targetBlockType` (`driver-psp`). The talent-request path called `ensureHubBlocksForPspMvrBundle` to install both `driver-mvr` + `driver-psp`, but the invite path didn't.
+
+**Fix:** added the same `ensureHubBlocksForPspMvrBundle` call in `POST /api/invite/[token]` when `target_block_type === 'driver-psp'`.
+
+| File | Change |
+|---|---|
+| `src/app/api/invite/[token]/route.ts` | Import + call `ensureHubBlocksForPspMvrBundle` for PSP invites so `driver-mvr` is also installed. |
+
+---
+
+## **Employer PSP + MVR bundle: Page 3 (CDLIS written consent) before Accio submit** (May 2026)
+
+The employer-initiated PSP + MVR flow in `PspOrderForm` was a two-step wizard (FCRA `BackgroundCheckDisclosure`, then FMCSA `PspDisclosureForm` with `fulfillOrder` which called `/api/candidate/fulfill-screening` immediately after the PSP consent POST).
+
+Product/legal now requires a **third stand-alone page** **after** the two mandated auth forms, with **Accio placement deferred** until Page 3 is submitted. Page 3 is the **CDLIS written consent** instrument (canonical text in `docs/employer-screenings/cdlis-written-consent.md`).
+
+| File | Change |
+|---|---|
+| `docs/employer-screenings/cdlis-written-consent.md` | Counsel / carrier CDLIS consent language (Markdown source of truth for the instrument). |
+| `src/lib/employer-psp-mvr-page3-copy.ts` | Step labels and CDLIS form headings; keep in sync with the Markdown doc when legal updates wording. |
+| `src/components/employer/EmployerPspMvrBundleAttestationStep.tsx` | Step 3: renders CDLIS authorization (named disclosure recipient = employer), consent date, typed signature, print first/last (prefilled from prior steps), vendor-only SSN block, then `PATCH /api/psp/consent/:id` (`cdlisWrittenConsent` into `form_data`) and `POST /api/candidate/fulfill-screening`. |
+| `src/app/api/psp/consent/[consentId]/route.ts` | **PATCH** — driver-only merge into `psp_consents.form_data` (used to append CDLIS answers after FMCSA consent is saved). |
+| `src/components/PspDisclosureForm.tsx` | `onConsentSigned` passes `consentId` + optional `profileSnapshot`. Employer bundle Step 2 uses `fulfillOrder={false}` so FMCSA consent saves without placing the order. |
+| `src/components/PspOrderForm.tsx` | Wizard: `bg-disclosure` → `psp-disclosure` → `attestation`; stores `employerPspConsentId` for the Page 3 PATCH; step 3 breadcrumb shows CDLIS consent. |
+
+---
+
 ## **PSP/MVR fail-fast: pre-flight validation, hardened webhook matching, and a real failure UX** (May 2026)
 
 Sparked by a PSP order (`fc7936ec…`) that came back "Failed" in the Storm employer hub even though Key/Pace's Pace portal showed it as fully completed. The user's boss had typed the DL number with a transposed digit (`RL194094` ↔ `RL194049`) and Accio later replayed a stale webhook from an old `testaccount` order. Both went undetected by Storm: we placed the bad order without checking, then matched the stale postback to the wrong row.

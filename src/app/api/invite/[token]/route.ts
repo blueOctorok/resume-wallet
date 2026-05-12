@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * GET /api/invite/[token]
@@ -235,6 +236,13 @@ export async function POST(
         } else {
           console.log(`[INVITE START] Created ${requestType} candidate_request for invite ${invite.id}`)
         }
+      }
+
+      // PSP product = MVR + FMCSA bundle. The onboard page only installs the
+      // single targetBlockType (driver-psp), so the MVR block would be missing.
+      // This mirrors the talent-request path which calls the same helper.
+      if (targetBlock === 'driver-psp') {
+        await ensureHubBlocksForPspMvrBundle(supabase, userId)
       }
     }
 

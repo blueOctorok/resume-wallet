@@ -7,10 +7,12 @@ import { useTheme } from '@/contexts/ThemeContext'
 import PspPaymentButton from './PspPaymentButton'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
+import EmployerPspMvrBundleAttestationStep from '@/components/employer/EmployerPspMvrBundleAttestationStep'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { CDLIS_PAGE_BREADCRUMB } from '@/lib/employer-psp-mvr-page3-copy'
 
 interface PspOrderFormProps {
   userAddress: string
@@ -198,10 +200,18 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
     isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
   }`
 
-  // Employer-initiated PSP requires TWO legally separate disclosures:
+  // Employer-initiated PSP requires TWO legally separate disclosures, then a
+  // carrier-specific Page 3 attestation before Accio is called:
   //   Step 1: General Background Check Disclosure (FCRA)
-  //   Step 2: PSP FMCSA Disclosure & Authorization (which also submits the order)
-  const [pspEmployerStep, setPspEmployerStep] = useState<'bg-disclosure' | 'psp-disclosure'>('bg-disclosure')
+  //   Step 2: PSP FMCSA Disclosure & Authorization (stand-alone; no SSN here)
+  //   Step 3: CDLIS written consent (`EmployerPspMvrBundleAttestationStep`) + SSN → POST /api/candidate/fulfill-screening
+  const [pspEmployerStep, setPspEmployerStep] = useState<
+    'bg-disclosure' | 'psp-disclosure' | 'attestation'
+  >('bg-disclosure')
+  // PSP Step 2 profile snapshot (merged with Step 1 in Step 3 for Accio payload)
+  const [pspProfileSnapshot, setPspProfileSnapshot] = useState<Record<string, string> | null>(null)
+  /** `psp_consents.id` from Step 2 — Page 3 PATCHes CDLIS answers into `form_data` before fulfill-screening. */
+  const [employerPspConsentId, setEmployerPspConsentId] = useState<string | null>(null)
   // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
   const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
 
@@ -239,7 +249,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                 PSP + MVR Order Submitted
               </h3>
               <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                Both disclosures have been signed and your order has been submitted to Accio. Results typically arrive within 24–48 hours.
+                All three steps are complete and your PSP + MVR order has been submitted to Accio. Results typically arrive within 24–48 hours.
               </p>
               <Button variant='primary' onClick={onBack}>
                 Back to Hub
@@ -257,33 +267,50 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
             <BackToHubButton onClick={onBack} />
           </div>
 
-          {/* Step indicator */}
-          <div className={`mb-4 flex items-center gap-3 px-4 py-3 rounded-xl text-sm ${
+          {/* Step indicator — three stand-alone legal / attestation gates */}
+          <div className={`mb-4 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl text-sm ${
             isDarkTheme(theme)
               ? 'bg-gray-800/50 border border-gray-700 text-gray-300'
               : 'bg-white/70 border border-gray-200 text-gray-600'
           }`}>
-            <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-              pspEmployerStep === 'bg-disclosure'
-                ? 'bg-teal-600 text-white'
-                : 'bg-green-100 text-green-700'
-            }`}>
+            <span
+              className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                pspEmployerStep === 'bg-disclosure'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+              }`}
+            >
               {pspEmployerStep === 'bg-disclosure' ? '1' : '✓'}
             </span>
-            <span className={pspEmployerStep === 'bg-disclosure' ? 'font-medium' : 'text-green-700'}>
+            <span className={pspEmployerStep === 'bg-disclosure' ? 'font-medium' : 'text-green-700 dark:text-green-400'}>
               Background Check Disclosure
             </span>
             <span className="text-gray-400">→</span>
-            <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-              pspEmployerStep === 'psp-disclosure'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-            }`}>
-              2
+            <span
+              className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                pspEmployerStep === 'psp-disclosure'
+                  ? 'bg-amber-600 text-white'
+                  : pspEmployerStep === 'attestation'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                    : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+              }`}
+            >
+              {pspEmployerStep === 'psp-disclosure' ? '2' : pspEmployerStep === 'attestation' ? '✓' : '2'}
             </span>
             <span className={pspEmployerStep === 'psp-disclosure' ? 'font-medium' : ''}>
               FMCSA PSP Authorization
             </span>
+            <span className="text-gray-400">→</span>
+            <span
+              className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                pspEmployerStep === 'attestation'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+              }`}
+            >
+              3
+            </span>
+            <span className={pspEmployerStep === 'attestation' ? 'font-medium' : ''}>{CDLIS_PAGE_BREADCRUMB}</span>
           </div>
 
           {pspEmployerStep === 'bg-disclosure' && (
@@ -295,6 +322,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               onClose={onBack}
               // Capture profile so Step 2 prefills, then advance the wizard.
               onConsentSigned={(profile) => {
+                setEmployerPspConsentId(null)
                 if (profile) setBgFormProfile(profile)
                 setPspEmployerStep('psp-disclosure')
               }}
@@ -307,14 +335,27 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               companyName={activeEmployerRequest!.companyName}
               requestId={activeEmployerRequest!.id}
               renderInline
-              fulfillOrder
+              fulfillOrder={false}
               initialProfile={bgFormProfile}
               onClose={onBack}
-              // Don't refresh pendingRequest here — the consent endpoint marks
-              // it 'completed' immediately, which would unmount this wizard
-              // before onOrderPlaced fires. The wizard owns its lifecycle.
-              onConsentSigned={() => {}}
-              onOrderPlaced={async () => {
+              onConsentSigned={({ consentId, profileSnapshot }) => {
+                setEmployerPspConsentId(consentId)
+                setPspProfileSnapshot(profileSnapshot ?? null)
+                setPspEmployerStep('attestation')
+              }}
+            />
+          )}
+
+          {pspEmployerStep === 'attestation' && (
+            <EmployerPspMvrBundleAttestationStep
+              userAddress={userAddress}
+              requestId={activeEmployerRequest!.id}
+              companyName={activeEmployerRequest!.companyName}
+              pspConsentId={employerPspConsentId}
+              bgProfile={bgFormProfile}
+              pspProfile={pspProfileSnapshot}
+              onBack={onBack}
+              onOrderComplete={async () => {
                 setEmployerOrderComplete(true)
                 void refreshPendingRequest()
                 const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
