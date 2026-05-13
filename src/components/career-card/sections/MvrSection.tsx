@@ -7,6 +7,7 @@ import type { MvrData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import MvrViewModal from '@/components/MvrViewModal'
 import ScreeningFailureBanner from '@/components/ui/ScreeningFailureBanner'
+import Button from '@/components/ui/Button'
 import { outcomeBadgeClasses, outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
 
 function formatOrderDate(raw: string | null | undefined): string | null {
@@ -52,6 +53,10 @@ export default function MvrSection({
   const hasOrder = Boolean(data.orderId && data.orderStatus !== 'none')
   const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
+  const pending = data.pendingEmployerRequest
+  const isBundledPspMvr = pending?.bundledWithBlockType === 'driver-psp'
+  const isEmployerPendingNoOrder = Boolean(pending) && !hasOrder && !isFailed
+
   const handlePrimaryClick = () => {
     if (data.employerPaidScreening) return
     if (isComplete) {
@@ -63,10 +68,15 @@ export default function MvrSection({
 
   // Suppress the header button on failed orders — the failure banner has
   // its own prominent "Re-order" CTA, and showing both is noisy.
+  // PSP+MVR bundle: the real CTA lives on the PSP wizard — hide self-pay "Order" in the header.
+  const hideOrderHeaderForBundlePlaceholder =
+    !isComplete && !isFailed && isBundledPspMvr && isEmployerPendingNoOrder
+
   const showSelfButton =
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
     !isFailed &&
+    !hideOrderHeaderForBundlePlaceholder &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
@@ -105,7 +115,7 @@ export default function MvrSection({
               isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
             )}
           >
-            {isComplete ? 'View' : 'Order'}
+            {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
           </button>
         )}
       </div>
@@ -167,14 +177,34 @@ export default function MvrSection({
           </div>
         </div>
       ) : (
-        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          No MVR ordered yet.{' '}
-          {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
-            <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
-              Order one
-            </button>
+        <div className='space-y-3'>
+          {isBundledPspMvr && isEmployerPendingNoOrder ? (
+            <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              This motor vehicle record is part of an employer-requested <span className='font-medium'>PSP + MVR</span>{' '}
+              screening. Complete the consent forms on your PSP step to submit — you are not ordering a separate paid MVR
+              here.
+            </p>
+          ) : pending && isEmployerPendingNoOrder ? (
+            <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <span className='font-medium'>{pending.companyName}</span> requested your motor vehicle record. Continue to
+              complete their screening.
+            </p>
+          ) : (
+            <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              No MVR ordered yet.{' '}
+              {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
+                <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
+                  Order one
+                </button>
+              )}
+            </p>
           )}
-        </p>
+          {isBundledPspMvr && isEmployerPendingNoOrder && isCareerCardOwnerMode(mode) && onNavigateToOrder ? (
+            <Button type='button' variant='primary' size='sm' onClick={onNavigateToOrder}>
+              Continue screening
+            </Button>
+          ) : null}
+        </div>
       )}
 
       {showMvrViewer && walletAddress && (

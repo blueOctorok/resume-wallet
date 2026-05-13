@@ -1,6 +1,17 @@
 import type { PageType } from '@/stores/types'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 
+/** Employer screening not yet fulfilled — hub + career card use this instead of self-pay “Order” copy. */
+export interface HubPendingEmployerScreening {
+  requestId: string
+  companyName: string
+  /**
+   * When the employer requested PSP+MVR (`driver-psp`), the MVR hub row should
+   * deep-link to the PSP wizard (`pageRoute` `psp`), not the self-order MVR page.
+   */
+  bundledWithBlockType?: 'driver-psp'
+}
+
 /**
  * Maps `mvr_orders.status` / `psp_orders.status` to the coarse My Files / construct-chip status.
  * Pending vs processing: pending = ordered, waiting on vendor queue; processing = vendor actively running.
@@ -63,6 +74,8 @@ export interface HubDocument {
   stormResumeInitialPanel?: 'upload' | 'general' | 'driver' | 'developer'
   /** Company-paid screening — candidate sees progress only; full report opens for the employer purchaser. */
   employerPaidScreening?: boolean
+  /** Set while `candidate_requests` is pending/viewed — before an order row exists. */
+  pendingEmployerRequest?: HubPendingEmployerScreening
 }
 
 /** Primary My Files row for a career-card block section (best-effort for legacy resume types). */

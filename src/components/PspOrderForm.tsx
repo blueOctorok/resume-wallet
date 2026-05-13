@@ -7,7 +7,10 @@ import { useTheme } from '@/contexts/ThemeContext'
 import PspPaymentButton from './PspPaymentButton'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
-import EmployerPspMvrBundleAttestationStep from '@/components/employer/EmployerPspMvrBundleAttestationStep'
+import EmployerPspMvrBundleAttestationStep, {
+  type DeferredBgConsentData,
+  type DeferredPspConsentData,
+} from '@/components/employer/EmployerPspMvrBundleAttestationStep'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
@@ -210,8 +213,10 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   >('bg-disclosure')
   // PSP Step 2 profile snapshot (merged with Step 1 in Step 3 for Accio payload)
   const [pspProfileSnapshot, setPspProfileSnapshot] = useState<Record<string, string> | null>(null)
-  /** `psp_consents.id` from Step 2 — Page 3 PATCHes CDLIS answers into `form_data` before fulfill-screening. */
-  const [employerPspConsentId, setEmployerPspConsentId] = useState<string | null>(null)
+
+  // Deferred consent payloads — nothing is POSTed until step 3 "Submit" is clicked.
+  const [deferredBgConsent, setDeferredBgConsent] = useState<DeferredBgConsentData | null>(null)
+  const [deferredPspConsent, setDeferredPspConsent] = useState<DeferredPspConsentData | null>(null)
   // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
   const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
 
@@ -319,11 +324,15 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               companyName={activeEmployerRequest!.companyName}
               userAddress={userAddress}
               renderInline
+              deferSubmit
+              initialFormData={bgFormProfile}
               onClose={onBack}
-              // Capture profile so Step 2 prefills, then advance the wizard.
               onConsentSigned={(profile) => {
-                setEmployerPspConsentId(null)
-                if (profile) setBgFormProfile(profile)
+                if (profile) {
+                  const { signedName: sn, ...rest } = profile
+                  setBgFormProfile(profile)
+                  setDeferredBgConsent({ signedName: sn ?? '', formData: rest })
+                }
                 setPspEmployerStep('psp-disclosure')
               }}
             />
@@ -336,11 +345,14 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               requestId={activeEmployerRequest!.id}
               renderInline
               fulfillOrder={false}
+              deferSubmit
               initialProfile={bgFormProfile}
-              onClose={onBack}
-              onConsentSigned={({ consentId, profileSnapshot }) => {
-                setEmployerPspConsentId(consentId)
+              onClose={() => setPspEmployerStep('bg-disclosure')}
+              onConsentSigned={({ profileSnapshot, deferredConsentPayload }) => {
                 setPspProfileSnapshot(profileSnapshot ?? null)
+                if (deferredConsentPayload) {
+                  setDeferredPspConsent(deferredConsentPayload)
+                }
                 setPspEmployerStep('attestation')
               }}
             />
@@ -351,10 +363,11 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               userAddress={userAddress}
               requestId={activeEmployerRequest!.id}
               companyName={activeEmployerRequest!.companyName}
-              pspConsentId={employerPspConsentId}
               bgProfile={bgFormProfile}
               pspProfile={pspProfileSnapshot}
-              onBack={onBack}
+              deferredBgConsent={deferredBgConsent}
+              deferredPspConsent={deferredPspConsent}
+              onPrevious={() => setPspEmployerStep('psp-disclosure')}
               onOrderComplete={async () => {
                 setEmployerOrderComplete(true)
                 void refreshPendingRequest()

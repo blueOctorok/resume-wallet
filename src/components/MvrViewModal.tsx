@@ -3,13 +3,15 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import {
   X, FileText, Calendar, MapPin, CreditCard, AlertCircle,
   Shield, AlertTriangle, Car, Clock, CheckCircle, XCircle,
-  Stethoscope, ChevronDown, ExternalLink, Award, Activity,
-  Download, Printer, User as UserIcon,
+  Stethoscope, ChevronDown, Activity, Download, User as UserIcon,
+  Hash, UserCheck, Ban,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { cn } from '@/lib/utils'
 import {
   outcomeBadgeClasses,
   outcomeLabel,
@@ -113,6 +115,17 @@ interface MvrResult {
   dmvAsOfDate: string | null
   /** Raw DMV physical description block — display only fields that are present. */
   personalCharacteristics: PersonalCharacteristics | null
+  /**
+   * Medical examiner details from the MEDICAL EXAMINER INFORMATION text section.
+   * Only populated for CDL drivers whose state includes examiner info.
+   */
+  medicalExaminer: {
+    name?: string
+    licenseNumber?: string
+    licenseJurisdiction?: string
+    nationalRegistryNumber?: string
+    phone?: string
+  } | null
   resultStatus: string
   receivedAt: string
   parsedAt: string | null
@@ -180,22 +193,73 @@ function formatDate(dateStr: string | undefined | null): string {
 }
 
 /**
- * Get status badge styling
+ * Get status badge styling — semantic color mapping shared across license,
+ * medical cert, and CDL status fields.
  */
 function getStatusBadge(status: string | undefined | null): { bg: string; text: string; dot: string } {
-  if (!status) return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
+  if (!status) return { bg: 'bg-slate-500/20', text: 'text-slate-400', dot: 'bg-slate-400' }
   
-  const statusLower = status.toLowerCase()
-  if (statusLower.includes('valid') || statusLower.includes('active') || statusLower.includes('certified') || statusLower.includes('completed')) {
-    return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400' }
+  const s = status.toLowerCase()
+  if (s.includes('valid') || s.includes('active') || s.includes('certified') || s.includes('licensed') || s.includes('completed')) {
+    return { bg: 'bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' }
   }
-  if (statusLower.includes('expired') || statusLower.includes('suspend') || statusLower.includes('revoked')) {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', dot: 'bg-red-400' }
+  if (s.includes('expired') || s.includes('suspend') || s.includes('revoked') || s.includes('cancelled')) {
+    return { bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400', dot: 'bg-red-500' }
   }
-  if (statusLower.includes('pending') || statusLower.includes('unknown') || statusLower.includes('review')) {
-    return { bg: 'bg-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-400' }
+  if (s.includes('pending') || s.includes('unknown') || s.includes('review') || s.includes('discrepancy')) {
+    return { bg: 'bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' }
   }
-  return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
+  return { bg: 'bg-slate-500/20', text: 'text-slate-500 dark:text-slate-400', dot: 'bg-slate-400' }
+}
+
+type IconAccent = 'teal' | 'amber' | 'emerald' | 'red' | 'slate'
+
+/**
+ * Shared section header — icon tile + title + optional count badge.
+ * Amber = screening data (violations, accidents, suspensions, order refs)
+ * Teal = identity data (driver info, license)
+ * Emerald = positive health data (medical cert)
+ */
+function SectionHeader({
+  icon: Icon,
+  title,
+  accent = 'teal',
+  count,
+  isDark,
+}: {
+  icon: React.ElementType
+  title: string
+  accent?: IconAccent
+  count?: number
+  isDark: boolean
+}) {
+  const tile: Record<IconAccent, string> = {
+    teal:    'bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-200 ring-1 ring-teal-200 dark:ring-teal-400/30',
+    amber:   'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-200 ring-1 ring-amber-200 dark:ring-amber-400/30',
+    emerald: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 ring-1 ring-emerald-200 dark:ring-emerald-400/30',
+    red:     'bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-400/30',
+    slate:   'bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-600/40',
+  }
+  const countBg: Record<IconAccent, string> = {
+    teal:    'bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300',
+    amber:   'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
+    emerald: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+    red:     'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',
+    slate:   'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+  }
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', tile[accent])}>
+        <Icon className="h-4 w-4" aria-hidden />
+      </div>
+      <h3 className={cn('font-semibold text-sm', isDark ? 'text-white' : 'text-gray-900')}>{title}</h3>
+      {count !== undefined && (
+        <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', countBg[accent])}>
+          {count}
+        </span>
+      )}
+    </div>
+  )
 }
 
 export default function MvrViewModal({
@@ -212,6 +276,7 @@ export default function MvrViewModal({
   const [mvrResult, setMvrResult] = useState<MvrResult | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
   const [showPayments, setShowPayments] = useState(false)
+  const [showRefs, setShowRefs] = useState(false)
 
   // Download a Storm-branded server-rendered PDF for this report.
   // The /api/mvr/[orderId]/pdf route handles auth, parses the raw XML, and
@@ -350,28 +415,27 @@ export default function MvrViewModal({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Download/Print Button - only show when results are available */}
+              {/* Download Button - only show when results are available */}
               {mvrResult && mvrOrder && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={handleDownloadPDF}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${
-                    isDark 
-                      ? 'bg-teal-700/20 hover:bg-teal-700/30 text-teal-600 dark:text-teal-400' 
-                      : 'bg-teal-700/10 hover:bg-teal-700/20 text-teal-800 dark:text-teal-300'
-                  }`}
-                  title="Download or Print Report"
+                  title="Download Report PDF"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4 mr-1" aria-hidden />
                   <span className="hidden sm:inline">Download</span>
-                </button>
+                </Button>
               )}
               <button
                 onClick={onClose}
-                className={`p-2 rounded-xl transition-all ${
-                  isDark 
-                    ? 'hover:bg-gray-700/50 text-gray-400 hover:text-white' 
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                }`}
+                className={cn(
+                  'p-2 rounded-xl transition-all',
+                  isDark
+                    ? 'hover:bg-gray-700/50 text-gray-400 hover:text-white'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700',
+                )}
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -548,21 +612,17 @@ export default function MvrViewModal({
                       isDark ? 'border-teal-700/20' : 'border-teal-700/10'
                     }`}>
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            License Information
-                          </h3>
-                        </div>
+                        <SectionHeader icon={Shield} title="License Information" accent="teal" isDark={isDark} />
                         {/* DMV "As of" timestamp — when the state actually pulled
                             this record. Distinct from when Storm/Accio processed
                             it. Employers care about this for staleness. */}
                         {mvrResult.dmvAsOfDate && (
-                          <span className={`text-xs px-2.5 py-1 rounded-md ${
+                          <span className={cn(
+                            'text-xs px-2.5 py-1 rounded-md',
                             isDark
                               ? 'bg-teal-500/15 text-teal-300 ring-1 ring-teal-400/30'
-                              : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
-                          }`}>
+                              : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200',
+                          )}>
                             DMV pulled {mvrResult.dmvAsOfDate}
                           </span>
                         )}
@@ -638,14 +698,14 @@ export default function MvrViewModal({
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                      license.type?.toLowerCase().includes('commercial')
-                                        ? 'bg-blue-500/20'
-                                        : isDark ? 'bg-gray-700' : 'bg-gray-200'
-                                    }`}>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                        license.type?.toLowerCase().includes('commercial')
+                                          ? 'bg-teal-500/20 dark:bg-teal-500/20'
+                                          : isDark ? 'bg-gray-700' : 'bg-gray-200'
+                                      }`}>
                                       <span className={`text-xl font-black ${
                                         license.type?.toLowerCase().includes('commercial')
-                                          ? 'text-blue-400'
+                                          ? 'text-teal-600 dark:text-teal-300'
                                           : isDark ? 'text-gray-300' : 'text-gray-600'
                                       }`}>
                                         {license.class || '?'}
@@ -658,7 +718,7 @@ export default function MvrViewModal({
                                         </span>
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                                           license.type?.toLowerCase().includes('commercial')
-                                            ? 'bg-blue-500/20 text-blue-400'
+                                            ? 'bg-teal-500/20 text-teal-600 dark:text-teal-300'
                                             : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
                                         }`}>
                                           {license.type || 'Standard'}
@@ -697,6 +757,47 @@ export default function MvrViewModal({
                                     </p>
                                   </div>
                                 )}
+                                {/* Endorsements — shown as teal pills, one per endorsement code/name */}
+                                {license.endorsements && (
+                                  <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                                    <p className={cn('mb-1.5 text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                                      Endorsements
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {license.endorsements.split(/[,;]+/).map((e) => e.trim()).filter(Boolean).map((endorsement, eIdx) => (
+                                        <span
+                                          key={eIdx}
+                                          className="rounded-md bg-teal-50 dark:bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-200 ring-1 ring-teal-200 dark:ring-teal-400/30"
+                                        >
+                                          {endorsement}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Issue / expiration dates */}
+                                {(license.issueDate || license.originalIssueDate || license.expirationDate) && (
+                                  <div className={`mt-3 pt-3 border-t grid grid-cols-3 gap-3 ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                                    {license.originalIssueDate && (
+                                      <div>
+                                        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Orig. Issued</p>
+                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.originalIssueDate)}</p>
+                                      </div>
+                                    )}
+                                    {license.issueDate && (
+                                      <div>
+                                        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Issued</p>
+                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.issueDate)}</p>
+                                      </div>
+                                    )}
+                                    {license.expirationDate && (
+                                      <div>
+                                        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Expires</p>
+                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.expirationDate)}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -719,12 +820,7 @@ export default function MvrViewModal({
                           : 'bg-white border border-gray-200 shadow-sm'
                       }`}>
                         <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                          <div className="flex items-center gap-2">
-                            <UserIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                            <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                              Personal Characteristics
-                            </h3>
-                          </div>
+                          <SectionHeader icon={UserIcon} title="Personal Characteristics" accent="teal" isDark={isDark} />
                         </div>
                         <div className="p-5">
                           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -801,12 +897,7 @@ export default function MvrViewModal({
                         : 'bg-white border border-gray-200 shadow-sm'
                     }`}>
                       <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                        <div className="flex items-center gap-2">
-                          <Stethoscope className="h-5 w-5 text-emerald-400" />
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Medical Certificate
-                          </h3>
-                        </div>
+                        <SectionHeader icon={Stethoscope} title="Medical Certificate" accent="emerald" isDark={isDark} />
                       </div>
                       <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-5">
                         <div>
@@ -839,6 +930,61 @@ export default function MvrViewModal({
                             <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Self Certification</p>
                             <p className={`mt-1 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                               {mvrResult.medicalCertSelfCertification}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Medical Examiner — only shown when the parser extracted examiner data
+                      from the MEDICAL EXAMINER INFORMATION text section (CDL drivers, certain states). */}
+                  {mvrResult.medicalExaminer && (
+                    <div className={cn(
+                      'rounded-xl overflow-hidden',
+                      isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200 shadow-sm',
+                    )}>
+                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                        <SectionHeader icon={UserCheck} title="Medical Examiner" accent="emerald" isDark={isDark} />
+                      </div>
+                      <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {mvrResult.medicalExaminer.name && (
+                          <div className="col-span-2 md:col-span-1">
+                            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Examiner Name</p>
+                            <p className={cn('mt-1 font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                              {mvrResult.medicalExaminer.name}
+                            </p>
+                          </div>
+                        )}
+                        {mvrResult.medicalExaminer.licenseJurisdiction && (
+                          <div>
+                            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Jurisdiction</p>
+                            <p className={cn('mt-1 font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                              {mvrResult.medicalExaminer.licenseJurisdiction}
+                            </p>
+                          </div>
+                        )}
+                        {mvrResult.medicalExaminer.licenseNumber && (
+                          <div>
+                            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>License No.</p>
+                            <p className={cn('mt-1 font-mono text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                              {mvrResult.medicalExaminer.licenseNumber}
+                            </p>
+                          </div>
+                        )}
+                        {mvrResult.medicalExaminer.nationalRegistryNumber && (
+                          <div>
+                            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>National Registry No.</p>
+                            <p className={cn('mt-1 font-mono text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                              {mvrResult.medicalExaminer.nationalRegistryNumber}
+                            </p>
+                          </div>
+                        )}
+                        {mvrResult.medicalExaminer.phone && (
+                          <div>
+                            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Phone</p>
+                            <p className={cn('mt-1 font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                              {mvrResult.medicalExaminer.phone}
                             </p>
                           </div>
                         )}
@@ -906,182 +1052,214 @@ export default function MvrViewModal({
                   </div>
 
                   {/* Violations Detail */}
-                  {mvrResult.violations && mvrResult.violations.length > 0 && (
-                    <div className={`rounded-xl overflow-hidden ${
-                      isDark 
-                        ? 'bg-gray-800/50 border border-gray-700/50' 
-                        : 'bg-white border border-gray-200 shadow-sm'
-                    }`}>
-                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-amber-400" />
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Violations
-                          </h3>
-                          <span className={`text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400`}>
-                            {mvrResult.violations.length}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-5 space-y-3">
-                        {mvrResult.violations.map((violation, idx) => (
-                          <div 
-                            key={idx}
-                            className={`p-4 rounded-xl border-l-4 border-amber-500 ${
-                              isDark ? 'bg-amber-500/5' : 'bg-amber-50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                  {violation.description || violation.type || 'Violation'}
-                                </p>
-                                <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm ${
-                                  isDark ? 'text-gray-400' : 'text-gray-500'
-                                }`}>
-                                  {violation.date && (
-                                    <span className="flex items-center gap-1">
-                                      <Calendar className="h-3.5 w-3.5" />
-                                      Issue: {formatDate(violation.date)}
+                  <div className={`rounded-xl overflow-hidden ${
+                    isDark 
+                      ? 'bg-gray-800/50 border border-gray-700/50' 
+                      : 'bg-white border border-gray-200 shadow-sm'
+                  }`}>
+                    <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                      <SectionHeader icon={AlertTriangle} title="Violations" accent="amber" count={mvrResult.violations?.length ?? 0} isDark={isDark} />
+                    </div>
+                    <div className="p-5">
+                      {!mvrResult.violations || mvrResult.violations.length === 0 ? (
+                        <p className={cn('text-sm text-center py-4', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                          No violations on record
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {mvrResult.violations.map((violation, idx) => (
+                            <div 
+                              key={idx}
+                              className={`p-4 rounded-xl border-l-4 border-amber-500 ${
+                                isDark ? 'bg-amber-500/5' : 'bg-amber-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                    {violation.description || violation.type || 'Violation'}
+                                  </p>
+                                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm ${
+                                    isDark ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>
+                                    {violation.date && (
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        Issue: {formatDate(violation.date)}
+                                      </span>
+                                    )}
+                                    {violation.convictionDate && (
+                                      <span className="flex items-center gap-1">
+                                        <CheckCircle className="h-3.5 w-3.5" />
+                                        Conviction: {formatDate(violation.convictionDate)}
+                                      </span>
+                                    )}
+                                    {violation.state && (
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="h-3.5 w-3.5" />
+                                        {violation.state}
+                                      </span>
+                                    )}
+                                    {violation.stateCode && (
+                                      <span className={cn('font-mono text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                                        {violation.stateCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  {violation.points !== undefined && violation.points > 0 && (
+                                    <span className="text-lg font-bold text-red-400">
+                                      {violation.points} pts
                                     </span>
                                   )}
-                                  {violation.convictionDate && (
-                                    <span className="flex items-center gap-1">
-                                      <CheckCircle className="h-3.5 w-3.5" />
-                                      Conviction: {formatDate(violation.convictionDate)}
-                                    </span>
-                                  )}
-                                  {violation.state && (
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="h-3.5 w-3.5" />
-                                      {violation.state}
+                                  {violation.acdCode && (
+                                    <span className={`text-xs font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      ACD: {violation.acdCode}
                                     </span>
                                   )}
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-1">
-                                {violation.points !== undefined && violation.points > 0 && (
-                                  <span className="text-lg font-bold text-red-400">
-                                    {violation.points} pts
-                                  </span>
-                                )}
-                                {violation.acdCode && (
-                                  <span className={`text-xs font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    ACD: {violation.acdCode}
-                                  </span>
-                                )}
-                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
                   {/* Accidents Detail */}
-                  {mvrResult.accidents && mvrResult.accidents.length > 0 && (
-                    <div className={`rounded-xl overflow-hidden ${
-                      isDark 
-                        ? 'bg-gray-800/50 border border-gray-700/50' 
-                        : 'bg-white border border-gray-200 shadow-sm'
-                    }`}>
-                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                        <div className="flex items-center gap-2">
-                          <Car className="h-5 w-5 text-red-400" />
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Accidents
-                          </h3>
-                          <span className={`text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400`}>
-                            {mvrResult.accidents.length}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-5 space-y-3">
-                        {mvrResult.accidents.map((accident, idx) => (
-                          <div 
-                            key={idx}
-                            className={`p-4 rounded-xl border-l-4 border-red-500 ${
-                              isDark ? 'bg-red-500/5' : 'bg-red-50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                  {accident.description || 'Accident'}
-                                </p>
-                                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  {formatDate(accident.date)}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                {accident.severity && (
-                                  <span className={`text-sm font-medium ${
-                                    accident.severity.toLowerCase().includes('fatal') 
-                                      ? 'text-red-400' 
-                                      : 'text-amber-400'
-                                  }`}>
-                                    {accident.severity}
-                                  </span>
-                                )}
-                                {accident.fault && (
-                                  <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    Fault: {accident.fault}
+                  <div className={`rounded-xl overflow-hidden ${
+                    isDark 
+                      ? 'bg-gray-800/50 border border-gray-700/50' 
+                      : 'bg-white border border-gray-200 shadow-sm'
+                  }`}>
+                    <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                      <SectionHeader icon={Car} title="Accidents" accent="red" count={mvrResult.accidents?.length ?? 0} isDark={isDark} />
+                    </div>
+                    <div className="p-5">
+                      {!mvrResult.accidents || mvrResult.accidents.length === 0 ? (
+                        <p className={cn('text-sm text-center py-4', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                          No accidents on record
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {mvrResult.accidents.map((accident, idx) => (
+                            <div 
+                              key={idx}
+                              className={`p-4 rounded-xl border-l-4 border-red-500 ${
+                                isDark ? 'bg-red-500/5' : 'bg-red-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                    {accident.description || 'Accident'}
                                   </p>
-                                )}
+                                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {formatDate(accident.date)}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  {accident.severity && (
+                                    <span className={`text-sm font-medium ${
+                                      accident.severity.toLowerCase().includes('fatal') 
+                                        ? 'text-red-400' 
+                                        : 'text-amber-400'
+                                    }`}>
+                                      {accident.severity}
+                                    </span>
+                                  )}
+                                  {accident.fault && (
+                                    <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      Fault: {accident.fault}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
                   {/* Suspensions Detail */}
-                  {mvrResult.suspensions && mvrResult.suspensions.length > 0 && (
-                    <div className={`rounded-xl overflow-hidden ${
-                      isDark 
-                        ? 'bg-gray-800/50 border border-gray-700/50' 
-                        : 'bg-white border border-gray-200 shadow-sm'
-                    }`}>
-                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                        <div className="flex items-center gap-2">
-                          <XCircle className="h-5 w-5 text-red-400" />
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            Suspensions
-                          </h3>
-                          <span className={`text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400`}>
-                            {mvrResult.suspensions.length}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-5 space-y-3">
-                        {mvrResult.suspensions.map((suspension, idx) => (
-                          <div 
-                            key={idx}
-                            className={`p-4 rounded-xl border-l-4 border-red-600 ${
-                              isDark ? 'bg-red-500/5' : 'bg-red-50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                                  {suspension.reason || 'Suspension'}
-                                </p>
-                                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  From: {formatDate(suspension.date)}
-                                  {suspension.endDate && ` → To: ${formatDate(suspension.endDate)}`}
-                                </p>
+                  <div className={`rounded-xl overflow-hidden ${
+                    isDark 
+                      ? 'bg-gray-800/50 border border-gray-700/50' 
+                      : 'bg-white border border-gray-200 shadow-sm'
+                  }`}>
+                    <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                      <SectionHeader icon={Ban} title="Suspensions" accent="red" count={mvrResult.suspensions?.length ?? 0} isDark={isDark} />
+                    </div>
+                    <div className="p-5">
+                      {!mvrResult.suspensions || mvrResult.suspensions.length === 0 ? (
+                        <p className={cn('text-sm text-center py-4', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                          No suspensions on record
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {mvrResult.suspensions.map((suspension, idx) => (
+                            <div 
+                              key={idx}
+                              className={`p-4 rounded-xl border-l-4 border-red-600 ${
+                                isDark ? 'bg-red-500/5' : 'bg-red-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                    {suspension.reason || 'Suspension'}
+                                  </p>
+                                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    From: {formatDate(suspension.date)}
+                                    {suspension.endDate && ` → To: ${formatDate(suspension.endDate)}`}
+                                  </p>
+                                </div>
+                                {suspension.state && (
+                                  <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {suspension.state}
+                                  </span>
+                                )}
                               </div>
-                              {suspension.state && (
-                                <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                  <MapPin className="h-3.5 w-3.5" />
-                                  {suspension.state}
-                                </span>
-                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Order References — collapsed by default, useful for support */}
+                  {mvrOrder && (
+                    <div className={cn('rounded-xl overflow-hidden', isDark ? 'border border-gray-700/50' : 'border border-gray-200')}>
+                      <button
+                        type="button"
+                        onClick={() => setShowRefs(!showRefs)}
+                        className={cn(
+                          'w-full flex items-center justify-between px-5 py-3.5 transition-colors',
+                          isDark ? 'hover:bg-gray-800/60 bg-gray-800/40' : 'hover:bg-gray-50 bg-white',
+                        )}
+                      >
+                        <SectionHeader icon={Hash} title="Order References" accent="slate" isDark={isDark} />
+                        <ChevronDown className={cn('h-4 w-4 transition-transform', isDark ? 'text-gray-400' : 'text-gray-500', showRefs && 'rotate-180')} />
+                      </button>
+                      {showRefs && (
+                        <div className={cn('px-5 pb-5 pt-2 border-t', isDark ? 'border-gray-700/50 bg-gray-800/40' : 'border-gray-200 bg-white')}>
+                          <dl className="grid gap-2 font-mono text-[11px] leading-snug">
+                            <div>
+                              <dt className={cn(isDark ? 'text-gray-500' : 'text-gray-400')}>Storm order ID</dt>
+                              <dd className={cn('break-all', isDark ? 'text-gray-200' : 'text-gray-800')}>{mvrOrder.id}</dd>
+                            </div>
+                            {mvrOrder.orderNumber && (
+                              <div>
+                                <dt className={cn(isDark ? 'text-gray-500' : 'text-gray-400')}>Accio order #</dt>
+                                <dd className={cn('break-all', isDark ? 'text-gray-200' : 'text-gray-800')}>{mvrOrder.orderNumber}</dd>
+                              </div>
+                            )}
+                          </dl>
+                        </div>
+                      )}
                     </div>
                   )}
 

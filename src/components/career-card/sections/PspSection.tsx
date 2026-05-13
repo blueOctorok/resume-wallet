@@ -52,6 +52,9 @@ export default function PspSection({
   const hasOrder = Boolean(data.orderId && data.orderStatus !== 'none')
   const dateStr = formatOrderDate(data.orderedAt) ?? formatOrderDate(data.completedAt)
 
+  const pending = data.pendingEmployerRequest
+  const isEmployerPendingNoOrder = Boolean(pending) && !hasOrder && !isFailed
+
   const handlePrimary = () => {
     if (data.employerPaidScreening) return
     if (isComplete) {
@@ -95,7 +98,7 @@ export default function PspSection({
         </div>
         {showSelfButton && (
           <Button type="button" variant={isComplete ? 'secondary' : 'primary'} size="sm" onClick={handlePrimary}>
-            {isComplete ? 'View' : 'Order'}
+            {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
           </Button>
         )}
       </div>
@@ -157,11 +160,20 @@ export default function PspSection({
         </div>
       ) : (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          No PSP report ordered yet.{' '}
-          {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
-            <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
-              Order one
-            </button>
+          {isEmployerPendingNoOrder ? (
+            <>
+              <span className='font-medium'>{pending?.companyName}</span> requested your PSP + MVR screening. Continue
+              to complete the consent forms — the employer is paying for this bundle.
+            </>
+          ) : (
+            <>
+              No PSP report ordered yet.{' '}
+              {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
+                <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
+                  Order one
+                </button>
+              )}
+            </>
           )}
         </p>
       )}

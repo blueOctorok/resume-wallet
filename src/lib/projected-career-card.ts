@@ -123,6 +123,11 @@ function computeCareerCardSignals(
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { applyLensOrderAndFilterPerPage, getLensOrDefault } from '@/lib/career-card-lenses'
 import { readCardPage } from '@/lib/hub-block-config'
+import {
+  pickPendingEmployerScreening,
+  type CandidateRequestScreeningRow,
+  type PickedPendingEmployerScreening,
+} from '@/lib/pending-employer-screening'
 
 export type ProjectedCareerCardContactMode = 'self' | 'public' | 'employer'
 
@@ -213,6 +218,29 @@ export async function buildProjectedCareerCard(
   const hasStormResume = installedTypes.includes('storm-resume')
   const legacyResumeBlockTypes = new Set(['driver-resume', 'developer-resume', 'general-resume'])
 
+  let pickedPendingScreening: PickedPendingEmployerScreening | null = null
+  if (meta.contactMode === 'self') {
+    const { data: pendingReqRows } = await supabase
+      .from('candidate_requests')
+      .select(
+        `
+        id,
+        request_type,
+        target_block_type,
+        status,
+        created_at,
+        company:companies(company_name)
+      `,
+      )
+      .eq('candidate_user_id', userId)
+      .in('status', ['pending', 'viewed'])
+      .order('created_at', { ascending: false })
+      .limit(40)
+    pickedPendingScreening = pickPendingEmployerScreening(
+      (pendingReqRows ?? []) as unknown as CandidateRequestScreeningRow[],
+    )
+  }
+
   const { data: evrRows } = await supabase
     .from('employment_verification_requests')
     .select(
@@ -283,6 +311,31 @@ export async function buildProjectedCareerCard(
   const projectedSections = lensRow
     ? applyLensOrderAndFilterPerPage(sections, lensRow)
     : sections
+
+  if (pickedPendingScreening && meta.contactMode === 'self') {
+    for (const s of projectedSections) {
+      if (pickedPendingScreening.mode === 'psp_mvr_bundle') {
+        const base = { requestId: pickedPendingScreening.requestId, companyName: pickedPendingScreening.companyName }
+        if (s.blockType === 'driver-psp') {
+          s.data = { ...(s.data as PspData), pendingEmployerRequest: base }
+        }
+        if (s.blockType === 'driver-mvr') {
+          s.data = {
+            ...(s.data as MvrData),
+            pendingEmployerRequest: { ...base, bundledWithBlockType: 'driver-psp' },
+          }
+        }
+      } else if (pickedPendingScreening.mode === 'mvr_standalone' && s.blockType === 'driver-mvr') {
+        s.data = {
+          ...(s.data as MvrData),
+          pendingEmployerRequest: {
+            requestId: pickedPendingScreening.requestId,
+            companyName: pickedPendingScreening.companyName,
+          },
+        }
+      }
+    }
+  }
 
   const signals = computeCareerCardSignals(projectedSections, employerConfirmed)
 

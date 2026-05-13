@@ -234,8 +234,19 @@ export default function ConstructSectionWrapper({
                 doc.editPage &&
                 doc.status !== 'complete' &&
                 !doc.employerPaidScreening && (
-                  <button type='button' onClick={() => setCurrentPage('mvr')} className={cn(btn, tealBtn)}>
-                    {doc.status === 'empty' ? 'Order MVR' : 'Open'}
+                  <button
+                    type='button'
+                    onClick={() => {
+                      if (doc.pendingEmployerRequest?.bundledWithBlockType === 'driver-psp') {
+                        const route = getBlockDefinition('driver-psp')?.pageRoute
+                        setCurrentPage((route as PageType) ?? 'psp')
+                        return
+                      }
+                      setCurrentPage('mvr')
+                    }}
+                    className={cn(btn, tealBtn)}
+                  >
+                    {doc.pendingEmployerRequest ? 'Continue screening' : doc.status === 'empty' ? 'Order MVR' : 'Open'}
                   </button>
                 )}
               {doc?.type === 'mvr' && doc.status === 'complete' && !doc.employerPaidScreening && (
@@ -248,7 +259,7 @@ export default function ConstructSectionWrapper({
                 doc.status !== 'complete' &&
                 !doc.employerPaidScreening && (
                   <button type='button' onClick={() => setCurrentPage('psp')} className={cn(btn, tealBtn)}>
-                    {doc.status === 'empty' ? 'Order PSP' : 'Open'}
+                    {doc.pendingEmployerRequest ? 'Continue' : doc.status === 'empty' ? 'Order PSP' : 'Open'}
                   </button>
                 )}
               {doc?.type === 'psp' && doc.status === 'complete' && !doc.employerPaidScreening && (

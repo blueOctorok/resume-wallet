@@ -20,6 +20,14 @@ export type PspConsentSignedResult = {
   consentId: string
   /** Applicant profile captured on this screen — used to chain employer PSP+MVR wizard steps. */
   profileSnapshot?: Record<string, string>
+  /**
+   * Populated when `deferSubmit=true` — all fields needed to POST `/api/psp/consent` later.
+   * Lets the parent wizard collect data across steps and batch-submit at the end.
+   */
+  deferredConsentPayload?: {
+    signedName: string
+    formData: Record<string, string>
+  }
 }
 
 interface DriverProfileInfo {
@@ -57,6 +65,12 @@ export interface PspDisclosureFormProps {
    * CRA practice — only the SIGNATURE per document must be unique.
    */
   initialProfile?: Record<string, string> | null
+  /**
+   * When true, validate but do NOT POST the consent. The parent wizard
+   * collects form data from all steps and submits them together later.
+   * `onConsentSigned` fires with `deferredConsentPayload` instead of `consentId`.
+   */
+  deferSubmit?: boolean
 }
 
 /** html2canvas: force SVG strokes to rgb for reliable capture (same idea as BackgroundCheckDisclosure). */
@@ -143,6 +157,7 @@ export default function PspDisclosureForm({
   fulfillOrder = false,
   onOrderPlaced,
   initialProfile,
+  deferSubmit = false,
 }: PspDisclosureFormProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
@@ -164,8 +179,8 @@ export default function PspDisclosureForm({
   const [profileLoading, setProfileLoading] = useState(true)
   const [viewCompanyName, setViewCompanyName] = useState(companyName)
 
-  const [signedName, setSignedName] = useState('')
-  const [printedName, setPrintedName] = useState('')
+  const [signedName, setSignedName] = useState(initialProfile?.signedName ?? '')
+  const [printedName, setPrintedName] = useState(initialProfile?.printedName ?? '')
   const [signedDate, setSignedDate] = useState(
     new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
   )
@@ -288,6 +303,36 @@ export default function PspDisclosureForm({
     }
 
     setError(null)
+
+    // Deferred mode: skip the POST, return validated data to the parent wizard.
+    if (deferSubmit) {
+      const formSnapshot: Record<string, string> = {
+        ...profile,
+        printedName: printedName.trim(),
+      }
+      const profileSnapshot: Record<string, string> = {
+        firstName: profile.firstName.trim(),
+        lastName: profile.lastName.trim(),
+        dateOfBirth: profile.dateOfBirth.trim(),
+        address: profile.address.trim(),
+        city: profile.city.trim(),
+        state: profile.state.trim(),
+        zip: profile.zip.trim(),
+        dlNumber: profile.dlNumber.trim(),
+        dlState: profile.dlState.trim(),
+        email: profile.email.trim(),
+      }
+      onConsentSigned({
+        consentId: '',
+        profileSnapshot,
+        deferredConsentPayload: {
+          signedName: signedName.trim(),
+          formData: formSnapshot,
+        },
+      })
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -681,7 +726,7 @@ export default function PspDisclosureForm({
             ) : (
               <>
                 <Button type="button" variant="secondary" size="md" onClick={onClose}>
-                  Decline
+                  {deferSubmit ? 'Previous' : 'Decline'}
                 </Button>
                 <div className="flex-1 min-w-[1rem]" />
                 <Button
@@ -703,7 +748,7 @@ export default function PspDisclosureForm({
                   isLoading={submitting}
                 >
                   <PenLine className="w-4 h-4 mr-2 inline" />
-                  {fulfillOrder ? 'Sign & Submit Order' : 'Sign & Authorize'}
+                  {fulfillOrder ? 'Sign & Submit Order' : deferSubmit ? 'Sign & Continue' : 'Sign & Authorize'}
                 </Button>
               </>
             )}

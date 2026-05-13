@@ -4,6 +4,116 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR + PSP: Maximize Accio Data Extraction and Display** (May 2026)
+
+Full pass on the Accio MVR and PSP data pipeline to fix parser bugs that corrupted stored data for certain state formats, add new extraction capabilities, and redesign both view modals for clarity and completeness.
+
+### Parser bugs fixed (`src/lib/accio-xml-parser.ts`)
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| `personalCharacteristics.sex/eyes/hair` captured next column's label (e.g. `"Weight:"`) for VA and MO drivers | `[ \t]*` after colon eats all horizontal whitespace, positioning lazy regex at next label | Reject values matching `/^[\w][\w\s]*:$/` — real demographics never end with `:` |
+| `dmvAsOfDate` captured underscore separator line on MO "DRIVER NOT FOUND" records | `\s*` after `:` in the As-of regex crossed a newline to the next row | Changed to `[ \t]*`; added digit-presence guard to reject garbage captures |
+| `subject.state` could over-capture long XML fragments for some state formats | Generic `extractXmlValue` matched first `<state>` tag even inside nested blocks | Validate result length ≤ 20 chars; reject anything longer |
+
+### New extraction capabilities (`src/lib/accio-xml-parser.ts`)
+
+- **Text-block license fallback** (`extractLicensesFromText`) — for states that provide LICENSE AND PERMIT INFORMATION in the text block but no `<mvr_license>` XML tags. Only called when the XML extractor returns zero licenses.
+- **Medical examiner extraction** (`extractMedicalExaminerFromText`) — parses the MEDICAL EXAMINER INFORMATION section (VA format: `Examiner full name`, `MD License No`, `MD License jurisd`, `MD Registry No`). Stored as `medicalExaminer` in `ParsedMvrResult` and in `parsed_data` JSONB.
+- **Endorsement text fallback** (`extractEndorsementsFromText`) — parses `|CODE DESC - CODE DESC|` endorsement lines from the ENDORSEMENTS text section when `<license_endorsements>` XML is absent. Merged into the primary license's `endorsements` field.
+- Added `medicalExaminer` field to `ParsedMvrResult` interface.
+- `mvrResultToJsonb` updated to include `medicalExaminer`; fixed return type from `any` to `Record<string, unknown>`.
+- Removed dead `extractXmlValues` function.
+
+### MVR display enhancements
+
+- **`GET /api/mvr/status/[orderId]`** — surfaces `medicalExaminer` from `parsed_data` in the response.
+- **`MvrViewModal.tsx`** — complete visual redesign:
+  - Shared `SectionHeader` component with tinted icon tiles (teal for identity/license, amber for screening events, emerald for medical, red for accidents/suspensions, slate for refs).
+  - Medical Examiner section: name, license number, jurisdiction, national registry number, phone.
+  - Endorsements shown as teal pills per license, one per endorsement code/name.
+  - Issue / expiration dates shown inside each license card.
+  - Violations, Accidents, and Suspensions sections now always render — explicit "No X on record" empty state instead of hiding the section.
+  - Collapsible Order References section (Storm order ID, Accio order number) at the bottom.
+  - Download button upgraded to `Button` component.
+- **`MvrReportPdf.tsx`** — Medical Examiner section added to the PDF output.
+
+### PSP display enhancements
+
+- **`PspViewModal.tsx`** — complete rewrite:
+  - Driver identity section (name, DL state, masked DL number).
+  - Record Summary — 3-column stat tiles: Crashes, Inspections, Out-of-Service count.
+  - **Crash History** — per-crash card: date, city/state, fatalities, injuries, tow-away, hazmat, vehicle type.
+  - **Inspection History** — per-inspection card: date, state, level, result chip, plus nested violation rows with OOS badges and violation codes/descriptions.
+  - Full Report Text — collapsible monospace pre-block with the vendor's raw `reportText`.
+  - Order References — collapsible (order #, suborder #, FMCSA code, timestamps, access expiry).
+  - Employer-ordered banner when `orderedByEmployer` is true.
+  - Consistent amber accent theme (screenings accent per UI standards).
+
+### Admin re-parse tool
+
+- **`POST /api/admin/reparse-screening-results`** — One-time admin action that re-parses all `mvr_orders` and/or `psp_orders` with `result_xml` using the latest parser logic. Updates `mvr_results.parsed_data` and `psp_results.parsed_data` in place, and refreshes `block_driver_mvr` cache for candidate-owned MVR orders. Supports `{ "dryRun": true }` and `{ "type": "mvr" | "psp" | "all" }` body params. Run after deploying parser fixes to fix historical data.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/lib/accio-xml-parser.ts` | Bug fixes (3 regex issues), new extraction fns, `medicalExaminer` field, `mvrResultToJsonb` typed |
+| `src/app/api/mvr/status/[orderId]/route.ts` | Add `medicalExaminer` to response |
+| `src/components/MvrViewModal.tsx` | New sections (medical examiner, endorsements, order refs); icon tile system; always-on violation/accident/suspension sections with empty states |
+| `src/lib/pdf/MvrReportPdf.tsx` | Medical Examiner PDF section |
+| `src/components/PspViewModal.tsx` | Full rewrite — crashes, inspections, OOS violations, report text, order refs, amber design |
+| `src/app/api/admin/reparse-screening-results/route.ts` | **New** — re-parse all historical orders after bug fixes |
+
+---
+
+## **PSP + MVR hub / career card: employer-pending messaging (no new block)** (May 2026)
+
+While an employer PSP + MVR request is still `pending` / `viewed` and **no order row exists yet**, the construct hub tiles and career card sections still showed self-pay copy ("Order MVR", "Order PSP"). The MVR tile routed to `MvrOrderForm` self-checkout, which does not match `usePendingScreeningRequest('psp')` for bundle requests.
+
+### What changed
+
+- **`GET /api/driver/hub`** — Loads recent `candidate_requests` (pending/viewed) and returns `pendingEmployerScreening` using the same rules as `usePendingScreeningRequest` (`src/lib/pending-employer-screening.ts`).
+- **`HubDocument`** — Optional `pendingEmployerRequest` (with `bundledWithBlockType: 'driver-psp'` on the MVR placeholder when the bundle is PSP-driven).
+- **Construct mode tiles** — `ConstructSectionWrapper`: "Continue screening" / "Continue" instead of Order labels; MVR navigates to the PSP page when bundled.
+- **Career card projection** — `buildProjectedCareerCard` (self mode only) merges `pendingEmployerRequest` into `MvrData` / `PspData` so `MvrSection` / `PspSection` body copy matches.
+- **`ProjectedCareerCard`** — In-bundle MVR primary actions call `onNavigateToBlock('driver-psp')` so the PSP wizard opens.
+
+| File | Change |
+|---|---|
+| `src/lib/pending-employer-screening.ts` | **New** — shared pick logic for PSP bundle vs standalone MVR. |
+| `src/lib/hub-document-types.ts` | `HubPendingEmployerScreening` + `pendingEmployerRequest?` on `HubDocument`. |
+| `src/types/career-card.ts` | `pendingEmployerRequest?` on `MvrData` / `PspData`. |
+| `src/app/api/driver/hub/route.ts` | Parallel fetch + `pendingEmployerScreening` in JSON. |
+| `src/hooks/use-hub-documents.tsx` | Attach `pendingEmployerRequest` to MVR/PSP placeholder rows from hub payload. |
+| `src/components/career-card/ConstructSectionWrapper.tsx` | CTA labels + PSP route for bundled MVR. |
+| `src/lib/projected-career-card.ts` | Self-view query + merge pending into sections. |
+| `src/components/career-card/ProjectedCareerCard.tsx` | Bundle navigation for MVR → PSP. |
+| `src/components/career-card/sections/MvrSection.tsx` | Bundle copy + "Continue screening" `Button`; "Continue" header for standalone employer MVR pending. |
+| `src/components/career-card/sections/PspSection.tsx` | Employer-pending empty copy + "Continue" header. |
+
+---
+
+## **PSP + MVR wizard: deferred batch submit + Previous navigation** (May 2026)
+
+The employer PSP + MVR 3-step wizard (BG disclosure → FMCSA PSP → CDLIS) was submitting each consent to the database immediately when the user advanced to the next step. This meant: (1) going back to fix a typo was impossible, (2) if the user abandoned between steps 2 and 3 the employer saw "completed" with no Accio order, and (3) duplicate Back to Hub buttons and step indicators appeared.
+
+### What changed
+
+- **Deferred submission** — `BackgroundCheckDisclosure` and `PspDisclosureForm` now accept `deferSubmit?: boolean`. When true, they validate the form but skip the POST, returning the payload to the parent wizard. All three consent records (BG, FMCSA PSP, CDLIS) are batch-POSTed in sequence only when the user clicks "Submit PSP + MVR order" on step 3.
+- **Previous navigation** — Users can go back from step 3 → step 2, and step 2 → step 1. Form data is preserved via `initialFormData` / `initialProfile` props so nothing is lost on re-mount. Step 2's "Decline" label becomes "Previous" in `deferSubmit` mode. Step 3 has an explicit "Previous" button.
+- **De-duplicated chrome** — `EmployerPspMvrBundleAttestationStep` no longer renders its own `BackToHubButton` or step indicator; the parent `PspOrderForm` handles those. Only one Back to Hub button appears at the top.
+- **Button labels** — Both disclosure forms show "Sign & Continue" instead of "Sign & Authorize" in deferred mode.
+
+| File | Change |
+|---|---|
+| `src/components/BackgroundCheckDisclosure.tsx` | `deferSubmit` + `initialFormData` props; handleSign short-circuits; "Sign & Continue" label. |
+| `src/components/PspDisclosureForm.tsx` | `deferSubmit` prop; `PspConsentSignedResult.deferredConsentPayload`; "Previous" / "Sign & Continue" labels. |
+| `src/components/employer/EmployerPspMvrBundleAttestationStep.tsx` | Removed duplicate BackToHubButton + step indicator; added `onPrevious`, `deferredBgConsent`, `deferredPspConsent`; batch submit: bgcheck-consent → psp-consent → CDLIS PATCH → fulfill-screening. |
+| `src/components/PspOrderForm.tsx` | `deferSubmit` on both disclosure components; stores deferred payloads; Previous navigation via step state. |
+
+---
+
 ## **PSP + MVR bundle audit: premature completion + missing MVR block on invite path** (May 2026)
 
 End-to-end audit of the employer → candidate PSP + MVR flow uncovered two bugs:

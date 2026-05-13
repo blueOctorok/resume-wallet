@@ -557,7 +557,19 @@ export default function ProjectedCareerCard({
                 walletAddress={walletAddress}
                 shareToken={data.shareToken}
                 onAction={
-                  allowNav && onNavigateToBlock ? () => onNavigateToBlock(section.blockType) : undefined
+                  allowNav && onNavigateToBlock
+                    ? () => {
+                        if (
+                          section.blockType === 'driver-mvr' &&
+                          (section.data as MvrData).pendingEmployerRequest?.bundledWithBlockType ===
+                            'driver-psp'
+                        ) {
+                          onNavigateToBlock('driver-psp')
+                          return
+                        }
+                        onNavigateToBlock(section.blockType)
+                      }
+                    : undefined
                 }
               />
             )}

@@ -121,6 +121,9 @@ function jsonFromMvrOrderRow(mvrOrder: Record<string, unknown>) {
           personalCharacteristics:
             (result.parsed_data as { personalCharacteristics?: Record<string, unknown> } | null)
               ?.personalCharacteristics ?? null,
+          medicalExaminer:
+            (result.parsed_data as { medicalExaminer?: Record<string, unknown> } | null)
+              ?.medicalExaminer ?? null,
           resultStatus: result.result_status,
           receivedAt: result.received_at,
           parsedAt: result.parsed_at,

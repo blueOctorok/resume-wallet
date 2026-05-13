@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences, getDevPortfolio, getDevGithub } from '@/lib/block-data'
+import {
+  pickPendingEmployerScreening,
+  type CandidateRequestScreeningRow,
+} from '@/lib/pending-employer-screening'
 
 /**
  * GET /api/driver/hub
@@ -71,7 +75,8 @@ export async function GET(request: NextRequest) {
           totalTransactions: 0,
           careerCardViewsThisWeek: 0,
           careerCardViewsTotal: 0,
-        }
+        },
+        pendingEmployerScreening: null,
       })
     }
 
@@ -96,6 +101,7 @@ export async function GET(request: NextRequest) {
       paymentsResult,
       portfolioRow,
       githubRow,
+      candidateRequestsPendingResult,
     ] = await Promise.all([
       // 1. User profile (identity: name, avatar, contact)
       supabase
@@ -184,9 +190,30 @@ export async function GET(request: NextRequest) {
       getDevPortfolio(supabase, user.id),
       // 17. Developer GitHub (for My Files + journey when user has developer-github block)
       getDevGithub(supabase, user.id),
+      // 18. Employer screening requests still in flight (PSP+MVR wizard not finished)
+      supabase
+        .from('candidate_requests')
+        .select(
+          `
+          id,
+          request_type,
+          target_block_type,
+          status,
+          created_at,
+          company:companies(company_name)
+        `,
+        )
+        .eq('candidate_user_id', user.id)
+        .in('status', ['pending', 'viewed'])
+        .order('created_at', { ascending: false })
+        .limit(40),
     ])
 
     const userProfile = userProfileResult.data || null
+
+    const pendingEmployerScreening = pickPendingEmployerScreening(
+      (candidateRequestsPendingResult.data ?? []) as unknown as CandidateRequestScreeningRow[],
+    )
 
     // Reconstruct the driver-specific profile from block tables
     const driverProfile = {
@@ -473,6 +500,7 @@ export async function GET(request: NextRequest) {
       transactions, // New: derived from actual orders/purchases
       stats,
       memberSince: user.created_at,
+      pendingEmployerScreening,
     })
 
   } catch (error) {

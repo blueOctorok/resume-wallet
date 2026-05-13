@@ -38,7 +38,7 @@ interface BackgroundCheckDisclosureProps {
   userAddress: string
   onClose: () => void
   /**
-   * Called once the FCRA consent is saved.
+   * Called once the FCRA consent is saved (or validated when `deferSubmit` is true).
    * `profile` is the candidate-typed/edited form data — useful for prefilling
    * a downstream form (e.g. PSP Step 2) so the candidate doesn't re-type
    * identical name/DL/DOB fields.
@@ -54,6 +54,14 @@ interface BackgroundCheckDisclosureProps {
   fulfillOrder?: boolean
   /** Called when the order has been successfully placed (only relevant with fulfillOrder) */
   onOrderPlaced?: (result: { orderId: string; orderNumber: string }) => void
+  /**
+   * When true, validate but do NOT POST the consent. The parent wizard
+   * collects form data from all steps and submits them together later.
+   * `onConsentSigned` still fires with the profile + `signedName` key.
+   */
+  deferSubmit?: boolean
+  /** Pre-populate form fields when returning to this step (back navigation). */
+  initialFormData?: Record<string, string> | null
 }
 
 /**
@@ -153,29 +161,37 @@ export default function BackgroundCheckDisclosure({
   renderInline = false,
   fulfillOrder = false,
   onOrderPlaced,
+  deferSubmit = false,
+  initialFormData,
 }: BackgroundCheckDisclosureProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
-  const [profile, setProfile] = useState<DriverProfileInfo>({
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    dlNumber: '',
-    dlState: '',
-    email: '',
+  const [profile, setProfile] = useState<DriverProfileInfo>(() => {
+    const base: DriverProfileInfo = {
+      firstName: '',
+      lastName: '',
+      dateOfBirth: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      dlNumber: '',
+      dlState: '',
+      email: '',
+    }
+    if (initialFormData) {
+      return { ...base, ...initialFormData } as DriverProfileInfo
+    }
+    return base
   })
-  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(!initialFormData)
   const [viewCompanyName, setViewCompanyName] = useState(companyName)
 
   const [stateNoticesOpen, setStateNoticesOpen] = useState(false)
   const [fcraRightsOpen, setFcraRightsOpen] = useState(false)
 
-  const [signedName, setSignedName] = useState('')
+  const [signedName, setSignedName] = useState(initialFormData?.signedName ?? '')
   const [signedDate, setSignedDate] = useState(
     new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
   )
@@ -197,7 +213,7 @@ export default function BackgroundCheckDisclosure({
   useEffect(() => {
     if (viewMode && consentId) {
       fetchSignedConsent()
-    } else {
+    } else if (!initialFormData) {
       fetchDriverProfile()
     }
   }, [userAddress, viewMode, consentId])
@@ -270,6 +286,13 @@ export default function BackgroundCheckDisclosure({
     }
 
     setError(null)
+
+    // Deferred mode: skip the POST, just return validated data to the parent wizard.
+    if (deferSubmit) {
+      onConsentSigned({ ...profile, signedName: signedName.trim() })
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -939,7 +962,7 @@ export default function BackgroundCheckDisclosure({
                 ) : (
                   <FileCheck className="w-4 h-4" />
                 )}
-                {fulfillOrder ? 'Sign & Submit Order' : 'Sign & Authorize'}
+                {fulfillOrder ? 'Sign & Submit Order' : deferSubmit ? 'Sign & Continue' : 'Sign & Authorize'}
               </button>
             </>
           )}

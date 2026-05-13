@@ -56,6 +56,18 @@ export interface ParsedMvrResult {
     age?: number           // computed from subject.dateOfBirth
   }
 
+  /**
+   * Medical examiner details from the MEDICAL EXAMINER INFORMATION text section.
+   * Only populated for CDL drivers whose state includes examiner info in the report.
+   */
+  medicalExaminer?: {
+    name?: string
+    licenseNumber?: string
+    licenseJurisdiction?: string
+    nationalRegistryNumber?: string
+    phone?: string
+  }
+
   // License Information (from MVR subOrder - dlnum, dlstate, dlexpiration)
   licenseNumber?: string // dlnum
   licenseState?: string // dlstate
@@ -271,6 +283,7 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     // Extract subject information (personal info from subject block)
     const subjectXml = extractXmlBlock(xml, 'subject')
     if (subjectXml) {
+      const rawState = extractXmlValue(subjectXml, 'state')
       result.subject = {
         firstName: extractXmlValue(subjectXml, 'name_first'),
         middleName: extractXmlValue(subjectXml, 'name_middle'),
@@ -282,7 +295,10 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         phone: extractXmlValue(subjectXml, 'phone_number'),
         address: extractXmlValue(subjectXml, 'address'),
         city: extractXmlValue(subjectXml, 'city'),
-        state: extractXmlValue(subjectXml, 'state'),
+        // Reject suspiciously long values — state names/codes are ≤20 chars.
+        // Some XML formats nest other blocks inside <subject>, causing the generic
+        // extractor to grab entire XML fragments instead of a state abbreviation.
+        state: rawState && rawState.length <= 20 ? rawState : undefined,
         zip: extractXmlValue(subjectXml, 'zip'),
         country: extractXmlValue(subjectXml, 'country'),
         gender: extractXmlValue(subjectXml, 'gender')
@@ -423,6 +439,24 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         if (cdlStatus && result.licenses && result.licenses.length > 0 && !result.licenses[0].cdlStatus) {
           result.licenses[0].cdlStatus = cdlStatus
         }
+
+        // Text-block license fallback: some states don't emit `<mvr_license>`
+        // XML blocks but do include structured license info in the text.
+        if (!result.licenses || result.licenses.length === 0) {
+          const textLicenses = extractLicensesFromText(mvrTextBlock)
+          if (textLicenses.length > 0) result.licenses = textLicenses
+        }
+
+        // Text-block endorsement fallback: when XML `<license_endorsements>` is
+        // empty, pull from the ENDORSEMENTS section of the text report.
+        if (result.licenses && result.licenses.length > 0 && !result.licenses[0].endorsements) {
+          const textEndorsements = extractEndorsementsFromText(mvrTextBlock)
+          if (textEndorsements) result.licenses[0].endorsements = textEndorsements
+        }
+
+        // Medical examiner info lives only in the text block.
+        const examiner = extractMedicalExaminerFromText(mvrTextBlock)
+        if (examiner) result.medicalExaminer = examiner
       }
     } catch (textParseError) {
       console.warn('[ACCIO PARSER] Could not parse personal/asof/cdl from text block:', textParseError)
@@ -951,9 +985,11 @@ function extractPersonalCharacteristicsFromText(text: string): {
     const m = text.match(regex)
     if (m) {
       const v = m[1].trim()
-      // Defense in depth: if a future report layout puts these labels next to
-      // an underscore-separator line, never let a row of `____` leak through.
-      if (v && !/^_+$/.test(v)) result[key] = v
+      // Reject underscore separators and values that look like the next column's
+      // label (e.g. "Weight:", "Exp Date:"). This happens when a field is blank —
+      // the `[ \t]*` after the colon eats all whitespace and positions the lazy
+      // capture at the neighboring label instead of an empty string.
+      if (v && !/^_+$/.test(v) && !/^[\w][\w\s]*:$/.test(v)) result[key] = v
     }
   }
   return result
@@ -963,10 +999,18 @@ function extractPersonalCharacteristicsFromText(text: string): {
  * Extract the "As of: M/D/YYYY h:mm:ss AM/PM" timestamp the DMV stamps on the
  * report. We keep the raw string (don't try to normalize timezones) because
  * the DMV doesn't tell us what zone it's in — we just display it verbatim.
+ *
+ * Bug guard: use `[ \t]*` (not `\s*`) after the colon so the regex can't cross
+ * a newline and capture an underscore separator row on states where the "As of"
+ * field is blank (e.g. MO DRIVER NOT FOUND reports). Also reject values that
+ * contain no digit — real timestamps always have at least one digit.
  */
 function extractAsOfDateFromText(text: string): string | undefined {
-  const m = text.match(/^\s*As\s*of\s*:\s*([^\n]+?)\s*$/im)
-  return m ? m[1].trim() : undefined
+  const m = text.match(/^\s*As\s*of\s*:[ \t]*([^\n]+?)\s*$/im)
+  if (!m) return undefined
+  const v = m[1].trim()
+  if (!v || /^_+$/.test(v) || !/\d/.test(v)) return undefined
+  return v
 }
 
 /**
@@ -978,6 +1022,141 @@ function extractAsOfDateFromText(text: string): string | undefined {
 function extractCdlStatusFromText(text: string): string | undefined {
   const m = text.match(/^\s*CDL\s+Status\s*:\s*([^\n]+?)\s*$/im)
   return m ? m[1].trim().toUpperCase() : undefined
+}
+
+/**
+ * Text-block license fallback for states that don't emit `<mvr_license>` XML.
+ *
+ * Parses the LICENSE AND PERMIT INFORMATION section (the underscore-delimited
+ * block common to most state formats) into MvrLicense entries. Only called
+ * when `extractMvrLicenses` returns an empty array.
+ *
+ * VA format example:
+ *   License: COMMERCIAL    Orig. Issued:     Issued: 10/07/2025    Expires: 07/02/2033
+ *   Status: LICENSED
+ *   Class: A - ANY COMBINATION OF VEHICLES...
+ */
+function extractLicensesFromText(text: string): MvrLicense[] {
+  // Scope to the LICENSE AND PERMIT INFORMATION block only.
+  const blockMatch = text.match(
+    /LICENSE AND PERMIT INFORMATION[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
+  )
+  if (!blockMatch) return []
+
+  const block = blockMatch[1]
+  const typeLine = block.match(/^License:\s*([^\n]+)/im)
+  if (!typeLine) return []
+
+  // On some states "License:" is followed by the DL number (not the type).
+  // If it looks alphanumeric-only (no spaces, mixed case) treat it as a number,
+  // not a type description — and skip (the number is already on the order row).
+  const rawType = typeLine[1].split(/\s{2,}/)[0]?.trim() ?? ''
+  if (/^[A-Z0-9]{5,}$/.test(rawType)) return []
+
+  // Dates may appear on the same line as "License: TYPE"
+  const dateSource = typeLine[1]
+  const origIssueMatch = dateSource.match(/Orig\.\s*Issued:\s*(\d[\d/]+)/i)
+  const issuedMatch = dateSource.match(/(?<!Orig\.\s{0,5})Issued:\s*(\d[\d/]+)/i)
+  const expiresMatch = dateSource.match(/Expires:\s*(\d[\d/]+)/i)
+
+  const statusMatch = block.match(/^Status:\s*([^\n]+)/im)
+  const classMatch = block.match(/^Class:\s*([^\n]+)/im)
+
+  const classStr = classMatch?.[1]?.trim() ?? ''
+  const parts = classStr.split(' - ')
+  const classLetter = parts[0]?.trim() || undefined
+  const classDescription = parts.slice(1).join(' - ').trim() || undefined
+
+  const license: MvrLicense = {
+    type: rawType || undefined,
+    issueDate: issuedMatch?.[1] || undefined,
+    originalIssueDate: origIssueMatch?.[1] || undefined,
+    expirationDate: expiresMatch?.[1] || undefined,
+    status: statusMatch?.[1]?.trim() || undefined,
+    class: classLetter,
+    classDescription,
+  }
+
+  return license.type || license.status || license.class ? [license] : []
+}
+
+/**
+ * Extract endorsements from the ENDORSEMENTS text section as a fallback when
+ * `<license_endorsements>` XML is empty.
+ *
+ * VA/typical format:
+ *   ENDORSEMENTS
+ *   ___
+ *    Class: A  Lic. Type: COMMERCIAL
+ *   |N TANK - N TANK|
+ *
+ * Each `|CODE DESC - CODE DESC|` line is one endorsement group.
+ * Returns a comma-separated string matching the existing `endorsements` field type.
+ */
+function extractEndorsementsFromText(text: string): string | undefined {
+  const blockMatch = text.match(/ENDORSEMENTS[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i)
+  if (!blockMatch) return undefined
+
+  const block = blockMatch[1]
+  const endorsements: string[] = []
+
+  // Capture each pipe-delimited endorsement entry
+  const entryRe = /\|([^|]+)\|/g
+  let m: RegExpExecArray | null
+  while ((m = entryRe.exec(block)) !== null) {
+    // "N TANK - N TANK" → deduplicate and normalize to "N TANK"
+    const parts = m[1]
+      .split(/\s*-\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    const unique = [...new Set(parts)]
+    endorsements.push(unique.join(', '))
+  }
+
+  return endorsements.length > 0 ? endorsements.join('; ') : undefined
+}
+
+/**
+ * Extract medical examiner details from the MEDICAL EXAMINER INFORMATION text
+ * section. This block appears on CDL driver records from states that include
+ * examiner data (e.g. VA).
+ *
+ * VA format:
+ *   Examiner full name: Seldat,Heather,,   MD License No: 0024180261   MD License jurisd: VIRGINIA
+ *   MD Registry No: 6835767235
+ */
+function extractMedicalExaminerFromText(text: string): ParsedMvrResult['medicalExaminer'] {
+  const blockMatch = text.match(
+    /MEDICAL EXAMINER INFORMATION[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
+  )
+  if (!blockMatch) return undefined
+
+  const block = blockMatch[1]
+
+  const nameMatch = block.match(/Examiner full name:\s*([^\n,]{2,}?)(?:\s{2,}|MD License|$)/im)
+  const licNoMatch = block.match(/MD License No:\s*([^\s]+)/im)
+  const licJurisdMatch = block.match(/MD License jurisd:\s*([^\n]+?)(?:\s{2,}|$)/im)
+  const regNoMatch = block.match(/MD Registry No:\s*([^\s]+)/im)
+  const phoneMatch = block.match(/Phone(?:\s+Number)?:\s*([^\n]+?)(?:\s{2,}|$)/im)
+
+  // Clean up the name — Accio stores it as "Seldat,Heather,," (last,first,,suffix)
+  let name: string | undefined
+  if (nameMatch?.[1]) {
+    const parts = nameMatch[1]
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    name = parts.length >= 2 ? `${parts[1]} ${parts[0]}` : parts[0]
+  }
+
+  const result: ParsedMvrResult['medicalExaminer'] = {}
+  if (name) result.name = name
+  if (licNoMatch?.[1]) result.licenseNumber = licNoMatch[1].trim()
+  if (licJurisdMatch?.[1]) result.licenseJurisdiction = licJurisdMatch[1].trim()
+  if (regNoMatch?.[1]) result.nationalRegistryNumber = regNoMatch[1].trim()
+  if (phoneMatch?.[1]) result.phone = phoneMatch[1].trim()
+
+  return Object.keys(result).length > 0 ? result : undefined
 }
 
 /**
@@ -1001,24 +1180,9 @@ function computeAgeFromYmd(ymd?: string): number | undefined {
 }
 
 /**
- * Extract multiple values from XML (for arrays)
- */
-function extractXmlValues(xml: string, tagName: string): string[] {
-  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'gi')
-  const matches = xml.matchAll(regex)
-  const values: string[] = []
-  for (const match of matches) {
-    if (match[1]) {
-      values.push(match[1].trim())
-    }
-  }
-  return values
-}
-
-/**
  * Convert parsed result to JSONB format for database storage
  */
-export function mvrResultToJsonb(result: ParsedMvrResult): any {
+export function mvrResultToJsonb(result: ParsedMvrResult): Record<string, unknown> {
   // Get primary license from licenses array or fallback to basic license fields
   const primaryLicense = result.licenses && result.licenses.length > 0 
     ? result.licenses[0] 
@@ -1082,6 +1246,7 @@ export function mvrResultToJsonb(result: ParsedMvrResult): any {
       certStatus: result.medicalCertStatus,
       selfCertification: result.medicalCertSelfCertification
     },
+    medicalExaminer: result.medicalExaminer,
     fees: result.fees,
     status: {
       filledStatus: result.filledStatus,

@@ -354,6 +354,22 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
           </Section>
         ) : null}
 
+        {/* Medical Examiner — populated for CDL drivers on states that include
+            examiner info in the text block (e.g. VA). */}
+        {parsed.medicalExaminer && (
+          <Section heading="Medical Examiner">
+            <View style={stormPdfStyles.kvGrid}>
+              <KeyValue label="Examiner Name" value={parsed.medicalExaminer.name} />
+              <KeyValue label="License No." value={parsed.medicalExaminer.licenseNumber} />
+              <KeyValue label="Jurisdiction" value={parsed.medicalExaminer.licenseJurisdiction} />
+              <KeyValue label="National Registry No." value={parsed.medicalExaminer.nationalRegistryNumber} />
+              {parsed.medicalExaminer.phone && (
+                <KeyValue label="Phone" value={parsed.medicalExaminer.phone} />
+              )}
+            </View>
+          </Section>
+        )}
+
         <StormPdfFooter
           orderId={meta.stormOrderId}
           verifiedTxHash={meta.verifiedTxHash}

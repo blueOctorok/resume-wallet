@@ -6,6 +6,8 @@
  * CareerCardSection with block-specific data fetched from the DB.
  */
 
+import type { HubPendingEmployerScreening } from '@/lib/hub-document-types'
+
 // ── Section data shapes ──────────────────────────────────────────────────────
 // Each block type has a known payload shape. Using a discriminated union
 // so section renderers can narrow on `blockType` and get typed `data`.
@@ -56,6 +58,8 @@ export interface MvrData {
    * Candidate hub shows status only; full MVR opens for the purchasing employer.
    */
   employerPaidScreening?: boolean
+  /** Present before an order exists — employer asked for screening; hub uses for CTA copy. */
+  pendingEmployerRequest?: HubPendingEmployerScreening
 }
 
 /** FMCSA PSP / crash-inspection — summary until Accio result XML is parsed. */
@@ -70,6 +74,7 @@ export interface PspData {
   resultSummary: { resultStatus: string | null } | null
   /** Same semantics as {@link MvrData.employerPaidScreening}. */
   employerPaidScreening?: boolean
+  pendingEmployerRequest?: HubPendingEmployerScreening
 }
 
 export interface CdlData {

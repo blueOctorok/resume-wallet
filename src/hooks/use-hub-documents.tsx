@@ -15,6 +15,7 @@ import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import type { PageType } from '@/stores/types'
 import type { HubDocument } from '@/lib/hub-document-types'
 import { hubDocStatusFromScreeningOrder } from '@/lib/hub-document-types'
+import type { PickedPendingEmployerScreening } from '@/lib/pending-employer-screening'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
@@ -106,6 +107,8 @@ export function useHubDocuments(refreshKey: number): {
 
         const data = await response.json()
         if (typeof data.userId === 'string') setHubUserId(data.userId)
+
+        const pendingPick = data.pendingEmployerScreening as PickedPendingEmployerScreening | null | undefined
 
         const hasStormResumeBlock = installedBlocks.some((b) => b.blockType === 'storm-resume')
         const hasDriverResumeBlock = installedBlocks.some((b) => b.blockType === 'driver-resume')
@@ -236,6 +239,16 @@ export function useHubDocuments(refreshKey: number): {
         }
 
         if (hasMvrBlock && (!data.mvrRecords || data.mvrRecords.length === 0)) {
+          const mvrPending =
+            pendingPick?.mode === 'psp_mvr_bundle'
+              ? {
+                  requestId: pendingPick.requestId,
+                  companyName: pendingPick.companyName,
+                  bundledWithBlockType: 'driver-psp' as const,
+                }
+              : pendingPick?.mode === 'mvr_standalone'
+                ? { requestId: pendingPick.requestId, companyName: pendingPick.companyName }
+                : undefined
           docs.push({
             id: 'mvr-hub-placeholder',
             type: 'mvr',
@@ -247,6 +260,7 @@ export function useHubDocuments(refreshKey: number): {
             canVerify: false,
             canDelete: false,
             editPage: 'mvr',
+            pendingEmployerRequest: mvrPending,
           })
         }
 
@@ -271,6 +285,10 @@ export function useHubDocuments(refreshKey: number): {
         }
 
         if (hasPspBlock && (!data.pspRecords || data.pspRecords.length === 0)) {
+          const pspPending =
+            pendingPick?.mode === 'psp_mvr_bundle'
+              ? { requestId: pendingPick.requestId, companyName: pendingPick.companyName }
+              : undefined
           docs.push({
             id: 'psp-hub-placeholder',
             type: 'psp',
@@ -282,6 +300,7 @@ export function useHubDocuments(refreshKey: number): {
             canVerify: false,
             canDelete: false,
             editPage: 'psp',
+            pendingEmployerRequest: pspPending,
           })
         }
 
