@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
+    // 500 per kind is plenty for any single company in normal usage — covers years
+    // of orders before we'd need real pagination. Both the Active outreach tab and
+    // the Files vault tab share this single fetch, so we read once and group client-side.
     const [{ data: mvrOrders }, { data: pspOrders }] = await Promise.all([
       supabase
         .from('mvr_orders')
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
-        .limit(100),
+        .limit(500),
       supabase
         .from('psp_orders')
         .select(
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
-        .limit(100),
+        .limit(500),
     ])
 
     const candidateIds = Array.from(

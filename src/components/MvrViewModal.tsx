@@ -391,20 +391,20 @@ export default function MvrViewModal({
           {/* Accent line */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-700 via-teal-500 to-teal-200" />
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className={`p-2.5 rounded-xl ${
                 isDark ? 'bg-teal-700/20' : 'bg-teal-700/10'
               }`}>
                 <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Motor Vehicle Report
                 </h2>
                 {/* Show driver name prominently if available */}
                 {mvrResult && formatDriverName(mvrResult.subject) ? (
-                  <p className={`text-sm font-medium ${isDark ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}>
+                  <p className={`text-sm font-medium break-words ${isDark ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}>
                     {formatDriverName(mvrResult.subject)}
                   </p>
                 ) : (
@@ -414,8 +414,7 @@ export default function MvrViewModal({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Download Button - only show when results are available */}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               {mvrResult && mvrOrder && (
                 <Button
                   variant="secondary"
@@ -470,13 +469,13 @@ export default function MvrViewModal({
                   (Accio's filledCode mapped via accio-result-status.ts) at a glance. */}
               {mvrOrder && mvrOrder.status === 'completed' && mvrOrder.resultOutcome && (
                 <div
-                  className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+                  className={`flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
                     isDark
                       ? 'border-gray-700/60 bg-gray-800/40'
                       : 'border-gray-200 bg-white'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Shield className={`h-5 w-5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
                     <div>
                       <p className={`text-xs uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -488,7 +487,7 @@ export default function MvrViewModal({
                     </div>
                   </div>
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${outcomeBadgeClasses(mvrOrder.resultOutcome)}`}
+                    className={`shrink-0 self-start rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide sm:self-center ${outcomeBadgeClasses(mvrOrder.resultOutcome)}`}
                   >
                     {outcomeLabel(mvrOrder.resultOutcome)}
                   </span>
@@ -696,51 +695,62 @@ export default function MvrViewModal({
                                   isDark ? 'bg-gray-900/50' : 'bg-gray-50'
                                 }`}
                               >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                {/* Stack on narrow widths: long type / "Passenger" text must not
+                                    overlap status badges (was flex row + justify-between). */}
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                                    <div
+                                      className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center overflow-hidden ${
                                         license.type?.toLowerCase().includes('commercial')
                                           ? 'bg-teal-500/20 dark:bg-teal-500/20'
                                           : isDark ? 'bg-gray-700' : 'bg-gray-200'
-                                      }`}>
-                                      <span className={`text-xl font-black ${
-                                        license.type?.toLowerCase().includes('commercial')
-                                          ? 'text-teal-600 dark:text-teal-300'
-                                          : isDark ? 'text-gray-300' : 'text-gray-600'
-                                      }`}>
-                                        {license.class || '?'}
+                                      }`}
+                                    >
+                                      {/* Show only first char so long values like "PASSENGER" don't overflow the tile */}
+                                      <span
+                                        className={`text-xl font-black leading-none ${
+                                          license.type?.toLowerCase().includes('commercial')
+                                            ? 'text-teal-600 dark:text-teal-300'
+                                            : isDark ? 'text-gray-300' : 'text-gray-600'
+                                        }`}
+                                      >
+                                        {(license.class || '?')[0]}
                                       </span>
                                     </div>
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <span className={`shrink-0 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                           Class {license.class}
                                         </span>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                          license.type?.toLowerCase().includes('commercial')
-                                            ? 'bg-teal-500/20 text-teal-600 dark:text-teal-300'
-                                            : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
-                                        }`}>
+                                        <span
+                                          className={cn(
+                                            'max-w-full break-words text-xs px-2 py-0.5 rounded-full',
+                                            license.type?.toLowerCase().includes('commercial')
+                                              ? 'bg-teal-500/20 text-teal-600 dark:text-teal-300'
+                                              : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600',
+                                          )}
+                                        >
                                           {license.type || 'Standard'}
                                         </span>
                                       </div>
                                       {license.classDescription && (
-                                        <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        <p
+                                          className={cn(
+                                            'mt-1 max-w-full text-sm break-words',
+                                            isDark ? 'text-gray-400' : 'text-gray-500',
+                                          )}
+                                        >
                                           {license.classDescription}
                                         </p>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:flex-col sm:items-end sm:justify-start">
                                     <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.status).bg}`}>
                                       <span className={`text-xs font-medium ${getStatusBadge(license.status).text}`}>
                                         {license.status || 'Unknown'}
                                       </span>
                                     </div>
-                                    {/* Some states publish a separate CDL Status (parsed from the
-                                        text block when the structured tag is empty). Only show it
-                                        when it differs from the license status — otherwise it's
-                                        redundant noise. */}
                                     {license.cdlStatus && license.cdlStatus !== license.status && (
                                       <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.cdlStatus).bg}`}>
                                         <span className={`text-xs font-medium ${getStatusBadge(license.cdlStatus).text}`}>
@@ -752,7 +762,12 @@ export default function MvrViewModal({
                                 </div>
                                 {license.restrictions && (
                                   <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
-                                    <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    <p
+                                      className={cn(
+                                        'text-xs max-w-full break-words',
+                                        isDark ? 'text-gray-500' : 'text-gray-400',
+                                      )}
+                                    >
                                       <span className="font-medium">Restrictions:</span> {license.restrictions}
                                     </p>
                                   </div>
@@ -767,7 +782,7 @@ export default function MvrViewModal({
                                       {license.endorsements.split(/[,;]+/).map((e) => e.trim()).filter(Boolean).map((endorsement, eIdx) => (
                                         <span
                                           key={eIdx}
-                                          className="rounded-md bg-teal-50 dark:bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-200 ring-1 ring-teal-200 dark:ring-teal-400/30"
+                                          className="max-w-full min-w-0 break-words rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 ring-1 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/30"
                                         >
                                           {endorsement}
                                         </span>
@@ -777,23 +792,32 @@ export default function MvrViewModal({
                                 )}
                                 {/* Issue / expiration dates */}
                                 {(license.issueDate || license.originalIssueDate || license.expirationDate) && (
-                                  <div className={`mt-3 pt-3 border-t grid grid-cols-3 gap-3 ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                                  <div
+                                    className={cn(
+                                      'mt-3 grid gap-3 border-t pt-3 sm:grid-cols-3',
+                                      isDark ? 'border-gray-700/50' : 'border-gray-200',
+                                      // 1 col when only one date, else responsive — avoids squeezed columns overlapping
+                                      [license.originalIssueDate, license.issueDate, license.expirationDate].filter(Boolean).length === 1
+                                        ? 'grid-cols-1'
+                                        : 'grid-cols-1 sm:grid-cols-3',
+                                    )}
+                                  >
                                     {license.originalIssueDate && (
-                                      <div>
+                                      <div className="min-w-0">
                                         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Orig. Issued</p>
-                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.originalIssueDate)}</p>
+                                        <p className={cn('mt-0.5 break-words text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.originalIssueDate)}</p>
                                       </div>
                                     )}
                                     {license.issueDate && (
-                                      <div>
+                                      <div className="min-w-0">
                                         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Issued</p>
-                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.issueDate)}</p>
+                                        <p className={cn('mt-0.5 break-words text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.issueDate)}</p>
                                       </div>
                                     )}
                                     {license.expirationDate && (
-                                      <div>
+                                      <div className="min-w-0">
                                         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Expires</p>
-                                        <p className={cn('mt-0.5 text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.expirationDate)}</p>
+                                        <p className={cn('mt-0.5 break-words text-xs font-medium', isDark ? 'text-gray-200' : 'text-gray-700')}>{formatDate(license.expirationDate)}</p>
                                       </div>
                                     )}
                                   </div>
@@ -1075,8 +1099,8 @@ export default function MvrViewModal({
                               }`}
                             >
                               <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                <div className="min-w-0 flex-1">
+                                  <p className={`font-semibold break-words ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                     {violation.description || violation.type || 'Violation'}
                                   </p>
                                   <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm ${
@@ -1150,16 +1174,16 @@ export default function MvrViewModal({
                                 isDark ? 'bg-red-500/5' : 'bg-red-50'
                               }`}
                             >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className={`break-words font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                     {accident.description || 'Accident'}
                                   </p>
                                   <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                     {formatDate(accident.date)}
                                   </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="shrink-0 text-right">
                                   {accident.severity && (
                                     <span className={`text-sm font-medium ${
                                       accident.severity.toLowerCase().includes('fatal') 
@@ -1206,9 +1230,9 @@ export default function MvrViewModal({
                                 isDark ? 'bg-red-500/5' : 'bg-red-50'
                               }`}
                             >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className={`break-words font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                     {suspension.reason || 'Suspension'}
                                   </p>
                                   <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -1217,7 +1241,7 @@ export default function MvrViewModal({
                                   </p>
                                 </div>
                                 {suspension.state && (
-                                  <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <span className={`shrink-0 text-sm flex items-center gap-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                     <MapPin className="h-3.5 w-3.5" />
                                     {suspension.state}
                                   </span>

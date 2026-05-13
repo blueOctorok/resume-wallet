@@ -20,6 +20,7 @@ import {
   Plus,
   Users,
   Shield,
+  CheckCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -49,6 +50,7 @@ import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
 import ModeToggle from './ui/ModeToggle'
 import { useStormTokenBalance } from '@/hooks/use-storm-token-balance'
+import { getDisplayRole } from '@/lib/employer-roles'
 
 // Define the navigation page type
 //
@@ -106,6 +108,7 @@ export default function Navigation({
   const setWalkthroughDismissed = useHubBlocksStore((s) => s.setWalkthroughDismissed)
   const requestWalkthrough = useJourneyStore((s) => s.requestWalkthrough)
   const { navigateToMessages, requestHubRefresh, setCurrentPage } = useUIStore()
+  const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
   const isDark = isDarkTheme(theme)
@@ -453,6 +456,72 @@ export default function Navigation({
                         </button>
                       </div>
                     ) : null}
+                    {userRole === 'employer' && employerNavSnapshot && (
+                      <div className='flex min-w-0 max-w-[min(100%,12rem)] flex-col text-left sm:max-w-xs'>
+                        <div className='flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1'>
+                          <span
+                            className={cn(
+                              'truncate text-xs font-semibold',
+                              isDark ? 'text-gray-100' : 'text-gray-900',
+                            )}
+                            title={employerNavSnapshot.companyName}
+                          >
+                            {employerNavSnapshot.companyName}
+                          </span>
+                          {employerNavSnapshot.userRole && (
+                            <span
+                              className={cn(
+                                'inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                                employerNavSnapshot.userRole === 'owner'
+                                  ? isDark
+                                    ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
+                                    : 'border-purple-200 bg-purple-50 text-purple-800'
+                                  : employerNavSnapshot.userRole === 'admin'
+                                    ? isDark
+                                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+                                      : 'border-blue-200 bg-blue-50 text-blue-800'
+                                    : employerNavSnapshot.userRole === 'viewer'
+                                      ? isDark
+                                        ? 'border-gray-500/40 bg-gray-500/15 text-gray-400'
+                                        : 'border-gray-200 bg-gray-100 text-gray-700'
+                                      : isDark
+                                        ? 'border-teal-500/40 bg-teal-500/15 text-teal-300'
+                                        : 'border-teal-200 bg-teal-50 text-teal-800',
+                              )}
+                            >
+                              {getDisplayRole(employerNavSnapshot.userRole)}
+                            </span>
+                          )}
+                          {employerNavSnapshot.verified && (
+                            <span
+                              className={cn(
+                                'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                                isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-800',
+                              )}
+                              title='Verified company'
+                            >
+                              <CheckCircle className='h-2.5 w-2.5 shrink-0' aria-hidden />
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                        {(employerNavSnapshot.subtitle || employerNavSnapshot.memberSinceLabel) && (
+                          <p
+                            className={cn(
+                              'mt-0.5 truncate text-[10px] leading-tight',
+                              isDark ? 'text-gray-500' : 'text-gray-500',
+                            )}
+                            title={[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          >
+                            {[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {userRole === 'candidate' && (
                       <div className='flex shrink-0 items-center self-center'>
                         <ModeToggle variant='pill' onAfterToggle={() => setIsMenuOpen(false)} />

@@ -4,6 +4,177 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer hub: company strip in nav + working refresh** (May 2026)
+
+Removed the large company profile card above **Blocks & outreach** to reclaim vertical space. Company name, role badge (owner / admin / team), verified pill, location · DOT line, and member-since now render in the **hub row of the global nav** next to the refresh control.
+
+**Refresh hub** now does a full employer pull: main hub JSON, installed employer blocks, screenings, and outreach lists (invites + jobs) via the shared `hubRefreshNonce` listener.
+
+| File | Change |
+|---|---|
+| `src/stores/ui-store.ts` | `employerNavSnapshot` + setter for nav strip |
+| `src/components/EmployerHub.tsx` | Drop title card; sync snapshot; `pullLatestEmployerHub` refetches hub + blocks + screenings |
+| `src/components/Navigation.tsx` | Compact employer strip after refresh button |
+| `src/components/employer/CandidateOutreach.tsx` | Refetch on `hubRefreshNonce` |
+
+---
+
+## **MVR modal: fix overlapping text** (May 2026)
+
+License class rows used a single `flex` row with `justify-between`, so long DMV strings (e.g. **Passenger** endorsements, commercial type labels, class descriptions) ran into status badges. **Fix:** stack the row on small screens, `min-w-0` + `flex-1` on the text column, `flex-wrap` on title/type chips, `break-words` on descriptions/restrictions/endorsement pills, responsive date grid (`grid-cols-1` → `sm:grid-cols-3`), and the same overflow-safe patterns on violations, accidents, suspensions, outcome banner, and modal header.
+
+| File | Change |
+|---|---|
+| `src/components/MvrViewModal.tsx` | Layout + wrapping fixes for license blocks and related sections |
+
+---
+
+## **Stormi Per-Candidate Chat Modal** (May 2026)
+
+Replaced the non-functional clipboard+scroll "Ask Stormi" hack with a real AI chat modal. Removed the static `StormiOutreachSummary` banner (was just counts, not useful).
+
+### What changed
+
+- **Ask Stormi button** on each `OutreachCandidateCard` now opens a **dedicated Stormi chat modal** scoped to that one candidate. The modal:
+  1. Auto-fires a context message to Stormi (hidden from UI) with the candidate's name, invite type, status, views, screenings, linked job, and email state.
+  2. Shows Stormi's AI response immediately in a clean chat thread with violet accent.
+  3. Shows a "Context shared with Stormi" card so the employer sees what data was sent.
+  4. Offers suggested follow-up chips ("Should I resend the email?", "What screenings should I order?", "How can I improve my outreach?") after the first response.
+  5. Supports multi-turn conversation with full history passed to the API.
+  6. Handles out-of-credits errors gracefully.
+- **Removed `StormiOutreachSummary`** — the static counts banner above the filter bar was perceived as pointless. Candidate-specific AI coaching via the per-card modal is the replacement.
+- **`CandidateOutreach` now accepts `employerContext` prop** — passed from `EmployerHub` so the modal can call `sendToStormi` with the employer's hub context.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/components/employer/CandidateOutreach.tsx` | Remove `StormiOutreachSummary`, add `StormiCandidateModal`, replace clipboard `handleAskStormi` with modal state, accept `employerContext` prop |
+| `src/components/EmployerHub.tsx` | Pass `employerStormiContext` to `CandidateOutreach` |
+
+---
+
+## **Employer Outreach Card Actions Upgrade** (May 2026)
+
+Refinements to the Blocks & Outreach section: cleaner action grid, Edit invite workflow, Stormi-powered insights, and visual polish to the capability tiles.
+
+### Card action changes (`OutreachCandidateCard.tsx`)
+
+- **Removed "Text" button** — it was functionally identical to "Copy" (both copied the invite URL). Renamed "Link" → "Copy". Removed `onCopyMessage` prop and `copyInviteTextForSms` from `CandidateOutreach.tsx`.
+- **Added "Edit" button** — appears on `pending` and `viewed` invites (disabled once a candidate has started or completed the flow). Opens `EditInviteModal`.
+- **Added "Ask Stormi" button** — full-width violet-accented row below the standard actions. Opens a **dedicated Stormi chat modal** scoped to the candidate (see "Stormi Per-Candidate Chat Modal" above).
+
+### Edit invite modal (`CandidateOutreach.tsx` — `EditInviteModal`)
+
+Two-section modal triggered by the Edit button:
+- **Section 1: Edit details** — name, email, linked job posting, welcome message. Saves via a new field-update PATCH path (see API change below). Optimistic local state update after save.
+- **Section 2: Send another block** — block picker filtered to blocks the candidate does NOT already have. Selecting a block and clicking "Create & copy link" creates a new invite (separate token) for the same candidate, pre-filled with their name/email. The existing invite is untouched.
+
+### API: `PATCH /api/employer/invites` extended
+
+Added a **field-edit path** alongside the existing status-transition path:
+- When `status` is absent and any of `candidateName`, `candidateEmail`, `jobPostingId`, `welcomeMessage` are provided, the handler applies field-level updates.
+- Guard: field edits are only allowed on `pending` or `viewed` invites (never after the candidate has started/completed).
+- Status transitions still work unchanged on the same endpoint.
+
+### Stormi summary banner (REMOVED — see "Stormi Per-Candidate Chat Modal" above)
+
+~~Compact violet-accented banner rendered above the filter bar in the Active tab.~~ Removed — replaced by the per-card Stormi chat modal which provides actual AI-powered guidance instead of static counts.
+
+### Visual polish (`EmployerHub.tsx`)
+
+- **Installed capabilities** — row is `flex-nowrap` + `justify-center` with horizontal scroll if needed (few blocks, no wrap quirks). **No per-tile bordered box**; each tile is vault chrome + label + optional remove. **Separators** are a subtle **`divide-x divide-dotted`** between tiles instead of individual card borders. **Larger vault block**: chrome `h-11 w-11` (`sm:h-12`), icons `h-5` / `sm:h-6`, labels `text-xs`. Per-block glow + icon colors still come from `EMPLOYER_TILE_COLORS` (MVR blue, PSP amber, DOT teal, employment slate).
+- **"New outreach" button** is now a single centered hero CTA (teal→emerald gradient, amber ring, soft shadow) shared between the empty state and the active list — the duplicate header button was removed. The CTA sits in a `space-y-4` stack with the Stormi summary and filter bar so vertical rhythm stays even. Sticky `OutreachFilterBar` no longer uses a negative top margin (it was pulling the bar over the CTA; dark sticky backdrops hid the bottom of the button). The employer outreach inset uses `overflow-x-hidden` instead of `overflow-hidden` so the CTA ring/shadow is not clipped vertically.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Remove Text btn + `onCopyMessage`, add Edit + Ask Stormi btns |
+| `src/components/employer/CandidateOutreach.tsx` | Add `EditInviteModal`, `StormiOutreachSummary`, remove SMS logic, wire new handlers, new outreach CTA |
+| `src/app/api/employer/invites/route.ts` | Extend PATCH to support field-level edits on unused invites |
+| `src/components/EmployerHub.tsx` | Capability row: no boxed tiles, `divide-x divide-dotted` separators, larger vault chrome, `EMPLOYER_TILE_COLORS` glow/icon |
+
+---
+
+## **Employer Hub: Candidate-Centric Outreach Redesign** (May 2026)
+
+Replaced the scattered "Blocks & outreach" + standalone "Purchased screenings" sections with a single, professional candidate ops surface. Recruiters can now find any candidate in seconds, files always live with the person, and removing an invite never loses the screenings paid for.
+
+### What changed in the UI
+
+The "Blocks & outreach" section is now a tabbed surface:
+
+```
+┌─ Blocks & outreach ────────────────────────────────────────┐
+│ Installed capabilities ▢ ▢ ▢                  [+ Add block]│
+│                                                            │
+│ [ Active outreach (41) (10 ready) ][ Files vault ][Archive]│
+│ 🔎 Search name / email   Status ▾  Block ▾  Sort ▾         │
+│ ───────────────────────────────────────────────────────    │
+│ 2-col grid of OutreachCandidateCard …                      │
+└────────────────────────────────────────────────────────────┘
+```
+
+- **Active outreach tab** — 2-col grid (1-col mobile) of candidate cards. Each card shows identity, status, file pills (MVR/PSP results inline with View buttons when complete), and the same six share/manage actions in a denser 3-col layout. With 41 invites, vertical scroll dropped from ~45 viewports to ~12.
+- **Files vault tab** — every MVR + PSP this company has paid for, grouped by candidate, searchable, with type/outcome chip filters and CSV export. Survives invite deletion (see "File persistence" below).
+- **Archive tab** — cancelled / expired invites with a one-click **Restore** action; preserved files for the candidate are still visible inline so a deleted invite never hides the paid screening.
+
+### Filtering, search, sort
+
+- **Search** matches name, email, and job title (case-insensitive).
+- **Status chips** (Active tab): Pending / Viewed / In progress / Completed — multi-select with live counts so recruiters see "Pending (8) · Viewed (12)" before clicking.
+- **Block chips** (Active tab): one chip per requested block type (PSP+MVR, MVR, etc.), again multi-select with counts.
+- **Type / Outcome chips** (Vault tab): MVR/PSP and Clear/Hits found/Pending review/Pending.
+- **Sort**: Newest / Oldest / Name A–Z.
+- **`/` shortcut** focuses the search input from anywhere on the page (Linear/GitHub-style).
+- **"Showing X of Y"** counter prevents the "where did everyone go?" feeling when filters are too tight.
+- **Tab + filter state persists to `localStorage`** so a recruiter's narrowed view survives reload and tab switches.
+
+### File persistence — long-term safety
+
+`mvr_orders` and `psp_orders` were already anchored to `driver_user_id` + `ordered_by_company_id` at the DB schema level — **zero `invite_id` columns** (verified before building). That means deleting or cancelling an invite never destroys the paid screening; we just needed a UI that exposed those records when the invite is gone. The Files vault tab is that UI.
+
+### Files added
+
+| File | Purpose |
+|---|---|
+| `src/hooks/useEmployerScreenings.ts` | One-fetch source of truth for company screenings; returns `rows[]` + `byUserId` map. Both Active cards and Vault tab consume from it. |
+| `src/components/employer/outreach/types.ts` | Shared `Invite`, `InviteStatus`, `ScreeningRow`, `ScreeningsByUserId` types. |
+| `src/components/employer/outreach/OutreachFilterBar.tsx` | Reusable filter bar — search + chip rows + sort + result count. Configurable chip-row labels so the Vault can show "Type" / "Outcome". |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | One card = one outreached candidate. Identity + inline file pills + 6 compact share/manage actions. Designed for 2-col grid layout. |
+| `src/components/employer/outreach/FilesVault.tsx` | Vault tab content — grouped by candidate, type/outcome filters, CSV export. |
+
+### Files modified
+
+- **`src/app/api/employer/invites/route.ts`** — `GET` now exposes `usedByUserId` (was already in DB, just not in response). Cards use it to look up screening files. `PATCH` now accepts `status: 'pending'` for restore-from-archive (only allowed when current status is `cancelled` or `expired`).
+- **`src/app/api/employer/screenings/route.ts`** — bumped `limit` from 100 → 500 per kind so the Vault scales for years of orders.
+- **`src/components/EmployerHub.tsx`** — added `useEmployerScreenings(walletAddress)`, passes results into `<CandidateOutreach>`, removed the standalone `<EmployerScreeningsPanel>` mount.
+- **`src/components/employer/CandidateOutreach.tsx`** — added tab switcher (`active` / `vault` / `archive`), filter state with localStorage persistence, derived chip definitions with live counts, restore handler, file-view modal state. Replaced the old `InviteRow` rendering with the new `OutreachCandidateCard` grid. Old `InviteRow` component deleted (~250 lines of dead code removed).
+- **`src/types/career-card.ts`** — comment updated (panel reference renamed).
+
+### Files removed
+
+- **`src/components/employer/EmployerScreeningsPanel.tsx`** — its data now lives inline on cards (Active tab) and grouped (Vault tab).
+
+### Polish
+
+- **"X reports ready" red-dot badge** on the Active outreach tab — counts complete files attached to active invites so a recruiter knows there's something new to review without scanning every card.
+- **Expiry hint** on cards within 7 days of expiration ("Expires in 5d") in amber, "Expired" in red.
+- **Inline email override** — cards with no email on file flip to an inline email input on click (Enter to send, Esc to cancel) instead of a separate state.
+- **Empty + no-match states** with explicit "Clear filters" CTAs.
+- **Sticky filter bar** stays visible while scrolling within a long active list.
+- **CSV export** on the vault for compliance/audit.
+
+### Why this is the right architecture
+
+- **Single fetch, two consumers**: hoisting screenings into `EmployerHub` and passing the map down means the Active cards and Vault never get out of sync. The hook returns both `rows[]` (flat) and `byUserId` (Map) so each consumer reads the shape it needs without re-bucketing.
+- **Files outlive invites at the DB level**: confirmed by querying `information_schema.columns` — neither `mvr_orders` nor `psp_orders` has any `invite`-prefixed column. The Vault is just a UI lens on data that was always safe.
+- **Tab + filter state persists** because losing your filter on every reload feels broken when you're working through 40+ invites.
+- **Compact 3-col actions in a 2-col card grid** is the density win — actions stay one click away (no popover) but the card no longer eats half a viewport.
+
+---
+
 ## **MVR + PSP: Maximize Accio Data Extraction and Display** (May 2026)
 
 Full pass on the Accio MVR and PSP data pipeline to fix parser bugs that corrupted stored data for certain state formats, add new extraction capabilities, and redesign both view modals for clarity and completeness.

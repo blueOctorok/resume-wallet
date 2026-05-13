@@ -35,6 +35,16 @@ type JourneyStageKey = 'wallet' | 'resume' | 'forms' | 'submission'
 /** Initial tab when opening STORM Resume from My Files or notifications */
 export type StormResumePanel = 'upload' | 'general' | 'driver' | 'developer'
 
+/** Shown next to Employer Hub in `Navigation` — populated by `EmployerHub` when hub data loads */
+export type EmployerNavSnapshot = {
+  companyName: string
+  userRole: string | null
+  verified: boolean
+  /** Location · DOT (optional) */
+  subtitle: string | null
+  memberSinceLabel: string | null
+}
+
 interface UIState {
   // Navigation
   currentPage: PageType
@@ -75,6 +85,12 @@ interface UIState {
 
   /** Incremented by nav "Refresh hub" — CandidateHub reacts to refetch blocks + My Files */
   hubRefreshNonce: number
+
+  /**
+   * Employer hub: company + role shown in global nav (EmployerHub writes; cleared when no company).
+   * Persists while on employer sub-pages (Applicants, etc.) so the bar stays informative.
+   */
+  employerNavSnapshot: EmployerNavSnapshot | null
 }
 
 interface UIActions {
@@ -127,6 +143,8 @@ interface UIActions {
   /** Nav refresh control — bumps nonce so CandidateHub runs the same refresh as the old title-card button */
   requestHubRefresh: () => void
 
+  setEmployerNavSnapshot: (snapshot: EmployerNavSnapshot | null) => void
+
   // Reset
   resetUI: () => void
 }
@@ -150,6 +168,7 @@ const initialState: UIState = {
   resumeUploadEvent: null,
   initialThreadId: null,
   hubRefreshNonce: 0,
+  employerNavSnapshot: null,
 }
 
 export const useUIStore = create<UIState & UIActions>()(
@@ -273,6 +292,8 @@ export const useUIStore = create<UIState & UIActions>()(
 
     requestHubRefresh: () =>
       set((s) => ({ hubRefreshNonce: s.hubRefreshNonce + 1 })),
+
+    setEmployerNavSnapshot: (snapshot) => set({ employerNavSnapshot: snapshot }),
 
     // Reset
     resetUI: () => set(initialState),

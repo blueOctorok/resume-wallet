@@ -29,7 +29,6 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Building2,
   Calendar,
   Loader2,
   MapPin,
@@ -48,7 +47,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
-import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import STORMBalance from '@/components/STORMBalance'
@@ -56,11 +54,11 @@ import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
-import EmployerScreeningsPanel from '@/components/employer/EmployerScreeningsPanel'
 import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import type { EmployerInstalledHubBlock } from '@/stores/employer-blocks-store'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
+import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
 
 // ============================================================
 // TYPES
@@ -173,7 +171,35 @@ interface EmployerHubProps {
   onNavigate: (view: string) => void
 }
 
-/** Small vault glyph + title — visual inventory only; remove is a single ghost icon (not a full-width CTA). */
+/**
+ * Per-block color scheme for employer tiles. Each employer block gets its own
+ * distinct color so they're visually distinct instead of all teal.
+ */
+const EMPLOYER_TILE_COLORS: Record<
+  string,
+  { glowColor: string; iconText: { dark: string; light: string } }
+> = {
+  'employer-mvr-orders': {
+    glowColor: 'rgba(59,130,246,0.20)',
+    iconText: { dark: 'text-blue-400', light: 'text-blue-600' },
+  },
+  'employer-psp-mvr-bundle': {
+    glowColor: 'rgba(245,158,11,0.20)',
+    iconText: { dark: 'text-amber-400', light: 'text-amber-600' },
+  },
+  'employer-dot-screening': {
+    glowColor: 'rgba(20,184,166,0.20)',
+    iconText: { dark: 'text-teal-400', light: 'text-teal-600' },
+  },
+  'employer-employment-verification': {
+    glowColor: 'rgba(100,116,139,0.15)',
+    iconText: { dark: 'text-slate-400', light: 'text-slate-500' },
+  },
+}
+
+const DEFAULT_EMPLOYER_TILE_COLOR = EMPLOYER_TILE_COLORS['employer-dot-screening']
+
+/** Installed capability — vault chrome + label; separators come from the list `divide-x`, not a per-tile box. */
 function EmployerInstalledBlockTile({
   row,
   theme,
@@ -188,53 +214,49 @@ function EmployerInstalledBlockTile({
   const isDark = isDarkTheme(theme)
   const def = getEmployerBlockDefinition(row.blockType)
   const blockLabel = def?.label ?? row.blockType
-  const registryIdForGlow =
-    def?.categoryId === 'drivers' ? 'driver-mvr' : def?.categoryId === 'developers' ? 'developer-resume' : 'general-resume'
-  const colors = getBlockColor(registryIdForGlow)
+  const colors = EMPLOYER_TILE_COLORS[row.blockType] ?? DEFAULT_EMPLOYER_TILE_COLOR
   const Icon = def?.icon ?? Package
 
   return (
     <li
-      className={cn(
-        'flex w-[7.75rem] flex-col items-center gap-1 rounded-lg border px-2 pb-2 pt-2.5 text-center sm:w-[8.25rem]',
-        isDark ? 'border-gray-700/70 bg-gray-900/50' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40',
-      )}
+      title={`Installed ${new Date(row.addedAt).toLocaleDateString()}`}
+      className="flex min-w-[7.5rem] flex-col items-center gap-2.5 px-5 py-1.5 text-center sm:min-w-[8.5rem] sm:px-6 sm:py-2"
     >
-      <div className="relative h-12 w-12 shrink-0">
+      <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
         <VaultCredentialChrome
           isDark={isDark}
           glowColor={colors.glowColor}
           hasRoute
           showSigil={false}
-          className="h-full min-h-12"
+          className="h-full min-h-12 sm:min-h-14"
         >
           <div className="flex h-full items-center justify-center p-0.5">
-            <Icon className={cn('h-5 w-5', isDark ? colors.iconText.dark : colors.iconText.light)} aria-hidden />
+            <Icon
+              className={cn('h-6 w-6 sm:h-7 sm:w-7', isDark ? colors.iconText.dark : colors.iconText.light)}
+              aria-hidden
+            />
           </div>
         </VaultCredentialChrome>
       </div>
       <p
         className={cn(
-          'line-clamp-2 w-full text-[11px] font-semibold leading-snug',
+          'line-clamp-2 max-w-[11rem] text-xs font-semibold leading-snug sm:text-sm',
           isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100',
         )}
       >
         {blockLabel}
-      </p>
-      <p className={cn('text-[10px] leading-none', isDark ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-        {new Date(row.addedAt).toLocaleDateString()}
       </p>
       {canManage && (
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="mt-0.5 !h-8 !w-8 !p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/15 dark:hover:text-red-400"
+          className="!h-9 !w-9 !p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/15 dark:hover:text-red-400"
           onClick={onRemove}
           aria-label={`Remove ${blockLabel}`}
           title="Remove block"
         >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
       )}
     </li>
@@ -249,6 +271,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const { theme } = useTheme()
   const { navigateToMessages } = useUIStore()
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
+  const setEmployerNavSnapshot = useUIStore((s) => s.setEmployerNavSnapshot)
   const lastHubRefreshNonce = useRef<number | null>(null)
   const setEmployerHiringPath = useEmployerHiringPathStore((s) => s.setEmployerHiringPath)
   const [data, setData] = useState<HubData | null>(null)
@@ -277,6 +300,34 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const installEmployerBlock = useEmployerBlocksStore((s) => s.installBlock)
   const removeEmployerBlock = useEmployerBlocksStore((s) => s.removeBlock)
   const employerRecentAudit = useEmployerBlocksStore((s) => s.recentAudit)
+
+  // One screenings fetch shared across the Active outreach (per-card files) and
+  // the Files vault tab. Anchored to `driver_user_id` at the DB level so files
+  // outlive any invite state — even after an invite is cancelled/removed.
+  const screenings = useEmployerScreenings(walletAddress)
+  const refreshScreenings = screenings.refresh
+
+  // Company + role live in global nav — keep store in sync whenever hub payload changes.
+  useEffect(() => {
+    if (!data?.company) {
+      setEmployerNavSnapshot(null)
+      return
+    }
+    const subtitle =
+      [
+        data.company.city && data.company.state ? `${data.company.city}, ${data.company.state}` : null,
+        data.company.dotNumber ? `DOT #${data.company.dotNumber}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null
+    setEmployerNavSnapshot({
+      companyName: data.company.name,
+      userRole: data.userRole ?? null,
+      verified: Boolean(data.company.verified),
+      subtitle,
+      memberSinceLabel: data.memberSince ? `Member since ${formatDate(data.memberSince)}` : null,
+    })
+  }, [data, setEmployerNavSnapshot])
 
   const [employerBlockToRemove, setEmployerBlockToRemove] = useState<{ id: string; label: string } | null>(null)
 
@@ -506,18 +557,29 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     void fetchEmployerBlocks(walletAddress)
   }, [walletAddress, data?.company?.id, fetchEmployerBlocks])
 
+  // Full hub refresh: main hub API + employer blocks store + screenings + invites (nonce).
+  const pullLatestEmployerHub = useCallback(async () => {
+    await fetchHubData(true)
+    if (walletAddress) {
+      await Promise.all([
+        fetchEmployerBlocks(walletAddress),
+        refreshScreenings(true),
+      ])
+    }
+  }, [walletAddress, fetchHubData, fetchEmployerBlocks, refreshScreenings])
+
   // Auto-refresh when tab becomes visible (solves stale data after changes in
   // other tabs). Always silent — we don't want a focus event to wipe the hub
   // and show a loading skeleton; the user keeps seeing the existing data
   // while it refreshes in the background.
-  const silentRefresh = useCallback(() => fetchHubData(true), [fetchHubData])
-  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(silentRefresh, {
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(pullLatestEmployerHub, {
     staleTime: 30000,
     enabled: !!walletAddress,
   })
 
   // Nav-bar hub refresh — Navigation calls `requestHubRefresh()` which bumps `hubRefreshNonce`.
-  // Mirrors `CandidateHub`'s nonce listener so the same nav button works for both roles.
+  // Call `pullLatestEmployerHub` directly rather than going through `triggerRefresh` from
+  // useVisibilityRefresh — that hook's `isRefreshing` guard can silently drop manual calls.
   useEffect(() => {
     if (lastHubRefreshNonce.current === null) {
       lastHubRefreshNonce.current = hubRefreshNonce
@@ -526,8 +588,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     if (hubRefreshNonce === lastHubRefreshNonce.current) return
     lastHubRefreshNonce.current = hubRefreshNonce
     if (!walletAddress) return
-    void triggerRefresh()
-  }, [hubRefreshNonce, walletAddress, triggerRefresh])
+    void pullLatestEmployerHub()
+  }, [hubRefreshNonce, walletAddress, pullLatestEmployerHub])
 
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {
@@ -780,79 +842,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           ))}
         {/* Priority column (row 1) — DOM order on mobile: wallet → this → Stormi → rest */}
           <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
-      {/* Company profile — vault panel + embed block (candidate hub parity) */}
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
-        <BlockCard
-          variant="embed"
-          icon={Building2}
-          title={data.company?.name || 'Your Company'}
-          description={
-            [
-              data.company?.city && data.company?.state
-                ? `${data.company.city}, ${data.company.state}`
-                : 'Location not set',
-              data.company?.dotNumber ? `DOT #${data.company.dotNumber}` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ') || 'Add location and DOT in company profile.'
-          }
-          headerActions={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {data.userRole && (
-                <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                    data.userRole === 'owner'
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
-                      : data.userRole === 'admin'
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                        : data.userRole === 'viewer'
-                          ? 'bg-gray-500/20 text-gray-400 border border-gray-500/40'
-                          : 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
-                  }`}
-                >
-                  {getDisplayRole(data.userRole)}
-                </span>
-              )}
-              {data.company?.verified && (
-                <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-500">
-                  <CheckCircle className="w-3 h-3" />
-                  Verified
-                </span>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={triggerRefresh}
-                disabled={loading}
-                title={isStale ? 'Data may be stale — refresh' : 'Refresh hub data'}
-                className={cn(isStale && 'text-amber-600 dark:text-amber-400')}
-                aria-label="Refresh hub data"
-              >
-                <RefreshCw className={cn('w-5 h-5', loading && 'animate-spin')} />
-              </Button>
-            </div>
-          }
-        >
-          <div
-            className={cn(
-              'flex flex-col gap-1 border-t border-slate-200/80 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-gray-700/50',
-              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600',
-            )}
-          >
-            <span className="text-xs text-slate-500 dark:text-gray-500">
-              Verification and company details shown to candidates you recruit.
-            </span>
-            <div className="text-right shrink-0">
-              <p>Member since</p>
-              <p className={cn('font-medium', isDarkTheme(theme) ? 'text-white' : 'text-gray-900')}>
-                {formatDate(data.memberSince || '')}
-              </p>
-            </div>
-          </div>
-        </BlockCard>
-      </HubSectionPanel>
-
       {/* ── Blocks & Outreach — unified section ─────────────────────────
            Top: installed employer blocks (what capabilities does this company have?)
            Bottom: candidate outreach (create invites using those capabilities)
@@ -894,7 +883,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               >
                 Installed capabilities
               </p>
-              <ul className="flex flex-wrap justify-start gap-2 sm:gap-3">
+            <ul
+                className={cn(
+                  'flex flex-nowrap items-stretch justify-center divide-x divide-dotted overflow-x-auto pb-1 pt-0.5',
+                  '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+                  isDarkTheme(theme)
+                    ? 'divide-gray-600/50'
+                    : 'divide-gray-300/80 dark:divide-gray-600/50',
+                )}
+              >
                 {employerInstalledBlocks.map((row) => {
                   const blockLabel = getEmployerBlockDefinition(row.blockType)?.label ?? row.blockType
                   return (
@@ -916,7 +913,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <div
               id="candidate-outreach"
               className={cn(
-                'mt-6 min-w-0 max-w-full overflow-hidden rounded-xl border p-4 sm:mt-8 sm:p-5',
+                'mt-6 min-w-0 max-w-full overflow-x-hidden rounded-xl border p-4 sm:mt-8 sm:p-5',
                 isDarkTheme(theme)
                   ? 'border-amber-500/20 bg-gray-950/50 shadow-[inset_0_1px_0_0_rgba(251,191,36,0.08)]'
                   : 'border-amber-200/80 bg-amber-50/50 dark:border-amber-500/25 dark:bg-gray-950/40',
@@ -928,13 +925,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                   isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600 dark:text-gray-400',
                 )}
               >
-                Create invite links for the blocks above. Share by link, text message, QR, or email — each action is labeled on the invite card.
+                Active outreach, files vault, and archive — switch with the tabs below. Files are
+                tied to the candidate (not the invite), so they stay safe even if the invite is removed.
               </p>
               <CandidateOutreach
                 walletAddress={walletAddress}
                 isCollapsed={!openSections.outreach}
                 onToggle={() => toggleSection('outreach')}
                 embedded
+                screeningsRows={screenings.rows}
+                screeningsByUserId={screenings.byUserId}
+                screeningsLoading={screenings.loading}
+                screeningsError={screenings.error}
+                onRefreshScreenings={() => void screenings.refresh(true)}
+                employerContext={employerStormiContext}
               />
             </div>
           )}
@@ -960,10 +964,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </BlockCard>
       </HubSectionPanel>
 
-      {/* Purchased screenings — only when the company has the screening capability */}
-      {employerInstalledBlocks.some(
-        (b) => b.blockType === 'employer-mvr-orders' || b.blockType === 'employer-psp-mvr-bundle',
-      ) && <EmployerScreeningsPanel walletAddress={walletAddress} />}
+      {/* (Purchased screenings panel removed — its data now lives inside the
+          Blocks & outreach section's "Files vault" tab, plus per-candidate file
+          pills on each Active outreach card.) */}
 
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
         <BlockCard

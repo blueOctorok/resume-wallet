@@ -40,7 +40,7 @@ export interface MvrData {
   orderStatus: string
   /**
    * High-level Accio outcome derived from filledCode. Drives the colored
-   * badge in MvrSection / MvrViewModal / EmployerScreeningsPanel.
+   * badge in MvrSection / MvrViewModal / employer Files vault.
    * See `src/lib/accio-result-status.ts` (`ScreeningOutcome`) for the union.
    */
   resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'pass' | 'fail' | 'unknown' | null

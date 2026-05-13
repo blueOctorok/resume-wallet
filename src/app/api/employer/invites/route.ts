@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         id, token, candidate_email, candidate_name, status, type,
         target_block_type,
         job_posting_id, view_count, expires_at, created_at, updated_at,
-        used_at, driver_application_id, email_sent_at,
+        used_at, used_by_user_id, driver_application_id, email_sent_at,
         job_postings(title),
         users!application_invites_used_by_user_id_fkey(email)
       `)
@@ -131,6 +131,10 @@ export async function GET(request: NextRequest) {
         expiresAt: invite.expires_at,
         createdAt: invite.created_at,
         usedAt: invite.used_at,
+        // Storm user id once the candidate has actually claimed the invite.
+        // The Active outreach card uses this to look up that candidate's MVR/PSP
+        // files (they live in mvr_orders / psp_orders keyed by driver_user_id).
+        usedByUserId: (invite as any).used_by_user_id || null,
         usedByName: (invite.users as any)?.email || null,
         driverApplicationId: invite.driver_application_id,
         emailSentAt: (invite as any).email_sent_at || null,
@@ -282,7 +286,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status } = body
+    const { id, status, candidateName, candidateEmail, jobPostingId, welcomeMessage } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Invite ID is required' }, { status: 400 })
@@ -300,10 +304,68 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
-    // Only allow certain status transitions
-    const allowedStatuses = ['cancelled']
+    // ── Path A: field-level edit (no status change) ──────────────────────────
+    // Allowed only on pending/viewed invites — once a candidate has started or
+    // completed the flow, editing contact details would be confusing.
+    const isFieldEdit = status === undefined && (
+      candidateName !== undefined ||
+      candidateEmail !== undefined ||
+      jobPostingId !== undefined ||
+      welcomeMessage !== undefined
+    )
+
+    if (isFieldEdit) {
+      if (!['pending', 'viewed'].includes(existing.status)) {
+        return NextResponse.json(
+          { error: 'Only pending or viewed invites can have their details edited' },
+          { status: 400 },
+        )
+      }
+
+      const patch: Record<string, string | null> = {}
+      if (candidateName !== undefined) patch.candidate_name = candidateName || null
+      if (candidateEmail !== undefined) patch.candidate_email = candidateEmail || null
+      if (jobPostingId !== undefined) patch.job_posting_id = jobPostingId || null
+      if (welcomeMessage !== undefined) patch.welcome_message = welcomeMessage || null
+
+      const { data: updated, error } = await supabase
+        .from('application_invites')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[EMPLOYER INVITES] Field update error:', error)
+        return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        invite: {
+          id: updated.id,
+          candidateName: updated.candidate_name,
+          candidateEmail: updated.candidate_email,
+          jobPostingId: updated.job_posting_id,
+          welcomeMessage: updated.welcome_message,
+        },
+      })
+    }
+
+    // ── Path B: status transition ────────────────────────────────────────────
+    // Only allow specific transitions to keep status clean:
+    //   - cancelled: from any active state (employer cancels)
+    //   - pending  : restore-from-archive — ONLY when currently cancelled or expired,
+    //                so we never re-open a real "completed" or "in_progress" invite.
+    const allowedStatuses = ['cancelled', 'pending']
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+    }
+    if (status === 'pending' && !['cancelled', 'expired'].includes(existing.status)) {
+      return NextResponse.json(
+        { error: 'Only cancelled or expired invites can be restored' },
+        { status: 400 },
+      )
     }
 
     const { data: updated, error } = await supabase
