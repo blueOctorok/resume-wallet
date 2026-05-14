@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('mvr_orders')
         .select(
-          'id, driver_user_id, status, result_outcome, dl_state, ordered_at, created_at, completed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('psp_orders')
         .select(
-          'id, driver_user_id, status, result_outcome, dl_state, ordered_at, created_at, completed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -87,7 +87,11 @@ export async function GET(request: NextRequest) {
           // Accio outcome (clear/hits/etc) from src/lib/accio-result-status.ts
           resultOutcome: (o.result_outcome as string | null) ?? null,
           dlState: o.dl_state as string | null,
+          dlNumber: (o.dl_number as string | null) ?? null,
+          errorCode: (o.error_code as string | null) ?? null,
+          errorMessage: (o.error_message as string | null) ?? null,
           orderedAt: (o.ordered_at as string | null) ?? (o.created_at as string),
+          processedAt: (o.processed_at as string | null) ?? null,
           completedAt: o.completed_at as string | null,
           feeAmount: o.fee_amount as number | string | null,
         }

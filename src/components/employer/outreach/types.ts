@@ -10,6 +10,10 @@
  */
 
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
+import type { RecruiterStatus } from '@/lib/employer-recruiter-pipeline'
+
+export type { RecruiterStatus } from '@/lib/employer-recruiter-pipeline'
+export { isRecruiterStatus, RECRUITER_STATUSES } from '@/lib/employer-recruiter-pipeline'
 
 export type InviteStatus =
   | 'pending'
@@ -18,6 +22,20 @@ export type InviteStatus =
   | 'completed'
   | 'expired'
   | 'cancelled'
+
+/** Every value allowed in `application_invites.status` (DB check constraint). */
+export const ALL_INVITE_STATUSES: readonly InviteStatus[] = [
+  'pending',
+  'viewed',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'expired',
+] as const
+
+export function isInviteStatus(v: string): v is InviteStatus {
+  return (ALL_INVITE_STATUSES as readonly string[]).includes(v)
+}
 
 export interface Invite {
   id: string
@@ -28,6 +46,12 @@ export interface Invite {
   candidateEmail: string | null
   candidateName: string | null
   status: InviteStatus
+  /** Row update time from DB — used to age completed invites off the Active board. */
+  updatedAt: string
+  /** Legacy DB field; not used for board columns (see `outreach-invite-buckets`). */
+  recruiterStatus: RecruiterStatus
+  /** Employer notes on this outreach; null when empty. */
+  recruiterNotes: string | null
   jobTitle: string | null
   jobPostingId: string | null
   viewCount: number
@@ -50,7 +74,14 @@ export interface ScreeningRow {
   status: string
   resultOutcome: ScreeningOutcome
   dlState: string | null
+  /** Raw DL number on the order (caps comparison; null for older rows). */
+  dlNumber?: string | null
+  /** Set when Accio fails the order at intake (e.g. invalid state, malformed DL). */
+  errorCode?: string | null
+  errorMessage?: string | null
   orderedAt: string
+  /** Set when Accio acknowledged + began processing; null while still pending intake. */
+  processedAt?: string | null
   completedAt: string | null
   feeAmount: number | string | null
 }

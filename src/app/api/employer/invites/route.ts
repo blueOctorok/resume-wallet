@@ -1,7 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recruiter-pipeline'
+import { isInviteStatus } from '@/components/employer/outreach/types'
 import crypto from 'crypto'
+
+const RECRUITER_NOTES_MAX = 8000
+
+type InviteDbRow = {
+  id: string
+  token: string
+  candidate_email: string | null
+  candidate_name: string | null
+  status: string
+  type?: string | null
+  target_block_type?: string | null
+  job_posting_id: string | null
+  view_count: number
+  expires_at: string | null
+  created_at: string
+  updated_at?: string
+  used_at: string | null
+  used_by_user_id?: string | null
+  driver_application_id: string | null
+  email_sent_at?: string | null
+  recruiter_status?: string | null
+  recruiter_notes?: string | null
+  job_postings?: { title: string } | null
+  users?: { email: string } | null
+}
+
+function mapInviteToClient(invite: InviteDbRow, baseUrl: string) {
+  return {
+    id: invite.id,
+    token: invite.token,
+    url: `${baseUrl}/apply/${invite.token}`,
+    type: invite.type || 'general',
+    targetBlockType: invite.target_block_type || null,
+    candidateEmail: invite.candidate_email,
+    candidateName: invite.candidate_name,
+    status: invite.status,
+    updatedAt: invite.updated_at ?? invite.created_at,
+    recruiterStatus: mapRecruiterStatusColumn(invite.recruiter_status),
+    recruiterNotes: invite.recruiter_notes ?? null,
+    jobTitle: invite.job_postings?.title || null,
+    jobPostingId: invite.job_posting_id,
+    viewCount: invite.view_count,
+    expiresAt: invite.expires_at,
+    createdAt: invite.created_at,
+    usedAt: invite.used_at,
+    usedByUserId: invite.used_by_user_id || null,
+    usedByName: invite.users?.email || null,
+    driverApplicationId: invite.driver_application_id,
+    emailSentAt: invite.email_sent_at || null,
+  }
+}
 
 /**
  * Helper to get employer's company ID and user ID
@@ -90,6 +143,7 @@ export async function GET(request: NextRequest) {
         target_block_type,
         job_posting_id, view_count, expires_at, created_at, updated_at,
         used_at, used_by_user_id, driver_application_id, email_sent_at,
+        recruiter_status, recruiter_notes,
         job_postings(title),
         users!application_invites_used_by_user_id_fkey(email)
       `)
@@ -116,29 +170,9 @@ export async function GET(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     return NextResponse.json({
-      invites: (invites || []).map(invite => ({
-        id: invite.id,
-        token: invite.token,
-        url: `${baseUrl}/apply/${invite.token}`,
-        type: (invite as any).type || 'general',
-        targetBlockType: (invite as any).target_block_type || null,
-        candidateEmail: invite.candidate_email,
-        candidateName: invite.candidate_name,
-        status: invite.status,
-        jobTitle: (invite.job_postings as any)?.title || null,
-        jobPostingId: invite.job_posting_id,
-        viewCount: invite.view_count,
-        expiresAt: invite.expires_at,
-        createdAt: invite.created_at,
-        usedAt: invite.used_at,
-        // Storm user id once the candidate has actually claimed the invite.
-        // The Active outreach card uses this to look up that candidate's MVR/PSP
-        // files (they live in mvr_orders / psp_orders keyed by driver_user_id).
-        usedByUserId: (invite as any).used_by_user_id || null,
-        usedByName: (invite.users as any)?.email || null,
-        driverApplicationId: invite.driver_application_id,
-        emailSentAt: (invite as any).email_sent_at || null,
-      })),
+      invites: (invites || []).map((invite) =>
+        mapInviteToClient(invite as unknown as InviteDbRow, baseUrl),
+      ),
       companyName: ctx.companyName,
     })
 
@@ -229,7 +263,15 @@ export async function POST(request: NextRequest) {
         welcome_message: welcomeMessage || null,
         expires_at: expiresAt.toISOString(),
       })
-      .select()
+      .select(
+        `
+        id, token, candidate_email, candidate_name, status, type, target_block_type,
+        job_posting_id, view_count, expires_at, created_at, updated_at, used_at, used_by_user_id,
+        driver_application_id, email_sent_at, recruiter_status, recruiter_notes,
+        job_postings(title),
+        users!application_invites_used_by_user_id_fkey(email)
+      `,
+      )
       .single()
 
     if (error) {
@@ -241,19 +283,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      invite: {
-        id: invite.id,
-        token: invite.token,
-        url: `${baseUrl}/apply/${invite.token}`,
-        type: (invite as any).type || type,
-        targetBlockType: (invite as any).target_block_type || null,
-        candidateEmail: invite.candidate_email,
-        candidateName: invite.candidate_name,
-        status: invite.status,
-        expiresAt: invite.expires_at,
-        createdAt: invite.created_at,
-        emailSentAt: null,
-      },
+      invite: mapInviteToClient(invite as unknown as InviteDbRow, baseUrl),
       companyName: ctx.companyName,
     })
 
@@ -265,11 +295,12 @@ export async function POST(request: NextRequest) {
 
 /**
  * PATCH /api/employer/invites
- * Update an invite (cancel, etc.)
- * 
+ * Update an invite (cancel, restore, field edits, recruiter notes, employer status override).
+ *
  * Body:
  *   id - Invite ID
- *   status - New status (cancelled)
+ *   status - With `employerStatusOverride: true`, any valid lifecycle status (pending…expired).
+ *            Without override: only `cancelled` or restore `pending` (from cancelled/expired).
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -286,7 +317,28 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, candidateName, candidateEmail, jobPostingId, welcomeMessage } = body
+    const {
+      id,
+      status,
+      candidateName,
+      candidateEmail,
+      jobPostingId,
+      welcomeMessage,
+      recruiterStatus,
+      recruiterNotes,
+      employerStatusOverride,
+    } = body as {
+      id?: string
+      status?: string
+      candidateName?: string
+      candidateEmail?: string
+      jobPostingId?: string | null
+      welcomeMessage?: string | null
+      recruiterStatus?: string
+      recruiterNotes?: string | null
+      /** When true with `status`, employer may set lifecycle to any valid value (ops / stuck sync). */
+      employerStatusOverride?: boolean
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'Invite ID is required' }, { status: 400 })
@@ -304,9 +356,85 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
+    // ── Path 0: employer pipeline / notes (kanban + Jira-style description) ──
+    const hasRecruiterPatch = recruiterStatus !== undefined || recruiterNotes !== undefined
+    if (hasRecruiterPatch) {
+      const patch: Record<string, string | null> = {}
+      if (recruiterStatus !== undefined) {
+        if (!isRecruiterStatus(recruiterStatus)) {
+          return NextResponse.json({ error: 'Invalid recruiterStatus' }, { status: 400 })
+        }
+        patch.recruiter_status = recruiterStatus
+      }
+      if (recruiterNotes !== undefined) {
+        const raw = recruiterNotes === null ? '' : String(recruiterNotes)
+        const trimmed = raw.trim()
+        patch.recruiter_notes = trimmed.length === 0 ? null : trimmed.slice(0, RECRUITER_NOTES_MAX)
+      }
+
+      if (Object.keys(patch).length === 0) {
+        return NextResponse.json({ error: 'No recruiter fields to update' }, { status: 400 })
+      }
+
+      const { data: updated, error } = await supabase
+        .from('application_invites')
+        .update(patch)
+        .eq('id', id)
+        .select('id, recruiter_status, recruiter_notes')
+        .single()
+
+      if (error) {
+        console.error('[EMPLOYER INVITES] Recruiter patch error:', error)
+        return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        invite: {
+          id: updated.id,
+          recruiterStatus: mapRecruiterStatusColumn(updated.recruiter_status),
+          recruiterNotes: updated.recruiter_notes ?? null,
+        },
+      })
+    }
+
+    // ── Path 0.5: employer forced lifecycle status (kanban detail modal) ────
+    // Requires explicit flag so normal PATCH `status` rules (cancel / restore)
+    // stay unchanged for older clients.
+    if (employerStatusOverride === true && status !== undefined) {
+      if (typeof status !== 'string' || !isInviteStatus(status)) {
+        return NextResponse.json({ error: 'Invalid invite status' }, { status: 400 })
+      }
+      console.log(
+        `[EMPLOYER INVITES] employerStatusOverride invite=${id} ${String(existing.status)} → ${status} company=${ctx.companyId}`,
+      )
+      const { data: updated, error: overrideErr } = await supabase
+        .from('application_invites')
+        .update({ status })
+        .eq('id', id)
+        .eq('company_id', ctx.companyId)
+        .select('id, status, updated_at')
+        .single()
+
+      if (overrideErr || !updated) {
+        console.error('[EMPLOYER INVITES] Status override error:', overrideErr)
+        return NextResponse.json({ error: 'Failed to update status' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        invite: {
+          id: updated.id,
+          status: updated.status,
+          updatedAt: updated.updated_at ?? new Date().toISOString(),
+        },
+      })
+    }
+
     // ── Path A: field-level edit (no status change) ──────────────────────────
-    // Allowed only on pending/viewed invites — once a candidate has started or
-    // completed the flow, editing contact details would be confusing.
+    // Allowed while the candidate has not finished: pending / viewed / in_progress.
+    // Block once completed (or terminal cancelled/expired) so edits do not fight
+    // a finished consent flow or audit trail.
     const isFieldEdit = status === undefined && (
       candidateName !== undefined ||
       candidateEmail !== undefined ||
@@ -315,9 +443,9 @@ export async function PATCH(request: NextRequest) {
     )
 
     if (isFieldEdit) {
-      if (!['pending', 'viewed'].includes(existing.status)) {
+      if (!['pending', 'viewed', 'in_progress'].includes(existing.status)) {
         return NextResponse.json(
-          { error: 'Only pending or viewed invites can have their details edited' },
+          { error: 'Only invites that are still open (not completed or expired) can have their details edited' },
           { status: 400 },
         )
       }

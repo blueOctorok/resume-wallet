@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Car,
   FileWarning,
@@ -17,12 +17,15 @@ import {
   Loader2,
   Send,
   X,
-  ChevronDown,
   AlertTriangle,
   Package,
   Users,
   Pencil,
   Bot,
+  StickyNote,
+  ChevronRight,
+  Sparkles,
+  Send as SendIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDarkTheme } from '@/lib/theme-storage'
@@ -34,7 +37,9 @@ import {
   hubScreeningStatusLabel,
 } from '@/lib/hub-document-types'
 import { outcomeBadgeClasses, outcomeLabel } from '@/lib/accio-result-status'
+import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { Invite, InviteStatus, ScreeningRow } from './types'
+import { ALL_INVITE_STATUSES } from './types'
 
 const STATUS_CONFIG: Record<
   InviteStatus,
@@ -105,7 +110,6 @@ interface OutreachCandidateCardProps {
   invite: Invite
   /** Files (MVR/PSP) the company has paid for, scoped to this candidate. May be empty. */
   files: ScreeningRow[]
-  walletAddress: string
   theme: string
 
   // Action handlers — owned by parent so optimistic updates land in one store.
@@ -113,6 +117,8 @@ interface OutreachCandidateCardProps {
   sendingEmailId: string | null
   emailSentId: string | null
   removingId: string | null
+  /** When saving recruiter notes to the API for this invite. */
+  notesSaving?: boolean
   onCopy: (url: string, id: string) => void
   onShowQr: (invite: Invite) => void
   onSendEmail: (invite: Invite, emailOverride?: string) => void
@@ -121,6 +127,23 @@ interface OutreachCandidateCardProps {
   onViewFile: (file: ScreeningRow) => void
   onEdit: (invite: Invite) => void
   onAskStormi: (invite: Invite, files: ScreeningRow[]) => void
+  /** Persist internal team notes (blur-to-save). */
+  onRecruiterNotesSave?: (inviteId: string, notes: string) => void | Promise<void>
+  /**
+   * Fired when the employer wants to re-send a consent invite to a stalled
+   * candidate (typo'd DL, failed order, etc.). Parent creates a new invite
+   * tied to the same target block and sends an email.
+   */
+  onResendConsent?: (invite: Invite) => void | Promise<void>
+  /** True while a resend is in flight for this invite. */
+  resending?: boolean
+  /**
+   * Kanban detail modal only: let Pace force `invite.status` when the board is
+   * stuck vs reality (same DB field the columns use).
+   */
+  showPipelineStatusOverride?: boolean
+  onPipelineStatusOverride?: (inviteId: string, status: InviteStatus) => Promise<void>
+  statusOverrideSaving?: boolean
 }
 
 /**
@@ -138,6 +161,7 @@ export default function OutreachCandidateCard({
   sendingEmailId,
   emailSentId,
   removingId,
+  notesSaving = false,
   onCopy,
   onShowQr,
   onSendEmail,
@@ -146,6 +170,12 @@ export default function OutreachCandidateCard({
   onViewFile,
   onEdit,
   onAskStormi,
+  onRecruiterNotesSave,
+  onResendConsent,
+  resending = false,
+  showPipelineStatusOverride = false,
+  onPipelineStatusOverride,
+  statusOverrideSaving = false,
 }: OutreachCandidateCardProps) {
   const isDark = isDarkTheme(theme)
   const statusCfg = STATUS_CONFIG[invite.status] ?? STATUS_CONFIG.pending
@@ -157,14 +187,53 @@ export default function OutreachCandidateCard({
   const isEmailSent = emailSentId === invite.id
   const isRemoving = removingId === invite.id
   const canAct = !['cancelled', 'completed', 'expired'].includes(invite.status)
-  // Edit is allowed on pending/viewed invites only (not yet touched by candidate)
-  const canEdit = ['pending', 'viewed'].includes(invite.status)
+  // Match PATCH /api/employer/invites: editable until the candidate finishes (not completed/cancelled/expired).
+  // We always render the Edit tile so the action grid does not look "random" when status differs by column.
+  const canEditDetails = ['pending', 'viewed', 'in_progress'].includes(invite.status)
+  const editDisabledTitle = (() => {
+    if (canEditDetails) return undefined
+    if (invite.status === 'completed') {
+      return 'This invite is finished. Contact details cannot be edited; start a new outreach if something changed.'
+    }
+    if (invite.status === 'cancelled' || invite.status === 'expired') {
+      return 'Cancelled or expired invites cannot be edited.'
+    }
+    return 'Contact details cannot be edited for this invite.'
+  })()
 
   // Inline email override input (when no email is on file yet).
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [emailInput, setEmailInput] = useState('')
 
+  const [pipelineStatusDraft, setPipelineStatusDraft] = useState<InviteStatus>(invite.status)
+
+  useEffect(() => {
+    setPipelineStatusDraft(invite.status)
+  }, [invite.id, invite.status])
+
+  const showNotesSection = Boolean(onRecruiterNotesSave)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [notesDraft, setNotesDraft] = useState(invite.recruiterNotes ?? '')
+
+  useEffect(() => {
+    if (!notesOpen) setNotesDraft(invite.recruiterNotes ?? '')
+  }, [invite.recruiterNotes, notesOpen])
+
+  const hasNotesPreview = Boolean((invite.recruiterNotes ?? '').trim())
+
+  const handleNotesBlur = () => {
+    if (!onRecruiterNotesSave) return
+    const next = notesDraft.trim()
+    const prev = (invite.recruiterNotes ?? '').trim()
+    if (next !== prev) void onRecruiterNotesSave(invite.id, next)
+  }
+
   const expiry = expiryHint(invite.expiresAt, invite.status)
+
+  // Pure-function attention check (same logic as the kanban card).
+  // Re-derived per render so a fresh screening fetch instantly clears the
+  // banner without any local state to invalidate.
+  const attention = detectOutreachAttention(invite, files)
 
   return (
     <article
@@ -258,6 +327,124 @@ export default function OutreachCandidateCard({
           )}
         </div>
       </header>
+
+      {showPipelineStatusOverride && onPipelineStatusOverride && (
+        <div
+          className={cn(
+            'border-b px-4 py-2.5 dark:border-gray-700/70',
+            isDark ? 'border-amber-500/25 bg-amber-950/20' : 'border-amber-200 bg-amber-50/90 dark:border-amber-500/25',
+          )}
+        >
+          <p
+            className={cn(
+              'mb-1.5 text-[10px] font-semibold uppercase tracking-wide',
+              isDark ? 'text-amber-200/90' : 'text-amber-900 dark:text-amber-200/90',
+            )}
+          >
+            Pipeline status (override)
+          </p>
+          <p className={cn('mb-2 text-[11px] leading-snug', isDark ? 'text-gray-400' : 'text-amber-950/80 dark:text-gray-400')}>
+            Moves this card on the kanban. Use when progress is stuck or out of sync — the candidate app may not match until they take action again.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={pipelineStatusDraft}
+              onChange={(e) => setPipelineStatusDraft(e.target.value as InviteStatus)}
+              disabled={statusOverrideSaving}
+              className={cn(
+                'min-w-[10rem] rounded-lg border px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-amber-500/40',
+                isDark
+                  ? 'border-amber-700/50 bg-gray-900 text-gray-100'
+                  : 'border-amber-300 bg-white text-gray-900 dark:border-amber-700/50 dark:bg-gray-900 dark:text-gray-100',
+              )}
+              aria-label="Override invite pipeline status"
+            >
+              {ALL_INVITE_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_CONFIG[s].label}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              isLoading={statusOverrideSaving}
+              disabled={statusOverrideSaving || pipelineStatusDraft === invite.status}
+              onClick={async () => {
+                if (pipelineStatusDraft === invite.status || !onPipelineStatusOverride) return
+                try {
+                  await onPipelineStatusOverride(invite.id, pipelineStatusDraft)
+                } catch {
+                  setPipelineStatusDraft(invite.status)
+                }
+              }}
+            >
+              Apply
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stormi attention panel ──────────────────────────────────────────
+         Renders ONLY when something needs the recruiter's eyes. Stormi-violet
+         framing tells the recruiter "this is the AI flagging an issue", and
+         the Resend Consent button gives them a one-click rescue path. */}
+      {attention && (
+        <div
+          className={cn(
+            'flex items-start gap-2.5 border-b px-4 py-3',
+            isDark
+              ? 'border-red-500/30 bg-red-950/25'
+              : 'border-red-200 bg-red-50',
+          )}
+        >
+          <span
+            className={cn(
+              'mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+              isDark ? 'bg-violet-500/15 text-violet-300' : 'bg-violet-100 text-violet-700',
+            )}
+            aria-hidden
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p
+              className={cn(
+                'text-[11px] font-semibold uppercase tracking-wide',
+                isDark ? 'text-red-300' : 'text-red-700',
+              )}
+            >
+              Stormi: {attention.label}
+            </p>
+            <p
+              className={cn(
+                'mt-1 text-xs leading-snug',
+                isDark ? 'text-gray-300' : 'text-gray-700',
+              )}
+            >
+              {attention.reason}
+            </p>
+            {attention.cta === 'resend_consent' && onResendConsent && (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="mt-2"
+                disabled={resending}
+                onClick={() => onResendConsent(invite)}
+              >
+                {resending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <SendIcon className="h-3.5 w-3.5" />
+                )}
+                {resending ? 'Resending…' : 'Resend consent'}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Files (MVR / PSP) ───────────────────────────────────────────────
          The whole point of the redesign — the candidate's screenings live ON
@@ -361,17 +548,14 @@ export default function OutreachCandidateCard({
           onClick={() => onCopy(invite.url, invite.id)}
           theme={theme}
         />
-        {canEdit ? (
-          <ActionBtn
-            label="Edit"
-            icon={<Pencil className="h-3.5 w-3.5" />}
-            onClick={() => onEdit(invite)}
-            theme={theme}
-          />
-        ) : (
-          /* Keep the grid balanced when Edit is hidden */
-          <div />
-        )}
+        <ActionBtn
+          label="Edit"
+          icon={<Pencil className="h-3.5 w-3.5" />}
+          disabled={!canEditDetails}
+          title={editDisabledTitle}
+          onClick={() => onEdit(invite)}
+          theme={theme}
+        />
         <ActionBtn
           label="QR"
           icon={<QrCode className="h-3.5 w-3.5" />}
@@ -427,6 +611,73 @@ export default function OutreachCandidateCard({
           theme={theme}
         />
       </div>
+
+      {/* ── Employer notes (same invite row; kanban columns follow candidate status) ─ */}
+      {showNotesSection && (
+        <div className="border-t border-gray-100 px-2.5 py-2 dark:border-gray-700/70">
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (notesOpen) {
+                  setNotesOpen(false)
+                } else {
+                  setNotesDraft(invite.recruiterNotes ?? '')
+                  setNotesOpen(true)
+                }
+              }}
+              className={cn(
+                'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition-colors',
+                isDark
+                  ? 'border-gray-700/70 text-gray-300 hover:bg-gray-800/60'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700/70 dark:text-gray-300 dark:hover:bg-gray-800/40',
+              )}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <StickyNote className="h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" aria-hidden />
+                <span className="shrink-0">Notes</span>
+                {!notesOpen && hasNotesPreview && (
+                  <span className="min-w-0 truncate font-normal text-gray-500 dark:text-gray-500">
+                    — {invite.recruiterNotes}
+                  </span>
+                )}
+              </span>
+              <ChevronRight
+                className={cn('h-3.5 w-3.5 shrink-0 transition-transform', notesOpen && 'rotate-90')}
+                aria-hidden
+              />
+            </button>
+
+            {notesOpen && (
+              <div className="relative">
+                <textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  onBlur={handleNotesBlur}
+                  disabled={notesSaving}
+                  rows={4}
+                  placeholder="Internal notes for your team…"
+                  className={cn(
+                    'w-full resize-y rounded-lg border px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500/40',
+                    isDark
+                      ? 'border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-500'
+                      : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100',
+                  )}
+                />
+                {notesSaving && (
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/10 dark:bg-black/25',
+                    )}
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin text-teal-600 dark:text-teal-400" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Stormi row — violet-accented, visually distinct from CRUD actions ── */}
       <div className="border-t border-gray-100 px-2.5 pb-2.5 pt-2 dark:border-gray-700/70">
@@ -539,6 +790,7 @@ function ActionBtn({
   disabled,
   tone = 'default',
   theme,
+  title,
 }: {
   label: string
   icon: React.ReactNode
@@ -546,6 +798,8 @@ function ActionBtn({
   disabled?: boolean
   tone?: 'default' | 'success' | 'warn' | 'danger'
   theme: string
+  /** Native tooltip — used when Edit is disabled so recruiters know why. */
+  title?: string
 }) {
   const isDark = isDarkTheme(theme)
   const toneCls =
@@ -562,6 +816,7 @@ function ActionBtn({
   return (
     <button
       type="button"
+      title={title}
       onClick={onClick}
       disabled={disabled}
       className={cn(

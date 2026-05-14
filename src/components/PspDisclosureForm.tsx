@@ -15,6 +15,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { checkDlNumberIsNotName } from '@/lib/screening-validation'
 
 export type PspConsentSignedResult = {
   consentId: string
@@ -295,6 +296,15 @@ export default function PspDisclosureForm({
     }
     if (!profile.dlNumber.trim()) {
       setError("Driver's license number is required.")
+      return
+    }
+    const dlNameError = checkDlNumberIsNotName({
+      dlNumber: profile.dlNumber,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+    })
+    if (dlNameError) {
+      setError(dlNameError)
       return
     }
     if (fulfillOrder && !isValidSsn(ssn)) {

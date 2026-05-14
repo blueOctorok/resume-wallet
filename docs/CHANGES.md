@@ -4,6 +4,101 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer outreach: Edit always visible + in_progress editable** (May 2026)
+
+- **Cause:** `OutreachCandidateCard` only rendered **Edit** for `pending` and `viewed`. Anyone in **`in_progress`** got an empty grid cell, which looked random next to other columns.
+- **UI:** Edit is **always** shown; it is **disabled** with a native `title` tooltip when the invite is `completed`, `cancelled`, or `expired`.
+- **API + UI:** Field edits (`candidateName`, `candidateEmail`, `jobPostingId`, `welcomeMessage`) now allowed for **`in_progress`** as well as `pending` / `viewed`, so employers can fix typos while the candidate is mid-flow (`PATCH /api/employer/invites`).
+
+| File | Change |
+|---|---|
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | `canEditDetails` includes `in_progress`; always render Edit; `ActionBtn` accepts `title` |
+| `src/app/api/employer/invites/route.ts` | Field-edit guard includes `in_progress` |
+
+### Stormi stacking + pipeline override (kanban detail modal)
+
+- **`StormiCandidateModal`** — `Modal` `zIndex` raised from `1010` to **`1250`** so it stacks above the candidate detail modal (`1100`) and the kanban help modal (`1150`). Reply bubbles render **Markdown** (`react-markdown` + `remark-breaks`) via `StormiChatMarkdown` so `**bold**`, lists, and line breaks display correctly instead of raw syntax.
+- **`PATCH /api/employer/invites`** — New **`employerStatusOverride: true`** + **`status`** path (after recruiter-notes path): sets `application_invites.status` to any DB-valid value (`pending` … `expired`). Logged as `[EMPLOYER INVITES] employerStatusOverride`. Does not replace cancel/restore rules when the flag is omitted.
+- **`OutreachCandidateCard`** (only when opened from **`KanbanBoard`** modal) — **Pipeline status (override)** row: `<select>` of all lifecycle statuses + **Apply**; calls the new PATCH; on failure resets the draft and parent `setError` shows the message.
+- **`types.ts`** — `ALL_INVITE_STATUSES` + **`isInviteStatus()`** for API validation.
+
+| File | Change |
+|---|---|
+| `src/components/employer/outreach/StormiChatMarkdown.tsx` | New — Markdown renderer for Stormi modal bubbles |
+| `package.json` | `react-markdown`, `remark-breaks` |
+| `src/components/employer/CandidateOutreach.tsx` | `handleInviteStatusOverride`, `statusOverrideSavingId`, Stormi `zIndex={1250}`, uses `StormiChatMarkdown` in `StormiCandidateModal` |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Pass override props into modal card |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Override UI row |
+| `src/app/api/employer/invites/route.ts` | Path 0.5 employer status override |
+| `src/components/employer/outreach/types.ts` | `ALL_INVITE_STATUSES`, `isInviteStatus` |
+
+---
+
+## **Screening rescue: DL-name guard + kanban attention signals** (May 2026)
+
+Closes the **"Isaiah Martin" failure mode** — candidates typing their last name into the driver license field, Accio silently accepting it, and the order hanging forever as `pending` with the company already billed.
+
+### Prevention — at the consent step
+
+- **`src/lib/screening-validation.ts`** — `validateScreeningOrderInput` now rejects DL numbers that (letters-only) match `firstName`, `lastName`, or `firstName + lastName`. Error copy: *"Your driver license number cannot match your name. The DL number is printed on the front of your license — usually a mix of letters and digits."* Exported new helper `checkDlNumberIsNotName({ dlNumber, firstName, lastName })` for client-side use.
+- **`src/components/BackgroundCheckDisclosure.tsx` + `PspDisclosureForm.tsx`** — both `handleSign` flows call `checkDlNumberIsNotName` before submit so the candidate sees the same error inline (no wasted API round-trip, same wording either way).
+
+### Rescue — in the employer kanban
+
+- **`src/lib/outreach-attention.ts`** (new) — pure `detectOutreachAttention(invite, files)` returns `{ kind, label, reason, cta, triggeringFile } | null`. First-match priority: `order_failed` → `order_error` (Accio rejection) → `dl_looks_like_name` → `stuck_pending` (>24h). All four conditions read from existing DB rows; no new columns.
+- **`src/components/employer/outreach/KanbanCard.tsx`** — when attention is present: red ring on the tile, red dot in the top-right corner (with ring offset for both dark and light), tooltip with the short `label`.
+- **`src/components/employer/outreach/KanbanBoard.tsx`** — within each column, flagged invites float to the top (stable sort, preserves incoming order for ties). Plumbs `onResendConsent` + `resendingId` through to the detail modal.
+- **`src/components/employer/outreach/OutreachCandidateCard.tsx`** — when attention is detected, renders a Stormi-violet callout above the file list with the long-form `reason` and (for resendable cases) a **Resend consent** primary button.
+- **`src/components/employer/CandidateOutreach.tsx`** — `handleResendConsent(invite)` mints a fresh invite on `/api/employer/invites` (same `targetBlockType`, `candidateEmail`, `candidateName`, `candidateUserId`, `jobPostingId`) with a rescue welcome message, prepends it to the local list, and auto-fires `handleSendEmail` if we have an address on file. The original card stays as historical context.
+- **`src/app/api/employer/screenings/route.ts`** — selects + exposes `dl_number`, `error_code`, `error_message`, `processed_at` on each order row so the attention detector can read them.
+- **`src/components/employer/outreach/types.ts`** — `ScreeningRow` gains `dlNumber`, `errorCode`, `errorMessage`, `processedAt` (all optional / nullable for backwards compat).
+- **`src/components/employer/outreach/OutreachKanbanInfoModal.tsx`** — new "Red dot = needs attention" section explaining the signal, the Resend consent flow, and the within-column sort.
+
+### Files touched
+
+| File | Change |
+|---|---|
+| `src/lib/screening-validation.ts` | DL≠name check + exported `checkDlNumberIsNotName` |
+| `src/lib/outreach-attention.ts` | New attention detector (4 kinds, first-match wins) |
+| `src/components/BackgroundCheckDisclosure.tsx` | Client guard before sign |
+| `src/components/PspDisclosureForm.tsx` | Client guard before sign |
+| `src/components/employer/outreach/types.ts` | `ScreeningRow.dlNumber/errorCode/errorMessage/processedAt` |
+| `src/app/api/employer/screenings/route.ts` | Select + expose new columns |
+| `src/components/employer/outreach/KanbanCard.tsx` | Red ring + red dot + tooltip |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Attention-first sort + new props |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Stormi attention panel + Resend consent button |
+| `src/components/employer/outreach/OutreachKanbanInfoModal.tsx` | Help-modal section for the red dot |
+| `src/components/employer/CandidateOutreach.tsx` | `handleResendConsent` + state wiring |
+
+---
+
+## **Employer outreach: kanban pipeline + card notes + vault sections** (May 2026)
+
+- **DB:** `application_invites.recruiter_status` (legacy / unused in UI) and `recruiter_notes` (nullable text). Candidate lifecycle remains `application_invites.status` (`pending` → `completed`, etc.).
+- **API:** `GET/PATCH /api/employer/invites` returns `updatedAt` (from `updated_at`) for staleness; `recruiterNotes` PATCH unchanged; `recruiterStatus` PATCH kept for compatibility but the board no longer reads it.
+- **Active tab:** Horizontal **kanban** (`pending` | `viewed` | `in_progress` | `completed`) + **How this board works** opens `OutreachKanbanInfoModal` (rules for columns, archive, restore, cards).
+- **Stale completed:** Invites with `status === 'completed'` older than **14 days** (by `updatedAt`, fallback `createdAt`) leave the Active board and appear under the **Archive** tab with cancelled/expired items.
+- **Kanban UX:** Compact `KanbanCard` tiles + click opens full `OutreachCandidateCard` in a `Modal`; each column body scrolls (`max-h`) so the page does not grow unbounded.
+- **Cards:** Collapsible **Notes** only (blur-to-save); pipeline `<select>` removed.
+- **Files vault:** Split into **Completed reports** vs **Processing / pending** (by `hubDocStatusFromScreeningOrder`).
+- **New:** `src/lib/outreach-invite-buckets.ts` — `OUTREACH_STALE_COMPLETED_DAYS`, `isInviteOnActiveKanban`, `isInviteInArchiveTab`, kanban column constants/labels.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/084_application_invites_recruiter_pipeline.sql` | New columns + comments |
+| `src/lib/employer-recruiter-pipeline.ts` | Legacy status union (API) |
+| `src/lib/outreach-invite-buckets.ts` | Active vs archive + kanban columns |
+| `src/app/api/employer/invites/route.ts` | `updatedAt` on invite payload |
+| `src/components/employer/outreach/types.ts` | `Invite.updatedAt` |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Status columns + modal |
+| `src/components/employer/outreach/KanbanCard.tsx` | Compact tile |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Notes |
+| `src/components/employer/outreach/FilesVault.tsx` | Two sections |
+| `src/components/employer/outreach/OutreachKanbanInfoModal.tsx` | Help modal (board rules) |
+| `src/components/employer/CandidateOutreach.tsx` | Buckets, Archive copy, empty board state, help trigger |
+
+---
+
 ## **Employer hub: company strip in nav + working refresh** (May 2026)
 
 Removed the large company profile card above **Blocks & outreach** to reclaim vertical space. Company name, role badge (owner / admin / team), verified pill, location · DOT line, and member-since now render in the **hub row of the global nav** next to the refresh control.

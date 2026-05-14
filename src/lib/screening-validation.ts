@@ -67,6 +67,40 @@ const US_STATE_CODES = new Set([
 /** Driver license format: alphanumeric (and dashes — some states use them), 5-17 chars. */
 const DL_NUMBER_RE = /^[A-Z0-9-]{5,17}$/i
 
+/**
+ * Strip everything that's not A-Z so we can compare a DL number to a name
+ * without dashes / spaces / punctuation getting in the way.
+ *
+ * Why this is a separate step: someone may type "MARTIN-A" or "MARTIN " — we
+ * still want to catch that as "this is your last name, not a license number".
+ */
+function lettersOnly(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z]/g, '')
+}
+
+/**
+ * Lightweight client-side guard so disclosure forms can show inline errors
+ * BEFORE the user signs. Same rule as the server validator below — keep both
+ * in sync. Returns a user-safe error string, or null when the value is OK.
+ *
+ * `dlNumber` is required to be non-empty by the form already; this only
+ * fires when the user typed something that looks like a name.
+ */
+export function checkDlNumberIsNotName(input: {
+  dlNumber: string
+  firstName: string
+  lastName: string
+}): string | null {
+  const dl = lettersOnly(input.dlNumber)
+  if (!dl) return null
+  const first = lettersOnly(input.firstName)
+  const last = lettersOnly(input.lastName)
+  if (dl === first || dl === last || dl === first + last) {
+    return "That looks like your name, not your driver license number. The DL number is printed on the front of your license."
+  }
+  return null
+}
+
 function trimSafe(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -142,6 +176,25 @@ export function validateScreeningOrderInput(input: ScreeningOrderInput): Validat
     return {
       ok: false,
       error: 'Driver license number must be 5-17 letters, digits, or dashes. Check the number on the physical card.',
+    }
+  }
+
+  // Catch the most common data-entry mistake we see in production:
+  // the candidate (or a prefill) puts their NAME in the DL field. Accio happily
+  // accepts it, charges the company, and the lookup comes back unfilled hours later.
+  // Compare on letters-only so "MARTIN ", "Martin-A", etc. all trip the check.
+  const dlLetters = lettersOnly(dlNumber)
+  const firstLetters = lettersOnly(firstName)
+  const lastLetters = lettersOnly(lastName)
+  const fullLetters = firstLetters + lastLetters
+  if (
+    dlLetters.length > 0 &&
+    (dlLetters === firstLetters || dlLetters === lastLetters || dlLetters === fullLetters)
+  ) {
+    return {
+      ok: false,
+      error:
+        'Your driver license number cannot match your name. The DL number is printed on the front of your license — usually a mix of letters and digits.',
     }
   }
 

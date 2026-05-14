@@ -15,12 +15,21 @@ import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useUIStore } from '@/stores'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import QRCode from 'qrcode'
-import OutreachCandidateCard from '@/components/employer/outreach/OutreachCandidateCard'
+import KanbanBoard from '@/components/employer/outreach/KanbanBoard'
+import OutreachKanbanInfoModal from '@/components/employer/outreach/OutreachKanbanInfoModal'
 import OutreachFilterBar, { type FilterChipDef, type SortKey } from '@/components/employer/outreach/OutreachFilterBar'
 import FilesVault from '@/components/employer/outreach/FilesVault'
+import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdown'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
+import {
+  OUTREACH_KANBAN_COLUMNS,
+  OUTREACH_STALE_COMPLETED_DAYS,
+  isInviteInArchiveTab,
+  isInviteOnActiveKanban,
+  isStaleCompletedOutreach,
+} from '@/lib/outreach-invite-buckets'
 import {
   Link2,
   Plus,
@@ -45,6 +54,7 @@ import {
   ChevronDown,
   Bot,
   Pencil,
+  Info,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -104,9 +114,6 @@ const STATUS_CHIP_LABEL: Record<InviteStatus, string> = {
   expired: 'Expired',
   cancelled: 'Cancelled',
 }
-
-const ACTIVE_STATUSES: InviteStatus[] = ['pending', 'viewed', 'in_progress', 'completed']
-const ARCHIVE_STATUSES: InviteStatus[] = ['cancelled', 'expired']
 
 const OUTREACH_TAB_LS = 'employer-outreach-tab'
 const OUTREACH_FILTER_LS = 'employer-outreach-filters'
@@ -265,6 +272,10 @@ export default function CandidateOutreach({
   const [qrInvite, setQrInvite] = useState<Invite | null>(null)
   const [companyName, setCompanyName] = useState('')
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [savingNotesId, setSavingNotesId] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const [statusOverrideSavingId, setStatusOverrideSavingId] = useState<string | null>(null)
+  const [showKanbanHelp, setShowKanbanHelp] = useState(false)
 
   const [selectedBlockType, setSelectedBlockType] = useState<string | null>(null)
 
@@ -543,7 +554,7 @@ export default function CandidateOutreach({
         body: JSON.stringify({ id, status: 'cancelled' }),
       })
       if (res.ok) {
-        setInvites(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'cancelled' } : inv))
+        setInvites(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'cancelled' as const, updatedAt: new Date().toISOString() } : inv))
       }
     } catch (err) {
       console.error('[CandidateOutreach] cancel error:', err)
@@ -642,6 +653,135 @@ export default function CandidateOutreach({
     setEditingInvite(null)
   }
 
+  const handleRecruiterNotesSave = useCallback(
+    async (inviteId: string, notes: string) => {
+      const normalized = notes.trim()
+      const nextNotes = normalized.length === 0 ? null : normalized.slice(0, 8000)
+      let previousNotes: string | null = null
+      setInvites((prev) => {
+        const cur = prev.find((i) => i.id === inviteId)
+        if (cur) previousNotes = cur.recruiterNotes
+        return prev.map((inv) =>
+          inv.id === inviteId
+            ? {
+                ...inv,
+                recruiterNotes: nextNotes,
+                updatedAt: new Date().toISOString(),
+              }
+            : inv,
+        )
+      })
+      setSavingNotesId(inviteId)
+      try {
+        const res = await fetch('/api/employer/invites', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+          body: JSON.stringify({
+            id: inviteId,
+            recruiterNotes: nextNotes === null ? null : nextNotes,
+          }),
+        })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}))
+          throw new Error((d as { error?: string }).error ?? 'Failed to save notes')
+        }
+      } catch (err) {
+        console.error('[CandidateOutreach] recruiter notes error:', err)
+        setInvites((prev) =>
+          prev.map((inv) =>
+            inv.id === inviteId ? { ...inv, recruiterNotes: previousNotes } : inv,
+          ),
+        )
+      } finally {
+        setSavingNotesId(null)
+      }
+    },
+    [walletAddress],
+  )
+
+  /**
+   * Rescue flow: candidate's screening got stuck (typo'd DL, bad data, stale
+   * pending). We don't try to mutate the old invite — instead we mint a fresh
+   * invite for the SAME target block, optimistically prepend it to the list,
+   * and auto-send the email if we have one on file. The original card stays
+   * around for audit / context until the recruiter manually removes it.
+   */
+  const handleResendConsent = useCallback(
+    async (invite: Invite) => {
+      setResendingId(invite.id)
+      setError(null)
+      try {
+        const res = await fetch('/api/employer/invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+          body: JSON.stringify({
+            targetBlockType: invite.targetBlockType ?? undefined,
+            candidateEmail: invite.candidateEmail ?? undefined,
+            candidateName: invite.candidateName ?? undefined,
+            candidateUserId: invite.usedByUserId ?? undefined,
+            jobPostingId: invite.jobPostingId ?? undefined,
+            welcomeMessage:
+              "We hit a snag with your last screening — likely a typo in the driver's license field. Please re-sign so we can re-pull the report. Thanks!",
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to resend consent')
+        const newInvite: Invite = data.invite
+        setInvites((prev) => [{ ...newInvite, emailSentAt: newInvite.emailSentAt ?? null }, ...prev])
+
+        // If we already have an email on file, auto-fire it. Otherwise leave
+        // it to the recruiter to use the "Email" button on the new card.
+        if (newInvite.candidateEmail) {
+          void handleSendEmail(newInvite)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Resend failed')
+      } finally {
+        setResendingId(null)
+      }
+    },
+    // handleSendEmail is stable enough (not in deps) — capturing it would
+    // require hoisting it above this block. The lint warning is OK here:
+    // resend is a manual action, not a useEffect dep cycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [walletAddress],
+  )
+
+  /** Force `application_invites.status` from the kanban detail modal (Pace ops / stuck sync). */
+  const handleInviteStatusOverride = useCallback(
+    async (inviteId: string, nextStatus: InviteStatus) => {
+      setStatusOverrideSavingId(inviteId)
+      setError(null)
+      try {
+        const res = await fetch('/api/employer/invites', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+          body: JSON.stringify({
+            id: inviteId,
+            status: nextStatus,
+            employerStatusOverride: true,
+          }),
+        })
+        const data = (await res.json()) as {
+          error?: string
+          invite?: { id: string; status: InviteStatus; updatedAt?: string }
+        }
+        if (!res.ok) throw new Error(data.error || 'Failed to update status')
+        const updatedAt = data.invite?.updatedAt ?? new Date().toISOString()
+        const status = data.invite?.status ?? nextStatus
+        setInvites((prev) =>
+          prev.map((inv) => (inv.id === inviteId ? { ...inv, status, updatedAt } : inv)),
+        )
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to update status')
+        throw e
+      } finally {
+        setStatusOverrideSavingId(null)
+      }
+    },
+    [walletAddress],
+  )
+
   // ── Stormi mini modal state ──────────────────────────────────────────────
   const [stormiTarget, setStormiTarget] = useState<{ invite: Invite; files: ScreeningRow[] } | null>(null)
 
@@ -653,52 +793,37 @@ export default function CandidateOutreach({
   )
 
   // ── Derived: tab buckets, filter chips, "ready to view" count ─────────────
+  // Board = candidate lifecycle (pending → completed) minus stale completed.
+  // Archive tab = cancelled / expired + completed older than OUTREACH_STALE_COMPLETED_DAYS.
+  const boardInvites = useMemo(() => invites.filter(isInviteOnActiveKanban), [invites])
+  const archivedTabInvites = useMemo(() => invites.filter(isInviteInArchiveTab), [invites])
 
-  // Active = invites you can still act on. Archive = cancelled/expired so they
-  // don't pollute the day-to-day view but are recoverable.
-  const activeInvites = useMemo(
-    () => invites.filter((i) => ACTIVE_STATUSES.includes(i.status)),
-    [invites],
-  )
-  const archivedInvites = useMemo(
-    () => invites.filter((i) => ARCHIVE_STATUSES.includes(i.status)),
-    [invites],
-  )
-
-  // "X reports ready" badge on the Active tab — counts files attached to
-  // active invites that came back COMPLETE so the recruiter knows there's
-  // something new to review without having to scan every card.
   const readyToViewCount = useMemo(() => {
     if (!screeningsByUserId) return 0
     let n = 0
-    for (const inv of activeInvites) {
+    for (const inv of boardInvites) {
       if (!inv.usedByUserId) continue
       const files = screeningsByUserId.get(inv.usedByUserId)
       if (!files) continue
       for (const f of files) if (f.status === 'completed') n++
     }
     return n
-  }, [activeInvites, screeningsByUserId])
+  }, [boardInvites, screeningsByUserId])
 
-  // Status / block chip definitions with live counts. Counts come from the
-  // current tab's full set so users see "Pending (8)" no matter what filter
-  // is currently applied — feedback before they click, not after.
   const statusChips = useMemo<FilterChipDef[]>(() => {
     const counts: Partial<Record<InviteStatus, number>> = {}
-    for (const inv of activeInvites) counts[inv.status] = (counts[inv.status] ?? 0) + 1
-    return ACTIVE_STATUSES
-      .filter((s) => (counts[s] ?? 0) > 0)
-      .map((s) => ({
-        id: s,
-        label: STATUS_CHIP_LABEL[s],
-        count: counts[s] ?? 0,
-        dotClass: STATUS_CHIP_DOTS[s],
-      }))
-  }, [activeInvites])
+    for (const inv of boardInvites) counts[inv.status] = (counts[inv.status] ?? 0) + 1
+    return OUTREACH_KANBAN_COLUMNS.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
+      id: s,
+      label: STATUS_CHIP_LABEL[s],
+      count: counts[s] ?? 0,
+      dotClass: STATUS_CHIP_DOTS[s],
+    }))
+  }, [boardInvites])
 
   const blockChips = useMemo<FilterChipDef[]>(() => {
     const counts = new Map<string, number>()
-    for (const inv of activeInvites) {
+    for (const inv of boardInvites) {
       const k = inv.targetBlockType ?? '__general__'
       counts.set(k, (counts.get(k) ?? 0) + 1)
     }
@@ -707,7 +832,7 @@ export default function CandidateOutreach({
       label: id === '__general__' ? 'General' : getBlockDefinition(id)?.label ?? id,
       count,
     }))
-  }, [activeInvites])
+  }, [boardInvites])
 
   // Filter + sort applied to whichever tab is active. Search matches name,
   // email, or job title.
@@ -740,12 +865,12 @@ export default function CandidateOutreach({
   )
 
   const filteredActive = useMemo(
-    () => applyFilters(activeInvites, { useStatusFilter: true }),
-    [applyFilters, activeInvites],
+    () => applyFilters(boardInvites, { useStatusFilter: true }),
+    [applyFilters, boardInvites],
   )
   const filteredArchive = useMemo(
-    () => applyFilters(archivedInvites, { useStatusFilter: false }),
-    [applyFilters, archivedInvites],
+    () => applyFilters(archivedTabInvites, { useStatusFilter: false }),
+    [applyFilters, archivedTabInvites],
   )
 
   const hasActiveFilters =
@@ -784,7 +909,7 @@ export default function CandidateOutreach({
         body: JSON.stringify({ id, status: 'pending' }),
       })
       if (res.ok) {
-        setInvites((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: 'pending' as const } : inv)))
+        setInvites((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: 'pending' as const, updatedAt: new Date().toISOString() } : inv)))
       }
     } catch (err) {
       console.error('[CandidateOutreach] restore error:', err)
@@ -818,9 +943,9 @@ export default function CandidateOutreach({
         <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800')}>
           Candidate outreach
         </h4>
-        {activeInvites.length > 0 && (
+        {boardInvites.length > 0 && (
           <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', isDarkTheme(theme) ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700')}>
-            {activeInvites.length} active
+            {boardInvites.length} active
           </span>
         )}
       </div>
@@ -1260,9 +1385,9 @@ export default function CandidateOutreach({
         )}
 
         {/* ── Tabs + body ───────────────────────────────────────────────────
-             Active = act-on-now invites, with files inline on each card.
+             Active = kanban by candidate invite status; stale completed → Archive.
              Vault  = every paid screening, even if the invite is gone.
-             Archive = cancelled / expired invites with a one-click restore. */}
+             Archive = cancelled / expired + completed older than OUTREACH_STALE_COMPLETED_DAYS. */}
         {!isCollapsed && (
           <div
             className={cn(
@@ -1281,7 +1406,7 @@ export default function CandidateOutreach({
             >
               <TabButton
                 label="Active outreach"
-                count={activeInvites.length}
+                count={boardInvites.length}
                 badgeCount={readyToViewCount}
                 badgeTitle={`${readyToViewCount} report${readyToViewCount === 1 ? '' : 's'} ready to view`}
                 icon={<Users className="h-3.5 w-3.5" />}
@@ -1299,7 +1424,7 @@ export default function CandidateOutreach({
               />
               <TabButton
                 label="Archive"
-                count={archivedInvites.length}
+                count={archivedTabInvites.length}
                 icon={<ArchiveIcon className="h-3.5 w-3.5" />}
                 active={activeTab === 'archive'}
                 onClick={() => setActiveTab('archive')}
@@ -1317,11 +1442,48 @@ export default function CandidateOutreach({
                       Loading outreach…
                     </span>
                   </div>
-                ) : activeInvites.length === 0 ? (
+                ) : invites.length === 0 ? (
                   <EmptyOutreach
                     theme={theme}
                     onNewOutreach={() => { setShowForm(true); setError(null); resetForm() }}
                   />
+                ) : boardInvites.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <Inbox
+                      className={cn('mx-auto mb-3 h-10 w-10', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')}
+                    />
+                    <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800')}>
+                      Nothing on your main board
+                    </p>
+                    <p className={cn('mx-auto mt-1 max-w-md text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600')}>
+                      Completed outreaches move to Archive after {OUTREACH_STALE_COMPLETED_DAYS} days so daily work stays
+                      uncluttered. Cancelled and expired invites are there too.
+                    </p>
+                    {archivedTabInvites.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => setActiveTab('archive')}
+                      >
+                        Open Archive ({archivedTabInvites.length})
+                      </Button>
+                    )}
+                    <div className="mt-3 flex justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 text-xs text-gray-600 dark:text-gray-400"
+                        onClick={() => setShowKanbanHelp(true)}
+                        aria-label="How this outreach board works"
+                      >
+                        <Info className="h-3.5 w-3.5 shrink-0" />
+                        How this board works
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="space-y-4">
@@ -1351,47 +1513,52 @@ export default function CandidateOutreach({
                         sort={sort}
                         onSortChange={setSort}
                         showingCount={filteredActive.length}
-                        totalCount={activeInvites.length}
+                        totalCount={boardInvites.length}
                         onClearAll={clearAllFilters}
                         hasActiveFilters={hasActiveFilters}
                         sticky
                       />
+                      <div className="mt-1 flex justify-end px-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 text-xs text-gray-600 dark:text-gray-400"
+                          onClick={() => setShowKanbanHelp(true)}
+                          aria-label="How this outreach board works"
+                        >
+                          <Info className="h-3.5 w-3.5 shrink-0" />
+                          How this board works
+                        </Button>
+                      </div>
                     </div>
 
                     {filteredActive.length === 0 ? (
                       <NoMatches theme={theme} onClear={clearAllFilters} />
                     ) : (
-                      // 2-col on desktop / 1-col on mobile. This is the core
-                      // density win — two cards per row instead of one full-width
-                      // strip per invite. With 43 invites you go from ~45 viewports
-                      // of scroll to ~12.
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {filteredActive.map((invite) => (
-                          <OutreachCandidateCard
-                            key={invite.id}
-                            invite={invite}
-                            files={
-                              invite.usedByUserId
-                                ? screeningsByUserId?.get(invite.usedByUserId) ?? []
-                                : []
-                            }
-                            walletAddress={walletAddress}
-                            theme={theme}
-                            copiedId={copiedId}
-                            sendingEmailId={sendingEmailId}
-                            emailSentId={emailSentId}
-                            removingId={removingId}
-                            onCopy={copyToClipboard}
-                            onShowQr={(inv) => setQrInvite(inv)}
-                            onSendEmail={handleSendEmail}
-                            onCancel={handleCancel}
-                            onRemove={handleRemove}
-                            onViewFile={handleViewFile}
-                            onEdit={setEditingInvite}
-                            onAskStormi={handleAskStormi}
-                          />
-                        ))}
-                      </div>
+                      <KanbanBoard
+                        invites={filteredActive}
+                        screeningsByUserId={screeningsByUserId}
+                        theme={theme}
+                        copiedId={copiedId}
+                        sendingEmailId={sendingEmailId}
+                        emailSentId={emailSentId}
+                        removingId={removingId}
+                        savingNotesId={savingNotesId}
+                        onCopy={copyToClipboard}
+                        onShowQr={(inv) => setQrInvite(inv)}
+                        onSendEmail={handleSendEmail}
+                        onCancel={handleCancel}
+                        onRemove={handleRemove}
+                        onViewFile={handleViewFile}
+                        onEdit={setEditingInvite}
+                        onAskStormi={handleAskStormi}
+                        onRecruiterNotesSave={handleRecruiterNotesSave}
+                        onResendConsent={handleResendConsent}
+                        resendingId={resendingId}
+                        onPipelineStatusOverride={handleInviteStatusOverride}
+                        statusOverrideSavingId={statusOverrideSavingId}
+                      />
                     )}
                   </>
                 )}
@@ -1419,7 +1586,7 @@ export default function CandidateOutreach({
                       Loading…
                     </span>
                   </div>
-                ) : archivedInvites.length === 0 ? (
+                ) : archivedTabInvites.length === 0 ? (
                   <div className="py-10 text-center">
                     <ArchiveIcon
                       className={cn('mx-auto mb-2 h-10 w-10', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')}
@@ -1428,13 +1595,14 @@ export default function CandidateOutreach({
                       No archived invites
                     </p>
                     <p className={cn('mt-1 text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
-                      Cancelled or expired invites move here. Their candidate files stay safe in the vault.
+                      Cancelled or expired invites, plus completed outreaches older than {OUTREACH_STALE_COMPLETED_DAYS}{' '}
+                      days. Files stay in the vault.
                     </p>
                   </div>
                 ) : (
                   <ArchiveTabContent
                     invites={filteredArchive}
-                    totalCount={archivedInvites.length}
+                    totalCount={archivedTabInvites.length}
                     theme={theme}
                     search={search}
                     onSearchChange={setSearch}
@@ -1480,7 +1648,7 @@ export default function CandidateOutreach({
             title="Candidate outreach"
             description={
               !isCollapsed
-                ? `${activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'} · Send invite links to candidates`
+                ? `${boardInvites.length > 0 ? `${boardInvites.length} active` : 'No active invites'} · Send invite links to candidates`
                 : 'Expand to create and manage invite links.'
             }
           >
@@ -1497,6 +1665,8 @@ export default function CandidateOutreach({
           onClose={() => setQrInvite(null)}
         />
       )}
+
+      <OutreachKanbanInfoModal open={showKanbanHelp} onClose={() => setShowKanbanHelp(false)} />
 
       {/* Edit invite modal */}
       {editingInvite && (
@@ -1760,6 +1930,8 @@ function ArchiveTabContent({
             const files = invite.usedByUserId
               ? screeningsByUserId?.get(invite.usedByUserId) ?? []
               : []
+            const isStaleCompleted = invite.status === 'completed' && isStaleCompletedOutreach(invite)
+            const canRestore = invite.status === 'cancelled'
             const isExpired = invite.status === 'expired'
             const isRemoving = removingId === invite.id
             return (
@@ -1776,22 +1948,28 @@ function ArchiveTabContent({
                       {invite.candidateName || invite.candidateEmail || 'Anonymous invite'}
                     </p>
                     <p className={cn('truncate text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                      {STATUS_CHIP_LABEL[invite.status]} · created {new Date(invite.createdAt).toLocaleDateString()}
+                      {isStaleCompleted
+                        ? `Completed · auto-archived after ${OUTREACH_STALE_COMPLETED_DAYS}+ days on the board`
+                        : `${STATUS_CHIP_LABEL[invite.status]} · created ${new Date(invite.createdAt).toLocaleDateString()}`}
                     </p>
                   </div>
                   <span
                     className={cn(
                       'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                      isExpired
+                      isStaleCompleted
                         ? isDark
-                          ? 'bg-gray-800 text-gray-400'
-                          : 'bg-gray-100 text-gray-600'
-                        : isDark
-                          ? 'bg-red-500/15 text-red-300'
-                          : 'bg-red-50 text-red-700',
+                          ? 'bg-emerald-900/35 text-emerald-200'
+                          : 'bg-emerald-50 text-emerald-800'
+                        : isExpired
+                          ? isDark
+                            ? 'bg-gray-800 text-gray-400'
+                            : 'bg-gray-100 text-gray-600'
+                          : isDark
+                            ? 'bg-red-500/15 text-red-300'
+                            : 'bg-red-50 text-red-700',
                     )}
                   >
-                    {STATUS_CHIP_LABEL[invite.status]}
+                    {isStaleCompleted ? 'Archived' : STATUS_CHIP_LABEL[invite.status]}
                   </span>
                 </div>
 
@@ -1824,7 +2002,7 @@ function ArchiveTabContent({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {!isExpired && (
+                  {canRestore && (
                     <Button type="button" variant="secondary" size="sm" onClick={() => onRestore(invite.id)}>
                       <RotateCcw className="h-3.5 w-3.5" />
                       Restore
@@ -2294,7 +2472,7 @@ function StormiCandidateModal({
   ]
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={1010}>
+    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={1250}>
       <ModalHeader
         title={`Stormi — ${candidateLabel}`}
         subtitle="AI coaching for this candidate"
@@ -2344,7 +2522,7 @@ function StormiCandidateModal({
             >
               <div
                 className={cn(
-                  'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
+                  'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed',
                   msg.role === 'user'
                     ? isDark
                       ? 'rounded-tr-sm bg-teal-800/60 text-teal-50'
@@ -2362,7 +2540,11 @@ function StormiCandidateModal({
                     </span>
                   </div>
                 )}
-                {msg.text}
+                <StormiChatMarkdown
+                  text={msg.text}
+                  variant={msg.role === 'user' ? 'user' : 'assistant'}
+                  isDark={isDark}
+                />
               </div>
             </div>
           ))}

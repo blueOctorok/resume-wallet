@@ -105,23 +105,19 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
     return list
   }, [rows, search, selectedTypes, selectedOutcomes, sort])
 
-  // Group by candidate so each person's files visually cluster.
-  const grouped = useMemo(() => {
-    const m = new Map<string, { name: string; userId: string | null; avatarUrl: string | null; files: ScreeningRow[] }>()
-    for (const r of filtered) {
-      const key = r.candidateUserId ?? `__noid__${r.candidateName ?? 'Unknown'}`
-      const existing = m.get(key)
-      if (existing) existing.files.push(r)
-      else
-        m.set(key, {
-          name: r.candidateName ?? 'Unknown candidate',
-          userId: r.candidateUserId,
-          avatarUrl: r.avatarUrl,
-          files: [r],
-        })
-    }
-    return Array.from(m.values())
-  }, [filtered])
+  const completedRows = useMemo(
+    () => filtered.filter((r) => hubDocStatusFromScreeningOrder(r.status) === 'complete'),
+    [filtered],
+  )
+  const processingRows = useMemo(
+    () => filtered.filter((r) => hubDocStatusFromScreeningOrder(r.status) !== 'complete'),
+    [filtered],
+  )
+
+  const completedGroups = useMemo(() => groupScreeningsByCandidate(completedRows), [completedRows])
+  const processingGroups = useMemo(() => groupScreeningsByCandidate(processingRows), [processingRows])
+
+  const hasAnyGroups = completedGroups.length > 0 || processingGroups.length > 0
 
   const hasActiveFilters = search.trim().length > 0 || selectedTypes.size > 0 || selectedOutcomes.size > 0
 
@@ -225,7 +221,7 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
 
       <div className="flex items-center justify-between">
         <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-          {grouped.length} candidate{grouped.length === 1 ? '' : 's'} · {filtered.length} report
+          {completedRows.length} completed · {processingRows.length} processing · {filtered.length} report
           {filtered.length === 1 ? '' : 's'}
         </p>
         <Button type="button" variant="ghost" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
@@ -234,7 +230,7 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
         </Button>
       </div>
 
-      {grouped.length === 0 ? (
+      {!hasAnyGroups ? (
         <div className="py-10 text-center">
           <Inbox className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-gray-600' : 'text-gray-300')} />
           <p className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
@@ -245,36 +241,100 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {grouped.map((group) => (
-            <li
-              key={group.userId ?? group.name}
-              className={cn(
-                'rounded-xl border',
-                isDark ? 'border-gray-700/80 bg-gray-900/30' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/20',
-              )}
-            >
-              <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 dark:border-gray-700/70">
-                <Avatar name={group.name} avatarUrl={group.avatarUrl} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-                    {group.name}
-                  </p>
-                  <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                    {group.files.length} report{group.files.length === 1 ? '' : 's'}
-                  </p>
-                </div>
-              </div>
-              <ul className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                {group.files.map((file) => (
-                  <VaultRow key={`${file.kind}-${file.id}`} file={file} isDark={isDark} onView={() => onView(file)} />
+        <div className="flex flex-col gap-8">
+          {completedGroups.length > 0 && (
+            <section className="flex flex-col gap-3" aria-labelledby="vault-completed-heading">
+              <h3
+                id="vault-completed-heading"
+                className={cn(
+                  'text-xs font-semibold uppercase tracking-wide',
+                  isDark ? 'text-emerald-400/90' : 'text-emerald-700 dark:text-emerald-400/90',
+                )}
+              >
+                Completed reports ({completedRows.length})
+              </h3>
+              <ul className="space-y-3">
+                {completedGroups.map((group) => (
+                  <VaultCandidateGroup key={`done-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
                 ))}
               </ul>
-            </li>
-          ))}
-        </ul>
+            </section>
+          )}
+          {processingGroups.length > 0 && (
+            <section className="flex flex-col gap-3" aria-labelledby="vault-processing-heading">
+              <h3
+                id="vault-processing-heading"
+                className={cn(
+                  'text-xs font-semibold uppercase tracking-wide',
+                  isDark ? 'text-amber-400/90' : 'text-amber-800 dark:text-amber-400/90',
+                )}
+              >
+                Processing / pending ({processingRows.length})
+              </h3>
+              <ul className="space-y-3">
+                {processingGroups.map((group) => (
+                  <VaultCandidateGroup key={`pend-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
     </div>
+  )
+}
+
+/** Group screening rows by candidate for the vault list. */
+function groupScreeningsByCandidate(rows: ScreeningRow[]) {
+  const m = new Map<string, { name: string; userId: string | null; avatarUrl: string | null; files: ScreeningRow[] }>()
+  for (const r of rows) {
+    const key = r.candidateUserId ?? `__noid__${r.candidateName ?? 'Unknown'}`
+    const existing = m.get(key)
+    if (existing) existing.files.push(r)
+    else
+      m.set(key, {
+        name: r.candidateName ?? 'Unknown candidate',
+        userId: r.candidateUserId,
+        avatarUrl: r.avatarUrl,
+        files: [r],
+      })
+  }
+  return Array.from(m.values())
+}
+
+function VaultCandidateGroup({
+  group,
+  isDark,
+  onView,
+}: {
+  group: { name: string; userId: string | null; avatarUrl: string | null; files: ScreeningRow[] }
+  isDark: boolean
+  onView: (row: ScreeningRow) => void
+}) {
+  return (
+    <li
+      className={cn(
+        'rounded-xl border',
+        isDark ? 'border-gray-700/80 bg-gray-900/30' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/20',
+      )}
+    >
+      <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 dark:border-gray-700/70">
+        <Avatar name={group.name} avatarUrl={group.avatarUrl} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+            {group.name}
+          </p>
+          <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            {group.files.length} report{group.files.length === 1 ? '' : 's'}
+          </p>
+        </div>
+      </div>
+      <ul className="divide-y divide-gray-100 dark:divide-gray-700/60">
+        {group.files.map((file) => (
+          <VaultRow key={`${file.kind}-${file.id}`} file={file} isDark={isDark} onView={() => onView(file)} />
+        ))}
+      </ul>
+    </li>
   )
 }
 
