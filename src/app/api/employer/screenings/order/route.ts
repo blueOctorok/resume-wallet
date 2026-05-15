@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
             tx_hash: syntheticTxHash,
             type: paymentType,
             status: 'COMPLETED',
-            amount: 0,
+            amount_usdc: 0,
             company_id: access.companyId,
             user_id: access.employerUserId,
           })
