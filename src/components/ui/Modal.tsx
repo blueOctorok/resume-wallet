@@ -24,6 +24,8 @@ interface ModalProps {
   zIndex?: number
   /** When true the backdrop click does NOT close the modal */
   disableBackdropClose?: boolean
+  /** When true, Escape does not call onClose (backdrop still respects disableBackdropClose) */
+  disableEscapeClose?: boolean
   /**
    * `default` — rounded-2xl panel (standard dialogs).
    * `block` — same shell as hub block-picker / category cards: rounded-xl border, muted fill, hidden scrollbar on overflow.
@@ -56,6 +58,7 @@ export default function Modal({
   maxWidth = 'max-w-lg',
   zIndex = 1000,
   disableBackdropClose = false,
+  disableEscapeClose = false,
   panelShape = 'default',
   panelClassName,
 }: ModalProps) {
@@ -64,6 +67,8 @@ export default function Modal({
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  const disableEscapeCloseRef = useRef(disableEscapeClose)
+  disableEscapeCloseRef.current = disableEscapeClose
 
   // Scroll lock + Escape handler. Empty deps so this runs only on mount/unmount.
   // If we depended on [onClose], parent re-renders (e.g. closing another modal) would
@@ -75,7 +80,7 @@ export default function Modal({
     document.body.style.overflow = 'hidden'
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current()
+      if (e.key === 'Escape' && !disableEscapeCloseRef.current) onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
 

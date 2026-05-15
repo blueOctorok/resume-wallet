@@ -285,7 +285,6 @@ export default function DriverShell({
         role="driver"
         walletAddress={walletAddress ?? ''}
         onComplete={handleNavigateToHub}
-        onSkip={handleNavigateToHub}
       />
     )
   }

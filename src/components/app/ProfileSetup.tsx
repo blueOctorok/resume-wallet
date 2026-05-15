@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Loader2, ArrowLeft, Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Loader2, Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,6 @@ interface ProfileSetupProps {
   role: 'driver' | 'developer' | 'candidate'
   walletAddress: string
   onComplete: () => void
-  onSkip?: () => void
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -85,7 +84,6 @@ export default function ProfileSetup({
   role,
   walletAddress,
   onComplete,
-  onSkip,
 }: ProfileSetupProps) {
   const { theme } = useTheme()
   const isDriver = role === 'driver'
@@ -211,19 +209,6 @@ export default function ProfileSetup({
   // ─── Form ─────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      {/* Back */}
-      {onSkip && (
-        <button
-          onClick={onSkip}
-          className={`flex items-center gap-2 mb-6 text-sm transition-colors ${
-            isDarkTheme(theme) ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Skip for now
-        </button>
-      )}
-
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${

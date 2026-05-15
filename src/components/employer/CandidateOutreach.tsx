@@ -23,6 +23,7 @@ import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdow
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
+import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import {
   OUTREACH_KANBAN_COLUMNS,
   OUTREACH_STALE_COMPLETED_DAYS,
@@ -89,6 +90,8 @@ interface CandidateOutreachProps {
   screeningsByUserId?: ScreeningsByUserId
   screeningsLoading?: boolean
   screeningsError?: string | null
+  /** Signed consent packages (FCRA + FMCSA PSP + CDLIS bundles) for the vault */
+  consentBundles?: ConsentBundleSummary[]
   /** Optional refresh handler — wired to the tab refresh button */
   onRefreshScreenings?: () => void
   /** Employer hub context — passed through so the mini Stormi modal can call the AI API */
@@ -253,6 +256,7 @@ export default function CandidateOutreach({
   screeningsByUserId,
   screeningsLoading = false,
   screeningsError = null,
+  consentBundles = [],
   onRefreshScreenings,
   employerContext = null,
 }: CandidateOutreachProps) {
@@ -1569,6 +1573,7 @@ export default function CandidateOutreach({
             {activeTab === 'vault' && (
               <FilesVault
                 rows={screeningsRows}
+                consentBundles={consentBundles}
                 loading={screeningsLoading}
                 error={screeningsError}
                 theme={theme}
@@ -2135,7 +2140,7 @@ function EditInviteModal({
   )
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-lg">
+    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={1200}>
       <ModalHeader
         title={`Edit: ${invite.candidateName || invite.candidateEmail || 'Anonymous invite'}`}
         subtitle="Update invite details or send another block to this candidate"

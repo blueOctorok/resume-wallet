@@ -70,7 +70,6 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
         role="developer"
         walletAddress={userAddress}
         onComplete={goBack}
-        onSkip={goBack}
       />
     )
   }

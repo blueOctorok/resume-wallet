@@ -112,7 +112,13 @@ export default function ProfileSetupModal({
   if (!isOpen) return null
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-md" zIndex={100}>
+    <Modal
+      onClose={onClose}
+      maxWidth="max-w-md"
+      zIndex={100}
+      disableBackdropClose
+      disableEscapeClose
+    >
       {/* Header */}
         <div className={`px-6 pt-6 pb-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3 mb-2">
@@ -284,23 +290,12 @@ export default function ProfileSetupModal({
             <p className="text-red-400 text-sm">{error}</p>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                isDark
-                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Skip for now
-            </button>
+          {/* Actions — no skip: incomplete profiles show as "Unknown" to employers */}
+          <div className="pt-2">
             <button
               type="submit"
               disabled={saving}
-              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+              className={`w-full px-4 py-2.5 rounded-xl font-medium transition-colors ${
                 saving
                   ? 'bg-teal-600/50 cursor-not-allowed'
                   : 'bg-teal-600 hover:bg-teal-500'
@@ -318,7 +313,7 @@ export default function ProfileSetupModal({
           </div>
 
           <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            You can always update this later from your hub
+            You can update contact details anytime from your hub after saving
           </p>
         </form>
     </Modal>

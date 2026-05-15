@@ -230,7 +230,10 @@ export default function KanbanBoard({
                 setActiveInviteId(null)
               }}
               onViewFile={onViewFile}
-              onEdit={onEdit}
+              onEdit={(inv) => {
+                setActiveInviteId(null)
+                onEdit(inv)
+              }}
               onAskStormi={onAskStormi}
               onRecruiterNotesSave={onRecruiterNotesSave}
               onResendConsent={onResendConsent}

@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer outreach edit modal + mandatory first-time profile** (May 2026)
+
+1. **Edit invite under candidate modal** — Kanban candidate detail uses `Modal` at `zIndex={1100}`; `EditInviteModal` used the default `1000`, so the edit dialog rendered underneath. Fixed: `EditInviteModal` uses `zIndex={1200}`, and clicking **Edit** closes the detail modal first (`KanbanBoard` clears `activeInviteId` before calling `onEdit`) so only one overlay is open.
+
+2. **Profile setup skip** — First-time `ProfileSetupModal` offered "Skip for now" (and backdrop could dismiss), so candidates reached the hub without `user_profiles` name and showed as unknown in employer outreach. Removed the skip action, added `disableBackdropClose` + `disableEscapeClose` on that modal, and removed the optional `onSkip` / "Skip for now" path from legacy `ProfileSetup` (`CandidateShell` / `DriverShell` / `DeveloperShell`). `Modal` now supports optional `disableEscapeClose` (read via ref so the scroll-lock effect stays `[]`-deps safe).
+
+| File | Change |
+|---|---|
+| `src/components/ui/Modal.tsx` | `disableEscapeClose` prop + ref in Escape handler |
+| `src/components/ProfileSetupModal.tsx` | No skip; backdrop/Escape locked until save |
+| `src/components/app/ProfileSetup.tsx` | Drop `onSkip` UI |
+| `src/components/app/CandidateShell.tsx`, `DriverShell.tsx`, `DeveloperShell.tsx` | Remove `onSkip` prop |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Close detail modal when opening edit |
+| `src/components/employer/CandidateOutreach.tsx` | `EditInviteModal` `zIndex={1200}` |
+
+---
+
 ## **Invite flow: missing `candidate_requests` row for screening consent** (May 2026)
 
 The outreach/invite path (`POST /api/invite/[token]`) had a hardcoded `screeningBlocks` array of `['driver-mvr', 'driver-psp']` — missing `'driver-screening-consent'`. When an employer sent an invite targeting `driver-screening-consent`, the invite handler installed the hub block but never created a `candidate_requests` row. The `ScreeningConsentBlock` only checks `candidate_requests`, so the candidate saw "No pending screening consent request." Fixed by adding `'driver-screening-consent'` to the array, broadening the dupe-check to the full screening pipeline OR filter, and calling `ensureHubBlocksForPspMvrBundle` for consent invites (since consent gates both MVR + PSP).

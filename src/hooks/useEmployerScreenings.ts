@@ -10,22 +10,27 @@ interface ScreeningsResponse {
   consentBundles?: Array<{
     id: string
     driverUserId: string
+    candidateName: string | null
+    avatarUrl: string | null
     status: string
     completedAt: string | null
     createdAt: string
+    cdlisSignedAt: string | null
+    cdlisSignedName: string | null
     bg: { signedName: string | null; signedAt: string } | null
     psp: { signedName: string | null; signedAt: string; formVersion: string | null } | null
   }>
 }
 
+export type ConsentBundleSummary = NonNullable<ScreeningsResponse['consentBundles']>[number]
+
 interface UseEmployerScreeningsResult {
   rows: ScreeningRow[]
   byUserId: ScreeningsByUserId
-  /** Latest screening consent bundle per candidate user id (for outreach UI) */
-  consentBundleByUserId: Map<
-    string,
-    NonNullable<ScreeningsResponse['consentBundles']>[number]
-  >
+  /** All consent bundles for this company, newest first */
+  consentBundles: ConsentBundleSummary[]
+  /** Latest consent bundle per candidate user id (for outreach card pills) */
+  consentBundleByUserId: Map<string, ConsentBundleSummary>
   loading: boolean
   refreshing: boolean
   error: string | null
@@ -102,7 +107,7 @@ export function useEmployerScreenings(
   }, [rows])
 
   const consentBundleByUserId = useMemo(() => {
-    const m = new Map<string, NonNullable<ScreeningsResponse['consentBundles']>[number]>()
+    const m = new Map<string, ConsentBundleSummary>()
     for (const b of consentBundles) {
       if (!b.driverUserId) continue
       if (!m.has(b.driverUserId)) m.set(b.driverUserId, b)
@@ -110,5 +115,5 @@ export function useEmployerScreenings(
     return m
   }, [consentBundles])
 
-  return { rows, byUserId, consentBundleByUserId, loading, refreshing, error, refresh }
+  return { rows, byUserId, consentBundles, consentBundleByUserId, loading, refreshing, error, refresh }
 }

@@ -166,7 +166,6 @@ export default function CandidateShell() {
         role='candidate'
         walletAddress={walletAddress ?? ''}
         onComplete={goBack}
-        onSkip={goBack}
       />
     )
   }

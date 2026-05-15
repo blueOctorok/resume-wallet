@@ -9,6 +9,7 @@ import {
   Download,
   Loader2,
   Inbox,
+  FileCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDarkTheme } from '@/lib/theme-storage'
@@ -24,9 +25,11 @@ import {
   outcomeLabel,
 } from '@/lib/accio-result-status'
 import type { ScreeningRow } from './types'
+import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 
 interface FilesVaultProps {
   rows: ScreeningRow[]
+  consentBundles?: ConsentBundleSummary[]
   loading: boolean
   error: string | null
   theme: string
@@ -44,7 +47,7 @@ interface FilesVaultProps {
  *
  * Filtering: search by name, type chips (MVR/PSP), outcome chips (Clear/Hits/etc).
  */
-export default function FilesVault({ rows, loading, error, theme, onView }: FilesVaultProps) {
+export default function FilesVault({ rows, consentBundles = [], loading, error, theme, onView }: FilesVaultProps) {
   const isDark = isDarkTheme(theme)
 
   const [search, setSearch] = useState('')
@@ -182,7 +185,7 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
     )
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && consentBundles.length === 0) {
     return (
       <div className="py-10 text-center">
         <ShieldCheck className={cn('mx-auto mb-2 h-10 w-10', isDark ? 'text-gray-600' : 'text-gray-300')} />
@@ -198,87 +201,112 @@ export default function FilesVault({ rows, loading, error, theme, onView }: File
 
   return (
     <div className="flex flex-col gap-4">
-      <OutreachFilterBar
-        theme={theme}
-        search={search}
-        onSearchChange={setSearch}
-        enableKeyboardShortcut={false}
-        statusFilters={typeChips}
-        selectedStatuses={selectedTypes}
-        onToggleStatus={(id) => toggleSet(selectedTypes, id, setSelectedTypes)}
-        statusFilterLabel="Type"
-        blockFilters={outcomeChips}
-        selectedBlocks={selectedOutcomes}
-        onToggleBlock={(id) => toggleSet(selectedOutcomes, id, setSelectedOutcomes)}
-        blockFilterLabel="Outcome"
-        sort={sort}
-        onSortChange={setSort}
-        showingCount={filtered.length}
-        totalCount={rows.length}
-        onClearAll={clearAll}
-        hasActiveFilters={hasActiveFilters}
-      />
+      {/* ── Consent packages (always shown, no filter applies) ────────── */}
+      {consentBundles.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="vault-consent-heading">
+          <h3
+            id="vault-consent-heading"
+            className={cn(
+              'text-xs font-semibold uppercase tracking-wide',
+              isDark ? 'text-teal-400/90' : 'text-teal-700',
+            )}
+          >
+            Signed consent packages ({consentBundles.length})
+          </h3>
+          <ul className="space-y-3">
+            {consentBundles.map((bundle) => (
+              <ConsentBundleRow key={bundle.id} bundle={bundle} isDark={isDark} />
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <div className="flex items-center justify-between">
-        <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-          {completedRows.length} completed · {processingRows.length} processing · {filtered.length} report
-          {filtered.length === 1 ? '' : 's'}
-        </p>
-        <Button type="button" variant="ghost" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
-        </Button>
-      </div>
+      {/* ── MVR / PSP order filter + list ─────────────────────────────── */}
+      {rows.length > 0 && (
+        <>
+          <OutreachFilterBar
+            theme={theme}
+            search={search}
+            onSearchChange={setSearch}
+            enableKeyboardShortcut={false}
+            statusFilters={typeChips}
+            selectedStatuses={selectedTypes}
+            onToggleStatus={(id) => toggleSet(selectedTypes, id, setSelectedTypes)}
+            statusFilterLabel="Type"
+            blockFilters={outcomeChips}
+            selectedBlocks={selectedOutcomes}
+            onToggleBlock={(id) => toggleSet(selectedOutcomes, id, setSelectedOutcomes)}
+            blockFilterLabel="Outcome"
+            sort={sort}
+            onSortChange={setSort}
+            showingCount={filtered.length}
+            totalCount={rows.length}
+            onClearAll={clearAll}
+            hasActiveFilters={hasActiveFilters}
+          />
 
-      {!hasAnyGroups ? (
-        <div className="py-10 text-center">
-          <Inbox className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-gray-600' : 'text-gray-300')} />
-          <p className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            No matches
-          </p>
-          <p className={cn('mt-1 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            Try broadening your filters or clearing the search.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-8">
-          {completedGroups.length > 0 && (
-            <section className="flex flex-col gap-3" aria-labelledby="vault-completed-heading">
-              <h3
-                id="vault-completed-heading"
-                className={cn(
-                  'text-xs font-semibold uppercase tracking-wide',
-                  isDark ? 'text-emerald-400/90' : 'text-emerald-700 dark:text-emerald-400/90',
-                )}
-              >
-                Completed reports ({completedRows.length})
-              </h3>
-              <ul className="space-y-3">
-                {completedGroups.map((group) => (
-                  <VaultCandidateGroup key={`done-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
-                ))}
-              </ul>
-            </section>
+          <div className="flex items-center justify-between">
+            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+              {completedRows.length} completed · {processingRows.length} processing · {filtered.length} report
+              {filtered.length === 1 ? '' : 's'}
+            </p>
+            <Button type="button" variant="ghost" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </div>
+
+          {!hasAnyGroups ? (
+            <div className="py-10 text-center">
+              <Inbox className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-gray-600' : 'text-gray-300')} />
+              <p className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                No matches
+              </p>
+              <p className={cn('mt-1 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                Try broadening your filters or clearing the search.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8">
+              {completedGroups.length > 0 && (
+                <section className="flex flex-col gap-3" aria-labelledby="vault-completed-heading">
+                  <h3
+                    id="vault-completed-heading"
+                    className={cn(
+                      'text-xs font-semibold uppercase tracking-wide',
+                      isDark ? 'text-emerald-400/90' : 'text-emerald-700 dark:text-emerald-400/90',
+                    )}
+                  >
+                    Completed reports ({completedRows.length})
+                  </h3>
+                  <ul className="space-y-3">
+                    {completedGroups.map((group) => (
+                      <VaultCandidateGroup key={`done-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {processingGroups.length > 0 && (
+                <section className="flex flex-col gap-3" aria-labelledby="vault-processing-heading">
+                  <h3
+                    id="vault-processing-heading"
+                    className={cn(
+                      'text-xs font-semibold uppercase tracking-wide',
+                      isDark ? 'text-amber-400/90' : 'text-amber-800 dark:text-amber-400/90',
+                    )}
+                  >
+                    Processing / pending ({processingRows.length})
+                  </h3>
+                  <ul className="space-y-3">
+                    {processingGroups.map((group) => (
+                      <VaultCandidateGroup key={`pend-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
           )}
-          {processingGroups.length > 0 && (
-            <section className="flex flex-col gap-3" aria-labelledby="vault-processing-heading">
-              <h3
-                id="vault-processing-heading"
-                className={cn(
-                  'text-xs font-semibold uppercase tracking-wide',
-                  isDark ? 'text-amber-400/90' : 'text-amber-800 dark:text-amber-400/90',
-                )}
-              >
-                Processing / pending ({processingRows.length})
-              </h3>
-              <ul className="space-y-3">
-                {processingGroups.map((group) => (
-                  <VaultCandidateGroup key={`pend-${group.userId ?? group.name}`} group={group} isDark={isDark} onView={onView} />
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
+        </>
       )}
     </div>
   )
@@ -412,4 +440,60 @@ function VaultRow({
 function csvCell(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
+}
+
+function ConsentBundleRow({ bundle, isDark }: { bundle: ConsentBundleSummary; isDark: boolean }) {
+  const name = bundle.candidateName ?? 'Unknown candidate'
+  const isComplete = bundle.status === 'complete'
+  const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : null)
+
+  const pillCls = isComplete
+    ? isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-800'
+    : isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-900'
+
+  const instruments = [
+    bundle.bg ? `FCRA (signed ${fmt(bundle.bg.signedAt)})` : null,
+    bundle.psp ? `FMCSA PSP (signed ${fmt(bundle.psp.signedAt)})` : null,
+    bundle.cdlisSignedAt ? `CDLIS (signed ${fmt(bundle.cdlisSignedAt)})` : null,
+  ].filter(Boolean)
+
+  return (
+    <li
+      className={cn(
+        'rounded-xl border',
+        isDark ? 'border-gray-700/80 bg-gray-900/30' : 'border-gray-200 bg-white',
+      )}
+    >
+      <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 dark:border-gray-700/70">
+        <Avatar name={name} avatarUrl={bundle.avatarUrl} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className={cn('truncate text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+            {name}
+          </p>
+          <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            Consent package
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+        <FileCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} aria-hidden />
+        <span className={cn('font-semibold shrink-0', isDark ? 'text-gray-100' : 'text-gray-900')}>
+          Signed Consent Package
+        </span>
+        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', pillCls)}>
+          {isComplete ? 'Complete' : 'Pending'}
+        </span>
+        {instruments.length > 0 && (
+          <span className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            {instruments.join(' · ')}
+          </span>
+        )}
+        {isComplete && bundle.completedAt && (
+          <span className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            · Completed {fmt(bundle.completedAt)}
+          </span>
+        )}
+      </div>
+    </li>
+  )
 }

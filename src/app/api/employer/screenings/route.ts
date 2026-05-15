@@ -128,9 +128,13 @@ export async function GET(request: NextRequest) {
     const consentBundleSummaries = (consentBundles ?? []).map((b) => {
       const bg = b.bgcheck_consent_id ? bgById.get(b.bgcheck_consent_id as string) : null
       const psp = b.psp_consent_id ? pspById.get(b.psp_consent_id as string) : null
+      const driverId = b.driver_user_id as string
+      const c = driverId ? candidateById.get(driverId) : null
       return {
         id: b.id as string,
-        driverUserId: b.driver_user_id as string,
+        driverUserId: driverId,
+        candidateName: c ? [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || null : null,
+        avatarUrl: c?.avatarUrl ?? null,
         status: b.status as string,
         completedAt: b.completed_at as string | null,
         createdAt: b.created_at as string,
