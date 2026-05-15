@@ -584,6 +584,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Nav-bar hub refresh — Navigation calls `requestHubRefresh()` which bumps `hubRefreshNonce`.
   // Call `pullLatestEmployerHub` directly rather than going through `triggerRefresh` from
   // useVisibilityRefresh — that hook's `isRefreshing` guard can silently drop manual calls.
+  const setEmployerHubRefreshing = useUIStore((s) => s.setEmployerHubRefreshing)
   useEffect(() => {
     if (lastHubRefreshNonce.current === null) {
       lastHubRefreshNonce.current = hubRefreshNonce
@@ -592,8 +593,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     if (hubRefreshNonce === lastHubRefreshNonce.current) return
     lastHubRefreshNonce.current = hubRefreshNonce
     if (!walletAddress) return
-    void pullLatestEmployerHub()
-  }, [hubRefreshNonce, walletAddress, pullLatestEmployerHub])
+    setEmployerHubRefreshing(true)
+    void pullLatestEmployerHub().finally(() => setEmployerHubRefreshing(false))
+  }, [hubRefreshNonce, walletAddress, pullLatestEmployerHub, setEmployerHubRefreshing])
 
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {

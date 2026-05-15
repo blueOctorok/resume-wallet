@@ -86,6 +86,9 @@ interface UIState {
   /** Incremented by nav "Refresh hub" — CandidateHub reacts to refetch blocks + My Files */
   hubRefreshNonce: number
 
+  /** True while the employer hub is running a manual refresh cycle */
+  employerHubRefreshing: boolean
+
   /**
    * Employer hub: company + role shown in global nav (EmployerHub writes; cleared when no company).
    * Persists while on employer sub-pages (Applicants, etc.) so the bar stays informative.
@@ -142,6 +145,7 @@ interface UIActions {
 
   /** Nav refresh control — bumps nonce so CandidateHub runs the same refresh as the old title-card button */
   requestHubRefresh: () => void
+  setEmployerHubRefreshing: (v: boolean) => void
 
   setEmployerNavSnapshot: (snapshot: EmployerNavSnapshot | null) => void
 
@@ -168,6 +172,7 @@ const initialState: UIState = {
   resumeUploadEvent: null,
   initialThreadId: null,
   hubRefreshNonce: 0,
+  employerHubRefreshing: false,
   employerNavSnapshot: null,
 }
 
@@ -292,6 +297,8 @@ export const useUIStore = create<UIState & UIActions>()(
 
     requestHubRefresh: () =>
       set((s) => ({ hubRefreshNonce: s.hubRefreshNonce + 1 })),
+
+    setEmployerHubRefreshing: (v) => set({ employerHubRefreshing: v }),
 
     setEmployerNavSnapshot: (snapshot) => set({ employerNavSnapshot: snapshot }),
 

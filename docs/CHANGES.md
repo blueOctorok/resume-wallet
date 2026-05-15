@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer hub refresh spinner** (May 2026)
+
+The nav-bar "Refresh hub" button showed a spinner for candidates (via `hubBlocksLoading`) but had **no visual feedback for employers** — the data refreshed silently, making it look broken. Added `employerHubRefreshing` to `useUIStore` so the nav button shows a `Loader2` spinner while the employer hub is fetching.
+
+| File | Change |
+|---|---|
+| `src/stores/ui-store.ts` | Added `employerHubRefreshing` state + `setEmployerHubRefreshing` action |
+| `src/components/EmployerHub.tsx` | Sets `employerHubRefreshing` true/false around `pullLatestEmployerHub` in the nonce effect |
+| `src/components/Navigation.tsx` | Reads `employerHubRefreshing` — disables button + shows spinner for employers |
+
+---
+
 ## **Direct order: waived payment path + Alchemy crash fix** (May 2026)
 
 Two bugs fixed:

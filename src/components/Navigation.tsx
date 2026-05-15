@@ -109,6 +109,7 @@ export default function Navigation({
   const requestWalkthrough = useJourneyStore((s) => s.requestWalkthrough)
   const { navigateToMessages, requestHubRefresh, setCurrentPage } = useUIStore()
   const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
+  const employerHubRefreshing = useUIStore((s) => s.employerHubRefreshing)
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
   const isDark = isDarkTheme(theme)
@@ -432,9 +433,7 @@ export default function Navigation({
                   <div className='flex shrink-0 items-center gap-3'>
                     {/* Hub refresh — candidates AND employers. EmployerHub listens for
                         `hubRefreshNonce` (same store as CandidateHub) and refetches its
-                        data when this is clicked. `hubBlocksLoading` only tracks candidate
-                        blocks, so it's a candidate-only spinner — for employers we just
-                        leave the icon static (refresh is fast enough to not need one). */}
+                        data when this is clicked. */}
                     {(userRole === 'candidate' || userRole === 'employer') && walletAddress ? (
                       <div className={cn(navHubGradientRingClass(theme), 'shrink-0')}>
                         <button
@@ -443,12 +442,12 @@ export default function Navigation({
                             requestHubRefresh()
                             setIsMenuOpen(false)
                           }}
-                          disabled={userRole === 'candidate' && hubBlocksLoading}
+                          disabled={(userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing)}
                           className={cn(navHubRefreshInnerButtonClass(theme), 'cursor-pointer')}
                           title='Refresh hub — pull latest data'
                           aria-label='Refresh hub — pull latest data'
                         >
-                          {userRole === 'candidate' && hubBlocksLoading ? (
+                          {(userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing) ? (
                             <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
                           ) : (
                             <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
