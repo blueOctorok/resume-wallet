@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Invite flow: missing `candidate_requests` row for screening consent** (May 2026)
+
+The outreach/invite path (`POST /api/invite/[token]`) had a hardcoded `screeningBlocks` array of `['driver-mvr', 'driver-psp']` — missing `'driver-screening-consent'`. When an employer sent an invite targeting `driver-screening-consent`, the invite handler installed the hub block but never created a `candidate_requests` row. The `ScreeningConsentBlock` only checks `candidate_requests`, so the candidate saw "No pending screening consent request." Fixed by adding `'driver-screening-consent'` to the array, broadening the dupe-check to the full screening pipeline OR filter, and calling `ensureHubBlocksForPspMvrBundle` for consent invites (since consent gates both MVR + PSP).
+
+| File | Fix |
+|---|---|
+| `src/app/api/invite/[token]/route.ts` | Add `driver-screening-consent` to `screeningBlocks`; broaden dupe-check; call `ensureHubBlocksForPspMvrBundle` |
+
+---
+
 ## **Screening consent — audit fixes** (May 2026)
 
 Three bugs found during post-implementation audit:

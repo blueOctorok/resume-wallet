@@ -191,10 +191,10 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
     }
 
-    // For screening blocks (MVR, PSP), create a candidate_requests record
-    // so the FCRA disclosure gate fires when the candidate lands on the form.
-    // Without this, invite-based MVR/PSP deep-links bypass disclosure entirely.
-    const screeningBlocks = ['driver-mvr', 'driver-psp']
+    // For screening blocks (MVR, PSP, unified consent), create a candidate_requests
+    // record so the disclosure/consent gate fires when the candidate lands on the form.
+    // Without this, invite-based deep-links bypass disclosure entirely.
+    const screeningBlocks = ['driver-mvr', 'driver-psp', 'driver-screening-consent']
     const targetBlock = invite.target_block_type
     if (userId && targetBlock && screeningBlocks.includes(targetBlock)) {
       const requestType =
@@ -206,14 +206,17 @@ export async function POST(
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 30)
 
-      // Only create if no pending request already exists (idempotent)
+      // Only create if no pending screening request already exists (idempotent).
+      // Use broad OR filter: any of the screening pipeline types count as a dupe.
       const { data: existing } = await supabase
         .from('candidate_requests')
         .select('id')
         .eq('candidate_user_id', userId)
         .eq('company_id', invite.company_id)
-        .eq('request_type', requestType)
         .in('status', ['pending', 'viewed'])
+        .or(
+          'request_type.eq.mvr_order,request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-screening-consent)',
+        )
         .maybeSingle()
 
       if (!existing) {
@@ -231,17 +234,15 @@ export async function POST(
           })
 
         if (reqError) {
-          // Non-fatal — the form still works, just without the disclosure gate
           console.error('[INVITE START] Failed to create screening request:', reqError)
         } else {
           console.log(`[INVITE START] Created ${requestType} candidate_request for invite ${invite.id}`)
         }
       }
 
-      // PSP product = MVR + FMCSA bundle. The onboard page only installs the
-      // single targetBlockType (driver-psp), so the MVR block would be missing.
-      // This mirrors the talent-request path which calls the same helper.
-      if (targetBlock === 'driver-psp') {
+      // Screening consent and PSP both need the full MVR + PSP hub block set
+      // so My Files and career card sections appear correctly.
+      if (targetBlock === 'driver-psp' || targetBlock === 'driver-screening-consent') {
         await ensureHubBlocksForPspMvrBundle(supabase, userId)
       }
     }
