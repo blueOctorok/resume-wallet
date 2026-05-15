@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { companyCanOrderPsp } from '@/lib/employer-company-access'
+import { companyCanOrderPsp, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
 import {
   buildAccioPspWithMvrBundleOrderXml,
   generateOrderNumber,
@@ -114,6 +114,16 @@ export async function POST(request: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    if (await companyHasScreeningConsentBlock(supabase, companyId)) {
+      return NextResponse.json(
+        {
+          error:
+            'Your company collects screening consent in Storm first. After the candidate finishes the three-step package, place PSP orders with POST /api/employer/screenings/order (payment + consent bundle id).',
+        },
+        { status: 400 },
+      )
     }
 
     if (!(await companyCanOrderPsp(supabase, companyId))) {

@@ -161,22 +161,16 @@ export async function POST(
       .eq('candidate_user_id', candidateUserId)
       .in('status', ['pending', 'viewed'])
 
-    const isMvrConsentPipeline =
+    /** Employer screening packages all resolve to the screening-consent block + 3-step flow. */
+    const isEmployerScreeningConsentPipeline =
       requestType === 'mvr_order' ||
-      (requestType === 'block_request' && targetBlockType === 'driver-mvr')
-
-    const isPspConsentPipeline =
       requestType === 'psp_order' ||
-      (requestType === 'block_request' && targetBlockType === 'driver-psp')
+      (requestType === 'block_request' &&
+        ['driver-screening-consent', 'driver-mvr', 'driver-psp'].includes(String(targetBlockType || '')))
 
-    if (isMvrConsentPipeline) {
-      // `mvr_order` and legacy `block_request`+driver-mvr are the same FCRA inbox item
+    if (isEmployerScreeningConsentPipeline) {
       dupeQuery = dupeQuery.or(
-        'request_type.eq.mvr_order,and(request_type.eq.block_request,target_block_type.eq.driver-mvr)',
-      )
-    } else if (isPspConsentPipeline) {
-      dupeQuery = dupeQuery.or(
-        'request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-psp)',
+        'request_type.eq.mvr_order,request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-screening-consent),and(request_type.eq.block_request,target_block_type.eq.driver-mvr),and(request_type.eq.block_request,target_block_type.eq.driver-psp)',
       )
     } else if (requestType === 'block_request' && targetBlockType) {
       dupeQuery = dupeQuery.eq('target_block_type', targetBlockType)
@@ -197,6 +191,10 @@ export async function POST(
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + expiresInDays)
 
+    const effectiveTargetBlockType = isEmployerScreeningConsentPipeline
+      ? 'driver-screening-consent'
+      : targetBlockType || null
+
     // Create the request
     const { data: newRequest, error: insertError } = await supabase
       .from('candidate_requests')
@@ -206,7 +204,7 @@ export async function POST(
         candidate_user_id: candidateUserId,
         request_type: requestType,
         document_type: documentType || null,
-        target_block_type: targetBlockType || null,
+        target_block_type: effectiveTargetBlockType,
         message: message || null,
         status: 'pending',
         expires_at: expiresAt.toISOString(),
@@ -225,13 +223,13 @@ export async function POST(
     console.log(`[CANDIDATE REQUEST] Created request ${newRequest.id} for candidate ${candidateUserId}`)
 
     // Auto-install the target block on the candidate's hub (if they don't have it yet)
-    const blockDef = targetBlockType ? getBlockDefinition(targetBlockType) : null
-    if (targetBlockType && blockDef) {
+    const blockDef = effectiveTargetBlockType ? getBlockDefinition(effectiveTargetBlockType) : null
+    if (effectiveTargetBlockType && blockDef) {
       const { data: existingBlock } = await supabase
         .from('hub_blocks')
         .select('id')
         .eq('user_id', candidateUserId)
-        .eq('block_type', targetBlockType)
+        .eq('block_type', effectiveTargetBlockType)
         .maybeSingle()
 
       if (!existingBlock) {
@@ -245,15 +243,17 @@ export async function POST(
 
         await supabase.from('hub_blocks').insert({
           user_id: candidateUserId,
-          block_type: targetBlockType,
+          block_type: effectiveTargetBlockType,
           position: (maxPos?.position ?? -1) + 1,
         })
-        console.log(`[CANDIDATE REQUEST] Auto-installed block ${targetBlockType} for candidate ${candidateUserId}`)
+        console.log(
+          `[CANDIDATE REQUEST] Auto-installed block ${effectiveTargetBlockType} for candidate ${candidateUserId}`,
+        )
       }
     }
 
-    // PSP product = MVR + FMCSA — hub must show both blocks (My Files + career card sections).
-    if (isPspConsentPipeline) {
+    // Screening consent is the on-ramp to MVR + PSP tiles (My Files + career card sections).
+    if (isEmployerScreeningConsentPipeline) {
       await ensureHubBlocksForPspMvrBundle(supabase, candidateUserId)
     }
 
@@ -282,7 +282,12 @@ export async function POST(
       title: notifTitle,
       body: notifBody,
       actionUrl: actionUrl ?? undefined,
-      data: { companyName, requestType, requestId: newRequest.id, targetBlockType: targetBlockType ?? undefined },
+      data: {
+        companyName,
+        requestType,
+        requestId: newRequest.id,
+        targetBlockType: effectiveTargetBlockType ?? targetBlockType ?? undefined,
+      },
     }).catch(err => console.error('[CANDIDATE REQUEST] Notification error:', err))
 
     // Resolve candidate name from user_profiles

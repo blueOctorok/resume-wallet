@@ -79,6 +79,8 @@ export interface BlockProgressData {
   hasPortfolioProjects: boolean
   portfolioProjectCount: number
   hasConnectedGithub: boolean
+  /** Full screening consent package on file (any employer) — drives driver-screening-consent journey */
+  hasScreeningConsentBundle?: boolean
 }
 
 // ===== BLOCK → JOURNEY STEP MAP =====
@@ -171,6 +173,29 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
         action: { label: 'Manage', target: 'employment-verification' },
       },
     ],
+  },
+
+  'driver-screening-consent': {
+    resolve: (d) => [
+      {
+        id: 'driver-screening-consent',
+        label: 'Employer screening consent',
+        description: 'FCRA disclosure, FMCSA PSP authorization, and CDLIS written consent',
+        status: d.hasScreeningConsentBundle ? 'complete' : 'pending',
+        action: !d.hasScreeningConsentBundle
+          ? { label: 'Complete consent package', target: 'screening-consent' }
+          : undefined,
+      },
+    ],
+    nextAction: (d) =>
+      d.hasScreeningConsentBundle
+        ? null
+        : {
+            label: 'Finish screening consent',
+            description: 'Your employer needs this package before they can order MVR or PSP for you',
+            target: 'screening-consent',
+            priority: 'high',
+          },
   },
 
   'driver-dot-application': {

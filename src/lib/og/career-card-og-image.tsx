@@ -97,12 +97,12 @@ function sectionToOgLine(s: CareerCardSection): string | null {
     case 'driver-resume':
     case 'developer-resume':
     case 'general-resume': {
-      const d = s.data
+      const d = s.data as import('@/types/career-card').ResumeData
       const st = d.verificationStatus ? ` · ${d.verificationStatus}` : ''
       return d.title ? `${s.label}: ${d.title}${st}` : `${s.label} on card`
     }
     case 'developer-github': {
-      const d = s.data
+      const d = s.data as import('@/types/career-card').GitHubData
       const u = d.username ? `@${d.username}` : 'GitHub'
       const bits = [`${s.label}: ${u}`]
       if (d.publicRepos != null) bits.push(`${d.publicRepos} repos`)
@@ -115,28 +115,41 @@ function sectionToOgLine(s: CareerCardSection): string | null {
       return line
     }
     case 'developer-projects': {
-      const titles = s.data.projects.map((p) => p.title).filter(Boolean).slice(0, 4)
+      const titles = (s.data as import('@/types/career-card').ProjectsData).projects.map((p) => p.title).filter(Boolean).slice(0, 4)
       return titles.length ? `${s.label}: ${titles.join(' · ')}` : null
     }
     case 'developer-portfolio': {
-      const u = s.data.portfolioUrl?.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+      const raw = (s.data as import('@/types/career-card').PortfolioData).portfolioUrl
+      const u = raw?.replace(/^https?:\/\//i, '').replace(/\/$/, '')
       return u ? `${s.label}: ${u.slice(0, 96)}${u.length > 96 ? '…' : ''}` : null
     }
     case 'driver-cdl-credentials': {
-      const d = s.data
+      const d = s.data as import('@/types/career-card').CdlData
       const bits = [d.cdlClass, d.cdlState].filter(Boolean).join(' · ')
       return bits ? `${s.label}: ${bits}` : null
     }
     case 'driver-mvr': {
-      const d = s.data
+      const d = s.data as import('@/types/career-card').MvrData
       if (d.results) {
         return `${s.label}: ${d.results.licenseClass} · ${d.results.licenseStatus} · ${d.licenseState}`
       }
       return `${s.label}: ${d.orderStatus} · ${d.licenseState}`
     }
+    case 'driver-psp': {
+      const d = s.data as import('@/types/career-card').PspData
+      if (d.resultSummary?.resultStatus) {
+        return `${s.label}: ${d.resultSummary.resultStatus} · ${d.licenseState}`
+      }
+      return `${s.label}: ${d.orderStatus} · ${d.licenseState}`
+    }
     case 'driver-dot-application': {
-      const d = s.data
+      const d = s.data as import('@/types/career-card').DotAppData
       return `${s.label}: ${d.status}${d.isComplete ? ' · complete' : ''}`
+    }
+    case 'driver-screening-consent': {
+      const d = s.data as import('@/types/career-card').ScreeningConsentData
+      const n = d.bundles.length
+      return n ? `${s.label}: ${n} employer package(s)` : `${s.label} on card`
     }
     default:
       return `${s.label} on card`

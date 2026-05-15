@@ -133,6 +133,16 @@ export interface WorkHistoryData {
   verifiedCount: number
 }
 
+/** Per-employer screening consent bundle (FCRA + FMCSA + CDLIS) — self card only */
+export interface ScreeningConsentData {
+  bundles: Array<{
+    id: string
+    companyName: string | null
+    status: string
+    completedAt: string | null
+  }>
+}
+
 // ── Section union ────────────────────────────────────────────────────────────
 
 export type SectionDataMap = {
@@ -141,6 +151,7 @@ export type SectionDataMap = {
   'developer-resume': ResumeData
   'general-resume': ResumeData
   'driver-dot-application': DotAppData
+  'driver-screening-consent': ScreeningConsentData
   'driver-mvr': MvrData
   'driver-psp': PspData
   'driver-cdl-credentials': CdlData

@@ -22,42 +22,32 @@ export function isPendingScreeningStatus(status: string | null | undefined): boo
   return status === 'pending' || status === 'viewed'
 }
 
-export function isPendingPspBundleRow(r: CandidateRequestScreeningRow): boolean {
+/** Any employer-driven screening consent pipeline (MVR ask, PSP ask, or explicit consent block). */
+export function isPendingEmployerScreeningConsentRow(r: CandidateRequestScreeningRow): boolean {
   if (!isPendingScreeningStatus(r.status)) return false
+  if (r.request_type === 'mvr_order' || r.request_type === 'psp_order') return true
+  if (r.request_type !== 'block_request') return false
+  const t = r.target_block_type
   return (
-    r.request_type === 'psp_order' ||
-    (r.request_type === 'block_request' && r.target_block_type === 'driver-psp')
-  )
-}
-
-export function isPendingMvrOnlyRow(r: CandidateRequestScreeningRow): boolean {
-  if (!isPendingScreeningStatus(r.status)) return false
-  return (
-    r.request_type === 'mvr_order' ||
-    (r.request_type === 'block_request' && r.target_block_type === 'driver-mvr')
+    t === 'driver-screening-consent' || t === 'driver-mvr' || t === 'driver-psp'
   )
 }
 
 export type PickedPendingEmployerScreening = {
   requestId: string
   companyName: string
-  mode: 'psp_mvr_bundle' | 'mvr_standalone'
+  /** All employer screening asks now land on the screening-consent flow first. */
+  mode: 'screening_consent'
 }
 
-/** Newest-first PSP+MVR bundle request, else newest standalone MVR employer request. */
+/** Newest-first employer screening consent request (MVR / PSP / explicit consent block). */
 export function pickPendingEmployerScreening(
   rows: CandidateRequestScreeningRow[],
 ): PickedPendingEmployerScreening | null {
   const sorted = [...rows].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   )
-  const psp = sorted.find(isPendingPspBundleRow)
-  if (psp) {
-    return { requestId: psp.id, companyName: screeningCompanyName(psp), mode: 'psp_mvr_bundle' }
-  }
-  const mvr = sorted.find(isPendingMvrOnlyRow)
-  if (mvr) {
-    return { requestId: mvr.id, companyName: screeningCompanyName(mvr), mode: 'mvr_standalone' }
-  }
-  return null
+  const row = sorted.find(isPendingEmployerScreeningConsentRow)
+  if (!row) return null
+  return { requestId: row.id, companyName: screeningCompanyName(row), mode: 'screening_consent' }
 }

@@ -75,28 +75,29 @@ export async function companyHasEmployerBlock(
 }
 
 /**
- * MVR capability check: company has standalone MVR block OR the PSP+MVR bundle.
- * PSP always ships with MVR, so the bundle is a superset of standalone MVR.
+ * MVR capability: company has the employer MVR ordering block installed.
  */
 export async function companyCanOrderMvr(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<boolean> {
-  const { data } = await supabase
-    .from('employer_hub_blocks')
-    .select('id')
-    .eq('company_id', companyId)
-    .in('block_type', ['employer-mvr-orders', 'employer-psp-mvr-bundle'])
-    .limit(1)
-  return Boolean(data?.length)
+  return companyHasEmployerBlock(supabase, companyId, 'employer-mvr-orders')
 }
 
 /**
- * PSP capability check: company has the PSP+MVR bundle only (PSP is never standalone).
+ * PSP capability: company has the employer PSP ordering block (PSP Accio product still includes MVR suborder).
  */
 export async function companyCanOrderPsp(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<boolean> {
-  return companyHasEmployerBlock(supabase, companyId, 'employer-psp-mvr-bundle')
+  return companyHasEmployerBlock(supabase, companyId, 'employer-psp-orders')
+}
+
+/** Collect bundled screening consent (FCRA + FMCSA + CDLIS) before MVR/PSP employer orders. */
+export async function companyHasScreeningConsentBlock(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<boolean> {
+  return companyHasEmployerBlock(supabase, companyId, 'employer-screening-consent')
 }

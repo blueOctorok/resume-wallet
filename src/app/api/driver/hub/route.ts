@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
         github: null,
         jobApplications: [],
         payments: [],
+        screeningConsentBundles: [],
         stats: {
           profileCompleteness: 0,
           totalResumes: 0,
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
           totalTransactions: 0,
           careerCardViewsThisWeek: 0,
           careerCardViewsTotal: 0,
+          hasScreeningConsentBundle: false,
         },
         pendingEmployerScreening: null,
       })
@@ -102,6 +104,7 @@ export async function GET(request: NextRequest) {
       portfolioRow,
       githubRow,
       candidateRequestsPendingResult,
+      screeningConsentBundlesResult,
     ] = await Promise.all([
       // 1. User profile (identity: name, avatar, contact)
       supabase
@@ -207,6 +210,21 @@ export async function GET(request: NextRequest) {
         .in('status', ['pending', 'viewed'])
         .order('created_at', { ascending: false })
         .limit(40),
+      supabase
+        .from('screening_consent_bundles')
+        .select(
+          `
+          id,
+          company_id,
+          status,
+          completed_at,
+          created_at,
+          company:companies(company_name)
+        `,
+        )
+        .eq('driver_user_id', user.id)
+        .order('completed_at', { ascending: false, nullsFirst: false })
+        .limit(20),
     ])
 
     const userProfile = userProfileResult.data || null
@@ -214,6 +232,28 @@ export async function GET(request: NextRequest) {
     const pendingEmployerScreening = pickPendingEmployerScreening(
       (candidateRequestsPendingResult.data ?? []) as unknown as CandidateRequestScreeningRow[],
     )
+
+    type BundleRow = {
+      id: string
+      company_id: string
+      status: string
+      completed_at: string | null
+      created_at: string
+      company?: { company_name: string | null } | { company_name: string | null }[] | null
+    }
+    const screeningConsentBundles = (screeningConsentBundlesResult.data ?? []).map((r: BundleRow) => {
+      const c = r.company
+      const obj = Array.isArray(c) ? c[0] : c
+      return {
+        id: r.id,
+        companyId: r.company_id,
+        companyName: obj?.company_name?.trim() || null,
+        status: r.status,
+        completedAt: r.completed_at,
+        createdAt: r.created_at,
+      }
+    })
+    const hasScreeningConsentBundle = screeningConsentBundles.some((b) => b.status === 'complete')
 
     // Reconstruct the driver-specific profile from block tables
     const driverProfile = {
@@ -473,6 +513,7 @@ export async function GET(request: NextRequest) {
       totalTransactions: transactions.length,
       careerCardViewsThisWeek: cardViewsWeek ?? 0,
       careerCardViewsTotal: cardViewsTotal ?? 0,
+      hasScreeningConsentBundle,
     }
 
     const portfolio = portfolioRow
@@ -501,6 +542,7 @@ export async function GET(request: NextRequest) {
       stats,
       memberSince: user.created_at,
       pendingEmployerScreening,
+      screeningConsentBundles,
     })
 
   } catch (error) {

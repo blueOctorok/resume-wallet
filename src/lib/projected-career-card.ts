@@ -17,6 +17,7 @@ import type {
   PortfolioData,
   GitHubData,
   ProjectsData,
+  ScreeningConsentData,
   OnChainCredential,
 } from '@/types/career-card'
 
@@ -66,6 +67,7 @@ const EMPTY_SECTION_DATA: Record<string, unknown> = {
   'developer-portfolio': { portfolioUrl: null } satisfies PortfolioData,
   'developer-github': { username: null, avatarUrl: null, bio: null, publicRepos: 0, followers: 0, languages: {}, topRepos: [] } satisfies GitHubData,
   'developer-projects': { projects: [] } satisfies ProjectsData,
+  'driver-screening-consent': { bundles: [] } satisfies ScreeningConsentData,
 }
 
 function computeCareerCardSignals(
@@ -299,6 +301,27 @@ export async function buildProjectedCareerCard(
     })
   }
 
+  // My Files + journey: screening consent is `appearsOnCareerCard: false` in the registry
+  // (employers do not see this strip on the shared card), but self Construct still needs
+  // a section so the vault row + hub document picker can attach to this block.
+  const screeningConsentHubRow = hubRows.find((r) => r.block_type === 'driver-screening-consent')
+  if (screeningConsentHubRow && meta.contactMode === 'self') {
+    const consentData =
+      (await fetchScreeningConsentSectionData(supabase, userId)) ??
+      (EMPTY_SECTION_DATA['driver-screening-consent'] as ScreeningConsentData)
+    if (!sections.some((s) => s.blockType === 'driver-screening-consent')) {
+      sections.push({
+        blockType: 'driver-screening-consent',
+        label: getBlockDefinition('driver-screening-consent')?.label ?? 'Screening consent',
+        icon: 'ShieldCheck',
+        data: consentData,
+        hubBlockId: screeningConsentHubRow.id,
+        cardPage: readCardPage(screeningConsentHubRow.config ?? undefined),
+        needsSetup: consentData.bundles.length === 0,
+      })
+    }
+  }
+
   const stormIdx = sections.findIndex((s) => s.blockType === 'storm-resume')
   if (stormIdx > 0) {
     const [storm] = sections.splice(stormIdx, 1)
@@ -314,24 +337,13 @@ export async function buildProjectedCareerCard(
 
   if (pickedPendingScreening && meta.contactMode === 'self') {
     for (const s of projectedSections) {
-      if (pickedPendingScreening.mode === 'psp_mvr_bundle') {
+      if (pickedPendingScreening.mode === 'screening_consent') {
         const base = { requestId: pickedPendingScreening.requestId, companyName: pickedPendingScreening.companyName }
         if (s.blockType === 'driver-psp') {
           s.data = { ...(s.data as PspData), pendingEmployerRequest: base }
         }
         if (s.blockType === 'driver-mvr') {
-          s.data = {
-            ...(s.data as MvrData),
-            pendingEmployerRequest: { ...base, bundledWithBlockType: 'driver-psp' },
-          }
-        }
-      } else if (pickedPendingScreening.mode === 'mvr_standalone' && s.blockType === 'driver-mvr') {
-        s.data = {
-          ...(s.data as MvrData),
-          pendingEmployerRequest: {
-            requestId: pickedPendingScreening.requestId,
-            companyName: pickedPendingScreening.companyName,
-          },
+          s.data = { ...(s.data as MvrData), pendingEmployerRequest: base }
         }
       }
     }
@@ -378,6 +390,7 @@ async function fetchSectionData(
   | PortfolioData
   | GitHubData
   | ProjectsData
+  | ScreeningConsentData
   | null
 > {
   switch (blockType) {
@@ -389,6 +402,8 @@ async function fetchSectionData(
       return fetchResumeData(supabase, userId, blockType)
     case 'driver-dot-application':
       return fetchDotAppData(supabase, userId)
+    case 'driver-screening-consent':
+      return fetchScreeningConsentSectionData(supabase, userId)
     case 'driver-mvr':
       return fetchMvrData(supabase, userId, contactMode)
     case 'driver-psp':
@@ -404,6 +419,43 @@ async function fetchSectionData(
     default:
       return null
   }
+}
+
+async function fetchScreeningConsentSectionData(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ScreeningConsentData | null> {
+  const { data, error } = await supabase
+    .from('screening_consent_bundles')
+    .select(
+      `
+      id,
+      status,
+      completed_at,
+      company:companies(company_name)
+    `,
+    )
+    .eq('driver_user_id', userId)
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .limit(15)
+
+  if (error) {
+    console.warn('[projected-career-card] screening consent bundles:', error.message)
+    return null
+  }
+
+  const bundles = (data ?? []).map((row: Record<string, unknown>) => {
+    const c = row.company as { company_name?: string | null } | { company_name?: string | null }[] | null | undefined
+    const obj = Array.isArray(c) ? c[0] : c
+    return {
+      id: String(row.id),
+      companyName: obj?.company_name?.trim() || null,
+      status: String(row.status ?? 'pending'),
+      completedAt: (row.completed_at as string | null) ?? null,
+    }
+  })
+
+  return { bundles }
 }
 
 /** Latest resume row for any source_role — used by STORM Resume block on the career card */

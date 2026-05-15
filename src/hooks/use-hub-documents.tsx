@@ -78,13 +78,20 @@ export function useHubDocuments(refreshKey: number): {
   const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
   const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
   const hasPspBlock = installedBlocks.some((b) => b.blockType === 'driver-psp')
+  const hasScreeningConsentBlock = installedBlocks.some((b) => b.blockType === 'driver-screening-consent')
   const hasPortfolioBlock = installedBlocks.some((b) => b.blockType === 'developer-portfolio')
   const hasGithubBlock = installedBlocks.some((b) => b.blockType === 'developer-github')
   const hasEmploymentVerificationBlock = installedBlocks.some(
     (b) => b.blockType === 'general-employment-verification',
   )
   const needsHubData =
-    hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPspBlock || hasPortfolioBlock || hasGithubBlock
+    hasResumeBlock ||
+    hasDotAppBlock ||
+    hasMvrBlock ||
+    hasPspBlock ||
+    hasPortfolioBlock ||
+    hasGithubBlock ||
+    hasScreeningConsentBlock
   const hasAnyFileSectionBlock = needsHubData || hasEmploymentVerificationBlock
 
   const fetchDocuments = useCallback(async () => {
@@ -240,15 +247,9 @@ export function useHubDocuments(refreshKey: number): {
 
         if (hasMvrBlock && (!data.mvrRecords || data.mvrRecords.length === 0)) {
           const mvrPending =
-            pendingPick?.mode === 'psp_mvr_bundle'
-              ? {
-                  requestId: pendingPick.requestId,
-                  companyName: pendingPick.companyName,
-                  bundledWithBlockType: 'driver-psp' as const,
-                }
-              : pendingPick?.mode === 'mvr_standalone'
-                ? { requestId: pendingPick.requestId, companyName: pendingPick.companyName }
-                : undefined
+            pendingPick?.mode === 'screening_consent'
+              ? { requestId: pendingPick.requestId, companyName: pendingPick.companyName }
+              : undefined
           docs.push({
             id: 'mvr-hub-placeholder',
             type: 'mvr',
@@ -259,7 +260,7 @@ export function useHubDocuments(refreshKey: number): {
             txHash: null,
             canVerify: false,
             canDelete: false,
-            editPage: 'mvr',
+            editPage: pendingPick?.mode === 'screening_consent' ? 'screening-consent' : 'mvr',
             pendingEmployerRequest: mvrPending,
           })
         }
@@ -286,7 +287,7 @@ export function useHubDocuments(refreshKey: number): {
 
         if (hasPspBlock && (!data.pspRecords || data.pspRecords.length === 0)) {
           const pspPending =
-            pendingPick?.mode === 'psp_mvr_bundle'
+            pendingPick?.mode === 'screening_consent'
               ? { requestId: pendingPick.requestId, companyName: pendingPick.companyName }
               : undefined
           docs.push({
@@ -299,7 +300,7 @@ export function useHubDocuments(refreshKey: number): {
             txHash: null,
             canVerify: false,
             canDelete: false,
-            editPage: 'psp',
+            editPage: pendingPick?.mode === 'screening_consent' ? 'screening-consent' : 'psp',
             pendingEmployerRequest: pspPending,
           })
         }
@@ -334,6 +335,48 @@ export function useHubDocuments(refreshKey: number): {
             editPage: 'github',
             githubUsername: username,
           })
+        }
+
+        if (hasScreeningConsentBlock) {
+          type BundleApi = {
+            id: string
+            companyName?: string | null
+            status: string
+            completedAt?: string | null
+            createdAt?: string
+          }
+          const bundles: BundleApi[] = Array.isArray(data.screeningConsentBundles)
+            ? data.screeningConsentBundles
+            : []
+          for (const b of bundles) {
+            docs.push({
+              id: `screening-consent-${b.id}`,
+              type: 'screening_consent',
+              title: 'Screening consent',
+              subtitle: b.companyName?.trim() || 'Employer',
+              createdAt: b.completedAt ?? b.createdAt,
+              status: b.status === 'complete' ? 'complete' : 'in-progress',
+              verified: false,
+              txHash: null,
+              canVerify: false,
+              canDelete: false,
+              editPage: b.status === 'complete' ? null : 'screening-consent',
+            })
+          }
+          if (bundles.length === 0) {
+            docs.push({
+              id: 'screening-consent-hub-placeholder',
+              type: 'screening_consent',
+              title: 'Screening consent',
+              subtitle: 'Employer-requested packages',
+              status: 'empty',
+              verified: false,
+              txHash: null,
+              canVerify: false,
+              canDelete: false,
+              editPage: 'screening-consent',
+            })
+          }
         }
       }
 
@@ -379,6 +422,7 @@ export function useHubDocuments(refreshKey: number): {
     hasPspBlock,
     hasPortfolioBlock,
     hasGithubBlock,
+    hasScreeningConsentBlock,
     hasEmploymentVerificationBlock,
     needsHubData,
     hasAnyFileSectionBlock,

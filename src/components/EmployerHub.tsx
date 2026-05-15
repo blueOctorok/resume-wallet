@@ -183,9 +183,13 @@ const EMPLOYER_TILE_COLORS: Record<
     glowColor: 'rgba(59,130,246,0.20)',
     iconText: { dark: 'text-blue-400', light: 'text-blue-600' },
   },
-  'employer-psp-mvr-bundle': {
+  'employer-psp-orders': {
     glowColor: 'rgba(245,158,11,0.20)',
     iconText: { dark: 'text-amber-400', light: 'text-amber-600' },
+  },
+  'employer-screening-consent': {
+    glowColor: 'rgba(100,116,139,0.22)',
+    iconText: { dark: 'text-slate-300', light: 'text-slate-600' },
   },
   'employer-dot-screening': {
     glowColor: 'rgba(20,184,166,0.20)',

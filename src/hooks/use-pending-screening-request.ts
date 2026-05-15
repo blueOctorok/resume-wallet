@@ -3,18 +3,16 @@
 import { useState, useEffect, useCallback } from 'react'
 
 /**
- * Pending employer screening request (MVR or PSP) for the current candidate.
- * Used by MvrOrderForm + PspOrderForm to show the FCRA disclosure gate
- * even when the candidate deep-links straight into the order page from a notification.
- *
- * Shape mirrors the subset of fields these forms actually need from
- * `/api/candidate/requests` — kept minimal so changes to the requests API
- * don't ripple into every form.
+ * Pending employer screening request for the current candidate.
+ * MVR and PSP hooks share the same matcher — employer asks now normalize to
+ * `driver-screening-consent` on the server.
  */
 export interface PendingScreeningRequest {
   id: string
   companyName: string
   createdAt: string
+  requestType: string
+  targetBlockType: string | null
 }
 
 type Kind = 'mvr' | 'psp'
@@ -28,27 +26,20 @@ interface RawRequest {
   company: { name?: string | null } | null
 }
 
-function isPendingForKind(kind: Kind, r: RawRequest): boolean {
+function isPendingEmployerScreeningRow(r: RawRequest): boolean {
   if (r.status !== 'pending' && r.status !== 'viewed') return false
-  if (kind === 'mvr') {
-    return (
-      r.requestType === 'mvr_order' ||
-      (r.requestType === 'block_request' && r.targetBlockType === 'driver-mvr')
-    )
-  }
-  return (
-    r.requestType === 'psp_order' ||
-    (r.requestType === 'block_request' && r.targetBlockType === 'driver-psp')
-  )
+  if (r.requestType === 'mvr_order' || r.requestType === 'psp_order') return true
+  if (r.requestType !== 'block_request') return false
+  const t = r.targetBlockType
+  return t === 'driver-screening-consent' || t === 'driver-mvr' || t === 'driver-psp'
+}
+
+function isPendingForKind(_kind: Kind, r: RawRequest): boolean {
+  return isPendingEmployerScreeningRow(r)
 }
 
 /**
- * Fetches the most recent pending screening request of `kind` for this candidate.
- * Returns `null` when none is pending. Refetch by calling `refresh()`.
- *
- * Why hook (not store): MVR + PSP forms are the only consumers, the data is
- * short-lived (cleared the moment the candidate signs disclosure), and keeping
- * it local avoids cross-form cache invalidation bugs.
+ * Fetches the most recent pending screening request for this candidate.
  */
 export function usePendingScreeningRequest(kind: Kind, walletAddress: string | null) {
   const [request, setRequest] = useState<PendingScreeningRequest | null>(null)
@@ -78,6 +69,8 @@ export function usePendingScreeningRequest(kind: Kind, walletAddress: string | n
               id: match.id,
               companyName: match.company?.name ?? 'An employer',
               createdAt: match.createdAt,
+              requestType: match.requestType,
+              targetBlockType: match.targetBlockType,
             }
           : null,
       )

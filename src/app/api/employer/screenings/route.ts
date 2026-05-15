@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // 500 per kind is plenty for any single company in normal usage — covers years
     // of orders before we'd need real pagination. Both the Active outreach tab and
     // the Files vault tab share this single fetch, so we read once and group client-side.
-    const [{ data: mvrOrders }, { data: pspOrders }] = await Promise.all([
+    const [{ data: mvrOrders }, { data: pspOrders }, { data: consentBundles }] = await Promise.all([
       supabase
         .from('mvr_orders')
         .select(
@@ -42,12 +42,21 @@ export async function GET(request: NextRequest) {
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
         .limit(500),
+      supabase
+        .from('screening_consent_bundles')
+        .select(
+          'id, driver_user_id, status, completed_at, created_at, bgcheck_consent_id, psp_consent_id, cdlis_signed_at, cdlis_signed_name',
+        )
+        .eq('company_id', ctx.companyId)
+        .order('completed_at', { ascending: false, nullsFirst: false })
+        .limit(500),
     ])
 
     const candidateIds = Array.from(
       new Set([
         ...((mvrOrders ?? []).map((o) => o.driver_user_id).filter(Boolean) as string[]),
         ...((pspOrders ?? []).map((o) => o.driver_user_id).filter(Boolean) as string[]),
+        ...((consentBundles ?? []).map((b) => b.driver_user_id).filter(Boolean) as string[]),
       ]),
     )
 
@@ -97,10 +106,50 @@ export async function GET(request: NextRequest) {
         }
       })
 
+    const bgIds = (consentBundles ?? [])
+      .map((b) => b.bgcheck_consent_id)
+      .filter(Boolean) as string[]
+    const pspIds = (consentBundles ?? [])
+      .map((b) => b.psp_consent_id)
+      .filter(Boolean) as string[]
+
+    const [{ data: bgRows }, { data: pspRows }] = await Promise.all([
+      bgIds.length
+        ? supabase.from('bgcheck_consents').select('id, signed_name, signed_at').in('id', bgIds)
+        : Promise.resolve({ data: [] as { id: string; signed_name: string; signed_at: string }[] }),
+      pspIds.length
+        ? supabase.from('psp_consents').select('id, signed_name, signed_at, form_version').in('id', pspIds)
+        : Promise.resolve({ data: [] as { id: string; signed_name: string; signed_at: string; form_version: string }[] }),
+    ])
+
+    const bgById = new Map((bgRows ?? []).map((r) => [r.id, r]))
+    const pspById = new Map((pspRows ?? []).map((r) => [r.id, r]))
+
+    const consentBundleSummaries = (consentBundles ?? []).map((b) => {
+      const bg = b.bgcheck_consent_id ? bgById.get(b.bgcheck_consent_id as string) : null
+      const psp = b.psp_consent_id ? pspById.get(b.psp_consent_id as string) : null
+      return {
+        id: b.id as string,
+        driverUserId: b.driver_user_id as string,
+        status: b.status as string,
+        completedAt: b.completed_at as string | null,
+        createdAt: b.created_at as string,
+        cdlisSignedAt: b.cdlis_signed_at as string | null,
+        cdlisSignedName: b.cdlis_signed_name as string | null,
+        bg: bg
+          ? { signedName: bg.signed_name, signedAt: bg.signed_at }
+          : null,
+        psp: psp
+          ? { signedName: psp.signed_name, signedAt: psp.signed_at, formVersion: psp.form_version }
+          : null,
+      }
+    })
+
     return NextResponse.json({
       success: true,
       mvr: shape('mvr'),
       psp: shape('psp'),
+      consentBundles: consentBundleSummaries,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'

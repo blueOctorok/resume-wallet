@@ -44,6 +44,8 @@ interface EmployerTalentExtras {
   pendingRequests: PendingCandidateRequest[]
   existingApplication: { id: string; job_posting_id: string; status: string; created_at: string } | null
   completionFlags: Record<string, boolean>
+  /** Latest complete screening_consent_bundles row for this company + candidate (MVR/PSP order path) */
+  screeningConsentBundleId: string | null
   hasBgcheckConsent: boolean
   bgcheckConsentSignedAt: string | null
   bgcheckConsentFormData: Record<string, unknown> | null
@@ -142,6 +144,7 @@ export default function CareerCardModal({
         pendingRequests: data.pendingRequests ?? [],
         existingApplication: data.existingApplication ?? null,
         completionFlags: data.completionFlags ?? {},
+        screeningConsentBundleId: data.screeningConsentBundleId ?? null,
         hasBgcheckConsent: Boolean(data.hasBgcheckConsent),
         bgcheckConsentSignedAt: data.bgcheckConsentSignedAt ?? null,
         bgcheckConsentFormData: (data.bgcheckConsentFormData ?? null) as Record<string, unknown> | null,
@@ -244,6 +247,9 @@ export default function CareerCardModal({
       (blockType === 'driver-psp' &&
         (r.request_type === 'psp_order' ||
           (r.request_type === 'block_request' && r.target_block_type === 'driver-psp'))) ||
+      (blockType === 'driver-screening-consent' &&
+        r.request_type === 'block_request' &&
+        r.target_block_type === 'driver-screening-consent') ||
       (blockType === 'driver-dot-application' && r.request_type === 'profile_completion')
     ) || null
 
@@ -291,15 +297,46 @@ export default function CareerCardModal({
 
   // ── Employer Accio orders (MVR / PSP): payment → API call ─────────────────
 
-  const handleAccioEmployerOrder = async (txHash: string, fields: MvrOrderFields) => {
+  const handleAccioEmployerOrder = async (txHash: string, fields?: MvrOrderFields) => {
     setAccioOrderLoading(true)
     setAccioOrderError(null)
 
-    const endpoint =
-      accioOrderProduct === 'mvr' ? '/api/employer/mvr/order' : '/api/employer/psp/order'
+    const bundleId = employerExtras?.screeningConsentBundleId ?? null
+    const useScreeningsOrderEndpoint =
+      Boolean(bundleId) &&
+      employerExtras?.installedEmployerBlocks?.includes('employer-screening-consent') === true
+
     const productLabel = accioOrderProduct === 'mvr' ? 'MVR' : 'PSP'
 
     try {
+      if (useScreeningsOrderEndpoint) {
+        const response = await fetch('/api/employer/screenings/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+          body: JSON.stringify({
+            candidateUserId,
+            type: accioOrderProduct,
+            consentBundleId: bundleId,
+            paymentTxHash: txHash,
+          }),
+        })
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || `Failed to place ${productLabel} order`)
+        }
+        if (accioOrderProduct === 'mvr') setMvrEmployerOrderDone(true)
+        else setPspEmployerOrderDone(true)
+        await fetchCareerCard()
+        return
+      }
+
+      const endpoint =
+        accioOrderProduct === 'mvr' ? '/api/employer/mvr/order' : '/api/employer/psp/order'
+
+      if (!fields) {
+        throw new Error('Order form data is required')
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
@@ -364,16 +401,25 @@ export default function CareerCardModal({
       />
     )
 
-    // MVR / PSP: same FCRA consent gate + company-wallet payment before Accio submit
+    // MVR / PSP: consent gate — full bundle when company uses `employer-screening-consent`,
+    // otherwise legacy per-instrument consent flags.
     if (blockId === 'driver-mvr') {
-      const consentReady = employerExtras?.hasBgcheckConsent === true
+      const screeningBundleFlow =
+        employerExtras?.installedEmployerBlocks?.includes('employer-screening-consent') === true
+      const bundleComplete = employerExtras?.completionFlags?.hasScreeningConsentBundle === true
+      const consentReady = screeningBundleFlow
+        ? bundleComplete
+        : employerExtras?.hasBgcheckConsent === true
+      const waitTitle = screeningBundleFlow
+        ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
+        : 'Waiting for candidate to sign disclosure'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
           <button
             onClick={() => { setAccioOrderProduct('mvr'); setShowAccioOrderModal(true) }}
             disabled={!consentReady || mvrEmployerOrderDone}
-            title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
+            title={consentReady ? 'Order MVR' : waitTitle}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               mvrEmployerOrderDone
                 ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
@@ -397,14 +443,22 @@ export default function CareerCardModal({
     }
 
     if (blockId === 'driver-psp') {
-      const consentReady = employerExtras?.hasPspFmcsaConsent === true
+      const screeningBundleFlow =
+        employerExtras?.installedEmployerBlocks?.includes('employer-screening-consent') === true
+      const bundleComplete = employerExtras?.completionFlags?.hasScreeningConsentBundle === true
+      const consentReady = screeningBundleFlow
+        ? bundleComplete
+        : employerExtras?.hasPspFmcsaConsent === true
+      const waitTitle = screeningBundleFlow
+        ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
+        : 'Waiting for candidate to sign FMCSA PSP disclosure'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
           <button
             onClick={() => { setAccioOrderProduct('psp'); setShowAccioOrderModal(true) }}
             disabled={!consentReady || pspEmployerOrderDone}
-            title={consentReady ? 'Order PSP' : 'Waiting for candidate to sign FMCSA PSP disclosure'}
+            title={consentReady ? 'Order PSP' : waitTitle}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               pspEmployerOrderDone
                 ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
@@ -721,6 +775,11 @@ export default function CareerCardModal({
       candidateName={card?.name}
       bgcheckConsentFormData={employerExtras?.bgcheckConsentFormData ?? null}
       pspFmcsaConsentFormData={employerExtras?.pspFmcsaConsentFormData ?? null}
+      useStoredConsentOnly={Boolean(
+        employerExtras?.installedEmployerBlocks?.includes('employer-screening-consent') &&
+          employerExtras?.screeningConsentBundleId &&
+          employerExtras?.completionFlags?.hasScreeningConsentBundle,
+      )}
       loading={accioOrderLoading}
       error={accioOrderError}
       success={accioOrderProduct === 'mvr' ? mvrEmployerOrderDone : pspEmployerOrderDone}
@@ -785,6 +844,7 @@ function MvrOrderModal({
   candidateName,
   bgcheckConsentFormData,
   pspFmcsaConsentFormData,
+  useStoredConsentOnly = false,
   loading,
   error,
   success,
@@ -798,10 +858,12 @@ function MvrOrderModal({
   candidateName?: string
   bgcheckConsentFormData: Record<string, unknown> | null
   pspFmcsaConsentFormData: Record<string, unknown> | null
+  /** Identity + SSN already live in `screening_consent_bundles` — employer only pays here */
+  useStoredConsentOnly?: boolean
   loading: boolean
   error: string | null
   success: boolean
-  onOrder: (txHash: string, fields: MvrOrderFields) => void
+  onOrder: (txHash: string, fields?: MvrOrderFields) => void
   onClose: () => void
   theme: string
 }) {
@@ -835,14 +897,20 @@ function MvrOrderModal({
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const isPaymentComplete = !!paymentTxHash
 
-  const isFormValid = Boolean(
-    firstName.trim() && lastName.trim() && email.trim() && dob.trim() &&
-    isValidSsn(ssn) && dlNumber.trim() && dlState.trim() &&
-    address.trim() && city.trim() && state.trim() && zip.trim()
-  )
+  const isFormValid = useStoredConsentOnly
+    ? true
+    : Boolean(
+        firstName.trim() && lastName.trim() && email.trim() && dob.trim() &&
+        isValidSsn(ssn) && dlNumber.trim() && dlState.trim() &&
+        address.trim() && city.trim() && state.trim() && zip.trim()
+      )
 
   const handlePaymentSuccess = (txHash: string) => {
     setPaymentTxHash(txHash)
+    if (useStoredConsentOnly) {
+      onOrder(txHash)
+      return
+    }
     onOrder(txHash, {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -899,6 +967,14 @@ function MvrOrderModal({
           </div>
         ) : (
           <div className="p-5 space-y-4">
+            {useStoredConsentOnly ? (
+              <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
+                This candidate&apos;s FCRA disclosure, FMCSA PSP authorization, CDLIS written consent, and full identity
+                are already on file from their screening consent package. Complete USDC payment below — Storm will submit
+                the order to the vendor using the stored package (no re-entry).
+              </p>
+            ) : (
+              <>
             {/* Pre-fill notice */}
             {fd && (
               <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-400/70' : 'text-teal-600'}`}>
@@ -985,6 +1061,8 @@ function MvrOrderModal({
                 </div>
               </div>
             </div>
+              </>
+            )}
 
             {/* Status messages */}
             {error && (

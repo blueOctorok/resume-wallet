@@ -1,15 +1,10 @@
 import type { PageType } from '@/stores/types'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 
-/** Employer screening not yet fulfilled — hub + career card use this instead of self-pay “Order” copy. */
+/** Employer screening — candidate sees progress only; full report opens for the employer purchaser. */
 export interface HubPendingEmployerScreening {
   requestId: string
   companyName: string
-  /**
-   * When the employer requested PSP+MVR (`driver-psp`), the MVR hub row should
-   * deep-link to the PSP wizard (`pageRoute` `psp`), not the self-order MVR page.
-   */
-  bundledWithBlockType?: 'driver-psp'
 }
 
 /**
@@ -56,7 +51,7 @@ function latestHubDocByType(documents: HubDocument[], type: HubDocument['type'])
 /** Artifact row for hub block management (formerly “Block files”). */
 export interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp' | 'mvr' | 'psp' | 'portfolio' | 'github' | 'employment_verifications'
+  type: 'resume' | 'dotapp' | 'mvr' | 'psp' | 'screening_consent' | 'portfolio' | 'github' | 'employment_verifications'
   title: string
   subtitle?: string
   createdAt?: string
@@ -102,6 +97,9 @@ export function pickHubDocForCareerBlock(documents: HubDocument[], blockType: st
   }
   if (blockType === 'driver-psp') {
     return latestHubDocByType(documents, 'psp') ?? documents.find((d) => d.type === 'psp') ?? null
+  }
+  if (blockType === 'driver-screening-consent') {
+    return latestHubDocByType(documents, 'screening_consent') ?? documents.find((d) => d.type === 'screening_consent') ?? null
   }
   if (blockType === 'developer-portfolio') {
     return documents.find((d) => d.type === 'portfolio') ?? null

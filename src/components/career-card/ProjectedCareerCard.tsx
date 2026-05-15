@@ -19,7 +19,7 @@ import type {
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import CareerCardDynamicSections from '@/components/career-card/CareerCardDynamicSections'
-import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
+import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData, ScreeningConsentData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
 import {
@@ -31,6 +31,7 @@ import {
   PortfolioSection,
   GitHubSection,
   ProjectsSection,
+  ScreeningConsentSection,
 } from './sections'
 
 /**
@@ -561,10 +562,16 @@ export default function ProjectedCareerCard({
                     ? () => {
                         if (
                           section.blockType === 'driver-mvr' &&
-                          (section.data as MvrData).pendingEmployerRequest?.bundledWithBlockType ===
-                            'driver-psp'
+                          (section.data as MvrData).pendingEmployerRequest
                         ) {
-                          onNavigateToBlock('driver-psp')
+                          onNavigateToBlock('driver-screening-consent')
+                          return
+                        }
+                        if (
+                          section.blockType === 'driver-psp' &&
+                          (section.data as PspData).pendingEmployerRequest
+                        ) {
+                          onNavigateToBlock('driver-screening-consent')
                           return
                         }
                         onNavigateToBlock(section.blockType)
@@ -852,6 +859,15 @@ function SectionRenderer({
           onAction={onAction}
           userId={userId}
           walletAddress={walletAddress}
+        />
+      )
+    case 'driver-screening-consent':
+      return (
+        <ScreeningConsentSection
+          data={section.data as ScreeningConsentData}
+          mode={mode}
+          isDark={isDark}
+          onAction={onAction}
         />
       )
     case 'driver-mvr':

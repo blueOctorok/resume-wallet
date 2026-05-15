@@ -4,6 +4,7 @@ import {
   FileSearch,
   Folder,
   ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react'
 
 export type EmployerBlockCategoryId = 'general' | 'drivers' | 'developers'
@@ -53,6 +54,17 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
     complianceNote: 'Supports FMCSA driver qualification file requirements.',
   },
   {
+    id: 'employer-screening-consent',
+    label: 'Screening consent collection',
+    description:
+      'Collect FCRA Background Check Disclosure, FMCSA PSP Authorization, and CDLIS written consent in one bundle per candidate. Required before MVR/PSP orders; CDLIS portion is stored for compliance and a future CDLIS inquiry block (not sent in Accio PSP XML today).',
+    icon: ShieldCheck,
+    categoryId: 'drivers',
+    suggestedOrder: -4,
+    installable: true,
+    complianceNote: 'FCRA + FMCSA compliant consent collection.',
+  },
+  {
     id: 'employer-mvr-orders',
     label: 'MVR ordering',
     description: 'Request and place employer-paid motor vehicle reports through your integrated CRA.',
@@ -63,9 +75,10 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
     pricingNote: 'Per-order USDC pricing at checkout.',
   },
   {
-    id: 'employer-psp-mvr-bundle',
-    label: 'PSP + MVR screening',
-    description: 'Bundled motor vehicle reports and FMCSA pre-employment screening (crash/inspection history). PSP always includes MVR.',
+    id: 'employer-psp-orders',
+    label: 'PSP ordering',
+    description:
+      'FMCSA Pre-Employment Screening (crash/inspection history) via your integrated CRA. Requires screening consent on file for the candidate; MVR is ordered separately when needed.',
     icon: ShieldAlert,
     categoryId: 'drivers',
     suggestedOrder: 1,

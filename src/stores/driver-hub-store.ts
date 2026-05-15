@@ -143,6 +143,7 @@ const initialStats: DriverHubStats = {
   totalSpentUSDC: 0,
   careerCardViewsThisWeek: 0,
   careerCardViewsTotal: 0,
+  hasScreeningConsentBundle: false,
 }
 
 const initialState: DriverHubState = {

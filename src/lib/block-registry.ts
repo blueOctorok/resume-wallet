@@ -92,7 +92,7 @@ export interface BlockDefinition {
    * request is available. null means no gating (not used when employerRequestable
    * is true — every requestable block should list at least one employer block).
    *
-   * @example ['employer-mvr-orders', 'employer-psp-mvr-bundle'] — either grants MVR capability
+   * @example ['employer-mvr-orders'] — standalone MVR ordering for the company
    */
   requiredEmployerBlocks: string[] | null
 
@@ -293,6 +293,23 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requiredEmployerBlocks: ['employer-dot-screening'],
   },
   {
+    id: 'driver-screening-consent',
+    label: 'Screening consent',
+    description:
+      'Sign FCRA background check disclosure, FMCSA PSP authorization, and CDLIS written consent in one flow for employers who use Storm screening.',
+    icon: 'ShieldCheck',
+    categoryId: 'drivers',
+    suggestedFor: ['driver', 'cdl', 'mvr', 'psp', 'screening', 'background check', 'fmcsa', 'trucking'],
+    complexity: 'moderate',
+    appearsOnCareerCard: false,
+    pageRoute: 'screening-consent',
+    dataTables: ['screening_consent_bundles'],
+    employerRequestable: true,
+    requestLabel: 'Screening Consent',
+    completionField: 'hasScreeningConsentBundle',
+    requiredEmployerBlocks: ['employer-screening-consent'],
+  },
+  {
     id: 'driver-mvr',
     label: 'Motor Vehicle Record',
     description: 'Order and display your verified MVR for employers',
@@ -306,7 +323,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'MVR',
     completionField: 'hasMvr',
-    requiredEmployerBlocks: ['employer-mvr-orders', 'employer-psp-mvr-bundle'],
+    requiredEmployerBlocks: ['employer-mvr-orders'],
   },
   {
     id: 'driver-psp',
@@ -320,9 +337,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     pageRoute: 'psp',
     dataTables: ['block_driver_psp'],
     employerRequestable: true,
-    requestLabel: 'PSP + MVR',
+    requestLabel: 'PSP',
     completionField: 'hasPsp',
-    requiredEmployerBlocks: ['employer-psp-mvr-bundle'],
+    requiredEmployerBlocks: ['employer-psp-orders'],
   },
   {
     id: 'driver-cdl-credentials',
@@ -447,6 +464,13 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     borderHover: { dark: 'border-amber-500/40', light: 'border-amber-400/50' },
     glowColor:   'rgba(245,158,11,0.15)',
     badgeColor:  'bg-amber-500',
+  },
+  'driver-screening-consent': {
+    iconBg:      { dark: 'bg-slate-500/15',   light: 'bg-slate-100' },
+    iconText:    { dark: 'text-slate-300',     light: 'text-slate-700' },
+    borderHover: { dark: 'border-slate-500/40', light: 'border-slate-400/50' },
+    glowColor:   'rgba(100,116,139,0.15)',
+    badgeColor:  'bg-slate-500',
   },
   'driver-mvr': {
     iconBg:      { dark: 'bg-purple-500/15',   light: 'bg-purple-50' },

@@ -28,6 +28,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'employment-verification',
   'mvr',
   'psp',
+  'screening-consent',
   'portfolio',
   'github',
   // 'jobs' intentionally omitted — legacy nav targets get redirected to
@@ -83,6 +84,11 @@ const MvrOrderForm = dynamic(
 const PspOrderForm = dynamic(
   () => import('@/components/PspOrderForm').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading PSP order form...' fullScreen={false} /> }
+)
+
+const ScreeningConsentBlock = dynamic(
+  () => import('@/components/blocks/ScreeningConsentBlock').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Loading screening consent…' fullScreen={false} /> }
 )
 
 const PortfolioPage = dynamic(
@@ -230,6 +236,14 @@ export default function CandidateShell() {
     return (
       <div className='max-w-2xl mx-auto'>
         <PspOrderForm userAddress={user?.address ?? ''} onBack={goBack} />
+      </div>
+    )
+  }
+
+  if (currentPage === 'screening-consent') {
+    return (
+      <div className='max-w-2xl mx-auto'>
+        <ScreeningConsentBlock userAddress={user?.address ?? ''} onBack={goBack} />
       </div>
     )
   }

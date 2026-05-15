@@ -118,7 +118,7 @@ export default function ConstructSectionWrapper({
                 {getBlockDefinition(blockType)?.label ?? blockType}
               </p>
               {doc &&
-                (doc.type === 'mvr' || doc.type === 'psp') &&
+                (doc.type === 'mvr' || doc.type === 'psp' || doc.type === 'screening_consent') &&
                 doc.status !== 'empty' && (
                   <span
                     className={cn(
@@ -236,14 +236,7 @@ export default function ConstructSectionWrapper({
                 !doc.employerPaidScreening && (
                   <button
                     type='button'
-                    onClick={() => {
-                      if (doc.pendingEmployerRequest?.bundledWithBlockType === 'driver-psp') {
-                        const route = getBlockDefinition('driver-psp')?.pageRoute
-                        setCurrentPage((route as PageType) ?? 'psp')
-                        return
-                      }
-                      setCurrentPage('mvr')
-                    }}
+                    onClick={() => setCurrentPage((doc.editPage as PageType) ?? 'mvr')}
                     className={cn(btn, tealBtn)}
                   >
                     {doc.pendingEmployerRequest ? 'Continue screening' : doc.status === 'empty' ? 'Order MVR' : 'Open'}
@@ -258,7 +251,11 @@ export default function ConstructSectionWrapper({
                 doc.editPage &&
                 doc.status !== 'complete' &&
                 !doc.employerPaidScreening && (
-                  <button type='button' onClick={() => setCurrentPage('psp')} className={cn(btn, tealBtn)}>
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage((doc.editPage as PageType) ?? 'psp')}
+                    className={cn(btn, tealBtn)}
+                  >
                     {doc.pendingEmployerRequest ? 'Continue' : doc.status === 'empty' ? 'Order PSP' : 'Open'}
                   </button>
                 )}
@@ -266,6 +263,16 @@ export default function ConstructSectionWrapper({
                 <button type='button' onClick={() => hub.setPspViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
                   <Eye className='w-3 h-3' /> View
                 </button>
+              )}
+              {doc?.type === 'screening_consent' && doc.editPage && doc.status !== 'complete' && (
+                <button type='button' onClick={() => setCurrentPage(doc.editPage)} className={cn(btn, tealBtn)}>
+                  {doc.status === 'empty' ? 'Start' : 'Continue'}
+                </button>
+              )}
+              {doc?.type === 'screening_consent' && doc.status === 'complete' && (
+                <span className={cn('text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-emerald-300' : 'text-emerald-800')}>
+                  On file
+                </span>
               )}
               {doc?.canVerify && (
                 <button

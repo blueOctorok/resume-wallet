@@ -238,8 +238,14 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
 
   const activeEmployerRequest = capturedRequest || pendingEmployerRequest
 
-  // Employer-initiated flow: two-step disclosure wizard OR success screen
-  if (activeEmployerRequest || employerOrderComplete) {
+  // Only enter the unified consent wizard when the employer explicitly requested the
+  // driver-screening-consent block. A plain psp_order request (legacy, no consent block)
+  // goes through the normal self-order form below.
+  const needsConsentBundle =
+    activeEmployerRequest?.targetBlockType === 'driver-screening-consent'
+
+  // Employer-initiated flow: three-step consent wizard OR success screen
+  if ((needsConsentBundle && activeEmployerRequest) || employerOrderComplete) {
     if (employerOrderComplete) {
       return (
         <div className='w-full p-4 sm:p-6 lg:p-8'>
@@ -251,10 +257,11 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                 <CheckCircle className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
               </div>
               <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
-                PSP + MVR Order Submitted
+                Screening consent complete
               </h3>
               <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                All three steps are complete and your PSP + MVR order has been submitted to Accio. Results typically arrive within 24–48 hours.
+                All three instruments are on file. Your employer can place MVR or PSP orders from their dashboard when
+                they are ready — nothing has been sent to the vendor yet on your behalf.
               </p>
               <Button variant='primary' onClick={onBack}>
                 Back to Hub
@@ -367,6 +374,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               pspProfile={pspProfileSnapshot}
               deferredBgConsent={deferredBgConsent}
               deferredPspConsent={deferredPspConsent}
+              submitBehavior="consent-bundle-only"
               onPrevious={() => setPspEmployerStep('psp-disclosure')}
               onOrderComplete={async () => {
                 setEmployerOrderComplete(true)

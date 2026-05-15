@@ -7,9 +7,10 @@ import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
-import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { useUIStore } from '@/stores'
+import LoadingScreen from './LoadingScreen'
 
 interface MvrOrderFormProps {
   userAddress: string
@@ -50,8 +51,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // we MUST surface the company-scoped FCRA disclosure before any self-service flow.
   // This is defense in depth — the inbox flow handles it too, but candidates can deep-link
   // here straight from the bell notification (`?onboard=mvr`), bypassing the inbox entirely.
-  const { pendingRequest: pendingEmployerRequest, refresh: refreshPendingRequest } =
-    usePendingScreeningRequest('mvr', userAddress)
+  const { pendingRequest: pendingEmployerRequest } = usePendingScreeningRequest('mvr', userAddress)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
@@ -172,77 +172,22 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
     isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'
   }`
 
-  // Tracks whether the employer-initiated order was placed so we don't fall through to the self-order form
-  const [employerOrderComplete, setEmployerOrderComplete] = useState(false)
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
-  // Capture the request the moment we see it, so the wizard owns its lifecycle.
-  // Without this: signing the disclosure marks the candidate_request as 'completed',
-  // refreshPendingRequest() returns null, and the component briefly renders the
-  // self-order form between the sign callback and onOrderPlaced firing.
-  const [capturedRequest, setCapturedRequest] = useState(pendingEmployerRequest)
+  // Only redirect to the unified consent page when the employer explicitly requested the
+  // screening consent bundle (driver-screening-consent). A plain mvr_order request from a
+  // company without the consent block should stay on this form.
+  const needsConsentBundle =
+    pendingEmployerRequest?.targetBlockType === 'driver-screening-consent'
+
   useEffect(() => {
-    if (pendingEmployerRequest && !capturedRequest) {
-      setCapturedRequest(pendingEmployerRequest)
+    if (needsConsentBundle) {
+      setCurrentPage('screening-consent')
     }
-  }, [pendingEmployerRequest, capturedRequest])
+  }, [needsConsentBundle, setCurrentPage])
 
-  const activeEmployerRequest = capturedRequest || pendingEmployerRequest
-
-  // Employer-initiated flow: render the combined disclosure + order form as the full page
-  if (activeEmployerRequest || employerOrderComplete) {
-    if (employerOrderComplete) {
-      return (
-        <div className='w-full p-4 sm:p-6 lg:p-8'>
-          <div className='max-w-2xl mx-auto'>
-            <div className={`${cardClass} p-8 text-center`}>
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
-                isDarkTheme(theme) ? 'bg-green-500/20' : 'bg-green-50'
-              }`}>
-                <CheckCircle className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
-              </div>
-              <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
-                MVR Order Submitted
-              </h3>
-              <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                Your disclosure has been signed and the MVR order has been submitted to Accio. Results typically arrive within 24–48 hours.
-              </p>
-              <Button variant='primary' onClick={onBack}>
-                Back to Hub
-              </Button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className='w-full p-4 sm:p-6 lg:p-8'>
-        <div className='max-w-3xl mx-auto'>
-          <div className="mb-4">
-            <BackToHubButton onClick={onBack} />
-          </div>
-          <BackgroundCheckDisclosure
-            requestId={activeEmployerRequest!.id}
-            companyName={activeEmployerRequest!.companyName}
-            userAddress={userAddress}
-            renderInline
-            fulfillOrder
-            onClose={onBack}
-            // Don't refresh pendingRequest here — the consent endpoint marks the
-            // request 'completed' immediately, which would unmount this wizard
-            // before onOrderPlaced fires. The wizard owns its lifecycle via
-            // capturedRequest + employerOrderComplete.
-            onConsentSigned={() => {}}
-            onOrderPlaced={async () => {
-              setEmployerOrderComplete(true)
-              void refreshPendingRequest()
-              const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
-              void syncDriverHubFromApi(userAddress)
-            }}
-          />
-        </div>
-      </div>
-    )
+  if (needsConsentBundle) {
+    return <LoadingScreen message="Opening screening consent…" fullScreen={false} />
   }
 
   return (

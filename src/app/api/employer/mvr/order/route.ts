@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { companyCanOrderMvr } from '@/lib/employer-company-access'
+import { companyCanOrderMvr, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -124,6 +124,16 @@ export async function POST(request: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    if (await companyHasScreeningConsentBlock(supabase, companyId)) {
+      return NextResponse.json(
+        {
+          error:
+            'Your company collects screening consent in Storm first. After the candidate finishes the three-step package, place MVR orders with POST /api/employer/screenings/order (payment + consent bundle id).',
+        },
+        { status: 400 },
+      )
     }
 
     if (!(await companyCanOrderMvr(supabase, companyId))) {

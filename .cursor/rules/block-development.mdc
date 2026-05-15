@@ -66,7 +66,7 @@ Blocks signal what sections appear on a candidate's career card.
 
 ## Employer blocks (company-scoped)
 
-**Audience split:** Candidate blocks live in `hub_blocks` + `block-registry.ts`. **Employer product blocks** (e.g. `employer-mvr-orders`, `employer-psp-mvr-bundle`) live in **`employer_hub_blocks`** + **`employer-block-registry.ts`**, keyed by **`company_id`**. Universal employer features (jobs, applicants, talent search, messaging) are **not** employer blocks. **Bundle rule:** PSP is never ordered without MVR — `employer-psp-mvr-bundle` grants both capabilities; standalone `employer-mvr-orders` is for MVR-only companies. API guards use `companyCanOrderMvr` / `companyCanOrderPsp` from `employer-company-access.ts`.
+**Audience split:** Candidate blocks live in `hub_blocks` + `block-registry.ts`. **Employer product blocks** (e.g. `employer-mvr-orders`, `employer-psp-orders`, `employer-screening-consent`) live in **`employer_hub_blocks`** + **`employer-block-registry.ts`**, keyed by **`company_id`**. Universal employer features (jobs, applicants, talent search, messaging) are **not** employer blocks. **Screening consent:** `employer-screening-consent` collects the FCRA + FMCSA + CDLIS package per candidate; MVR and PSP vendor orders are placed separately via `employer-mvr-orders` / `employer-psp-orders` after payment, using **`/api/employer/screenings/order`** when the consent bundle is complete. API guards use `companyCanOrderMvr` / `companyCanOrderPsp` / `companyHasScreeningConsentBlock` from `employer-company-access.ts`.
 
 **Mutations:** Install/remove is **owner/admin** only (RLS + API guards). **Storm central admin** can also install/remove via `/api/admin/companies/[id]/blocks/*` with a required **reason** on admin-initiated removals.
 

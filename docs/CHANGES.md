@@ -4,6 +4,38 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Screening consent — audit fixes** (May 2026)
+
+Three bugs found during post-implementation audit:
+
+1. **Security: plaintext SSN in `form_data`** — `POST /api/candidate/screening-consent` was storing the full `formData` payload (including `ssn`) in the JSONB `form_data` column alongside the AES-256-GCM ciphertext in `ssn_encrypted`, defeating the encryption entirely. Fixed: `ssn` is stripped from `formData` before the INSERT; the order endpoint already reads SSN exclusively from `decryptScreeningSsn(bundle.ssn_encrypted)`.
+
+2. **Wrong column: `companies.name` → `companies.company_name`** — The fallback company name lookup used `.select('name')` but the actual column is `company_name`. The bug was masked because the client always supplies `companyName`, but any code path that reached the DB fallback would silently resolve to `"the employer"`.
+
+3. **MVR/PSP form dead-end** — `MvrOrderForm` and `PspOrderForm` redirected to `screening-consent` whenever *any* pending employer screening request existed, including plain `mvr_order` / `psp_order` requests from companies without the consent block. The consent wizard then POSTed to `/api/candidate/screening-consent` which rejected it (`"endpoint only completes screening consent bundle requests"`). Fixed: redirect and wizard branch only activate when `pendingEmployerRequest.targetBlockType === 'driver-screening-consent'`.
+
+| File | Fix |
+|---|---|
+| `src/app/api/candidate/screening-consent/route.ts` | Strip `ssn` from `formData` before INSERT; fix `companies.company_name` column |
+| `src/components/MvrOrderForm.tsx` | Redirect only when `targetBlockType === 'driver-screening-consent'` |
+| `src/components/PspOrderForm.tsx` | Enter consent wizard only when `targetBlockType === 'driver-screening-consent'` |
+
+---
+
+## **Screening consent block + employer MVR/PSP order split** (May 2026)
+
+Decouples **consent capture** (FCRA + FMCSA + CDLIS + encrypted identity in `screening_consent_bundles`) from **Accio order placement**. Companies with **`employer-screening-consent`** collect the three-instrument package first; **`POST /api/employer/screenings/order`** places MVR or PSP using the stored bundle after USDC payment. **`employer-psp-mvr-bundle`** is retired in favor of **`employer-psp-orders`** + **`employer-screening-consent`**. Candidate block **`driver-screening-consent`** (`pageRoute: screening-consent`), hub My Files rows, self-only career card section injection, Stormi journey step, and talent API **`screeningConsentBundleId`** / **`completionFlags.hasScreeningConsentBundle`** support employer gating in **`CareerCardModal`**. Legacy **`POST /api/employer/mvr/order`** and **`psp/order`** return **400** when the screening-consent employer block is installed.
+
+| Area | Files (representative) |
+|---|---|
+| DB | `supabase/migrations/085_screening_consent_bundles.sql`, `086_employer_psp_bundle_split.sql` |
+| APIs | `src/app/api/candidate/screening-consent/route.ts`, `src/app/api/employer/screenings/order/route.ts`, `src/app/api/employer/talent/[userId]/route.ts` |
+| Registry / access | `src/lib/block-registry.ts`, `src/lib/employer-block-registry.ts`, `src/lib/employer-company-access.ts` |
+| UI / shell | `ScreeningConsentBlock.tsx`, `CandidateShell.tsx`, `use-hub-documents.tsx`, `CareerCardModal.tsx`, `ProjectedCareerCard` / `ScreeningConsentSection`, `BlockIllustrations.tsx`, `EmployerHub.tsx` tile colors |
+| Docs / rules | `docs/PROJECT_ROADMAP.md`, `.cursor/rules/block-development.mdc` |
+
+---
+
 ## **Employer outreach: Edit always visible + in_progress editable** (May 2026)
 
 - **Cause:** `OutreachCandidateCard` only rendered **Edit** for `pending` and `viewed`. Anyone in **`in_progress`** got an empty grid cell, which looked random next to other columns.

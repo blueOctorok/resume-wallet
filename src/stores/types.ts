@@ -34,6 +34,7 @@ export type PageType =
   | 'profile-setup'
   | 'messages'
   | 'employment-verification'
+  | 'screening-consent'
   | null
 
 // Candidate encompasses all non-employer roles (driver, developer, pilot, etc.)
@@ -143,8 +144,10 @@ export interface DriverHubStats {
   totalSpentUSDC: number
   /** Employer opens of this candidate's card (talent search / pipeline), last 7 days */
   careerCardViewsThisWeek: number
-  /** All-time employer career card views */
-  careerCardViewsTotal: number
+  /** All-time employer opens (talent search / pipeline) — Stormi context */
+  careerCardViewsTotal?: number
+  /** At least one complete screening_consent_bundles row (any company) */
+  hasScreeningConsentBundle?: boolean
 }
 
 // Profile conflict resolution

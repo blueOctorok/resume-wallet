@@ -121,6 +121,19 @@ function PspIllustration({ accentText, isDark }: IllustrationProps) {
   )
 }
 
+/** FCRA + FMCSA + CDLIS consent package — distinct from PSP crash tile */
+function ScreeningConsentIllustration({ accentText, isDark }: IllustrationProps) {
+  const ring = isDark ? 'ring-slate-400/30' : 'ring-slate-500/20'
+  return (
+    <IllustrationFrame accentText={accentText} isDark={isDark}>
+      <div className={cn('relative flex flex-col items-center gap-0.5 rounded-xl p-1 ring-1', ring)}>
+        <ShieldCheck className={cn('h-8 w-8 drop-shadow-sm', accentText)} />
+        <FileText className={cn('h-4 w-4 opacity-70', accentText)} />
+      </div>
+    </IllustrationFrame>
+  )
+}
+
 /** Voluntary employer date confirmation — distinct from MVR shield */
 function EmploymentVerificationIllustration({ accentText, isDark }: IllustrationProps) {
   return (
@@ -209,6 +222,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'driver-dot-application': DotAppIllustration,
   'driver-mvr':             MvrIllustration,
   'driver-psp':             PspIllustration,
+  'driver-screening-consent': ScreeningConsentIllustration,
   'driver-cdl-credentials': CdlIllustration,
   'developer-portfolio':    PortfolioIllustration,
   'developer-github':       GithubIllustration,

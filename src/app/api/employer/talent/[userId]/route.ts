@@ -208,6 +208,16 @@ export async function GET(
       .eq('id', companyId)
       .maybeSingle()
 
+    const { data: latestScreeningBundle } = await supabase
+      .from('screening_consent_bundles')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('driver_user_id', userId)
+      .eq('status', 'complete')
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle()
+
     const completionFlags = {
       hasResume: Boolean(careerRow.has_resume),
       hasMvr: Boolean(careerRow.has_mvr),
@@ -215,6 +225,7 @@ export async function GET(
       hasDriverApp: Boolean(careerRow.has_driver_app),
       hasProfile: Boolean(careerRow.has_profile),
       hasWorkHistory: Boolean(careerRow.has_work_history),
+      hasScreeningConsentBundle: Boolean(latestScreeningBundle),
     }
 
     return NextResponse.json({
@@ -234,6 +245,7 @@ export async function GET(
       hasPspFmcsaConsent: !!pspFmcsaConsent,
       pspFmcsaConsentSignedAt: pspFmcsaConsent?.signed_at || null,
       pspFmcsaConsentFormData: pspFmcsaConsent?.form_data || null,
+      screeningConsentBundleId: latestScreeningBundle?.id ?? null,
       completionFlags,
       completenessScore: careerRow.completeness_score ?? 0,
       verifiedJobsCount: careerRow.verified_jobs_count ?? 0,

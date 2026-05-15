@@ -52,15 +52,19 @@ export interface EmployerPspMvrBundleAttestationStepProps {
   deferredPspConsent: DeferredPspConsentData | null
   onPrevious: () => void
   onOrderComplete: () => void | Promise<void>
+  /**
+   * `accio-bundle` (default): legacy POST bg + psp + PATCH CDLIS + fulfill-screening.
+   * `consent-bundle-only`: one POST to /api/candidate/screening-consent — no vendor order.
+   */
+  submitBehavior?: 'accio-bundle' | 'consent-bundle-only'
 }
 
 /**
  * Step 3 of the employer-requested PSP + MVR bundle: **CDLIS written consent**
  * (`docs/employer-screenings/cdlis-written-consent.md`), then vendor identity (SSN).
  *
- * On submit this component batch-POSTs all three consent records (BG, FMCSA PSP,
- * CDLIS merge) and then calls `fulfill-screening` to place the Accio order.
- * Nothing is persisted until the user clicks "Submit".
+ * On submit: either batch consent + Accio (`accio-bundle`) or consent-only bundle
+ * (`consent-bundle-only`) for the driver-screening-consent block.
  */
 export default function EmployerPspMvrBundleAttestationStep({
   userAddress,
@@ -72,6 +76,7 @@ export default function EmployerPspMvrBundleAttestationStep({
   deferredPspConsent,
   onPrevious,
   onOrderComplete,
+  submitBehavior = 'accio-bundle',
 }: EmployerPspMvrBundleAttestationStepProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
@@ -115,7 +120,11 @@ export default function EmployerPspMvrBundleAttestationStep({
       return
     }
     if (!isValidSsn(normalizeSsnDigits(ssn))) {
-      setError('Enter your full 9-digit Social Security Number so the vendor can run the PSP + MVR bundle.')
+      setError(
+        submitBehavior === 'consent-bundle-only'
+          ? 'Enter your full 9-digit Social Security Number so your identity can be verified when your employer places a screening order.'
+          : 'Enter your full 9-digit Social Security Number so the vendor can run the PSP + MVR bundle.',
+      )
       return
     }
 
@@ -139,6 +148,52 @@ export default function EmployerPspMvrBundleAttestationStep({
 
     setSubmitting(true)
     try {
+      if (submitBehavior === 'consent-bundle-only') {
+        const cdlisPayload = {
+          disclosureRecipientName: companyName.trim(),
+          consentDateIso: consentDateIso.trim(),
+          typedSignature: typedSignature.trim(),
+          printFirstName: printFirstName.trim(),
+          printLastName: printLastName.trim(),
+          submittedAtUtc: new Date().toISOString(),
+        }
+        const fullDigits = normalizeSsnDigits(ssn)
+        const formData = {
+          firstName: firstName ?? '',
+          lastName: lastName ?? '',
+          middleName: merged.middleName?.trim() || '',
+          dob: dob ?? '',
+          dateOfBirth: dob ?? '',
+          ssn: fullDigits,
+          dlNumber: dlNumber ?? '',
+          dlState: dlState ?? '',
+          address: address ?? '',
+          city: city ?? '',
+          state: state ?? '',
+          zip: zip ?? '',
+          email: email ?? '',
+          phone: merged.phone?.trim() || '',
+        }
+        const res = await fetch('/api/candidate/screening-consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
+          body: JSON.stringify({
+            requestId,
+            companyName: companyName.trim(),
+            deferredBgConsent,
+            deferredPspConsent,
+            cdlisWrittenConsent: cdlisPayload,
+            formData,
+          }),
+        })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}))
+          throw new Error(typeof d.error === 'string' ? d.error : 'Failed to save screening consent')
+        }
+        await onOrderComplete()
+        return
+      }
+
       // ── 1. POST background check consent (step 1) ──────────────────────
       const bgRes = await fetch('/api/candidate/bgcheck-consent', {
         method: 'POST',
@@ -315,8 +370,10 @@ export default function EmployerPspMvrBundleAttestationStep({
       <div className={`border-t pt-6 space-y-5 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <p className={`text-sm ${textSecondary}`}>
           The CDLIS instrument above does not ask for your SSN. The line below is for{' '}
-          <strong className={textPrimary}>Key Background Screening / Accio</strong> only — so the vendor can match
-          your identity when ordering PSP + MVR.
+          <strong className={textPrimary}>Key Background Screening / Accio</strong> only —{' '}
+          {submitBehavior === 'consent-bundle-only'
+            ? 'so your employer can run MVR or PSP later without asking you again. It is encrypted in Storm’s database.'
+            : 'so the vendor can match your identity when ordering PSP + MVR.'}
         </p>
 
         <div>
@@ -344,7 +401,7 @@ export default function EmployerPspMvrBundleAttestationStep({
             Previous
           </Button>
           <Button type="button" variant="primary" onClick={() => void handleSubmit()} disabled={submitting} isLoading={submitting}>
-            Submit PSP + MVR order
+            {submitBehavior === 'consent-bundle-only' ? 'Save screening consent' : 'Submit PSP + MVR order'}
           </Button>
         </div>
       </div>

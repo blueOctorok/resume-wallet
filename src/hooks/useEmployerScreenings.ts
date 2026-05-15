@@ -7,11 +7,25 @@ interface ScreeningsResponse {
   success: boolean
   mvr: ScreeningRow[]
   psp: ScreeningRow[]
+  consentBundles?: Array<{
+    id: string
+    driverUserId: string
+    status: string
+    completedAt: string | null
+    createdAt: string
+    bg: { signedName: string | null; signedAt: string } | null
+    psp: { signedName: string | null; signedAt: string; formVersion: string | null } | null
+  }>
 }
 
 interface UseEmployerScreeningsResult {
   rows: ScreeningRow[]
   byUserId: ScreeningsByUserId
+  /** Latest screening consent bundle per candidate user id (for outreach UI) */
+  consentBundleByUserId: Map<
+    string,
+    NonNullable<ScreeningsResponse['consentBundles']>[number]
+  >
   loading: boolean
   refreshing: boolean
   error: string | null
@@ -31,6 +45,7 @@ export function useEmployerScreenings(
   walletAddress: string | null | undefined,
 ): UseEmployerScreeningsResult {
   const [rows, setRows] = useState<ScreeningRow[]>([])
+  const [consentBundles, setConsentBundles] = useState<NonNullable<ScreeningsResponse['consentBundles']>>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,8 +69,11 @@ export function useEmployerScreenings(
           (a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime(),
         )
         setRows(merged)
+        setConsentBundles(data.consentBundles ?? [])
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load screenings')
+        setRows([])
+        setConsentBundles([])
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -83,5 +101,14 @@ export function useEmployerScreenings(
     return m
   }, [rows])
 
-  return { rows, byUserId, loading, refreshing, error, refresh }
+  const consentBundleByUserId = useMemo(() => {
+    const m = new Map<string, NonNullable<ScreeningsResponse['consentBundles']>[number]>()
+    for (const b of consentBundles) {
+      if (!b.driverUserId) continue
+      if (!m.has(b.driverUserId)) m.set(b.driverUserId, b)
+    }
+    return m
+  }, [consentBundles])
+
+  return { rows, byUserId, consentBundleByUserId, loading, refreshing, error, refresh }
 }
