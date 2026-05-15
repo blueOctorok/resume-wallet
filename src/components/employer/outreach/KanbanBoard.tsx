@@ -11,6 +11,7 @@ import {
 } from '@/lib/outreach-invite-buckets'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from './types'
+import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import KanbanCard from './KanbanCard'
 import OutreachCandidateCard from './OutreachCandidateCard'
 
@@ -36,6 +37,8 @@ const COLUMN_ACCENTS: Record<OutreachKanbanColumn, { bar: string; title: string 
 export interface KanbanBoardProps {
   invites: Invite[]
   screeningsByUserId?: ScreeningsByUserId
+  /** Latest screening consent bundle per candidate — file badges on cards + modal */
+  consentBundleByUserId?: Map<string, ConsentBundleSummary>
   theme: string
   copiedId: string | null
   sendingEmailId: string | null
@@ -49,7 +52,7 @@ export interface KanbanBoardProps {
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
   onEdit: (invite: Invite) => void
-  onAskStormi: (invite: Invite, files: ScreeningRow[]) => void
+  onAskStormi: (invite: Invite) => void
   onRecruiterNotesSave: (inviteId: string, notes: string) => void | Promise<void>
   /**
    * Fired when the employer hits "Resend consent" inside the detail modal.
@@ -72,6 +75,7 @@ export interface KanbanBoardProps {
 export default function KanbanBoard({
   invites,
   screeningsByUserId,
+  consentBundleByUserId,
   theme,
   copiedId,
   sendingEmailId,
@@ -189,6 +193,11 @@ export default function KanbanBoard({
                           ? screeningsByUserId?.get(invite.usedByUserId) ?? []
                           : []
                       }
+                      consentBundle={
+                        invite.usedByUserId
+                          ? consentBundleByUserId?.get(invite.usedByUserId)
+                          : undefined
+                      }
                       theme={theme}
                       onClick={(inv) => setActiveInviteId(inv.id)}
                     />
@@ -214,6 +223,11 @@ export default function KanbanBoard({
                 activeInvite.usedByUserId
                   ? screeningsByUserId?.get(activeInvite.usedByUserId) ?? []
                   : []
+              }
+              consentBundle={
+                activeInvite.usedByUserId
+                  ? consentBundleByUserId?.get(activeInvite.usedByUserId)
+                  : undefined
               }
               theme={theme}
               copiedId={copiedId}

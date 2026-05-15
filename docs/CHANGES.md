@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach: consent packages on kanban + candidate modal** (May 2026)
+
+Signed screening consent bundles were listed in the Files vault API but not passed into the kanban / `OutreachCandidateCard`, so recruiters only saw MVR/PSP order rows (`screening_consent_bundles` is separate from `mvr_orders` / `psp_orders`). **EmployerHub** now passes **`consentBundleByUserId`**. **KanbanCard** shows emerald/amber file badges including consent (complete → green count; in-progress bundle → amber with `FileCheck` when there are no pending MVR rows). **OutreachCandidateCard** lists a **Signed consent package** row with Complete/Pending and updated empty copy. **Archive** preserved-files section shows the same. **Stormi** modal context includes consent + screening summaries; **Ask Stormi** now passes only `invite` and the parent resolves files + bundle.
+
+| File | Change |
+|---|---|
+| `EmployerHub.tsx` | Pass `consentBundleByUserId` |
+| `CandidateOutreach.tsx` | Prop, `handleAskStormi(invite)`, archive + Stormi |
+| `KanbanBoard.tsx` | Prop; pass bundle into cards |
+| `KanbanCard.tsx` | Consent-aware badge counts |
+| `OutreachCandidateCard.tsx` | Consent row + `onAskStormi(invite)` |
+
+---
+
 ## **Employer outreach edit modal + mandatory first-time profile** (May 2026)
 
 1. **Edit invite under candidate modal** — Kanban candidate detail uses `Modal` at `zIndex={1100}`; `EditInviteModal` used the default `1000`, so the edit dialog rendered underneath. Fixed: `EditInviteModal` uses `zIndex={1200}`, and clicking **Edit** closes the detail modal first (`KanbanBoard` clears `activeInviteId` before calling `onEdit`) so only one overlay is open.

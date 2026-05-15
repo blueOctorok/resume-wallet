@@ -942,6 +942,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 screeningsLoading={screenings.loading}
                 screeningsError={screenings.error}
                 consentBundles={screenings.consentBundles}
+                consentBundleByUserId={screenings.consentBundleByUserId}
                 onRefreshScreenings={() => void screenings.refresh(true)}
                 employerContext={employerStormiContext}
               />

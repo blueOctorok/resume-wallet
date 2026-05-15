@@ -46,6 +46,7 @@ import {
   Package,
   ArrowLeft,
   ShieldCheck,
+  FileCheck,
   Inbox,
   Archive as ArchiveIcon,
   Users,
@@ -92,6 +93,8 @@ interface CandidateOutreachProps {
   screeningsError?: string | null
   /** Signed consent packages (FCRA + FMCSA PSP + CDLIS bundles) for the vault */
   consentBundles?: ConsentBundleSummary[]
+  /** Latest consent bundle per candidate user id — kanban + detail modal file pills */
+  consentBundleByUserId?: Map<string, ConsentBundleSummary>
   /** Optional refresh handler — wired to the tab refresh button */
   onRefreshScreenings?: () => void
   /** Employer hub context — passed through so the mini Stormi modal can call the AI API */
@@ -245,6 +248,9 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
   )
 }
 
+// Stable empty map — avoids allocating `new Map()` on every render when prop omitted.
+const EMPTY_CONSENT_BUNDLE_BY_USER_ID = new Map<string, ConsentBundleSummary>()
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CandidateOutreach({
@@ -257,6 +263,7 @@ export default function CandidateOutreach({
   screeningsLoading = false,
   screeningsError = null,
   consentBundles = [],
+  consentBundleByUserId,
   onRefreshScreenings,
   employerContext = null,
 }: CandidateOutreachProps) {
@@ -787,13 +794,22 @@ export default function CandidateOutreach({
   )
 
   // ── Stormi mini modal state ──────────────────────────────────────────────
-  const [stormiTarget, setStormiTarget] = useState<{ invite: Invite; files: ScreeningRow[] } | null>(null)
+  const [stormiTarget, setStormiTarget] = useState<{
+    invite: Invite
+    files: ScreeningRow[]
+    consentBundle: ConsentBundleSummary | null
+  } | null>(null)
+
+  const consentBundleMap = consentBundleByUserId ?? EMPTY_CONSENT_BUNDLE_BY_USER_ID
 
   const handleAskStormi = useCallback(
-    (invite: Invite, files: ScreeningRow[]) => {
-      setStormiTarget({ invite, files })
+    (invite: Invite) => {
+      const uid = invite.usedByUserId
+      const files = uid ? screeningsByUserId?.get(uid) ?? [] : []
+      const consentBundle = uid ? consentBundleMap.get(uid) ?? null : null
+      setStormiTarget({ invite, files, consentBundle })
     },
-    [],
+    [screeningsByUserId, consentBundleMap],
   )
 
   // ── Derived: tab buckets, filter chips, "ready to view" count ─────────────
@@ -1543,6 +1559,7 @@ export default function CandidateOutreach({
                       <KanbanBoard
                         invites={filteredActive}
                         screeningsByUserId={screeningsByUserId}
+                        consentBundleByUserId={consentBundleMap}
                         theme={theme}
                         copiedId={copiedId}
                         sendingEmailId={sendingEmailId}
@@ -1619,6 +1636,7 @@ export default function CandidateOutreach({
                     onRemove={handleRemove}
                     removingId={removingId}
                     screeningsByUserId={screeningsByUserId}
+                    consentBundleByUserId={consentBundleMap}
                     onViewFile={handleViewFile}
                   />
                 )}
@@ -1697,6 +1715,7 @@ export default function CandidateOutreach({
         <StormiCandidateModal
           invite={stormiTarget.invite}
           files={stormiTarget.files}
+          consentBundle={stormiTarget.consentBundle}
           employerContext={employerContext}
           walletAddress={walletAddress}
           theme={theme}
@@ -1894,6 +1913,7 @@ function ArchiveTabContent({
   onRemove,
   removingId,
   screeningsByUserId,
+  consentBundleByUserId,
   onViewFile,
 }: {
   invites: Invite[]
@@ -1909,9 +1929,11 @@ function ArchiveTabContent({
   onRemove: (id: string) => void
   removingId: string | null
   screeningsByUserId?: ScreeningsByUserId
+  consentBundleByUserId?: Map<string, ConsentBundleSummary>
   onViewFile: (file: ScreeningRow) => void
 }) {
   const isDark = isDarkTheme(theme)
+  const bundleMap = consentBundleByUserId ?? EMPTY_CONSENT_BUNDLE_BY_USER_ID
   return (
     <>
       <OutreachFilterBar
@@ -1935,6 +1957,7 @@ function ArchiveTabContent({
             const files = invite.usedByUserId
               ? screeningsByUserId?.get(invite.usedByUserId) ?? []
               : []
+            const consentBundle = invite.usedByUserId ? bundleMap.get(invite.usedByUserId) : undefined
             const isStaleCompleted = invite.status === 'completed' && isStaleCompletedOutreach(invite)
             const canRestore = invite.status === 'cancelled'
             const isExpired = invite.status === 'expired'
@@ -1978,7 +2001,7 @@ function ArchiveTabContent({
                   </span>
                 </div>
 
-                {files.length > 0 && (
+                {files.length > 0 || consentBundle ? (
                   <div
                     className={cn(
                       'rounded-md border px-2 py-2 text-[11px]',
@@ -1988,6 +2011,17 @@ function ArchiveTabContent({
                     <p className={cn('mb-1 text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-gray-500' : 'text-gray-500')}>
                       Files preserved
                     </p>
+                    {consentBundle && (
+                      <div
+                        className={cn(
+                          'mb-0.5 inline-flex w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px]',
+                          isDark ? 'bg-teal-950/40 text-teal-200' : 'bg-teal-50 text-teal-900',
+                        )}
+                      >
+                        <FileCheck className="h-3 w-3 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                        Signed consent package · {consentBundle.status === 'complete' ? 'Complete' : 'Pending'}
+                      </div>
+                    )}
                     {files.map((f) => (
                       <button
                         key={`${f.kind}-${f.id}`}
@@ -2354,6 +2388,7 @@ function EditInviteModal({
 function StormiCandidateModal({
   invite,
   files,
+  consentBundle,
   employerContext,
   walletAddress,
   theme,
@@ -2361,6 +2396,7 @@ function StormiCandidateModal({
 }: {
   invite: Invite
   files: ScreeningRow[]
+  consentBundle: ConsentBundleSummary | null
   employerContext: EmployerHubContext
   walletAddress: string
   theme: string
@@ -2387,9 +2423,13 @@ function StormiCandidateModal({
       ? (getBlockDefinition(invite.targetBlockType)?.label ?? invite.targetBlockType)
       : 'General invite'
 
+    const consentSummary = consentBundle
+      ? `Signed consent package — status: ${consentBundle.status}${consentBundle.completedAt ? `, completed ${new Date(consentBundle.completedAt).toLocaleDateString()}` : ''}.`
+      : 'No signed consent package on file yet.'
+
     const filesSummary =
       files.length === 0
-        ? 'No screenings ordered yet.'
+        ? 'No MVR or PSP orders placed yet.'
         : files
             .map((f) => `${f.kind.toUpperCase()} — status: ${f.status}${f.resultOutcome ? `, outcome: ${f.resultOutcome}` : ''}`)
             .join('; ')
@@ -2400,6 +2440,7 @@ function StormiCandidateModal({
       `Invite type: ${blockLabel}.`,
       `Current status: ${invite.status}.`,
       `Views: ${invite.viewCount}.`,
+      `Consent: ${consentSummary}`,
       `Screenings: ${filesSummary}`,
       invite.jobTitle ? `Linked job: ${invite.jobTitle}.` : null,
       invite.emailSentAt ? `Email was sent.` : `Email has not been sent yet.`,
@@ -2407,7 +2448,7 @@ function StormiCandidateModal({
     ]
       .filter(Boolean)
       .join(' ')
-  }, [invite, files])
+  }, [invite, files, consentBundle])
 
   const doSend = useCallback(
     async (text: string, history: Msg[], displayText?: string) => {
@@ -2513,6 +2554,9 @@ function StormiCandidateModal({
               {' · '}
               {invite.status}
               {invite.viewCount > 0 ? ` · ${invite.viewCount} views` : ''}
+              {consentBundle
+                ? ` · Consent: ${consentBundle.status === 'complete' ? 'signed' : consentBundle.status}`
+                : ''}
               {files.length > 0 ? ` · ${files.length} screening${files.length === 1 ? '' : 's'}` : ''}
             </p>
           </div>

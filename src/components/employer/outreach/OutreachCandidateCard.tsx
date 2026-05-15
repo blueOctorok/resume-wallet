@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Sparkles,
   Send as SendIcon,
+  FileCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isDarkTheme } from '@/lib/theme-storage'
@@ -39,6 +40,7 @@ import {
 import { outcomeBadgeClasses, outcomeLabel } from '@/lib/accio-result-status'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { Invite, InviteStatus, ScreeningRow } from './types'
+import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import { ALL_INVITE_STATUSES } from './types'
 
 const STATUS_CONFIG: Record<
@@ -110,6 +112,8 @@ interface OutreachCandidateCardProps {
   invite: Invite
   /** Files (MVR/PSP) the company has paid for, scoped to this candidate. May be empty. */
   files: ScreeningRow[]
+  /** Signed FCRA + FMCSA + CDLIS package stored for ordering — same source as Files vault */
+  consentBundle?: ConsentBundleSummary | null
   theme: string
 
   // Action handlers — owned by parent so optimistic updates land in one store.
@@ -126,7 +130,7 @@ interface OutreachCandidateCardProps {
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
   onEdit: (invite: Invite) => void
-  onAskStormi: (invite: Invite, files: ScreeningRow[]) => void
+  onAskStormi: (invite: Invite) => void
   /** Persist internal team notes (blur-to-save). */
   onRecruiterNotesSave?: (inviteId: string, notes: string) => void | Promise<void>
   /**
@@ -156,6 +160,7 @@ interface OutreachCandidateCardProps {
 export default function OutreachCandidateCard({
   invite,
   files,
+  consentBundle,
   theme,
   copiedId,
   sendingEmailId,
@@ -446,10 +451,8 @@ export default function OutreachCandidateCard({
         </div>
       )}
 
-      {/* ── Files (MVR / PSP) ───────────────────────────────────────────────
-         The whole point of the redesign — the candidate's screenings live ON
-         the candidate, not in a separate panel. */}
-      {files.length > 0 ? (
+      {/* ── Files: consent package + MVR / PSP ───────────────────────────── */}
+      {files.length > 0 || consentBundle ? (
         <div className="border-b border-gray-100 px-4 py-2.5 dark:border-gray-700/70">
           <p
             className={cn(
@@ -457,9 +460,37 @@ export default function OutreachCandidateCard({
               isDark ? 'text-gray-500' : 'text-gray-500',
             )}
           >
-            Files ({files.length})
+            Files ({files.length + (consentBundle ? 1 : 0)})
           </p>
           <ul className="space-y-1.5">
+            {consentBundle && (
+              <li
+                className={cn(
+                  'flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 text-xs',
+                  isDark ? 'border-teal-500/30 bg-teal-950/25 text-teal-100' : 'border-teal-200 bg-teal-50/90 text-teal-900',
+                )}
+              >
+                <FileCheck className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                <span className="font-semibold">Signed consent package</span>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                    consentBundle.status === 'complete'
+                      ? isDark
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-emerald-100 text-emerald-800'
+                      : isDark
+                        ? 'bg-amber-500/20 text-amber-200'
+                        : 'bg-amber-100 text-amber-900',
+                  )}
+                >
+                  {consentBundle.status === 'complete' ? 'Complete' : 'Pending'}
+                </span>
+                <span className={cn('ml-auto text-[10px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
+                  FCRA + FMCSA + CDLIS · Files vault
+                </span>
+              </li>
+            )}
             {files.map((file) => (
               <FilePill key={`${file.kind}-${file.id}`} file={file} isDark={isDark} onView={() => onViewFile(file)} />
             ))}
@@ -472,7 +503,7 @@ export default function OutreachCandidateCard({
             isDark ? 'text-gray-500' : 'text-gray-500',
           )}
         >
-          No screenings ordered yet for this candidate.
+          No consent package or screenings on file yet. Vault updates when the candidate signs or you order MVR/PSP.
         </div>
       )}
 
@@ -683,7 +714,7 @@ export default function OutreachCandidateCard({
       <div className="border-t border-gray-100 px-2.5 pb-2.5 pt-2 dark:border-gray-700/70">
         <button
           type="button"
-          onClick={() => onAskStormi(invite, files)}
+          onClick={() => onAskStormi(invite)}
           className={cn(
             'flex w-full items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-[10px] font-semibold transition-colors',
             isDark
