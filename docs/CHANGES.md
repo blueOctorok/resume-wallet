@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP webhook fix — FMCSA results never returning to Storm** (May 2026)
+
+**Root cause**: Accio sends PSP+MVR bundle completions in two possible XML envelopes: individual `<postResults type="fmcsa_crash_inspection">` and aggregate `<completeOrder>` containing both suborders. The webhook handler (`/api/mvr/webhook`) only detected FMCSA payloads via `isFmcsaPostResultsWebhookXml()`, which requires the `<postResults>` tag — aggregate `<completeOrder>` payloads bypassed FMCSA detection entirely. The MVR parser processed only the MVR suborder and the FMCSA suborder was silently dropped, leaving `psp_orders` stuck at `pending` forever.
+
+**Fix (two-pronged)**:
+1. **FMCSA-only `<completeOrder>`** — added an early routing check: if the XML contains `type="fmcsa_crash_inspection"` but no MVR suborder, route directly to PSP processor (same as `<postResults>` path).
+2. **Bundle `<completeOrder>` with both MVR + FMCSA** — after MVR processing succeeds, detect the bundled FMCSA suborder and also call `processPspAccioWebhookCompletion`. This is idempotent (checks for existing `psp_results`) so duplicate processing from a later individual `<postResults>` is safe.
+3. **Diagnostic logging** — FMCSA detection flags logged on every webhook for production visibility.
+
+| File | Change |
+|---|---|
+| `src/app/api/mvr/webhook/route.ts` | Early FMCSA routing for non-`<postResults>` envelopes; post-MVR bundle FMCSA processing; enhanced logging |
+
+---
+
 ## **Outreach: consent packages on kanban + candidate modal** (May 2026)
 
 Signed screening consent bundles were listed in the Files vault API but not passed into the kanban / `OutreachCandidateCard`, so recruiters only saw MVR/PSP order rows (`screening_consent_bundles` is separate from `mvr_orders` / `psp_orders`). **EmployerHub** now passes **`consentBundleByUserId`**. **KanbanCard** shows emerald/amber file badges including consent (complete → green count; in-progress bundle → amber with `FileCheck` when there are no pending MVR rows). **OutreachCandidateCard** lists a **Signed consent package** row with Complete/Pending and updated empty copy. **Archive** preserved-files section shows the same. **Stormi** modal context includes consent + screening summaries; **Ask Stormi** now passes only `invite` and the parent resolves files + bundle.

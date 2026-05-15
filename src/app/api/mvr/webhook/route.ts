@@ -44,6 +44,12 @@ export async function POST(request: NextRequest) {
     console.log('[MVR WEBHOOK] ========== INCOMING WEBHOOK ==========')
     console.log('[MVR WEBHOOK] Body length:', xmlBody.length)
     console.log('[MVR WEBHOOK] Full XML body:', xmlBody)
+    console.log('[MVR WEBHOOK] FMCSA detection:', {
+      hasPostResults: xmlBody.includes('<postResults'),
+      hasFmcsaType: /type=["']fmcsa_crash_inspection["']/i.test(xmlBody),
+      hasMvrType: /<subOrder[^>]*type=["']MVR["']/i.test(xmlBody),
+      isFmcsaPostResults: xmlBody.includes('<postResults') && (/fmcsa|crash/i.test(xmlBody)),
+    })
     console.log('[MVR WEBHOOK] ========================================')
 
     if (!xmlBody) {
@@ -89,8 +95,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[MVR WEBHOOK] Processing completion notification')
 
-    // PSP+MVR bundle uses this URL for all Accio postbacks; FMCSA suborder posts are not MVR XML.
-    if (isFmcsaPostResultsWebhookXml(xmlBody)) {
+    // Detect FMCSA content early — used for routing decisions below.
+    const hasFmcsaSuborder = /type=["']fmcsa_crash_inspection["']/i.test(xmlBody)
+    const hasMvrSuborder = /<subOrder[^>]*type=["']MVR["']/i.test(xmlBody)
+
+    // PSP+MVR bundle uses this URL for all Accio postbacks. Route FMCSA-only
+    // payloads (<postResults> or <completeOrder> with no MVR suborder) directly
+    // to the PSP processor — they contain no MVR data for the parser below.
+    if (isFmcsaPostResultsWebhookXml(xmlBody) || (hasFmcsaSuborder && !hasMvrSuborder)) {
+      console.log('[MVR WEBHOOK] Routing to PSP processor (FMCSA-only payload)')
       const supabaseService = createServiceClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -327,6 +340,22 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[MVR WEBHOOK] MVR result processed successfully:', mvrResult.id)
+
+    // Bundle completion: when Accio sends a <completeOrder> containing both MVR
+    // and FMCSA suborders, the parser above only processes the MVR half.
+    // Detect the bundled FMCSA suborder and process it so psp_orders doesn't
+    // stay stuck at 'pending'. processPspAccioWebhookCompletion is idempotent
+    // (checks for existing psp_results before insert), so this is safe even if
+    // Accio also sends a separate <postResults> for the FMCSA suborder later.
+    if (hasFmcsaSuborder) {
+      console.log('[MVR WEBHOOK] Detected bundled FMCSA suborder — processing PSP result')
+      try {
+        const pspOutcome = await processPspAccioWebhookCompletion(supabaseService, xmlBody)
+        console.log('[MVR WEBHOOK] Bundled PSP result:', pspOutcome.status, JSON.stringify(pspOutcome.body))
+      } catch (pspErr) {
+        console.error('[MVR WEBHOOK] Bundled FMCSA processing error (non-fatal):', pspErr)
+      }
+    }
 
     // Only notify on the first transition out of `pending`. Guarding at the call
     // site (in addition to inside notifyScreeningReportDelivered) ensures Accio
