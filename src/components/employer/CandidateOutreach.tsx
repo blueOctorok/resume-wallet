@@ -2001,7 +2001,7 @@ function ArchiveTabContent({
                   </span>
                 </div>
 
-                {files.length > 0 || consentBundle ? (
+                {(files.length > 0 || consentBundle) && (
                   <div
                     className={cn(
                       'rounded-md border px-2 py-2 text-[11px]',
