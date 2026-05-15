@@ -65,6 +65,8 @@ export interface KanbanBoardProps {
   /** Kanban detail modal: employer may PATCH `invite.status` with override flag. */
   onPipelineStatusOverride?: (inviteId: string, status: InviteStatus) => Promise<void>
   statusOverrideSavingId?: string | null
+  /** Refresh screenings data — forwarded to OutreachCandidateCard refresh button */
+  onRefreshScreenings?: () => void
 }
 
 /**
@@ -95,6 +97,7 @@ export default function KanbanBoard({
   resendingId,
   onPipelineStatusOverride,
   statusOverrideSavingId,
+  onRefreshScreenings,
 }: KanbanBoardProps) {
   const isDark = isDarkTheme(theme)
   const [activeInviteId, setActiveInviteId] = useState<string | null>(null)
@@ -252,6 +255,7 @@ export default function KanbanBoard({
               onRecruiterNotesSave={onRecruiterNotesSave}
               onResendConsent={onResendConsent}
               resending={resendingId === activeInvite.id}
+              onRefreshScreenings={onRefreshScreenings}
               showPipelineStatusOverride
               onPipelineStatusOverride={onPipelineStatusOverride}
               statusOverrideSaving={statusOverrideSavingId === activeInvite.id}

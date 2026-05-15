@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach edit modal: multi-select blocks + direct MVR/PSP ordering** (May 2026)
+
+Employers previously had to pick one block at a time in the "Edit invite" modal and always received an invite link to send the candidate. Now that consent bundles are collected upfront, MVR/PSP can be ordered directly without another invite link.
+
+**Changes:**
+1. **Multi-select block picker** — state changed from `string | null` (radio) to `Set<string>` (checkboxes). Each block row shows a teal checkbox. Multiple blocks can be checked simultaneously.
+2. **Smart CTA split** — the action section adapts based on what's selected:
+   - **Screening blocks (MVR/PSP) with complete consent bundle** → "Place orders directly" section shows `MvrPaymentButton` / `PspPaymentButton` individually so the employer can pay and run each in one step via `/api/employer/screenings/order`. Consent status badge shown inline.
+   - **Screening blocks without consent** → amber warning: "Consent required — send a Screening consent invite first."
+   - **Non-screening blocks** → "Create invite link(s)" button (existing flow).
+3. **`companyId` + `companyWalletAddress` prop chain** — threaded from `EmployerHub.tsx` → `CandidateOutreach` → `EditInviteModal` so payment buttons know which company wallet to charge.
+4. **`consentBundle` prop** — the latest `ConsentBundleSummary` for the candidate is resolved by `invite.usedByUserId` in `CandidateOutreach` and passed to the modal.
+5. **`onOrderPlaced` callback** — after any direct order is placed the modal calls `onOrderPlaced()` which fires `onRefreshScreenings()` so the kanban + file pills refresh automatically.
+6. **Live status refresh button** — `OutreachCandidateCard` now shows a "Refresh" button in the Files header whenever any screening is still in processing state.
+7. **Elapsed time on processing pills** — `FilePill` shows `"Processing · 4m"` / `"Processing · 2h"` instead of just "Processing", calculated from `ScreeningRow.orderedAt`.
+
+| File | Change |
+|---|---|
+| `src/components/employer/CandidateOutreach.tsx` | Props `companyId`/`companyWalletAddress`/`consentBundle`/`onOrderPlaced`; import `MvrPaymentButton`/`PspPaymentButton`; rewrite `EditInviteModal` |
+| `src/components/EmployerHub.tsx` | Pass `companyId` and `companyWalletAddress` to `CandidateOutreach` |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | `onRefreshScreenings` prop; refresh button; `elapsedLabel` helper; elapsed on processing pills |
+| `src/components/employer/outreach/KanbanBoard.tsx` | `onRefreshScreenings` prop forwarded to `OutreachCandidateCard` |
+
+---
+
 ## **PSP webhook fix — FMCSA results never returning to Storm** (May 2026)
 
 **Root cause**: Accio sends PSP+MVR bundle completions in two possible XML envelopes: individual `<postResults type="fmcsa_crash_inspection">` and aggregate `<completeOrder>` containing both suborders. The webhook handler (`/api/mvr/webhook`) only detected FMCSA payloads via `isFmcsaPostResultsWebhookXml()`, which requires the `<postResults>` tag — aggregate `<completeOrder>` payloads bypassed FMCSA detection entirely. The MVR parser processed only the MVR suborder and the FMCSA suborder was silently dropped, leaving `psp_orders` stuck at `pending` forever.

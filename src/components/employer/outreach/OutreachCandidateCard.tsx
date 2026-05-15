@@ -95,6 +95,16 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
+/** "Processing · 4m" — shown on in-flight screening pills instead of just "Processing" */
+function elapsedLabel(orderedAt: string): string {
+  const ms = Date.now() - new Date(orderedAt).getTime()
+  const mins = Math.floor(ms / 60000)
+  if (mins < 1) return 'Processing · just now'
+  if (mins < 60) return `Processing · ${mins}m`
+  const hrs = Math.floor(mins / 60)
+  return `Processing · ${hrs}h`
+}
+
 /** "Expires in 5 days" / "Expires in 2 hours" — only meaningful when actionable. */
 function expiryHint(expiresAt: string | null, status: InviteStatus): string | null {
   if (!expiresAt) return null
@@ -141,6 +151,8 @@ interface OutreachCandidateCardProps {
   onResendConsent?: (invite: Invite) => void | Promise<void>
   /** True while a resend is in flight for this invite. */
   resending?: boolean
+  /** Refresh screenings data — shown when any file is still processing */
+  onRefreshScreenings?: () => void
   /**
    * Kanban detail modal only: let Pace force `invite.status` when the board is
    * stuck vs reality (same DB field the columns use).
@@ -178,6 +190,7 @@ export default function OutreachCandidateCard({
   onRecruiterNotesSave,
   onResendConsent,
   resending = false,
+  onRefreshScreenings,
   showPipelineStatusOverride = false,
   onPipelineStatusOverride,
   statusOverrideSaving = false,
@@ -454,14 +467,33 @@ export default function OutreachCandidateCard({
       {/* ── Files: consent package + MVR / PSP ───────────────────────────── */}
       {files.length > 0 || consentBundle ? (
         <div className="border-b border-gray-100 px-4 py-2.5 dark:border-gray-700/70">
-          <p
-            className={cn(
-              'mb-1.5 text-[10px] font-semibold uppercase tracking-wide',
-              isDark ? 'text-gray-500' : 'text-gray-500',
+          <div className="mb-1.5 flex items-center justify-between">
+            <p
+              className={cn(
+                'text-[10px] font-semibold uppercase tracking-wide',
+                isDark ? 'text-gray-500' : 'text-gray-500',
+              )}
+            >
+              Files ({files.length + (consentBundle ? 1 : 0)})
+            </p>
+            {/* Show refresh when any screening is still processing */}
+            {onRefreshScreenings && files.some((f) => hubDocStatusFromScreeningOrder(f.status) === 'processing') && (
+              <button
+                type="button"
+                onClick={onRefreshScreenings}
+                title="Refresh screening status"
+                className={cn(
+                  'flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                  isDark
+                    ? 'text-gray-500 hover:bg-gray-700 hover:text-gray-300'
+                    : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700',
+                )}
+              >
+                <RefreshCw className="h-3 w-3" aria-hidden />
+                Refresh
+              </button>
             )}
-          >
-            Files ({files.length + (consentBundle ? 1 : 0)})
-          </p>
+          </div>
           <ul className="space-y-1.5">
             {consentBundle && (
               <li
@@ -802,6 +834,10 @@ function FilePill({
             <Eye className="mr-0.5 h-3 w-3" />
             View
           </Button>
+        ) : docStatus === 'processing' && file.orderedAt ? (
+          <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            {elapsedLabel(file.orderedAt)}
+          </span>
         ) : (
           <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
             {docStatus === 'failed' ? 'Failed' : 'Processing'}

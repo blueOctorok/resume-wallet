@@ -22,6 +22,8 @@ import FilesVault from '@/components/employer/outreach/FilesVault'
 import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdown'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
+import MvrPaymentButton from '@/components/MvrPaymentButton'
+import PspPaymentButton from '@/components/PspPaymentButton'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import {
@@ -99,6 +101,9 @@ interface CandidateOutreachProps {
   onRefreshScreenings?: () => void
   /** Employer hub context — passed through so the mini Stormi modal can call the AI API */
   employerContext?: EmployerHubContext | null
+  /** Company ID and wallet address — used for direct MVR/PSP ordering from the edit modal */
+  companyId?: string | null
+  companyWalletAddress?: string | null
 }
 
 // Status visuals reused for the chip filter row. Keeping these here (not in the
@@ -266,6 +271,8 @@ export default function CandidateOutreach({
   consentBundleByUserId,
   onRefreshScreenings,
   employerContext = null,
+  companyId = null,
+  companyWalletAddress = null,
 }: CandidateOutreachProps) {
   const { theme } = useTheme()
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
@@ -1579,6 +1586,7 @@ export default function CandidateOutreach({
                         resendingId={resendingId}
                         onPipelineStatusOverride={handleInviteStatusOverride}
                         statusOverrideSavingId={statusOverrideSavingId}
+                        onRefreshScreenings={onRefreshScreenings}
                       />
                     )}
                   </>
@@ -1699,12 +1707,19 @@ export default function CandidateOutreach({
           blocksByCategory={blocksByCategory}
           installedEmployerBlockTypes={installedEmployerBlockTypes}
           walletAddress={walletAddress}
+          companyId={companyId}
+          companyWalletAddress={companyWalletAddress}
+          consentBundle={editingInvite.usedByUserId ? (consentBundleByUserId?.get(editingInvite.usedByUserId) ?? null) : null}
           theme={theme}
           onSave={handleEditInvite}
           onAddBlock={(newInvite) => {
             setInvites((prev) => [newInvite, ...prev])
             setEditingInvite(null)
             copyToClipboard(newInvite.url, newInvite.id)
+          }}
+          onOrderPlaced={() => {
+            setEditingInvite(null)
+            onRefreshScreenings?.()
           }}
           onClose={() => setEditingInvite(null)}
         />
@@ -2070,10 +2085,12 @@ function ArchiveTabContent({
 
 // ─── Edit invite modal ────────────────────────────────────────────────────────
 
+const SCREENING_BLOCK_IDS = new Set(['driver-mvr', 'driver-psp'])
+
 /**
  * Two-section modal:
  *   Top    — edit mutable fields on the existing invite (name, email, job, message)
- *   Bottom — send another block to the same candidate (creates a new invite)
+ *   Bottom — send another block OR place a direct MVR/PSP order when consent is complete
  */
 function EditInviteModal({
   invite,
@@ -2081,9 +2098,13 @@ function EditInviteModal({
   blocksByCategory,
   installedEmployerBlockTypes,
   walletAddress,
+  companyId,
+  companyWalletAddress,
+  consentBundle,
   theme,
   onSave,
   onAddBlock,
+  onOrderPlaced,
   onClose,
 }: {
   invite: Invite
@@ -2091,12 +2112,16 @@ function EditInviteModal({
   blocksByCategory: { category: { id: string; label: string }; blocks: typeof BLOCK_DEFINITIONS }[]
   installedEmployerBlockTypes: string[]
   walletAddress: string
+  companyId?: string | null
+  companyWalletAddress?: string | null
+  consentBundle?: ConsentBundleSummary | null
   theme: string
   onSave: (
     id: string,
     patch: { candidateName?: string; candidateEmail?: string; jobPostingId?: string; welcomeMessage?: string },
   ) => Promise<void>
   onAddBlock: (newInvite: Invite) => void
+  onOrderPlaced?: () => void
   onClose: () => void
 }) {
   const isDark = isDarkTheme(theme)
@@ -2115,13 +2140,36 @@ function EditInviteModal({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // "Add another block" section
-  const [newBlockType, setNewBlockType] = useState<string | null>(null)
+  // Multi-select: Set of block IDs the employer has checked
+  const [selectedBlockTypes, setSelectedBlockTypes] = useState<Set<string>>(new Set())
   const [addingBlock, setAddingBlock] = useState(false)
   const [addBlockError, setAddBlockError] = useState<string | null>(null)
 
-  // Blocks already invited for this candidate so we can filter them out
+  // Direct order state (for consent-backed MVR/PSP)
+  const [orderingType, setOrderingType] = useState<'mvr' | 'psp' | null>(null)
+  const [orderLoading, setOrderLoading] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
+  const [ordersPlaced, setOrdersPlaced] = useState<Set<'mvr' | 'psp'>>(new Set())
+
   const alreadyHasBlockType = invite.targetBlockType
+  const consentComplete = consentBundle?.status === 'complete'
+  const candidateUserId = invite.usedByUserId
+
+  // Split selected blocks into: screening (direct order when consent complete) vs invite
+  const selectedScreening = [...selectedBlockTypes].filter((b) => SCREENING_BLOCK_IDS.has(b))
+  const selectedInvite = [...selectedBlockTypes].filter((b) => !SCREENING_BLOCK_IDS.has(b))
+
+  // Can we run direct orders? Need: consent complete + candidate has a userId + company block + not already placed
+  const canDirectOrder = consentComplete && Boolean(candidateUserId) && Boolean(companyId)
+
+  const toggleBlock = (blockId: string) => {
+    setSelectedBlockTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(blockId)) next.delete(blockId)
+      else next.add(blockId)
+      return next
+    })
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -2140,32 +2188,77 @@ function EditInviteModal({
     }
   }
 
-  const handleAddBlock = async () => {
-    if (!newBlockType) return
+  // Create invite links for non-screening blocks (unchanged behavior)
+  const handleAddInviteBlocks = async () => {
+    if (selectedInvite.length === 0) return
     setAddingBlock(true)
     setAddBlockError(null)
     try {
-      const res = await fetch('/api/employer/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({
-          targetBlockType: newBlockType,
-          candidateName: invite.candidateName || undefined,
-          candidateEmail: invite.candidateEmail || undefined,
-          candidateUserId: invite.usedByUserId || undefined,
-        }),
-      })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error((d as { error?: string }).error ?? 'Failed to create invite')
+      for (const blockType of selectedInvite) {
+        const res = await fetch('/api/employer/invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+          body: JSON.stringify({
+            targetBlockType: blockType,
+            candidateName: invite.candidateName || undefined,
+            candidateEmail: invite.candidateEmail || undefined,
+            candidateUserId: invite.usedByUserId || undefined,
+          }),
+        })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}))
+          throw new Error((d as { error?: string }).error ?? 'Failed to create invite')
+        }
+        const { invite: created } = await res.json()
+        onAddBlock({ ...created, emailSentAt: created.emailSentAt ?? null })
       }
-      const { invite: created } = await res.json()
-      onAddBlock({ ...created, emailSentAt: created.emailSentAt ?? null })
     } catch (e: unknown) {
       setAddBlockError(e instanceof Error ? e.message : 'Failed to create invite')
     } finally {
       setAddingBlock(false)
     }
+  }
+
+  // Called by MvrPaymentButton / PspPaymentButton after USDC payment succeeds
+  const handlePaymentSuccess = async (type: 'mvr' | 'psp', txHash: string) => {
+    if (!candidateUserId || !consentBundle || !companyId) return
+    setOrderingType(type)
+    setOrderLoading(true)
+    setOrderError(null)
+    try {
+      const res = await fetch('/api/employer/screenings/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        body: JSON.stringify({
+          candidateUserId,
+          type,
+          consentBundleId: consentBundle.id,
+          paymentTxHash: txHash,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error((d as { error?: string }).error ?? `Failed to place ${type.toUpperCase()} order`)
+      }
+      setOrdersPlaced((prev) => new Set([...prev, type]))
+      // Remove the block from selection now that it's placed
+      setSelectedBlockTypes((prev) => {
+        const next = new Set(prev)
+        next.delete(type === 'mvr' ? 'driver-mvr' : 'driver-psp')
+        return next
+      })
+    } catch (e: unknown) {
+      setOrderError(e instanceof Error ? e.message : `Failed to place ${type.toUpperCase()} order`)
+    } finally {
+      setOrderLoading(false)
+      setOrderingType(null)
+    }
+  }
+
+  // If any orders were placed, call onOrderPlaced on modal close so parent refreshes
+  const handleClose = () => {
+    if (ordersPlaced.size > 0) onOrderPlaced?.()
+    onClose()
   }
 
   const sectionHead = cn(
@@ -2174,11 +2267,11 @@ function EditInviteModal({
   )
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={1200}>
+    <Modal onClose={handleClose} maxWidth="max-w-lg" zIndex={1200}>
       <ModalHeader
         title={`Edit: ${invite.candidateName || invite.candidateEmail || 'Anonymous invite'}`}
-        subtitle="Update invite details or send another block to this candidate"
-        onClose={onClose}
+        subtitle="Update invite details or run screenings for this candidate"
+        onClose={handleClose}
       />
       <div className="p-5 space-y-6">
         {/* ── Section 1: edit mutable fields ─────────────────────────────────── */}
@@ -2253,13 +2346,13 @@ function EditInviteModal({
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
               Save changes
             </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+            <Button type="button" variant="secondary" size="sm" onClick={handleClose}>
               Cancel
             </Button>
           </div>
         </div>
 
-        {/* ── Section 2: add another block ────────────────────────────────────── */}
+        {/* ── Section 2: block picker (multi-select) ───────────────────────── */}
         {blocksByCategory.length > 0 && (
           <div
             className={cn(
@@ -2268,11 +2361,30 @@ function EditInviteModal({
             )}
           >
             <p className={cn(sectionHead, isDark ? 'text-teal-600' : 'text-teal-600')}>
-              Send another block to this candidate
+              Add blocks for this candidate
             </p>
             <p className={cn('mb-3 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-              Creates a new invite link for the same person. Current invite is unchanged.
+              {consentComplete
+                ? 'Consent is on file — MVR and PSP can be ordered directly (no invite needed). Select one or more blocks.'
+                : 'Select one or more blocks to send as invite links.'}
             </p>
+
+            {/* Consent badge */}
+            {consentBundle && (
+              <div
+                className={cn(
+                  'mb-3 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs',
+                  consentComplete
+                    ? isDark ? 'border-emerald-600/30 bg-emerald-900/20 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : isDark ? 'border-amber-600/30 bg-amber-900/20 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-800',
+                )}
+              >
+                <FileCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="font-medium">
+                  Consent package: {consentComplete ? 'Complete — ready to order' : 'Pending candidate signature'}
+                </span>
+              </div>
+            )}
 
             <div
               className={cn(
@@ -2294,23 +2406,29 @@ function EditInviteModal({
                   </div>
                   {blocks.map((block) => {
                     const isCurrentBlock = block.id === alreadyHasBlockType
+                    const isAlreadyOrdered = (block.id === 'driver-mvr' && ordersPlaced.has('mvr')) ||
+                      (block.id === 'driver-psp' && ordersPlaced.has('psp'))
+                    const isScreening = SCREENING_BLOCK_IDS.has(block.id)
+                    const isSelected = selectedBlockTypes.has(block.id)
                     const enabledByBlock = block.requiredEmployerBlocks?.find((eb) =>
                       installedEmployerBlockTypes.includes(eb),
                     )
                     const enabledByLabel = enabledByBlock
                       ? getEmployerBlockDefinition(enabledByBlock)?.label ?? enabledByBlock
                       : null
+                    const isDisabled = isCurrentBlock || isAlreadyOrdered
+
                     return (
                       <button
                         key={block.id}
                         type="button"
-                        disabled={isCurrentBlock}
-                        onClick={() => setNewBlockType(block.id === newBlockType ? null : block.id)}
+                        disabled={isDisabled}
+                        onClick={() => !isDisabled && toggleBlock(block.id)}
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-b last:border-b-0',
-                          isCurrentBlock
+                          isDisabled
                             ? 'opacity-40 cursor-not-allowed'
-                            : newBlockType === block.id
+                            : isSelected
                               ? isDark
                                 ? 'bg-teal-900/40'
                                 : 'bg-teal-50'
@@ -2319,27 +2437,50 @@ function EditInviteModal({
                                 : 'hover:bg-gray-50 border-gray-100',
                         )}
                       >
+                        {/* Checkbox indicator */}
+                        <div
+                          className={cn(
+                            'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+                            isSelected && !isDisabled
+                              ? 'border-teal-500 bg-teal-500'
+                              : isDark ? 'border-gray-500 bg-transparent' : 'border-gray-300 bg-white',
+                          )}
+                        >
+                          {isSelected && !isDisabled && (
+                            <Check className="h-2.5 w-2.5 text-white" />
+                          )}
+                        </div>
                         <div
                           className={cn(
                             'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
-                            newBlockType === block.id && !isCurrentBlock
+                            isSelected && !isDisabled
                               ? isDark ? 'bg-teal-800/60' : 'bg-teal-100'
                               : isDark ? 'bg-gray-700' : 'bg-gray-100',
                           )}
                         >
-                          <Package className={cn('w-3.5 h-3.5', newBlockType === block.id ? 'text-teal-500' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                          <Package className={cn('w-3.5 h-3.5', isSelected ? 'text-teal-500' : isDark ? 'text-gray-400' : 'text-gray-500')} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                               {block.label}
                             </p>
-                            {isCurrentBlock && (
+                            {isAlreadyOrdered && (
+                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
+                                ordered ✓
+                              </span>
+                            )}
+                            {isCurrentBlock && !isAlreadyOrdered && (
                               <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500')}>
                                 already invited
                               </span>
                             )}
-                            {enabledByLabel && !isCurrentBlock && (
+                            {isScreening && consentComplete && !isDisabled && (
+                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
+                                direct order
+                              </span>
+                            )}
+                            {enabledByLabel && !isCurrentBlock && !isScreening && (
                               <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700')}>
                                 via {enabledByLabel}
                               </span>
@@ -2357,19 +2498,105 @@ function EditInviteModal({
             </div>
 
             {addBlockError && <p className="mt-2 text-xs text-red-400">{addBlockError}</p>}
+            {orderError && <p className="mt-2 text-xs text-red-400">{orderError}</p>}
 
-            {newBlockType && (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className="mt-3"
-                onClick={handleAddBlock}
-                disabled={addingBlock}
-              >
-                {addingBlock ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                {addingBlock ? 'Creating…' : 'Create & copy link'}
-              </Button>
+            {selectedBlockTypes.size > 0 && (
+              <div className="mt-4 space-y-3">
+                {/* Direct-order section: screening blocks with consent complete */}
+                {canDirectOrder && selectedScreening.length > 0 && (
+                  <div
+                    className={cn(
+                      'rounded-lg border p-3',
+                      isDark ? 'border-emerald-600/30 bg-emerald-950/20' : 'border-emerald-200 bg-emerald-50',
+                    )}
+                  >
+                    <p className={cn('mb-2 text-[11px] font-semibold uppercase tracking-wide', isDark ? 'text-emerald-300' : 'text-emerald-700')}>
+                      Place orders directly (consent on file)
+                    </p>
+                    <p className={cn('mb-3 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                      Pay with your company wallet to run these screenings now. Results will appear in the Files section when ready.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedScreening.includes('driver-mvr') && (
+                        <div className="flex flex-col gap-1">
+                          <span className={cn('text-[10px] font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>Motor Vehicle Record</span>
+                          {ordersPlaced.has('mvr') ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <Check className="h-3.5 w-3.5" /> Ordered
+                            </span>
+                          ) : (
+                            <MvrPaymentButton
+                              userAddress={walletAddress}
+                              payFromCompanyWallet={Boolean(companyWalletAddress)}
+                              companyWalletAddress={companyWalletAddress ?? undefined}
+                              companyId={companyId ?? undefined}
+                              onPaymentSuccess={(txHash) => handlePaymentSuccess('mvr', txHash)}
+                              onPaymentError={(msg) => setOrderError(msg)}
+                              disabled={orderLoading && orderingType !== 'mvr'}
+                              userType="employer"
+                            />
+                          )}
+                        </div>
+                      )}
+                      {selectedScreening.includes('driver-psp') && (
+                        <div className="flex flex-col gap-1">
+                          <span className={cn('text-[10px] font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>PSP Report</span>
+                          {ordersPlaced.has('psp') ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <Check className="h-3.5 w-3.5" /> Ordered
+                            </span>
+                          ) : (
+                            <PspPaymentButton
+                              userAddress={walletAddress}
+                              payFromCompanyWallet={Boolean(companyWalletAddress)}
+                              companyWalletAddress={companyWalletAddress ?? undefined}
+                              companyId={companyId ?? undefined}
+                              onPaymentSuccess={(txHash) => handlePaymentSuccess('psp', txHash)}
+                              onPaymentError={(msg) => setOrderError(msg)}
+                              disabled={orderLoading && orderingType !== 'psp'}
+                              userType="employer"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {orderLoading && (
+                      <p className={cn('mt-2 flex items-center gap-1.5 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Placing {orderingType?.toUpperCase()} order…
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* No consent warning for screening blocks */}
+                {!canDirectOrder && selectedScreening.length > 0 && (
+                  <div className={cn('rounded-lg border p-3 text-xs', isDark ? 'border-amber-600/30 bg-amber-950/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800')}>
+                    <span className="font-semibold">Consent required to order MVR/PSP directly.</span>{' '}
+                    {!consentBundle
+                      ? 'Send a Screening consent invite first so the candidate can sign.'
+                      : 'Waiting for the candidate to complete the consent package.'}
+                  </div>
+                )}
+
+                {/* Invite-link section: non-screening blocks */}
+                {selectedInvite.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleAddInviteBlocks}
+                    disabled={addingBlock}
+                  >
+                    {addingBlock ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                    {addingBlock
+                      ? 'Creating…'
+                      : selectedInvite.length === 1
+                        ? 'Create & copy link'
+                        : `Create ${selectedInvite.length} invite links`}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}

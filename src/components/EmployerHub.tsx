@@ -945,6 +945,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 consentBundleByUserId={screenings.consentBundleByUserId}
                 onRefreshScreenings={() => void screenings.refresh(true)}
                 employerContext={employerStormiContext}
+                companyId={data.company.id}
+                companyWalletAddress={data.company.walletAddress ?? null}
               />
             </div>
           )}
