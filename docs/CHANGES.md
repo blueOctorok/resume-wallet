@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Direct order: waived payment path + Alchemy crash fix** (May 2026)
+
+Two bugs fixed:
+
+1. **Alchemy `wallet_requestAccount: Account not found`** — `MvrPaymentButton` / `PspPaymentButton` use Alchemy Account Kit's `useSmartAccountClient` for the company MultiOwnerLightAccount. If the account is counterfactual (not yet deployed on-chain) the SDK crashes on mount. Replaced the payment buttons in `EditInviteModal` with plain `Button` components that call the order API directly without any USDC tx.
+
+2. **PATCH 400 "Invalid status" on empty Save** — when no invite fields changed, `patch = {}`, so no field keys are defined, `isFieldEdit = false`, and the API fell through to the status-transition branch which returned `"Invalid status"`. Fixed by early-returning before the API call when `patch` is empty.
+
+**API change (`/api/employer/screenings/order`)**: `paymentTxHash` is now optional. When omitted the route upserts a synthetic `payments` row (`tx_hash: 'waived-{companyId}-{candidateId}-{type}'`, `status: COMPLETED`, `amount: 0`) so the rest of the pipeline (duplicate checks, audit) works unchanged. When USDC billing is ready, pass `paymentTxHash` and the route validates the on-chain payment as before.
+
+| File | Change |
+|---|---|
+| `src/app/api/employer/screenings/order/route.ts` | `paymentTxHash` optional; waived payment upsert when absent |
+| `src/components/employer/CandidateOutreach.tsx` | Replace payment buttons with `handlePlaceOrder`; remove Alchemy imports; empty-patch guard in `handleSave` |
+
+---
+
 ## **Outreach edit modal: multi-select blocks + direct MVR/PSP ordering** (May 2026)
 
 Employers previously had to pick one block at a time in the "Edit invite" modal and always received an invite link to send the candidate. Now that consent bundles are collected upfront, MVR/PSP can be ordered directly without another invite link.

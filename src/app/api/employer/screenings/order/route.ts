@@ -13,8 +13,12 @@ import { placeScreeningOrder } from '@/lib/place-screening-order'
 /**
  * POST /api/employer/screenings/order
  *
- * After USDC payment, places MVR or PSP using the candidate's latest complete
- * screening consent bundle (decrypts SSN server-side only on this path).
+ * Places MVR or PSP using the candidate's latest complete screening consent
+ * bundle (decrypts SSN server-side only on this path).
+ *
+ * `paymentTxHash` is optional. When omitted the order is recorded as an
+ * internal/waived order — a synthetic payment row is upserted so the rest of
+ * the pipeline (duplicate checks, audit) works unchanged.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,9 +34,9 @@ export async function POST(request: NextRequest) {
       paymentTxHash?: string
     }
     const { candidateUserId, type, consentBundleId, paymentTxHash } = body
-    if (!candidateUserId || !type || !consentBundleId || !paymentTxHash) {
+    if (!candidateUserId || !type || !consentBundleId) {
       return NextResponse.json(
-        { error: 'candidateUserId, type, consentBundleId, and paymentTxHash are required' },
+        { error: 'candidateUserId, type, and consentBundleId are required' },
         { status: 400 },
       )
     }
@@ -60,23 +64,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company does not have PSP ordering enabled' }, { status: 403 })
     }
 
-    const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
     const paymentType = type === 'mvr' ? 'MVR_ORDER' : 'PSP_ORDER'
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, status, company_id')
-      .eq('tx_hash', truncatedTxHash)
-      .eq('type', paymentType)
-      .maybeSingle()
 
-    if (!payment) {
-      return NextResponse.json({ error: 'Payment not found — complete USDC payment first' }, { status: 402 })
-    }
-    if (payment.status !== 'COMPLETED') {
-      return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
-    }
-    if (payment.company_id && payment.company_id !== access.companyId) {
-      return NextResponse.json({ error: 'This payment is tied to a different company' }, { status: 403 })
+    // Resolve or create a payment record. When paymentTxHash is omitted the
+    // order is treated as internal / waived — a synthetic row is upserted so
+    // duplicate checks and audit trails work without requiring a USDC tx.
+    let paymentId: string
+    let resolvedTxHash: string
+    if (paymentTxHash) {
+      const truncated = paymentTxHash.length > 66 ? paymentTxHash.slice(0, 66) : paymentTxHash
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('id, status, company_id')
+        .eq('tx_hash', truncated)
+        .eq('type', paymentType)
+        .maybeSingle()
+
+      if (!payment) {
+        return NextResponse.json({ error: 'Payment not found — complete USDC payment first' }, { status: 402 })
+      }
+      if (payment.status !== 'COMPLETED') {
+        return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
+      }
+      if (payment.company_id && payment.company_id !== access.companyId) {
+        return NextResponse.json({ error: 'This payment is tied to a different company' }, { status: 403 })
+      }
+      paymentId = payment.id as string
+      resolvedTxHash = truncated
+    } else {
+      // No USDC payment — record a waived/internal order. Idempotent on the
+      // synthetic tx hash so re-tries are safe.
+      const syntheticTxHash = `waived-${access.companyId}-${candidateUserId}-${type}`
+      const { data: existing } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('tx_hash', syntheticTxHash)
+        .eq('type', paymentType)
+        .maybeSingle()
+
+      if (existing) {
+        paymentId = existing.id as string
+      } else {
+        const { data: inserted, error: insertErr } = await supabase
+          .from('payments')
+          .insert({
+            tx_hash: syntheticTxHash,
+            type: paymentType,
+            status: 'COMPLETED',
+            amount: 0,
+            company_id: access.companyId,
+            user_id: access.employerUserId,
+          })
+          .select('id')
+          .single()
+        if (insertErr || !inserted) {
+          console.error('[EMPLOYER SCREENINGS ORDER] waived payment insert:', insertErr)
+          return NextResponse.json({ error: 'Failed to record internal order' }, { status: 500 })
+        }
+        paymentId = inserted.id as string
+      }
+      resolvedTxHash = syntheticTxHash
     }
 
     const { data: bundle } = await supabase
@@ -138,8 +185,8 @@ export async function POST(request: NextRequest) {
       type,
       formData,
       candidateRequestIdToComplete: null,
-      paymentId: payment.id as string,
-      paymentTxHash: truncatedTxHash,
+      paymentId,
+      paymentTxHash: resolvedTxHash,
     })
 
     if (placed.ok === false) {

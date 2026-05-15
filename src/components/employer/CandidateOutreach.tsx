@@ -22,8 +22,6 @@ import FilesVault from '@/components/employer/outreach/FilesVault'
 import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdown'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
-import MvrPaymentButton from '@/components/MvrPaymentButton'
-import PspPaymentButton from '@/components/PspPaymentButton'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import {
@@ -2180,6 +2178,8 @@ function EditInviteModal({
       if (email !== (invite.candidateEmail ?? '')) patch.candidateEmail = email
       if (jobId) patch.jobPostingId = jobId
       if (message) patch.welcomeMessage = message
+      // Nothing changed — skip the network round-trip
+      if (Object.keys(patch).length === 0) { setSaving(false); return }
       await onSave(invite.id, patch)
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : 'Failed to save')
@@ -2219,8 +2219,10 @@ function EditInviteModal({
     }
   }
 
-  // Called by MvrPaymentButton / PspPaymentButton after USDC payment succeeds
-  const handlePaymentSuccess = async (type: 'mvr' | 'psp', txHash: string) => {
+  // Direct order — no Alchemy SDK involved; the API creates a waived payment
+  // record internally when paymentTxHash is omitted. When USDC billing is ready,
+  // swap this for the full payment button flow.
+  const handlePlaceOrder = async (type: 'mvr' | 'psp') => {
     if (!candidateUserId || !consentBundle || !companyId) return
     setOrderingType(type)
     setOrderLoading(true)
@@ -2233,7 +2235,7 @@ function EditInviteModal({
           candidateUserId,
           type,
           consentBundleId: consentBundle.id,
-          paymentTxHash: txHash,
+          // paymentTxHash intentionally omitted — API records a waived order
         }),
       })
       if (!res.ok) {
@@ -2241,7 +2243,6 @@ function EditInviteModal({
         throw new Error((d as { error?: string }).error ?? `Failed to place ${type.toUpperCase()} order`)
       }
       setOrdersPlaced((prev) => new Set([...prev, type]))
-      // Remove the block from selection now that it's placed
       setSelectedBlockTypes((prev) => {
         const next = new Set(prev)
         next.delete(type === 'mvr' ? 'driver-mvr' : 'driver-psp')
@@ -2514,50 +2515,44 @@ function EditInviteModal({
                       Place orders directly (consent on file)
                     </p>
                     <p className={cn('mb-3 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                      Pay with your company wallet to run these screenings now. Results will appear in the Files section when ready.
+                      Consent is signed and on file. Click to run each screening — results appear in the Files section when ready.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {selectedScreening.includes('driver-mvr') && (
-                        <div className="flex flex-col gap-1">
-                          <span className={cn('text-[10px] font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>Motor Vehicle Record</span>
-                          {ordersPlaced.has('mvr') ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <Check className="h-3.5 w-3.5" /> Ordered
-                            </span>
-                          ) : (
-                            <MvrPaymentButton
-                              userAddress={walletAddress}
-                              payFromCompanyWallet={Boolean(companyWalletAddress)}
-                              companyWalletAddress={companyWalletAddress ?? undefined}
-                              companyId={companyId ?? undefined}
-                              onPaymentSuccess={(txHash) => handlePaymentSuccess('mvr', txHash)}
-                              onPaymentError={(msg) => setOrderError(msg)}
-                              disabled={orderLoading && orderingType !== 'mvr'}
-                              userType="employer"
-                            />
-                          )}
-                        </div>
+                        ordersPlaced.has('mvr') ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <Check className="h-3.5 w-3.5" /> MVR ordered
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            disabled={orderLoading}
+                            isLoading={orderLoading && orderingType === 'mvr'}
+                            onClick={() => handlePlaceOrder('mvr')}
+                          >
+                            Run MVR
+                          </Button>
+                        )
                       )}
                       {selectedScreening.includes('driver-psp') && (
-                        <div className="flex flex-col gap-1">
-                          <span className={cn('text-[10px] font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>PSP Report</span>
-                          {ordersPlaced.has('psp') ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <Check className="h-3.5 w-3.5" /> Ordered
-                            </span>
-                          ) : (
-                            <PspPaymentButton
-                              userAddress={walletAddress}
-                              payFromCompanyWallet={Boolean(companyWalletAddress)}
-                              companyWalletAddress={companyWalletAddress ?? undefined}
-                              companyId={companyId ?? undefined}
-                              onPaymentSuccess={(txHash) => handlePaymentSuccess('psp', txHash)}
-                              onPaymentError={(msg) => setOrderError(msg)}
-                              disabled={orderLoading && orderingType !== 'psp'}
-                              userType="employer"
-                            />
-                          )}
-                        </div>
+                        ordersPlaced.has('psp') ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <Check className="h-3.5 w-3.5" /> PSP ordered
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            disabled={orderLoading}
+                            isLoading={orderLoading && orderingType === 'psp'}
+                            onClick={() => handlePlaceOrder('psp')}
+                          >
+                            Run PSP
+                          </Button>
+                        )
                       )}
                     </div>
                     {orderLoading && (
