@@ -86,7 +86,8 @@ export default function EmployerPspMvrBundleAttestationStep({
   const [typedSignature, setTypedSignature] = useState('')
   const [printFirstName, setPrintFirstName] = useState(() => merged.firstName?.trim() ?? '')
   const [printLastName, setPrintLastName] = useState(() => merged.lastName?.trim() ?? '')
-  const [ssn, setSsn] = useState('')
+  // Pre-fill from step 2 (FMCSA form) if it captured SSN — avoids double-entry.
+  const [ssn, setSsn] = useState(() => normalizeSsnDigits(merged.ssn ?? ''))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

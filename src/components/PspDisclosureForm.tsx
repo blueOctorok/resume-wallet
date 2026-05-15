@@ -307,8 +307,8 @@ export default function PspDisclosureForm({
       setError(dlNameError)
       return
     }
-    if (fulfillOrder && !isValidSsn(ssn)) {
-      setError('Your full 9-digit Social Security Number is required to submit the order.')
+    if ((fulfillOrder || deferSubmit) && !isValidSsn(ssn)) {
+      setError('Your full 9-digit Social Security Number is required.')
       return
     }
 
@@ -316,6 +316,10 @@ export default function PspDisclosureForm({
 
     // Deferred mode: skip the POST, return validated data to the parent wizard.
     if (deferSubmit) {
+      // SSN is included in profileSnapshot so step 3 (CDLIS) can pre-fill it —
+      // but intentionally excluded from formData/formSnapshot, which ends up
+      // stored in psp_consents.form_data (plaintext JSONB). SSN is encrypted
+      // in screening_consent_bundles.ssn_encrypted at the bundle submission step.
       const formSnapshot: Record<string, string> = {
         ...profile,
         printedName: printedName.trim(),
@@ -331,6 +335,7 @@ export default function PspDisclosureForm({
         dlNumber: profile.dlNumber.trim(),
         dlState: profile.dlState.trim(),
         email: profile.email.trim(),
+        ssn: normalizeSsnDigits(ssn),
       }
       onConsentSigned({
         consentId: '',
@@ -645,7 +650,7 @@ export default function PspDisclosureForm({
                       type="email"
                       autoComplete="email"
                     />
-                    {fulfillOrder && !viewMode && (
+                    {(fulfillOrder || deferSubmit) && !viewMode && (
                       <ReadOnlyOrInput
                         label="Social Security Number"
                         value={formatSsnDisplay(ssn)}
