@@ -424,3 +424,141 @@ export async function sendEmployerScreeningReadyEmail(params: {
     return { ok: false, error: message }
   }
 }
+
+// ─── Employer: candidate completed a major action ────────────────────────────
+
+export type EmployerCandidateActionEmailKind =
+  | 'screening_consent'
+  | 'bgcheck_consent'
+  | 'psp_consent'
+  | 'block_completed'
+  | 'invite_completed'
+
+const EMPLOYER_ACTION_EMAIL_COPY: Record<
+  EmployerCandidateActionEmailKind,
+  {
+    subject: (candidateName: string) => string
+    title: (candidateName: string) => string
+    preheader: string
+    lead: (candidateName: string, companyName: string, blockLabel: string | null) => string
+    ctaLabel: string
+  }
+> = {
+  screening_consent: {
+    subject: (n) => `${n} completed screening consent`,
+    title: (n) => `Screening consent complete`,
+    preheader: 'FCRA, FMCSA, and CDLIS package signed — ready to order MVR/PSP',
+    lead: (n, c) =>
+      `<strong>${n}</strong> completed the full screening consent package (FCRA background check authorization, FMCSA PSP disclosure, and CDLIS written consent) for <strong>${c}</strong>. You can now place MVR and PSP orders from Outreach without sending another invite.`,
+    ctaLabel: 'Open Storm',
+  },
+  bgcheck_consent: {
+    subject: (n) => `${n} signed background check consent`,
+    title: () => `Background check consent signed`,
+    preheader: 'A candidate signed your FCRA authorization',
+    lead: (n, c) =>
+      `<strong>${n}</strong> signed the background check authorization for <strong>${c}</strong>.`,
+    ctaLabel: 'Open Storm',
+  },
+  psp_consent: {
+    subject: (n) => `${n} signed PSP disclosure`,
+    title: () => `PSP disclosure signed`,
+    preheader: 'FMCSA PSP disclosure recorded on Storm',
+    lead: (n, c) =>
+      `<strong>${n}</strong> signed the FMCSA PSP Disclosure &amp; Authorization for <strong>${c}</strong>.`,
+    ctaLabel: 'Open Storm',
+  },
+  block_completed: {
+    subject: (n) => `${n} completed your request`,
+    title: () => `Request fulfilled`,
+    preheader: 'A candidate finished something you requested on Storm',
+    lead: (n, c, block) =>
+      block
+        ? `<strong>${n}</strong> completed your <strong>${block}</strong> request for <strong>${c}</strong>.`
+        : `<strong>${n}</strong> fulfilled a request for <strong>${c}</strong>.`,
+    ctaLabel: 'View in Storm',
+  },
+  invite_completed: {
+    subject: (n) => `${n} completed your invite`,
+    title: () => `Outreach invite completed`,
+    preheader: 'A candidate finished the step from your invite link',
+    lead: (n, c, block) =>
+      block
+        ? `<strong>${n}</strong> completed <strong>${block}</strong> from your outreach invite for <strong>${c}</strong>.`
+        : `<strong>${n}</strong> completed the step from your outreach invite for <strong>${c}</strong>.`,
+    ctaLabel: 'View Outreach',
+  },
+}
+
+/**
+ * Confirmation email to the employer when a candidate completes a major action
+ * (consent package, block request, invite step, etc.).
+ */
+export async function sendEmployerCandidateActionCompleteEmail(params: {
+  kind: EmployerCandidateActionEmailKind
+  employerEmail: string
+  employerFirstName: string
+  companyName: string
+  candidateDisplayName: string
+  blockLabel?: string | null
+  ctaUrl: string
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!resend) {
+    console.warn('[EMPLOYER ACTION EMAIL] RESEND_API_KEY not set, skipping send')
+    return { ok: false, error: 'Email not configured' }
+  }
+
+  const {
+    kind,
+    employerEmail,
+    employerFirstName,
+    companyName,
+    candidateDisplayName,
+    blockLabel = null,
+    ctaUrl,
+  } = params
+  const copy = EMPLOYER_ACTION_EMAIL_COPY[kind]
+  const first = employerFirstName.trim() || 'there'
+  const candidate = candidateDisplayName.trim() || 'A candidate'
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      ${copy.lead(candidate, companyName, blockLabel)}
+    </p>
+    ${infoBox(`
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
+        Open Storm to review the update in your hiring workflow. Sensitive screening documents are never sent by email — only this confirmation.
+      </p>
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: copy.preheader,
+    headerEyebrow: companyName,
+    headerTitle: copy.title(candidate),
+    greeting: `Hi ${first},`,
+    bodyHtml,
+    ctaLabel: copy.ctaLabel,
+    ctaUrl,
+    footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on Storm.`,
+  })
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: employerEmail,
+      subject: `[Storm] ${copy.subject(candidate)}`,
+      html,
+    })
+    if (error) {
+      console.error('[EMPLOYER ACTION EMAIL] Resend error:', error)
+      return { ok: false, error: error.message }
+    }
+    console.log('[EMPLOYER ACTION EMAIL] Sent. Resend id:', data?.id, 'kind:', kind)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[EMPLOYER ACTION EMAIL] Send failed:', err)
+    return { ok: false, error: message }
+  }
+}

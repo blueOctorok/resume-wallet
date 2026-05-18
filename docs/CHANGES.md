@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer confirmation emails on candidate completion** (May 2026)
+
+Employers (e.g. Pace) were only getting **in-app** notifications when candidates completed screening consent — no email. Added a shared `notifyEmployerCandidateActionComplete` helper that sends a Resend confirmation email plus the existing bell notification.
+
+**Wired for:**
+- Full screening consent bundle (`POST /api/candidate/screening-consent`)
+- Background check consent when request is fully completed (`POST /api/candidate/bgcheck-consent`)
+- Generic block/request completion (`PATCH /api/candidate/requests/[id]` — skips `driver-screening-consent` to avoid duplicate)
+- Outreach invite marked complete (`PATCH /api/invite/[token]`)
+
+Falls back to company `employer_user_id` when `requested_by_user_id` is missing. MVR/PSP **report ready** emails were already handled via `notifyScreeningReportDelivered`.
+
+| File | Change |
+|---|---|
+| `src/lib/notify-employer-candidate-action.ts` | New helper — resolve employer email, send email + in-app |
+| `src/lib/send-admin-notification.ts` | `sendEmployerCandidateActionCompleteEmail` |
+| `src/app/api/candidate/screening-consent/route.ts` | Use helper instead of in-app-only |
+| `src/app/api/candidate/bgcheck-consent/route.ts` | Email on completed MVR consent path |
+| `src/app/api/candidate/requests/[requestId]/route.ts` | Email on `status: completed` |
+| `src/app/api/invite/[token]/route.ts` | Email when invite completes |
+
+---
+
 ## **Employer hub refresh spinner** (May 2026)
 
 The nav-bar "Refresh hub" button showed a spinner for candidates (via `hubBlocksLoading`) but had **no visual feedback for employers** — the data refreshed silently, making it look broken. Added `employerHubRefreshing` to `useUIStore` so the nav button shows a `Loader2` spinner while the employer hub is fetching.

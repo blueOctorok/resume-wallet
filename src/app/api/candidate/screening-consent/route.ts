@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { encryptScreeningSsn } from '@/lib/screening-consent-crypto'
-import { createNotification } from '@/lib/create-notification'
 import { hasCdlisWrittenConsent } from '@/lib/screening-consent-bundle'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
 interface DeferredConsent {
   signedName: string
@@ -180,15 +180,14 @@ export async function POST(request: NextRequest) {
 
     await ensureHubBlocksForPspMvrBundle(supabase, user.id)
 
-    if (candidateRequest.requested_by_user_id) {
-      createNotification({
-        userId: candidateRequest.requested_by_user_id as string,
-        type: 'consent_signed',
-        title: 'Screening consent complete',
-        body: `A candidate completed the full screening consent package for ${resolvedCompanyName}.`,
-        data: { requestId, bundleId: bundleRow.id, kind: 'screening_consent_bundle' },
-      }).catch(err => console.error('[SCREENING CONSENT] Employer notification:', err))
-    }
+    void notifyEmployerCandidateActionComplete(supabase, {
+      kind: 'screening_consent',
+      employerUserId: candidateRequest.requested_by_user_id as string | null,
+      companyId: candidateRequest.company_id as string,
+      companyName: resolvedCompanyName,
+      candidateUserId: user.id,
+      notificationData: { requestId, bundleId: bundleRow.id, kind: 'screening_consent_bundle' },
+    })
 
     return NextResponse.json({
       success: true,

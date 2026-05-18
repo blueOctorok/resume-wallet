@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { createNotification } from '@/lib/create-notification'
+import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
 /**
  * POST /api/candidate/bgcheck-consent
@@ -121,20 +122,29 @@ export async function POST(request: NextRequest) {
     .eq('id', requestId)
     .single()
 
-  if (requestingUser?.requested_by_user_id) {
+  if (requestingUser?.requested_by_user_id && newStatus === 'completed') {
+    void notifyEmployerCandidateActionComplete(supabase, {
+      kind: 'bgcheck_consent',
+      employerUserId: requestingUser.requested_by_user_id as string,
+      companyId: candidateRequest.company_id as string,
+      companyName: companyName || 'your company',
+      candidateUserId: user.id,
+      notificationData: { requestId, driverUserId: user.id, companyName },
+    })
+  } else if (requestingUser?.requested_by_user_id && isPspRequest) {
+    // PSP path: only in-app nudge — full email goes out when the bundle or order completes
     const { data: driverProfile } = await supabase
       .from('user_profiles')
       .select('first_name, last_name')
       .eq('user_id', requestingUser.candidate_user_id)
       .maybeSingle()
-
-    const driverName = [driverProfile?.first_name, driverProfile?.last_name].filter(Boolean).join(' ').trim() || 'A candidate'
-
+    const driverName =
+      [driverProfile?.first_name, driverProfile?.last_name].filter(Boolean).join(' ').trim() || 'A candidate'
     createNotification({
-      userId: requestingUser.requested_by_user_id,
+      userId: requestingUser.requested_by_user_id as string,
       type: 'consent_signed',
       title: 'Background check consent signed',
-      body: `${driverName} has signed the background check authorization for ${companyName || 'your company'}.`,
+      body: `${driverName} signed step 1 of the screening flow for ${companyName || 'your company'}. FMCSA/CDLIS steps may still be pending.`,
       data: { requestId, driverUserId: user.id, companyName },
     }).catch(err => console.error('[BGCHECK CONSENT] Employer notification error:', err))
   }

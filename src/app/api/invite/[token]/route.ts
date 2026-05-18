@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
 /**
  * GET /api/invite/[token]
@@ -284,7 +285,9 @@ export async function PATCH(
     // Get the invite
     const { data: invite, error: fetchError } = await supabase
       .from('application_invites')
-      .select('id, status')
+      .select(
+        'id, status, company_id, created_by_user_id, target_block_type, used_by_user_id, candidate_name',
+      )
       .eq('token', token)
       .single()
 
@@ -292,20 +295,26 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     }
 
+    if (invite.status === 'completed') {
+      return NextResponse.json({ success: true, inviteId: invite.id, alreadyCompleted: true })
+    }
+
     // Get user ID from wallet address
-    let userId = null
+    let userId: string | null = null
     if (walletAddress) {
       const { data: user } = await supabase
         .from('users')
         .select('id')
         .ilike('wallet_address', walletAddress)
         .single()
-      
+
       userId = user?.id || null
     }
 
+    const candidateUserId = userId ?? (invite.used_by_user_id as string | null)
+
     // Update invite to completed
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status: 'completed',
     }
     if (driverApplicationId) {
@@ -326,7 +335,31 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
     }
 
-    return NextResponse.json({ 
+    if (candidateUserId && invite.created_by_user_id) {
+      const blockDef = invite.target_block_type
+        ? getBlockDefinition(invite.target_block_type as string)
+        : undefined
+      const { data: company } = await supabase
+        .from('companies')
+        .select('company_name')
+        .eq('id', invite.company_id)
+        .maybeSingle()
+      const companyName =
+        (company as { company_name?: string } | null)?.company_name?.trim() || 'Your company'
+
+      void notifyEmployerCandidateActionComplete(supabase, {
+        kind: 'invite_completed',
+        employerUserId: invite.created_by_user_id as string,
+        companyId: invite.company_id as string,
+        companyName,
+        candidateUserId,
+        candidateDisplayName: (invite.candidate_name as string | null) ?? undefined,
+        blockLabel: blockDef?.label ?? null,
+        notificationData: { inviteId: invite.id, targetBlockType: invite.target_block_type },
+      })
+    }
+
+    return NextResponse.json({
       success: true,
       inviteId: invite.id,
     })

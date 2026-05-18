@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getBlockDefinition } from '@/lib/block-registry'
+import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
 /**
  * PATCH /api/candidate/requests/[requestId]
@@ -62,7 +64,9 @@ export async function PATCH(
     // Verify the request belongs to this candidate
     const { data: existingRequest } = await supabase
       .from('candidate_requests')
-      .select('id, status, candidate_user_id')
+      .select(
+        'id, status, candidate_user_id, company_id, requested_by_user_id, request_type, target_block_type',
+      )
       .eq('id', requestId)
       .single()
 
@@ -115,6 +119,43 @@ export async function PATCH(
     }
 
     console.log(`[CANDIDATE REQUEST] Updated request ${requestId} to status: ${status}`)
+
+    if (
+      status === 'completed' &&
+      existingRequest.status !== 'completed' &&
+      existingRequest.requested_by_user_id
+    ) {
+      const skipEmailForDedicatedHandlers =
+        existingRequest.request_type === 'block_request' &&
+        existingRequest.target_block_type === 'driver-screening-consent'
+
+      if (!skipEmailForDedicatedHandlers) {
+        const blockDef = existingRequest.target_block_type
+          ? getBlockDefinition(existingRequest.target_block_type as string)
+          : undefined
+        const { data: company } = await supabase
+          .from('companies')
+          .select('company_name')
+          .eq('id', existingRequest.company_id)
+          .maybeSingle()
+        const companyName =
+          (company as { company_name?: string } | null)?.company_name?.trim() || 'Your company'
+
+        void notifyEmployerCandidateActionComplete(supabase, {
+          kind: 'block_completed',
+          employerUserId: existingRequest.requested_by_user_id as string,
+          companyId: existingRequest.company_id as string,
+          companyName,
+          candidateUserId: user.id,
+          blockLabel: blockDef?.label ?? null,
+          notificationData: {
+            requestId,
+            requestType: existingRequest.request_type,
+            targetBlockType: existingRequest.target_block_type,
+          },
+        })
+      }
+    }
 
     return NextResponse.json({
       success: true,
