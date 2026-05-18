@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Accio order placement: error detection + retry** (May 2026)
+
+Orders placed from the employer "Run MVR/PSP" button were being stored as `pending` in Storm's DB even when Accio returned an error in the XML response body (HTTP 200 with error content). This meant Key/Pace never received the order and it sat stuck at "pending" forever.
+
+**Root cause**: `placeScreeningOrder` only checked `!raw.ok` (HTTP status) but never inspected the XML body for error elements. Accio can return HTTP 200 with `<error>` tags or missing `orderID` when rejecting an order (bad data, duplicate applicant, account issues, etc.).
+
+**Fixes:**
+1. **Accio error detection** — after receiving the response, check for `<error>`, `<status>ERROR</status>`, `errorCode`, or missing `orderID`. If any detected → fail immediately with 502 so the order is never stored as `pending` in the DB.
+2. **Diagnostic logging** — log the full Accio request params (redacted SSN) before sending and the response body after. This makes it possible to diagnose Accio rejections from Vercel logs.
+3. **`force` flag** — the employer order API (`POST /api/employer/screenings/order`) and `placeScreeningOrder` now accept `force: true` which skips the 24h duplicate check. The frontend always sends `force: true` since the employer explicitly clicked the button.
+4. **Error surfacing** — when `placeScreeningOrder` fails, the employer order API now logs the full context (candidateUserId, type, bundleId) so failures are traceable.
+5. **Outreach invite dedup** — candidates with both a `driver-screening-consent` invite AND a legacy `driver-psp`/`driver-mvr` invite now appear as ONE card (consent card wins). New per-block invites are blocked (409) if a consent invite already exists for that candidate.
+6. **Admin dedup endpoint** — `POST /api/admin/outreach/dedup` cancels existing stale per-block invites. Use `?dry=true` to preview.
+7. **MVR/PSP removed from invite picker** — `driver-psp` and `driver-mvr` no longer appear as options when creating a new outreach invite. They are direct-order-only (run from the edit modal after consent). The API also rejects attempts to create those invite types with a clear error message. Only `driver-screening-consent` (and non-screening blocks) can be email invites.
+
+| File | Change |
+|---|---|
+| `src/lib/place-screening-order.ts` | Accio error detection, pre/post logging, `skipDuplicateCheck` option |
+| `src/app/api/employer/screenings/order/route.ts` | `force` body param, error logging |
+| `src/components/employer/CandidateOutreach.tsx` | Always send `force: true`; kanban dedup by consent email/userId |
+| `src/app/api/employer/invites/route.ts` | Screening invite dedup (cancels old when consent created; blocks per-block if consent exists) |
+| `src/app/api/admin/outreach/dedup/route.ts` | One-time cleanup endpoint |
+
+---
+
 ## **Employer confirmation emails on candidate completion** (May 2026)
 
 Employers (e.g. Pace) were only getting **in-app** notifications when candidates completed screening consent — no email. Added a shared `notifyEmployerCandidateActionComplete` helper that sends a Resend confirmation email plus the existing bell notification.

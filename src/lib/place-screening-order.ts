@@ -33,6 +33,8 @@ export interface PlaceScreeningOrderInput {
   /** Employer-paid USDC row — linked on PSP bundle inserts when present */
   paymentId?: string | null
   paymentTxHash?: string | null
+  /** Skip 24h duplicate window (e.g. retrying a failed order) */
+  skipDuplicateCheck?: boolean
 }
 
 /**
@@ -114,10 +116,12 @@ export async function placeScreeningOrder(
     }
   }
 
-  const dupErr = await checkRecentDuplicateOrder(supabase, {
-    driverUserId,
-    kind: type,
-  })
+  const dupErr = input.skipDuplicateCheck
+    ? null
+    : await checkRecentDuplicateOrder(supabase, {
+        driverUserId,
+        kind: type,
+      })
   if (dupErr) {
     return { ok: false, status: 409, error: dupErr }
   }
@@ -198,6 +202,20 @@ export async function placeScreeningOrder(
     })
   }
 
+  console.log('[PLACE SCREENING ORDER] Submitting to Accio:', {
+    type,
+    orderNumber,
+    webhookUrl,
+    accioApiUrl,
+    driverUserId,
+    dlState: n.dlState,
+    dlNumber: n.dlNumber ? `${n.dlNumber.substring(0, 3)}***` : 'MISSING',
+    firstName: n.firstName,
+    lastName: n.lastName,
+    dob: n.dob,
+    hasSsn: Boolean(n.ssn && n.ssn.length === 9),
+  })
+
   let accioResponse: string
   try {
     const raw = await fetch(accioApiUrl, {
@@ -207,14 +225,43 @@ export async function placeScreeningOrder(
     })
     if (!raw.ok) {
       const text = await raw.text()
-      console.error(`[PLACE SCREENING ORDER] Accio API error:`, raw.status, text)
+      console.error(`[PLACE SCREENING ORDER] Accio API HTTP error:`, raw.status, text)
       return { ok: false, status: 500, error: 'Failed to submit screening order', details: String(raw.status) }
     }
     accioResponse = await raw.text()
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[PLACE SCREENING ORDER] Accio error:', msg)
+    console.error('[PLACE SCREENING ORDER] Accio network error:', msg)
     return { ok: false, status: 500, error: 'Failed to submit screening order', details: msg }
+  }
+
+  // ── Accio error detection ────────────────────────────────────────────────
+  // Accio can return HTTP 200 with an error in the XML body. Detect common
+  // error patterns and fail loudly so we never store a "pending" order that
+  // Accio actually rejected.
+  console.log('[PLACE SCREENING ORDER] Accio response length:', accioResponse.length, 'type:', type, 'orderNumber:', orderNumber)
+  console.log('[PLACE SCREENING ORDER] Accio response body:', accioResponse.substring(0, 2000))
+
+  const hasOrderId = /orderID=["']\d+["']/i.test(accioResponse)
+  const hasError =
+    /<error[^>]*>/i.test(accioResponse) ||
+    /<status>\s*ERROR\s*<\/status>/i.test(accioResponse) ||
+    /errorCode/i.test(accioResponse)
+
+  if (hasError || !hasOrderId) {
+    console.error('[PLACE SCREENING ORDER] Accio rejected order:', {
+      type,
+      orderNumber,
+      hasOrderId,
+      hasError,
+      responseSnippet: accioResponse.substring(0, 1000),
+    })
+    return {
+      ok: false,
+      status: 502,
+      error: 'Screening service rejected the order — review data and retry',
+      details: accioResponse.substring(0, 500),
+    }
   }
 
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()

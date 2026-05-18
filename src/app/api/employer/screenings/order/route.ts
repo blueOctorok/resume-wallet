@@ -32,8 +32,10 @@ export async function POST(request: NextRequest) {
       type?: 'mvr' | 'psp'
       consentBundleId?: string
       paymentTxHash?: string
+      /** Skip duplicate check — allows re-ordering when a previous attempt is stuck */
+      force?: boolean
     }
-    const { candidateUserId, type, consentBundleId, paymentTxHash } = body
+    const { candidateUserId, type, consentBundleId, paymentTxHash, force } = body
     if (!candidateUserId || !type || !consentBundleId) {
       return NextResponse.json(
         { error: 'candidateUserId, type, and consentBundleId are required' },
@@ -187,9 +189,18 @@ export async function POST(request: NextRequest) {
       candidateRequestIdToComplete: null,
       paymentId,
       paymentTxHash: resolvedTxHash,
+      skipDuplicateCheck: force === true,
     })
 
     if (placed.ok === false) {
+      console.error('[EMPLOYER SCREENINGS ORDER] Order placement failed:', {
+        candidateUserId,
+        type,
+        consentBundleId,
+        status: placed.status,
+        error: placed.error,
+        details: placed.details,
+      })
       return NextResponse.json({ error: placed.error, details: placed.details }, { status: placed.status })
     }
 

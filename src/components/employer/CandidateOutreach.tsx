@@ -384,8 +384,27 @@ export default function CandidateOutreach({
   )
 
   // Only show candidate blocks the employer can actually request:
-  // must be employerRequestable AND the company must have the required employer block installed
+  // must be employerRequestable AND the company must have the required employer block installed.
+  // Exclude driver-psp and driver-mvr — these are now direct-order-only (run from the edit modal
+  // after consent is collected). The only screening email invite is driver-screening-consent.
+  const DIRECT_ORDER_ONLY_BLOCKS = new Set(['driver-psp', 'driver-mvr'])
   const blocksByCategory = useMemo(() => {
+    const map = new Map<string, typeof BLOCK_DEFINITIONS>()
+    for (const block of BLOCK_DEFINITIONS) {
+      if (!block.employerRequestable) continue
+      if (DIRECT_ORDER_ONLY_BLOCKS.has(block.id)) continue
+      if (!employerCanRequest(block, installedEmployerBlockTypes)) continue
+      const existing = map.get(block.categoryId) ?? []
+      existing.push(block)
+      map.set(block.categoryId, existing)
+    }
+    return BLOCK_CATEGORIES
+      .filter(cat => map.has(cat.id))
+      .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
+  }, [installedEmployerBlockTypes])
+
+  // Edit modal needs the full list including screening blocks (for direct-order UI)
+  const allBlocksByCategory = useMemo(() => {
     const map = new Map<string, typeof BLOCK_DEFINITIONS>()
     for (const block of BLOCK_DEFINITIONS) {
       if (!block.employerRequestable) continue
@@ -820,7 +839,28 @@ export default function CandidateOutreach({
   // ── Derived: tab buckets, filter chips, "ready to view" count ─────────────
   // Board = candidate lifecycle (pending → completed) minus stale completed.
   // Archive tab = cancelled / expired + completed older than OUTREACH_STALE_COMPLETED_DAYS.
-  const boardInvites = useMemo(() => invites.filter(isInviteOnActiveKanban), [invites])
+  const boardInvites = useMemo(() => {
+    const active = invites.filter(isInviteOnActiveKanban)
+
+    // Deduplicate: if a candidate has both a driver-screening-consent invite
+    // AND a legacy driver-psp/driver-mvr invite, only keep the consent one.
+    const consentEmails = new Set<string>()
+    const consentUserIds = new Set<string>()
+    for (const inv of active) {
+      if (inv.targetBlockType !== 'driver-screening-consent') continue
+      const email = (inv.candidateEmail ?? '').trim().toLowerCase()
+      if (email) consentEmails.add(email)
+      if (inv.usedByUserId) consentUserIds.add(inv.usedByUserId)
+    }
+
+    return active.filter((inv) => {
+      if (inv.targetBlockType !== 'driver-psp' && inv.targetBlockType !== 'driver-mvr') return true
+      const email = (inv.candidateEmail ?? '').trim().toLowerCase()
+      if (email && consentEmails.has(email)) return false
+      if (inv.usedByUserId && consentUserIds.has(inv.usedByUserId)) return false
+      return true
+    })
+  }, [invites])
   const archivedTabInvites = useMemo(() => invites.filter(isInviteInArchiveTab), [invites])
 
   const readyToViewCount = useMemo(() => {
@@ -1702,7 +1742,7 @@ export default function CandidateOutreach({
         <EditInviteModal
           invite={editingInvite}
           jobs={jobs}
-          blocksByCategory={blocksByCategory}
+          blocksByCategory={allBlocksByCategory}
           installedEmployerBlockTypes={installedEmployerBlockTypes}
           walletAddress={walletAddress}
           companyId={companyId}
@@ -2235,7 +2275,7 @@ function EditInviteModal({
           candidateUserId,
           type,
           consentBundleId: consentBundle.id,
-          // paymentTxHash intentionally omitted — API records a waived order
+          force: true,
         }),
       })
       if (!res.ok) {

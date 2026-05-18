@@ -229,6 +229,30 @@ export async function POST(request: NextRequest) {
     // Derive type from presence of targetBlockType
     const type = targetBlockType ? 'block' : 'general'
 
+    // ── Screening invite dedup ─────────────────────────────────────────────
+    // The unified consent flow (driver-screening-consent) supersedes the old
+    // per-block invites (driver-psp, driver-mvr). Those blocks are now
+    // direct-order-only — employers run them from the edit modal after consent.
+    const DIRECT_ORDER_ONLY = ['driver-psp', 'driver-mvr']
+    if (targetBlockType && DIRECT_ORDER_ONLY.includes(targetBlockType)) {
+      return NextResponse.json(
+        { error: 'MVR and PSP are now ordered directly after consent is collected. Send a Screening Consent invite instead.' },
+        { status: 400 },
+      )
+    }
+
+    if (targetBlockType === 'driver-screening-consent' && candidateEmail) {
+      // Cancel any stale legacy per-block invites that are now superseded
+      const emailLower = candidateEmail.trim().toLowerCase()
+      await supabase
+        .from('application_invites')
+        .update({ status: 'cancelled' })
+        .eq('company_id', ctx.companyId)
+        .ilike('candidate_email', emailLower)
+        .in('target_block_type', DIRECT_ORDER_ONLY)
+        .in('status', ['pending', 'viewed'])
+    }
+
     // Validate job posting belongs to company (if provided)
     if (jobPostingId) {
       const { data: job } = await supabase
