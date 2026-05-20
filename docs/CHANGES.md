@@ -41,6 +41,12 @@ Employers saw many screenings "processing" in Storm while Key/Accio already had 
 | `src/hooks/useEmployerScreenings.ts` | Reconcile on silent refresh |
 | `src/app/api/admin/screening/check-accio/[orderId]/route.ts` | MVR + PSP admin pull/apply |
 
+**Follow-up tightening (same day):** original implementation only reconciled on **silent** refresh (manual button click), so simply viewing the hub didn't pull anything. Tightened to:
+
+- **Initial load also reconciles** — fires in background and silently re-reads the list once Accio responds (no blocking first paint).
+- **10-minute staleness threshold** (was 30) — Accio MVRs usually return in seconds, so 10 min is a safe "long enough to suspect a missed webhook" window.
+- **Vercel cron `*/5 * * * *`** at `/api/cron/reconcile-screenings` — global safety net so stuck orders complete even when no user is online. Pulls up to 100 stale MVR + 100 stale PSP orders per tick. Auth via `CRON_SECRET`.
+
 | File | Change |
 |---|---|
 | `src/lib/place-screening-order.ts` | Accio error detection, pre/post logging, `skipDuplicateCheck` option |

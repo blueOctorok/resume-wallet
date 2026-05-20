@@ -8,7 +8,7 @@ import {
 import { processMvrAccioWebhookCompletion } from '@/lib/process-mvr-accio-webhook'
 import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhook'
 
-const STALE_MINUTES = 30
+const DEFAULT_STALE_MINUTES = 10
 
 export interface ReconcileOneResult {
   orderId: string
@@ -20,6 +20,15 @@ export interface ReconcileOneResult {
   newStatus?: string
 }
 
+export interface ReconcileOptions {
+  /** Reconcile only this order (still must be pending + have an Accio number) */
+  orderId?: string
+  /** Filter by kind */
+  kind?: 'mvr' | 'psp'
+  /** Only reconcile orders ordered_at < now() - staleMinutes. Default 10. */
+  staleMinutes?: number
+}
+
 /**
  * Ask Accio for current results and replay through the same processors as webhooks.
  * Fixes orders stuck at `pending` when Key has the report but postback never landed.
@@ -27,9 +36,10 @@ export interface ReconcileOneResult {
 export async function reconcilePendingScreeningsForCompany(
   supabase: SupabaseClient,
   companyId: string,
-  options?: { orderId?: string; kind?: 'mvr' | 'psp' },
+  options?: ReconcileOptions,
 ): Promise<ReconcileOneResult[]> {
-  const staleBefore = new Date(Date.now() - STALE_MINUTES * 60 * 1000).toISOString()
+  const staleMinutes = options?.staleMinutes ?? DEFAULT_STALE_MINUTES
+  const staleBefore = new Date(Date.now() - staleMinutes * 60 * 1000).toISOString()
   const results: ReconcileOneResult[] = []
 
   const reconcileMvr = async () => {

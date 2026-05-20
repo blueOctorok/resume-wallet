@@ -63,20 +63,21 @@ export function useEmployerScreenings(
         else setLoading(true)
         setError(null)
 
-        // Pull stuck pending orders from Accio before re-reading the DB (webhook backup).
+        // Pull stuck pending orders from Accio every time we refresh — webhook is
+        // best-effort and sometimes never lands. Fire-and-forget on initial load
+        // so we don't block first paint; await on silent (manual refresh) so the
+        // user sees the result of their click.
+        const reconcilePromise = fetch('/api/employer/screenings/reconcile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': walletAddress,
+          },
+          body: '{}',
+        }).catch(() => null)
+
         if (silent) {
-          try {
-            await fetch('/api/employer/screenings/reconcile', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-wallet-address': walletAddress,
-              },
-              body: '{}',
-            })
-          } catch {
-            // Non-fatal — still refresh local list
-          }
+          await reconcilePromise
         }
 
         const res = await fetch('/api/employer/screenings', {
@@ -91,6 +92,34 @@ export function useEmployerScreenings(
         )
         setRows(merged)
         setConsentBundles(data.consentBundles ?? [])
+
+        // If reconcile imported new data after the initial fetch returned,
+        // silently re-read so the user sees the updated rows without clicking.
+        if (!silent) {
+          void reconcilePromise.then(async (r) => {
+            if (!r || !r.ok) return
+            try {
+              const data2 = (await r.json()) as { reconciled?: number }
+              if ((data2?.reconciled ?? 0) > 0) {
+                const res2 = await fetch('/api/employer/screenings', {
+                  headers: { 'x-wallet-address': walletAddress },
+                })
+                if (res2.ok) {
+                  const fresh = (await res2.json()) as ScreeningsResponse
+                  if ('success' in fresh) {
+                    const merged2 = [...fresh.mvr, ...fresh.psp].sort(
+                      (a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime(),
+                    )
+                    setRows(merged2)
+                    setConsentBundles(fresh.consentBundles ?? [])
+                  }
+                }
+              }
+            } catch {
+              // Non-fatal — the eventual silent refresh will pick it up
+            }
+          })
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load screenings')
         setRows([])

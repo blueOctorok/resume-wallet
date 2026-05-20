@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/job-alerts",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-screenings",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

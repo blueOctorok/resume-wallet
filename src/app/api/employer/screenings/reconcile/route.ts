@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    let body: { orderId?: string; kind?: 'mvr' | 'psp' } = {}
+    let body: { orderId?: string; kind?: 'mvr' | 'psp'; staleMinutes?: number } = {}
     try {
       body = await request.json()
     } catch {
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     const results = await reconcilePendingScreeningsForCompany(supabase, ctx.companyId, {
       orderId: body.orderId,
       kind: body.kind,
+      staleMinutes: body.staleMinutes,
     })
 
     const reconciled = results.filter((r) => r.action === 'reconciled').length
