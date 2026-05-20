@@ -5,6 +5,7 @@ import { notifyScreeningReportDelivered } from '@/lib/notify-screening-complete'
 import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { parsePspResult, pspResultToJsonb } from '@/lib/accio-psp-parser'
 import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
+import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
 
 export interface PspWebhookProcessOutcome {
   status: number
@@ -200,6 +201,14 @@ export async function processPspAccioWebhookCompletion(
   // Bug history: when `unfilled` was incorrectly treated as `pending`, every
   // Accio retry sent another "report ready" email — Jason Peterson got 3.
   const becameTerminal = previousOrderStatus === 'pending' && nextStatus !== 'pending'
+  if (becameTerminal && pspOrder.driver_user_id && pspOrder.ordered_by_company_id) {
+    void syncOutreachInviteForDriver(
+      supabase,
+      pspOrder.ordered_by_company_id,
+      pspOrder.driver_user_id,
+    ).catch((err) => console.warn('[PSP WEBHOOK] Outreach invite sync non-fatal:', err))
+  }
+
   if (becameTerminal) {
     void notifyScreeningReportDelivered(supabase, {
       kind: 'psp',

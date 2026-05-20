@@ -8,6 +8,7 @@ import {
 } from '@/lib/process-psp-accio-webhook'
 import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
+import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
 
 export interface MvrWebhookProcessOutcome {
   status: number
@@ -236,6 +237,14 @@ export async function processMvrAccioWebhookCompletion(
   }
 
   const becameTerminal = previousOrderStatus === 'pending' && nextStatus !== 'pending'
+  if (becameTerminal && mvrOrder.driver_user_id && mvrOrder.ordered_by_company_id) {
+    void syncOutreachInviteForDriver(
+      supabase,
+      mvrOrder.ordered_by_company_id,
+      mvrOrder.driver_user_id,
+    ).catch((err) => console.warn('[MVR PROCESS] Outreach invite sync non-fatal:', err))
+  }
+
   if (becameTerminal) {
     void notifyScreeningReportDelivered(supabase, {
       kind: 'mvr',

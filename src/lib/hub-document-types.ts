@@ -36,6 +36,30 @@ export function hubScreeningStatusLabel(status: HubDocument['status']): string {
   }
 }
 
+/**
+ * Employer outreach file pills — show Accio's real terminal state, not just
+ * "Complete" for both `completed` and `needs_review`.
+ */
+export function employerOutreachFileStatusLabel(
+  rawOrderStatus: string | null | undefined,
+): string {
+  const s = String(rawOrderStatus ?? '').toLowerCase()
+  if (s === 'needs_review') return 'Needs review'
+  if (s === 'completed') return 'Complete'
+  if (s === 'failed') return 'Failed'
+  if (s === 'processing') return 'Processing'
+  if (s === 'pending') return 'Pending'
+  return hubScreeningStatusLabel(hubDocStatusFromScreeningOrder(rawOrderStatus))
+}
+
+/** True when the employer can open the full report (completed or flagged for review). */
+export function employerScreeningReportReady(
+  rawOrderStatus: string | null | undefined,
+): boolean {
+  const s = String(rawOrderStatus ?? '').toLowerCase()
+  return s === 'completed' || s === 'needs_review'
+}
+
 function latestHubDocByType(documents: HubDocument[], type: HubDocument['type']): HubDocument | null {
   const rows = documents.filter(
     (d) => d.type === type && !String(d.id).endsWith('-hub-placeholder') && d.status !== 'empty',

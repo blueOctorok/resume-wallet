@@ -4,7 +4,7 @@ import { AlertTriangle, Car, FileWarning, StickyNote, Package, Users, ShieldChec
 import { cn } from '@/lib/utils'
 import { isDarkTheme } from '@/lib/theme-storage'
 import Avatar from '@/components/ui/Avatar'
-import { hubDocStatusFromScreeningOrder } from '@/lib/hub-document-types'
+import { employerScreeningReportReady } from '@/lib/hub-document-types'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { Invite, ScreeningRow } from './types'
@@ -39,17 +39,17 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
   const blockDef = invite.targetBlockType ? getBlockDefinition(invite.targetBlockType) : null
   const blockLabel = blockDef?.label ?? (invite.targetBlockType ? invite.targetBlockType : 'General')
 
-  const completedFiles = files.filter(
-    (f) => hubDocStatusFromScreeningOrder(f.status) === 'complete',
+  const reportReadyFiles = files.filter((f) => employerScreeningReportReady(f.status))
+  const needsReviewFiles = files.filter(
+    (f) => String(f.status ?? '').toLowerCase() === 'needs_review',
   )
-  const pendingFiles = files.filter(
-    (f) => hubDocStatusFromScreeningOrder(f.status) !== 'complete',
-  )
+  const pendingFiles = files.filter((f) => !employerScreeningReportReady(f.status))
 
   const consentComplete = consentBundle?.status === 'complete'
   const consentPending = Boolean(consentBundle && !consentComplete)
 
-  const completedCount = completedFiles.length + (consentComplete ? 1 : 0)
+  const completedCount =
+    reportReadyFiles.length - needsReviewFiles.length + (consentComplete ? 1 : 0)
   const pendingCount = pendingFiles.length + (consentPending ? 1 : 0)
 
   const hasNotes = Boolean((invite.recruiterNotes ?? '').trim())
@@ -120,6 +120,15 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
         <span className={cn('shrink-0', isDark ? 'text-gray-600' : 'text-gray-400')}>·</span>
         <span className={cn('shrink-0', isDark ? 'text-gray-500' : 'text-gray-500')}>{timeAgo(invite.createdAt)}</span>
 
+        {needsReviewFiles.length > 0 && (
+          <span
+            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 dark:text-amber-200"
+            title="Report ready — review recommended"
+          >
+            <FileWarning className="h-2.5 w-2.5" />
+            {needsReviewFiles.length}
+          </span>
+        )}
         {completedCount > 0 && (
           <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">
             <ShieldCheck className="h-2.5 w-2.5" />

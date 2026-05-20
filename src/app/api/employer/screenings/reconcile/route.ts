@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { reconcilePendingScreeningsForCompany } from '@/lib/reconcile-pending-screenings'
+import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
 
 /**
  * POST /api/employer/screenings/reconcile
@@ -45,12 +46,15 @@ export async function POST(request: NextRequest) {
       (r) => r.action === 'accio_error' || r.action === 'process_error',
     ).length
 
+    const outreachSync = await syncOutreachInvitesForCompany(supabase, ctx.companyId)
+
     console.log('[EMPLOYER RECONCILE]', {
       companyId: ctx.companyId,
       checked: results.length,
       reconciled,
       stillPending,
       errors,
+      invitesCompleted: outreachSync.updated,
     })
 
     return NextResponse.json({
@@ -59,6 +63,7 @@ export async function POST(request: NextRequest) {
       reconciled,
       stillPending,
       errors,
+      invitesCompleted: outreachSync.updated,
       results,
     })
   } catch (error: unknown) {

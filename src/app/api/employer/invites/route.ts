@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recruiter-pipeline'
 import { isInviteStatus } from '@/components/employer/outreach/types'
+import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
 import crypto from 'crypto'
 
 const RECRUITER_NOTES_MAX = 8000
@@ -158,6 +159,10 @@ export async function GET(request: NextRequest) {
         query = query.eq('status', status)
       }
     }
+
+    // Backfill kanban columns: screening reports may have landed while invite.status
+    // was still `in_progress` (webhook/reconcile did not run invite sync yet).
+    await syncOutreachInvitesForCompany(supabase, ctx.companyId!)
 
     const { data: invites, error } = await query
 

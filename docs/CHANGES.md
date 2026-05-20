@@ -73,6 +73,12 @@ Fix:
 - `processMvrAccioWebhookCompletion` now defensively `slice()`s string fields before insert so a future column-narrowing can't silently swallow reports again.
 - Cron's catch-block now logs full Postgres error (`code`, `message`, `hint`, `details`) instead of just `e.message`, so the next column-mismatch surfaces in Vercel logs immediately.
 
+**Outreach kanban stuck in "In progress" after reports arrived:** Kanban columns use `application_invites.status`, not `mvr_orders.status`. Consent-first flow only set `in_progress` when the candidate started; MVR/PSP webhooks updated order rows but never flipped the invite to `completed`, so every card stayed in the middle column despite green file badges. Fix:
+
+- `src/lib/sync-outreach-invite-status.ts` — when all employer-paid orders for a candidate are terminal (`completed`, `needs_review`, or `failed`), mark matching screening invites `completed`.
+- Wired from MVR/PSP webhook processors, employer reconcile, and GET `/api/employer/invites` (backfill on load).
+- Outreach UI: file pills show **Needs review** (amber) vs **Complete** (green); kanban tiles show separate amber/green counts; refresh re-fetches invites after reconcile.
+
 **Critical fix #3 — DL numbers with dashes get voided by Key/Accio:** Live probe on Keeshon Samson revealed Key's operators manually voided his MVR with `<client_notes>MVR had to be reordered due to the format entered. No dashes or delimiters.</client_notes>` then cleared `<dlnum/>` and `<dlstate/>`, leaving `<status>unknown</status>` forever. Storm sent the DL as `S525-5109-3241` (Illinois CDLs are commonly formatted with dashes in DMV records); Accio's auto-pipeline rejected it. Fix:
 
 - `accio-xml-builder.ts` now `sanitizeDlNumber()`s before sending — strips everything except `[A-Za-z0-9]` and uppercases.

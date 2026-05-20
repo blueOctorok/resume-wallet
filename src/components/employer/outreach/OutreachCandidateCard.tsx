@@ -34,8 +34,9 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { getBlockDefinition } from '@/lib/block-registry'
 import {
+  employerOutreachFileStatusLabel,
+  employerScreeningReportReady,
   hubDocStatusFromScreeningOrder,
-  hubScreeningStatusLabel,
 } from '@/lib/hub-document-types'
 import { outcomeBadgeClasses, outcomeLabel } from '@/lib/accio-result-status'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
@@ -775,12 +776,17 @@ function FilePill({
 }) {
   const Icon = file.kind === 'mvr' ? Car : FileWarning
   const docStatus = hubDocStatusFromScreeningOrder(file.status)
-  const ready = docStatus === 'complete'
+  const ready = employerScreeningReportReady(file.status)
+  const needsReview = String(file.status ?? '').toLowerCase() === 'needs_review'
 
   const pillCls = ready
-    ? isDark
-      ? 'bg-emerald-500/15 text-emerald-300'
-      : 'bg-emerald-100 text-emerald-800'
+    ? needsReview
+      ? isDark
+        ? 'bg-amber-500/15 text-amber-200'
+        : 'bg-amber-100 text-amber-900'
+      : isDark
+        ? 'bg-emerald-500/15 text-emerald-300'
+        : 'bg-emerald-100 text-emerald-800'
     : docStatus === 'processing'
       ? isDark
         ? 'bg-amber-500/15 text-amber-200'
@@ -816,7 +822,7 @@ function FilePill({
           pillCls,
         )}
       >
-        {hubScreeningStatusLabel(docStatus)}
+        {employerOutreachFileStatusLabel(file.status)}
       </span>
       {ready && file.resultOutcome && (
         <span

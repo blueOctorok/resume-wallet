@@ -54,7 +54,7 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
                 {id === 'pending' && ' — link created, not opened yet.'}
                 {id === 'viewed' && ' — they opened the invite.'}
                 {id === 'in_progress' && ' — they started the flow.'}
-                {id === 'completed' && ' — they finished.'}
+                {id === 'completed' && ' — consent done and every paid MVR/PSP report has returned (clear or needs review).'}
               </li>
             ))}
           </ul>

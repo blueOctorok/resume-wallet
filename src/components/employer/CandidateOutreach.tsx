@@ -870,10 +870,19 @@ export default function CandidateOutreach({
       if (!inv.usedByUserId) continue
       const files = screeningsByUserId.get(inv.usedByUserId)
       if (!files) continue
-      for (const f of files) if (f.status === 'completed') n++
+      for (const f of files) {
+        const s = String(f.status ?? '').toLowerCase()
+        if (s === 'completed' || s === 'needs_review') n++
+      }
     }
     return n
   }, [boardInvites, screeningsByUserId])
+
+  /** Refresh screenings then re-fetch invites so kanban columns catch up after reconcile. */
+  const handleRefreshScreeningsAndInvites = useCallback(async () => {
+    await onRefreshScreenings?.()
+    await fetchInvites()
+  }, [onRefreshScreenings, fetchInvites])
 
   const statusChips = useMemo<FilterChipDef[]>(() => {
     const counts: Partial<Record<InviteStatus, number>> = {}
@@ -1624,7 +1633,7 @@ export default function CandidateOutreach({
                         resendingId={resendingId}
                         onPipelineStatusOverride={handleInviteStatusOverride}
                         statusOverrideSavingId={statusOverrideSavingId}
-                        onRefreshScreenings={onRefreshScreenings}
+                        onRefreshScreenings={handleRefreshScreeningsAndInvites}
                       />
                     )}
                   </>
@@ -1757,7 +1766,7 @@ export default function CandidateOutreach({
           }}
           onOrderPlaced={() => {
             setEditingInvite(null)
-            onRefreshScreenings?.()
+            void handleRefreshScreeningsAndInvites()
           }}
           onClose={() => setEditingInvite(null)}
         />
@@ -1785,7 +1794,7 @@ export default function CandidateOutreach({
           onClose={() => {
             setMvrViewOrderId(null)
             setActiveFileCandidateId(null)
-            onRefreshScreenings?.()
+            void handleRefreshScreeningsAndInvites()
           }}
           walletAddress={walletAddress}
           orderId={mvrViewOrderId}
@@ -1798,7 +1807,7 @@ export default function CandidateOutreach({
           onClose={() => {
             setPspViewOrderId(null)
             setActiveFileCandidateId(null)
-            onRefreshScreenings?.()
+            void handleRefreshScreeningsAndInvites()
           }}
           walletAddress={walletAddress}
           orderId={pspViewOrderId}

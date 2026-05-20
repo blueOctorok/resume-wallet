@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
+import { useUIStore } from '@/stores/ui-store'
 
 interface ScreeningsResponse {
   success: boolean
@@ -49,6 +50,7 @@ interface UseEmployerScreeningsResult {
 export function useEmployerScreenings(
   walletAddress: string | null | undefined,
 ): UseEmployerScreeningsResult {
+  const requestHubRefresh = useUIStore((s) => s.requestHubRefresh)
   const [rows, setRows] = useState<ScreeningRow[]>([])
   const [consentBundles, setConsentBundles] = useState<NonNullable<ScreeningsResponse['consentBundles']>>([])
   const [loading, setLoading] = useState(true)
@@ -76,10 +78,6 @@ export function useEmployerScreenings(
           body: '{}',
         }).catch(() => null)
 
-        if (silent) {
-          await reconcilePromise
-        }
-
         const res = await fetch('/api/employer/screenings', {
           headers: { 'x-wallet-address': walletAddress },
         })
@@ -95,30 +93,40 @@ export function useEmployerScreenings(
 
         // If reconcile imported new data after the initial fetch returned,
         // silently re-read so the user sees the updated rows without clicking.
-        if (!silent) {
-          void reconcilePromise.then(async (r) => {
-            if (!r || !r.ok) return
-            try {
-              const data2 = (await r.json()) as { reconciled?: number }
-              if ((data2?.reconciled ?? 0) > 0) {
-                const res2 = await fetch('/api/employer/screenings', {
-                  headers: { 'x-wallet-address': walletAddress },
-                })
-                if (res2.ok) {
-                  const fresh = (await res2.json()) as ScreeningsResponse
-                  if ('success' in fresh) {
-                    const merged2 = [...fresh.mvr, ...fresh.psp].sort(
-                      (a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime(),
-                    )
-                    setRows(merged2)
-                    setConsentBundles(fresh.consentBundles ?? [])
-                  }
-                }
+        const applyReconcileFollowUp = async (r: Response | null) => {
+          if (!r?.ok) return
+          try {
+            const data2 = (await r.json()) as { reconciled?: number; invitesCompleted?: number }
+            const touched =
+              (data2?.reconciled ?? 0) > 0 || (data2?.invitesCompleted ?? 0) > 0
+            if (!touched) return
+            const res2 = await fetch('/api/employer/screenings', {
+              headers: { 'x-wallet-address': walletAddress },
+            })
+            if (res2.ok) {
+              const fresh = (await res2.json()) as ScreeningsResponse
+              if ('success' in fresh) {
+                const merged2 = [...fresh.mvr, ...fresh.psp].sort(
+                  (a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime(),
+                )
+                setRows(merged2)
+                setConsentBundles(fresh.consentBundles ?? [])
               }
-            } catch {
-              // Non-fatal — the eventual silent refresh will pick it up
             }
-          })
+            // Re-fetch outreach invites so kanban columns move to Completed.
+            if ((data2?.invitesCompleted ?? 0) > 0) {
+              requestHubRefresh()
+            }
+          } catch {
+            // Non-fatal
+          }
+        }
+
+        if (silent) {
+          const r = await reconcilePromise
+          await applyReconcileFollowUp(r)
+        } else {
+          void reconcilePromise.then(applyReconcileFollowUp)
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load screenings')
@@ -129,7 +137,7 @@ export function useEmployerScreenings(
         setRefreshing(false)
       }
     },
-    [walletAddress],
+    [walletAddress, requestHubRefresh],
   )
 
   useEffect(() => {
