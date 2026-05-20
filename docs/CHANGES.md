@@ -19,6 +19,28 @@ Orders placed from the employer "Run MVR/PSP" button were being stored as `pendi
 6. **Admin dedup endpoint** — `POST /api/admin/outreach/dedup` cancels existing stale per-block invites. Use `?dry=true` to preview.
 7. **MVR/PSP removed from invite picker** — `driver-psp` and `driver-mvr` no longer appear as options when creating a new outreach invite. They are direct-order-only (run from the edit modal after consent). The API also rejects attempts to create those invite types with a clear error message. Only `driver-screening-consent` (and non-screening blocks) can be email invites.
 
+## **Stuck MVR/PSP: Accio postback + reconcile pull** (May 2026)
+
+Employers saw many screenings "processing" in Storm while Key/Accio already had results (e.g. Keeshon Samson — order sent to Accio, `pending` in DB for 24h+ with `result_xml` null).
+
+**Root cause:** `postback_types` had been trimmed to `IPC::OCR::RDC`, dropping **`EXP`** (per-component completion XML) and **`CNF`** (complete-order XML) per Accio `order_entry.md`. Without those postbacks, completion payloads often never hit `/api/mvr/webhook`.
+
+**Fixes:**
+1. **Restore postback types** — `IPC::EXP::CNF::OCR::RDC` in `accio-xml-builder.ts` for all new orders.
+2. **Reconcile pull** — `POST /api/employer/screenings/reconcile` calls Accio `getOrderResults` for company pending orders older than 30 minutes and replays through the same processors as webhooks. Employer hub refresh (silent) runs this before re-fetching screenings.
+3. **Shared MVR processor** — `process-mvr-accio-webhook.ts` (webhook + reconcile). Relaxed suborder requirement when order ID alone is enough to match.
+4. **Admin check-accio** — supports `?kind=mvr` for MVR rows (Keeshon: `07955d5f-3bea-4f7f-acea-d0c1fde75d3f`).
+
+| File | Change |
+|---|---|
+| `src/lib/accio-xml-builder.ts` | Restore EXP + CNF postback types |
+| `src/lib/accio-get-order-results.ts` | Accio `getOrderResults` pull helper |
+| `src/lib/process-mvr-accio-webhook.ts` | Shared MVR completion processor |
+| `src/lib/reconcile-pending-screenings.ts` | Company-wide stale order reconcile |
+| `src/app/api/employer/screenings/reconcile/route.ts` | Employer reconcile API |
+| `src/hooks/useEmployerScreenings.ts` | Reconcile on silent refresh |
+| `src/app/api/admin/screening/check-accio/[orderId]/route.ts` | MVR + PSP admin pull/apply |
+
 | File | Change |
 |---|---|
 | `src/lib/place-screening-order.ts` | Accio error detection, pre/post logging, `skipDuplicateCheck` option |

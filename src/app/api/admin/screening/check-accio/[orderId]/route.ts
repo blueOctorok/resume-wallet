@@ -2,74 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/admin-auth'
 import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhook'
+import { processMvrAccioWebhookCompletion } from '@/lib/process-mvr-accio-webhook'
+import {
+  accioXmlHasFilledFmcsa,
+  accioXmlHasFilledMvr,
+  pullAccioOrderResults,
+  summarizeAccioSuborders,
+} from '@/lib/accio-get-order-results'
 
 /**
- * Admin diagnostic: pull a screening order's status directly from Accio via
- * `getOrderResults`, instead of waiting for Accio's webhook to fire.
+ * Admin diagnostic: pull screening status from Accio via `getOrderResults`.
  *
- * Why this exists:
- *   PSP queries through FMCSA can sit in Accio's queue for 30+ minutes. If the
- *   order is genuinely "still processing", we wait. But if Accio has the result
- *   and the webhook delivery silently failed, we'd otherwise wait forever.
- *   This endpoint lets admin ask Accio "what do you actually have?" and replay
- *   the result through our normal PSP webhook path so the order, the block
- *   table, and notifications all get the same treatment as a real postback.
- *
- * Usage:
- *   GET  /api/admin/screening/check-accio/{pspOrderId}
- *     → pull current status from Accio, return summary, do NOT touch the DB
- *   POST /api/admin/screening/check-accio/{pspOrderId}?apply=true
- *     → pull from Accio AND if FMCSA suborder is filled, replay through the
- *       PSP webhook processor (updates the row + sends emails as if Accio had
- *       posted normally)
- *
- * Auth: ADMIN_WALLETS only — this calls Accio with billable creds and writes
- * to production tables. Not a public endpoint.
+ * GET  ...?kind=mvr|psp (default psp) — preview only
+ * POST ...?apply=true — replay filled results through webhook processors
  */
 
-const ACCIO_API_URL = process.env.ACCIO_API_URL || 'https://service.keybackground.com/c/p/researcherxml'
-
-function buildGetOrderResultsXml(accioOrderNumber: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<XML>
-    <login>
-        <account>${process.env.ACCIO_ACCOUNT || ''}</account>
-        <username>${process.env.ACCIO_USERNAME || ''}</username>
-        <password>${process.env.ACCIO_PASSWORD || ''}</password>
-    </login>
-    <getOrderResults orderID="${accioOrderNumber}" />
-</XML>`
-}
-
-interface SuborderSummary {
-  type: string | null
-  filledStatus: string | null
-  filledCode: string | null
-  heldForReview: string | null
-  remoteSubOrderNumber: string | null
-}
-
-/** Pull a quick summary of every subOrder in the response so admin can eyeball it. */
-function summarizeSuborders(xml: string): SuborderSummary[] {
-  const re = /<subOrder([^>]*)>/gi
-  const out: SuborderSummary[] = []
-  let m: RegExpExecArray | null
-  while ((m = re.exec(xml)) !== null) {
-    const attrs = m[1]
-    const a = (name: string) =>
-      new RegExp(`\\b${name}=["']([^"']*)["']`, 'i').exec(attrs)?.[1] ?? null
-    out.push({
-      type: a('type'),
-      filledStatus: a('filledStatus'),
-      filledCode: a('filledCode'),
-      heldForReview: a('held_for_review'),
-      remoteSubOrderNumber: a('remote_number') ?? a('number'),
-    })
-  }
-  return out
-}
-
-async function fetchAccioFromPspOrder(orderId: string): Promise<{
+async function fetchStormOrder(
+  orderId: string,
+  kind: 'mvr' | 'psp',
+): Promise<{
   accioOrderNumber: string | null
   currentStatus: string | null
   orderedAt: string | null
@@ -78,8 +29,9 @@ async function fetchAccioFromPspOrder(orderId: string): Promise<{
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+  const table = kind === 'mvr' ? 'mvr_orders' : 'psp_orders'
   const { data } = await supabase
-    .from('psp_orders')
+    .from(table)
     .select('accio_order_number, status, ordered_at')
     .eq('id', orderId)
     .maybeSingle()
@@ -91,30 +43,6 @@ async function fetchAccioFromPspOrder(orderId: string): Promise<{
   }
 }
 
-interface AccioPullSuccess { ok: true; xml: string }
-interface AccioPullFailure { ok: false; status: number; body: string }
-type AccioPullResult = AccioPullSuccess | AccioPullFailure
-
-async function pullFromAccio(accioOrderNumber: string): Promise<AccioPullResult> {
-  const requestXml = buildGetOrderResultsXml(accioOrderNumber)
-  try {
-    const res = await fetch(ACCIO_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml' },
-      body: requestXml,
-    })
-    const xml = await res.text()
-    if (!res.ok) return { ok: false, status: res.status, body: xml }
-    return { ok: true, xml }
-  } catch (e) {
-    return {
-      ok: false,
-      status: 502,
-      body: e instanceof Error ? e.message : String(e),
-    }
-  }
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
@@ -123,21 +51,28 @@ export async function GET(
   if (auth.error) return auth.error
 
   const { orderId } = await params
-  const { accioOrderNumber, currentStatus, orderedAt } = await fetchAccioFromPspOrder(orderId)
+  const kind = request.nextUrl.searchParams.get('kind') === 'mvr' ? 'mvr' : 'psp'
+  const { accioOrderNumber, currentStatus, orderedAt } = await fetchStormOrder(orderId, kind)
   if (!accioOrderNumber) {
-    return NextResponse.json({ error: 'PSP order not found or has no Accio order number' }, { status: 404 })
+    return NextResponse.json(
+      { error: `${kind.toUpperCase()} order not found or has no Accio order number` },
+      { status: 404 },
+    )
   }
 
-  const accio = await pullFromAccio(accioOrderNumber)
+  const accio = await pullAccioOrderResults(accioOrderNumber)
   if (accio.ok === false) {
     return NextResponse.json({ error: `Accio returned ${accio.status}`, body: accio.body }, { status: 502 })
   }
 
   return NextResponse.json({
     success: true,
+    kind,
     storm: { orderId, currentStatus, orderedAt, accioOrderNumber },
     accio: {
-      suborders: summarizeSuborders(accio.xml),
+      suborders: summarizeAccioSuborders(accio.xml),
+      mvrFilled: accioXmlHasFilledMvr(accio.xml),
+      fmcsaFilled: accioXmlHasFilledFmcsa(accio.xml),
       responseLength: accio.xml.length,
       rawHead: accio.xml.substring(0, 2000),
     },
@@ -152,46 +87,55 @@ export async function POST(
   if (auth.error) return auth.error
 
   const { orderId } = await params
+  const kind = request.nextUrl.searchParams.get('kind') === 'mvr' ? 'mvr' : 'psp'
   const apply = request.nextUrl.searchParams.get('apply') === 'true'
 
-  const { accioOrderNumber, currentStatus, orderedAt } = await fetchAccioFromPspOrder(orderId)
+  const { accioOrderNumber, currentStatus, orderedAt } = await fetchStormOrder(orderId, kind)
   if (!accioOrderNumber) {
-    return NextResponse.json({ error: 'PSP order not found or has no Accio order number' }, { status: 404 })
+    return NextResponse.json(
+      { error: `${kind.toUpperCase()} order not found or has no Accio order number` },
+      { status: 404 },
+    )
   }
 
-  const accio = await pullFromAccio(accioOrderNumber)
+  const accio = await pullAccioOrderResults(accioOrderNumber)
   if (accio.ok === false) {
     return NextResponse.json({ error: `Accio returned ${accio.status}`, body: accio.body }, { status: 502 })
   }
 
-  const suborders = summarizeSuborders(accio.xml)
-
+  const suborders = summarizeAccioSuborders(accio.xml)
   let replay: { replayed: boolean; detail: string } = { replayed: false, detail: 'apply=false' }
+
   if (apply) {
-    // Reuse the production PSP webhook processor so side effects (status flip,
-    // block sync, dedup'd email) match exactly what would have happened on a
-    // real postback. The processor checks `previousStatus === 'pending'` so
-    // calling it twice on a completed order is safe.
     const supabase = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
-    try {
-      const outcome = await processPspAccioWebhookCompletion(supabase, accio.xml)
-      replay = {
-        replayed: true,
-        detail: `Processor responded ${outcome.status}: ${JSON.stringify(outcome.body)}`,
-      }
-    } catch (e) {
-      replay = {
-        replayed: false,
-        detail: `Processor threw: ${e instanceof Error ? e.message : String(e)}`,
+    const ready = kind === 'mvr' ? accioXmlHasFilledMvr(accio.xml) : accioXmlHasFilledFmcsa(accio.xml)
+    if (!ready) {
+      replay = { replayed: false, detail: 'Accio suborder not filled yet' }
+    } else {
+      try {
+        const outcome =
+          kind === 'mvr'
+            ? await processMvrAccioWebhookCompletion(supabase, accio.xml)
+            : await processPspAccioWebhookCompletion(supabase, accio.xml)
+        replay = {
+          replayed: outcome.status < 400,
+          detail: `Processor responded ${outcome.status}: ${JSON.stringify(outcome.body)}`,
+        }
+      } catch (e) {
+        replay = {
+          replayed: false,
+          detail: `Processor threw: ${e instanceof Error ? e.message : String(e)}`,
+        }
       }
     }
   }
 
   return NextResponse.json({
     success: true,
+    kind,
     storm: { orderId, currentStatus, orderedAt, accioOrderNumber },
     accio: {
       suborders,

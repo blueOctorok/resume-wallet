@@ -147,11 +147,11 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
         </subject>`
 
   // Add webhook configuration if provided.
-  // postback_types: trimmed from CETA::IPC::EXP::CNF::OCR::RDC down to the three
-  // we actually care about — IPC (in-progress completion), OCR (order completion),
-  // RDC (results-delivery completion). The dropped types were generating noisy
-  // intermediate webhook posts (confirmation, expirations) that we just 200-acked
-  // without doing any work.
+  // postback_types per Accio order_entry.md:
+  //   EXP = component completion XML when each suborder completes (MVR result payload)
+  //   CNF = complete order XML when the whole order completes
+  //   IPC/OCR/RDC = in-progress + disposition updates (we 200-ack non-completion noise)
+  // Dropping EXP/CNF caused reports to sit at Key while Storm stayed pending forever.
   if (webhookUrl && webhookGuid) {
     xml += `
         <postBackInfo>
@@ -159,7 +159,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <guID>${escapeXml(webhookGuid)}</guID>
             <account>${escapeXml(account)}</account>
             <username>${escapeXml(username)}</username>
-            <postback_types>IPC::OCR::RDC</postback_types>
+            <postback_types>IPC::EXP::CNF::OCR::RDC</postback_types>
         </postBackInfo>`
   }
 
@@ -306,7 +306,7 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
             <guID>${escapeXml(webhookGuid)}</guID>
             <account>${escapeXml(account)}</account>
             <username>${escapeXml(username)}</username>
-            <postback_types>IPC::OCR::RDC</postback_types>
+            <postback_types>IPC::EXP::CNF::OCR::RDC</postback_types>
         </postBackInfo>`
   }
 

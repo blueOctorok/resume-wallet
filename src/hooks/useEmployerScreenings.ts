@@ -63,6 +63,22 @@ export function useEmployerScreenings(
         else setLoading(true)
         setError(null)
 
+        // Pull stuck pending orders from Accio before re-reading the DB (webhook backup).
+        if (silent) {
+          try {
+            await fetch('/api/employer/screenings/reconcile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-wallet-address': walletAddress,
+              },
+              body: '{}',
+            })
+          } catch {
+            // Non-fatal — still refresh local list
+          }
+        }
+
         const res = await fetch('/api/employer/screenings', {
           headers: { 'x-wallet-address': walletAddress },
         })
