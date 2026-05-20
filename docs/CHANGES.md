@@ -47,6 +47,12 @@ Employers saw many screenings "processing" in Storm while Key/Accio already had 
 - **10-minute staleness threshold** (was 30) — Accio MVRs usually return in seconds, so 10 min is a safe "long enough to suspect a missed webhook" window.
 - **Vercel cron `*/5 * * * *`** at `/api/cron/reconcile-screenings` — global safety net so stuck orders complete even when no user is online. Pulls up to 100 stale MVR + 100 stale PSP orders per tick. Auth via `CRON_SECRET`.
 
+**Critical fix — wrong orderID sent to Accio:** Initial reconcile was passing `accio_order_number` (Storm's generated 17-digit reference, e.g. `17792054834422185`) to Accio's `getOrderResults`. Per Accio docs the `orderID` attribute must be **Accio's internal order ID** (a short numeric like `59782` returned on `placeOrder`). With the wrong ID Accio returns an XML error node that our code interpreted as "still pending" — so reconcile silently no-op'd on every stuck order. Fix:
+
+- `pullAccioOrderResults` now treats `<error>` / `<errors>` / `errorCode` in a 200 response as failure (not "still pending").
+- Reconcile (`reconcile-pending-screenings.ts`, cron, admin check-accio) now tries `accio_remote_order_number` first, falls back to `accio_order_number` only if Accio rejects the internal ID. Both IDs are logged.
+- Admin check-accio response includes `lookupIdUsed`, `triedIds`, and 4 KB of Accio's raw response head so we can diagnose any future stragglers.
+
 | File | Change |
 |---|---|
 | `src/lib/place-screening-order.ts` | Accio error detection, pre/post logging, `skipDuplicateCheck` option |

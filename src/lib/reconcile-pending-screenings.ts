@@ -10,6 +10,19 @@ import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhoo
 
 const DEFAULT_STALE_MINUTES = 10
 
+/**
+ * Accio's `getOrderResults` expects THEIR orderID (the short numeric one they
+ * issued on placeOrder, e.g. "59782"), NOT our generated reference number.
+ * Per Accio docs the reference number may also resolve, but their internal
+ * ID is the canonical lookup — try it first.
+ */
+function pickAccioLookupId(row: {
+  accio_remote_order_number: string | null
+  accio_order_number: string | null
+}): string | null {
+  return row.accio_remote_order_number || row.accio_order_number || null
+}
+
 export interface ReconcileOneResult {
   orderId: string
   kind: 'mvr' | 'psp'
@@ -45,10 +58,9 @@ export async function reconcilePendingScreeningsForCompany(
   const reconcileMvr = async () => {
     let query = supabase
       .from('mvr_orders')
-      .select('id, status, accio_order_number, ordered_at')
+      .select('id, status, accio_order_number, accio_remote_order_number, ordered_at')
       .eq('ordered_by_company_id', companyId)
       .eq('status', 'pending')
-      .not('accio_order_number', 'is', null)
       .lt('ordered_at', staleBefore)
 
     if (options?.orderId) query = query.eq('id', options.orderId)
@@ -62,10 +74,9 @@ export async function reconcilePendingScreeningsForCompany(
   const reconcilePsp = async () => {
     let query = supabase
       .from('psp_orders')
-      .select('id, status, accio_order_number, ordered_at')
+      .select('id, status, accio_order_number, accio_remote_order_number, ordered_at')
       .eq('ordered_by_company_id', companyId)
       .eq('status', 'pending')
-      .not('accio_order_number', 'is', null)
       .lt('ordered_at', staleBefore)
 
     if (options?.orderId) query = query.eq('id', options.orderId)
@@ -85,10 +96,15 @@ export async function reconcilePendingScreeningsForCompany(
 async function reconcileOne(
   supabase: SupabaseClient,
   kind: 'mvr' | 'psp',
-  row: { id: string; status: string; accio_order_number: string | null },
+  row: {
+    id: string
+    status: string
+    accio_order_number: string | null
+    accio_remote_order_number: string | null
+  },
 ): Promise<ReconcileOneResult> {
-  const accioOrderNumber = row.accio_order_number
-  if (!accioOrderNumber) {
+  const lookupId = pickAccioLookupId(row)
+  if (!lookupId) {
     return {
       orderId: row.id,
       kind,
@@ -99,16 +115,36 @@ async function reconcileOne(
     }
   }
 
-  const pull = await pullAccioOrderResults(accioOrderNumber)
+  // Try Accio's remote ID first (their internal orderID — what getOrderResults
+  // actually expects). If that returns an error, retry with our reference number.
+  let pull = await pullAccioOrderResults(lookupId)
+  let usedId = lookupId
+  if (
+    pull.ok === false &&
+    row.accio_remote_order_number &&
+    row.accio_order_number &&
+    lookupId === row.accio_remote_order_number
+  ) {
+    console.warn(
+      `[RECONCILE] ${kind} ${row.id} remote ID ${lookupId} failed, retrying with reference number ${row.accio_order_number}`,
+    )
+    pull = await pullAccioOrderResults(row.accio_order_number)
+    usedId = row.accio_order_number
+  }
+
   if (pull.ok === false) {
-    console.error(`[RECONCILE] Accio pull failed ${kind} ${row.id}:`, pull.status, pull.body.slice(0, 300))
+    console.error(
+      `[RECONCILE] Accio pull failed ${kind} ${row.id} (id=${usedId}):`,
+      pull.status,
+      pull.body.slice(0, 500),
+    )
     return {
       orderId: row.id,
       kind,
-      accioOrderNumber,
+      accioOrderNumber: usedId,
       previousStatus: row.status,
       action: 'accio_error',
-      detail: `Accio HTTP ${pull.status}`,
+      detail: `Accio status=${pull.status}; ${pull.body.slice(0, 200)}`,
     }
   }
 
@@ -120,10 +156,13 @@ async function reconcileOne(
     const summary = suborders
       .map((s) => `${s.type ?? '?'}:${s.filledStatus ?? '?'}`)
       .join(', ')
+    console.log(
+      `[RECONCILE] ${kind} ${row.id} still pending (id=${usedId}): ${summary || 'no suborders'}`,
+    )
     return {
       orderId: row.id,
       kind,
-      accioOrderNumber,
+      accioOrderNumber: usedId,
       previousStatus: row.status,
       action: 'still_pending',
       detail: summary || 'No filled suborder in Accio response',
@@ -140,7 +179,7 @@ async function reconcileOne(
       return {
         orderId: row.id,
         kind,
-        accioOrderNumber,
+        accioOrderNumber: usedId,
         previousStatus: row.status,
         action: 'process_error',
         detail: JSON.stringify(outcome.body).slice(0, 200),
@@ -150,12 +189,12 @@ async function reconcileOne(
     const newStatus =
       typeof outcome.body.status === 'string' ? outcome.body.status : undefined
 
-    console.log(`[RECONCILE] ${kind} ${row.id} reconciled via pull`)
+    console.log(`[RECONCILE] ${kind} ${row.id} reconciled via id=${usedId}`)
 
     return {
       orderId: row.id,
       kind,
-      accioOrderNumber,
+      accioOrderNumber: usedId,
       previousStatus: row.status,
       action: 'reconciled',
       detail: 'Imported from Accio getOrderResults',
@@ -166,7 +205,7 @@ async function reconcileOne(
     return {
       orderId: row.id,
       kind,
-      accioOrderNumber,
+      accioOrderNumber: usedId,
       previousStatus: row.status,
       action: 'process_error',
       detail: msg,

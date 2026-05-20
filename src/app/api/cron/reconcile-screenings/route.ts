@@ -50,17 +50,15 @@ export async function GET(request: NextRequest) {
   const [{ data: mvrOrders }, { data: pspOrders }] = await Promise.all([
     supabase
       .from('mvr_orders')
-      .select('id, status, accio_order_number, ordered_at')
+      .select('id, status, accio_order_number, accio_remote_order_number, ordered_at')
       .eq('status', 'pending')
-      .not('accio_order_number', 'is', null)
       .lt('ordered_at', staleBefore)
       .order('ordered_at', { ascending: true })
       .limit(MAX_PER_RUN),
     supabase
       .from('psp_orders')
-      .select('id, status, accio_order_number, ordered_at')
+      .select('id, status, accio_order_number, accio_remote_order_number, ordered_at')
       .eq('status', 'pending')
-      .not('accio_order_number', 'is', null)
       .lt('ordered_at', staleBefore)
       .order('ordered_at', { ascending: true })
       .limit(MAX_PER_RUN),
@@ -100,17 +98,36 @@ function bumpSummary(
 async function reconcileOne(
   supabase: SupabaseClient,
   kind: 'mvr' | 'psp',
-  row: { id: string; status: string; accio_order_number: string | null },
+  row: {
+    id: string
+    status: string
+    accio_order_number: string | null
+    accio_remote_order_number: string | null
+  },
 ): Promise<{ action: string }> {
-  const accioOrderNumber = row.accio_order_number
-  if (!accioOrderNumber) return { action: 'errors' }
+  // Prefer Accio's internal orderID; fall back to our reference number.
+  const primary = row.accio_remote_order_number || row.accio_order_number
+  if (!primary) return { action: 'errors' }
 
-  const pull = await pullAccioOrderResults(accioOrderNumber)
+  let pull = await pullAccioOrderResults(primary)
+  let usedId = primary
+  if (
+    pull.ok === false &&
+    row.accio_remote_order_number &&
+    row.accio_order_number &&
+    primary === row.accio_remote_order_number
+  ) {
+    console.warn(
+      `[RECONCILE CRON] ${kind} ${row.id} remote ID ${primary} bounced, retrying with reference ${row.accio_order_number}`,
+    )
+    pull = await pullAccioOrderResults(row.accio_order_number)
+    usedId = row.accio_order_number
+  }
+
   if (pull.ok === false) {
     console.error(
-      `[RECONCILE CRON] Accio pull failed ${kind} ${row.id}:`,
-      pull.status,
-      pull.body.slice(0, 300),
+      `[RECONCILE CRON] Accio pull failed ${kind} ${row.id} (id=${usedId}, status=${pull.status}):`,
+      pull.body.slice(0, 500),
     )
     return { action: 'errors' }
   }
@@ -121,7 +138,7 @@ async function reconcileOne(
     const sum = summarizeAccioSuborders(pull.xml)
       .map((s) => `${s.type ?? '?'}:${s.filledStatus ?? '?'}`)
       .join(', ')
-    console.log(`[RECONCILE CRON] ${kind} ${row.id} still pending in Accio: ${sum}`)
+    console.log(`[RECONCILE CRON] ${kind} ${row.id} (id=${usedId}) still pending: ${sum || 'no suborders'}`)
     return { action: 'still_pending' }
   }
 
@@ -137,7 +154,7 @@ async function reconcileOne(
       )
       return { action: 'errors' }
     }
-    console.log(`[RECONCILE CRON] ${kind} ${row.id} reconciled`)
+    console.log(`[RECONCILE CRON] ${kind} ${row.id} reconciled via id=${usedId}`)
     return { action: 'reconciled' }
   } catch (e) {
     console.error(

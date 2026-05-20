@@ -22,6 +22,7 @@ async function fetchStormOrder(
   kind: 'mvr' | 'psp',
 ): Promise<{
   accioOrderNumber: string | null
+  accioRemoteOrderNumber: string | null
   currentStatus: string | null
   orderedAt: string | null
 }> {
@@ -32,12 +33,15 @@ async function fetchStormOrder(
   const table = kind === 'mvr' ? 'mvr_orders' : 'psp_orders'
   const { data } = await supabase
     .from(table)
-    .select('accio_order_number, status, ordered_at')
+    .select('accio_order_number, accio_remote_order_number, status, ordered_at')
     .eq('id', orderId)
     .maybeSingle()
-  if (!data) return { accioOrderNumber: null, currentStatus: null, orderedAt: null }
+  if (!data) {
+    return { accioOrderNumber: null, accioRemoteOrderNumber: null, currentStatus: null, orderedAt: null }
+  }
   return {
     accioOrderNumber: data.accio_order_number ?? null,
+    accioRemoteOrderNumber: data.accio_remote_order_number ?? null,
     currentStatus: data.status ?? null,
     orderedAt: data.ordered_at ?? null,
   }
@@ -52,29 +56,46 @@ export async function GET(
 
   const { orderId } = await params
   const kind = request.nextUrl.searchParams.get('kind') === 'mvr' ? 'mvr' : 'psp'
-  const { accioOrderNumber, currentStatus, orderedAt } = await fetchStormOrder(orderId, kind)
-  if (!accioOrderNumber) {
+  const { accioOrderNumber, accioRemoteOrderNumber, currentStatus, orderedAt } =
+    await fetchStormOrder(orderId, kind)
+  if (!accioOrderNumber && !accioRemoteOrderNumber) {
     return NextResponse.json(
       { error: `${kind.toUpperCase()} order not found or has no Accio order number` },
       { status: 404 },
     )
   }
 
-  const accio = await pullAccioOrderResults(accioOrderNumber)
+  // Try Accio's internal ID first, fall back to our reference.
+  const primary = accioRemoteOrderNumber || accioOrderNumber!
+  let accio = await pullAccioOrderResults(primary)
+  let usedId = primary
+  if (accio.ok === false && accioRemoteOrderNumber && accioOrderNumber && primary === accioRemoteOrderNumber) {
+    accio = await pullAccioOrderResults(accioOrderNumber)
+    usedId = accioOrderNumber
+  }
+
   if (accio.ok === false) {
-    return NextResponse.json({ error: `Accio returned ${accio.status}`, body: accio.body }, { status: 502 })
+    return NextResponse.json(
+      {
+        error: `Accio returned ${accio.status}`,
+        body: accio.body,
+        triedIds: { accioOrderNumber, accioRemoteOrderNumber, used: usedId },
+      },
+      { status: 502 },
+    )
   }
 
   return NextResponse.json({
     success: true,
     kind,
-    storm: { orderId, currentStatus, orderedAt, accioOrderNumber },
+    storm: { orderId, currentStatus, orderedAt, accioOrderNumber, accioRemoteOrderNumber },
     accio: {
+      lookupIdUsed: usedId,
       suborders: summarizeAccioSuborders(accio.xml),
       mvrFilled: accioXmlHasFilledMvr(accio.xml),
       fmcsaFilled: accioXmlHasFilledFmcsa(accio.xml),
       responseLength: accio.xml.length,
-      rawHead: accio.xml.substring(0, 2000),
+      rawHead: accio.xml.substring(0, 4000),
     },
   })
 }
@@ -90,17 +111,32 @@ export async function POST(
   const kind = request.nextUrl.searchParams.get('kind') === 'mvr' ? 'mvr' : 'psp'
   const apply = request.nextUrl.searchParams.get('apply') === 'true'
 
-  const { accioOrderNumber, currentStatus, orderedAt } = await fetchStormOrder(orderId, kind)
-  if (!accioOrderNumber) {
+  const { accioOrderNumber, accioRemoteOrderNumber, currentStatus, orderedAt } =
+    await fetchStormOrder(orderId, kind)
+  if (!accioOrderNumber && !accioRemoteOrderNumber) {
     return NextResponse.json(
       { error: `${kind.toUpperCase()} order not found or has no Accio order number` },
       { status: 404 },
     )
   }
 
-  const accio = await pullAccioOrderResults(accioOrderNumber)
+  const primary = accioRemoteOrderNumber || accioOrderNumber!
+  let accio = await pullAccioOrderResults(primary)
+  let usedId = primary
+  if (accio.ok === false && accioRemoteOrderNumber && accioOrderNumber && primary === accioRemoteOrderNumber) {
+    accio = await pullAccioOrderResults(accioOrderNumber)
+    usedId = accioOrderNumber
+  }
+
   if (accio.ok === false) {
-    return NextResponse.json({ error: `Accio returned ${accio.status}`, body: accio.body }, { status: 502 })
+    return NextResponse.json(
+      {
+        error: `Accio returned ${accio.status}`,
+        body: accio.body,
+        triedIds: { accioOrderNumber, accioRemoteOrderNumber, used: usedId },
+      },
+      { status: 502 },
+    )
   }
 
   const suborders = summarizeAccioSuborders(accio.xml)
@@ -136,11 +172,12 @@ export async function POST(
   return NextResponse.json({
     success: true,
     kind,
-    storm: { orderId, currentStatus, orderedAt, accioOrderNumber },
+    storm: { orderId, currentStatus, orderedAt, accioOrderNumber, accioRemoteOrderNumber },
     accio: {
+      lookupIdUsed: usedId,
       suborders,
       responseLength: accio.xml.length,
-      rawHead: accio.xml.substring(0, 2000),
+      rawHead: accio.xml.substring(0, 4000),
     },
     replay,
   })

@@ -76,6 +76,19 @@ export type AccioPullResult =
   | { ok: true; xml: string }
   | { ok: false; status: number; body: string }
 
+/**
+ * Detect Accio error responses that come back as HTTP 200 with XML error nodes.
+ * Common cases: error code 90 (invalid orderID), 91 (cannot view), missing perms.
+ */
+export function hasAccioErrorXml(xml: string): boolean {
+  return (
+    /<error\b/i.test(xml) ||
+    /<errors\b/i.test(xml) ||
+    /<status>\s*ERROR\s*<\/status>/i.test(xml) ||
+    /errorCode/i.test(xml)
+  )
+}
+
 export async function pullAccioOrderResults(
   accioOrderNumber: string,
 ): Promise<AccioPullResult> {
@@ -88,6 +101,10 @@ export async function pullAccioOrderResults(
     })
     const xml = await res.text()
     if (!res.ok) return { ok: false, status: res.status, body: xml }
+    // HTTP 200 with XML error nodes → still a failure
+    if (hasAccioErrorXml(xml)) {
+      return { ok: false, status: 200, body: xml }
+    }
     return { ok: true, xml }
   } catch (e) {
     return {
