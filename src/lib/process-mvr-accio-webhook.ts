@@ -132,14 +132,20 @@ export async function processMvrAccioWebhookCompletion(
       ? parsedResult.licenses[0]
       : null
 
+  // Defensive truncation: license_class/status are now `text` in DB, but if
+  // anyone narrows them again or we hit an unexpected column constraint we'd
+  // rather store a truncated value than fail the whole reconcile silently.
+  const safe = (v: string | undefined | null, max = 1000): string | null =>
+    v ? v.slice(0, max) : null
+
   const resultData = {
     mvr_order_id: mvrOrder.id,
     driver_user_id: mvrOrder.driver_user_id,
     driver_profile_id: mvrOrder.driver_profile_id,
-    license_number: parsedResult.licenseNumber,
-    license_state: parsedResult.licenseState,
-    license_class: primaryLicense?.class || null,
-    license_status: primaryLicense?.status || null,
+    license_number: safe(parsedResult.licenseNumber, 50),
+    license_state: safe(parsedResult.licenseState, 2),
+    license_class: safe(primaryLicense?.class),
+    license_status: safe(primaryLicense?.status),
     license_expiration_date: primaryLicense?.expirationDate
       ? formatDateForDb(primaryLicense.expirationDate)
       : parsedResult.licenseExpirationDate

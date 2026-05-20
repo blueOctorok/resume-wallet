@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
   ])
 
   const summary = {
-    mvr: { checked: 0, reconciled: 0, stillPending: 0, errors: 0 },
-    psp: { checked: 0, reconciled: 0, stillPending: 0, errors: 0 },
+    mvr: { checked: 0, reconciled: 0, stillPending: 0, voided: 0, errors: 0 },
+    psp: { checked: 0, reconciled: 0, stillPending: 0, voided: 0, errors: 0 },
   }
 
   for (const row of mvrOrders ?? []) {
@@ -87,11 +87,12 @@ export async function GET(request: NextRequest) {
 }
 
 function bumpSummary(
-  s: { reconciled: number; stillPending: number; errors: number },
+  s: { reconciled: number; stillPending: number; voided: number; errors: number },
   action: string,
 ) {
   if (action === 'reconciled') s.reconciled++
   else if (action === 'still_pending') s.stillPending++
+  else if (action === 'voided') s.voided++
   else s.errors++
 }
 
@@ -135,6 +136,28 @@ async function reconcileOne(
   const ready =
     kind === 'mvr' ? accioXmlHasFilledMvr(pull.xml) : accioXmlHasFilledFmcsa(pull.xml)
   if (!ready) {
+    // Detect orders Accio voided for bad input (e.g. DL with dashes). They
+    // will never complete via webhook — see reconcile-pending-screenings.ts.
+    const accioStatus = /<status>\s*unknown\s*<\/status>/i.test(pull.xml)
+    const dlnumEmpty = /<dlnum\s*\/>/i.test(pull.xml)
+    const reorderNote = /reordered|no dashes|delimiter|format entered/i.test(pull.xml)
+    if (accioStatus && (dlnumEmpty || reorderNote)) {
+      const table = kind === 'mvr' ? 'mvr_orders' : 'psp_orders'
+      await supabase
+        .from(table)
+        .update({
+          status: 'failed',
+          result_outcome: 'voided_by_vendor',
+          completed_at: new Date().toISOString(),
+          result_xml: pull.xml,
+        })
+        .eq('id', row.id)
+      console.warn(
+        `[RECONCILE CRON] ${kind} ${row.id} voided by Accio operator — marked failed`,
+      )
+      return { action: 'voided' }
+    }
+
     const sum = summarizeAccioSuborders(pull.xml)
       .map((s) => `${s.type ?? '?'}:${s.filledStatus ?? '?'}`)
       .join(', ')
@@ -149,18 +172,30 @@ async function reconcileOne(
         : await processPspAccioWebhookCompletion(supabase, pull.xml)
     if (outcome.status >= 400) {
       console.error(
-        `[RECONCILE CRON] ${kind} ${row.id} process error:`,
-        outcome.body,
+        `[RECONCILE CRON] ${kind} ${row.id} process error (status=${outcome.status}):`,
+        JSON.stringify(outcome.body).slice(0, 500),
       )
       return { action: 'errors' }
     }
     console.log(`[RECONCILE CRON] ${kind} ${row.id} reconciled via id=${usedId}`)
     return { action: 'reconciled' }
   } catch (e) {
-    console.error(
-      `[RECONCILE CRON] ${kind} ${row.id} threw:`,
-      e instanceof Error ? e.message : String(e),
-    )
+    // Surface the FULL error — code, message, hint — so DB constraint failures
+    // (like the varchar(10) license_class one) don't disappear into "errors".
+    const detail =
+      e && typeof e === 'object'
+        ? JSON.stringify(
+            {
+              message: (e as Error).message,
+              code: (e as { code?: string }).code,
+              hint: (e as { hint?: string }).hint,
+              details: (e as { details?: string }).details,
+            },
+            null,
+            0,
+          )
+        : String(e)
+    console.error(`[RECONCILE CRON] ${kind} ${row.id} threw:`, detail)
     return { action: 'errors' }
   }
 }

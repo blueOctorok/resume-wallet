@@ -47,11 +47,36 @@ Employers saw many screenings "processing" in Storm while Key/Accio already had 
 - **10-minute staleness threshold** (was 30) — Accio MVRs usually return in seconds, so 10 min is a safe "long enough to suspect a missed webhook" window.
 - **Vercel cron `*/5 * * * *`** at `/api/cron/reconcile-screenings` — global safety net so stuck orders complete even when no user is online. Pulls up to 100 stale MVR + 100 stale PSP orders per tick. Auth via `CRON_SECRET`.
 
-**Critical fix — wrong orderID sent to Accio:** Initial reconcile was passing `accio_order_number` (Storm's generated 17-digit reference, e.g. `17792054834422185`) to Accio's `getOrderResults`. Per Accio docs the `orderID` attribute must be **Accio's internal order ID** (a short numeric like `59782` returned on `placeOrder`). With the wrong ID Accio returns an XML error node that our code interpreted as "still pending" — so reconcile silently no-op'd on every stuck order. Fix:
+**Critical fix — wrong orderID sent to Accio:** Initial reconcile was passing `accio_order_number` (Storm's generated 17-digit reference, e.g. `17792054834422185`) to Accio's `getOrderResults`. Per Accio docs the `orderID` attribute must be **Accio's internal order ID** (a short numeric like `59782` returned on `placeOrder`). Live probe confirmed: Storm reference returns `<error n="90">a getOrderResults orderID attribute value is not a valid order number</error>`. With the wrong ID our code interpreted Accio's error response as "still pending" — so reconcile silently no-op'd on every stuck order. Fix:
 
 - `pullAccioOrderResults` now treats `<error>` / `<errors>` / `errorCode` in a 200 response as failure (not "still pending").
 - Reconcile (`reconcile-pending-screenings.ts`, cron, admin check-accio) now tries `accio_remote_order_number` first, falls back to `accio_order_number` only if Accio rejects the internal ID. Both IDs are logged.
 - Admin check-accio response includes `lookupIdUsed`, `triedIds`, and 4 KB of Accio's raw response head so we can diagnose any future stragglers.
+
+**Critical fix #2 — narrow varchar columns were silently rejecting every reconcile:** Even after the orderID fix, the cron returned `{ errors: 24 }` because every `processMvrAccioWebhookCompletion` call threw Postgres `22001` ("value too long for type character varying(10)"). Webhook deliveries had been silently failing too — Accio retries successful but the same constraint failure happened each time — which is why these older orders never completed.
+
+We audited 106 real Accio responses to find every overflow risk, not just the one that surfaced:
+
+| Column | Old type | Max seen | Risk |
+|---|---|---|---|
+| `mvr_results.license_class` | varchar(10) | **105 chars** | **broken** — 226 overflowing values |
+| `mvr_results.license_status` | varchar(50) | 48 chars | imminent (2 chars from breaking) |
+| `mvr_results.medical_cert_status` | varchar(50) | 0 chars (never populated yet) | prophylactic |
+| `block_driver_mvr.license_status` | varchar(50) | (synced from MVR results) | imminent |
+| `mvr_orders.fee_currency` | varchar(10) | 0 chars (never populated yet) | prophylactic |
+| `psp_orders.fee_currency` | varchar(10) | 0 chars (never populated yet) | prophylactic |
+
+Fix:
+
+- Migration `087_widen_accio_vendor_string_columns.sql` — all six vendor-controlled string columns → `text`. State DMVs use wildly varying conventions; `text` and `varchar(N)` are identical in Postgres storage anyway. We deliberately keep narrow varchar on columns *we* control (`*.status`, `*.result_status`, `*.order_type`, `mvr_search_type`) so the type system still guards us against bad internal writes.
+- The migration also drops + recreates the `career_cards` view because Postgres blocks `ALTER COLUMN TYPE` on any column referenced by a view (`fee_currency` was used in two LATERAL subqueries). The recreated view is verbatim from `pg_get_viewdef`. Wrapped in `BEGIN/COMMIT` so the view is never missing if anything fails.
+- `processMvrAccioWebhookCompletion` now defensively `slice()`s string fields before insert so a future column-narrowing can't silently swallow reports again.
+- Cron's catch-block now logs full Postgres error (`code`, `message`, `hint`, `details`) instead of just `e.message`, so the next column-mismatch surfaces in Vercel logs immediately.
+
+**Critical fix #3 — DL numbers with dashes get voided by Key/Accio:** Live probe on Keeshon Samson revealed Key's operators manually voided his MVR with `<client_notes>MVR had to be reordered due to the format entered. No dashes or delimiters.</client_notes>` then cleared `<dlnum/>` and `<dlstate/>`, leaving `<status>unknown</status>` forever. Storm sent the DL as `S525-5109-3241` (Illinois CDLs are commonly formatted with dashes in DMV records); Accio's auto-pipeline rejected it. Fix:
+
+- `accio-xml-builder.ts` now `sanitizeDlNumber()`s before sending — strips everything except `[A-Za-z0-9]` and uppercases.
+- Reconcile + cron now detect the voided-by-operator signature (`<status>unknown</status>` + empty `<dlnum/>` + reorder note) and flip the order to `status='failed'`, `result_outcome='voided_by_vendor'`. Previously these would have sat as `pending` forever.
 
 | File | Change |
 |---|---|

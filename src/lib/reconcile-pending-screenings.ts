@@ -28,7 +28,13 @@ export interface ReconcileOneResult {
   kind: 'mvr' | 'psp'
   accioOrderNumber: string
   previousStatus: string
-  action: 'still_pending' | 'reconciled' | 'accio_error' | 'process_error' | 'skipped'
+  action:
+    | 'still_pending'
+    | 'reconciled'
+    | 'accio_error'
+    | 'process_error'
+    | 'skipped'
+    | 'voided_by_vendor'
   detail: string
   newStatus?: string
 }
@@ -156,6 +162,39 @@ async function reconcileOne(
     const summary = suborders
       .map((s) => `${s.type ?? '?'}:${s.filledStatus ?? '?'}`)
       .join(', ')
+
+    // Detect orders Accio operators voided for bad data (e.g. DL with dashes).
+    // Signature: <status>unknown</status> + empty <dlnum/> + client_notes about
+    // reordering. These will NEVER complete via webhook — flip them to
+    // `failed` so the UI can show "reorder needed" instead of "pending".
+    const accioStatus = /<status>\s*unknown\s*<\/status>/i.test(pull.xml)
+    const dlnumEmpty = /<dlnum\s*\/>/i.test(pull.xml)
+    const reorderNote = /reordered|no dashes|delimiter|format entered/i.test(pull.xml)
+    if (accioStatus && (dlnumEmpty || reorderNote)) {
+      const table = kind === 'mvr' ? 'mvr_orders' : 'psp_orders'
+      await supabase
+        .from(table)
+        .update({
+          status: 'failed',
+          result_outcome: 'voided_by_vendor',
+          completed_at: new Date().toISOString(),
+          result_xml: pull.xml,
+        })
+        .eq('id', row.id)
+      console.warn(
+        `[RECONCILE] ${kind} ${row.id} voided by Accio operator (DL format) — marked failed`,
+      )
+      return {
+        orderId: row.id,
+        kind,
+        accioOrderNumber: usedId,
+        previousStatus: row.status,
+        action: 'voided_by_vendor',
+        detail: 'Accio operator reordered/voided for bad input',
+        newStatus: 'failed',
+      }
+    }
+
     console.log(
       `[RECONCILE] ${kind} ${row.id} still pending (id=${usedId}): ${summary || 'no suborders'}`,
     )

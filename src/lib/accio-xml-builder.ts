@@ -47,6 +47,20 @@ export interface AccioOrderData {
 }
 
 /**
+ * Strip dashes, spaces, and slashes from a DL number before sending to Accio.
+ *
+ * Key Background's MVR operators reject DLs with delimiters and reorder them
+ * manually, leaving us a `client_notes` like "MVR had to be reordered due to
+ * the format entered. No dashes or delimiters." Once they reorder, the
+ * suborder sits in Accio as <status>unknown</status> with empty dlnum/dlstate
+ * forever and Storm's order silently stays pending. Sanitizing here keeps
+ * orders on the fast automated path.
+ */
+function sanitizeDlNumber(dl: string): string {
+  return (dl || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+}
+
+/**
  * Build Accio MVR order XML
  */
 export function buildAccioMvrOrderXml(data: AccioOrderData): string {
@@ -66,7 +80,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
     state,
     zip,
     jobState,
-    dlNumber,
+    dlNumber: rawDlNumber,
     dlState,
     orderNumber,
     mvrSearchType = 'standard',
@@ -77,13 +91,12 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
     webhookGuid
   } = data
 
-  // Get Accio credentials from environment
+  const dlNumber = sanitizeDlNumber(rawDlNumber)
   const account = process.env.ACCIO_ACCOUNT || ''
   const username = process.env.ACCIO_USERNAME || ''
   const password = process.env.ACCIO_PASSWORD || ''
   const mode = process.env.ACCIO_MODE || 'PROD'
 
-  // Format DOB (YYYYMMDD)
   const dobFormatted = dob.replace(/-/g, '').substring(0, 8)
 
   // Build XML - matching new Accio format exactly
@@ -235,7 +248,7 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
     state,
     zip,
     jobState,
-    dlNumber,
+    dlNumber: rawDlNumber,
     dlState,
     orderNumber,
     suppressApplicantEmail = true,
@@ -243,6 +256,7 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
     webhookGuid,
   } = data
 
+  const dlNumber = sanitizeDlNumber(rawDlNumber)
   const account = process.env.ACCIO_ACCOUNT || ''
   const username = process.env.ACCIO_USERNAME || ''
   const password = process.env.ACCIO_PASSWORD || ''
