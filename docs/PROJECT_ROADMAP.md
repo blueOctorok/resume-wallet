@@ -1,6 +1,51 @@
 # Storm — Project Roadmap
 
+## Foundation Reset (May 2026 — top priority)
+
+> **Read this first.** A late-May 2026 strategy review concluded that Storm's user-facing infrastructure (Alchemy smart wallets, USDC payments, IPFS, on-chain registries, STORM ERC-20) is decorative — it adds operational complexity without delivering a real moat. The new direction puts a Web2 stack underneath the product and treats cryptographic verification as a deferred upgrade behind a stable interface. **Full strategic + architectural context lives in [`docs/midnight/ARCHITECTURE.md`](midnight/ARCHITECTURE.md). The moat thesis is in [`docs/midnight/MOAT_THESIS.md`](midnight/MOAT_THESIS.md). Decision rationale is in [`docs/midnight/DECISION_LOG.md`](midnight/DECISION_LOG.md).**
+
+The Foundation Reset is **the highest-priority work track** until Phases 1 and 2 ship. DQ File Completion (below) continues in parallel where it doesn't depend on the legacy stack.
+
+| Phase | Goal | Effort | Status |
+|---|---|---|---|
+| **Phase 1 — Web2 cleanup** | Replace Alchemy/Base/USDC/IPFS/STORM-on-Base with **Supabase Auth + Stripe + Supabase Storage**. End-user experience: 30s onboarding, credit-card payments, no crypto in UI. | 4–6 weeks | 🔲 Pre-flight decisions locked 2026-05-22; ready to start at T1.1 |
+| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `AttestationService` interface. | 3–4 weeks | 🔲 Not started |
+| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind same `AttestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case has emerged. Users still never see Midnight. | 4–6 weeks | ⏸ **Deferred — customer-driven trigger only** |
+
+### Pre-flight decisions (resolved 2026-05-22)
+
+- **Auth provider:** ✅ **Supabase Auth** (DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; one vendor surface. Custom sign-in UI built with Storm's `@/components/ui` primitives.
+- **STORM token:** ✅ **Option B** (DEC-2026-05-005) — drop Base Sepolia ERC-20 in Phase 1, replace with off-chain `users.storm_points` ledger; preserve optionality to reissue as Midnight-native shielded token in Phase 3.
+- **Payment shape:** ✅ **Stripe Checkout (one-time) + Subscriptions** (DEC-2026-05-006) — full capability built; **Pace billing deferred** (Pace continues operating without enforced billing during the migration; new/non-Pace customers use Stripe from day one).
+
+Atomic per-step execution: [`docs/midnight/EXECUTION_CHECKLIST.md`](midnight/EXECUTION_CHECKLIST.md). Strategic-level breakdown: [`docs/midnight/PHASE_1_PLAN.md`](midnight/PHASE_1_PLAN.md).
+
+### Phase 3 trigger criteria (defer until at least one is true)
+
+- A carrier requires proof Storm cannot forge its own attestations
+- A regulator demands cryptographic guarantees about disclosure correctness
+- An investor due-diligence process requires the chain story to be live, not theoretical
+- A customer offers a contract conditional on ZK availability
+
+If none of these happen, Phase 3 stays deferred indefinitely. **That's a good outcome** — the moat is selective disclosure (Phase 2), with Phase 3 as a defensive cryptographic upgrade only when adversarial pressure justifies it.
+
+### What survives every phase
+
+- Supabase as source of truth (every `block_*` table, `user_profiles`, `companies`, `mvr_orders`, `psp_orders`, `applications`, `driver_applications`)
+- Composable hub architecture (registry, `block-data.ts`, every block component, every shell)
+- Accio integration (PSP / MVR XML pipeline, webhooks, reconcile)
+- DOT application wizard, bidirectional mapper, PDF export
+- Stormi context, prompts, journey
+- Career card, projected card, lenses
+- Employer hub, blocks, screenings, applicant pipeline, audit trail
+
+The Foundation Reset is *substitution* (Web3 stack → Web2 stack), not *rewrite*. Product surface stays intact.
+
+---
+
 ## Strategic Direction (May 2026)
+
+> The blockchain policy and product framing in this section remain correct under the Foundation Reset. The Foundation Reset adds *implementation* details (Phase 1/2/3) but does not change *what Storm is*.
 
 ### What Storm IS
 
@@ -80,7 +125,7 @@ Items 1-3 (the hard ones) are done. Items 4-10 are document uploads and simple f
 | Driver self-orders MVR | Driver | $20-40 |
 | Annual DQ file renewal (fresh MVR + certs) | Driver or carrier | $30-50/year |
 | Stormi AI credits | Driver | $1-5 packs |
-| STORM token rewards | Platform (engagement) | Earned, not purchased |
+| ~~STORM token rewards~~ → Storm Points | Platform (engagement) | **Foundation Reset (May 2026):** STORM ERC-20 dropped. Replaced with off-chain `users.storm_points` ledger if user-facing rewards return. See [`docs/midnight/DECISION_LOG.md`](midnight/DECISION_LOG.md) DEC-2026-05-005. |
 
 ### Long-term vision: Storm as the DQ file API
 
@@ -100,14 +145,29 @@ Once enough drivers have complete DQ files in Storm:
 | Resume generator with career card QR link | A career card that replaces resumes |
 | Fill-once DOT app (TurboTax for DQ files) | A mass-apply automation tool |
 
-### Pace Drivers as the wedge
+### Pace Drivers as the wedge — open to the ecosystem
 
-Pace is the initial customer. Everything built should answer: "Does this help Pace place drivers faster?"
+> Full reasoning, including the four operational pains and how selective-disclosure attestations address each, lives in [`docs/midnight/PARTNERS.md`](midnight/PARTNERS.md). Read that for the strategic context.
 
-- Pace onboards drivers → drivers build DQ files in Storm
-- Pace sees compliance status across their driver pool
-- Pace sends carriers a Storm link → carrier sees pre-assembled DQ file
-- Carrier trusts Pace placements more → Pace closes faster → more drivers join
+Pace is the **wedge, not the lock-in.** Pace is the initial customer and the design partner whose workflow shapes feature defaults. Other recruiting agencies and direct carriers come onto Storm's employer side using the same blocks (`employer-screening-consent`, `employer-mvr-orders`, `employer-psp-orders`). There is no Pace-specific code path, and there must never be one.
+
+**Why Pace specifically benefits** (full version in [`PARTNERS.md`](midnight/PARTNERS.md)):
+
+- **Re-screening drops to zero on repeat drivers.** Pace's pre-screen produces attestations once; every subsequent carrier accepts the same attestations. Per-placement screening cost trends to zero on repeat drivers; margin and throughput rise.
+- **Placement timelines compress from weeks to days.** Carriers accept Pace's pre-screen attestations natively; the duplicative screening loop disappears.
+- **Match quality up, 90-day attrition down.** Carriers publish requirements as attestation requests; mismatches surface before interviews are scheduled.
+- **Communication gap closes without recruiter cost.** Stormi handles status updates; recruiters keep doing the high-value human work.
+- **Pace's verified-driver pool compounds.** Every driver they place builds a permanent network asset Pace's competitors can't replicate.
+
+**Why the ecosystem benefits at the same time:**
+
+- **Driver portability.** Attestations belong to the driver, not the agency. A Pace-placed driver who later goes to a direct carrier doesn't re-screen.
+- **No per-agency code paths.** `employer_hub_blocks` is company-scoped (per [`block-development.mdc`](../.cursor/rules/block-development.mdc)). Any agency or carrier installs the same blocks, gets the same capabilities.
+- **Pricing is shaped by customer type, not by name.** Recruiting agencies, direct carriers, and large fleets each get appropriate pricing; Pace doesn't get favored economic status.
+
+**The product principle that follows:** every employer-side feature must either strengthen Pace *and* the ecosystem, or it's the wrong feature. A feature that locks drivers to Pace, special-cases Pace in code, or assumes Pace is the only employer is an anti-pattern.
+
+The original three-bullet wedge story still holds — Pace onboards drivers → drivers build DQ files → carriers trust Pace placements more → Pace closes faster → more drivers join. The Foundation Reset (above) makes the *carrier trust* step structural rather than reputational: carriers trust because the facts are verified, not because Pace says so.
 
 ### DOT app "fill once, use everywhere"
 
@@ -136,9 +196,11 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 
 ## 🚧 Next Up — DQ File Completion (May–June 2026)
 
+> **Coordination with Foundation Reset:** These are **product-feature** phases (DQ file content). The **Foundation Reset** above is **infrastructure** phases (Web2 stack, attestations). They run in parallel. DQ-File-Completion-Phase-1 (language cleanup) reinforces Foundation-Reset-Phase-1 (UI no longer says "blockchain-verified"). DQ-File-Completion-Phase-10 (IPFS PDF archival) is **superseded** by Foundation-Reset-Phase-2 (attestation-backed verification — see below).
+
 | Track | Status | Notes |
 |-------|--------|-------|
-| **Phase 1 — Language cleanup** | 🔲 Todo | Remove "blockchain-verified" from self-reported data UI. Rebrand resume/DOT verification status labels. Update meta tags, homepage copy, Stormi prompts. |
+| **Phase 1 — Language cleanup** | 🔲 Todo | Remove "blockchain-verified" from self-reported data UI. Rebrand resume/DOT verification status labels. Update meta tags, homepage copy, Stormi prompts. **Aligns with Foundation Reset Phase 1.** |
 | **Phase 2 — Document upload blocks** | 🔲 Todo | Medical cert, road test cert, ELDT cert, SPE cert, medical variance — each a small block with file upload + metadata fields. |
 | **Phase 3 — Annual compliance forms** | 🔲 Todo | Annual certificate of violations (simple form). Annual MVR review trigger (re-order via Accio + reviewer field). |
 | **Phase 4 — DOT app PDF format** | 🔲 Todo | Rework export to match standard DOT form layout carriers expect. |
@@ -146,8 +208,8 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 | **Phase 6 — Agency dashboard** | 🔲 Todo | Pace-specific view: multi-candidate compliance status, DQ file completeness per driver, share links for carriers. |
 | **Phase 7 — CDL verification API** | 🔲 Future | Investigate Accio/SambaSafety CDLIS lookup. Turns self-reported CDL into confirmed CDL. |
 | **Phase 8 — FMCSA Clearinghouse** | 🔲 Future | Requires employer credentials. Facilitate query through Pace's Clearinghouse account. |
-| **Phase 9 — DQ file API** | 🔲 Future | External API for carriers to pull driver-owned DQ files with consent. The long-term product. |
-| **Phase 10 — IPFS / on-chain PDF archival** | 🔲 Future | Server-rendered MVR + PSP PDFs (shipped May 2026 via `@react-pdf/renderer`) are streamed on demand. Next step: upload each finalized PDF to IPFS, anchor the CID on-chain alongside the existing MVR result hash, and surface a `verified on-chain` link in the PDF footer. Lets a third party verify the exact PDF bytes a candidate shared without trusting Storm. |
+| **Phase 9 — DQ file API** | 🔲 Future | External API for carriers to pull driver-owned DQ files with consent. The long-term product. **Will use `AttestationService` interface from Foundation Reset Phase 2 for all returned facts.** |
+| **Phase 10 — IPFS / on-chain PDF archival** | ⛔ **Superseded** | Originally planned to upload finalized MVR + PSP PDFs to IPFS and anchor CIDs on-chain. **Foundation Reset (May 2026) supersedes this.** Phase 2 attestations deliver the same trust guarantee (third-party verifiable, tamper-proof) without IPFS or Pinata, and Phase 3 (deferred) replaces the signature with a Midnight ZK proof when customer demand justifies it. PDFs stay in Supabase Storage; verification happens via `attestationService.verifyAttestation()`. |
 
 ---
 

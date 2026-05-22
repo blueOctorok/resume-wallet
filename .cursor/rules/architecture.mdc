@@ -120,6 +120,10 @@ Every API route (`src/app/api/...`) must follow these patterns:
 
 ### Authentication
 
+> **⚠️ Phase 1 deprecation.** The `x-wallet-address` header pattern is current production but is being **removed in Phase 1** of the strategic shift (see `.cursor/rules/strategic-direction.mdc` and `docs/midnight/PHASE_1_PLAN.md`). It will be replaced with **Supabase Auth** session cookies (locked 2026-05-22; DEC-2026-05-008).
+
+**Current pattern (legacy — will be removed in Phase 1):**
+
 ```typescript
 // Candidate/employer routes — wallet address from header
 const walletAddress = request.headers.get('x-wallet-address')
@@ -130,6 +134,34 @@ import { requireAdmin } from '@/lib/admin-auth'
 const auth = requireAdmin(request)
 if (auth instanceof NextResponse) return auth
 ```
+
+**Phase 1 target pattern (Supabase Auth — will replace the above):**
+
+```typescript
+// Candidate/employer routes — session-based auth via Supabase Auth
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
+
+const userId = await getStormUserIdFromRequest(request)
+if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+
+// During the dual-mode transition, getStormUserIdFromRequest tries the Supabase
+// session first, then falls back to the x-wallet-address header. Once T1.12 ships,
+// the wallet fallback is removed and the helper becomes Supabase-only.
+
+// Admin routes — same requireAdmin helper (uses ADMIN_API_TOKEN, unchanged)
+import { requireAdmin } from '@/lib/admin-auth'
+const auth = requireAdmin(request)
+if (auth instanceof NextResponse) return auth
+```
+
+**Why `getStormUserIdFromRequest` (and not direct `supabase.auth.getUser()` inline)?**
+Because `users.id` equals `auth.users.id` by convention (T1.3 migration sets up the FK), the helper just returns `user.id` directly — no extra DB lookup. But putting it behind a helper keeps the dual-mode wallet fallback in one place during the migration and gives every route a uniform call site.
+
+### Rules during Phase 1 cleanup
+
+- **Don't add new uses of `x-wallet-address`.** If you're writing a new API route, write it for the Phase 1 target pattern even if the helpers don't exist yet — leave a `TODO(phase-1)` comment for the auth-provider import line.
+- **Don't refactor existing routes preemptively.** Phase 1 has a dedicated track for this (~50 routes). One-off refactors create merge conflicts.
+- **Admin routes (`requireAdmin`)** are a separate path; `ADMIN_API_TOKEN` is preserved.
 
 ### Error response shape
 
@@ -215,7 +247,7 @@ All state lives in Zustand stores. No `useState` for shared or feature-level dat
 
 | Store | Owns |
 |---|---|
-| `useAuthStore` | user, walletAddress, userRole, session |
+| `useAuthStore` | user, userRole, session (Phase 1: drops `walletAddress`, adds auth-provider session id) |
 | `useUIStore` | currentPage, modals, tabs, journey state |
 | `useHubBlocksStore` | installed blocks, block picker state |
 | `useDotApplicationStore` | DOT form data, submission state, prefill |

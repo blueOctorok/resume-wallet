@@ -1,0 +1,261 @@
+---
+description: Rules for working on credential verification, attestation generation, and verification UIs. Read this when touching any "verified" badge, fact panel, or proof-issuing code path.
+globs: src/lib/attestation-service*, src/lib/verify-*, src/components/career-card/*, src/app/api/career-card/**, src/app/api/attestation/**, src/app/api/verify/**
+alwaysApply: false
+---
+
+# Attestation Architecture
+
+**Read this whenever you touch:**
+
+- Anything named `attestation*`, `verify-*`, or `proof-*`
+- Career-card "verified" badges, fact panels, or trust strips
+- API routes under `/api/attestation/`, `/api/verify/`, `/api/career-card/`
+- Code that decides what an employer / carrier can see about a candidate
+
+The strategic context for this rule lives in `.cursor/rules/strategic-direction.mdc` and `docs/midnight/ARCHITECTURE.md`. Read those first if you haven't.
+
+---
+
+## The core architectural rule
+
+**Every credential fact a carrier sees flows through `AttestationService.proveFact()`.**
+
+Never read directly from `block_*` tables to render a "verified" badge or fact. Even if it's tempting, even if the fact is "obvious" (e.g. "Class A CDL" — pulled from `block_driver_cdl.cdl_class`). The point of the abstraction is that *every* fact is verifiable the same way, with the same proof artifact, regardless of where it came from.
+
+```typescript
+// ❌ BAD — bypasses attestation service
+const cdl = await getCdlData(supabase, userId)
+const isClassA = cdl?.cdl_class === 'A'
+return <Badge verified={isClassA}>Class A CDL</Badge>
+
+// ✅ GOOD — fact flows through attestation service
+const attestation = await attestationService.proveFact({
+  candidateUserId: userId,
+  factType: 'cdl_class_a',
+})
+return <VerifiedFactBadge attestation={attestation}>Class A CDL</VerifiedFactBadge>
+```
+
+The reason: in Phase 3, that `proveFact` call returns a Midnight ZK proof. In Phase 2, it returns a signed JWT. The component never knows which. If the badge bypasses the service, swapping implementations becomes a code-search-and-rewrite instead of a one-line change.
+
+---
+
+## The interface
+
+Defined in `src/lib/attestation-service.ts` (Phase 2 will create this — currently does not exist).
+
+```typescript
+export interface AttestationService {
+  /**
+   * Prove a specific fact about a candidate. Returns a verifiable artifact.
+   * The fact MUST be derivable from data Storm has access to (block_* tables,
+   * MVR results, employment verifications, etc.). The implementation chooses
+   * how to render the proof: signed JWT today, ZK proof later.
+   */
+  proveFact(input: AttestationInput): Promise<Attestation>
+
+  /**
+   * Verify an attestation independently. Used by carrier UIs and any
+   * third-party verification endpoints. Returns whether the proof is valid
+   * and what fields were disclosed.
+   */
+  verifyAttestation(attestation: Attestation): Promise<VerificationResult>
+}
+
+export interface AttestationInput {
+  candidateUserId: string
+  factType: FactType  // see registry below
+  parameters?: Record<string, unknown>  // optional fact-specific params
+  audienceId?: string  // optional carrier scoping
+}
+
+export interface Attestation {
+  id: string                              // UUID, persisted in `attestations` table
+  factType: FactType
+  factSummary: string                     // human-readable summary for UI
+  disclosedFields: Record<string, unknown> // selectively-disclosed values
+  issuedAt: string
+  expiresAt?: string
+  proof: ProofArtifact
+}
+
+export type ProofArtifact =
+  | { kind: 'signed_jwt'; jwt: string; issuer: string }       // Phase 2
+  | { kind: 'midnight_zk'; txHash: string; proofId: string }  // Phase 3 (future)
+
+export interface VerificationResult {
+  valid: boolean
+  factType: FactType
+  factSummary: string
+  disclosedFields: Record<string, unknown>
+  issuedAt: string
+  issuer: string
+  reason?: string  // populated when valid: false
+}
+```
+
+---
+
+## The fact registry
+
+Every verifiable fact has a `FactType` entry. New facts must be added to the registry before they can be requested.
+
+```typescript
+// src/lib/fact-registry.ts (Phase 2)
+
+export type FactType =
+  | 'mvr_clean_36_months'      // No moving violations in last 36 months
+  | 'mvr_no_dui_ever'          // No DUI ever
+  | 'cdl_class_a'              // Holds Class A CDL
+  | 'cdl_endorsement_hazmat'   // Has hazmat endorsement
+  | 'cdl_valid_through'        // CDL valid through date X (parameter)
+  | 'dot_application_complete' // DOT 391.21 application is on file and complete
+  | 'employment_history_no_gaps' // 7-year employment history with no unexplained gaps
+  | 'previous_employer_verified' // Specific previous employer responded to verification
+  // ... etc
+
+interface FactDefinition {
+  factType: FactType
+  label: string                                           // UI label
+  description: string                                     // longer human-readable
+  category: 'driving' | 'license' | 'employment' | 'compliance'
+  source: 'self_reported' | 'third_party'                // from `PROJECT_ROADMAP.md` blockchain policy
+  proveImpl: (input: ProveContext) => Promise<FactResult> // the actual logic
+}
+```
+
+### Rules for adding a new fact
+
+1. **Add the `FactType` literal** to the union above.
+2. **Add a `FactDefinition`** to the registry export. Without this, `proveFact()` rejects requests for the fact.
+3. **Implement `proveImpl`.** This is the function that reads from `block_*` / `mvr_results` / wherever, computes the fact, and returns `{ true | false, disclosedFields }`.
+4. **Decide `disclosedFields` carefully.** This is the selectively-disclosed surface. Only include fields the carrier *needs* to evaluate the fact. For `cdl_valid_through`, include the expiration date (the carrier needs it). For `mvr_clean_36_months`, do NOT include the underlying MVR data — only the boolean fact and the verification date.
+5. **Set `source` honestly.** Per `PROJECT_ROADMAP.md` blockchain policy, only third-party-sourced facts get the strongest verification language ("tamper-proof"). Self-reported facts get "submitted" / "on-file" language.
+6. **Add a UI mapping** in the appropriate fact panel component (e.g. `CredentialFactsPanel.tsx`).
+
+### Don't add a fact if
+
+- The "fact" is trivially derivable from public data (no signal value).
+- It would expose PII the carrier doesn't need (refactor it to a narrower fact).
+- It conflates multiple checks (e.g. "is hireable" — split into the underlying facts).
+
+---
+
+## Selective disclosure rules
+
+The `disclosedFields` map is the most consequential part of every attestation. It's literally the surface the carrier sees.
+
+### What goes in `disclosedFields`
+
+- The **direct evidence** the carrier needs to evaluate the fact.
+  - `cdl_valid_through` → `{ expirationDate: '2028-04-15' }`
+  - `cdl_class_a` → `{ class: 'A' }` (no other CDL fields)
+  - `mvr_clean_36_months` → `{ verificationWindowStart: '...', verificationWindowEnd: '...' }` (NOT individual violation records)
+  - `previous_employer_verified` → `{ employerName: '...', dateRange: '...', responseDate: '...' }` (NOT the substance of their response unless explicitly authorized)
+
+### What does NOT go in `disclosedFields`
+
+- License numbers, DOB, full address, SSN, full name (unless the carrier specifically requested name attestation as a separate fact)
+- Underlying record bytes (full MVR PDF, full PSP report, full DOT app)
+- Audit-trail metadata about Storm's internal processing
+- Other facts about the candidate not requested in this attestation
+
+### Audience scoping
+
+If `AttestationInput.audienceId` is set, the implementation must:
+
+1. Persist the attestation with the audience tag.
+2. Refuse to serve the attestation to any caller other than the audience.
+3. Optionally narrow `disclosedFields` further for that audience based on the candidate's per-audience disclosure preferences (Phase 2: candidate-controlled toggles).
+
+---
+
+## Persistence
+
+Phase 2 introduces an `attestations` table:
+
+```sql
+create table attestations (
+  id uuid primary key default gen_random_uuid(),
+  candidate_user_id uuid not null references users(id),
+  fact_type text not null,
+  fact_summary text not null,
+  disclosed_fields jsonb not null,
+  issued_at timestamptz not null default now(),
+  expires_at timestamptz,
+  audience_id uuid references companies(id),
+  proof_artifact jsonb not null,  -- {kind: 'signed_jwt', jwt: '...', issuer: '...'}
+  superseded_by uuid references attestations(id),
+  created_at timestamptz not null default now()
+);
+
+create index attestations_candidate_idx on attestations(candidate_user_id, fact_type);
+create index attestations_audience_idx on attestations(audience_id) where audience_id is not null;
+```
+
+Rules:
+
+- **Attestations are immutable.** Never UPDATE — always insert a new row and set `superseded_by` on the old one.
+- **Attestations expire.** Most facts should have an `expires_at`. MVR-based facts: 365 days. CDL: until license expiration. Employment verification: 90 days (carriers often want fresh).
+- **Cache reads, never writes.** Reading the most-recent unsuperseded attestation per (candidate, fact_type) is hot; cache it. Writes (new attestations) are rare and must always go to DB.
+- **RLS:** candidate sees their own attestations. Audience-scoped attestations are visible only to that audience's company users.
+
+---
+
+## What about Phase 1?
+
+`AttestationService` does not exist yet during Phase 1 cleanup work. Don't try to build it as part of Phase 1. Phase 1 is *removing* the wrong abstractions; Phase 2 is *adding* the right ones.
+
+If during Phase 1 you encounter code that reads `block_*` tables to render a "verified" badge:
+
+- That code is wrong, but not your problem to fix in Phase 1.
+- Leave a `// TODO(phase-2): wire through attestationService.proveFact()` comment.
+- Don't refactor it now — Phase 2 will rewrite it cleanly.
+
+---
+
+## Phase 3 (Midnight) — when it ships
+
+Same interface, swap implementation:
+
+```typescript
+// src/lib/attestation-service-registry.ts
+
+import { signedJwtAttestationService } from './signed-jwt-attestation-service'
+import { midnightAttestationService } from './midnight-attestation-service'
+
+const impl = process.env.ATTESTATION_BACKEND === 'midnight'
+  ? midnightAttestationService
+  : signedJwtAttestationService
+
+export const attestationService: AttestationService = impl
+```
+
+The Phase 3 implementation:
+
+- Compiles candidate data + circuit inputs into a Compact program input.
+- Submits a proof-generation request to the proof server (Cloud Run / Render).
+- Receives a transaction hash + proof ID.
+- Returns `{ kind: 'midnight_zk', txHash, proofId }` as the proof artifact.
+
+`disclosedFields` semantics are identical. The difference is: in Phase 2, a determined adversary could in principle compromise the JWT signing key and forge attestations. In Phase 3, even Storm cannot forge an attestation without the underlying data being true — that's the cryptographic non-repudiation property.
+
+This rule's job is to ensure Phase 2 code stays implementation-agnostic so Phase 3 is a clean swap.
+
+---
+
+## Don'ts
+
+- ❌ **Don't read `block_*` tables in verification UI.** Always go through `attestationService`.
+- ❌ **Don't render PDFs as the primary "verified" surface.** Facts first; PDFs as candidate-controlled fallback only.
+- ❌ **Don't put PII in `disclosedFields`** unless the carrier explicitly requested that PII as a fact.
+- ❌ **Don't bypass `audienceId` scoping** because "the carrier is logged in anyway." Scoping enforces that *this attestation* was issued *for this carrier* — it's the audit-trail mechanism.
+- ❌ **Don't UPDATE existing attestations.** Always supersede with a new row.
+- ❌ **Don't conflate Phase 2 with Phase 3 in code comments.** Phase 2 = signed JWTs, Phase 3 = ZK proofs. Don't say "ZK proof" if you mean "signed JWT" — it muddles the migration story.
+- ❌ **Don't hardcode the implementation choice in components.** Always import `attestationService` from the registry; never import `signedJwtAttestationService` directly from a component.
+
+---
+
+**Last updated:** 2026-05-22
+**Status:** Pre-Phase-2 (interface designed, not yet implemented)

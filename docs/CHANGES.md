@@ -4,6 +4,64 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Strategic direction reset — Web2 stack + selective-disclosure moat** (May 2026 — Planning)
+
+> **Status: planning only.** No code changes have shipped yet under this reset. This entry exists to anchor every future Phase 1 / 2 / 3 entry to the strategic context.
+> **Update 2026-05-22:** All three pre-flight decisions (P0.1 auth, P0.2 STORM, P0.3 Stripe) locked. Phase 1 ready to start at T1.1.
+
+After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base Sepolia, USDC payments, IPFS via Pinata, on-chain hash registries, STORM ERC-20), an honest audit found the chain layer was decorative — it stamped hashes but did no real verification work. Carriers still saw full-disclosure PDFs, and the "blockchain verified" badge was marketing, not a moat.
+
+**New direction (May 2026):**
+
+1. **Phase 1 (4–6 weeks)** — Replace user-facing infrastructure with a standard SaaS stack: **Supabase Auth** (locked 2026-05-22 over Clerk — already paid for on Supabase Pro, native `auth.uid()` for RLS), Stripe (one-time Checkout + Subscriptions; Pace billing deferred) for payments, Supabase Storage for documents. Drop Alchemy, Base, USDC, Pinata, the registry contracts, and the STORM ERC-20 on Base.
+2. **Phase 2 (3–4 weeks)** — Ship selective-disclosure UX (carrier-facing fact panels, candidate disclosure toggles) backed by signed JWT attestations behind an `AttestationService` interface.
+3. **Phase 3 (deferred, customer-driven)** — Swap the implementation behind `AttestationService` to Midnight ZK proofs only when a customer / regulator / investor explicitly requires cryptographic non-repudiation. Optional Midnight-native STORM reissue (likely shielded) at this stage if a token use case has emerged. Until then, Phase 2 attestations carry the moat.
+
+**The moat:** selective disclosure of verified DQ-file facts. Tenstreet, HireRight, DriverFacts, Foley cannot retrofit this without rebuilding their CRA business model — their data formats, contracts, and carrier relationships all assume full-disclosure reports. See `docs/midnight/MOAT_THESIS.md`.
+
+**Reference docs (created with this entry):**
+
+| Doc | Purpose |
+|---|---|
+| [`docs/midnight/EXECUTION_CHECKLIST.md`](./midnight/EXECUTION_CHECKLIST.md) | **Master migration tracker.** Atomic AI-session-sized steps (T1.1 → T6.8 for Phase 1, ~50 steps) with Pace invariants, dual-mode strategy, rollback playbook, model-selection guide, and session-handoff log. Every Phase 1 session starts here. |
+| [`docs/midnight/ARCHITECTURE.md`](./midnight/ARCHITECTURE.md) | Master strategic + architectural reference |
+| [`docs/midnight/PHASE_1_PLAN.md`](./midnight/PHASE_1_PLAN.md) | High-level Phase 1 task breakdown (atomic steps live in `EXECUTION_CHECKLIST.md`) |
+| [`docs/midnight/MOAT_THESIS.md`](./midnight/MOAT_THESIS.md) | Moat reasoning for non-engineering audiences |
+| [`docs/midnight/PARTNERS.md`](./midnight/PARTNERS.md) | How Storm strengthens Pace specifically and stays open to other agencies / carriers |
+| [`docs/midnight/DECISION_LOG.md`](./midnight/DECISION_LOG.md) | Why Midnight, why not Aztec / RISC Zero / zkSync; decision rationale for every architectural choice |
+| `.cursor/rules/strategic-direction.mdc` | Always-applied rule so every Cursor session knows the current phase + how to use the execution checklist |
+| `.cursor/rules/attestation-architecture.mdc` | Rules for verification / credential code |
+| `.cursor/rules/architecture.mdc` (updated) | `x-wallet-address` auth pattern flagged as Phase 1 deprecation |
+
+**What's affected (in code, when Phase 1 starts):**
+
+- All ~115 API routes using `x-wallet-address` header → replaced with `getStormUserIdFromRequest()` (Supabase session, with wallet fallback during dual-mode)
+- `MvrPaymentButton`, `PspPaymentButton`, `WalletCard`, `STORMBalance`, `USDCBalance`, `TransactionHistory`, `SendUSDC`, `SendSTORM` → deleted
+- `lib/ipfs.ts` (Pinata) → replaced with `lib/document-storage.ts` (Supabase Storage)
+- `lib/resume-registry-onchain.ts`, `lib/driver-contract.ts`, `/api/blockchain/*` → deleted
+- `lib/alchemy-*`, `AlchemyProvider.tsx`, `useStormTokenBalance` → deleted
+- `contracts/StormToken.sol` and ResumeRegistry / ProductionDriverRegistry / RewardDistributor / TreasuryDistributor / FounderVesting → moved to `contracts/legacy/`
+- New: `users.storm_points` BIGINT + `storm_points_ledger` table (replaces STORM ERC-20 rewards if rewards return)
+
+**What is NOT affected:**
+
+- Supabase as source of truth (every `block_*` table, `user_profiles`, `companies`, `mvr_orders`, `psp_orders`, `applications`, `driver_applications`)
+- Composable hub (registry, blocks, `block-data.ts`, every block component, every shell)
+- Accio integration (PSP / MVR XML pipeline, webhooks, reconcile)
+- DOT application multi-step wizard, bidirectional mapper, PDF export
+- Stormi (`ava-context.ts`, `ava-chat.ts`, `ava-brain.ts`, journey progress)
+- Career card, projected card, lenses
+- Employer hub (employer blocks, talent search, screenings, audit trail, applicant pipeline)
+
+**Pre-flight decisions (locked 2026-05-22):**
+- **P0.1 Auth:** Supabase Auth (DEC-2026-05-008) — revised from initial Clerk recommendation after factoring existing Supabase Pro subscription, RLS native integration, and the team's existing `companies` model conflicting with Clerk's `Organizations` feature. Custom sign-in UI built with Storm's `@/components/ui` primitives.
+- **P0.2 STORM:** Option B (DEC-2026-05-005) — drop Base Sepolia ERC-20 in Phase 1, replace with off-chain `users.storm_points` + `storm_points_ledger`, preserve optionality to reissue as Midnight-native shielded token in Phase 3.
+- **P0.3 Stripe:** Checkout one-time + Subscriptions (DEC-2026-05-006) — full capability built; **Pace billing deferred** (Pace continues operating without a Stripe subscription during the migration; non-Pace customers use Stripe from day one).
+
+**Next steps:** Begin T1.1 in `docs/midnight/EXECUTION_CHECKLIST.md` — configure Supabase Auth providers in dashboard.
+
+---
+
 ## **Accio order placement: error detection + retry** (May 2026)
 
 Orders placed from the employer "Run MVR/PSP" button were being stored as `pending` in Storm's DB even when Accio returned an error in the XML response body (HTTP 200 with error content). This meant Key/Pace never received the order and it sat stuck at "pending" forever.

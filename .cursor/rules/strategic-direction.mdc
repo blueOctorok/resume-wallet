@@ -1,0 +1,177 @@
+---
+description: Storm strategic direction (May 2026) — Web2 stack, selective-disclosure moat, deferred ZK on Midnight. Every session must know the current phase.
+alwaysApply: true
+---
+
+# Strategic Direction (May 2026)
+
+**This rule is the single most important piece of context for the codebase right now.** A major architectural shift was decided in May 2026. Files in the repo do not yet reflect it — Phase 1 has not started. Match every code change to the phase the project is actually in.
+
+Master reference: `docs/midnight/ARCHITECTURE.md`. When this rule is ambiguous, that doc wins.
+
+---
+
+## What Storm is becoming
+
+A **portable, composable Driver Qualification (DQ) file platform** for trucking, where verified credential facts are eventually backed by **selective-disclosure cryptographic proofs**. The moat is *selective disclosure of verified facts* — competitors (Tenstreet, HireRight, DriverFacts) cannot retrofit it without rebuilding their CRA business model.
+
+The chain is implementation detail of the moat, not the moat itself. Users will never see Midnight, install a wallet, or write down a seed phrase.
+
+---
+
+## Phase status (as of 2026-05-22)
+
+| Phase | Goal | Status |
+|---|---|---|
+| **Phase 1** | Web2 cleanup — drop Alchemy/Base/USDC/IPFS/STORM-on-Base, add **Supabase Auth**/Stripe/Supabase Storage | **Pre-flight decisions locked 2026-05-22; code work not started.** Ready to start at T1.1 in `docs/midnight/EXECUTION_CHECKLIST.md`. |
+| **Phase 2** | Selective-disclosure UX backed by signed JWT attestations | Not started |
+| **Phase 3** | Midnight ZK proofs behind same `attestationService` interface; optional Midnight-native STORM reissue | **Deferred** — only when customer explicitly requires non-repudiation |
+
+### Pre-flight decisions (locked 2026-05-22)
+
+- **P0.1 Auth:** Supabase Auth (NOT Clerk). DEC-2026-05-008.
+- **P0.2 STORM:** Option B — drop Base Sepolia ERC-20, replace with off-chain `storm_points`, preserve Phase 3 Midnight reissue option. DEC-2026-05-005.
+- **P0.3 Stripe:** Checkout one-time + Subscriptions; Pace billing deferred (capability built but not enforced on Pace at cutover). DEC-2026-05-006.
+
+When the user starts a session, **assume the codebase is still in pre-Phase-1 state** unless `docs/CHANGES.md` shows Phase 1 work has shipped. Files referencing Alchemy, Base, IPFS, USDC, etc. are legacy that *will be* removed in Phase 1, but currently still exist and may still be in use.
+
+---
+
+## What changed
+
+### Old paradigm (still in code, not yet removed)
+- Alchemy Account Kit smart wallets for auth (`x-wallet-address` header pattern in API routes)
+- USDC payments via Base Sepolia (`MvrPaymentButton`, `PspPaymentButton`)
+- IPFS document storage via Pinata (`lib/ipfs.ts`)
+- On-chain hash registries (`ResumeRegistry`, `ProductionDriverRegistry`) on Base Sepolia
+- STORM ERC-20 token (deployed to Sepolia, never live)
+- "Blockchain verified" UI badges
+
+### New paradigm (Phase 1 + 2)
+- Email / Google / magic-link auth via **Supabase Auth** (locked 2026-05-22; uses `@supabase/ssr` for cookie sessions; sign-in UI built with Storm's `@/components/ui` primitives)
+- Stripe Checkout (one-time) + Subscriptions for MVR / PSP / employer plans (Pace billing deferred per DEC-2026-05-006)
+- Supabase Storage for documents
+- No on-chain registries; verifications via `attestationService` interface
+- STORM ERC-20 dropped on Base; replaced with off-chain `users.storm_points` ledger; Midnight reissue (likely shielded) preserved as Phase 3 optionality
+- "Verified by Storm" UI (Phase 2) → "Verified on-chain" UI (Phase 3, conditional)
+
+### Deferred (Phase 3, conditional)
+- Midnight as the ZK target chain
+- Compact contracts for credential-disclosure circuits
+- Server-side proof server (managed Docker on Cloud Run / Render / Fly)
+- Server-managed Midnight wallet for proof submission
+
+---
+
+## What survives unchanged
+
+The strongest parts of Storm are kept intact through every phase:
+
+- **Supabase as source of truth.** Every `block_*` table, `user_profiles`, `companies`, `mvr_orders`, `psp_orders`, `applications`, `driver_applications`, etc. Source of truth forever.
+- **Composable hub.** Every block, the registry (`block-registry.ts`), `block-data.ts`, every block component, every shell.
+- **Accio integration.** PSP / MVR XML pipeline, webhooks, reconcile, Stripe-replaces-USDC for the *payment* but the screening flow is unchanged.
+- **DOT application.** 3-form wizard, bidirectional mapper, PDF export.
+- **Stormi.** Context, prompts, chat, brain templates.
+- **Career card + projected card.** Every projection / lens.
+- **Employer hub.** Employer blocks, talent search, screenings, audit trail, applicant pipeline.
+
+**If you find yourself rewriting block-data, the hub, or the career card, stop — that's not what's changing.**
+
+---
+
+## Rules for code changes during Phase 1
+
+When making code changes during Phase 1 cleanup work:
+
+1. **Don't add new code that depends on Alchemy / Base / IPFS / USDC.** If the user asks for a feature that "needs blockchain," push back: explain that the chain is being removed in Phase 1, and ask if Phase 2 attestation is the right fit instead.
+2. **Don't add new code that depends on the STORM ERC-20 contract.** If reward logic is needed, use `users.storm_points` (off-chain). If `users.storm_points` doesn't exist yet, that's a Phase 1 task — flag it.
+3. **Don't add new uses of the `x-wallet-address` header.** Use auth-provider session helpers instead. If those don't exist yet, that's a Phase 1 task.
+4. **Don't write new code that calls `RESUME_REGISTRY_ABI` or `DRIVER_APP_REGISTRY_ABI` contracts.** These are being deprecated.
+5. **DO keep using `block-data.ts`, the block registry, `user_profiles`, the shell pattern.** None of that changes.
+
+If a request would extend the legacy paradigm in a way that creates more cleanup work later, **say so** and propose the Phase-1-aligned alternative.
+
+---
+
+## Rules for verification / credential code (any phase)
+
+This is where the moat lives. Special care:
+
+- **Never render a "verified" badge by reading directly from `block_*` tables.** All verification UI must go through `attestationService` (Phase 2+) or its placeholder.
+- **Never expose raw PDF documents as the primary "verification" surface.** Phase 2+ surfaces facts; documents are a secondary, candidate-controlled fallback.
+- **Selective disclosure is the product.** Whatever fields the candidate chose to share with a specific carrier are what the carrier sees. Hard-coded "show everything" UI is a regression.
+- See `.cursor/rules/attestation-architecture.mdc` for detailed rules when working on attestation code.
+
+---
+
+## Language rules (carries into UI copy and Stormi prompts)
+
+### Use
+- "Verified by Storm" / "Verified credentials"
+- "Selective disclosure"
+- "Proof of [fact]" — e.g. "Proof of clean MVR"
+- "Tamper-proof" (for facts derived from third-party sources)
+- "Storm Points" (if rewards return)
+
+### Don't use
+- "Blockchain-verified" (especially for self-reported data — see `PROJECT_ROADMAP.md` blockchain policy)
+- "On-chain" in customer-facing copy until Phase 3 ships
+- "Crypto wallet" / "smart wallet" / "USDC" anywhere user-facing
+- "STORM token" (post-decision in DEC-2026-05-005)
+- "Web3" as a positioning term
+
+### Internally OK (engineering docs, decision logs)
+- ZK, zero-knowledge, Compact, Midnight, DUST, NIGHT, Aztec, RISC Zero
+- These belong in `/docs/midnight/`, decision logs, technical comments — not user-facing strings
+
+---
+
+## When the user asks about blockchain / Midnight / ZK / Pace / partners / migration steps
+
+Refer them to:
+- `docs/midnight/EXECUTION_CHECKLIST.md` — **the migration tracker.** Atomic steps with Pace invariants. Every session doing migration work starts here.
+- `docs/midnight/ARCHITECTURE.md` — full strategic + architectural reference
+- `docs/midnight/PHASE_1_PLAN.md` — detailed Phase 1 implementation plan (high-level — `EXECUTION_CHECKLIST.md` has the atomic steps)
+- `docs/midnight/MOAT_THESIS.md` — moat reasoning for non-engineering audiences
+- `docs/midnight/PARTNERS.md` — how Storm strengthens Pace specifically and stays open to other agencies / carriers
+- `docs/midnight/DECISION_LOG.md` — why Midnight, why not Aztec / RISC Zero / zkSync
+
+## Working on Phase 1 migration steps
+
+When the user is executing Phase 1 work:
+
+1. **Always open `docs/midnight/EXECUTION_CHECKLIST.md` first.** Find the current step.
+2. **Verify the step's Pre-conditions are met** before writing code.
+3. **Check the step's Pace risk + DO NOT TOUCH list.** If touching a Pace-critical file (`src/app/api/employer/**`, `src/lib/place-screening-order.ts`, `src/lib/reconcile-pending-screenings.ts`, `src/lib/accio-*`, `src/lib/sync-outreach-invite-status.ts`, `src/lib/employer-*`, `src/components/employer/**`), **stop and confirm with user** before proceeding.
+4. **After completing the step, update its Status in the checklist** to `✅ Done · {commit-hash} · {date}`.
+5. **Append a row to the Session handoff log** at the bottom of the checklist with the step ID, model used, commit hash, and any gotchas.
+
+If the user starts a session with no clear step, ask: "Which step from `EXECUTION_CHECKLIST.md` are we working on?"
+
+## Pace and the employer-side ecosystem
+
+**Pace Drivers is the wedge, not the lock-in.** Pace is the design partner and first major customer; their workflow shapes feature defaults. Other agencies and direct carriers come onto the same employer-side blocks. **Never special-case Pace in code** (no `companies.is_pace`, no `if (company.name === 'Pace')`). If Pace needs a workflow, it becomes a generic configuration any company can use. Full reasoning in `docs/midnight/PARTNERS.md`.
+
+Don't guess at decisions that are already in those docs. If the user proposes something that contradicts a documented decision, point them at the relevant decision and ask if they want to revisit.
+
+---
+
+## How to know which phase we're in
+
+Quick signals:
+
+- **Pre-Phase-1:** `lib/ipfs.ts` exists, `MvrPaymentButton.tsx` exists, `AlchemyProvider.tsx` exists, `STORMBalance.tsx` exists, API routes use `x-wallet-address` header. **This is current state as of this rule's authorship (2026-05-22).**
+- **Phase 1 in progress:** some of the above removed, Stripe + `@supabase/ssr` imports appearing, `src/middleware.ts` exists, `users.storm_points` migration in `supabase/migrations/`, `auth.users` rows are being backfilled.
+- **Phase 1 done:** none of the legacy files above exist; auth uses Supabase session cookies; payments are Stripe; documents in Supabase Storage.
+- **Phase 2 in progress:** `lib/attestation-service.ts` exists with the interface; signed-JWT implementation registered.
+- **Phase 2 done:** carrier-facing fact panels live; selective-disclosure toggles in candidate UI.
+- **Phase 3 in progress:** `compact/` directory exists, Cloud Run / Render config in repo, Midnight wallet env vars present.
+
+When in doubt, check `docs/CHANGES.md` for the latest entries and `docs/PROJECT_ROADMAP.md` for current phase status.
+
+---
+
+## What this means for `docs/CHANGES.md` and `docs/PROJECT_ROADMAP.md`
+
+- **`docs/CHANGES.md`** — every code change ships with a corresponding entry. Phase 1 entries should call out which file deletions / replacements they ship. Format: existing pattern (date, summary, root cause if relevant, fixes table).
+- **`docs/PROJECT_ROADMAP.md`** — the "Strategic Direction (May 2026)" section already exists with honest blockchain policy. The Phase 1/2/3 track should be added at the top of the "Next Up" section so it's the highest-priority work track.
