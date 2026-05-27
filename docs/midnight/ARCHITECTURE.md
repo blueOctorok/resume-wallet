@@ -285,6 +285,69 @@ The choice is reversible: the `attestationService` interface means Phase 3 can t
 
 ---
 
+## Future considerations (Phase 3b / Phase 4) — captured, NOT scheduled
+
+These are real ideas worth preserving so future-you doesn't reinvent them. **None of this is scheduled work.** Each item has explicit trigger conditions that must be met before design begins.
+
+### Phase 3b — Soulbound credential SBTs + visualization layer
+
+After Phase 3a (core ZK proofs) ships, the natural extension is to make each verified attestation visible to the candidate as a **non-transferable Soulbound Token (SBT)** in a "credential vault" UI surface.
+
+- **Soulbound to `users.id`, not to a wallet address.** Storm holds the on-chain anchor server-side. **Candidate never sees a wallet, never signs a transaction, never holds a seed phrase.**
+- **Non-transferable, period.** No secondary market. No "trade your CDL" feature ever. Transferability would break verification (the SBT stops verifying the holder).
+- **Storm-issuable, candidate-controlled, Storm-revocable** (when underlying credential lapses or fraud detected). Same posture as DEC-2026-05-011 candidate-as-agent.
+- **Selective disclosure layered on top.** Candidate proves possession of `clean_mvr_12mo` without revealing the underlying MVR.
+
+This is essentially a UX wrapper around what Phase 3a already produces — but it gives Storm a clean answer to "do you have soulbound credentials?" and aligns with W3C Verifiable Credentials patterns the broader identity ecosystem already understands.
+
+**Trigger condition to start design:** Phase 3a is in production with at least one carrier consuming attestations.
+**Estimated effort:** 1–2 weeks of UI work on top of Phase 3a output.
+
+### Phase 3b — STORM as Midnight-native shielded utility token
+
+Reissue option preserved in DEC-2026-05-005 Option B. The shape if/when it ships:
+
+- **Shielded by default** on Midnight — driver balances are private; their pay-per-credential history isn't visible on-chain.
+- **Earned by drivers** for verifying credentials, completing DOT app, accepting placements, referring drivers.
+- **Earned by carriers** for subscribing, sponsoring driver verifications.
+- **Spent on platform discounts** — reduced MVR pulls, premium career card features, expedited verification, premium talent search.
+- **No profit-sharing, no governance over Storm corp** — pure utility, designed to stay outside the Howey test.
+- **UX label: "Storm Points."** The on-chain token is the implementation; the surface is points. Candidates and carriers never need a wallet.
+
+**Trigger condition to start design:** Phase 3a + 3b SBT layer in production. Storm Points are running off-chain in Phase 1 (per DEC-005 Option B); reissuing on Midnight is a substrate change to a working system, not a new product.
+
+### Phase 4 — Cached-attestation marketplace (driver economic compounding)
+
+When a driver self-funds an MVR, the resulting verified attestation can be re-queried by multiple carriers within its 30-day freshness window. Today every carrier pays for a fresh pull. The Phase 4 model routes some of that economic value back to the driver:
+
+- Carrier UI surfaces two paths: **Fresh pull** (~$35 via Accio + Storm margin) or **Recent attestation query** (~$15, available only if pulled within 30 days, only with driver's selective-disclosure consent).
+- Recent-attestation revenue split: **driver receives ~$5, Storm keeps ~$10**. Carrier saves ~$20.
+- **Storm mediates every transaction** — driver is never a vendor, no FCRA "consumer-report-resale" exposure, no Lace wallet, no driver-side crypto UX. Driver receives Storm Points or cash payout via existing rails (Stripe Connect, ACH).
+- **Pace co-design required** before any rollout. When a candidate was sourced through Pace, Pace gets routed economics on cached pulls. This is a feature Pace explicitly enables for their drivers, not a default behavior.
+- **Hard 30-day cliff.** After 30 days, only fresh-pull path is available. Maintains MVR currency requirements (FMCSA + carrier policy).
+
+**Why we're uniquely positioned:** previous Web3 "credential marketplace" attempts failed because buyers didn't trust the verifications. Phase 2 (signed JWT) and Phase 3a (ZK proofs) both solve that trust problem. The marketplace economics get to ride on top of real verification.
+
+**Trigger conditions to start design:**
+1. Phase 2 in production with N drivers and M carriers (concrete numbers TBD when we get there)
+2. Pace stakeholder explicitly engaged as co-designer
+3. FCRA legal review (DEC-2026-05-011 trigger conditions) completed
+
+**Why this fits the philosophy:** drivers who self-invest in verification compound economically. Carriers save money on amortized pulls. Storm captures middle margin. Pace's revenue is preserved through routed economics. Selective disclosure remains the moat — driver still chooses which facts to reveal per query.
+
+### Rejected ideas (do not revisit without reading the rejection reasoning)
+
+The following ideas have been deliberately rejected. They are captured in [`MOAT_THESIS.md`](./MOAT_THESIS.md) "Rejected feature ideas" appendix with full reasoning. Future sessions should not propose them without re-reading why they were rejected:
+
+- Tokenized DQ files as transferable NFTs
+- Tradeable / fungible credential tokens
+- Driver-as-vendor-of-own-data with Lace wallet UX
+- Income-share agreement tokens against driver future earnings
+- "Verified driver pool" tokens (fractional ownership of drivers)
+- Storm becoming a Consumer Reporting Agency (DEC-2026-05-011)
+
+---
+
 ## What this is NOT
 
 To prevent confusion in future sessions:

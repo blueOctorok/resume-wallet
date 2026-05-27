@@ -83,6 +83,75 @@ The window opened in 2026 and is open *now*. Every quarter we delay shipping sel
 
 ---
 
+## Storm is not a CRA — and that's the point
+
+**Storm will not register as a Consumer Reporting Agency.** This is a strategic, not a regulatory, decision and it's the structural reason the moat holds.
+
+### Why "become a CRA" is the wrong instinct
+
+It's tempting to think Storm should become a CRA so we can pull MVR / PSP / employment-verification data directly from state DMVs and FMCSA without Accio (or any other CRA) in the middle. Better margin, full control, direct relationships with the data sources. **This instinct is wrong, and following it would kill the moat.**
+
+A CRA's economic model is "produce full-disclosure reports, charge per pull." Their data formats, their state DMV contracts, their FMCSA agreements, their carrier integrations — every single one is structured around delivering whole reports. That's why Tenstreet / HireRight / DriverFacts / Foley **cannot** ship selective disclosure: the entire revenue base depends on the report being the unit of sale.
+
+If Storm registers as a CRA, we adopt the same operational shape and converge with the incumbents we are trying to disrupt. We would be a CRA with a slightly nicer UI competing against Tenstreet's 25-year head start on state DMV agreements, FCRA dispute infrastructure, and carrier contracts. That's a fight Storm loses.
+
+### The FCRA nuance worth understanding
+
+Phase 2's signed JWT attestation ("✓ clean MVR · signed by Storm") **probably qualifies as a consumer report under FCRA's broad definition** — it is information bearing on a consumer's character / personal characteristics being communicated to a third party for employment purposes.
+
+That doesn't force Storm to be a CRA. It forces Storm to choose a **legal posture** that handles consumer-information exchange without becoming one. Three real options exist:
+
+| Posture | What Storm is legally | Trade-off |
+|---|---|---|
+| **CRA (specialty)** | Direct producer of consumer reports under FCRA | Unlocks direct DMV / FMCSA access eventually; **kills the moat** |
+| **Reseller** | Resells Accio's CRA output, governed by FCRA reseller rules | Well-trodden, simple, but Storm becomes "Accio with extra steps" |
+| **Candidate's agent** | Tool the candidate uses to derive and share facts about their own consumer report | **Storm becomes a structurally different legal animal** |
+
+### Storm's chosen posture: candidate's agent
+
+Mechanism:
+
+1. The candidate authenticates to Storm (Supabase Auth, after Phase 1 cutover).
+2. Accio (or any future CRA backend) pulls the underlying MVR / PSP / employment-verification data on the candidate's behalf, with the candidate's FCRA-required authorization. Accio remains the regulated CRA. Accio holds the state-DMV agreements, takes the dispute load, and is the FCRA "consumer reporting agency" of record for the underlying report.
+3. The candidate consents to a specific fact being **derived** from their report (`clean_mvr_12mo = true`) and **shared with a specific carrier**.
+4. Storm produces and delivers that fact (Phase 2: signed JWT; Phase 3: Midnight ZK proof) **on behalf of the consumer to the consumer's authorized recipient**.
+
+The carrier receives the fact through the candidate's authorized disclosure, not through a Storm-issued consumer report. **That's permissible disclosure under FCRA's consumer-authorization regime, not CRA activity.**
+
+### Why this posture is structurally aligned with the existing product
+
+Storm is already shaped like a candidate-side platform:
+
+- Every block in the composable hub has the **candidate as the actor**.
+- The candidate installs blocks, the candidate authorizes verifications, the candidate shares the career card.
+- `.cursor/rules/product-philosophy.mdc` codifies "candidate-owned career identity" as the product thesis.
+
+Selective disclosure (Phase 2 UX, Phase 3 cryptography) is just the explicit, granular, enforceable version of what Storm has been since day one. **Becoming a CRA would invert this entire architecture** — Storm would start acting on behalf of the carrier (the FCRA "user") instead of the candidate (the FCRA "consumer"). That breaks the product philosophy and the moat at the same time.
+
+### Operational consequences
+
+The candidate-agent posture has concrete implications for engineering:
+
+- **Keep Accio (or any future CRA) as the data-pull layer.** Don't disintermediate. Their CRA stack is a 10-year moat we don't want to rebuild. Accio takes the FCRA dispute load; we deliver disclosure UX on top.
+- **Every screening order is initiated with explicit consumer authorization.** This is already enforced via `screening_consent_bundles` and the FCRA + FMCSA + CDLIS package. Don't loosen this — it's load-bearing for the legal posture.
+- **Every selective-disclosure share is candidate-initiated.** Stormi can recommend, but the consumer authorizes the share. Carriers cannot pull facts without a candidate-initiated grant.
+- **Storm-produced attestations explicitly cite the originating CRA.** "✓ Clean MVR · derived from MVR pulled by Accio on 2026-04-15 · shared with Pace Drivers by Sarah J. on 2026-04-20." This makes the chain of custody explicit and keeps Storm's role as derivation/disclosure agent — not consumer-report producer — visible.
+
+### When to revisit this with counsel
+
+The candidate-agent posture is the right strategic choice now. Two trigger conditions warrant a formal FCRA legal review:
+
+1. **Pace (or another anchor customer) commits to Storm-issued attestations as their default DQ delivery format** — i.e. carriers Pace places drivers with start receiving Storm attestations as the primary verification. At that scale, the candidate-agent legal theory needs documentation that survives discovery.
+2. **Storm crosses ~10,000 verified drivers or starts producing attestations for non-Pace direct carriers at scale.** Volume and direct-to-carrier delivery both raise the regulatory bar.
+
+Until then: **stay non-CRA, keep Accio as the regulated CRA layer, position every Storm-produced attestation as a candidate-authorized disclosure of a fact derived from a CRA-pulled report.**
+
+### One-line version
+
+> **CRAs sell reports about consumers. Storm sells consumers a way to share facts about themselves.** Different products, different legal exposure, different moats. Becoming a CRA collapses all three distinctions.
+
+---
+
 ## What about the chain itself? Is it the moat?
 
 **No.** The chain is implementation detail.
@@ -149,5 +218,50 @@ Storm's moat is selective disclosure of verified DQ-file facts. Carriers see "�
 
 ---
 
-**Last updated:** 2026-05-22
+## Rejected feature ideas (and why)
+
+This section exists so future-you, future collaborators, and future AI sessions can recognize when a "killer feature" instinct is actually a moat-collapsing trap. Each rejected idea here was a real proposal worth taking seriously — and each has a structural reason it doesn't work for Storm.
+
+**Pattern recognition rule:** when evaluating a new feature, run two checks before designing:
+1. **Category check** — is the use case in the same legal/ownership/economic category as the asset it's being applied to? (DQ file ≠ real estate; credentials ≠ securities.) A category error invalidates everything else.
+2. **Moat-direction check** — does this strengthen the existing moat or pull Storm toward becoming a competitor? If it pulls toward CRA-shaped resale infrastructure, transferable-credential markets, or full-disclosure delivery, **reject**.
+
+### Tokenized DQ files as transferable NFTs
+
+**Proposal:** Issue each driver's DQ file as an NFT they own.
+**Rejected because:** Transferability breaks candidate ownership. A creditor could seize an NFT'd DQ file. A failed business could sell one in liquidation. Once transferable, the file stops being the candidate's — which collapses the candidate-ownership thesis from `product-philosophy.mdc`.
+
+### Tradeable or fungible credential tokens
+
+**Proposal:** Make credentials tradeable on a secondary market.
+**Rejected because:** A secondary market for credentials creates fraud incentives — buyers who don't have the underlying qualification purchase proofs of it. The verification stops verifying the holder. Whatever liquidity it generates comes at the cost of the trust layer that makes Storm's product valuable.
+
+### Driver-as-vendor of own consumer report (with Lace wallet)
+
+**Proposal:** Drivers hold credentials in Lace wallet, sell access to carriers directly for crypto payment.
+**Rejected because:** (1) Driver wallet UX (seed phrases, gas, signing) breaks the rule that drivers never see crypto. (2) FCRA driver-as-vendor posture is murkier than candidate-as-agent (DEC-2026-05-011). (3) Adverse selection — only drivers with clean records sell access — collapses the marketplace within a quarter. (4) Disintermediates Pace, undermining the partner promise in `PARTNERS.md`.
+**The legitimate version of this insight (Storm-mediated cached-attestation marketplace) is captured as Phase 4 in [`ARCHITECTURE.md`](./ARCHITECTURE.md). It preserves the driver economic-compounding insight while routing all transactions through Storm and keeping driver UX wallet-free.**
+
+### Income-share agreements / labor capacity tokens
+
+**Proposal:** Drivers tokenize a percentage of future earnings, sell upfront for capital.
+**Rejected because:** This is debt bondage / indentured servitude territory. 13th Amendment exposure, FLSA violations, anti-trafficking concerns. **Do not propose this in any form ever.**
+
+### "Verified driver pool" tokens (fractional ownership of drivers)
+
+**Proposal:** Carriers buy fractional ownership of pre-verified driver pools.
+**Rejected because:** Tokenizing humans as inventory is illegal (anti-trafficking, ADA, FLSA) and morally indefensible. **Do not propose this in any form ever.**
+
+### Storm registers as a Consumer Reporting Agency
+
+**Proposal:** Storm becomes a CRA so we can pull MVR / PSP / employment-verification directly without Accio.
+**Rejected because:** Adopting a CRA's operational shape (full-disclosure reports, per-pull pricing, state-DMV contracts, FCRA dispute infrastructure) converges Storm with Tenstreet / HireRight / DriverFacts — the incumbents we are structurally moated against. Becoming a CRA collapses the moat. See full reasoning in DEC-2026-05-011.
+
+### One-line takeaway
+
+> **Generate ideas freely. Then run the category check and the moat-direction check before designing. Most "killer features" survive both. The ones that don't are captured here so we don't repeat the instinct.**
+
+---
+
+**Last updated:** 2026-05-27 (added "Storm is not a CRA" section + "Rejected feature ideas" appendix — see also `DECISION_LOG.md` DEC-2026-05-011, DEC-2026-05-012, DEC-2026-05-013)
 **Source conversations:** see `docs/midnight/new-direction.md` for the original boss memo

@@ -62,6 +62,83 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 
 ---
 
+## **Phase 1 — T1.2 Supabase Auth middleware shell** (2026-05-23)
+
+**Track 1 auth swap (dual-mode).** Wired root Next.js middleware to refresh Supabase session cookies on each request. Alchemy sign-in unchanged.
+
+| Change | Notes |
+|---|---|
+| `src/middleware.ts` | Calls existing `updateSession` from `src/utils/supabase/middleware.ts` |
+| `src/lib/supabase-server.ts`, `src/lib/supabase-browser.ts` | Re-exports of `src/utils/supabase/server` and `client` (checklist paths) |
+| `@supabase/ssr` | Upgraded `^0.1.0` → `^0.10.3` |
+| `npm run build` | Passes; Middleware ~90 kB |
+
+**T1.1** remains 🟡 in progress (Google OAuth client not finished). **Next:** T1.4 dual-mode `getStormUserIdFromRequest()` helper.
+
+---
+
+## **Phase 3b/4 economic layer captured: SBT credentials + STORM-on-Midnight + cached-attestation marketplace (all deferred)** (2026-05-27)
+
+Captured three future economic features as architectural directions, none scheduled, all behind explicit trigger conditions. The point is to preserve the design space without absorbing engineering attention before Phase 1/2 ship.
+
+| Feature | Phase | Trigger to start design |
+|---|---|---|
+| Soulbound credential SBTs (UI wrapper around Phase 3a attestations) | 3b | Phase 3a in production with at least one carrier consuming attestations |
+| STORM reissued as Midnight-native shielded utility token | 3b | Phase 3a + SBT layer in production AND off-chain Storm Points adoption shows real cross-app utility demand |
+| Cached-attestation marketplace (driver economic compounding) | 4 | Phase 2 in production + Pace co-design engagement + FCRA legal review complete |
+
+**Critical guardrails captured for all three:** drivers never see crypto UX (no wallets, no seed phrases); Storm mediates every transaction (driver-as-vendor explicitly rejected for FCRA + Pace-conflict reasons); Pace receives routed economics on cached pulls when candidate sourced through Pace; non-transferable / soulbound enforced cryptographically.
+
+**Steel-manning a "killer feature" idea, in real time:** A driver-side proposal — "drivers pay for their own MVR, then sell access to carriers via Lace wallet for less than fresh-pull cost" — surfaced an insight (drivers should compound from self-investment) but with an implementation that would have broken our Web2-simple UX rule, exposed FCRA driver-as-vendor risk, undermined Pace, and triggered adverse selection. Pushed back, kept the insight, redesigned the implementation: Storm-mediated marketplace with revenue split routes value to drivers without any of the traps. Captured the rejected version in `MOAT_THESIS.md` rejected-features appendix so the same instinct doesn't get reinvented later without remembering why it was redirected.
+
+| Doc updated/created | Change |
+|---|---|
+| `docs/midnight/ARCHITECTURE.md` | New "Future considerations (Phase 3b / Phase 4)" section with the three deferred features and trigger conditions |
+| `docs/midnight/MOAT_THESIS.md` | New "Rejected feature ideas (and why)" appendix capturing 6 rejected proposals with structural reasoning + pattern-recognition rule (category check + moat-direction check) |
+| `docs/midnight/DECISION_LOG.md` | DEC-2026-05-012 (SBT + STORM Phase 3b strategy), DEC-2026-05-013 (cached-attestation marketplace Phase 4) |
+| `docs/midnight/TOKEN_BRIEF.md` (new) | Boss-facing 5-minute brief explaining all three features in plain English without crypto jargon. Designed for board/advisor/non-technical reviewer conversations. |
+
+---
+
+## **Strategic posture: Storm is the candidate's agent, not a CRA** (2026-05-27)
+
+Documented the decision that Storm will not register as a Consumer Reporting Agency. Phase 2's signed-JWT attestations and Phase 3's Midnight ZK proofs both operate under a **candidate-as-agent** legal posture — Accio (or any future CRA backend) remains the regulated CRA that pulls the underlying MVR / PSP / employment-verification, and Storm acts as the consumer's tool for deriving and sharing specific facts under FCRA's consumer-authorization regime.
+
+**Why this matters:** registering as a CRA would converge Storm with the incumbents (Tenstreet, HireRight, DriverFacts, Foley) we are structurally moated against — same operational shape, same full-disclosure-report business model, no architectural room for the candidate-side disclosure UX that is the moat. The candidate-agent posture is also structurally aligned with the existing composable-hub product philosophy ("every block has the candidate as the actor").
+
+| Doc updated | Change |
+|---|---|
+| `docs/midnight/MOAT_THESIS.md` | New section: "Storm is not a CRA — and that's the point" with FCRA option matrix, mechanism, operational rules, counsel-review trigger conditions |
+| `docs/midnight/DECISION_LOG.md` | DEC-2026-05-011 — full decision rationale, alternatives considered, engineering-binding operational rules |
+| `.cursor/rules/strategic-direction.mdc` | Verification-code rules now include "Storm is NOT a CRA" with citation to DEC-011 |
+
+**Engineering-binding rules from this decision:**
+- Every screening order requires explicit consumer authorization (already via `screening_consent_bundles` — load-bearing; do not loosen)
+- Every selective-disclosure share is candidate-initiated
+- Storm-produced attestations must cite the originating CRA in their provenance string
+- Keep Accio (or future CRA backends) as the data-pull layer — never disintermediate
+
+**Trigger conditions for formal FCRA counsel review:** Pace commits to Storm-issued attestations as their default DQ delivery format, OR Storm crosses ~10k verified drivers / starts producing attestations for non-Pace direct carriers at scale.
+
+---
+
+## **Phase 1 — T1.3 users.id ↔ auth.users.id alignment** (2026-05-27)
+
+**Track 1 auth swap (dual-mode).** Establishes the convention that Storm `users.id` equals Supabase `auth.users.id`, without breaking existing wallet-only rows.
+
+| Change | Notes |
+|---|---|
+| `supabase/migrations/088_users_auth_fk.sql` | `users_id_fkey` → `auth.users(id)` with `NOT VALID` until T1.9 backfill; then `VALIDATE CONSTRAINT` |
+| `src/lib/user-bootstrap.ts` | `ensureUserRow()` — idempotent upsert on first Auth sign-in (T1.11 callback will call this) |
+| `src/lib/user-bootstrap.test.ts` | Vitest: existing row no-op, fresh sign-up creates `auth:{uuid}` placeholder wallet |
+| Remote apply | Migration file ready; apply via Supabase Dashboard SQL or `supabase db push` (MCP read-only) |
+
+**Teaching note:** `NOT VALID` is Postgres’s way to add a foreign key without checking existing rows. Wallet users created before backfill keep working; new Auth sign-ups must have an `auth.users` row first (Supabase guarantees that). After T1.9 backfills `auth.users` for every legacy user, one `VALIDATE CONSTRAINT` line makes the FK fully enforced.
+
+**Next:** T1.4 — `src/lib/auth-session.ts` dual-mode session helper.
+
+---
+
 ## **Accio order placement: error detection + retry** (May 2026)
 
 Orders placed from the employer "Run MVR/PSP" button were being stored as `pending` in Storm's DB even when Accio returned an error in the XML response body (HTTP 200 with error content). This meant Key/Pace never received the order and it sat stuck at "pending" forever.

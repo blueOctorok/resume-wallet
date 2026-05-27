@@ -100,6 +100,7 @@ This is where the moat lives. Special care:
 - **Never render a "verified" badge by reading directly from `block_*` tables.** All verification UI must go through `attestationService` (Phase 2+) or its placeholder.
 - **Never expose raw PDF documents as the primary "verification" surface.** Phase 2+ surfaces facts; documents are a secondary, candidate-controlled fallback.
 - **Selective disclosure is the product.** Whatever fields the candidate chose to share with a specific carrier are what the carrier sees. Hard-coded "show everything" UI is a regression.
+- **Storm is NOT a CRA — Storm is the candidate's agent.** Every screening order must require explicit consumer authorization (already enforced via `screening_consent_bundles`). Every selective-disclosure share must be candidate-initiated. Storm-produced attestations must cite the originating CRA (e.g. "derived from MVR pulled by Accio on YYYY-MM-DD"). Never propose Storm registering as a CRA or disintermediating Accio — that collapses the moat. See `DECISION_LOG.md` DEC-2026-05-011.
 - See `.cursor/rules/attestation-architecture.mdc` for detailed rules when working on attestation code.
 
 ---
@@ -132,9 +133,10 @@ Refer them to:
 - `docs/midnight/EXECUTION_CHECKLIST.md` — **the migration tracker.** Atomic steps with Pace invariants. Every session doing migration work starts here.
 - `docs/midnight/ARCHITECTURE.md` — full strategic + architectural reference
 - `docs/midnight/PHASE_1_PLAN.md` — detailed Phase 1 implementation plan (high-level — `EXECUTION_CHECKLIST.md` has the atomic steps)
-- `docs/midnight/MOAT_THESIS.md` — moat reasoning for non-engineering audiences
+- `docs/midnight/MOAT_THESIS.md` — moat reasoning for non-engineering audiences (incl. "Storm is not a CRA" section + "Rejected feature ideas" appendix for category/moat-direction checks)
 - `docs/midnight/PARTNERS.md` — how Storm strengthens Pace specifically and stays open to other agencies / carriers
-- `docs/midnight/DECISION_LOG.md` — why Midnight, why not Aztec / RISC Zero / zkSync
+- `docs/midnight/TOKEN_BRIEF.md` — boss-facing summary of Phase 3b/4 economic layer (SBT credentials, Midnight-shielded STORM, cached-attestation marketplace)
+- `docs/midnight/DECISION_LOG.md` — DEC-2026-05-011 (candidate-agent posture), DEC-2026-05-012 (deferred SBT+STORM strategy), DEC-2026-05-013 (deferred cached-attestation marketplace)
 
 ## Working on Phase 1 migration steps
 

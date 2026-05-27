@@ -165,7 +165,7 @@ Session prompt: copy-pasteable prompt for a new AI chat.
 ### T1.1 — Configure Supabase Auth providers
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | 🟡 In progress |
 | Pre-conditions | P0.1 decided ✅ |
 | Estimated session size | S (no code) |
 | Pace risk | None |
@@ -180,12 +180,78 @@ Session prompt: copy-pasteable prompt for a new AI chat.
 
 **Session prompt:** Manual setup, no AI session needed. Engineer does this directly in the Supabase Dashboard.
 
+#### T1.1 runbook (copy-paste checklist)
+
+**Project:** `qlxvcjxjrkphobcgvcmb` · API URL: `https://qlxvcjxjrkphobcgvcmb.supabase.co`  
+**Production app URL:** `https://stormchain.ai` (from `src/app/layout.tsx` metadata)
+
+Open the dashboard: [Authentication → URL configuration](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/url-configuration)
+
+**1. URL configuration**
+
+| Field | Value |
+|---|---|
+| **Site URL** | `https://stormchain.ai` |
+| **Redirect URLs** (add each line) | `http://localhost:3000/auth/callback` |
+| | `https://stormchain.ai/auth/callback` |
+| | `https://*.vercel.app/auth/callback` |
+
+> `/auth/callback` is created in **T1.11** — configuring URLs now avoids a second dashboard pass later. Supabase allows redirect URLs before the route exists.
+
+**2. Email provider** — [Authentication → Providers → Email](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/providers?provider=Email)
+
+- [ ] **Enable Email provider**
+- [ ] **Confirm email** — ON (users verify inbox before first sign-in)
+- [ ] **Secure email change** — ON (recommended)
+- [ ] **Magic Link** — ON (passwordless sign-in; same Email provider)
+
+**Dual-mode note (Pace still on Alchemy):** Do **not** turn on global “require email confirmation” in a way that blocks API routes. Email confirmation only affects **new** Supabase Auth sign-ups. Existing wallet users are untouched until T1.9 backfill + T1.12 cutover.
+
+**3. Google OAuth** — [Providers → Google](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/providers?provider=Google)
+
+Prerequisites in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+
+1. OAuth 2.0 Client ID → type **Web application**
+2. **Authorized JavaScript origins:** `http://localhost:3000`, `https://stormchain.ai`, `https://qlxvcjxjrkphobcgvcmb.supabase.co`
+3. **Authorized redirect URIs:** copy from Supabase Google provider page — format:  
+   `https://qlxvcjxjrkphobcgvcmb.supabase.co/auth/v1/callback`
+4. Paste **Client ID** + **Client secret** into Supabase → Enable Google
+
+**4. Email templates (branding)** — [Authentication → Email templates](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/templates)
+
+Customize at minimum: **Confirm signup**, **Magic Link**, **Reset password**, **Change email address**.
+
+Suggested copy direction (match Storm voice, not “Web3”):
+
+- Subject confirm: `Confirm your Storm account`
+- Subject magic link: `Sign in to Storm`
+- Subject reset: `Reset your Storm password`
+- Body: short line + button; support: `support@stormchain.com` if you use that address
+
+Optional: add Storm logo URL in template HTML (host a small PNG on `stormchain.ai` or Supabase Storage in a later step).
+
+**5. SMTP (optional but recommended for production)**
+
+Default Supabase mail works for dev. For production deliverability before cutover, configure [Project Settings → Authentication → SMTP](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/settings/auth) (Resend is already in the app — you can reuse the same provider).
+
+**6. Verification (tick before marking T1.1 done)**
+
+- [ ] Site URL = `https://stormchain.ai`
+- [ ] All three redirect URL patterns saved
+- [ ] Email + Magic Link enabled
+- [ ] Google enabled (or explicitly deferred with a note — don’t block T1.2 on Google if OAuth creds aren’t ready)
+- [ ] Template preview looks acceptable in dashboard
+
+**Already in repo (T1.2 preview — do not change in T1.1):** `@supabase/ssr` is in `package.json`; helpers exist at `src/utils/supabase/middleware.ts` and `src/utils/supabase/server.ts`. Root `src/middleware.ts` is still missing — that’s **T1.2**.
+
+When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` and start **T1.2**.
+
 ---
 
 ### T1.2 — Install `@supabase/ssr` + middleware shell
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · 2026-05-23 · no commit yet |
 | Pre-conditions | T1.1 |
 | Estimated session size | S |
 | Pace risk | None (no behavior change yet) |
@@ -216,7 +282,7 @@ Session prompt: copy-pasteable prompt for a new AI chat.
 ### T1.3 — ID alignment: ensure `users.id` = `auth.users.id`
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · pending commit · 2026-05-27 |
 | Pre-conditions | T1.2 |
 | Estimated session size | S |
 | Pace risk | Low (additive migration only) |
@@ -1103,11 +1169,23 @@ Atomic step list will be written when Phase 1 wraps. High-level tracks:
 
 **Pre-condition for T7:** Phase 1 fully shipped + 1 week production-stable.
 
+**T7 schema hygiene (forward-compat for Phase 4 cached-attestation marketplace per DEC-2026-05-013):** The `attestations` table must include fields that enable future cached re-querying without rework — at minimum `issued_at`, `valid_until` (e.g., MVR + 30 days), `source_cra` (e.g., `'accio'`), `source_pull_id` (Accio order ID), and a query-count column for marketplace metering. Don't build the marketplace; just don't make it impossible. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations" for the full Phase 4 sketch.
+
 ---
 
 ## Phase 3 — Midnight ZK (deferred)
 
 Atomic steps will be written when Phase 3 trigger fires. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for trigger criteria. **Do not start Phase 3 work until trigger is concrete.**
+
+### Phase 3b / Phase 4 future considerations (captured, NOT scheduled)
+
+Three deferred economic features are documented but explicitly NOT in the work queue:
+
+- **Phase 3b SBT credentials** — soulbound representation of Phase 3a attestations (DEC-2026-05-012)
+- **Phase 3b STORM-on-Midnight reissue** — shielded utility token (DEC-2026-05-005 Option B + DEC-2026-05-012)
+- **Phase 4 cached-attestation marketplace** — driver economic compounding via Storm-mediated cached re-queries (DEC-2026-05-013)
+
+Each has explicit trigger conditions in its decision-log entry. **Do not add atomic steps for any of these here until the relevant triggers fire.** Engineering view: [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations". Boss-facing summary: [`TOKEN_BRIEF.md`](./TOKEN_BRIEF.md).
 
 ---
 
@@ -1161,6 +1239,8 @@ Every AI session that does work on this checklist appends one entry here. Newest
 
 | Date | Step(s) | Model | Commit | Notes |
 |---|---|---|---|---|
+| 2026-05-27 | T1.3 | Composer | pending user commit | `088_users_auth_fk.sql` (FK NOT VALID); `user-bootstrap.ts` + tests. `auth:{uuid}` placeholder for auth-only rows until wallet column nullable. Apply migration on remote manually. **Next: T1.4.** |
+| 2026-05-23 | T1.2 | Composer | pending user commit | Root `src/middleware.ts`; `@supabase/ssr` ^0.10.3; `lib/supabase-*` re-exports. Build OK. T1.1 still 🟡 (Google OAuth incomplete). |
 | 2026-05-22 | Pre-flight P0.1–P0.3 + Track 1 rewrite (Clerk → Supabase Auth) | Claude Opus 4.7 | n/a (docs only) | All three pre-flight decisions resolved. Track 1 rewritten throughout: T1.1 dashboard config (no Clerk account), T1.2 `@supabase/ssr` install, T1.3 collapsed from "user-sync webhook" to "ID alignment migration" because `auth.users.id` IS `users.id`, T1.4 Supabase-first session helper, T1.9 backfill via `supabase.auth.admin.createUser`, T1.11 custom forms with Storm UI primitives. Net: Track 1 shrinks slightly + becomes simpler (no svix, no email-as-join-key). Pace-critical files still untouched. |
 | 2026-05-22 | doc-creation (this file) | Claude Opus 4.7 | n/a | Initial checklist authored. Phase 1 not yet started. Pre-flight decisions still pending. |
 
@@ -1184,4 +1264,4 @@ Every AI session that does work on this checklist appends one entry here. Newest
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-05-22
+**Last updated:** 2026-05-23

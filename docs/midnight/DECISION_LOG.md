@@ -6,6 +6,222 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-05-013 — Driver credential monetization: Storm-mediated cached-attestation marketplace, deferred to Phase 4
+
+**Date:** 2026-05-27
+**Status:** Accepted (deferred — design begins only when trigger conditions met)
+**Decided by:** Sole engineer
+
+### Context
+
+Drivers today absorb the friction of credential verification (forms, screenings, follow-ups) but do not capture economic value when carriers later evaluate them. Each carrier pays $30–70 to pull a fresh MVR for the same driver, repeatedly, even if a recent verified MVR already exists. The asymmetry is structural and routes value to CRAs (Accio) and Storm — never back to the driver who did the underlying work.
+
+A naive "drivers sell credential access via Lace wallet" framing was considered and rejected (see [`MOAT_THESIS.md`](./MOAT_THESIS.md) rejected-features appendix). The steel-manned version preserves the driver-economic-compounding insight while solving the regulatory, UX, and partner-conflict problems.
+
+### Decision
+
+When trigger conditions are met (see below), Phase 4 will introduce a **Storm-mediated cached-attestation marketplace**:
+
+1. Driver self-funds MVR / PSP. Verified attestation issued; SBT minted server-side under Storm's management. **No driver wallet.**
+2. Carrier evaluating driver sees two transparent paths in the UI:
+   - **Fresh pull** (~$35 via Accio + Storm margin) — full new MVR.
+   - **Recent attestation query** (~$15) — re-query existing cached attestation, available only if pulled within 30 days and only with driver's selective-disclosure consent.
+3. Recent-attestation revenue split: **driver $5, Storm $10, carrier saves $20.**
+4. Storm mediates every transaction. Driver is never a vendor. No FCRA consumer-report-resale exposure. Driver payout via Storm Points, Stripe Connect, or ACH — never crypto UX.
+5. **Pace co-design required.** When a candidate was sourced through Pace, Pace receives routed economics on cached queries. Pace explicitly enables this for their driver pool; not a default behavior across all carriers.
+6. **Hard 30-day freshness cliff.** Beyond 30 days, only fresh-pull path is available. Maintains FMCSA + carrier-policy MVR currency requirements.
+
+### Alternatives considered
+
+1. **Drivers-as-vendors with Lace wallet, direct payment from carriers.** Rejected — wallet UX breaks Web2 simplicity rule, FCRA driver-as-vendor posture is murky, disintermediates Pace, adverse selection collapses marketplace. Captured in `MOAT_THESIS.md` rejected appendix.
+2. **Free transferable credentials (no marketplace).** Rejected — transferability breaks verification. See rejected-features appendix.
+3. **Storm-mediated marketplace (chosen).** Solves wallet UX (Storm holds anchor), FCRA exposure (Storm mediates), Pace conflict (routed economics + Pace gating), staleness (30-day cliff), trust (Phase 2 / 3a verification underneath).
+4. **Sponsored verification model (carrier pre-pays driver's MVR for first-look exclusivity).** Considered as a complement, not replacement. May ship alongside cached-attestation marketplace as a second economic surface.
+
+### Trigger conditions to begin design
+
+All three required:
+
+1. **Phase 2 in production** with measurable carrier and driver adoption (concrete numbers TBD).
+2. **Pace stakeholder explicitly engaged** as co-designer of routed economics and gating policy.
+3. **FCRA legal review complete** per DEC-2026-05-011 trigger conditions.
+
+### Consequences
+
+- Captured as architectural future direction without committing engineering work.
+- Phase 2 attestation design must include schema fields needed for Phase 4 (issued-at, freshness window, query history) — small additive cost now, large rework cost later if missed.
+- Pace conversation about cached-attestation economics becomes a Phase 2-completion deliverable, not a Phase 1 deliverable.
+- Future-you must NOT begin Phase 4 design before all three trigger conditions are met. The temptation to ship the "killer feature" early absorbs Phase 1 / 2 engineering time and breaks Pace stability.
+
+### Related documents
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations (Phase 3b / Phase 4)" section — engineering view
+- [`MOAT_THESIS.md`](./MOAT_THESIS.md) "Rejected feature ideas" appendix — why driver-as-vendor was rejected
+- [`TOKEN_BRIEF.md`](./TOKEN_BRIEF.md) — boss-facing summary of the combined SBT + STORM + marketplace narrative
+- [`PARTNERS.md`](./PARTNERS.md) — Pace co-design requirement origin
+
+---
+
+## DEC-2026-05-012 — Future Phase 3b token strategy: SBT credentials + Midnight-shielded STORM, deferred
+
+**Date:** 2026-05-27
+**Status:** Accepted (deferred — design begins only when trigger conditions met)
+**Decided by:** Sole engineer
+
+### Context
+
+DEC-2026-05-005 Option B preserved the option to reissue STORM as a Midnight-native token in Phase 3 if a token use case justifies it. Separate to that, the broader identity ecosystem (W3C Verifiable Credentials, Soulbound Tokens) provides a mature pattern for representing verified credentials as candidate-controlled, non-transferable artifacts. Both ideas surfaced together while exploring how Storm could appeal to the Midnight ecosystem and crypto community without compromising the candidate-as-agent moat.
+
+### Decision
+
+Two complementary additions to the Phase 3 roadmap, both **deferred until trigger conditions met**:
+
+**Phase 3b-A: Soulbound credential SBTs.** Each verified attestation is also represented as a non-transferable token bound to the candidate's `users.id` (NOT to a wallet address). Storm holds the on-chain anchor server-side; candidate never sees a wallet, signs a transaction, or holds a seed phrase. Selective disclosure layered on top.
+
+**Phase 3b-B: STORM reissued as Midnight-native shielded utility token.** Pure utility (no profit-sharing, no governance over Storm corp). Earned by candidates and carriers through platform activity; spent on platform discounts. Shielded by default on Midnight (private balances). Surface label remains "Storm Points" — the on-chain token is implementation, not UX.
+
+### Alternatives considered
+
+1. **Don't ship token features at all.** Rejected — the SBT layer is essentially a UX wrapper around what Phase 3a already produces; cost is small, identity-ecosystem appeal is high.
+2. **Ship transferable credential tokens.** Rejected — transferability breaks verification. See `MOAT_THESIS.md` rejected appendix.
+3. **Ship STORM as governance / profit-sharing token.** Rejected — Howey-test exposure, regulatory burden disproportionate to the benefit.
+4. **Ship STORM with public balances.** Rejected — driver pay-per-credential history would be on-chain; unacceptable privacy posture. Shielded is non-negotiable.
+5. **Ship SBT + STORM (chosen, deferred).** Strengthens identity-ecosystem positioning, gives Midnight Foundation a real production use case, preserves all candidate-control invariants.
+
+### Trigger conditions to begin design
+
+For SBT layer: **Phase 3a in production** with at least one carrier consuming attestations.
+For STORM reissue: **Phase 3a + SBT layer in production**, AND a measurable token use case (e.g., off-chain Storm Points adoption shows users want transferability or cross-app utility).
+
+### Consequences
+
+- No engineering work scheduled. Captured in `ARCHITECTURE.md` "Future considerations" section.
+- Phase 1 off-chain Storm Points (DEC-005 Option B) implementation must use a schema that allows future Midnight migration without data loss. Document this constraint when implementing.
+- Midnight Foundation contact (DEC-2026-05-010) is **not** to be re-engaged about these features until Phase 2 is in production. Avoid pitching ambitious roadmaps; pitch working code.
+- Crypto community / Midnight ecosystem positioning becomes a Phase 3b-era marketing track, not a Phase 1 / 2 priority.
+
+### Related documents
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations (Phase 3b / Phase 4)" — engineering view
+- [`TOKEN_BRIEF.md`](./TOKEN_BRIEF.md) — boss-facing summary
+- DEC-2026-05-005 — STORM disposition (Phase 1 drop, Phase 3 reissue optionality)
+- DEC-2026-05-010 — Midnight Foundation contact discipline
+
+---
+
+## DEC-2026-05-011 — Storm legal posture: candidate's agent, NOT a CRA
+
+**Date:** 2026-05-27
+**Status:** Accepted (strategic decision; legal posture to be ratified by counsel at trigger conditions below)
+**Decided by:** Sole engineer
+
+### Context
+
+Phase 2 ships signed JWT attestations like "✓ clean MVR · signed by Storm." Under FCRA's broad definition, that JWT probably qualifies as a consumer report — information bearing on a consumer's character / personal characteristics shared with a third party for employment purposes. Storm therefore has to choose a legal posture for handling consumer-information exchange. The instinctive answer ("Storm should become a CRA so we can pull data directly") would collapse the moat.
+
+### Decision
+
+**Storm operates as the candidate's agent, not as a Consumer Reporting Agency.**
+
+Mechanism:
+1. Candidate authenticates to Storm.
+2. Accio (or any future CRA backend) pulls the underlying MVR / PSP / employment-verification with the candidate's FCRA-required authorization. **Accio remains the regulated CRA** of record for the underlying report.
+3. Candidate consents to a specific derived fact being shared with a specific carrier.
+4. Storm produces and delivers the fact (Phase 2 signed JWT, Phase 3 Midnight ZK proof) **on behalf of the consumer to the consumer's authorized recipient**.
+
+The carrier receives the fact via candidate-authorized disclosure under FCRA's consumer-authorization regime, **not** as a Storm-issued consumer report.
+
+### Alternatives considered
+
+1. **Storm registers as a specialty CRA.** Rejected. Adopting a CRA's operational shape (full-disclosure reports, per-pull pricing, state-DMV contracts, FCRA dispute infrastructure) converges Storm with Tenstreet / HireRight / DriverFacts / Foley — the incumbents we are structurally moated against. Storm would be a CRA with a slightly nicer UI competing against 25 years of incumbent state-DMV relationships. Loses on every axis.
+2. **Storm operates as an FCRA reseller of Accio's output.** Rejected as a primary posture. Well-trodden legally but reduces Storm to "Accio with extra steps" — no architectural room for the candidate-side disclosure UX that is the moat. Reseller rules also still treat Storm as part of the report-delivery chain, which mismatches the candidate-agent UX.
+3. **Storm-as-candidate-agent (chosen).** Storm is the consumer's tool, not the user's tool. Selective-disclosure shares are candidate-initiated, candidate-authorized, candidate-revocable. Carriers receive facts via consumer authorization, not via report delivery. Structurally compatible with the existing composable-hub product philosophy ("every block has the candidate as the actor").
+
+### Operational rules (engineering-binding)
+
+- **Keep Accio (or any future CRA) as the data-pull layer.** Do not disintermediate. Their CRA stack handles the regulated relationship with state DMVs / FMCSA and absorbs the FCRA dispute load.
+- **Every screening order requires explicit consumer authorization.** Already enforced via `screening_consent_bundles` and the FCRA + FMCSA + CDLIS package — load-bearing for this posture; do not loosen.
+- **Every selective-disclosure share is candidate-initiated.** Stormi can recommend, but the consumer authorizes. Carriers cannot pull facts without a candidate-granted disclosure.
+- **Storm-produced attestations cite the originating CRA explicitly.** Format example: "✓ Clean MVR · derived from MVR pulled by Accio on YYYY-MM-DD · shared with {Carrier} by {Candidate} on YYYY-MM-DD." This makes chain of custody auditable and keeps Storm's role visible as derivation/disclosure agent, not report producer.
+- **Never special-case any single carrier or CRA in code.** Generic configuration only (consistent with `.cursor/rules/strategic-direction.mdc` partner rules).
+
+### Trigger conditions for formal counsel review
+
+The candidate-agent posture is the right strategic choice now. Formal FCRA legal review is warranted when **either** condition holds:
+
+1. **Pace (or any anchor customer) commits to Storm-issued attestations as their default DQ delivery format**, such that carriers receiving placements from that customer treat Storm attestations as primary verification documentation.
+2. **Storm crosses ~10,000 verified drivers, OR starts producing attestations for non-Pace direct carriers at scale.** Volume + direct-to-carrier delivery both raise the regulatory bar.
+
+At trigger time, counsel review should produce: (a) a formal opinion that the candidate-agent posture is FCRA-defensible at our scale, (b) consent and disclosure language that survives discovery, and (c) updated `screening_consent_bundles` content if needed.
+
+### Consequences
+
+- **Moat preserved.** Storm's structural advantage over incumbent CRAs depends on not being one of them. This decision protects that.
+- **Architectural alignment maintained.** The composable-hub philosophy ("candidate-owned, candidate-controlled") becomes the legal posture, not just a UX claim.
+- **Accio relationship is load-bearing.** If Accio terminates or fails, Storm needs an alternative CRA backend. Worth tracking as a vendor-concentration risk separately, but not a reason to become a CRA ourselves.
+- **No immediate engineering work.** This decision changes nothing about the current sprint; it codifies the strategic posture that informs every future engineering and product decision.
+- **Future Phase 2 / Phase 3 attestation copy must follow the citation rule** above. When implementing, make this a formatting helper (`formatAttestationProvenance()`) rather than scattering ad-hoc strings across components.
+
+### Related documents
+
+- [`MOAT_THESIS.md`](./MOAT_THESIS.md) — "Storm is not a CRA" section captures the customer-facing reasoning
+- [`PARTNERS.md`](./PARTNERS.md) — Pace as design partner; never special-case Pace
+- `.cursor/rules/attestation-architecture.mdc` — engineering rules for attestation code (reinforced by this decision)
+- `.cursor/rules/product-philosophy.mdc` — candidate-owned identity (the philosophical root of this posture)
+
+---
+
+## DEC-2026-05-010 — Initial Midnight Foundation contact established
+
+**Date:** 2026-05-23 (outreach) / 2026-05-25 (reply received)
+**Status:** Informational (relationship note, no architectural change)
+**Decided by:** Sole engineer
+**Contact:** Lauren Lee, Director of Developer Relations, Midnight Foundation (reply email on file)
+
+### Context
+
+After locking the Phase 1 pre-flight decisions (DEC-2026-05-005, -006, -008) and confirming Midnight as the Phase 3 ZK target (DEC-2026-05-002, deferred per DEC-2026-05-004), sent an informal intro email to the Midnight Foundation. Goal was relationship-opening only — no ask, no public commitment, no marketing claim.
+
+Email framing: Storm's selective-disclosure DQ-file thesis, Midnight named as the chosen Phase 3 implementation behind our `attestationService` interface, explicit mention that Compact code is months out and that we are not public about chain plans. The full email draft template lives in chat-session history; if reuse is needed, regenerate from this decision's framing.
+
+### Outcome
+
+Lauren Lee replied two days later with a personal, non-templated message:
+
+- Acknowledged the architectural fit specifically (witness + `disclose()` pattern, staged JWT-then-ZK abstraction).
+- Provided **public-only** resources: developer hub, docs, Hello World walkthrough, preprod testnet, Discord (`#dev-chat`), Midnight Forum.
+- Honored the "keep informal" request — explicitly said "I'll keep this quiet on our side."
+- Held the door open for future re-engagement: replying in the same email thread routes to "whoever is most useful, without making it a thing."
+- Wished us luck on Phase 1 — i.e. matched our tempo, did not try to pull us into Compact work prematurely.
+
+This is the best version of the outcome the outreach was designed for: a named, director-level contact at the foundation, with an open thread, zero obligations, and zero public visibility.
+
+### Re-engagement triggers (deliberate)
+
+Do **not** ping Lauren for things that belong in Discord (commodity questions, syntax help, devnet issues). Reserve the email thread for executive-level moments:
+
+1. **Phase 2 ships** and the selective-disclosure UX is live with real candidate / carrier traffic.
+2. **A customer requires cryptographic non-repudiation** (the Phase 3 trigger from DEC-2026-05-004).
+3. **Specific commercial moments**: investor diligence asking about chain partnerships, conference where in-person makes sense, a Pace-driven request for ZK-backed verification.
+
+Roughly 3–4 touchpoints expected over 12–24 months. If we exceed that frequency, we are over-spending the relationship.
+
+### Discipline notes
+
+- **No public mention.** Do not tweet, post in Storm channels, or mention to investors / boss as a "partnership" — it is a private relationship, not a marketing asset. Lauren's "I'll keep this quiet" is matched on our side.
+- **Lurk in Discord under real handle** — when we surface later as "Storm building selective disclosure for trucking," prior name recognition is leverage.
+- **Hello World walkthrough is a weekend / low-priority activity** — not a Phase 1 critical path item. Compact familiarity is a Phase 2 / 3 prerequisite, not a Phase 1 prerequisite. Resist letting it bleed into T1.x work.
+- **Midnight commitment scope is unchanged.** Our product (Phases 1–2) does not depend on Midnight; the relationship is leverage for *when* Phase 3 happens, not *whether* it happens. If Midnight stagnates or pivots, the `attestationService` seam still allows substrate change at the cost of a Phase 3 sub-track only.
+
+### Consequences
+
+- **Phase 3 starts with a warm contact instead of a cold email** when (and if) it triggers.
+- **Discovery channel exists** for Compact / Midnight technical questions (Discord) without burning the executive contact.
+- **No timeline, no architectural change, no public commitment.** Storm's roadmap and code are unchanged.
+- Should Lauren change roles or leave the foundation, the email thread + this entry preserve enough context that re-introduction to a successor is straightforward.
+
+---
+
 ## DEC-2026-05-001 — Web2 stack as primary, ZK as deferred upgrade
 
 **Date:** 2026-05-22
