@@ -312,7 +312,7 @@ When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` an
 ### T1.4 — Session helper alongside wallet helper
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · 2026-05-28 |
 | Pre-conditions | T1.3 |
 | Estimated session size | S |
 | Pace risk | None (additive) |
@@ -1239,6 +1239,7 @@ Every AI session that does work on this checklist appends one entry here. Newest
 
 | Date | Step(s) | Model | Commit | Notes |
 |---|---|---|---|---|
+| 2026-05-28 | T1.4 | Claude Opus 4.7 | pending user commit | `src/lib/auth-session.ts` + 5 unit tests (all passing). Public `getStormUserIdFromRequest` + testable internal `resolveStormUserId(request, { supabaseSession, supabaseAdmin })` with explicit-deps shape so tests don't need `vi.mock`. Supabase session wins; wallet header fallback; null when neither resolves. Pure additive — nothing imports it yet. **Safe to deploy alone (Category A).** Next: T1.5 in batches. |
 | 2026-05-28 | T1.2 hotfix | Claude Opus 4.7 | pending user commit | **Prod outage post-T1 deploy.** Users hit "Internal Server Error" / Alchemy `code:16` on OTP submit. Cause: `@supabase/ssr` 0.10.3 dropped the deprecated `get/set/remove` cookies API; `utils/supabase/middleware.ts` was still using it and threw on every request → all page loads 500'd. Migrated middleware + server client to `getAll/setAll`, wrapped middleware in try/catch with env-var guard, excluded `/api/*` from the matcher (Phase 1 dual-mode uses `x-wallet-address`; re-include at T1.5). Build green. T1.2 stays ✅ Done. |
 | 2026-05-27 | T1.3 | Composer | pending user commit | `088_users_auth_fk.sql` (FK NOT VALID); `user-bootstrap.ts` + tests. `auth:{uuid}` placeholder for auth-only rows until wallet column nullable. Apply migration on remote manually. **Next: T1.4.** |
 | 2026-05-23 | T1.2 | Composer | pending user commit | Root `src/middleware.ts`; `@supabase/ssr` ^0.10.3; `lib/supabase-*` re-exports. Build OK. T1.1 still 🟡 (Google OAuth incomplete). |

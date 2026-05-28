@@ -77,6 +77,23 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 
 ---
 
+## **Phase 1 — T1.4 Dual-mode session helper** (2026-05-28)
+
+**Goal:** drop in the helper every API route migration in T1.5–T1.8 will call. Lets us flip routes one at a time off `x-wallet-address` without breaking anything in dual-mode.
+
+| File | Purpose |
+|---|---|
+| `src/lib/auth-session.ts` | Exports `getStormUserIdFromRequest(request)`. Resolves order: Supabase Auth session cookie → `x-wallet-address` header → `null`. Internally splits into a public wrapper that builds the Supabase clients and a testable core (`resolveStormUserId`) that takes both clients explicitly — keeps the unit tests free of `vi.mock` plumbing. |
+| `src/lib/auth-session.test.ts` | 5 unit tests, all passing: Supabase wins when both present, wallet fallback, fallback even when `getUser()` throws, null when wallet header doesn't match a user, null when neither auth source present. |
+
+**Why no DB lookup for the Supabase path?** T1.3 enforces `users.id === auth.users.id`. So when the cookie resolves, `auth.user.id` is already the Storm user id — no second query needed. Saves one DB hit per migrated request.
+
+**Why two-layer (wrapper + core) instead of `vi.mock`?** Module mocking in Vitest is order-sensitive, brittle, and noisy in tests. Passing the clients in as arguments (dependency injection) makes the function pure-ish — the tests build trivial mock objects, no module hooks. The thin wrapper that constructs the real clients doesn't need tests because it's just plumbing. This is the same shape as `user-bootstrap.test.ts`.
+
+**Deploy category:** A (safe alone). Pure additive — nothing in production imports it yet. T1.5 will start the migration.
+
+---
+
 ## **HOTFIX — middleware 500s blocking Alchemy OTP login** (2026-05-28)
 
 **Prod outage** after the T1.1–1.3 deploy. Symptom: users could request the OTP code, then hit "Internal Server Error" / Alchemy `code:16 The OTP code has either expired or is invalid` when submitting it. Fresh codes failed too. Started exactly at the T1 deploy and was 100% reproducible.
