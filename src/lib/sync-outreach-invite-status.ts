@@ -17,27 +17,33 @@ export function isTerminalScreeningOrderStatus(status: string | null | undefined
  * Move outreach invites to `completed` when the candidate has finished the work
  * the invite was sent for.
  *
- * Two flows produce a "done" signal:
+ * Handles two distinct symptoms seen 2026-05-28:
  *
- *   1. **Consent-only flow (current default)** — the invite targets
- *      `driver-screening-consent`; "done" = a complete `screening_consent_bundles`
- *      row exists. Whether the employer later orders MVR/PSP is independent of
- *      the invite lifecycle (those use `mvr_orders` / `psp_orders` directly).
+ *   1. **Linked-but-stuck (Sean Buckner)** — invite has `used_by_user_id`
+ *      set, candidate completed consent, but no MVR/PSP was ever ordered. Old
+ *      sync logic required orders to flip the status. Now consent alone is
+ *      enough for `driver-screening-consent` invites.
  *
- *   2. **Per-block legacy flow** — the invite targets `driver-mvr` or
- *      `driver-psp`; "done" = the matching order(s) for that company/driver
- *      reached a terminal status (completed / needs_review / failed).
+ *   2. **Orphan invite (Quantez Johnson)** — invite was sent but never opened
+ *      via its token, so `used_by_user_id` stayed NULL. Candidate already had a
+ *      Storm account from a different path (Talent Search request) and
+ *      completed consent there. The kanban still showed "Pending" forever
+ *      because nothing connected the email-only invite to the user. We now
+ *      match orphan invites by `(company_id, lower(candidate_email))` and
+ *      back-link them to the driver on consent completion.
  *
- * The kanban reads `application_invites.status`. Without this sync, consent-only
- * invites stayed `in_progress` forever (no MVR/PSP order ever existed), which is
- * exactly the Sean Buckner symptom seen 2026-05-28.
+ * Per-block done signals:
+ *
+ *   - `driver-screening-consent` — complete `screening_consent_bundles` row
+ *   - `driver-mvr` — every MVR order for `(company, driver)` is terminal
+ *   - `driver-psp` — every PSP order for `(company, driver)` is terminal
  */
 export async function syncOutreachInviteForDriver(
   supabase: SupabaseClient,
   companyId: string,
   driverUserId: string,
 ): Promise<{ updated: number; inviteIds: string[] }> {
-  const [{ data: mvrOrders }, { data: pspOrders }, consentBundle] = await Promise.all([
+  const [{ data: mvrOrders }, { data: pspOrders }, consentBundle, driverEmail] = await Promise.all([
     supabase
       .from('mvr_orders')
       .select('id, status')
@@ -51,19 +57,46 @@ export async function syncOutreachInviteForDriver(
     // getLatestScreeningConsentBundle already filters to status = 'complete',
     // so a non-null result == "consent done for this (driver, company)".
     getLatestScreeningConsentBundle(supabase, driverUserId, companyId),
+    getDriverPrimaryEmail(supabase, driverUserId),
   ])
 
-  const { data: invites } = await supabase
+  // Pull both linked and orphan invites in one query. Orphans only count when
+  // we know the driver's email AND it matches the invite — otherwise we'd
+  // accidentally close someone else's pending invite.
+  const linkedQuery = supabase
     .from('application_invites')
-    .select('id, status, target_block_type')
+    .select('id, status, target_block_type, used_by_user_id, candidate_email')
     .eq('company_id', companyId)
     .eq('used_by_user_id', driverUserId)
     .in('status', ['viewed', 'in_progress'])
 
+  const { data: linkedInvites } = await linkedQuery
+
+  let orphanInvites: Array<{
+    id: string
+    status: string
+    target_block_type: string | null
+    used_by_user_id: string | null
+    candidate_email: string | null
+  }> = []
+  if (driverEmail) {
+    const { data } = await supabase
+      .from('application_invites')
+      .select('id, status, target_block_type, used_by_user_id, candidate_email')
+      .eq('company_id', companyId)
+      .is('used_by_user_id', null)
+      .ilike('candidate_email', driverEmail)
+      .in('status', ['pending', 'viewed', 'in_progress'])
+    orphanInvites = (data ?? []) as typeof orphanInvites
+  }
+
+  const allInvites = [...(linkedInvites ?? []), ...orphanInvites]
+
   const inviteIds: string[] = []
+  const linkedOrphanIds: string[] = []
   const now = new Date().toISOString()
 
-  for (const inv of invites ?? []) {
+  for (const inv of allInvites) {
     const block = inv.target_block_type as string | null
     if (!block || !SCREENING_INVITE_BLOCKS.has(block)) continue
 
@@ -82,21 +115,58 @@ export async function syncOutreachInviteForDriver(
       }
     }
 
+    const isOrphan = inv.used_by_user_id === null
+    const update: Record<string, string> = { status: 'completed', updated_at: now }
+    if (isOrphan) update.used_by_user_id = driverUserId
+
     const { error } = await supabase
       .from('application_invites')
-      .update({ status: 'completed', updated_at: now })
+      .update(update)
       .eq('id', inv.id)
 
-    if (!error) inviteIds.push(inv.id as string)
+    if (!error) {
+      inviteIds.push(inv.id as string)
+      if (isOrphan) linkedOrphanIds.push(inv.id as string)
+    }
   }
 
   if (inviteIds.length > 0) {
+    const orphanNote = linkedOrphanIds.length > 0 ? ` (${linkedOrphanIds.length} orphan-linked)` : ''
     console.log(
-      `[OUTREACH SYNC] Marked ${inviteIds.length} invite(s) completed for driver ${driverUserId} company ${companyId}`,
+      `[OUTREACH SYNC] Marked ${inviteIds.length} invite(s) completed for driver ${driverUserId} company ${companyId}${orphanNote}`,
     )
   }
 
   return { updated: inviteIds.length, inviteIds }
+}
+
+/**
+ * Resolve the driver's primary email for invite-matching. `users.email` is
+ * often NULL for Alchemy wallet-only signups; `user_profiles.email` is the
+ * authoritative copy. Returned lowercase + trimmed because invites store
+ * whatever the employer typed (Pace HR types in mixed case).
+ */
+async function getDriverPrimaryEmail(
+  supabase: SupabaseClient,
+  driverUserId: string,
+): Promise<string | null> {
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('email')
+    .eq('user_id', driverUserId)
+    .maybeSingle()
+  const profileEmail = (profile as { email: string | null } | null)?.email
+  if (profileEmail && profileEmail.trim()) return profileEmail.trim().toLowerCase()
+
+  const { data: user } = await supabase
+    .from('users')
+    .select('email')
+    .eq('id', driverUserId)
+    .maybeSingle()
+  const userEmail = (user as { email: string | null } | null)?.email
+  if (userEmail && userEmail.trim()) return userEmail.trim().toLowerCase()
+
+  return null
 }
 
 /** Backfill all active screening invites for a company (page load / reconcile tick). */

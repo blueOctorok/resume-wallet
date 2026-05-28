@@ -62,24 +62,29 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 
 ---
 
-## **HOTFIX — Outreach kanban "missing" candidates + stuck `in_progress`** (2026-05-28)
+## **HOTFIX — Outreach kanban: paginated rows, stuck `in_progress`, orphan invites** (2026-05-28)
 
-**Symptom (Pace Drivers):** Sean Buckner appeared "missing" from the outreach kanban; Quantez Johnson stayed in "Pending" despite Pace receiving consent-completion emails for him. Investigation found two distinct production bugs (both pre-existing — unrelated to T1.1–T1.3 deploys, but exposed by Pace's onboarding volume crossing the cap on 2026-05-28).
+**Symptom (Pace Drivers):** Sean Buckner appeared "missing" from the outreach kanban; Quantez Johnson and Micah King stayed in "Pending" despite Pace receiving consent-completion emails for them. Investigation found three distinct production bugs (all pre-existing — unrelated to T1.1–T1.3 deploys, but exposed by Pace's onboarding volume on 2026-05-28).
 
 | Bug | Root cause | Fix |
 |---|---|---|
-| Sean Buckner not visible | `/api/employer/invites` had a hardcoded `limit = 50` ordered by `created_at DESC`. Pace had 57 invites created after Sean's, pushing his row off the end of the API response. | Default raised to 500 in `src/app/api/employer/invites/route.ts`. Real pagination is a future task; for now we just lift the ceiling well above any current customer (Pace = 261 total invites). |
-| Six consent-completed candidates stuck on "In progress" (Sean, Robert Duckett, Ernesto Fresneda, Amanda Hodge, Kristopher Riley, Rontonio Porter) | `lib/sync-outreach-invite-status.ts` early-returned when the driver had zero MVR/PSP orders. Logic was written for the old "consent + MVR/PSP together" flow; the consent-first flow leaves consent-only candidates with no orders, so the sync never flipped their invite to `completed`. | `syncOutreachInviteForDriver` now flips `driver-screening-consent` invites to `completed` when a complete `screening_consent_bundles` row exists for `(driver_user_id, company_id)` — independent of MVR/PSP. Migration `090_backfill_consent_only_invite_completion.sql` applies the same logic to existing stuck rows. |
+| **Older active invites silently dropping off the kanban** (Sean Buckner) | `/api/employer/invites` had a hardcoded `limit = 50` ordered by `created_at DESC`. Once Pace's daily new-invite volume crossed 50, older active rows (Sean's was #58) fell off the bottom of the response. | Default cap removed entirely. Sort changed from `created_at DESC` to `updated_at DESC` so recency-of-activity wins, not recency-of-creation. The data is naturally bounded by the lifecycle (30-day pending expiry, 14-day archive on completed). Real cursor pagination is deferred until a customer actually exceeds ~10k active invites. |
+| **Consent-completed candidates stuck on "In progress"** (Sean + 5 others) | `lib/sync-outreach-invite-status.ts` early-returned when the driver had zero MVR/PSP orders. Logic was written for the old "consent + MVR/PSP together" flow; the consent-first flow leaves consent-only candidates with no orders, so the sync never flipped their invite to `completed`. | `syncOutreachInviteForDriver` now flips `driver-screening-consent` invites to `completed` when a complete `screening_consent_bundles` row exists for `(driver_user_id, company_id)` — independent of MVR/PSP. Migration `090` applies the same logic to existing stuck rows. |
+| **Orphan invites stuck on "Pending"** (Quantez Johnson, Micah King) | The candidate had a Storm account from a different path (Talent Search request → hub) and completed consent there. The outreach invite (sent later or earlier) was never opened via its token, so `used_by_user_id` stayed NULL. Nothing connected the email-only invite to the existing user. Pace's kanban reads only `application_invites.status`, so it stayed "Pending" forever. | `syncOutreachInviteForDriver` now also matches orphan invites by `(company_id, lower(candidate_email))` and back-links them to the driver. The consent-completion endpoint (`/api/candidate/screening-consent`) fires the sync immediately after the bundle is saved. Migration `091` cleans up the two known orphans. |
 
-**Quantez Johnson (separate, not fixed in this commit):** Two parallel records exist for the same Pace request — an `application_invites` row (status: `pending`, never opened via token, `used_by_user_id = NULL`) and a `candidate_requests` row + completed consent bundle on his existing Storm user account. He completed consent via his hub (likely a Talent Search request, not the outreach invite). Pace's kanban only reads `application_invites.status`, so he stays "Pending" forever even though consent is done. Auto-linking orphan invites by email on consent completion is queued as the next fix; flagged in `EXECUTION_CHECKLIST.md`.
+**Architectural takeaway:** All three bugs are different surface manifestations of the same root issue — the kanban derives lifecycle state from `application_invites.status` only, but state is actually written from multiple paths (`application_invites`, `candidate_requests`, `screening_consent_bundles`, `mvr_orders`, `psp_orders`). The sync function is now the single chokepoint that reconciles them. A more invasive long-term fix would be a derived view that computes lifecycle from the most-progressed signal across all five tables; the targeted reconcile in the sync gets us 80% of the value without that refactor.
 
-**Why this isn't from T1.1–T1.3:** Both bugs predate the migration work. The middleware/FK incidents earlier today caused Pace HR to retry sends, accelerating the invite count past 50, which is why the limit-bug only surfaced now. The `sync-outreach-invite-status` early-return has been wrong since the consent-first flow shipped.
+**Why this isn't from T1.1–T1.3:** All three bugs predate the migration work. The middleware/FK incidents earlier today caused Pace HR to retry sends, accelerating the invite count past 50, which is why the limit bug only surfaced today. The `sync-outreach-invite-status` early-return has been wrong since the consent-first flow shipped. The orphan-invite issue has existed since Talent Search and Outreach were two separate write paths.
 
 | Files |
 |---|
-| `src/app/api/employer/invites/route.ts` (limit 50 → 500) |
-| `src/lib/sync-outreach-invite-status.ts` (consent-only completion path) |
-| `supabase/migrations/090_backfill_consent_only_invite_completion.sql` (data fix; applied via dashboard since MCP is read-only) |
+| `src/app/api/employer/invites/route.ts` — drop default limit; sort by `updated_at` |
+| `src/lib/sync-outreach-invite-status.ts` — consent-only completion + orphan-invite back-link |
+| `src/app/api/candidate/screening-consent/route.ts` — fire `syncOutreachInviteForDriver` on bundle save |
+| `supabase/migrations/090_backfill_consent_only_invite_completion.sql` — flips 6 stuck `in_progress` rows |
+| `supabase/migrations/091_backfill_orphan_screening_invites.sql` — links 2 orphan `pending` rows |
+
+**Manual step:** Apply migrations 090 and 091 via the Supabase SQL editor (MCP is read-only). Both are idempotent — they no-op if there's nothing matching the pattern, so re-running is safe.
 
 ---
 

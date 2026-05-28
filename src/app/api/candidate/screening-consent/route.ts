@@ -4,6 +4,7 @@ import { encryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { hasCdlisWrittenConsent } from '@/lib/screening-consent-bundle'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
+import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
 
 interface DeferredConsent {
   signedName: string
@@ -179,6 +180,19 @@ export async function POST(request: NextRequest) {
       .eq('id', requestId)
 
     await ensureHubBlocksForPspMvrBundle(supabase, user.id)
+
+    // Close out any matching outreach invite. This handles the orphan case
+    // (Quantez Johnson 2026-05-28): an outreach invite was sent to the same
+    // email but the candidate completed consent through a different path
+    // (Talent Search request → hub), so the invite never linked. Sync now
+    // back-links by `(company_id, lower(candidate_email))` and flips status.
+    void syncOutreachInviteForDriver(
+      supabase,
+      candidateRequest.company_id as string,
+      user.id,
+    ).catch((err) => {
+      console.error('[SCREENING CONSENT] outreach sync failed:', err)
+    })
 
     void notifyEmployerCandidateActionComplete(supabase, {
       kind: 'screening_consent',

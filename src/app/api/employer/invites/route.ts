@@ -135,12 +135,17 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'all'
-    // Default raised from 50 → 500 because the kanban renders ALL active invites
-    // client-side (no server-side pagination). Pace already has 250+ active rows;
-    // a 50-row cap silently dropped older `in_progress` candidates off the board
-    // once daily new-invite volume exceeded the cap. Real pagination is a future
-    // task — for now we just raise the ceiling well above any current customer.
-    const limit = parseInt(searchParams.get('limit') || '500')
+    // Optional explicit cap — only applied when caller asks for one.
+    // The default kanban request does NOT pass `limit`, so the result is
+    // bounded by the data lifecycle (30-day pending expiry, 14-day archive
+    // for completed) rather than an arbitrary row count. The 2026-05-28 bug
+    // where Sean Buckner "disappeared" was caused by a hardcoded 50-row cap +
+    // ORDER BY created_at DESC: as Pace's daily new-invite volume crossed 50,
+    // older active rows fell off the bottom of the response. Removing the
+    // default cap and sorting by `updated_at` (recency-of-activity, not
+    // recency-of-creation) prevents that class of bug.
+    const explicitLimit = searchParams.get('limit')
+    const limit = explicitLimit ? parseInt(explicitLimit) : null
 
     let query = supabase
       .from('application_invites')
@@ -154,8 +159,11 @@ export async function GET(request: NextRequest) {
         users!application_invites_used_by_user_id_fkey(email)
       `)
       .eq('company_id', ctx.companyId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
+      .order('updated_at', { ascending: false })
+
+    if (limit !== null && Number.isFinite(limit) && limit > 0) {
+      query = query.limit(limit)
+    }
 
     if (status !== 'all') {
       if (status === 'active') {
