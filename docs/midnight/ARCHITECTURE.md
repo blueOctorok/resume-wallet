@@ -289,19 +289,36 @@ The choice is reversible: the `attestationService` interface means Phase 3 can t
 
 These are real ideas worth preserving so future-you doesn't reinvent them. **None of this is scheduled work.** Each item has explicit trigger conditions that must be met before design begins.
 
-### Phase 3b — Soulbound credential SBTs + visualization layer
+### Phase 3b — Soulbound credential SBTs (career card becomes the vault)
 
-After Phase 3a (core ZK proofs) ships, the natural extension is to make each verified attestation visible to the candidate as a **non-transferable Soulbound Token (SBT)** in a "credential vault" UI surface.
+After Phase 3a (core ZK proofs) ships, the natural extension is to make each verified attestation visible to the candidate as a **non-transferable Soulbound Token (SBT)** — and the natural home for them is the **career card the candidate already has**. The career card is not a separate UI; it's already the candidate's primary identity surface, already shareable via token, already projects per-audience views via lenses. Phase 3b upgrades it from a Supabase projection into a verifiable artifact.
+
+**The two-layer model:**
+
+| Layer | Today | Phase 3b |
+|---|---|---|
+| **Career card** | Read-only projection of installed blocks (`/api/career-card`, `share_token` URL, lens views) | Same UX surface, now with a Midnight-anchored cryptographic identifier proving the card is irreplicably this candidate's |
+| **Credential cards** (CDL, MVR, employment, DOT) | Data inside `block_*` tables, surfaced via career card sections | Each verified attestation gets minted as an SBT that lives *inside* the career card. Lenses still control which credentials each audience sees. |
+
+**Invariants (do not break):**
 
 - **Soulbound to `users.id`, not to a wallet address.** Storm holds the on-chain anchor server-side. **Candidate never sees a wallet, never signs a transaction, never holds a seed phrase.**
-- **Non-transferable, period.** No secondary market. No "trade your CDL" feature ever. Transferability would break verification (the SBT stops verifying the holder).
-- **Storm-issuable, candidate-controlled, Storm-revocable** (when underlying credential lapses or fraud detected). Same posture as DEC-2026-05-011 candidate-as-agent.
-- **Selective disclosure layered on top.** Candidate proves possession of `clean_mvr_12mo` without revealing the underlying MVR.
+- **Non-transferable, period.** No secondary market. No "trade your CDL" feature ever. Transferability would break verification.
+- **Storm-issuable, candidate-controlled, Storm-revocable** when underlying credential lapses or fraud detected. Same posture as DEC-2026-05-011 candidate-as-agent.
+- **Selective disclosure stays at the credential-card level**, layered through existing lenses. Candidate proves possession of `clean_mvr_12mo` to a specific carrier; full MVR data is never disclosed.
+- **Carrier-facing URL doesn't change.** `/card/{token}` still works the same way. Phase 3b adds the cryptographic verification underneath; the access surface is unchanged.
+- **Career card mints at signup**, before any credentials exist. Empty career card = soulbound shell with zero credentials inside. This preserves the rule from `product-philosophy.mdc`: "Never gate the career card behind completion."
 
-This is essentially a UX wrapper around what Phase 3a already produces — but it gives Storm a clean answer to "do you have soulbound credentials?" and aligns with W3C Verifiable Credentials patterns the broader identity ecosystem already understands.
+**Open design questions (don't need answers until trigger condition met):**
+
+- One SBT layer (only credential cards) vs. two (career card itself also minted)? Lean toward one: career card is a logical container; only individual credentials are minted on-chain. Lower complexity, same UX outcome.
+- Renewals: each new MVR / annual review = new credential SBT, supersedes the prior. Default lens views show only most recent. Old SBTs remain on-chain for audit trail (matches FMCSA "annual review" expectations from DQ file Item 6).
+- "Verified Storm career card" badge vs. simply showing verified credential SBTs inside it. Probably the latter — the badge becomes the *count* of verified SBTs visible, not a separate signifier.
+
+**Why this is structurally elegant:** the career card already exists, already feels owned by the candidate, already shows up to carriers as the primary identity surface. We're not building a new credential vault — we're upgrading what already has the right shape.
 
 **Trigger condition to start design:** Phase 3a is in production with at least one carrier consuming attestations.
-**Estimated effort:** 1–2 weeks of UI work on top of Phase 3a output.
+**Estimated effort:** 1–2 weeks of UI work on top of Phase 3a output (lower than originally estimated because career card UI surface already exists).
 
 ### Phase 3b — STORM as Midnight-native shielded utility token
 

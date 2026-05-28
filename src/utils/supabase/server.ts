@@ -1,33 +1,33 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+/**
+ * Server-side Supabase client (cookie session).
+ *
+ * Updated 2026-05-28 from the deprecated `get/set/remove` cookies API to the
+ * `getAll`/`setAll` shape supported by @supabase/ssr ≥0.5. Server Components
+ * can't write cookies; the try/catch in setAll preserves that — middleware
+ * (`utils/supabase/middleware.ts`) is responsible for writing refreshed
+ * cookies, this client only reads.
+ */
 export async function createClient() {
   const cookieStore = await cookies()
 
   return createServerClient(supabaseUrl!, supabaseKey!, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
+      getAll() {
+        return cookieStore.getAll()
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(cookiesToSet) {
         try {
-          cookieStore.set(name, value, options)
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options)
+          }
         } catch {
-          // The `set` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing
-          // user sessions.
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore.set(name, '', { ...options, maxAge: 0 })
-        } catch {
-          // The `remove` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing
-          // user sessions.
+          // Called from a Server Component — middleware handles refresh.
         }
       },
     },

@@ -77,6 +77,42 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 
 ---
 
+## **HOTFIX — middleware 500s blocking Alchemy OTP login** (2026-05-28)
+
+**Prod outage** after the T1.1–1.3 deploy. Symptom: users could request the OTP code, then hit "Internal Server Error" / Alchemy `code:16 The OTP code has either expired or is invalid` when submitting it. Fresh codes failed too. Started exactly at the T1 deploy and was 100% reproducible.
+
+**Root cause:** the T1.2 commit upgraded `@supabase/ssr` from `^0.1.0` to `^0.10.3` and added root middleware, but `src/utils/supabase/middleware.ts` was still using the **deprecated `get`/`set`/`remove` cookies API**. That shape was replaced by `getAll`/`setAll` in `@supabase/ssr` ≥0.5 and threw on every request in 0.10.3. Middleware throwing on every request → every page load returned 500 → users never made it past the verification screen even when their code was valid.
+
+**Fix:**
+
+| File | Change |
+|---|---|
+| `src/utils/supabase/middleware.ts` | Switched cookies to `getAll`/`setAll`. Wrapped `createServerClient` + `getUser` in try/catch — auth refresh failures now log and pass through instead of 500'ing the page. Added env-var guard so missing `NEXT_PUBLIC_SUPABASE_*` vars never throw either. |
+| `src/middleware.ts` | Added outer try/catch as a final safety net (belt-and-suspenders). **Excluded `/api/*` from the matcher** — Phase 1 dual-mode auth uses `x-wallet-address` headers; Supabase cookies are not needed for API routes until T1.5–T1.8 migrate them. This also prevents middleware from running on Alchemy / Stripe / Accio webhooks. Re-include `/api` once T1.5 starts. |
+| `src/utils/supabase/server.ts` | Same cookies-API migration — the helper used by App Router server actions. Server Components still can't write cookies; `setAll` keeps the try/catch fallback for that case. |
+
+**Why this didn't surface in dev/build:** the deprecated cookies API still type-checks and the build passes — it only throws **at runtime** when `getUser()` actually tries to write a cookie, which doesn't happen in `npm run build`. Lesson filed: any time we bump a major dep AND wire it into middleware in the same commit, we need to test the dev server with a real auth-refresh round trip before pushing.
+
+**Disposition:** ship this commit, redeploy. Pace and other prod users should be able to sign in immediately after redeploy. T1.2 status remains `✅ Done` — middleware is still live, just no longer fragile.
+
+---
+
+## **Phase 3b refinement: career card becomes the soulbound vault** (2026-05-28)
+
+Refined the Phase 3b SBT plan after recognizing the career card is already the natural soulbound vault surface — already candidate-owned, already shareable via token, already lens-projected per audience. Phase 3b no longer ships a "new credential vault UI"; it upgrades the existing career card into a verifiable artifact with credential SBTs (CDL, MVR, employment, DOT) appearing inside it. Carrier-facing `/card/{token}` URL behavior unchanged.
+
+Why this matters: collapses two roadmap items into one (career card UX + soulbound credential vault), preserves the `product-philosophy.mdc` rule "never gate the career card behind completion" (career card mints at signup, soulbound shell with zero credentials), and lowers Phase 3b effort estimate (~1–2 weeks of UI work on existing surface vs. building a new one).
+
+| Doc updated | Change |
+|---|---|
+| `docs/midnight/ARCHITECTURE.md` | Phase 3b SBT section rewritten with two-layer model (career card = vault, credentials = SBTs inside), invariants list, design questions, mint-at-signup rule |
+| `docs/midnight/DECISION_LOG.md` DEC-2026-05-012 | Added implementation note: career card IS the vault, no separate UI surface |
+| `docs/midnight/TOKEN_BRIEF.md` | "Soulbound credential cards" section reframed as "Career card becomes the soulbound vault" — clearer pitch, drops the "wallet of badges" abstraction in favor of "the career card you already have, now tamper-proof" |
+
+**Pattern recognized for future Phase 3+ design:** before designing a new UI surface, ask "what already exists in the product that this is the upgrade of?" If something already has the right shape (candidate-owned, identity-bearing, shareable), upgrade it instead of building parallel infrastructure.
+
+---
+
 ## **Phase 3b/4 economic layer captured: SBT credentials + STORM-on-Midnight + cached-attestation marketplace (all deferred)** (2026-05-27)
 
 Captured three future economic features as architectural directions, none scheduled, all behind explicit trigger conditions. The point is to preserve the design space without absorbing engineering attention before Phase 1/2 ship.

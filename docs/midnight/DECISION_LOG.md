@@ -76,7 +76,9 @@ DEC-2026-05-005 Option B preserved the option to reissue STORM as a Midnight-nat
 
 Two complementary additions to the Phase 3 roadmap, both **deferred until trigger conditions met**:
 
-**Phase 3b-A: Soulbound credential SBTs.** Each verified attestation is also represented as a non-transferable token bound to the candidate's `users.id` (NOT to a wallet address). Storm holds the on-chain anchor server-side; candidate never sees a wallet, signs a transaction, or holds a seed phrase. Selective disclosure layered on top.
+**Phase 3b-A: Soulbound credential SBTs, with the career card as the vault.** Each verified attestation is represented as a non-transferable token bound to the candidate's `users.id` (NOT to a wallet address). Storm holds the on-chain anchor server-side; candidate never sees a wallet, signs a transaction, or holds a seed phrase. Selective disclosure layered on top via existing career-card lenses.
+
+**Implementation note (added 2026-05-28):** the career card the candidate already has IS the vault UX. We do not build a separate "credential vault" surface. Phase 3b upgrades the career card from a Supabase projection into a verifiable artifact, with each credential SBT (CDL, MVR, employment, DOT) appearing inside it. Career card mints at signup so it exists for empty/in-progress users (preserves `product-philosophy.mdc` "never gate the career card behind completion" rule). Carrier-facing `/card/{token}` URL behavior is unchanged; cryptographic verification is added underneath. Lower estimated effort than originally scoped (~1–2 weeks of UI work) because the career card surface already exists. Full design lives in `ARCHITECTURE.md` "Future considerations" → Phase 3b SBT section.
 
 **Phase 3b-B: STORM reissued as Midnight-native shielded utility token.** Pure utility (no profit-sharing, no governance over Storm corp). Earned by candidates and carriers through platform activity; spent on platform discounts. Shielded by default on Midnight (private balances). Surface label remains "Storm Points" — the on-chain token is implementation, not UX.
 

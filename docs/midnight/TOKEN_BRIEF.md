@@ -22,11 +22,13 @@ Same idea as a professional license or a diploma — you can show it, but you ca
 
 ## What we'd actually ship (three things)
 
-### 1. Soulbound credential cards
+### 1. The career card becomes the soulbound vault
 
-The driver collects cards as they verify things — "✓ Clean MVR · valid through 2026-12", "✓ Class A CDL with hazmat", "✓ 3 years employment verified." Carriers can scan a card and confirm it's real in under a second.
+Drivers already have a career card — it's their living, shareable Storm profile. In Phase 3 we upgrade it: the career card becomes the candidate's **soulbound vault**, and each verified credential (Clean MVR, Class A CDL with Hazmat, 3 years employment verified, etc.) shows up as a soulbound card *inside* it.
 
-Drivers never see a crypto wallet. Storm holds the technical piece on their behalf. To the driver, it just looks like a wallet of badges they earned.
+Carriers click the same career-card link they're used to. Behind the scenes, every credential is now cryptographically verifiable in under a second — no PDF needed, no fresh CRA pull needed.
+
+Drivers never see a crypto wallet. Storm holds the technical piece on their behalf. To the driver, it just looks like the career card they already have, except now it's tamper-proof and the credentials inside it are real, portable, and theirs.
 
 ### 2. Storm Points
 
@@ -68,7 +70,7 @@ The 30-day cliff matters — beyond 30 days, MVRs are too old to use anyway, so 
 | What | When |
 |---|---|
 | Storm Points (off-chain) | Part of Phase 1 cleanup, ~6 weeks out |
-| Soulbound credential cards | After the zero-knowledge work ships (Phase 3) |
+| Career card upgraded to soulbound vault + credential cards inside | After the zero-knowledge work ships (Phase 3) |
 | Storm Points on Midnight (private balances) | Same window — only if usage is real |
 | Cached-credential payback marketplace | Phase 4 — needs Phase 2 in production + Pace at the table |
 
