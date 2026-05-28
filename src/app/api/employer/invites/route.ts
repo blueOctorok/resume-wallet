@@ -474,9 +474,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     // ── Path A: field-level edit (no status change) ──────────────────────────
-    // Allowed while the candidate has not finished: pending / viewed / in_progress.
-    // Block once completed (or terminal cancelled/expired) so edits do not fight
-    // a finished consent flow or audit trail.
+    // Allowed for any non-terminal invite. Cancelled / expired are blocked
+    // because the link is dead. Completed is allowed because the screening
+    // relationship is long-lived (Pace may run annual MVR re-pulls, etc.) and
+    // the consent bundle's audit-relevant fields (signed names, signed_at,
+    // SSN) live in `bgcheck_consents` / `psp_consents` / `screening_consent_bundles`,
+    // not on the invite — so editing the invite's display name/email after
+    // completion does not affect compliance records.
     const isFieldEdit = status === undefined && (
       candidateName !== undefined ||
       candidateEmail !== undefined ||
@@ -485,9 +489,9 @@ export async function PATCH(request: NextRequest) {
     )
 
     if (isFieldEdit) {
-      if (!['pending', 'viewed', 'in_progress'].includes(existing.status)) {
+      if (['cancelled', 'expired'].includes(existing.status)) {
         return NextResponse.json(
-          { error: 'Only invites that are still open (not completed or expired) can have their details edited' },
+          { error: 'Cancelled or expired invites cannot be edited' },
           { status: 400 },
         )
       }

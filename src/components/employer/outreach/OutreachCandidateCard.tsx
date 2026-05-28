@@ -205,18 +205,19 @@ export default function OutreachCandidateCard({
   const isSending = sendingEmailId === invite.id
   const isEmailSent = emailSentId === invite.id
   const isRemoving = removingId === invite.id
-  const canAct = !['cancelled', 'completed', 'expired'].includes(invite.status)
-  // Match PATCH /api/employer/invites: editable until the candidate finishes (not completed/cancelled/expired).
-  // We always render the Edit tile so the action grid does not look "random" when status differs by column.
-  const canEditDetails = ['pending', 'viewed', 'in_progress'].includes(invite.status)
+  // Cancelled / expired invites are terminal — the link is dead. Everything
+  // else (including completed) stays actionable: Pace's relationship with the
+  // candidate is long-lived and they may want to re-run MVR or PSP later
+  // (annual review, post-incident audit, new offer) without collecting
+  // consent again. The signed consent bundle is good for the lifetime of
+  // the relationship.
+  const isTerminal = ['cancelled', 'expired'].includes(invite.status)
+  const canAct = !isTerminal
+  const canEditDetails = !isTerminal
   const editDisabledTitle = (() => {
     if (canEditDetails) return undefined
-    if (invite.status === 'completed') {
-      return 'This invite is finished. Contact details cannot be edited; start a new outreach if something changed.'
-    }
-    if (invite.status === 'cancelled' || invite.status === 'expired') {
-      return 'Cancelled or expired invites cannot be edited.'
-    }
+    if (invite.status === 'cancelled') return 'Cancelled invites cannot be edited.'
+    if (invite.status === 'expired') return 'Expired invites cannot be edited.'
     return 'Contact details cannot be edited for this invite.'
   })()
 

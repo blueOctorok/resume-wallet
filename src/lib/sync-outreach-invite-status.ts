@@ -14,35 +14,39 @@ export function isTerminalScreeningOrderStatus(status: string | null | undefined
 }
 
 /**
- * Move outreach invites to `completed` when the candidate has finished the work
- * the invite was sent for.
+ * Reconcile outreach invite status against the actual screening pipeline state.
  *
- * Handles two distinct symptoms seen 2026-05-28:
+ * Kanban semantics from Pace's perspective:
  *
- *   1. **Linked-but-stuck (Sean Buckner)** — invite has `used_by_user_id`
- *      set, candidate completed consent, but no MVR/PSP was ever ordered. Old
- *      sync logic required orders to flip the status. Now consent alone is
- *      enough for `driver-screening-consent` invites.
+ *   - `pending` / `viewed` / `in_progress` → action queue. Pace can edit the
+ *     card, run MVR/PSP, send a nudge, etc.
+ *   - `completed` → "everything I ordered came back." Card is locked from
+ *     edits and starts the 14-day archive timer.
  *
- *   2. **Orphan invite (Quantez Johnson)** — invite was sent but never opened
- *      via its token, so `used_by_user_id` stayed NULL. Candidate already had a
- *      Storm account from a different path (Talent Search request) and
- *      completed consent there. The kanban still showed "Pending" forever
- *      because nothing connected the email-only invite to the user. We now
- *      match orphan invites by `(company_id, lower(candidate_email))` and
- *      back-link them to the driver on consent completion.
+ * This means consent-signed-but-no-orders is intentionally `in_progress`:
+ * consent alone does NOT close the invite, because Pace's next step is still
+ * to decide whether to run MVR/PSP. The original 2026-05-28 attempt to flip
+ * consent-only to `completed` broke Pace's workflow (cards became unactionable
+ * with no MVR/PSP ordered) and was reverted.
  *
- * Per-block done signals:
+ * What this function actually does:
  *
- *   - `driver-screening-consent` — complete `screening_consent_bundles` row
- *   - `driver-mvr` — every MVR order for `(company, driver)` is terminal
- *   - `driver-psp` — every PSP order for `(company, driver)` is terminal
+ *   1. **Linked invites** — if the driver has any MVR/PSP orders for this
+ *      company AND every order is terminal (completed / needs_review /
+ *      failed), flip the matching invite to `completed`. This is the
+ *      original "screening pipeline done → kanban catches up" sync.
+ *
+ *   2. **Orphan invites** — if a `(company, candidate_email)` invite exists
+ *      with `used_by_user_id = NULL` and the driver completed consent
+ *      through another path (Talent Search request → hub), back-link the
+ *      invite to the driver. The orphan moves to `in_progress` (not
+ *      `completed`) so Pace's kanban shows it as actionable, not archived.
  */
 export async function syncOutreachInviteForDriver(
   supabase: SupabaseClient,
   companyId: string,
   driverUserId: string,
-): Promise<{ updated: number; inviteIds: string[] }> {
+): Promise<{ updated: number; inviteIds: string[]; orphansLinked: number }> {
   const [{ data: mvrOrders }, { data: pspOrders }, consentBundle, driverEmail] = await Promise.all([
     supabase
       .from('mvr_orders')
@@ -54,90 +58,99 @@ export async function syncOutreachInviteForDriver(
       .select('id, status')
       .eq('ordered_by_company_id', companyId)
       .eq('driver_user_id', driverUserId),
-    // getLatestScreeningConsentBundle already filters to status = 'complete',
-    // so a non-null result == "consent done for this (driver, company)".
     getLatestScreeningConsentBundle(supabase, driverUserId, companyId),
     getDriverPrimaryEmail(supabase, driverUserId),
   ])
 
-  // Pull both linked and orphan invites in one query. Orphans only count when
-  // we know the driver's email AND it matches the invite — otherwise we'd
-  // accidentally close someone else's pending invite.
-  const linkedQuery = supabase
+  const inviteIds: string[] = []
+  const now = new Date().toISOString()
+
+  // ── 1. Orphan back-link ────────────────────────────────────────────────
+  // Pace sent an outreach invite but the candidate completed consent via a
+  // different path, so the invite has used_by_user_id = NULL. We can only
+  // link it if (a) we have an email for this driver and (b) the driver has
+  // a completed consent bundle for this company — otherwise we'd be
+  // claiming someone else's pending invite. The status becomes in_progress
+  // (not completed) so Pace's kanban still shows it as actionable.
+  let orphansLinked = 0
+  if (driverEmail && consentBundle) {
+    const { data: orphans } = await supabase
+      .from('application_invites')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('target_block_type', 'driver-screening-consent')
+      .is('used_by_user_id', null)
+      .ilike('candidate_email', driverEmail)
+      .in('status', ['pending', 'viewed', 'in_progress'])
+
+    for (const orphan of orphans ?? []) {
+      const { error } = await supabase
+        .from('application_invites')
+        .update({
+          used_by_user_id: driverUserId,
+          status: 'in_progress',
+          updated_at: now,
+        })
+        .eq('id', orphan.id as string)
+      if (!error) orphansLinked++
+    }
+  }
+
+  // ── 2. Pipeline-done → completed ───────────────────────────────────────
+  // Original sync rule: only flip a per-block screening invite to completed
+  // once the matching order(s) all reached a terminal status. Consent-only
+  // invites (driver-screening-consent) deliberately stay open until Pace
+  // either runs screenings or manually overrides the status.
+  const allOrders = [...(mvrOrders ?? []), ...(pspOrders ?? [])]
+  if (allOrders.length === 0) {
+    return { updated: inviteIds.length, inviteIds, orphansLinked }
+  }
+  if (!allOrders.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
+    return { updated: inviteIds.length, inviteIds, orphansLinked }
+  }
+
+  const { data: invites } = await supabase
     .from('application_invites')
-    .select('id, status, target_block_type, used_by_user_id, candidate_email')
+    .select('id, status, target_block_type')
     .eq('company_id', companyId)
     .eq('used_by_user_id', driverUserId)
     .in('status', ['viewed', 'in_progress'])
 
-  const { data: linkedInvites } = await linkedQuery
-
-  let orphanInvites: Array<{
-    id: string
-    status: string
-    target_block_type: string | null
-    used_by_user_id: string | null
-    candidate_email: string | null
-  }> = []
-  if (driverEmail) {
-    const { data } = await supabase
-      .from('application_invites')
-      .select('id, status, target_block_type, used_by_user_id, candidate_email')
-      .eq('company_id', companyId)
-      .is('used_by_user_id', null)
-      .ilike('candidate_email', driverEmail)
-      .in('status', ['pending', 'viewed', 'in_progress'])
-    orphanInvites = (data ?? []) as typeof orphanInvites
-  }
-
-  const allInvites = [...(linkedInvites ?? []), ...orphanInvites]
-
-  const inviteIds: string[] = []
-  const linkedOrphanIds: string[] = []
-  const now = new Date().toISOString()
-
-  for (const inv of allInvites) {
+  for (const inv of invites ?? []) {
     const block = inv.target_block_type as string | null
     if (!block || !SCREENING_INVITE_BLOCKS.has(block)) continue
 
-    // Per-block guards: only complete the invite once its own artifact is done.
-    if (block === 'driver-screening-consent') {
-      if (!consentBundle) continue
-    } else if (block === 'driver-mvr') {
+    // Consent-only invites never auto-complete on the basis of MVR/PSP —
+    // they only move forward via consent (handled implicitly when Pace
+    // orders MVR/PSP, which creates a per-block invite or just flows
+    // through the screening detail UI).
+    if (block === 'driver-screening-consent') continue
+
+    if (block === 'driver-mvr') {
       const mvrOnly = mvrOrders ?? []
-      if (mvrOnly.length === 0 || !mvrOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
-        continue
-      }
-    } else if (block === 'driver-psp') {
-      const pspOnly = pspOrders ?? []
-      if (pspOnly.length === 0 || !pspOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
-        continue
-      }
+      if (mvrOnly.length === 0 || !mvrOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) continue
     }
 
-    const isOrphan = inv.used_by_user_id === null
-    const update: Record<string, string> = { status: 'completed', updated_at: now }
-    if (isOrphan) update.used_by_user_id = driverUserId
+    if (block === 'driver-psp') {
+      const pspOnly = pspOrders ?? []
+      if (pspOnly.length === 0 || !pspOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) continue
+    }
 
     const { error } = await supabase
       .from('application_invites')
-      .update(update)
+      .update({ status: 'completed', updated_at: now })
       .eq('id', inv.id)
 
-    if (!error) {
-      inviteIds.push(inv.id as string)
-      if (isOrphan) linkedOrphanIds.push(inv.id as string)
-    }
+    if (!error) inviteIds.push(inv.id as string)
   }
 
-  if (inviteIds.length > 0) {
-    const orphanNote = linkedOrphanIds.length > 0 ? ` (${linkedOrphanIds.length} orphan-linked)` : ''
+  if (inviteIds.length > 0 || orphansLinked > 0) {
     console.log(
-      `[OUTREACH SYNC] Marked ${inviteIds.length} invite(s) completed for driver ${driverUserId} company ${companyId}${orphanNote}`,
+      `[OUTREACH SYNC] driver ${driverUserId} company ${companyId}: ${inviteIds.length} completed, ${orphansLinked} orphan-linked`,
     )
   }
 
-  return { updated: inviteIds.length, inviteIds }
+  return { updated: inviteIds.length, inviteIds, orphansLinked }
 }
 
 /**
@@ -173,7 +186,7 @@ async function getDriverPrimaryEmail(
 export async function syncOutreachInvitesForCompany(
   supabase: SupabaseClient,
   companyId: string,
-): Promise<{ updated: number }> {
+): Promise<{ updated: number; orphansLinked: number }> {
   const { data: invites } = await supabase
     .from('application_invites')
     .select('used_by_user_id')
@@ -186,14 +199,18 @@ export async function syncOutreachInvitesForCompany(
   )
 
   let updated = 0
+  let orphansLinked = 0
   for (const uid of userIds) {
     const r = await syncOutreachInviteForDriver(supabase, companyId, uid)
     updated += r.updated
+    orphansLinked += r.orphansLinked
   }
 
-  if (updated > 0) {
-    console.log(`[OUTREACH SYNC] Company ${companyId}: ${updated} invite(s) → completed`)
+  if (updated > 0 || orphansLinked > 0) {
+    console.log(
+      `[OUTREACH SYNC] Company ${companyId}: ${updated} → completed, ${orphansLinked} orphan-linked`,
+    )
   }
 
-  return { updated }
+  return { updated, orphansLinked }
 }

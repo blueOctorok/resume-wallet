@@ -1,35 +1,14 @@
 -- ============================================================
--- MIGRATION 091: BACKFILL — link orphan outreach invites to users
--- who completed consent through a different path
+-- MIGRATION 091: BACKFILL — link orphan outreach invites
 -- ============================================================
 -- Date: 2026-05-28
--- Reason: One-time data fix paired with the auto-link logic added to
---   `lib/sync-outreach-invite-status.ts` and the consent-completion
---   hook in `api/candidate/screening-consent/route.ts` shipping in the
---   same commit.
+-- Status: APPLIED to production, then logically reversed by migration 092
+--   for the status portion (back-linking the user_id was correct; flipping
+--   to `completed` was wrong — those should have been `in_progress`).
+-- See migration 092 + docs/CHANGES.md "HOTFIX — Outreach kanban" entry
+-- (2026-05-28) for the full postmortem.
 --
--- Symptom (Pace Drivers, 2026-05-28):
---   Quantez Johnson (and Micah King) appeared "Pending" on the outreach
---   kanban indefinitely, even though Pace HR was receiving consent-
---   completion emails for them. Both had Storm accounts AND completed
---   `screening_consent_bundles` for Pace — just through the Talent
---   Search → candidate-request → hub path, NOT through the outreach
---   invite token. The outreach invite stayed orphaned with
---   `used_by_user_id = NULL` and `status = 'pending'` because nothing
---   matched the email-only invite to the existing user.
---
--- Forward fix:
---   `syncOutreachInviteForDriver` now matches orphan invites by
---   `(company_id, lower(candidate_email))` and back-links them on
---   consent completion. The consent endpoint invokes the sync. The
---   employer kanban GET also runs `syncOutreachInvitesForCompany` on
---   every load, but that only iterates over already-linked drivers —
---   orphans are caught only when the driver hits the consent endpoint
---   or when this backfill runs.
---
--- This migration cleans up the two known orphans plus any others that
--- match the same shape. After this runs the kanban will show them in
--- the Completed column with today's `updated_at`.
+-- This file is preserved verbatim for migration-history fidelity.
 -- ============================================================
 
 UPDATE application_invites ai

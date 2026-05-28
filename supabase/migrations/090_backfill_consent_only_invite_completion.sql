@@ -2,34 +2,18 @@
 -- MIGRATION 090: BACKFILL — flip consent-only outreach invites to `completed`
 -- ============================================================
 -- Date: 2026-05-28
--- Reason: One-time data fix paired with the sync-outreach-invite-status.ts
--- code change shipping in the same commit.
+-- Status: APPLIED to production, then logically reversed by migration 092.
+-- Reason for reversal: This migration paired with a code change that flipped
+--   `driver-screening-consent` invites to `completed` once consent was signed,
+--   without requiring MVR/PSP to be run. That was wrong — Pace's mental
+--   model of "completed" is "all ordered screenings came back," not "consent
+--   signed." The status flip locked HR out of the Edit modal (where MVR/PSP
+--   ordering happens), broke the workflow for ~14 candidates, and started a
+--   premature 14-day archive timer. See migration 092 + docs/CHANGES.md
+--   "HOTFIX — Outreach kanban" entry (2026-05-28) for the full postmortem.
 --
--- Symptom (Pace Drivers, 2026-05-28):
---   Multiple candidates (Sean Buckner, Robert Duckett, Ernesto Fresneda,
---   Amanda Hodge, Kristopher Riley, Rontonio Porter) had completed the
---   FCRA + FMCSA + CDLIS screening consent bundle, but their outreach
---   invites in `application_invites` were still stuck on `in_progress`.
---   The kanban therefore left them in the wrong column and (combined with
---   the 50-row API limit) some fell off the board entirely.
---
--- Root cause:
---   `lib/sync-outreach-invite-status.ts` early-returned when there were
---   no MVR/PSP orders for the driver. That logic was written for the old
---   "consent + MVR/PSP together" flow. The current consent-first flow
---   collects consent, then employers decide whether to order screenings
---   separately — so consent-only candidates never satisfied the early
---   return guard and stayed `in_progress` forever.
---
--- Fix shipped in the same commit:
---   `syncOutreachInviteForDriver` now flips `driver-screening-consent`
---   invites to `completed` when a complete `screening_consent_bundles`
---   row exists for (driver_user_id, company_id) — independent of MVR/PSP.
---
--- This migration brings already-stuck production rows in line with the
--- new logic. Going forward, the sync runs on every kanban load via
--- `syncOutreachInvitesForCompany`, so we shouldn't need a periodic
--- backfill.
+-- This file is preserved verbatim for migration-history fidelity. Migration
+-- 092 supersedes its effects.
 -- ============================================================
 
 UPDATE application_invites ai
