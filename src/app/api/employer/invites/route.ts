@@ -135,7 +135,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'all'
-    const limit = parseInt(searchParams.get('limit') || '50')
+    // Default raised from 50 → 500 because the kanban renders ALL active invites
+    // client-side (no server-side pagination). Pace already has 250+ active rows;
+    // a 50-row cap silently dropped older `in_progress` candidates off the board
+    // once daily new-invite volume exceeded the cap. Real pagination is a future
+    // task — for now we just raise the ceiling well above any current customer.
+    const limit = parseInt(searchParams.get('limit') || '500')
 
     let query = supabase
       .from('application_invites')

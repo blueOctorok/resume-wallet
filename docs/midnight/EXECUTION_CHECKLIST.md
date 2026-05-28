@@ -2,7 +2,7 @@
 
 **This is the master tracker for the Phase 1 / 2 / 3 migration.** Tick steps off as they ship. Every AI session working on this migration starts here.
 
-> Strategic context: [`ARCHITECTURE.md`](./ARCHITECTURE.md) · Phase 1 detail: [`PHASE_1_PLAN.md`](./PHASE_1_PLAN.md) · Pace context: [`PARTNERS.md`](./PARTNERS.md) · Decision rationale: [`DECISION_LOG.md`](./DECISION_LOG.md)
+> Strategic context: `[ARCHITECTURE.md](./ARCHITECTURE.md)` · Phase 1 detail: `[PHASE_1_PLAN.md](./PHASE_1_PLAN.md)` · Pace context: `[PARTNERS.md](./PARTNERS.md)` · Decision rationale: `[DECISION_LOG.md](./DECISION_LOG.md)`
 
 ---
 
@@ -25,19 +25,21 @@ When you're stopping mid-step or finishing a step, leave the next session a clea
 
 1. **Commit anything in progress** with a `wip:` prefix if not done, or the step's prescribed commit message if done.
 2. **Update this doc:**
-   - If done: Status → ✅ Done · note commit hash · date.
-   - If WIP: Status → 🟡 In progress · what's done · what's next · gotchas encountered.
+  - If done: Status → ✅ Done · note commit hash · date.
+  - If WIP: Status → 🟡 In progress · what's done · what's next · gotchas encountered.
 3. **Update `docs/CHANGES.md`** if the step shipped user-visible changes. Match the existing format.
 4. **No undocumented mid-flight refactors.** If you discovered something that needs refactoring outside the current step, add it as a new step in this doc — don't fold it into the current commit.
 
 ### Model selection guide (rough — your call)
 
-| Work type | Model |
-|---|---|
+
+| Work type                                                             | Model                                       |
+| --------------------------------------------------------------------- | ------------------------------------------- |
 | Greenfield code, complex multi-file refactors, architecture decisions | Strongest available (Claude Opus / GPT-5.5) |
-| Mechanical refactors (e.g. T1.5–T1.8 batch route migrations) | Mid-tier (Sonnet / Composer 2.5) |
-| Doc updates, commit messages, copy edits | Cheap (Composer 2.5 fast / Haiku) |
-| Anything touching Pace's employer paths | Strongest available — no shortcuts |
+| Mechanical refactors (e.g. T1.5–T1.8 batch route migrations)          | Mid-tier (Sonnet / Composer 2.5)            |
+| Doc updates, commit messages, copy edits                              | Cheap (Composer 2.5 fast / Haiku)           |
+| Anything touching Pace's employer paths                               | Strongest available — no shortcuts          |
+
 
 ### When something breaks
 
@@ -49,24 +51,26 @@ See the [Rollback playbook](#rollback-playbook) at the bottom of this doc.
 
 These flows must work continuously throughout the migration. If a step risks breaking any of these, it must ship with a **dual-mode** implementation (old + new both work) and the cutover happens in a separate, explicit step.
 
-| # | Invariant | Files / paths |
-|---|---|---|
-| **I-1** | Pace employer can sign in (any auth path) | `src/components/AlchemyProvider.tsx`, sign-in flow in `app/page.tsx` (during transition: BOTH old wallet-based and new session-based must work) |
-| **I-2** | Pace employer hub loads (block list, candidate pipeline, screening list) | `/api/employer/hub`, `/api/employer/hub/blocks`, `/api/employer/applicants`, `/api/employer/screenings` |
-| **I-3** | Pace can install / use employer blocks | `employer-screening-consent`, `employer-mvr-orders`, `employer-psp-orders` (per `employer-block-registry.ts`); routes `/api/employer/hub/blocks/*` |
-| **I-4** | Pace can place MVR/PSP orders (any payment method) | `/api/employer/screenings/order`, `/api/employer/mvr/order`, `/api/employer/psp/order`, `lib/place-screening-order.ts` |
-| **I-5** | Accio webhooks deliver and process MVR/PSP completions | `/api/mvr/webhook`, `/api/psp/webhook`, `lib/process-mvr-accio-webhook.ts`, `lib/accio-psp-webhook.ts` |
-| **I-6** | Reconcile cron runs and pulls stuck Accio orders | `/api/cron/reconcile-screenings`, `lib/reconcile-pending-screenings.ts` (uses `CRON_SECRET`, **not** `x-wallet-address` — auth swap does not touch this) |
-| **I-7** | Pace outreach invites work (email send + kanban) | `/api/employer/invites`, `/api/employer/invites/send-email`, `lib/sync-outreach-invite-status.ts`, `CandidateOutreach.tsx` |
-| **I-8** | Pace can view candidate career cards (talent search + modal) | `/api/employer/talent/search`, `/api/employer/talent/[userId]`, `CareerCardModal.tsx` |
-| **I-9** | Pace's existing data is untouched: every `mvr_orders`, `psp_orders`, `employer_hub_blocks`, `application_invites`, `candidate_status` row stays | All migrations must be additive (new columns, never DROP) until full cutover |
-| **I-10** | Existing employer notifications and emails fire correctly | `lib/notify-employer-candidate-action.ts`, `lib/send-admin-notification.ts` |
+
+| #        | Invariant                                                                                                                                       | Files / paths                                                                                                                                            |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **I-1**  | Pace employer can sign in (any auth path)                                                                                                       | `src/components/AlchemyProvider.tsx`, sign-in flow in `app/page.tsx` (during transition: BOTH old wallet-based and new session-based must work)          |
+| **I-2**  | Pace employer hub loads (block list, candidate pipeline, screening list)                                                                        | `/api/employer/hub`, `/api/employer/hub/blocks`, `/api/employer/applicants`, `/api/employer/screenings`                                                  |
+| **I-3**  | Pace can install / use employer blocks                                                                                                          | `employer-screening-consent`, `employer-mvr-orders`, `employer-psp-orders` (per `employer-block-registry.ts`); routes `/api/employer/hub/blocks/`*       |
+| **I-4**  | Pace can place MVR/PSP orders (any payment method)                                                                                              | `/api/employer/screenings/order`, `/api/employer/mvr/order`, `/api/employer/psp/order`, `lib/place-screening-order.ts`                                   |
+| **I-5**  | Accio webhooks deliver and process MVR/PSP completions                                                                                          | `/api/mvr/webhook`, `/api/psp/webhook`, `lib/process-mvr-accio-webhook.ts`, `lib/accio-psp-webhook.ts`                                                   |
+| **I-6**  | Reconcile cron runs and pulls stuck Accio orders                                                                                                | `/api/cron/reconcile-screenings`, `lib/reconcile-pending-screenings.ts` (uses `CRON_SECRET`, **not** `x-wallet-address` — auth swap does not touch this) |
+| **I-7**  | Pace outreach invites work (email send + kanban)                                                                                                | `/api/employer/invites`, `/api/employer/invites/send-email`, `lib/sync-outreach-invite-status.ts`, `CandidateOutreach.tsx`                               |
+| **I-8**  | Pace can view candidate career cards (talent search + modal)                                                                                    | `/api/employer/talent/search`, `/api/employer/talent/[userId]`, `CareerCardModal.tsx`                                                                    |
+| **I-9**  | Pace's existing data is untouched: every `mvr_orders`, `psp_orders`, `employer_hub_blocks`, `application_invites`, `candidate_status` row stays | All migrations must be additive (new columns, never DROP) until full cutover                                                                             |
+| **I-10** | Existing employer notifications and emails fire correctly                                                                                       | `lib/notify-employer-candidate-action.ts`, `lib/send-admin-notification.ts`                                                                              |
+
 
 ### Pace-critical files — extra caution
 
 When touching any of these, double-verify the change preserves I-1 through I-10:
 
-- `src/app/api/employer/**/*` (28 routes)
+- `src/app/api/employer/**/`* (28 routes)
 - `src/lib/place-screening-order.ts`
 - `src/lib/reconcile-pending-screenings.ts`
 - `src/lib/accio-xml-builder.ts`
@@ -90,13 +94,15 @@ When touching any of these, double-verify the change preserves I-1 through I-10:
 
 These three decisions blocked Phase 1. **All resolved 2026-05-22.**
 
-| # | Decision | Picked | Status |
-|---|---|---|---|
-| **P0.1** | Auth provider | **Supabase Auth** (revised from Clerk — see DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; cleaner ID alignment | ✅ 2026-05-22 |
-| **P0.2** | STORM token disposition | **Option B** — drop Base Sepolia ERC-20 in Phase 1, replace with off-chain `storm_points` ledger designed to map 1:1 to a future Midnight-native token in Phase 3 (DEC-2026-05-005). Implementation is **not urgent** — schema/helpers ship as part of Track 5; new earning use cases wait for a real reward concept | ✅ 2026-05-22 |
-| **P0.3** | Stripe payment shape | **One-time Checkout + Subscriptions** (DEC-2026-05-006). Pace billing is **deferred** — wire the full capability so it's production-ready, but don't enforce billing on Pace at cutover; new/non-Pace customers use Stripe from day one | ✅ 2026-05-22 |
 
-Decisions locked in [`DECISION_LOG.md`](./DECISION_LOG.md). Track 1 below is rewritten to reflect Supabase Auth (not Clerk).
+| #        | Decision                | Picked                                                                                                                                                                                                                                                                                                               | Status       |
+| -------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **P0.1** | Auth provider           | **Supabase Auth** (revised from Clerk — see DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; cleaner ID alignment                                                                                                                                                                   | ✅ 2026-05-22 |
+| **P0.2** | STORM token disposition | **Option B** — drop Base Sepolia ERC-20 in Phase 1, replace with off-chain `storm_points` ledger designed to map 1:1 to a future Midnight-native token in Phase 3 (DEC-2026-05-005). Implementation is **not urgent** — schema/helpers ship as part of Track 5; new earning use cases wait for a real reward concept | ✅ 2026-05-22 |
+| **P0.3** | Stripe payment shape    | **One-time Checkout + Subscriptions** (DEC-2026-05-006). Pace billing is **deferred** — wire the full capability so it's production-ready, but don't enforce billing on Pace at cutover; new/non-Pace customers use Stripe from day one                                                                              | ✅ 2026-05-22 |
+
+
+Decisions locked in `[DECISION_LOG.md](./DECISION_LOG.md)`. Track 1 below is rewritten to reflect Supabase Auth (not Clerk).
 
 ---
 
@@ -158,17 +164,20 @@ Session prompt: copy-pasteable prompt for a new AI chat.
 
 **Goal:** Replace Alchemy Account Kit smart-wallet auth with Supabase Auth (email/password + Google OAuth + magic links). ~115 API routes currently read `x-wallet-address` from request headers. Migration runs in dual-mode (both old and new work) until cutover, so Pace's flows never break.
 
-**Why Supabase Auth, not Clerk?** Storm is already on Supabase Pro (auth included). `auth.users.id` IS `users.id` — no email-keyed sync webhook needed (which is why T1.3 below is much smaller than the Clerk version was). RLS works natively against `auth.uid()`. One vendor surface instead of two. See [`DECISION_LOG.md`](./DECISION_LOG.md) DEC-2026-05-008 for the full reasoning.
+**Why Supabase Auth, not Clerk?** Storm is already on Supabase Pro (auth included). `auth.users.id` IS `users.id` — no email-keyed sync webhook needed (which is why T1.3 below is much smaller than the Clerk version was). RLS works natively against `auth.uid()`. One vendor surface instead of two. See `[DECISION_LOG.md](./DECISION_LOG.md)` DEC-2026-05-008 for the full reasoning.
 
 **Why dual-mode?** If we ripped out wallet auth in one commit, every Pace employer would be logged out and unable to sign back in until they had Supabase Auth identities. Dual-mode lets us pre-create `auth.users` rows and migrate users in the background, then cut over with a single "set password" email.
 
 ### T1.1 — Configure Supabase Auth providers
-| | |
-|---|---|
-| Status | 🟡 In progress |
-| Pre-conditions | P0.1 decided ✅ |
-| Estimated session size | S (no code) |
-| Pace risk | None |
+
+
+|                        |                |
+| ---------------------- | -------------- |
+| Status                 | 🟡 In progress |
+| Pre-conditions         | P0.1 decided ✅ |
+| Estimated session size | S (no code)    |
+| Pace risk              | None           |
+
 
 **Goal:** In the existing Supabase project dashboard, enable the auth providers we'll use: email/password (with confirmation email), magic links, and Google OAuth. Configure the Site URL + redirect URLs for `localhost:3000`, the Vercel preview domain, and the production domain. Customize the auth email templates to match Storm's branding.
 
@@ -189,21 +198,23 @@ Open the dashboard: [Authentication → URL configuration](https://supabase.com/
 
 **1. URL configuration**
 
-| Field | Value |
-|---|---|
-| **Site URL** | `https://stormchain.ai` |
+
+| Field                             | Value                                 |
+| --------------------------------- | ------------------------------------- |
+| **Site URL**                      | `https://stormchain.ai`               |
 | **Redirect URLs** (add each line) | `http://localhost:3000/auth/callback` |
-| | `https://stormchain.ai/auth/callback` |
-| | `https://*.vercel.app/auth/callback` |
+|                                   | `https://stormchain.ai/auth/callback` |
+|                                   | `https://*.vercel.app/auth/callback`  |
+
 
 > `/auth/callback` is created in **T1.11** — configuring URLs now avoids a second dashboard pass later. Supabase allows redirect URLs before the route exists.
 
 **2. Email provider** — [Authentication → Providers → Email](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/providers?provider=Email)
 
-- [ ] **Enable Email provider**
-- [ ] **Confirm email** — ON (users verify inbox before first sign-in)
-- [ ] **Secure email change** — ON (recommended)
-- [ ] **Magic Link** — ON (passwordless sign-in; same Email provider)
+- **Enable Email provider**
+- **Confirm email** — ON (users verify inbox before first sign-in)
+- **Secure email change** — ON (recommended)
+- **Magic Link** — ON (passwordless sign-in; same Email provider)
 
 **Dual-mode note (Pace still on Alchemy):** Do **not** turn on global “require email confirmation” in a way that blocks API routes. Email confirmation only affects **new** Supabase Auth sign-ups. Existing wallet users are untouched until T1.9 backfill + T1.12 cutover.
 
@@ -213,8 +224,8 @@ Prerequisites in [Google Cloud Console](https://console.cloud.google.com/apis/cr
 
 1. OAuth 2.0 Client ID → type **Web application**
 2. **Authorized JavaScript origins:** `http://localhost:3000`, `https://stormchain.ai`, `https://qlxvcjxjrkphobcgvcmb.supabase.co`
-3. **Authorized redirect URIs:** copy from Supabase Google provider page — format:  
-   `https://qlxvcjxjrkphobcgvcmb.supabase.co/auth/v1/callback`
+3. **Authorized redirect URIs:** copy from Supabase Google provider page — format:
+  `https://qlxvcjxjrkphobcgvcmb.supabase.co/auth/v1/callback`
 4. Paste **Client ID** + **Client secret** into Supabase → Enable Google
 
 **4. Email templates (branding)** — [Authentication → Email templates](https://supabase.com/dashboard/project/qlxvcjxjrkphobcgvcmb/auth/templates)
@@ -236,11 +247,11 @@ Default Supabase mail works for dev. For production deliverability before cutove
 
 **6. Verification (tick before marking T1.1 done)**
 
-- [ ] Site URL = `https://stormchain.ai`
-- [ ] All three redirect URL patterns saved
-- [ ] Email + Magic Link enabled
-- [ ] Google enabled (or explicitly deferred with a note — don’t block T1.2 on Google if OAuth creds aren’t ready)
-- [ ] Template preview looks acceptable in dashboard
+- Site URL = `https://stormchain.ai`
+- All three redirect URL patterns saved
+- Email + Magic Link enabled
+- Google enabled (or explicitly deferred with a note — don’t block T1.2 on Google if OAuth creds aren’t ready)
+- Template preview looks acceptable in dashboard
 
 **Already in repo (T1.2 preview — do not change in T1.1):** `@supabase/ssr` is in `package.json`; helpers exist at `src/utils/supabase/middleware.ts` and `src/utils/supabase/server.ts`. Root `src/middleware.ts` is still missing — that’s **T1.2**.
 
@@ -249,16 +260,20 @@ When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` an
 ---
 
 ### T1.2 — Install `@supabase/ssr` + middleware shell
-| | |
-|---|---|
-| Status | ✅ Done · 2026-05-23 · no commit yet |
-| Pre-conditions | T1.1 |
-| Estimated session size | S |
-| Pace risk | None (no behavior change yet) |
+
+
+|                        |                                     |
+| ---------------------- | ----------------------------------- |
+| Status                 | ✅ Done · 2026-05-23 · no commit yet |
+| Pre-conditions         | T1.1                                |
+| Estimated session size | S                                   |
+| Pace risk              | None (no behavior change yet)       |
+
 
 **Goal:** Install `@supabase/ssr` (Supabase's official Next.js App Router helper for cookie-based sessions). Add `src/middleware.ts` that refreshes the session cookie on every request and exposes the user to RSCs. The `<AlchemyProvider>` in `src/app/layout.tsx` stays mounted — both auth systems live side-by-side during the transition.
 
 **Files to change:**
+
 - `package.json` (add `@supabase/ssr`; the existing `@supabase/supabase-js` stays)
 - `src/middleware.ts` (new — uses `createServerClient` from `@supabase/ssr` per Supabase's official Next.js App Router pattern)
 - `src/lib/supabase-server.ts` (new — server-side Supabase client factory using `cookies()` from `next/headers`)
@@ -268,6 +283,7 @@ When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` an
 **DO NOT TOUCH:** `src/components/AlchemyProvider.tsx`, any sign-in UI, any API routes, the existing `getAdminSupabaseClient()` helper (which uses the service-role key and is unrelated to user sessions).
 
 **Verification:**
+
 - `npm run build` passes.
 - App renders unchanged in dev (Supabase auth is wired but unused — no sign-in UI yet).
 - A blank `/sign-in` page returns 404 (we haven't built it yet — T1.11).
@@ -275,49 +291,60 @@ When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` an
 **Commit:** `chore(auth): install @supabase/ssr alongside existing Alchemy auth (T1.2)`
 
 **Session prompt:**
-> Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.2. Install `@supabase/ssr`. Create `src/middleware.ts` following the official Supabase Next.js App Router pattern (https://supabase.com/docs/guides/auth/server-side/nextjs) — refresh the session cookie on every request. Use the matcher to exclude static assets and the existing public webhooks (`/api/mvr/webhook`, `/api/psp/webhook`, `/api/cron/*`, `/api/stripe/webhook`). Create `src/lib/supabase-server.ts` and `src/lib/supabase-browser.ts` as described. Do NOT touch `<AlchemyProvider>`, any sign-in UI, or any API route. Verify the build passes and the app renders identically.
+
+> Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.2. Install `@supabase/ssr`. Create `src/middleware.ts` following the official Supabase Next.js App Router pattern ([https://supabase.com/docs/guides/auth/server-side/nextjs](https://supabase.com/docs/guides/auth/server-side/nextjs)) — refresh the session cookie on every request. Use the matcher to exclude static assets and the existing public webhooks (`/api/mvr/webhook`, `/api/psp/webhook`, `/api/cron/*`, `/api/stripe/webhook`). Create `src/lib/supabase-server.ts` and `src/lib/supabase-browser.ts` as described. Do NOT touch `<AlchemyProvider>`, any sign-in UI, or any API route. Verify the build passes and the app renders identically.
 
 ---
 
 ### T1.3 — ID alignment: ensure `users.id` = `auth.users.id`
-| | |
-|---|---|
-| Status | ✅ Done · pending commit · 2026-05-27 |
-| Pre-conditions | T1.2 |
-| Estimated session size | S |
-| Pace risk | Low (additive migration only) |
 
-**Goal:** Guarantee that going forward, every newly-created Storm `users` row has `id = auth.users.id`. This is the **whole reason Supabase Auth is simpler than Clerk** — there is no separate webhook-driven sync; the auth system's user table IS the join target. We just need a foreign key + a convention.
 
-**Files to change:**
-- Supabase migration: `supabase/migrations/XXXX_users_auth_fk.sql` — adds `ALTER TABLE users ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;` (only if `users.id` already aligns; if not, the migration first asserts via a CHECK that no `users.id` exists outside `auth.users`, then adds the FK).
-- `src/lib/user-bootstrap.ts` (new — `ensureUserRow(authUserId, email)` upserts a `users` row when Supabase Auth fires a sign-up; called from the `/auth/callback` route in T1.11).
+|                        |                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Status                 | ⚠️ Partially rolled back · 2026-05-28 — bootstrap helper kept, FK dropped (089) |
+| Pre-conditions         | T1.2                                                                            |
+| Estimated session size | S                                                                               |
+| Pace risk              | **HIGH if FK enforced during dual-mode** — discovered the hard way 2026-05-28   |
+
+
+**⚠️ INCIDENT POSTMORTEM (2026-05-28):** The 088 migration broke production new-user sign-ups within hours of deploy. Symptom: `POST /api/user/set-role` → 500 for every fresh wallet sign-in. Cause: `getOrCreateUserByWallet` inserts a fresh UUID into `public.users` with no matching `auth.users` row. The `NOT VALID` flag on the FK only skips checks against *existing* rows; new INSERTs are always enforced. Result: every new candidate hit "Internal Server Error" right after Alchemy OTP succeeded. Existing users were unaffected (their rows pre-dated the constraint).
+
+**Resolution:** Migration `089_drop_users_auth_fk_temp.sql` drops the FK. The convention `users.id = auth.users.id` is still enforced by `lib/user-bootstrap.ts` at the code level for Supabase-Auth users. The FK will be re-added in **T1.12.1** (new step) AFTER cutover, when wallet-based user creation no longer exists.
+
+**Lesson filed:** A FK constraint added to an existing table is **never** additive when the legacy write path doesn't satisfy it. NOT VALID protects yesterday's rows, not tomorrow's INSERTs. For Phase 1, "Category A — safe to deploy alone" requires the legacy and target write paths to BOTH satisfy any new constraint. Documented in `## Pre-deploy verification` section.
+
+**Goal (revised):** Ship the bootstrap helper that ensures `users.id = auth.users.id` for Supabase-Auth users (code-enforced). Defer the FK constraint to T1.12.1.
+
+**Files shipped:**
+
+- `supabase/migrations/088_users_auth_fk.sql` — added the FK with `NOT VALID`. **Rolled back by 089.**
+- `supabase/migrations/089_drop_users_auth_fk_temp.sql` — drops the FK. Active in prod.
+- `src/lib/user-bootstrap.ts` — `ensureUserRow(authUserId, email)` upserts a `users` row when Supabase Auth fires a sign-up; called from the `/auth/callback` route in T1.11. **Still in place and correct.**
+- `src/lib/user-bootstrap.test.ts` — 2 tests, all passing.
 
 **DO NOT TOUCH:** `users.wallet_address` column. Existing `users` rows. Any current API route.
 
-**Why no webhook?** With Clerk, we needed `/api/clerk/webhook` because Clerk's user table lives outside our DB. Supabase Auth's `auth.users` is in the same Postgres instance, so we only need a foreign key + a small bootstrap helper. **This step takes ~30 minutes versus T1.3-Clerk's ~3 hours.**
+**Why no webhook?** With Clerk, we needed `/api/clerk/webhook` because Clerk's user table lives outside our DB. Supabase Auth's `auth.users` is in the same Postgres instance, so we only need a small bootstrap helper that runs at the auth callback.
 
-**Verification:**
-- Migration runs without error in a fresh Supabase staging instance.
-- Existing production `users` rows are unaffected (FK is added but no rows currently fail it because they predate `auth.users` and we're not enforcing yet — T1.9 backfill will populate `auth.users`).
-- `ensureUserRow()` unit tests cover (a) existing user → no-op, (b) fresh sign-up → row created with matching id.
+**Where the FK enforcement lives now:** Code, not schema. `user-bootstrap.ts` always inserts with `id = authUserId` (and only fires for Supabase-Auth users, who by definition have an `auth.users` row). The legacy wallet path keeps generating fresh `users.id` UUIDs unrelated to `auth.users` until T1.12 retires it. Re-add the schema FK at **T1.12.1** once the legacy path is gone.
 
-**Commit:** `feat(auth): users.id ↔ auth.users.id foreign key + bootstrap helper (T1.3)`
-
-**Session prompt:**
-> Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.3. Add the additive migration described. Create `src/lib/user-bootstrap.ts` with `ensureUserRow(supabase, authUserId, email)` that does `INSERT ... ON CONFLICT (id) DO NOTHING`, returning the resulting `users` row. Do NOT enforce the FK on existing rows yet (defer to T1.9 backfill). Add unit tests for the helper. Do NOT modify any API route or sign-in flow.
+**Commit reference:** `feat(auth): users.id ↔ auth.users.id helper (T1.3, FK rolled back)`
 
 ---
 
 ### T1.4 — Session helper alongside wallet helper
-| | |
-|---|---|
-| Status | ✅ Done · 2026-05-28 |
-| Pre-conditions | T1.3 |
-| Estimated session size | S |
-| Pace risk | None (additive) |
+
+
+|                        |                     |
+| ---------------------- | ------------------- |
+| Status                 | ✅ Done · 2026-05-28 |
+| Pre-conditions         | T1.3                |
+| Estimated session size | S                   |
+| Pace risk              | None (additive)     |
+
 
 **Goal:** Add `src/lib/auth-session.ts` exporting `getStormUserIdFromRequest(request)` which:
+
 1. Tries the Supabase Auth session first (`supabase.auth.getUser()` from `@supabase/ssr` → returns `auth.users.id`, which equals `users.id` by T1.3 convention).
 2. Falls back to the existing `x-wallet-address` header path (looks up `users.id` from `wallet_address`).
 3. Returns `null` if neither resolves.
@@ -325,32 +352,39 @@ When complete, update Status above to `✅ Done · n/a (dashboard) · {date}` an
 This is the dual-mode helper that every API route migration calls in T1.5–T1.8.
 
 **Files to change:**
+
 - `src/lib/auth-session.ts` (new)
 - `src/lib/auth-session.test.ts` (new — unit tests for both paths)
 
 **DO NOT TOUCH:** any API route yet.
 
 **Verification:**
+
 - Unit tests pass for: Supabase-only request, wallet-only request, both-present request (Supabase wins), neither (returns null).
 
 **Commit:** `feat(auth): dual-mode session helper for migration (T1.4)`
 
 **Session prompt:**
+
 > Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.4. Create `src/lib/auth-session.ts` with `getStormUserIdFromRequest(request: NextRequest): Promise<string | null>` that tries `supabase.auth.getUser()` first using `@supabase/ssr`'s server client. If a Supabase session exists, return its `user.id` directly (no DB lookup needed — by T1.3 it equals `users.id`). Fall back to the existing `x-wallet-address` header → `users` table lookup. Add unit tests covering all four paths. Do not modify any API route.
 
 ---
 
 ### T1.5 — Migrate API routes batch 1 (candidate read routes, ~25 routes)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.4 |
+
+
+|                        |                                          |
+| ---------------------- | ---------------------------------------- |
+| Status                 | ⬜ Not started                            |
+| Pre-conditions         | T1.4                                     |
 | Estimated session size | L (split into 2–3 sub-batches if needed) |
-| Pace risk | Low |
+| Pace risk              | Low                                      |
+
 
 **Goal:** Replace `request.headers.get('x-wallet-address')` + lookup with `getStormUserIdFromRequest(request)` in **candidate-side READ routes only**. Reads are lower-risk than writes if something breaks.
 
 **Files to change (target list, mechanical):**
+
 - `src/app/api/career-card/route.ts`
 - `src/app/api/career-card/lenses/route.ts` and `[id]/route.ts`
 - `src/app/api/career-card/share/route.ts`
@@ -380,6 +414,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **DO NOT TOUCH:** any `/api/employer/*` route (Track 1 batch 3), any write/POST/PATCH route (batch 2), webhooks, cron routes.
 
 **Verification:**
+
 - `npm run typecheck` passes.
 - `npm run build` passes.
 - Manual smoke test: candidate hub loads with both auth paths (sign in via Alchemy AND via Supabase Auth in two browsers — both should work).
@@ -387,17 +422,21 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **Commit:** `refactor(auth): migrate candidate read routes to session helper (T1.5)`
 
 **Session prompt:**
+
 > Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.5. For each route in the file list, replace the `walletAddress = request.headers.get('x-wallet-address')` pattern with `userId = await getStormUserIdFromRequest(request)`. Preserve existing 401 behavior when null. Do not change response shapes. Do not touch any employer route, write route, webhook, or cron route. Verify typecheck + build pass after each ~5-route batch.
 
 ---
 
 ### T1.6 — Migrate API routes batch 2 (candidate write routes, ~25 routes)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.5 |
-| Estimated session size | L |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T1.5          |
+| Estimated session size | L             |
+| Pace risk              | Low           |
+
 
 **Goal:** Same migration pattern, but for candidate-side write routes (POST/PATCH/DELETE). Higher impact if it breaks (data writes), so split into smaller sub-batches and test each.
 
@@ -406,6 +445,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **DO NOT TOUCH:** employer routes, webhooks, cron routes.
 
 **Verification:**
+
 - All typecheck + build green.
 - Manual smoke: candidate can complete a DOT app step, upload a resume, save a profile field — all using BOTH old and new auth paths.
 
@@ -414,16 +454,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T1.7 — Migrate API routes batch 3 (employer routes — Pace critical)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.6 |
-| Estimated session size | L |
-| Pace risk | **HIGH** — every Pace operation flows through these |
+
+
+|                        |                                                     |
+| ---------------------- | --------------------------------------------------- |
+| Status                 | ⬜ Not started                                       |
+| Pre-conditions         | T1.6                                                |
+| Estimated session size | L                                                   |
+| Pace risk              | **HIGH** — every Pace operation flows through these |
+
 
 **Goal:** Migrate all 28 employer routes to the dual-mode session helper. **Strongest model only.** Test each route after migration with Pace's actual flows.
 
 **Files to change (all 28):**
+
 - `src/app/api/employer/hub/route.ts`
 - `src/app/api/employer/hub/blocks/route.ts` and `[id]/route.ts`
 - `src/app/api/employer/applicants/route.ts`
@@ -442,6 +486,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **DO NOT TOUCH:** webhooks, cron routes, candidate routes (already done).
 
 **Verification (Pace invariants I-1 through I-10):**
+
 - Pace employer signs in (via wallet during dual-mode) and lands on hub → employer hub loads, blocks list visible
 - Pace can install/uninstall an employer block → state persists
 - Pace can place a test MVR order (use Accio test creds) → order row created with all expected fields
@@ -452,21 +497,25 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **Commit:** `refactor(auth): migrate employer routes to session helper — Pace critical (T1.7)`
 
 **Session prompt:**
+
 > Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.7. This is Pace-critical. For each of the 28 employer routes, replace `x-wallet-address` reads with `getStormUserIdFromRequest(request)`. Preserve every existing behavior — response shapes, error codes, audit trails. After every 3-4 routes, stop and ask the user to manually run Pace's flow before continuing. Do NOT touch the screening order placement logic in `lib/place-screening-order.ts` itself — only the auth header read at the route level.
 
 ---
 
 ### T1.8 — Migrate API routes batch 4 (admin + AI + misc, ~30 routes)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.7 |
-| Estimated session size | M |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T1.7          |
+| Estimated session size | M             |
+| Pace risk              | Low           |
+
 
 **Goal:** Migrate remaining routes — admin, AI, GitHub, share-token, etc. Lower risk; brief verification.
 
-**Files to change:** every remaining route from the original ~115 list that isn't covered by T1.5–T1.7. Use grep to confirm zero `x-wallet-address` remains in `src/app/api/**` after this step (except webhooks which have separate auth).
+**Files to change:** every remaining route from the original ~115 list that isn't covered by T1.5–T1.7. Use grep to confirm zero `x-wallet-address` remains in `src/app/api/`** after this step (except webhooks which have separate auth).
 
 **Verification:** `rg "x-wallet-address" src/app/api/` returns only webhook / cron / public-share routes that intentionally don't use it.
 
@@ -475,43 +524,53 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T1.9 — Backfill: create `auth.users` rows for existing wallet-bound users
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.8 |
-| Estimated session size | M |
-| Pace risk | Medium (touches user records) |
+
+
+|                        |                               |
+| ---------------------- | ----------------------------- |
+| Status                 | ⬜ Not started                 |
+| Pre-conditions         | T1.8                          |
+| Estimated session size | M                             |
+| Pace risk              | Medium (touches user records) |
+
 
 **Goal:** One-time script that reads existing `users` rows with `wallet_address IS NOT NULL` and no matching `auth.users.id`, then calls `supabase.auth.admin.createUser({ id: users.id, email: users.email, email_confirm: false })` for each. The crucial trick: pass the existing `users.id` UUID as the new `auth.users.id` so the foreign key from T1.3 lines up automatically. After this script runs, every Storm user has both a `users` row and a matching `auth.users` row, ready for the cutover email in T1.12.
 
 **Files to change:**
+
 - `scripts/backfill-supabase-auth-users.ts` (new — one-shot, NOT a long-running migration)
 - `package.json` script entry: `"backfill:auth-users": "tsx scripts/backfill-supabase-auth-users.ts"`
 
 **DO NOT TOUCH:** `wallet_address` (preserved for fallback during T1.13 cutover).
 
 **Verification:**
+
 - Script dry-run output shows expected count of users to create.
 - Wet run completes with zero errors; spot-check 5 random users — Supabase Dashboard → Authentication → Users shows the account, the `auth.users.id` matches the existing `users.id`.
 
 **Commit:** `chore(auth): backfill auth.users rows for existing users (T1.9)`
 
 **Session prompt:**
+
 > Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.9. Create `scripts/backfill-supabase-auth-users.ts` using `@supabase/supabase-js` with the service-role key. Query `users WHERE wallet_address IS NOT NULL AND email IS NOT NULL`. For each, check if `auth.users` already has a row with that id (admin API). If not, call `supabase.auth.admin.createUser({ id: user.id, email: user.email, email_confirm: false, user_metadata: { migrated_from: 'wallet' } })`. Log each row processed. Add a `--dry-run` flag that just counts. Run with `npm run backfill:auth-users -- --dry-run` first.
 
 ---
 
 ### T1.10 — Update useAuthStore to read Supabase Auth session
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.9 |
-| Estimated session size | M |
-| Pace risk | Medium |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T1.9          |
+| Estimated session size | M             |
+| Pace risk              | Medium        |
+
 
 **Goal:** `useAuthStore` currently exposes `walletAddress`. Add a parallel `sessionUserId` populated from Supabase's `supabase.auth.getUser()` (via `@supabase/ssr`'s browser client). Components keep reading `walletAddress` during transition; new code uses `sessionUserId`.
 
 **Files to change:**
+
 - `src/stores/auth-store.ts` — add `sessionUserId: string | null`, hydrate from Supabase session on mount, subscribe to `onAuthStateChange`.
 - `src/app/layout.tsx` (or `AppShell.tsx`) — initialize the auth-state subscription using the browser Supabase client.
 
@@ -524,16 +583,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T1.11 — Build sign-in / sign-up UI
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.10 |
-| Estimated session size | M |
-| Pace risk | Medium (visible UI change) |
+
+
+|                        |                            |
+| ---------------------- | -------------------------- |
+| Status                 | ⬜ Not started              |
+| Pre-conditions         | T1.10                      |
+| Estimated session size | M                          |
+| Pace risk              | Medium (visible UI change) |
+
 
 **Goal:** Drop the Alchemy SDK sign-in widget. Build sign-in and sign-up pages using Storm's existing UI primitives (`Card`, `Button`, `Input` from `@/components/ui`). Email/password + Google OAuth + magic link options. Wallet-based sign-in is still possible during T1.12 via direct API access, but the UI no longer offers it.
 
 **Files to change:**
+
 - `src/app/sign-in/page.tsx` (new — custom form built with `@/components/ui` primitives, calling `supabase.auth.signInWithPassword`, `supabase.auth.signInWithOAuth({ provider: 'google' })`, `supabase.auth.signInWithOtp` for magic links)
 - `src/app/sign-up/page.tsx` (new — same primitives, calling `supabase.auth.signUp`)
 - `src/app/auth/callback/route.ts` (new — server route that exchanges the auth code for a session, calls `ensureUserRow()` from T1.3, redirects to the hub)
@@ -550,16 +613,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T1.12 — Cutover email + AlchemyProvider removal
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.11, Pace stakeholder coordinated |
-| Estimated session size | M |
-| Pace risk | **HIGH** — point of no return |
 
-**Goal:** Trigger Supabase Auth's password-reset flow for every backfilled user (or send a custom Storm email pointing them at `/sign-in` → "Forgot password?"). Wait 24–48h for adoption. Then remove `AlchemyProvider`, drop `@account-kit/*` packages, delete the `x-wallet-address` fallback from `getStormUserIdFromRequest`.
+
+|                        |                                     |
+| ---------------------- | ----------------------------------- |
+| Status                 | ⬜ Not started                       |
+| Pre-conditions         | T1.11, Pace stakeholder coordinated |
+| Estimated session size | M                                   |
+| Pace risk              | **HIGH** — point of no return       |
+
+
+**Goal:** Trigger Supabase Auth's password-reset flow for every backfilled user (or send a custom Storm email pointing them at `/sign-in` → "Forgot password?"). Wait 24–48h for adoption. Then remove `AlchemyProvider`, drop `@account-kit/`* packages, delete the `x-wallet-address` fallback from `getStormUserIdFromRequest`.
 
 **Files to change (after the wait):**
+
 - Delete `src/components/AlchemyProvider.tsx`
 - Delete `src/lib/alchemy-*.ts`
 - Remove `@account-kit/react`, `@account-kit/infra`, `@account-kit/core`, etc. from `package.json`
@@ -570,6 +637,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **DO NOT TOUCH:** anything else in the same commit. Keep this scoped.
 
 **Verification:**
+
 - `rg "AlchemyProvider\\|x-wallet-address\\|account-kit" src/` returns zero matches.
 - `npm run build` passes.
 - Pace stakeholder confirms employer team can sign in.
@@ -578,19 +646,64 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 ---
 
+### T1.12.1 — Re-add `users.id ↔ auth.users.id` FK (the deferred T1.3 enforcement)
+
+
+|                        |                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| Status                 | ⬜ Not started                                                                       |
+| Pre-conditions         | T1.12 (wallet path retired), T1.9 (all existing users backfilled into `auth.users`) |
+| Estimated session size | S                                                                                   |
+| Pace risk              | None — FK now matches reality on every row                                          |
+
+
+**Goal:** Re-introduce the FK that was rolled back by 089. By T1.12, no more `users` rows can be created without a matching `auth.users` row, so the constraint becomes safe.
+
+**Files to change:**
+
+- New migration: `supabase/migrations/XXX_users_auth_fk_final.sql`
+  ```sql
+  ALTER TABLE public.users
+    ADD CONSTRAINT users_id_fkey
+    FOREIGN KEY (id) REFERENCES auth.users (id)
+    ON DELETE CASCADE;  -- NOT 'NOT VALID' this time — every row must satisfy
+  ```
+
+**Pre-flight check before applying:**
+
+```sql
+SELECT COUNT(*) FROM public.users u
+LEFT JOIN auth.users a ON a.id = u.id
+WHERE a.id IS NULL;
+-- MUST return 0. If non-zero, T1.9 backfill missed rows — fix before adding FK.
+```
+
+**Verification:**
+
+- Migration runs. New sign-up still works (it goes through Supabase Auth → `ensureUserRow`, never violates FK).
+- `pg_constraint` shows `users_id_fkey` exists and is `convalidated = true`.
+
+**Commit:** `feat(auth): re-enable users ↔ auth.users FK now that wallet path is retired (T1.12.1)`
+
+---
+
 ### T1.13 — Wallet UI removal
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T1.12 |
-| Estimated session size | M |
-| Pace risk | Low (UI surface only — no behavior change) |
+
+
+|                        |                                            |
+| ---------------------- | ------------------------------------------ |
+| Status                 | ⬜ Not started                              |
+| Pre-conditions         | T1.12                                      |
+| Estimated session size | M                                          |
+| Pace risk              | Low (UI surface only — no behavior change) |
+
 
 **Goal:** Delete every wallet-flavored UI component: `WalletCard`, `STORMBalance`, `USDCBalance`, `TransactionHistory`, `SendUSDC`, `SendSTORM`, Coinbase Onramp integration, wallet hub block. Replace dashboard surfaces with simple account info.
 
 **Files to change:**
+
 - Delete `src/components/WalletCard.tsx`, `STORMBalance.tsx`, `USDCBalance.tsx`, `TransactionHistory.tsx`, `wallet/SendUSDC.tsx`, `wallet/SendSTORM.tsx`
-- Delete `src/app/api/wallet/*`
+- Delete `src/app/api/wallet/`*
 - Update `src/components/HubAccountSection.tsx` (or equivalent) — remove wallet card; show plain "Account" with email + sign-out
 - Update `useAuthStore` — drop `walletAddress` field entirely
 
@@ -607,12 +720,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 > **Pace billing deferral (DEC-2026-05-006):** Build the full Stripe capability — Checkout, Subscriptions, webhooks, customer portal — but **do not bill Pace at cutover time**. Pace continues operating without a Stripe subscription during the transition; their billing transition is a separate stakeholder conversation. New / non-Pace customers use Stripe from day one. The technical effect on this track: T2.10 still flips the UI to Stripe for everyone, but Pace places MVR/PSP orders via an admin-internal "free placement" path until they're explicitly onboarded to billing in a future, separate step.
 
 ### T2.1 — Stripe account + SDK install
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | P0.3 confirmed; can run in parallel with Track 1 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |                                                  |
+| ---------------------- | ------------------------------------------------ |
+| Status                 | ⬜ Not started                                    |
+| Pre-conditions         | P0.3 confirmed; can run in parallel with Track 1 |
+| Estimated session size | S                                                |
+| Pace risk              | None                                             |
+
 
 **Goal:** Stripe account configured (test + live). Install `stripe` server SDK + `@stripe/stripe-js` client SDK. Add env vars.
 
@@ -625,12 +741,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.2 — Stripe customer columns + webhook signing
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.1 |
-| Estimated session size | S |
-| Pace risk | Low (additive) |
+
+
+|                        |                |
+| ---------------------- | -------------- |
+| Status                 | ⬜ Not started  |
+| Pre-conditions         | T2.1           |
+| Estimated session size | S              |
+| Pace risk              | Low (additive) |
+
 
 **Goal:** Migration adds `users.stripe_customer_id` and `companies.stripe_customer_id` (both text, nullable, unique). Add `STRIPE_WEBHOOK_SECRET` env var.
 
@@ -641,16 +760,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.3 — Stripe webhook endpoint
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.2 |
-| Estimated session size | M |
-| Pace risk | Low (new endpoint) |
+
+
+|                        |                    |
+| ---------------------- | ------------------ |
+| Status                 | ⬜ Not started      |
+| Pre-conditions         | T2.2               |
+| Estimated session size | M                  |
+| Pace risk              | Low (new endpoint) |
+
 
 **Goal:** `/api/stripe/webhook` handles `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_succeeded`, `charge.refunded`. Routes to handler functions; logs everything with `[STRIPE WEBHOOK]` prefix.
 
 **Files to change:**
+
 - `src/app/api/stripe/webhook/route.ts` (new)
 - `src/lib/stripe-webhook-handlers.ts` (new — one handler per event type)
 
@@ -663,16 +786,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.4 — MVR Checkout flow
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.3 |
-| Estimated session size | M |
-| Pace risk | **High** — Pace orders MVRs daily |
+
+
+|                        |                                   |
+| ---------------------- | --------------------------------- |
+| Status                 | ⬜ Not started                     |
+| Pre-conditions         | T2.3                              |
+| Estimated session size | M                                 |
+| Pace risk              | **High** — Pace orders MVRs daily |
+
 
 **Goal:** Replace `MvrPaymentButton` with a button that POSTs to `/api/employer/screenings/checkout-session` to create a Stripe Checkout session, then redirects. Webhook on `checkout.session.completed` calls existing `placeScreeningOrder` (which today expects `payment_tx_hash` — add a `stripe_session_id` parameter alongside; both work during transition).
 
 **Files to change:**
+
 - `src/components/employer/MvrPaymentButton.tsx` → replace internals (keep export name temporarily)
 - `src/app/api/employer/screenings/checkout-session/route.ts` (new)
 - `src/lib/place-screening-order.ts` — accept optional `stripeSessionId` (preserves `paymentTxHash`)
@@ -687,12 +814,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.5 — PSP Checkout flow
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.4 |
-| Estimated session size | M |
-| Pace risk | High |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T2.4          |
+| Estimated session size | M             |
+| Pace risk              | High          |
+
 
 **Goal:** Same as T2.4, but for PSP orders. Same `place-screening-order` plumbing.
 
@@ -703,16 +833,20 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.6 — Subscription Checkout for employer plans
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.5 |
-| Estimated session size | M |
-| Pace risk | Medium |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T2.5          |
+| Estimated session size | M             |
+| Pace risk              | Medium        |
+
 
 **Goal:** Stripe Products + Prices for the existing $9.99/mo candidate verify plan and the $199/mo employer plan. Subscription Checkout flow. Webhook updates `companies.subscription_status` / `users.subscription_status`.
 
 **Files to change:**
+
 - Stripe Dashboard: create Products + Prices, capture IDs in env
 - `src/app/api/stripe/subscribe/route.ts` (new)
 - `src/lib/stripe-webhook-handlers.ts` — subscription-event handlers
@@ -723,12 +857,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.7 — Saved payment methods (SetupIntent)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.6 |
-| Estimated session size | S |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T2.6          |
+| Estimated session size | S             |
+| Pace risk              | Low           |
+
 
 **Goal:** Capture a payment method via SetupIntent on first payment so subsequent MVRs/PSPs are one-click charges via PaymentIntent.
 
@@ -737,12 +874,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.8 — Stripe customer portal
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.7 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T2.7          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Self-service plan changes / cancellations / payment-method updates via Stripe's hosted portal.
 
@@ -751,12 +891,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.9 — Refund handler
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.8 |
-| Estimated session size | S |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T2.8          |
+| Estimated session size | S             |
+| Pace risk              | Low           |
+
 
 **Goal:** `charge.refunded` webhook flips affected order rows to `refunded` status; surfaces a refunded badge in employer hub.
 
@@ -765,12 +908,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T2.10 — Disable USDC payment paths in UI
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.9 + Pace stakeholder confirmed comfortable on cards |
-| Estimated session size | M |
-| Pace risk | High |
+
+
+|                        |                                                        |
+| ---------------------- | ------------------------------------------------------ |
+| Status                 | ⬜ Not started                                          |
+| Pre-conditions         | T2.9 + Pace stakeholder confirmed comfortable on cards |
+| Estimated session size | M                                                      |
+| Pace risk              | High                                                   |
+
 
 **Goal:** Remove USDC payment buttons / Coinbase Onramp from the UI. Keep `payment_tx_hash` columns nullable for legacy data display. Leave the `placeScreeningOrder` `paymentTxHash` parameter accessible by admin tools but stop calling it from the UI.
 
@@ -785,12 +931,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ## Track 3 — Document storage (IPFS → Supabase Storage)
 
 ### T3.1 — Supabase Storage buckets + RLS
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | none (parallel with Tracks 1+2) |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |                                 |
+| ---------------------- | ------------------------------- |
+| Status                 | ⬜ Not started                   |
+| Pre-conditions         | none (parallel with Tracks 1+2) |
+| Estimated session size | S                               |
+| Pace risk              | None                            |
+
 
 **Goal:** Three buckets: `resumes` (private, RLS by `users.id`), `dot-applications` (private, RLS), `screening-reports` (private, employer-scoped RLS by `mvr_orders.requested_by_user_id`).
 
@@ -799,12 +948,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.2 — `lib/document-storage.ts` server helpers
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.1 |
-| Estimated session size | S |
-| Pace risk | None (additive) |
+
+
+|                        |                 |
+| ---------------------- | --------------- |
+| Status                 | ⬜ Not started   |
+| Pre-conditions         | T3.1            |
+| Estimated session size | S               |
+| Pace risk              | None (additive) |
+
 
 **Goal:** `uploadDocument(userId, kind, file)`, `getSignedUrl(path, expirySeconds)`, `deleteDocument(path)`. Wraps Supabase Storage client.
 
@@ -813,12 +965,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.3 — Dual-write upload paths
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.2 |
-| Estimated session size | M |
-| Pace risk | Medium |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T3.2          |
+| Estimated session size | M             |
+| Pace risk              | Medium        |
+
 
 **Goal:** Update every upload code path to write to BOTH Supabase Storage and IPFS during transition. Reads still go to IPFS (until T3.5 cutover).
 
@@ -831,12 +986,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.4 — Backfill: IPFS → Supabase Storage
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.3 |
-| Estimated session size | M |
-| Pace risk | Low (background) |
+
+
+|                        |                  |
+| ---------------------- | ---------------- |
+| Status                 | ⬜ Not started    |
+| Pre-conditions         | T3.3             |
+| Estimated session size | M                |
+| Pace risk              | Low (background) |
+
 
 **Goal:** One-shot script reads every `resumes.ipfs_hash`, fetches from Pinata gateway, uploads to Supabase Storage, populates a new `resumes.storage_path` column (additive migration).
 
@@ -845,12 +1003,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.5 — Cutover: switch read paths to Supabase Storage
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.4 + spot-check 100+ random docs accessible via Supabase signed URLs |
-| Estimated session size | M |
-| Pace risk | Medium |
+
+
+|                        |                                                                        |
+| ---------------------- | ---------------------------------------------------------------------- |
+| Status                 | ⬜ Not started                                                          |
+| Pre-conditions         | T3.4 + spot-check 100+ random docs accessible via Supabase signed URLs |
+| Estimated session size | M                                                                      |
+| Pace risk              | Medium                                                                 |
+
 
 **Goal:** Every UI surface that previously rendered IPFS gateway URLs now reads via `getSignedUrl()`. Share-card download links updated.
 
@@ -859,12 +1020,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.6 — Stop dual-writing, remove Pinata
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.5 + 1 week stable |
-| Estimated session size | M |
-| Pace risk | Low |
+
+
+|                        |                      |
+| ---------------------- | -------------------- |
+| Status                 | ⬜ Not started        |
+| Pre-conditions         | T3.5 + 1 week stable |
+| Estimated session size | M                    |
+| Pace risk              | Low                  |
+
 
 **Goal:** Remove the IPFS write half of dual-write. Delete `lib/ipfs.ts`. Drop `pinata-web3` from `package.json`. Remove Pinata env vars.
 
@@ -873,12 +1037,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T3.7 — Update share card / public URLs
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T3.6 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T3.6          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Audit every place that constructs IPFS gateway URLs (`gateway.pinata.cloud/ipfs/...`); replace with signed URL helpers. Some legacy share tokens may need a rewrite path.
 
@@ -889,12 +1056,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ## Track 4 — On-chain registry decommission
 
 ### T4.1 — Audit + archive Sepolia records
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T2.10 (don't decommission while orders still depend on `payment_tx_hash`) |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |                                                                           |
+| ---------------------- | ------------------------------------------------------------------------- |
+| Status                 | ⬜ Not started                                                             |
+| Pre-conditions         | T2.10 (don't decommission while orders still depend on `payment_tx_hash`) |
+| Estimated session size | S                                                                         |
+| Pace risk              | None                                                                      |
+
 
 **Goal:** Count records in `ResumeRegistry` and `ProductionDriverRegistry`. If material, copy metadata into a new Supabase `legacy_chain_records` table for historical reference. If minimal (likely), document in `DECISION_LOG.md` and skip the table.
 
@@ -903,12 +1073,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T4.2 — Refactor `/api/resumes/[id]/verify`
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.1 |
-| Estimated session size | M |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.1          |
+| Estimated session size | M             |
+| Pace risk              | Low           |
+
 
 **Goal:** Drop the blockchain branch. Verification becomes a placeholder (DB flag) until Phase 2 attestation flow ships. The route still exists; the on-chain part is removed.
 
@@ -920,13 +1093,16 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 ---
 
-### T4.3 — Delete `/api/blockchain/*` routes
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.2 |
-| Estimated session size | S |
-| Pace risk | None |
+### T4.3 — Delete `/api/blockchain/`* routes
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.2          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Delete `/api/blockchain/submit-driver-application/route.ts`, `/api/blockchain/verify-resume/route.ts`. Search for callers; remove or redirect.
 
@@ -935,12 +1111,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T4.4 — Delete chain helpers
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.3 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.3          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Delete `lib/resume-registry-onchain.ts`, `lib/driver-contract.ts`, `lib/contract.ts`, `lib/contract-constants.ts`, `lib/typed-data.ts` (verify each is unused after T4.2/T4.3).
 
@@ -949,12 +1128,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T4.5 — Archive contract source
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.4 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.4          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Move `contracts/` → `contracts/legacy/`. Move deploy scripts. Add a `contracts/legacy/README.md` explaining the archive.
 
@@ -963,12 +1145,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T4.6 — Drop `ethers` dependency
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.5 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.5          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** `npm uninstall ethers viem` (verify no remaining imports). Remove `NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS`, `NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS`, `ALCHEMY_BASE_SEPOLIA_URL`, `PRIVATE_KEY` env vars from Vercel.
 
@@ -980,19 +1165,22 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 ## Track 5 — STORM token drop on Base (Midnight reissue option preserved)
 
-> **Scope:** This track drops the **Base Sepolia STORM ERC-20** and replaces user-facing rewards with off-chain `users.storm_points`. It does **NOT** foreclose a future Midnight-native STORM reissue in Phase 3 — see [`DECISION_LOG.md`](./DECISION_LOG.md) DEC-2026-05-005. Contract source moves to `contracts/legacy/` rather than being deleted, because the ERC-20 supply / vesting model may inform a Midnight design later.
+> **Scope:** This track drops the **Base Sepolia STORM ERC-20** and replaces user-facing rewards with off-chain `users.storm_points`. It does **NOT** foreclose a future Midnight-native STORM reissue in Phase 3 — see `[DECISION_LOG.md](./DECISION_LOG.md)` DEC-2026-05-005. Contract source moves to `contracts/legacy/` rather than being deleted, because the ERC-20 supply / vesting model may inform a Midnight design later.
 
 > **Schema hygiene note for T5.1:** Design `storm_points_ledger` so every credit / debit row is a candidate for a future on-chain mint. Each row should have a stable `id` (UUID), `reason` (string), `source` (string — e.g. `placement_completion`, `referral_bonus`), `delta` (BIGINT, can be negative), and `created_at`. If Phase 3 ever ships a Midnight STORM, a snapshot of this ledger maps directly to mint operations. Don't optimize for this now — just don't make it impossible.
 
 (Skip this entire track if pre-flight P0.2 chooses **defer** instead of **drop on Base**.)
 
 ### T5.1 — `users.storm_points` migration
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T4.6 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T4.6          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** `users.storm_points` BIGINT default 0; `storm_points_ledger` append-only audit table.
 
@@ -1001,12 +1189,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T5.2 — `lib/storm-points.ts` helpers
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.1 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.1          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** `creditPoints(userId, delta, reason, source)`, `getBalance(userId)`, `getLedger(userId, limit)`.
 
@@ -1015,12 +1206,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T5.3 — Replace earning logic
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.2 |
-| Estimated session size | M |
-| Pace risk | Low |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.2          |
+| Estimated session size | M             |
+| Pace risk              | Low           |
+
 
 **Goal:** Wherever `RewardDistributor.distribute()` was called server-side, replace with `creditPoints()`.
 
@@ -1029,12 +1223,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T5.4 — Replace STORMBalance UI
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.3 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.3          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** UI shows "Storm Points: X" instead of token balance.
 
@@ -1043,12 +1240,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T5.5 — Remove STORM hooks + APIs
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.4 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.4          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Delete `useStormTokenBalance`, `lib/storm-contract.ts`, `/api/storm/distribute`, etc.
 
@@ -1057,12 +1257,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ---
 
 ### T5.6 — Archive STORM contracts
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.5 |
-| Estimated session size | S |
-| Pace risk | None |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.5          |
+| Estimated session size | S             |
+| Pace risk              | None          |
+
 
 **Goal:** Move `StormToken.sol`, `RewardDistributor.sol`, `TreasuryDistributor.sol`, `FounderVesting.sol` to `contracts/legacy/` (alongside T4.5).
 
@@ -1073,43 +1276,55 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 ## Track 6 — Cleanup, polish, ship
 
 ### T6.1 — End-to-end QA: candidate flows
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T5.6 |
-| Estimated session size | L (manual) |
+
+
+|                        |               |
+| ---------------------- | ------------- |
+| Status                 | ⬜ Not started |
+| Pre-conditions         | T5.6          |
+| Estimated session size | L (manual)    |
+
 
 Sign up → fill DOT app → upload resume → request screening → invite check. Document any rough edges as new steps.
 
 ---
 
 ### T6.2 — End-to-end QA: employer flows (Pace critical)
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T6.1 |
+
+
+|                        |                               |
+| ---------------------- | ----------------------------- |
+| Status                 | ⬜ Not started                 |
+| Pre-conditions         | T6.1                          |
 | Estimated session size | L (manual + Pace stakeholder) |
+
 
 Walk Pace's full daily workflow with a stakeholder. **Do not declare done without their sign-off.**
 
 ---
 
 ### T6.3 — Dependency audit
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pre-conditions | T6.2 |
 
-Remove unused: `@account-kit/*`, `pinata-web3`, `ethers`, `viem`, anything else flagged by `depcheck`.
+
+|                |               |
+| -------------- | ------------- |
+| Status         | ⬜ Not started |
+| Pre-conditions | T6.2          |
+
+
+Remove unused: `@account-kit/`*, `pinata-web3`, `ethers`, `viem`, anything else flagged by `depcheck`.
 
 **Commit:** `chore(deps): remove unused crypto-era packages (T6.3)`
 
 ---
 
 ### T6.4 — Env var cleanup
-| | |
-|---|---|
+
+
+|        |               |
+| ------ | ------------- |
 | Status | ⬜ Not started |
+
 
 Remove every crypto-related env var from Vercel + `.env.example`.
 
@@ -1118,18 +1333,24 @@ Remove every crypto-related env var from Vercel + `.env.example`.
 ---
 
 ### T6.5 — Setup / deployment docs
-| | |
-|---|---|
+
+
+|        |               |
+| ------ | ------------- |
 | Status | ⬜ Not started |
+
 
 Update `docs/SETUP.md`, `docs/DEPLOYMENT.md`. Phase 1 stack only.
 
 ---
 
 ### T6.6 — Homepage + marketing copy
-| | |
-|---|---|
+
+
+|        |               |
+| ------ | ------------- |
 | Status | ⬜ Not started |
+
 
 Remove "blockchain", "wallet", "USDC" language. Per `strategic-direction.mdc` language rules.
 
@@ -1138,19 +1359,25 @@ Remove "blockchain", "wallet", "USDC" language. Per `strategic-direction.mdc` la
 ---
 
 ### T6.7 — Production deploy
-| | |
-|---|---|
-| Status | ⬜ Not started |
-| Pace risk | **HIGH** |
+
+
+|           |               |
+| --------- | ------------- |
+| Status    | ⬜ Not started |
+| Pace risk | **HIGH**      |
+
 
 Tag `v2.0.0-phase1`. Deploy. Smoke test with Pace stakeholder live.
 
 ---
 
 ### T6.8 — Pace check-in + Phase 1 retrospective
-| | |
-|---|---|
+
+
+|        |               |
+| ------ | ------------- |
 | Status | ⬜ Not started |
+
 
 Confirm Pace is fully migrated and operating well. Write Phase 1 retro entry in `docs/CHANGES.md`. Then unlock Phase 2 work.
 
@@ -1160,22 +1387,24 @@ Confirm Pace is fully migrated and operating well. Write Phase 1 retro entry in 
 
 Atomic step list will be written when Phase 1 wraps. High-level tracks:
 
-| Track | Goal | Effort |
-|---|---|---|
-| **T7** | `attestationService` interface + `attestations` table + signed-JWT implementation | 1 week |
-| **T8** | Fact registry (`FactType` enum + `FactDefinition` map per [`attestation-architecture.mdc`](../../.cursor/rules/attestation-architecture.mdc)) | 1 week |
-| **T9** | Carrier-facing fact panels (replace PDF-first verification UI on career card modal) | 1 week |
-| **T10** | Candidate disclosure toggles (per-audience disclosure preferences) | 1 week |
+
+| Track   | Goal                                                                                                                                          | Effort |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **T7**  | `attestationService` interface + `attestations` table + signed-JWT implementation                                                             | 1 week |
+| **T8**  | Fact registry (`FactType` enum + `FactDefinition` map per `[attestation-architecture.mdc](../../.cursor/rules/attestation-architecture.mdc)`) | 1 week |
+| **T9**  | Carrier-facing fact panels (replace PDF-first verification UI on career card modal)                                                           | 1 week |
+| **T10** | Candidate disclosure toggles (per-audience disclosure preferences)                                                                            | 1 week |
+
 
 **Pre-condition for T7:** Phase 1 fully shipped + 1 week production-stable.
 
-**T7 schema hygiene (forward-compat for Phase 4 cached-attestation marketplace per DEC-2026-05-013):** The `attestations` table must include fields that enable future cached re-querying without rework — at minimum `issued_at`, `valid_until` (e.g., MVR + 30 days), `source_cra` (e.g., `'accio'`), `source_pull_id` (Accio order ID), and a query-count column for marketplace metering. Don't build the marketplace; just don't make it impossible. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations" for the full Phase 4 sketch.
+**T7 schema hygiene (forward-compat for Phase 4 cached-attestation marketplace per DEC-2026-05-013):** The `attestations` table must include fields that enable future cached re-querying without rework — at minimum `issued_at`, `valid_until` (e.g., MVR + 30 days), `source_cra` (e.g., `'accio'`), `source_pull_id` (Accio order ID), and a query-count column for marketplace metering. Don't build the marketplace; just don't make it impossible. See `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Future considerations" for the full Phase 4 sketch.
 
 ---
 
 ## Phase 3 — Midnight ZK (deferred)
 
-Atomic steps will be written when Phase 3 trigger fires. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for trigger criteria. **Do not start Phase 3 work until trigger is concrete.**
+Atomic steps will be written when Phase 3 trigger fires. See `[ARCHITECTURE.md](./ARCHITECTURE.md)` for trigger criteria. **Do not start Phase 3 work until trigger is concrete.**
 
 ### Phase 3b / Phase 4 future considerations (captured, NOT scheduled)
 
@@ -1185,7 +1414,7 @@ Three deferred economic features are documented but explicitly NOT in the work q
 - **Phase 3b STORM-on-Midnight reissue** — shielded utility token (DEC-2026-05-005 Option B + DEC-2026-05-012)
 - **Phase 4 cached-attestation marketplace** — driver economic compounding via Storm-mediated cached re-queries (DEC-2026-05-013)
 
-Each has explicit trigger conditions in its decision-log entry. **Do not add atomic steps for any of these here until the relevant triggers fire.** Engineering view: [`ARCHITECTURE.md`](./ARCHITECTURE.md) "Future considerations". Boss-facing summary: [`TOKEN_BRIEF.md`](./TOKEN_BRIEF.md).
+Each has explicit trigger conditions in its decision-log entry. **Do not add atomic steps for any of these here until the relevant triggers fire.** Engineering view: `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Future considerations". Boss-facing summary: `[TOKEN_BRIEF.md](./TOKEN_BRIEF.md)`.
 
 ---
 
@@ -1237,14 +1466,17 @@ If Pace is fully blocked from operating:
 
 Every AI session that does work on this checklist appends one entry here. Newest at top.
 
-| Date | Step(s) | Model | Commit | Notes |
-|---|---|---|---|---|
-| 2026-05-28 | T1.4 | Claude Opus 4.7 | pending user commit | `src/lib/auth-session.ts` + 5 unit tests (all passing). Public `getStormUserIdFromRequest` + testable internal `resolveStormUserId(request, { supabaseSession, supabaseAdmin })` with explicit-deps shape so tests don't need `vi.mock`. Supabase session wins; wallet header fallback; null when neither resolves. Pure additive — nothing imports it yet. **Safe to deploy alone (Category A).** Next: T1.5 in batches. |
-| 2026-05-28 | T1.2 hotfix | Claude Opus 4.7 | pending user commit | **Prod outage post-T1 deploy.** Users hit "Internal Server Error" / Alchemy `code:16` on OTP submit. Cause: `@supabase/ssr` 0.10.3 dropped the deprecated `get/set/remove` cookies API; `utils/supabase/middleware.ts` was still using it and threw on every request → all page loads 500'd. Migrated middleware + server client to `getAll/setAll`, wrapped middleware in try/catch with env-var guard, excluded `/api/*` from the matcher (Phase 1 dual-mode uses `x-wallet-address`; re-include at T1.5). Build green. T1.2 stays ✅ Done. |
-| 2026-05-27 | T1.3 | Composer | pending user commit | `088_users_auth_fk.sql` (FK NOT VALID); `user-bootstrap.ts` + tests. `auth:{uuid}` placeholder for auth-only rows until wallet column nullable. Apply migration on remote manually. **Next: T1.4.** |
-| 2026-05-23 | T1.2 | Composer | pending user commit | Root `src/middleware.ts`; `@supabase/ssr` ^0.10.3; `lib/supabase-*` re-exports. Build OK. T1.1 still 🟡 (Google OAuth incomplete). |
-| 2026-05-22 | Pre-flight P0.1–P0.3 + Track 1 rewrite (Clerk → Supabase Auth) | Claude Opus 4.7 | n/a (docs only) | All three pre-flight decisions resolved. Track 1 rewritten throughout: T1.1 dashboard config (no Clerk account), T1.2 `@supabase/ssr` install, T1.3 collapsed from "user-sync webhook" to "ID alignment migration" because `auth.users.id` IS `users.id`, T1.4 Supabase-first session helper, T1.9 backfill via `supabase.auth.admin.createUser`, T1.11 custom forms with Storm UI primitives. Net: Track 1 shrinks slightly + becomes simpler (no svix, no email-as-join-key). Pace-critical files still untouched. |
-| 2026-05-22 | doc-creation (this file) | Claude Opus 4.7 | n/a | Initial checklist authored. Phase 1 not yet started. Pre-flight decisions still pending. |
+
+| Date       | Step(s)                                                        | Model           | Commit                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------- | -------------------------------------------------------------- | --------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-28 | T1.3 rollback (089)                                            | Claude Opus 4.7 | applied to prod via dashboard | **Second prod outage from T1 deploy.** New users hitting `/api/user/set-role` → 500 immediately after Alchemy OTP. Cause: 088's FK enforces every new INSERT (NOT VALID only skips existing rows), and the legacy wallet path generates `users.id` UUIDs with no `auth.users` row. Fix: migration 089 drops the FK. Bootstrap helper from T1.3 stays — it'll do code-level enforcement for Supabase-Auth users. Re-added T1.12.1 to put the FK back AFTER cutover. Added pre-deploy verification rule: NOT VALID does not make a FK additive. |
+| 2026-05-28 | T1.4                                                           | Claude Opus 4.7 | pending user commit           | `src/lib/auth-session.ts` + 5 unit tests (all passing). Public `getStormUserIdFromRequest` + testable internal `resolveStormUserId(request, { supabaseSession, supabaseAdmin })` with explicit-deps shape so tests don't need `vi.mock`. Supabase session wins; wallet header fallback; null when neither resolves. Pure additive — nothing imports it yet. **Safe to deploy alone (Category A).** Next: T1.5 in batches.                                                                                                                     |
+| 2026-05-28 | T1.2 hotfix                                                    | Claude Opus 4.7 | pending user commit           | **Prod outage post-T1 deploy.** Users hit "Internal Server Error" / Alchemy `code:16` on OTP submit. Cause: `@supabase/ssr` 0.10.3 dropped the deprecated `get/set/remove` cookies API; `utils/supabase/middleware.ts` was still using it and threw on every request → all page loads 500'd. Migrated middleware + server client to `getAll/setAll`, wrapped middleware in try/catch with env-var guard, excluded `/api/`* from the matcher (Phase 1 dual-mode uses `x-wallet-address`; re-include at T1.5). Build green. T1.2 stays ✅ Done.  |
+| 2026-05-27 | T1.3                                                           | Composer        | pending user commit           | `088_users_auth_fk.sql` (FK NOT VALID); `user-bootstrap.ts` + tests. `auth:{uuid}` placeholder for auth-only rows until wallet column nullable. Apply migration on remote manually. **Next: T1.4.**                                                                                                                                                                                                                                                                                                                                           |
+| 2026-05-23 | T1.2                                                           | Composer        | pending user commit           | Root `src/middleware.ts`; `@supabase/ssr` ^0.10.3; `lib/supabase-`* re-exports. Build OK. T1.1 still 🟡 (Google OAuth incomplete).                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-05-22 | Pre-flight P0.1–P0.3 + Track 1 rewrite (Clerk → Supabase Auth) | Claude Opus 4.7 | n/a (docs only)               | All three pre-flight decisions resolved. Track 1 rewritten throughout: T1.1 dashboard config (no Clerk account), T1.2 `@supabase/ssr` install, T1.3 collapsed from "user-sync webhook" to "ID alignment migration" because `auth.users.id` IS `users.id`, T1.4 Supabase-first session helper, T1.9 backfill via `supabase.auth.admin.createUser`, T1.11 custom forms with Storm UI primitives. Net: Track 1 shrinks slightly + becomes simpler (no svix, no email-as-join-key). Pace-critical files still untouched.                          |
+| 2026-05-22 | doc-creation (this file)                                       | Claude Opus 4.7 | n/a                           | Initial checklist authored. Phase 1 not yet started. Pre-flight decisions still pending.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
 
 ---
 
@@ -1255,12 +1487,13 @@ Every AI session that does work on this checklist appends one entry here. Newest
 - ~~**Stripe shape**~~ — ✅ resolved 2026-05-22: Checkout one-time + Subscriptions; Pace billing deferred (DEC-2026-05-006)
 - **Pace stakeholder timing** — when's the right moment to brief them on auth cutover? Suggest: after T1.9 backfill completes successfully and before T1.11 sign-in UI ships.
 - **Pace billing onboarding step** — When does Pace transition off the admin-internal "free placement" path onto Stripe? Track separately from this checklist (out of Phase 1 scope per DEC-2026-05-006).
-- **`users.wallet_address` after T1.12** — drop the column or keep for historical? Default keep, mark deprecated in `block-development.mdc`.
-- **Existing share tokens** — public share URLs (`/card/[token]`) currently work without auth. Phase 1 should preserve this. T1.2 middleware matcher must include `/card/*`, `/d/*`, `/dev-card/*`, `/c/*`, `/onboard/*` in the public path list.
+- `**users.wallet_address` after T1.12** — drop the column or keep for historical? Default keep, mark deprecated in `block-development.mdc`.
+- **Existing share tokens** — public share URLs (`/card/[token]`) currently work without auth. Phase 1 should preserve this. T1.2 middleware matcher must include `/card/`*, `/d/*`, `/dev-card/*`, `/c/*`, `/onboard/*` in the public path list.
 
 ---
 
 **Document conventions:**
+
 - Status icons: ⬜ Not started · 🟡 In progress · ✅ Done · ❌ Blocked · ⏸ Deferred
 - Step IDs are stable (T1.5 stays T1.5 even if reordered)
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail

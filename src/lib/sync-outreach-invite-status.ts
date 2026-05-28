@@ -14,20 +14,30 @@ export function isTerminalScreeningOrderStatus(status: string | null | undefined
 }
 
 /**
- * Move outreach invites to `completed` when the employer-paid screening pipeline
- * is done for that candidate.
+ * Move outreach invites to `completed` when the candidate has finished the work
+ * the invite was sent for.
  *
- * Kanban columns read `application_invites.status`, not `mvr_orders.status`.
- * The consent-first flow only marks `in_progress` when the candidate starts;
- * nothing was flipping to `completed` when Accio delivered reports — so every
- * card stayed in "In progress" even with green file badges.
+ * Two flows produce a "done" signal:
+ *
+ *   1. **Consent-only flow (current default)** — the invite targets
+ *      `driver-screening-consent`; "done" = a complete `screening_consent_bundles`
+ *      row exists. Whether the employer later orders MVR/PSP is independent of
+ *      the invite lifecycle (those use `mvr_orders` / `psp_orders` directly).
+ *
+ *   2. **Per-block legacy flow** — the invite targets `driver-mvr` or
+ *      `driver-psp`; "done" = the matching order(s) for that company/driver
+ *      reached a terminal status (completed / needs_review / failed).
+ *
+ * The kanban reads `application_invites.status`. Without this sync, consent-only
+ * invites stayed `in_progress` forever (no MVR/PSP order ever existed), which is
+ * exactly the Sean Buckner symptom seen 2026-05-28.
  */
 export async function syncOutreachInviteForDriver(
   supabase: SupabaseClient,
   companyId: string,
   driverUserId: string,
 ): Promise<{ updated: number; inviteIds: string[] }> {
-  const [{ data: mvrOrders }, { data: pspOrders }] = await Promise.all([
+  const [{ data: mvrOrders }, { data: pspOrders }, consentBundle] = await Promise.all([
     supabase
       .from('mvr_orders')
       .select('id, status')
@@ -38,17 +48,10 @@ export async function syncOutreachInviteForDriver(
       .select('id, status')
       .eq('ordered_by_company_id', companyId)
       .eq('driver_user_id', driverUserId),
+    // getLatestScreeningConsentBundle already filters to status = 'complete',
+    // so a non-null result == "consent done for this (driver, company)".
+    getLatestScreeningConsentBundle(supabase, driverUserId, companyId),
   ])
-
-  const allOrders = [...(mvrOrders ?? []), ...(pspOrders ?? [])]
-  if (allOrders.length === 0) {
-    return { updated: 0, inviteIds: [] }
-  }
-  if (!allOrders.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
-    return { updated: 0, inviteIds: [] }
-  }
-
-  const consentBundle = await getLatestScreeningConsentBundle(supabase, driverUserId, companyId)
 
   const { data: invites } = await supabase
     .from('application_invites')
@@ -64,19 +67,15 @@ export async function syncOutreachInviteForDriver(
     const block = inv.target_block_type as string | null
     if (!block || !SCREENING_INVITE_BLOCKS.has(block)) continue
 
-    if (block === 'driver-screening-consent' && !consentBundle) {
-      // Employer cannot order without consent, but guard anyway.
-      continue
-    }
-
-    if (block === 'driver-mvr') {
+    // Per-block guards: only complete the invite once its own artifact is done.
+    if (block === 'driver-screening-consent') {
+      if (!consentBundle) continue
+    } else if (block === 'driver-mvr') {
       const mvrOnly = mvrOrders ?? []
       if (mvrOnly.length === 0 || !mvrOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
         continue
       }
-    }
-
-    if (block === 'driver-psp') {
+    } else if (block === 'driver-psp') {
       const pspOnly = pspOrders ?? []
       if (pspOnly.length === 0 || !pspOnly.every((o) => isTerminalScreeningOrderStatus(o.status as string))) {
         continue

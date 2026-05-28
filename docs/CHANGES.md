@@ -62,6 +62,27 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 
 ---
 
+## **HOTFIX — Outreach kanban "missing" candidates + stuck `in_progress`** (2026-05-28)
+
+**Symptom (Pace Drivers):** Sean Buckner appeared "missing" from the outreach kanban; Quantez Johnson stayed in "Pending" despite Pace receiving consent-completion emails for him. Investigation found two distinct production bugs (both pre-existing — unrelated to T1.1–T1.3 deploys, but exposed by Pace's onboarding volume crossing the cap on 2026-05-28).
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Sean Buckner not visible | `/api/employer/invites` had a hardcoded `limit = 50` ordered by `created_at DESC`. Pace had 57 invites created after Sean's, pushing his row off the end of the API response. | Default raised to 500 in `src/app/api/employer/invites/route.ts`. Real pagination is a future task; for now we just lift the ceiling well above any current customer (Pace = 261 total invites). |
+| Six consent-completed candidates stuck on "In progress" (Sean, Robert Duckett, Ernesto Fresneda, Amanda Hodge, Kristopher Riley, Rontonio Porter) | `lib/sync-outreach-invite-status.ts` early-returned when the driver had zero MVR/PSP orders. Logic was written for the old "consent + MVR/PSP together" flow; the consent-first flow leaves consent-only candidates with no orders, so the sync never flipped their invite to `completed`. | `syncOutreachInviteForDriver` now flips `driver-screening-consent` invites to `completed` when a complete `screening_consent_bundles` row exists for `(driver_user_id, company_id)` — independent of MVR/PSP. Migration `090_backfill_consent_only_invite_completion.sql` applies the same logic to existing stuck rows. |
+
+**Quantez Johnson (separate, not fixed in this commit):** Two parallel records exist for the same Pace request — an `application_invites` row (status: `pending`, never opened via token, `used_by_user_id = NULL`) and a `candidate_requests` row + completed consent bundle on his existing Storm user account. He completed consent via his hub (likely a Talent Search request, not the outreach invite). Pace's kanban only reads `application_invites.status`, so he stays "Pending" forever even though consent is done. Auto-linking orphan invites by email on consent completion is queued as the next fix; flagged in `EXECUTION_CHECKLIST.md`.
+
+**Why this isn't from T1.1–T1.3:** Both bugs predate the migration work. The middleware/FK incidents earlier today caused Pace HR to retry sends, accelerating the invite count past 50, which is why the limit-bug only surfaced now. The `sync-outreach-invite-status` early-return has been wrong since the consent-first flow shipped.
+
+| Files |
+|---|
+| `src/app/api/employer/invites/route.ts` (limit 50 → 500) |
+| `src/lib/sync-outreach-invite-status.ts` (consent-only completion path) |
+| `supabase/migrations/090_backfill_consent_only_invite_completion.sql` (data fix; applied via dashboard since MCP is read-only) |
+
+---
+
 ## **Phase 1 — T1.2 Supabase Auth middleware shell** (2026-05-23)
 
 **Track 1 auth swap (dual-mode).** Wired root Next.js middleware to refresh Supabase session cookies on each request. Alchemy sign-in unchanged.
@@ -74,6 +95,20 @@ After 6 months on the Web3-first stack (Alchemy Account Kit smart wallets, Base 
 | `npm run build` | Passes; Middleware ~90 kB |
 
 **T1.1** remains 🟡 in progress (Google OAuth client not finished). **Next:** T1.4 dual-mode `getStormUserIdFromRequest()` helper.
+
+---
+
+## **HOTFIX 2 — Migration 089 rolls back T1.3 FK (broke new-user sign-up)** (2026-05-28)
+
+**Second prod outage from the T1.1–1.3 deploy.** After yesterday's middleware fix, Alchemy OTP started succeeding again — but new users were now bouncing off `POST /api/user/set-role` with a 500 instead. Existing users were fine.
+
+**Root cause:** Migration `088_users_auth_fk.sql` added `FOREIGN KEY (users.id) REFERENCES auth.users(id) ON DELETE CASCADE NOT VALID`. I treated `NOT VALID` as "the FK is documentation that becomes enforced later." It's not. **`NOT VALID` only skips checking existing rows; every NEW INSERT/UPDATE is enforced from the moment the migration runs.** The legacy Alchemy wallet path (`getOrCreateUserByWallet`) inserts a fresh `users.id` UUID with no corresponding `auth.users` row — guaranteed FK violation, guaranteed 500 on every first-time sign-in.
+
+**Fix:** `supabase/migrations/089_drop_users_auth_fk_temp.sql` drops the constraint. Applied via dashboard SQL editor (MCP is read-only). The `users.id = auth.users.id` invariant is still enforced **at the code level** by `lib/user-bootstrap.ts` for any user that comes through Supabase Auth — which is sufficient for Phase 1 dual-mode. The schema FK will be re-added in the new step **T1.12.1**, AFTER cutover, when the wallet-based write path is gone and every `users` row is guaranteed to have a matching `auth.users` row.
+
+**Lesson filed (in `EXECUTION_CHECKLIST.md` T1.3 entry):** A FK constraint added to an existing table is **never** additive when the legacy write path doesn't satisfy it. `NOT VALID` protects yesterday's rows, not tomorrow's INSERTs. For "Category A — safe to deploy alone," the legacy AND target write paths must BOTH satisfy the constraint. If only one does, the migration is Category B (batched with code changes that route writes through the satisfying path) or Category C (cutover behind a flag).
+
+**Bigger lesson:** the T1.1–1.3 deploy had **two latent bugs that only surfaced for new users** — the cookies API mismatch (existing users skated through with valid sessions) and the FK violation (existing users pre-dated the constraint). Two days, two outages, same blind spot: testing as an existing user. The pre-deploy verification block in `EXECUTION_CHECKLIST.md` now explicitly mandates an **incognito + `+alias@gmail.com` first-ever sign-up test** before every Phase 1 push.
 
 ---
 
