@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getCdlData } from '@/lib/block-data'
 
 /**
@@ -10,10 +11,10 @@ import { getCdlData } from '@/lib/block-data'
  * Pulls from the user record + DOT application data.
  */
 export async function GET(request: NextRequest) {
-  const walletAddress = request.headers.get('x-wallet-address')
+  const userId = await getStormUserIdFromRequest(request)
 
-  if (!walletAddress) {
-    return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
 
   const supabase = await getAdminSupabaseClient()
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const { data: user } = await supabase
     .from('users')
     .select('id, email')
-    .ilike('wallet_address', walletAddress)
+    .eq('id', userId)
     .single()
 
   if (!user) {

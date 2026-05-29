@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
   incrementJobMatchAiDaily,
@@ -45,21 +46,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'AI service is not configured.' }, { status: 503 })
     }
 
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const force = request.nextUrl.searchParams.get('force') === '1'
     const location = request.nextUrl.searchParams.get('location')?.trim() ?? ''
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single()
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    // STORMI_UNLIMITED_WALLETS is a legacy wallet allowlist with no session
+    // equivalent — read the header directly for it. Removed with the wallet cutover.
+    const walletAddress = request.headers.get('x-wallet-address')
+    const isUnlimited = walletAddress
+      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+      : false
     let usage = await getOrCreateUsage(supabase, user.id)
 
     if (!force) {

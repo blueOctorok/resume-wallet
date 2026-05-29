@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
   checkUsage,
@@ -18,9 +19,9 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     let supabase
@@ -31,12 +32,8 @@ export async function GET(request: NextRequest) {
       console.error('[Stormi Credits] GET Supabase init failed:', msg)
       return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
     }
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
 
-    const usage = await getOrCreateUsage(supabase, user.id)
+    const usage = await getOrCreateUsage(supabase, userId)
     const usageCheck = checkUsage(usage)
 
     return NextResponse.json({

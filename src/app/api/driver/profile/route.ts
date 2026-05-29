@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getFullDriverProfile,
   saveCdlData,
@@ -14,31 +15,18 @@ import type { UnifiedDriverProfile, UnifiedEmployment, UnifiedEducation, Unified
 
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const requestedUserId = searchParams.get('userId')
     const supabase = await getAdminSupabaseClient()
-    let targetUserId: string
-
-    if (requestedUserId) {
-      const { data: requester } = await supabase
-        .from('users').select('id').ilike('wallet_address', walletAddress).single()
-      if (!requester) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      targetUserId = requestedUserId
-    } else {
-      const { data: user, error: userError } = await supabase
-        .from('users').select('id').ilike('wallet_address', walletAddress).single()
-      if (userError || !user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 })
-      }
-      targetUserId = user.id
-    }
+    // A resolved userId already proves the caller exists, so the old
+    // requester-existence lookups collapse away. `?userId=` lets a caller read
+    // another user's profile (self-view falls back to their own id).
+    const targetUserId = requestedUserId ?? userId
 
     // Compose profile from block tables + merge identity from user_profiles
     const unifiedProfile = await getFullDriverProfile(supabase, targetUserId)

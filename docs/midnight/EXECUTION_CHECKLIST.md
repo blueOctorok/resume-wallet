@@ -90,6 +90,45 @@ When touching any of these, double-verify the change preserves I-1 through I-10:
 
 ---
 
+## Deploy sequencing & release gates
+
+**Read this before pushing anything in Track 1.** Two prod outages on 2026-05-28 (middleware cookie-API break in T1.2, FK break in T1.3) came from treating "do the auth work" as one undifferentiated push. It isn't. The auth track has two phases with opposite risk profiles, and they get different deploy processes.
+
+### The two speeds
+
+| Phase | Steps | What it is | Does anything switch for Pace? | Process |
+|---|---|---|---|---|
+| **Dual-mode plumbing** | T1.5 → T1.8 | Migrate ~115 routes to `getStormUserIdFromRequest` (tries Supabase session, falls back to wallet header) | **No.** Pace keeps logging in via Alchemy. Routes only *gain* the ability to also read a session nobody issues yet. | Trunk-based on `main`. Go fast. |
+| **Cutover** | T1.9 → T1.12 | Backfill `auth.users`, ship new login UI, flip everyone, remove Alchemy + wallet fallback | **Yes — T1.12 is the point of no return.** | Branch + Vercel preview + Pace coordination. Go careful. |
+
+The mistake to avoid: rushing the cutover because the plumbing felt easy. Compress calendar time on T1.5–T1.8; never rush T1.9–T1.12.
+
+### Rules for the dual-mode plumbing (T1.5–T1.8)
+
+- **One step = one deploy = one verification.** Don't stack two batches into one push. Each batch is independently safe *because* the wallet fallback stays — keep it that way so a regression is bisectable to a single batch.
+- **Stay on `main`.** These edits touch ~115 files mechanically; a long-lived branch would drift and pile up conflicts. Dual-mode safety makes trunk-based fine here.
+- **Mandatory release gate — the new-user incognito test.** Both 2026-05-28 outages only affected *new* users; an existing logged-in session sailed past them. Before declaring any auth deploy good: open an incognito window, sign up / sign in as a brand-new user, and load the relevant surface. Testing your own existing session is **not** sufficient.
+
+### Rules for the cutover (T1.9–T1.12)
+
+- **Move to a `phase-1-auth` branch with Vercel preview deploys.** The new login UI and Alchemy removal are user-visible and dangerous half-shipped — they must not touch Pace's prod until verified on the preview URL.
+- **Hard gate before T1.12 (point of no return).** This query MUST return 0 — every existing user has a matching `auth.users` row from the T1.9 backfill — before removing the wallet fallback:
+
+  ```sql
+  SELECT COUNT(*) FROM public.users u
+  LEFT JOIN auth.users a ON a.id = u.id
+  WHERE a.id IS NULL;
+  -- non-zero = T1.9 missed rows. Fix the backfill BEFORE cutover or you lock users out.
+  ```
+
+- **Pace stakeholder coordinated** (see Pace check-in cadence above) before flipping.
+
+### Migration-history hygiene
+
+Migrations are append-only and reflect what actually ran in prod. If a migration shipped to production and was later reversed, **do not delete the file** — add a corrective migration and leave a header note on the original pointing at the correction (see 090/091 → 092, 2026-05-28).
+
+---
+
 ## Pre-flight — decisions that block all work
 
 These three decisions blocked Phase 1. **All resolved 2026-05-22.**
@@ -375,7 +414,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 |                        |                                          |
 | ---------------------- | ---------------------------------------- |
-| Status                 | ⬜ Not started                            |
+| Status                 | ✅ Done · 2026-05-29 · pending user commit |
 | Pre-conditions         | T1.4                                     |
 | Estimated session size | L (split into 2–3 sub-batches if needed) |
 | Pace risk              | Low                                      |
@@ -424,6 +463,21 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 **Session prompt:**
 
 > Read `docs/midnight/EXECUTION_CHECKLIST.md` step T1.5. For each route in the file list, replace the `walletAddress = request.headers.get('x-wallet-address')` pattern with `userId = await getStormUserIdFromRequest(request)`. Preserve existing 401 behavior when null. Do not change response shapes. Do not touch any employer route, write route, webhook, or cron route. Verify typecheck + build pass after each ~5-route batch.
+
+**Completion notes (2026-05-29):**
+
+- **22 GET handlers migrated** across 4 sub-batches. All lint-clean; `tsc --noEmit` adds **zero** new errors (only pre-existing `developer/hub:115`, `developer/profile:~199`, `driver/hub:318-468` remain — unrelated profile-shape mismatches); `npm run build` exit 0.
+- **Two `user`-resolution shapes used:** routes that only need the id call the helper and use `userId` directly; routes that need the full row (hub aggregators, share/pdf, etc.) call the helper then `select(...).eq('id', userId).single()`. The `.ilike('wallet_address', …)` lookup is gone from every migrated GET.
+- **Mixed-method files — GET only migrated; POST/PATCH/DELETE left on the wallet header for T1.6** (this is the read-first risk sequencing, on purpose): `career-card/lenses`, `career-card/share`, `developer/resume`, `developer/profile`, `general/resume`, `notifications`, `messages`, `job-alerts`, `ai/credits`, `hub/blocks`. `getUserByWallet` import retained where a write in the same file still needs it.
+- **Routes in the target list NOT migrated (deferred, with reason):**
+  - `career-card/lenses/[id]` — **write-only** (PATCH/DELETE), no GET → T1.6.
+  - `applications/status` — **PATCH-only** (checklist mislabeled it "(GET)"), no GET → T1.6.
+  - `user/profile` — **no GET** (POST get-or-create + PATCH are writes) → T1.6.
+  - `storm/history` — legacy STORM-on-Base; queries `storm_distributions` keyed by `wallet_address`, not user id. Migrating gives no value and the table is an Option-B removal target. Left on the wallet header; **delete in the STORM-on-Base cleanup**, not here.
+- **`jobs/recommended`** — GET migrated, but still reads `x-wallet-address` for the legacy `STORMI_UNLIMITED_WALLETS` allowlist (a feature flag, not auth; no session equivalent). **Flag for T1.8** grep-cleanup.
+- **`resumes` GET** — dual-mode *prepend*: try the session helper first; if it resolves, return; otherwise the entire legacy Base-signature + `upsertUser` flow is untouched. Fully behavior-preserving.
+- **Decision — null-auth response standardized** to `401 { error: 'Authentication required' }`. `driver/hub` and `developer/hub` previously returned `400 "Wallet address is required"`; now 401 with neutral copy (removes user-facing "wallet" language, correct semantics, and during dual-mode only unauthenticated requests hit it). Hub "new-user empty-state" branches are preserved for the id-resolved-but-row-missing case.
+- **Middleware matcher NOT re-included for `/api/*` yet** (T1.2's note said "re-include at T1.5"). Deferred on purpose: no Supabase sessions are issued until T1.11, so the helper's session path is dormant; an API route can still *validate* an existing session cookie without middleware (middleware only *refreshes* near-expiry tokens). **Re-include `/api/*` just before T1.11** to avoid re-introducing the surface that caused the T1.2 outage early.
 
 ---
 
@@ -1469,6 +1523,7 @@ Every AI session that does work on this checklist appends one entry here. Newest
 
 | Date       | Step(s)                                                        | Model           | Commit                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ---------- | -------------------------------------------------------------- | --------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-29 | T1.5 + deploy-sequencing doc                                   | Claude Opus 4.8 | pending user commit           | Migrated **22 candidate read (GET) routes** to `getStormUserIdFromRequest` in 4 sub-batches (career-card cluster, driver, developer/general/resumes, notifications/messages/jobs/candidate, storm/referrals/user/ai/hub). Mixed-method files: GET only (writes → T1.6). Deferred: `lenses/[id]`, `applications/status`, `user/profile` (no GET / write-only); **skipped** `storm/history` (legacy wallet-keyed STORM, Option-B removal target). `jobs/recommended` still reads wallet header for `STORMI_UNLIMITED_WALLETS` (flag T1.8). Null-auth standardized to `401 {error:'Authentication required'}` (was `400` on two hub routes). Middleware `/api/*` matcher **deliberately left excluded** until T1.11 (sessions dormant pre-cutover). Lint clean · tsc 0 new errors · build green. Also added the **"Deploy sequencing & release gates"** section (two-speed plumbing-vs-cutover, incognito new-user gate, T1.12 backfill SQL gate). **Next: T1.6 (candidate write routes).** |
 | 2026-05-28 | T1.3 rollback (089)                                            | Claude Opus 4.7 | applied to prod via dashboard | **Second prod outage from T1 deploy.** New users hitting `/api/user/set-role` → 500 immediately after Alchemy OTP. Cause: 088's FK enforces every new INSERT (NOT VALID only skips existing rows), and the legacy wallet path generates `users.id` UUIDs with no `auth.users` row. Fix: migration 089 drops the FK. Bootstrap helper from T1.3 stays — it'll do code-level enforcement for Supabase-Auth users. Re-added T1.12.1 to put the FK back AFTER cutover. Added pre-deploy verification rule: NOT VALID does not make a FK additive. |
 | 2026-05-28 | T1.4                                                           | Claude Opus 4.7 | pending user commit           | `src/lib/auth-session.ts` + 5 unit tests (all passing). Public `getStormUserIdFromRequest` + testable internal `resolveStormUserId(request, { supabaseSession, supabaseAdmin })` with explicit-deps shape so tests don't need `vi.mock`. Supabase session wins; wallet header fallback; null when neither resolves. Pure additive — nothing imports it yet. **Safe to deploy alone (Category A).** Next: T1.5 in batches.                                                                                                                     |
 | 2026-05-28 | T1.2 hotfix                                                    | Claude Opus 4.7 | pending user commit           | **Prod outage post-T1 deploy.** Users hit "Internal Server Error" / Alchemy `code:16` on OTP submit. Cause: `@supabase/ssr` 0.10.3 dropped the deprecated `get/set/remove` cookies API; `utils/supabase/middleware.ts` was still using it and threw on every request → all page loads 500'd. Migrated middleware + server client to `getAll/setAll`, wrapped middleware in try/catch with env-var guard, excluded `/api/`* from the matcher (Phase 1 dual-mode uses `x-wallet-address`; re-include at T1.5). Build green. T1.2 stays ✅ Done.  |

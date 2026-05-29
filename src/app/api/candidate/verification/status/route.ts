@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   VerificationRequestRow,
   rowToVerificationRequest,
@@ -18,9 +19,9 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (userError || !user) {

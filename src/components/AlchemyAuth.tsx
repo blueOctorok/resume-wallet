@@ -62,10 +62,15 @@ export default function AlchemyAuth({
 
   const [userInfo, setUserInfo] = useState<any>(null)
   const [cryptoError, setCryptoError] = useState<string | null>(null)
+  // True when the signer authed but the smart account never finished loading
+  // (e.g. Alchemy throttled the account-init RPC). Lets us bail out of the
+  // SDK's infinite getCode retry instead of spinning forever.
+  const [accountTimedOut, setAccountTimedOut] = useState(false)
 
   const onAuthSuccessRef = useRef(onAuthSuccess)
   const lastCalledAddressRef = useRef<string | null>(null)
   const logoutStateRef = useRef<{ timestamp: number; address: string } | null>(null)
+  const accountLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const hasCryptoError = sessionStorage.getItem('crypto-error')
@@ -149,13 +154,6 @@ export default function AlchemyAuth({
   const content = getContent()
 
   useEffect(() => {
-    console.log('🔍 [AUTH] useEffect triggered - checking connection status:', {
-      isConnected,
-      hasUser: !!user,
-      hasAccount: !!account?.address,
-      lastCalledAddress: lastCalledAddressRef.current,
-    })
-
     if (isConnected && user && account?.address) {
       const authData = {
         address: account.address,
@@ -214,6 +212,50 @@ export default function AlchemyAuth({
       })
     }
   }, [isConnected, user, account])
+
+  // Smart-account load watchdog.
+  //
+  // When the signer is authed (`isConnected` + `user`) but the LightAccount
+  // never resolves an address, the Account Kit SDK retries `eth_getCode`
+  // forever. If Alchemy is throttling that RPC (rate limit), this becomes a
+  // tight loop that both hangs the UI and hammers the rate limit harder. Cap
+  // it: after a grace period, clear the half-session and surface a recoverable
+  // error instead of spinning indefinitely.
+  const isAccountStuck = isConnected && !!user && !account?.address
+
+  useEffect(() => {
+    // Account finished loading — clear any pending watchdog + error state.
+    if (account?.address && accountTimedOut) {
+      setAccountTimedOut(false)
+    }
+  }, [account, accountTimedOut])
+
+  useEffect(() => {
+    if (!isAccountStuck) {
+      if (accountLoadTimerRef.current) {
+        clearTimeout(accountLoadTimerRef.current)
+        accountLoadTimerRef.current = null
+      }
+      return
+    }
+
+    // Already counting down for this stuck state — don't stack timers.
+    if (accountLoadTimerRef.current) return
+
+    accountLoadTimerRef.current = setTimeout(() => {
+      console.error('[AUTH] Smart account did not load in time — clearing stuck session to stop retry loop')
+      setAccountTimedOut(true)
+      // Drop the half-session so the SDK stops retrying getCode.
+      logout().catch(() => {})
+    }, 15000)
+
+    return () => {
+      if (accountLoadTimerRef.current) {
+        clearTimeout(accountLoadTimerRef.current)
+        accountLoadTimerRef.current = null
+      }
+    }
+  }, [isAccountStuck, logout])
 
   const handleLogout = async () => {
     try {
@@ -309,7 +351,7 @@ export default function AlchemyAuth({
   return (
     <div className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 sm:p-8 ${cardClass}`}>
       <div className='relative overflow-hidden'>
-        {cryptoError && (
+        {(cryptoError || accountTimedOut) && (
           <div className='mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg'>
             <div className='flex items-start'>
               <span className='text-yellow-600 dark:text-yellow-400 mr-2'>⚠️</span>
@@ -318,16 +360,18 @@ export default function AlchemyAuth({
                   Authentication Issue
                 </p>
                 <p className='text-xs text-yellow-700 dark:text-yellow-300'>
-                  {cryptoError}
+                  {cryptoError ||
+                    "We couldn't finish signing you in — the sign-in service is busy right now. Please try again in a moment."}
                 </p>
                 <button
                   onClick={() => {
                     setCryptoError(null)
+                    setAccountTimedOut(false)
                     window.location.reload()
                   }}
                   className='mt-2 text-xs text-yellow-800 dark:text-yellow-200 underline hover:text-yellow-900 dark:hover:text-yellow-100'
                 >
-                  Refresh Page
+                  Try Again
                 </button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { saveDevProfile } from '@/lib/block-data'
 
@@ -227,33 +228,22 @@ export async function PUT(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user ID
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get developer resumes
     const { data: resumes, error: resumesError } = await supabase
       .from('resumes')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('source_role', 'developer')
       .order('created_at', { ascending: false })
 

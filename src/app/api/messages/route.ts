@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/messages
@@ -22,9 +23,9 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const { data: user } = await supabase
       .from('users')
       .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })

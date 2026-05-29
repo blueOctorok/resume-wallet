@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { buildProjectedCareerCard } from '@/lib/projected-career-card'
 
 /**
@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const walletAddress = request.headers.get('x-wallet-address')
     const { searchParams } = new URL(request.url)
     const shareToken = searchParams.get('token')
     // `?lens=<uuid>` is advisory — bad IDs silently fall back to default so a
@@ -61,8 +60,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, card })
     }
 
-    if (walletAddress) {
-      const user = await getUserByWallet(supabase, walletAddress)
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (sessionUserId) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('id, created_at, share_token, share_settings')
+        .eq('id', sessionUserId)
+        .single()
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
@@ -82,7 +86,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, card })
     }
 
-    return NextResponse.json({ error: 'Wallet address or share token required' }, { status: 401 })
+    return NextResponse.json({ error: 'Authentication or share token required' }, { status: 401 })
   } catch (error) {
     console.error('[CAREER CARD] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences, getDevPortfolio, getDevGithub } from '@/lib/block-data'
 import {
   pickPendingEmployerScreening,
@@ -26,23 +27,21 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    
-    if (!walletAddress) {
+    const userId = await getStormUserIdFromRequest(request)
+
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
+        { error: 'Authentication required' },
+        { status: 401 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    const normalizedWallet = walletAddress.toLowerCase()
-
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, created_at, wallet_address, share_token, share_settings, share_token_created_at, share_views_count')
-      .ilike('wallet_address', normalizedWallet)
+      .eq('id', userId)
       .single()
 
     if (userError || !user) {

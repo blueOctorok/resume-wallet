@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createResume, getUserResumes, upsertUser } from '@/lib/supabase-db'
 import { getUserFromRequest } from '@/lib/base-auth-middleware'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,6 +120,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    // Phase 1 dual-mode: prefer a Supabase session (or wallet header) via the
+    // shared helper. When it resolves we already have the user, so skip the
+    // legacy Base-signature + upsert path below.
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (sessionUserId) {
+      const resumes = await getUserResumes(sessionUserId)
+      return NextResponse.json(resumes)
+    }
+
     // Try to authenticate via full Base auth first
     let walletAddress: string | null = null
 

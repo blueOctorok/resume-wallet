@@ -4,6 +4,38 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.5 — candidate read routes migrated to session helper (dual-mode)** (2026-05-29)
+
+> **Status: code complete, pending commit.** Part of the Phase 1 auth migration (Alchemy wallets → Supabase Auth). See `docs/midnight/EXECUTION_CHECKLIST.md` step T1.5.
+
+Migrated **22 candidate-side READ (GET) routes** from the legacy `x-wallet-address` header pattern to the dual-mode `getStormUserIdFromRequest()` helper (added in T1.4). The helper tries a Supabase Auth session first, then falls back to the wallet header — so **nothing changes for current users**: Alchemy sign-in keeps working, and the routes merely *gain* the ability to also read a session that nobody issues until T1.11.
+
+**Why this is safe to ship alone:** dual-mode means every route still honors the wallet header. The session path is dormant (no sign-in UI yet), so this is pure additive plumbing. Each sub-batch was independently lint-checked; the full set passes `tsc --noEmit` with **zero new type errors** and `npm run build` is green.
+
+**Routes migrated (4 sub-batches):**
+
+| Batch | Routes |
+|---|---|
+| 1 | `career-card`, `career-card/lenses` (GET), `career-card/share` (GET), `career-card/pdf`, `driver/hub`, `driver/profile` (GET), `driver/career-card` |
+| 2 | `developer/hub`, `developer/resume` (GET), `developer/profile` (GET), `general/resume` (GET), `resumes` (GET) |
+| 3 | `notifications` (GET), `messages` (GET), `jobs/recommended`, `job-alerts` (GET), `candidate/profile-info`, `candidate/verification/status` |
+| 4 | `referrals` (GET), `user/existing-profiles`, `ai/credits` (GET), `hub/blocks` (GET) |
+
+**Deliberate scope decisions:**
+
+- **Mixed-method files: GET only.** Files with both reads and writes (e.g. `career-card/lenses`, `developer/profile`, `notifications`, `hub/blocks`) had only their GET handler migrated. POST/PATCH/DELETE stay on the wallet header until T1.6 — this preserves T1.5's read-first risk sequencing (validate the helper on low-risk reads before touching writes).
+- **Deferred (not in T1.5):** `career-card/lenses/[id]` (write-only), `applications/status` (PATCH-only — checklist mislabeled it "GET"), `user/profile` (no GET). All → T1.6.
+- **Skipped:** `storm/history` — legacy STORM-on-Base data keyed by `wallet_address` (not user id); an Option-B removal target. Migrating it adds no value; it'll be deleted in the STORM-on-Base cleanup.
+- **`jobs/recommended`** still reads the wallet header for the legacy `STORMI_UNLIMITED_WALLETS` allowlist (a feature flag, not auth) — flagged for the T1.8 final grep-cleanup.
+- **`resumes` GET** uses a dual-mode *prepend*: session helper first, otherwise the existing Base-signature + `upsertUser` flow is untouched.
+- **Null-auth standardized** to `401 { error: 'Authentication required' }` (two hub routes previously returned `400 "Wallet address is required"`). Removes user-facing "wallet" language and is the correct status; during dual-mode only genuinely unauthenticated requests hit it.
+
+**Also shipped:** a new **"Deploy sequencing & release gates"** section in `EXECUTION_CHECKLIST.md` — codifies the two-speed strategy (fast trunk-based dual-mode plumbing T1.5–T1.8 vs. careful branch+preview cutover T1.9–T1.12), the **mandatory incognito new-user smoke test** before any auth deploy (both 2026-05-28 outages only hit new users), and the **T1.12 backfill-count SQL gate** (every `users` row must have a matching `auth.users` row before the wallet fallback is removed).
+
+**Files:** 22 route files under `src/app/api/**`; `docs/midnight/EXECUTION_CHECKLIST.md` (T1.5 status + completion notes + deploy-sequencing section + handoff log).
+
+---
+
 ## **Strategic direction reset — Web2 stack + selective-disclosure moat** (May 2026 — Planning)
 
 > **Status: planning only.** No code changes have shipped yet under this reset. This entry exists to anchor every future Phase 1 / 2 / 3 entry to the strategic context.
