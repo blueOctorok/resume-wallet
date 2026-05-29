@@ -20,6 +20,18 @@ const ALCHEMY_API_KEY =
   process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
 const ALCHEMY_POLICY_ID = process.env.NEXT_PUBLIC_ALCHEMY_POLICY_ID
 
+// CORS workaround (2026-05-29): Alchemy's bare node endpoint
+// (`https://base-sepolia.g.alchemy.com/v2` + an `Authorization: Bearer` header —
+// the SDK's default `apiKey` mode) started 401-ing the browser CORS preflight
+// with no `Access-Control-Allow-Origin`, which blocks smart-account load
+// (`eth_getCode`) for every user and triggers an infinite retry storm. The SAME
+// endpoint with the key in the URL PATH returns proper CORS headers. So we use a
+// split transport below: keep `apiKey` on `alchemyConnection` (the signer at
+// api.g.alchemy.com still needs the Bearer header and is unaffected), but route
+// plain node RPC through the key-in-path URL via `nodeRpcUrl`, which sends no
+// Authorization header and passes CORS.
+const ALCHEMY_NODE_RPC_URL = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+
 if (!ALCHEMY_POLICY_ID) {
   console.warn(
     '⚠️ NEXT_PUBLIC_ALCHEMY_POLICY_ID not set - gas sponsorship may not work'
@@ -59,7 +71,10 @@ let alchemyAccountConfigProduction: any
 try {
   alchemyAccountConfig = createConfig(
     {
-      transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
+      transport: alchemy({
+        alchemyConnection: { apiKey: ALCHEMY_API_KEY },
+        nodeRpcUrl: ALCHEMY_NODE_RPC_URL,
+      }),
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
       enablePopupOauth: true, // Enable popup OAuth for Google
@@ -73,7 +88,10 @@ try {
 
   alchemyAccountConfigProduction = createConfig(
     {
-      transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
+      transport: alchemy({
+        alchemyConnection: { apiKey: ALCHEMY_API_KEY },
+        nodeRpcUrl: ALCHEMY_NODE_RPC_URL,
+      }),
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
       enablePopupOauth: true, // Enable popup OAuth for Google

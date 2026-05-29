@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hotfix — Alchemy login broken by CORS preflight on bare `/v2` node endpoint** (2026-05-29)
+
+> **Status: code complete, pending commit + deploy.** Production login outage (email-OTP + Google both stuck). NOT caused by our T1.x changes — an Alchemy-side CORS behavior change.
+
+**Symptom:** Every user (incognito included) stuck on sign-in. Console showed `Access to fetch at 'https://base-sepolia.g.alchemy.com/v2' from origin 'https://www.stormchain.ai' blocked by CORS policy: No 'Access-Control-Allow-Origin' header`, plus an Alchemy dashboard banner: *"Your account has exceeded its concurrent requests capacity."*
+
+**Root cause (load-independent):** The Account Kit SDK's default `apiKey` transport calls the bare node endpoint `https://base-sepolia.g.alchemy.com/v2` with an `Authorization: Bearer {key}` header. Alchemy now **401s the browser CORS preflight (`OPTIONS`) on that bare endpoint with no `Access-Control-Allow-Origin` header.** Verified with a single `curl` (no load) — so it is a CORS/auth issue, not a rate-limit issue. The same endpoint with the key in the **URL path** (`/v2/{key}`, no Authorization header) returns proper CORS headers (`HTTP 200`).
+
+**The cascade (why it looked like a rate limit):** preflight 401 → `eth_getCode` can never complete → smart account never loads → SDK retries `getCode` **forever**, across every open tab → the retry storm **exceeds the concurrent-request cap** → `429`s that *also* lack CORS headers → more "CORS errors." So "concurrent requests exceeded" was a *symptom* of the retry storm, which was a symptom of the CORS bug. Raising the concurrency limit does NOT fix it.
+
+**Fix (two parts):**
+
+1. **Split transport** (`src/lib/alchemy-account-config.ts`): both `createConfig` calls switched from `alchemy({ apiKey })` to `alchemy({ alchemyConnection: { apiKey }, nodeRpcUrl })` where `nodeRpcUrl = https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`. The signer (`api.g.alchemy.com/signer`) keeps the Bearer header (works fine, unaffected); plain node RPC (`eth_getCode`) now goes through the key-in-path URL → passes CORS.
+2. **Retry-storm watchdog** (`src/components/AlchemyAuth.tsx`): 15-second timer that detects the `isConnected && user && !account?.address` stuck state, clears the half-session (`logout()`), and shows a recoverable "sign-in service is busy, try again" banner — caps the infinite `getCode` loop as a safety net. Also removed a verbose per-render console log.
+
+**Why safe to ship with T1.5:** T1.5 is dormant dual-mode read plumbing (no behavior change); this hotfix only touches Alchemy transport config + the auth component. Independent change sets. `npm run build` green.
+
+**Files:** `src/lib/alchemy-account-config.ts`, `src/components/AlchemyAuth.tsx`.
+
+---
+
 ## **Phase 1 · T1.5 — candidate read routes migrated to session helper (dual-mode)** (2026-05-29)
 
 > **Status: code complete, pending commit.** Part of the Phase 1 auth migration (Alchemy wallets → Supabase Auth). See `docs/midnight/EXECUTION_CHECKLIST.md` step T1.5.
