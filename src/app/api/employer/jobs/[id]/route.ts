@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
@@ -12,10 +13,10 @@ export async function DELETE(
 ) {
   try {
     const { id: jobId } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!jobId) {
@@ -24,22 +25,11 @@ export async function DELETE(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get employer's user ID
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get employer's company (via membership or legacy)
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -49,7 +39,7 @@ export async function DELETE(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       companyId = legacyCompany?.id || null
@@ -85,7 +75,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to delete job' }, { status: 500 })
     }
 
-    console.log(`[EMPLOYER JOBS DELETE] Deleted job "${job.title}" (${jobId}) by employer ${employer.id}`)
+    console.log(`[EMPLOYER JOBS DELETE] Deleted job "${job.title}" (${jobId}) by employer ${userId}`)
 
     return NextResponse.json({ success: true, message: 'Job posting deleted' })
   } catch (error) {
@@ -104,10 +94,10 @@ export async function PATCH(
 ) {
   try {
     const { id: jobId } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -128,22 +118,11 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get employer's user ID
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get employer's company
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -153,7 +132,7 @@ export async function PATCH(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       companyId = legacyCompany?.id || null

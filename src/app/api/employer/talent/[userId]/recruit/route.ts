@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
@@ -37,15 +38,15 @@ export async function POST(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { userId: candidateUserId } = await params
     const body = await request.json()
 
     const { jobPostingId, talentPool, message } = body
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -67,22 +68,11 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Verify employer and get company
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id, email')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get company membership
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -92,7 +82,7 @@ export async function POST(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       companyId = legacyCompany?.id || null
@@ -337,7 +327,7 @@ export async function POST(
         status: 'submitted',
         share_token: shareToken,
         initiated_by: 'employer',
-        recruited_by_user_id: employer.id,
+        recruited_by_user_id: userId,
         career_card_snapshot: careerCardSnapshot,
         application_data: {
           recruiterMessage: message || null,
@@ -356,7 +346,7 @@ export async function POST(
       )
     }
 
-    console.log(`[RECRUIT] Created application ${application.id} for candidate ${candidateUserId} via employer ${employer.id}`)
+    console.log(`[RECRUIT] Created application ${application.id} for candidate ${candidateUserId} via employer ${userId}`)
 
     // In-app notification so the candidate sees it in their bell
     const companyLabel = company?.company_name || 'A company'

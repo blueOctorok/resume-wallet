@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
@@ -27,7 +28,7 @@ export async function POST(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { userId: candidateUserId } = await params
     const body = await request.json()
 
@@ -39,9 +40,9 @@ export async function POST(
       targetBlockType,
     } = body
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -70,25 +71,11 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Verify employer and get company
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
     // Get company membership
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -98,7 +85,7 @@ export async function POST(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       companyId = legacyCompany?.id || null
@@ -200,7 +187,7 @@ export async function POST(
       .from('candidate_requests')
       .insert({
         company_id: companyId,
-        requested_by_user_id: employer.id,
+        requested_by_user_id: userId,
         candidate_user_id: candidateUserId,
         request_type: requestType,
         document_type: documentType || null,
@@ -355,35 +342,31 @@ export async function PATCH(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { userId: candidateUserId } = await params
     const { requestId } = await request.json()
 
-    if (!walletAddress || !requestId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'walletAddress and requestId are required' },
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    if (!requestId) {
+      return NextResponse.json(
+        { error: 'requestId is required' },
         { status: 400 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Verify employer identity
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get company
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -392,7 +375,7 @@ export async function PATCH(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
       companyId = legacyCompany?.id || null
     }
@@ -434,34 +417,23 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { userId: candidateUserId } = await params
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Verify employer
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get company
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -471,7 +443,7 @@ export async function GET(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       companyId = legacyCompany?.id || null

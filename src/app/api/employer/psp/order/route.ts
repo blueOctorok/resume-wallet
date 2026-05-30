@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { companyCanOrderPsp, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
 import {
@@ -18,9 +19,9 @@ import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/sc
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const employerUserId = await getStormUserIdFromRequest(request)
+    if (!employerUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -85,20 +86,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'Employer not found' }, { status: 404 })
-    }
-
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', employerUserId)
       .eq('is_active', true)
       .single()
 
@@ -107,7 +98,7 @@ export async function POST(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', employerUserId)
         .single()
       companyId = legacyCompany?.id || null
     }
@@ -262,7 +253,7 @@ export async function POST(request: NextRequest) {
       dlState: n.dlState,
       expiresAtIso: expiresAt,
       orderedByCompanyId: companyId,
-      orderedByUserId: employer.id,
+      orderedByUserId: employerUserId,
       orderedByEmployer: true,
       paymentId: payment.id,
       paymentTxHash,

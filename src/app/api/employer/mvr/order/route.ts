@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { companyCanOrderMvr, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
@@ -38,9 +39,9 @@ import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/sc
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -92,22 +93,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Resolve employer wallet → user
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'Employer not found' }, { status: 404 })
-    }
-
     // Get company (supports both company_members and legacy employer_user_id)
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -117,7 +107,7 @@ export async function POST(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
       companyId = legacyCompany?.id || null
     }
@@ -316,7 +306,7 @@ export async function POST(request: NextRequest) {
         order_xml:                  orderXml,
         applicant_portal_url:       applicantPortalUrl,
         ordered_by_company_id:      companyId,
-        ordered_by_user_id:         employer.id,
+        ordered_by_user_id:         userId,
         ordered_by_employer:        true,
         expires_at:                 new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })

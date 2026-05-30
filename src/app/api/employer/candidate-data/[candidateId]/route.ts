@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
@@ -12,12 +13,12 @@ export async function GET(
   { params }: { params: Promise<{ candidateId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { candidateId } = await params
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -35,7 +36,7 @@ export async function GET(
     const { data: employer } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!employer) {
@@ -119,14 +120,14 @@ export async function DELETE(
   { params }: { params: Promise<{ candidateId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { candidateId } = await params
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('itemId')
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -144,7 +145,7 @@ export async function DELETE(
     const { data: employer } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!employer) {

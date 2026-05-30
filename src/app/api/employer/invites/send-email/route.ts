@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendInviteEmail } from '@/lib/send-invite-email'
 import { getBlockDefinition } from '@/lib/block-registry'
@@ -14,29 +15,18 @@ import { createNotification } from '@/lib/create-notification'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Get user's company
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -46,7 +36,7 @@ export async function POST(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       companyId = legacyCompany?.id
     }

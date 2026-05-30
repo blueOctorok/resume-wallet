@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
@@ -6,20 +7,12 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 async function getEmployerCompanyId(
   supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
-  walletAddress: string
+  employerUserId: string
 ): Promise<{ companyId?: string; employerId?: string; error?: string; status?: number }> {
-  const { data: employer } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('wallet_address', walletAddress)
-    .single()
-
-  if (!employer) return { error: 'User not found', status: 404 }
-
   const { data: membership } = await supabase
     .from('company_members')
     .select('company_id')
-    .eq('user_id', employer.id)
+    .eq('user_id', employerUserId)
     .eq('is_active', true)
     .single()
 
@@ -29,7 +22,7 @@ async function getEmployerCompanyId(
     const { data: legacyCompany } = await supabase
       .from('companies')
       .select('id')
-      .eq('employer_user_id', employer.id)
+      .eq('employer_user_id', employerUserId)
       .single()
 
     companyId = legacyCompany?.id || null
@@ -37,7 +30,7 @@ async function getEmployerCompanyId(
 
   if (!companyId) return { error: 'No company found. Set up your company first.', status: 403 }
 
-  return { companyId, employerId: employer.id }
+  return { companyId, employerId: employerUserId }
 }
 
 /**
@@ -46,13 +39,13 @@ async function getEmployerCompanyId(
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const result = await getEmployerCompanyId(supabase, walletAddress)
+    const result = await getEmployerCompanyId(supabase, userId)
 
     if (result.error) {
       // No company = empty jobs list (not an error for GET)
@@ -121,9 +114,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -148,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const result = await getEmployerCompanyId(supabase, walletAddress)
+    const result = await getEmployerCompanyId(supabase, userId)
 
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: result.status })

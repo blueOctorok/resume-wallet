@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 const VALID_DATA_TYPES = [
@@ -28,7 +29,7 @@ type DataType = typeof VALID_DATA_TYPES[number]
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const body = await request.json()
 
     const {
@@ -39,9 +40,9 @@ export async function POST(request: NextRequest) {
       visibleToCandidate = false,
     } = body
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: employer } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!employer) {

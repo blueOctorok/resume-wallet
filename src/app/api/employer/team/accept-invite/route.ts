@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { addOwnerToCompanyWallet } from '@/lib/company-wallet-server'
 
@@ -10,15 +11,12 @@ import { addOwnerToCompanyWallet } from '@/lib/company-wallet-server'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const body = await request.json()
     const { inviteToken, displayName } = body
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!inviteToken) {
@@ -30,30 +28,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get or create user — new invitees may have a wallet from Alchemy but no users row yet
-    let { data: user } = await supabase
+    const { data: user } = await supabase
       .from('users')
-      .select('id, email')
-      .ilike('wallet_address', walletAddress)
-      .maybeSingle()
+      .select('id, email, wallet_address')
+      .eq('id', userId)
+      .single()
 
     if (!user) {
-      // First time on platform via invite link — create their record
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress.toLowerCase(),
-          role: 'employer',
-        })
-        .select('id, email')
-        .single()
-
-      if (createError || !newUser) {
-        console.error('[ACCEPT INVITE] Failed to create user:', createError)
-        return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
-      }
-
-      user = newUser
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Find the pending invite
@@ -117,10 +99,9 @@ export async function POST(request: NextRequest) {
       console.warn('[ACCEPT INVITE] Blocking: existing user tried to accept invite for different email', {
         userId: user.id,
         inviteEmail: invite.invite_email,
-        walletAddress,
       })
       return NextResponse.json(
-        { error: 'You are already registered. This invite was sent to a different person. Please have them sign in with their own wallet.' },
+        { error: 'You are already registered. This invite was sent to a different person. Please sign in with the invited email address.' },
         { status: 403 }
       )
     }
@@ -185,12 +166,12 @@ export async function POST(request: NextRequest) {
       .eq('id', invite.company_id)
       .maybeSingle()
 
-    if (coRow?.wallet_address) {
+    if (coRow?.wallet_address && user.wallet_address) {
       try {
         await addOwnerToCompanyWallet({
           companyId: invite.company_id,
           companyWalletAddress: coRow.wallet_address,
-          newOwnerSmartAccountAddress: walletAddress,
+          newOwnerSmartAccountAddress: user.wallet_address,
         })
       } catch (chainErr) {
         console.error('[ACCEPT INVITE] addOwnerToCompanyWallet failed:', chainErr)

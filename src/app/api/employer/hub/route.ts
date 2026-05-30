@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/employer/hub
  *
  * Role-agnostic employer hub data. Returns universal applicant info only.
  * Role-specific data (CDL, MVR, DOT) is read from block tables when needed in the UI.
- *
- * Headers:
- *   x-wallet-address: User's wallet address
  *
  * Returns:
  *   - company: Employer's company profile
@@ -20,21 +18,17 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, created_at, role, ava_auto_welcome_employer_at')
-      .ilike('wallet_address', walletAddress)
+      .select('id, created_at, role, ava_auto_welcome_employer_at, wallet_address')
+      .eq('id', userId)
       .single()
 
     if (userError || !user) {
@@ -91,7 +85,7 @@ export async function GET(request: NextRequest) {
       const { data: pendingAccess } = await supabase
         .from('employer_access_requests')
         .select('id, company_name, status, created_at, ai_reason')
-        .ilike('wallet_address', walletAddress)
+        .ilike('wallet_address', user.wallet_address)
         .in('status', ['pending', 'flagged'])
         .maybeSingle()
 

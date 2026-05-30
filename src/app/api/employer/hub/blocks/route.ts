@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { getInstallableEmployerBlockDefinitions, getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
@@ -9,13 +10,21 @@ import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+    if (!authUser?.wallet_address) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
     if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
@@ -57,9 +66,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -72,7 +81,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+    if (!authUser?.wallet_address) {
+      return NextResponse.json({ error: 'Only active company members can install blocks' }, { status: 403 })
+    }
+    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
     if (!access?.canManageEmployerBlocks) {
       return NextResponse.json({ error: 'Only active company members can install blocks' }, { status: 403 })
     }

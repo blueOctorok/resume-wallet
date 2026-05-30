@@ -4,6 +4,93 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.7 COMPLETE — all 28 employer routes → session helper (audited)** (2026-05-29)
+
+> Supersedes the three partial T1.7 entries below. `rg "x-wallet-address" src/app/api/employer/` → **zero**. Build green, lint clean, no `src/lib/**` touched. **Pace invariants I-1–I-10 NOT live-verified until Monday** — dual-mode keeps Pace's wallet login working in the meantime.
+
+All employer route handlers now resolve identity via `getStormUserIdFromRequest()`. Three patterns: (1) direct `userId` for membership/company gates; (2) **wallet bridge** — fetch `users.wallet_address` by id, pass to `getEmployerCompanyAccess` / `resolveEmployerCompanyForWallet` (lib unchanged, removed at T1.12); (3) legacy DB-column writes (`company`, `access-request`) keep a `walletAddress` var sourced from the user row. Local helpers `getEmployerCompanyId` (jobs) + `getEmployerContext` (invites) now take `employerUserId`. Auth errors standardized to `401 { error: 'Authentication required' }`.
+
+**Audit fixes:** removed a duplicate `let userId` shadow in `access-request` (Supabase session users already exist, so the inner get-or-create blocks were dropped). Behavior note: `mvr/order` no-company path is now `403` (was `404`).
+
+---
+
+## **Phase 1 · T1.7 (partial) — employer invites + team routes → session helper** (2026-05-29)
+
+> Dual-mode: `getStormUserIdFromRequest`. `getEmployerContext` on invites now takes `employerUserId` (no wallet ilike). Accept-invite POST loads user by session id (removed wallet-based user create). No `src/lib/**` changes.
+
+| Route | Handlers |
+|---|---|
+| `employer/invites` | GET, POST, PATCH, DELETE |
+| `employer/team` | GET, POST |
+| `employer/team/[memberId]` | PATCH, DELETE |
+| `employer/team/accept-invite` | POST |
+
+**9 handlers** across **4 files**.
+
+---
+
+## **Phase 1 · T1.7 (partial) — employer candidate-data, company, access-request → session helper** (2026-05-29)
+
+> Dual-mode: `getStormUserIdFromRequest`. No `src/lib/**` changes.
+
+| Route | Handlers | Notes |
+|---|---|---|
+| `employer/candidate-data` (POST) | 1 | session id → employer company gate |
+| `employer/candidate-data/[candidateId]` | GET, DELETE | same |
+| `employer/company` (POST) | 1 | resolve userId → fetch `users.wallet_address` for downstream DB writes |
+| `employer/company/ensure-wallet` (POST) | 1 | session id → company owner/admin gate |
+| `employer/access-request` | POST, GET | session id → fetch wallet for `employer_access_requests` queries |
+
+**6 handlers migrated** across 5 files.
+
+---
+
+## **Phase 1 · T1.7 (partial) — employer talent search + PSP order routes → session helper** (2026-05-29)
+
+> Dual-mode: `getStormUserIdFromRequest`. No `src/lib/**` changes.
+
+| Route | Pattern |
+|---|---|
+| `employer/psp/order` (POST) | `employerUserId` for company gate + `orderedByUserId` |
+| `employer/talent/search` (GET) | session id → company membership (wallet lookup removed) |
+| `employer/talent/[userId]` (GET) | session id → company gate + `career_card_views` |
+| `employer/talent/[userId]/dot-app` (GET) | session id; role by id for employer-or-self gate |
+
+---
+
+## **Phase 1 · T1.7 — Employer API auth migration (talent + invites send-email)** (2026-05-29)
+
+> Dual-mode: `getStormUserIdFromRequest` replaces `x-wallet-address` wallet lookups. No lib changes.
+
+| Route | Handlers |
+|---|---|
+| `src/app/api/employer/talent/[userId]/recruit/route.ts` | POST |
+| `src/app/api/employer/talent/[userId]/request/route.ts` | POST, PATCH, GET |
+| `src/app/api/employer/invites/send-email/route.ts` | POST |
+
+**5 handlers migrated** across 3 files. Company membership now keyed on session `userId` directly (wallet → users lookup removed).
+
+---
+
+## **Phase 1 · T1.7 (partial) — employer screening + MVR order routes → session helper** (2026-05-29)
+
+> Dual-mode: `getStormUserIdFromRequest` (Supabase session, wallet header fallback). No `src/lib/**` changes.
+
+Migrated 4 Pace-critical employer routes from `x-wallet-address` to session auth:
+
+| Route | Pattern |
+|---|---|
+| `employer/screenings` (GET) | `userId` → fetch `wallet_address` → `resolveEmployerCompanyForWallet` |
+| `employer/screenings/order` (POST) | same wallet bridge → `getEmployerCompanyAccess` |
+| `employer/screenings/reconcile` (POST) | same wallet bridge → `resolveEmployerCompanyForWallet` |
+| `employer/mvr/order` (POST) | `userId` used directly for company membership + `ordered_by_user_id` (replaces ilike wallet lookup) |
+
+401 copy unified to `Authentication required`. Routes that bridge to lib helpers return 403 `No company access` when `wallet_address` is missing (matches hub/blocks pattern).
+
+**Remaining T1.7:** ~24 other employer routes still on wallet header.
+
+---
+
 ## **Phase 1 · T1.11a — Supabase sign-in / sign-up UI** (2026-05-29)
 
 > Build green. Session wiring (premium) unchanged. Alchemy untouched.

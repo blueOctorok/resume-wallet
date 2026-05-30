@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recruiter-pipeline'
@@ -62,20 +63,12 @@ function mapInviteToClient(invite: InviteDbRow, baseUrl: string) {
  */
 async function getEmployerContext(
   supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
-  walletAddress: string
+  employerUserId: string
 ): Promise<{ companyId?: string; userId?: string; companyName?: string; error?: string; status?: number }> {
-  const { data: user } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('wallet_address', walletAddress)
-    .single()
-
-  if (!user) return { error: 'User not found', status: 404 }
-
   const { data: membership } = await supabase
     .from('company_members')
     .select('company_id, role')
-    .eq('user_id', user.id)
+    .eq('user_id', employerUserId)
     .eq('is_active', true)
     .single()
 
@@ -85,7 +78,7 @@ async function getEmployerContext(
     const { data: legacyCompany } = await supabase
       .from('companies')
       .select('id')
-      .eq('employer_user_id', user.id)
+      .eq('employer_user_id', employerUserId)
       .single()
 
     companyId = legacyCompany?.id || null
@@ -100,7 +93,7 @@ async function getEmployerContext(
     .eq('id', companyId)
     .single()
 
-  return { companyId, userId: user.id, companyName: company?.company_name }
+  return { companyId, userId: employerUserId, companyName: company?.company_name }
 }
 
 /**
@@ -120,13 +113,13 @@ function generateToken(): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const ctx = await getEmployerContext(supabase, walletAddress)
+    const ctx = await getEmployerContext(supabase, userId)
 
     if (ctx.error) {
       if (ctx.status === 403) return NextResponse.json({ invites: [] })
@@ -213,13 +206,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const ctx = await getEmployerContext(supabase, walletAddress)
+    const ctx = await getEmployerContext(supabase, userId)
 
     if (ctx.error) {
       return NextResponse.json({ error: ctx.error }, { status: ctx.status })
@@ -346,13 +339,13 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const ctx = await getEmployerContext(supabase, walletAddress)
+    const ctx = await getEmployerContext(supabase, userId)
 
     if (ctx.error) {
       return NextResponse.json({ error: ctx.error }, { status: ctx.status })
@@ -574,13 +567,13 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const ctx = await getEmployerContext(supabase, walletAddress)
+    const ctx = await getEmployerContext(supabase, userId)
 
     if (ctx.error) {
       return NextResponse.json({ error: ctx.error }, { status: ctx.status })

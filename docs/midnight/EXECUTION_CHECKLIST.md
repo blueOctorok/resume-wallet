@@ -514,13 +514,15 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 |                        |                                                     |
 | ---------------------- | --------------------------------------------------- |
-| Status                 | ⬜ Not started                                       |
+| Status                 | ✅ Done · pending-commit · 2026-05-29 · **Pace live verification Monday** |
 | Pre-conditions         | T1.6                                                |
 | Estimated session size | L                                                   |
 | Pace risk              | **HIGH** — every Pace operation flows through these |
 
 
 **Goal:** Migrate all 28 employer routes to the dual-mode session helper. **Strongest model only.** Test each route after migration with Pace's actual flows.
+
+**Completion notes (2026-05-29):** All 28 employer route files migrated to `getStormUserIdFromRequest()`. `rg "x-wallet-address" src/app/api/employer/` → **zero**. Three patterns: (1) direct `userId` for membership/company checks, (2) fetch `users.wallet_address` by id then pass to `getEmployerCompanyAccess` / `resolveEmployerCompanyForWallet` (lib unchanged), (3) company/access-request routes keep `walletAddress` variable populated from user row for legacy DB columns. Local helpers `getEmployerCompanyId` (jobs) and `getEmployerContext` (invites) now accept `employerUserId`. Auth errors standardized to `401 { error: 'Authentication required' }`. Build green. **Pace invariants I-1–I-10 not verified until Monday.**
 
 **Files to change (all 28):**
 

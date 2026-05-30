@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import {
   persistCompanyWalletIfMissing,
@@ -19,7 +20,20 @@ import { evaluateEmployerRequest } from '@/lib/ava-employer-eval'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const walletAddress = authUser?.wallet_address
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
     }
@@ -44,7 +58,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = await getAdminSupabaseClient()
     const fullName = `${firstName.trim()} ${lastName.trim()}`
     const trimmedCompanyName = companyName.trim()
     const emailDomain = email.split('@')[1]?.toLowerCase() ?? null

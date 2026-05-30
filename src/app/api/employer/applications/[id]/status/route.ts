@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendApplicationStatusNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
@@ -24,14 +25,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { id: applicationId } = await params
     const body = await request.json()
     const { status: newStatus } = body
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -51,17 +52,6 @@ export async function PATCH(
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Verify employer
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Fetch the application and its job posting separately to avoid !inner join
     // filtering out rows when a nested FK can't be resolved (e.g. talent pool jobs).
@@ -98,7 +88,7 @@ export async function PATCH(
     const { data: membership } = await supabase
       .from('company_members')
       .select('role')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
@@ -111,7 +101,7 @@ export async function PATCH(
         .from('companies')
         .select('id')
         .eq('id', companyId)
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
 
       hasAccess = !!legacyCompany

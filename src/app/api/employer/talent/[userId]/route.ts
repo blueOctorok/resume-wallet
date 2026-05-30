@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { buildProjectedCareerCard, toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
 import type { MvrData, PspData } from '@/types/career-card'
@@ -14,11 +15,11 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> },
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const employerUserId = await getStormUserIdFromRequest(request)
     const { userId } = await params
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!employerUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!userId) {
@@ -27,20 +28,10 @@ export async function GET(
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
-      .eq('user_id', employer.id)
+      .eq('user_id', employerUserId)
       .eq('is_active', true)
       .single()
 
@@ -50,7 +41,7 @@ export async function GET(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', employerUserId)
         .single()
 
       companyId = legacyCompany?.id || null
@@ -138,7 +129,7 @@ export async function GET(
     try {
       const { error: viewLogError } = await supabase.from('career_card_views').insert({
         candidate_user_id: userId,
-        viewer_user_id: employer.id,
+        viewer_user_id: employerUserId,
         source: 'talent_search',
       })
       if (viewLogError) {

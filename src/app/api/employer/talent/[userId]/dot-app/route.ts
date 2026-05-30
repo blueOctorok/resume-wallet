@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
@@ -13,9 +14,9 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const requesterUserId = await getStormUserIdFromRequest(request)
+    if (!requesterUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -24,8 +25,8 @@ export async function GET(
     // Verify the requester is either an employer OR the driver themselves
     const { data: requester } = await supabase
       .from('users')
-      .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .select('role')
+      .eq('id', requesterUserId)
       .single()
 
     if (!requester) {
@@ -33,7 +34,7 @@ export async function GET(
     }
 
     const isEmployer = requester.role === 'employer'
-    const isSelf = requester.id === userId
+    const isSelf = requesterUserId === userId
 
     if (!isEmployer && !isSelf) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })

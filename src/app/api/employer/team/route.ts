@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { randomUUID } from 'crypto'
 import { sendTeamInviteEmail } from '@/lib/send-team-invite-email'
@@ -17,33 +18,18 @@ const VALID_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruite
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Get user's company membership
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle()
 
@@ -55,7 +41,7 @@ export async function GET(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       
       companyId = legacyCompany?.id
@@ -171,15 +157,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const body = await request.json()
     const { email, role, jobScope, candidateScope } = body
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!email || !role) {
@@ -209,7 +192,7 @@ export async function POST(request: NextRequest) {
     const { data: user } = await supabase
       .from('users')
       .select('id, email')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) {
@@ -220,7 +203,7 @@ export async function POST(request: NextRequest) {
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle()
 
@@ -231,7 +214,7 @@ export async function POST(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       
       companyId = legacyCompany?.id

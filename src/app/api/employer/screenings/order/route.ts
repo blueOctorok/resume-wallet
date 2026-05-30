@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getEmployerCompanyAccess,
   companyCanOrderMvr,
@@ -22,9 +23,9 @@ import { placeScreeningOrder } from '@/lib/place-screening-order'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json() as {
@@ -47,7 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+    if (!authUser?.wallet_address) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
     if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }

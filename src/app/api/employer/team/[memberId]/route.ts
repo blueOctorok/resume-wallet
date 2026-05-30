@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import {
   addOwnerToCompanyWallet,
@@ -22,16 +23,13 @@ export async function PATCH(
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { memberId } = await params
     const body = await request.json()
     const { role, jobScope, candidateScope, isActive, displayName } = body
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!memberId) {
@@ -50,22 +48,11 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get user's company membership
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle()
 
@@ -76,7 +63,7 @@ export async function PATCH(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       
       companyId = legacyCompany?.id
@@ -120,7 +107,7 @@ export async function PATCH(
     }
 
     // Can't demote yourself if you're the only owner (only check when role is explicitly being changed)
-    if (role !== undefined && targetMember.user_id === user.id && targetMember.role === 'owner' && role !== 'owner') {
+    if (role !== undefined && targetMember.user_id === userId && targetMember.role === 'owner' && role !== 'owner') {
       const { count } = await supabase
         .from('company_members')
         .select('id', { count: 'exact' })
@@ -272,14 +259,11 @@ export async function DELETE(
   { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { memberId } = await params
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!memberId) {
@@ -291,22 +275,11 @@ export async function DELETE(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get user's company membership
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .maybeSingle()
 
@@ -317,7 +290,7 @@ export async function DELETE(
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       
       companyId = legacyCompany?.id
@@ -361,7 +334,7 @@ export async function DELETE(
     }
 
     // Can't remove yourself if you're the only owner
-    if (targetMember.user_id === user.id && targetMember.role === 'owner') {
+    if (targetMember.user_id === userId && targetMember.role === 'owner') {
       const { count } = await supabase
         .from('company_members')
         .select('id', { count: 'exact' })

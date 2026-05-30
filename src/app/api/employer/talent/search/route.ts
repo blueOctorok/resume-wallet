@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 
@@ -23,7 +24,7 @@ import { getBlockDefinition } from '@/lib/block-registry'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { searchParams } = new URL(request.url)
     
     // Parse query params
@@ -47,34 +48,20 @@ export async function GET(request: NextRequest) {
     const offsetRaw = parseInt(searchParams.get('offset') || '0', 10)
     const offset = Number.isNaN(offsetRaw) ? 0 : Math.max(0, offsetRaw)
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Verify user is an employer with company access
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, role')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
     // Check company membership (supports multi-user companies)
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_active', true)
       .single()
 
@@ -85,7 +72,7 @@ export async function GET(request: NextRequest) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', userId)
         .single()
       
       companyId = legacyCompany?.id || null

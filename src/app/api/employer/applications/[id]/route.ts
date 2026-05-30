@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
@@ -11,27 +12,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { id: applicationId } = await params
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
     if (!applicationId) {
       return NextResponse.json({ error: 'Application ID is required' }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    const { data: employer } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!employer) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: application } = await supabase
       .from('applications')
@@ -58,7 +49,7 @@ export async function DELETE(
     const { data: membership } = await supabase
       .from('company_members')
       .select('role')
-      .eq('user_id', employer.id)
+      .eq('user_id', userId)
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
@@ -70,7 +61,7 @@ export async function DELETE(
         .from('companies')
         .select('id')
         .eq('id', companyId)
-        .eq('employer_user_id', employer.id)
+        .eq('employer_user_id', userId)
         .single()
       hasAccess = !!legacyCompany
     }

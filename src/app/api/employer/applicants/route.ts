@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 const APPLICATION_PIPELINE_STATUSES = ['submitted', 'contacted', 'archived'] as const
 
@@ -12,7 +13,7 @@ const APPLICATION_PIPELINE_STATUSES = ['submitted', 'contacted', 'archived'] as 
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const { searchParams } = new URL(request.url)
 
     // Query params
@@ -21,25 +22,16 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'applied_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 },
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = { id: userId }
 
     // Check company_members for team-based access
     const { data: membership } = await supabase
@@ -308,13 +300,13 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const body = await request.json()
     const { applicationId, status, reviewerNotes } = body
 
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address is required' },
+        { error: 'Authentication required' },
         { status: 401 },
       )
     }
@@ -328,16 +320,7 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = { id: userId }
 
     // Check company_members for team-based access with appropriate role
     const { data: membership } = await supabase

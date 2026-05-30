@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
 
@@ -12,9 +13,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { id: rowId } = await params
@@ -23,7 +24,15 @@ export async function DELETE(
     }
 
     const supabase = await getAdminSupabaseClient()
-    const access = await getEmployerCompanyAccess(supabase, walletAddress)
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+    if (!authUser?.wallet_address) {
+      return NextResponse.json({ error: 'Only active company members can remove blocks' }, { status: 403 })
+    }
+    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
     if (!access?.canManageEmployerBlocks) {
       return NextResponse.json({ error: 'Only active company members can remove blocks' }, { status: 403 })
     }

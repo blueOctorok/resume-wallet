@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { evaluateEmployerRequest } from '@/lib/ava-employer-eval'
 import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
@@ -15,12 +16,12 @@ import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const body = await request.json()
     const { firstName, lastName, companyName, description, email } = body
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
     if (!firstName?.trim() || !lastName?.trim()) {
       return NextResponse.json({ error: 'First and last name are required' }, { status: 400 })
@@ -38,12 +39,20 @@ export async function POST(request: NextRequest) {
     const fullName = `${firstName.trim()} ${lastName.trim()}`
     const supabase = await getAdminSupabaseClient()
 
-    // ── Conflict checks ─────────────────────────────────────────
-    const { data: existingUser } = await supabase
+    const { data: authUser } = await supabase
       .from('users')
-      .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .select('id, role, wallet_address')
+      .eq('id', userId)
       .maybeSingle()
+
+    const walletAddress = authUser?.wallet_address
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
+
+    const existingUser = authUser
+
+    // ── Conflict checks ─────────────────────────────────────────
 
     if (existingUser?.role === 'employer') {
       return NextResponse.json({ error: 'You already have employer access' }, { status: 409 })
@@ -182,31 +191,10 @@ export async function POST(request: NextRequest) {
         )
 
         if (domainAllowsJoin) {
-          // Get or create user
-          let userId: string
-          if (existingUser) {
-            await supabase
-              .from('users')
-              .update({ role: 'employer', email: email.toLowerCase() })
-              .eq('id', existingUser.id)
-            userId = existingUser.id
-          } else {
-            const { data: newUser, error: createErr } = await supabase
-              .from('users')
-              .insert({
-                wallet_address: walletAddress.toLowerCase(),
-                email: email.toLowerCase(),
-                role: 'employer',
-              })
-              .select('id')
-              .single()
-
-            if (createErr || !newUser) {
-              console.error('[ACCESS REQUEST] Create user error:', createErr)
-              return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
-            }
-            userId = newUser.id
-          }
+          await supabase
+            .from('users')
+            .update({ role: 'employer', email: email.toLowerCase() })
+            .eq('id', userId)
 
           // Upsert user_profiles so hub header shows correct name
           await supabase.from('user_profiles').upsert(
@@ -294,27 +282,7 @@ export async function POST(request: NextRequest) {
     // Otherwise a failed insert (e.g. duplicate name) leaves an orphan employer with no company,
     // and the user hits Company onboarding → POST /api/employer/company → 409 with no admin request.
 
-    let userId: string
-    if (existingUser) {
-      userId = existingUser.id
-      await supabase.from('users').update({ email: email.toLowerCase() }).eq('id', userId)
-    } else {
-      const { data: newUser, error: createUserErr } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress.toLowerCase(),
-          email: email.toLowerCase(),
-          role: null,
-        })
-        .select('id')
-        .single()
-
-      if (createUserErr || !newUser) {
-        console.error('[ACCESS REQUEST] Create user error:', createUserErr)
-        return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
-      }
-      userId = newUser.id
-    }
+    await supabase.from('users').update({ email: email.toLowerCase() }).eq('id', userId)
 
     await supabase.from('user_profiles').upsert(
       {
@@ -386,13 +354,24 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
+
+    const { data: authUser } = await supabase
+      .from('users')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const walletAddress = authUser?.wallet_address
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
 
     const { data: pendingRequest } = await supabase
       .from('employer_access_requests')
