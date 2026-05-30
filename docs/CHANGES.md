@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.12.1-pre — Orphan-prevention fix + FK gate finding** (2026-05-30)
+
+Ran the **T1.12.1 hard-gate** query (`users` with no matching `auth.users`) before attempting the FK re-add. It returned **14 orphans**, so the FK is **NOT** applied — adding it now would fail the migration / lock those users out.
+
+**Root-cause fix (shipped):** `src/lib/user-by-wallet.ts` — `getOrCreateUserByWallet`, when handed an `auth:<uuid>` placeholder wallet, now resolves/creates the row by **`id = <uuid>`** (the `users.id = auth.users.id` convention) via a new `getOrCreateAuthUserById` helper, instead of inserting a fresh-UUID row. The old behavior orphaned migrated users from `auth.users` (observed in prod 2026-05-30: a spurious `candidate` duplicate `cbe37aa1…` minted for Pace owner `s.blaha@pacedrivers.com`). Gated strictly to `auth:` placeholders — real `0x…` wallet-first behavior is unchanged. Protects all 13 callers (`set-role`, resume create/upload, MVR/PSP order+payment, driver-app save, profile-setup, auth-sync) at once. `npm run build` green.
+
+**Pace status:** owner `s.blaha@pacedrivers.com` is correctly aligned (canonical row + auth row + company ownership) — signs in fine Monday. `metro@pacedrivers.com` is **not** the owner (2 orphan rows, no auth row) — pending boss confirmation it's unused.
+
+**Migrations authored (owner-approved cleanup):** `093_cleanup_orphan_users_pre_fk.sql` (transactional delete of all 14 orphans + their child rows across 36 user-referencing columns; asserts 0 orphans before COMMIT) and `094_users_auth_fk_final.sql` (re-adds `users_id_fkey` **VALIDATED** — no `NOT VALID`, so it fails loudly if any orphan remains). **MCP is read-only**, so the boss runs these in the Supabase SQL editor (same as 089): run 093 → re-run the gate (must be 0) → run 094. See `docs/midnight/EXECUTION_CHECKLIST.md` → T1.12.1.
+
+---
+
 ## **Phase 1 · T1.12c — Supabase-only auth cutover (scoped)** (2026-05-30)
 
 Supabase Auth is now the **only** login. This is the point-of-no-return cutover, deliberately **scoped**: the Alchemy SDK + `AlchemyProvider` stay installed/mounted (the company-wallet + payment plumbing is a separate epic — **T1.12d** — tied to the Midnight/Stripe decision). Payments are non-existent today (Pace charges no one; Stripe later), so the now-signerless `MvrPaymentButton`/`PspPaymentButton`/`StormiCreditModal` are knowingly inert and left untouched.

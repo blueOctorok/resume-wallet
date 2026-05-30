@@ -14,8 +14,10 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isAuthOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
 
 const WALLET_ADDRESS_KEY = 'wallet_address' as const
+const AUTH_WALLET_PREFIX = 'auth:' as const
 
 /** Normalize wallet for storage and lookup (lowercase) */
 export function normalizeWalletAddress(wallet: string): string {
@@ -70,6 +72,16 @@ export async function getOrCreateUserByWallet(
 ): Promise<{ user: UserRow; isNew: boolean }> {
   const normalized = normalizeWalletAddress(walletAddress)
 
+  // Supabase-auth placeholder (`auth:<uuid>`): identity is the auth user id, NOT
+  // the wallet string. By the T1.3 convention `users.id = auth.users.id`, so we
+  // must resolve (and, if missing, create) by `id` — never mint a fresh-UUID row.
+  // The wallet-first INSERT below would generate a brand-new id, orphaning the
+  // user from auth.users (breaks session-keyed lookups + blocks the T1.12.1 FK).
+  // Seen in prod 2026-05-30: a migrated employer got a spurious duplicate this way.
+  if (isAuthOnlyWalletPlaceholder(normalized)) {
+    return getOrCreateAuthUserById(supabase, normalized.slice(AUTH_WALLET_PREFIX.length), normalized, options)
+  }
+
   // 1. Look up existing (handle duplicates by taking most recent)
   const existing = await getUserByWallet(supabase, walletAddress)
   if (existing) {
@@ -101,4 +113,55 @@ export async function getOrCreateUserByWallet(
   }
 
   return { user: newUser as UserRow, isNew: true }
+}
+
+/**
+ * Resolve-or-create a user by Supabase auth id (for `auth:<uuid>` placeholders).
+ * Mirrors ensureUserRow: the row's `id` is pinned to the auth user id so it always
+ * matches auth.users. Race-safe via upsert(onConflict: 'id', ignoreDuplicates).
+ */
+async function getOrCreateAuthUserById(
+  supabase: SupabaseClient,
+  authUserId: string,
+  placeholderWallet: string,
+  options?: { role?: string | null }
+): Promise<{ user: UserRow; isNew: boolean }> {
+  const { data: existing, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', authUserId)
+    .maybeSingle()
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch user by auth id: ${fetchError.message}`)
+  }
+  if (existing) {
+    return { user: existing as UserRow, isNew: false }
+  }
+
+  const { error: upsertError } = await supabase.from('users').upsert(
+    {
+      id: authUserId,
+      wallet_address: placeholderWallet,
+      is_active: true,
+      ...(options?.role !== undefined && { role: options.role }),
+    },
+    { onConflict: 'id', ignoreDuplicates: true }
+  )
+
+  if (upsertError) {
+    throw new Error(`Failed to create auth user: ${upsertError.message}`)
+  }
+
+  const { data: row, error: selectError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', authUserId)
+    .single()
+
+  if (selectError || !row) {
+    throw new Error(`Auth user row missing after upsert: ${selectError?.message ?? 'no data'}`)
+  }
+
+  return { user: row as UserRow, isNew: true }
 }
