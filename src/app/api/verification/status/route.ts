@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { 
   VerificationRequestRow, 
   VerificationAttemptRow,
@@ -21,13 +22,10 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    console.log('[VERIFICATION STATUS] Received request with wallet:', walletAddress)
-    
-    if (!walletAddress) {
-      console.log('[VERIFICATION STATUS] No wallet address in header')
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -35,28 +33,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const roleParam = searchParams.get('role')
     const requestId = searchParams.get('requestId')
-    console.log('[VERIFICATION STATUS] Role param:', roleParam, 'RequestId:', requestId)
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get the user (using ilike for case-insensitive wallet address matching)
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .select('role')
+      .eq('id', userId)
       .single()
 
-    console.log('[VERIFICATION STATUS] User lookup result:', { user, error: userError?.message })
-
     if (userError || !user) {
-      console.log('[VERIFICATION STATUS] User not found for wallet:', walletAddress)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
-    
-    console.log('[VERIFICATION STATUS] Found user:', user.id, 'Role:', user.role || roleParam)
 
     const role = roleParam || user.role
 
@@ -76,11 +67,11 @@ export async function GET(request: NextRequest) {
 
     // If specific request ID is provided, return that request with attempts (employer view)
     if (requestId) {
-      return getVerificationDetails(supabase, user.id, role, requestId)
+      return getVerificationDetails(supabase, userId, role, requestId)
     }
 
     if (role === 'employer') {
-      return getEmployerVerificationSummary(supabase, user.id, walletAddress)
+      return getEmployerVerificationSummary(supabase, userId)
     }
 
     return NextResponse.json(
@@ -165,7 +156,6 @@ async function getVerificationDetails(
 async function getEmployerVerificationSummary(
   supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
   userId: string,
-  walletAddress: string
 ) {
   // Get employer's company
   // Schema: companies.employer_user_id links to users.id (one company per employer)

@@ -147,6 +147,17 @@ const HomeContent = () => {
     }
   }, [searchParams, referralCode, setReferralCode, router])
 
+  // Preserve the Indeed-style "browse jobs without signing in" hook now that
+  // /sign-in is the default front door: ?guided=1 drops a guest straight into
+  // Guided Mode instead of being redirected to sign-in. Runs before the
+  // session-settle window, so the guest-redirect effect never fires first.
+  useEffect(() => {
+    if (searchParams.get('guided') === '1') {
+      setShowGuidedMode(true)
+      router.replace('/', { scroll: false })
+    }
+  }, [searchParams, router])
+
   // -------------------------------------------------------
   // Sync Alchemy session to Auth store (existing sessions + OAuth redirects)
   //
@@ -286,6 +297,30 @@ const HomeContent = () => {
     }, 1500)
     return () => clearTimeout(timeout)
   }, [user])
+
+  // -------------------------------------------------------
+  // T1.11c — Supabase /sign-in is the front door (dual-door).
+  //
+  // Unauthenticated visitors are redirected to /sign-in UNLESS:
+  //   - they're browsing jobs in Guided Mode (Indeed-style lazy auth), or
+  //   - they explicitly chose the legacy wallet path (`?wallet=1`), which
+  //     renders the Alchemy login in DriverShell. That escape hatch stays
+  //     until the coordinated T1.12 cutover so Pace is never locked out.
+  //
+  // `!isConnected` is the load-bearing guard: a returning user with an
+  // active Alchemy session must NEVER be bounced to /sign-in while it
+  // restores. isConnected flips true before the session-sync effect sets
+  // `user`, so checking it here avoids that race.
+  // -------------------------------------------------------
+  const walletMode = searchParams.get('wallet') === '1'
+  const sessionSettled = !isCheckingSession && !isInitializing
+  const awaitingGuestRedirect = !user && !isConnected && !showGuidedMode && !walletMode
+
+  useEffect(() => {
+    if (sessionSettled && awaitingGuestRedirect) {
+      router.push('/sign-in')
+    }
+  }, [sessionSettled, awaitingGuestRedirect, router])
 
   // -------------------------------------------------------
   // Handlers
@@ -469,6 +504,11 @@ const HomeContent = () => {
             />
           )}
 
+          {/* Guest → /sign-in handoff (T1.11c). Covers both the session-check
+              window and the moment the redirect fires, so guests never see the
+              legacy Alchemy landing flash before reaching the Supabase front door. */}
+          {awaitingGuestRedirect && <LoadingScreen message='Loading…' />}
+
           {/* ── Employer ── */}
           {user && userRole === 'employer' && !isRoleLoading && (
             <ErrorBoundary section='Employer Hub'>
@@ -502,9 +542,11 @@ const HomeContent = () => {
             </ErrorBoundary>
           )}
 
-          {/* ── Driver (or unauthenticated landing) ── */}
+          {/* ── Driver hub, or the legacy Alchemy landing via ?wallet=1 ──
+             Unauthenticated visitors only reach DriverShell through the wallet
+             escape hatch now; everyone else is redirected to /sign-in above. */}
           {(!showGuidedMode || !!user) &&
-            (!user || userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
+            ((!user && walletMode) || userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
             !isRoleLoading && (
               <ErrorBoundary section='Driver Hub'>
                 <DriverShell

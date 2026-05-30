@@ -4,6 +4,58 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.11c — `/sign-in` is the front door (dual-door, Pace-safe)** (2026-05-29)
+
+Unauthenticated visitors now land on the Supabase `/sign-in` page instead of the legacy Alchemy connect UI. Implemented as a **dual door** (user-approved) so existing Alchemy users — including Pace — are not locked out before the coordinated T1.12 cutover.
+
+**`src/app/page.tsx`:**
+- Redirect effect to `/sign-in`, gated on `sessionSettled && !user && !isConnected && !showGuidedMode && !walletMode`. The **`!isConnected` guard** prevents bouncing a returning Alchemy user mid-restore (Pace's critical path). A `<LoadingScreen>` covers the window so the Alchemy landing never flashes.
+- Unauth `DriverShell` now renders only via the `?wallet=1` escape hatch.
+- `?guided=1` handler preserves the guest "browse jobs" Guided Mode hook.
+
+**`src/app/sign-in/page.tsx`:**
+- Self-correcting session guard: if already authenticated, `router.replace('/')`.
+- Two escape-hatch links: "Returning Storm user? Use the previous sign-in" (`/?wallet=1`) and "Just browsing? Explore jobs first" (`/?guided=1`).
+
+**Deferred to T1.12:** middleware `/api/*` re-include (runs `updateSession` on Pace-critical Accio/Stripe webhooks — coordinate at cutover). Build green, lint clean.
+
+---
+
+## **Phase 1 · T1.8 closeout — 3 missed verification routes migrated; admin carved out** (2026-05-29)
+
+A full `rg "x-wallet-address" src/app/api/` audit (to confirm T1.8 was actually complete) found **3 live employer-facing routes that both T1.7 and T1.8 missed** — they live under `src/app/api/verification/**`, outside the `employer/**` prefix T1.7 scanned:
+
+| Route | Handlers | Change |
+|---|---|---|
+| `verification/status` | GET | `getStormUserIdFromRequest()`; reads `role` by id; dropped unused `walletAddress` param from `getEmployerVerificationSummary` |
+| `verification/initiate` | POST | `getStormUserIdFromRequest()`; company lookup by `employer_user_id = userId` (dropped `ilike` user lookup) |
+| `verification/attempt` | POST + PATCH | same pattern, both handlers |
+
+These power `EmployerVerificationSection`/`DriverVerificationSection` (the employer→previous-employer employment-verification flow), so Phase 1 says migrate, not remove. Lint clean.
+
+**T1.8 reclassified ✅ Done (route scope).** All other remaining `x-wallet-address` matches are intentional (flag reads, create-on-write fallback, stale doc-comments, `storm/history` legacy, `driver/public/[token]` public route). The only holdout is the **5 admin routes** (`isAdmin(walletAddress)` allowlist) → tracked as **T1.8-admin** (distinct auth model, needs an allowlist decision).
+
+---
+
+## **Phase 1 · T1.9 — backfill COMPLETE (wet run executed + verified)** (2026-05-29)
+
+Wet run executed: **151 `auth.users` created, 0 errors.** Post-run verification (via Supabase MCP): `missing = 0` (the checklist hard gate — no migratable user left without an `auth.users` row), `total_auth_users = 151`, all tagged `migrated_from: wallet`, and **151/151 id-aligned** (`auth.users.id == public.users.id`). The 6 collision users (3 dup emails incl. test account `metro@pacedrivers.com`) skipped as designed.
+
+One-shot `scripts/backfill-supabase-auth-users.ts` creates `auth.users` rows for existing `public.users`, preserving `users.id` as `auth.users.id`. Email sourced via `coalesce(users.email, user_profiles.email)`; duplicate emails skipped for manual merge.
+
+| Metric | Count |
+|---|---|
+| total `public.users` | 164 |
+| with effective email | 157 |
+| **would create** (dry-run) | **151** |
+| skipped no-email | 7 |
+| collision emails | 3 (`dallasnash24@gmail.com`, `zaebrown444@gmail.com`, `metro@pacedrivers.com`) |
+| skipped collision users | 6 |
+
+**Run:** `npm run backfill:auth-users -- --dry-run` (default safe). Wet pass: `--execute` only after sign-off.
+
+---
+
 ## **Phase 1 · T1.7 COMPLETE — all 28 employer routes → session helper (audited)** (2026-05-29)
 
 > Supersedes the three partial T1.7 entries below. `rg "x-wallet-address" src/app/api/employer/` → **zero**. Build green, lint clean, no `src/lib/**` touched. **Pace invariants I-1–I-10 NOT live-verified until Monday** — dual-mode keeps Pace's wallet login working in the meantime.

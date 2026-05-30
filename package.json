@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "supabase:test": "node scripts/test-supabase.js",
+    "backfill:auth-users": "npx tsx scripts/backfill-supabase-auth-users.ts",
+    "inspect:collisions": "npx tsx scripts/inspect-auth-collisions.ts",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "test:app": "vitest run",

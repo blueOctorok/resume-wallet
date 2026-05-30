@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { 
   VerificationRequestRow, 
   rowToVerificationRequest 
@@ -12,8 +13,8 @@ import { getDriverEmployment } from '@/lib/block-data'
  * Future employer initiates employment verification for a driver.
  * Creates a verification request and prepares for first contact attempt.
  * 
+ * Auth: Supabase session cookie (falls back to x-wallet-address until T1.12).
  * Required:
- * - x-wallet-address header (employer's wallet)
  * - driverId: UUID of the driver
  * - employmentId: ID from driver's employment_history array
  * 
@@ -23,10 +24,10 @@ import { getDriverEmployment } from '@/lib/block-data'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -43,27 +44,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // 1. Get the requesting user and their company
+    // 1. Get the requesting user's company
     // Schema: companies.employer_user_id links to users.id (one company per employer)
-    const { data: employer, error: employerError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (employerError || !employer) {
-      console.error('Employer not found:', employerError)
-      return NextResponse.json(
-        { error: 'Employer not found' },
-        { status: 404 }
-      )
-    }
-
-    // Get the employer's company
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, company_name, verified')
-      .eq('employer_user_id', employer.id)
+      .eq('employer_user_id', userId)
       .single()
 
     if (companyError || !company) {

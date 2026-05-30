@@ -66,7 +66,7 @@ The Supabase-session→store bridge is already written. **Auto: do not create a 
   **The `id` MUST equal the existing `users.id`** — this is what preserves all their data.
 - `--dry-run` flag: print counts (`would create`, `already exists`, `skipped collisions`, `skipped no-email`) and the collision list. **No writes.**
 
-**Verify:** `npm run backfill:auth-users -- --dry-run` → prints ~157 "would create", lists exactly the 3 collision emails. Do NOT run the wet pass without sign-off.
+**Verify:** `npm run backfill:auth-users -- --dry-run` → prints **151** "would create", **7** skipped no-email, **3** collision emails (**6** users). Do NOT run the wet pass without sign-off (`--execute`).
 
 ---
 

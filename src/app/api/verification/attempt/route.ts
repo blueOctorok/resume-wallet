@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { 
   VerificationAttemptRow,
@@ -12,8 +13,8 @@ import {
  * Record a new verification attempt (contact to previous employer).
  * Called when system sends email/makes phone call.
  * 
+ * Auth: Supabase session cookie (falls back to x-wallet-address until T1.12).
  * Required:
- * - x-wallet-address header (employer's wallet or system)
  * - requestId: UUID of the verification request
  * - method: 'email' | 'phone' | 'portal' | 'fax' | 'mail'
  * 
@@ -24,10 +25,10 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -50,20 +51,6 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Verify the user has access to this request (owns the company that initiated it)
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
 
     // Get the verification request
     const { data: verificationRequest, error: reqError } = await supabase
@@ -92,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: company } = await supabase
       .from('companies')
       .select('id')
-      .eq('employer_user_id', user.id)
+      .eq('employer_user_id', userId)
       .eq('id', verificationRequest.requesting_company_id)
       .single()
 
@@ -204,10 +191,10 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Wallet address required' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -223,20 +210,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Verify user access
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
 
     // Get the verification request
     const { data: verificationRequest } = await supabase
@@ -256,7 +229,7 @@ export async function PATCH(request: NextRequest) {
     const { data: company } = await supabase
       .from('companies')
       .select('id')
-      .eq('employer_user_id', user.id)
+      .eq('employer_user_id', userId)
       .eq('id', verificationRequest.requesting_company_id)
       .single()
 

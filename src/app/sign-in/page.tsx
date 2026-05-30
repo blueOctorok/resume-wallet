@@ -30,6 +30,24 @@ function SignInForm() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false)
   const [isResetLoading, setIsResetLoading] = useState(false)
+  // Self-correcting guard: if an already-authenticated user lands here (e.g. the
+  // page.tsx guest redirect fired during a slow session restore), bounce them
+  // back to the hub instead of showing a sign-in form they don't need.
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    supabase.auth.getUser().then(({ data }) => {
+      if (!active) return
+      if (data.user) router.replace('/')
+      else setCheckingSession(false)
+    })
+    return () => {
+      active = false
+    }
+    // supabase client is stable for the page lifetime; intentionally run once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router])
 
   useEffect(() => {
     const urlError = searchParams.get('error')
@@ -139,6 +157,10 @@ function SignInForm() {
     } finally {
       setIsResetLoading(false)
     }
+  }
+
+  if (checkingSession) {
+    return <LoadingScreen message='Loading…' fullScreen />
   }
 
   return (
@@ -261,6 +283,26 @@ function SignInForm() {
             </Link>
           </p>
         </Card>
+
+        <p className='mt-6 text-center text-sm text-gray-600 dark:text-gray-400'>
+          <Link
+            href='/?guided=1'
+            className='font-medium text-teal-700 hover:text-teal-600 dark:text-teal-300 dark:hover:text-teal-200'
+          >
+            Just browsing? Explore jobs first
+          </Link>
+        </p>
+
+        {/* Escape hatch for existing users still on the previous (Alchemy) login.
+            Removed at the T1.12 cutover once everyone is on Supabase. */}
+        <p className='mt-4 text-center text-xs text-gray-500 dark:text-gray-400'>
+          <Link
+            href='/?wallet=1'
+            className='underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300'
+          >
+            Returning Storm user? Use the previous sign-in
+          </Link>
+        </p>
       </div>
     </div>
   )

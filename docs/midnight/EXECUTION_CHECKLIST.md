@@ -565,12 +565,19 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 |                        |               |
 | ---------------------- | ------------- |
-| Status                 | 🟡 Partial · AI + misc done · admin deferred · 2026-05-29 |
+| Status                 | ✅ Done (route scope) · admin carved to T1.8-admin · 2026-05-29 |
 | Pre-conditions         | T1.7          |
 | Estimated session size | M             |
 | Pace risk              | Low           |
 
-**Progress (2026-05-29):** Done out-of-order ahead of T1.7 (employer held for Pace). Migrated **9 AI routes** + **`applications/status`** to `getStormUserIdFromRequest()` (CASE 1; `STORMI_UNLIMITED_WALLETS` flag header read preserved separately in 5 AI routes; `ai/chat` adds a `role` lookup). Build green, lint clean. **Remaining for full T1.8:** (a) admin routes — **deferred to a dedicated admin-auth step**: they gate on `ADMIN_WALLETS` env allowlist via `isAdmin(walletAddress)`, NOT per-user resolution, so the session-helper swap doesn't apply; migrating needs an admin-email/role allowlist decision (lockout risk). (b) the final `rg "x-wallet-address" src/app/api/` zero-check can't pass until T1.7 (employer) + the admin-auth step land. GitHub routes were already covered in T1.6.
+**Progress (2026-05-29):** Done out-of-order ahead of T1.7 (employer held for Pace). Migrated **9 AI routes** + **`applications/status`** to `getStormUserIdFromRequest()` (CASE 1; `STORMI_UNLIMITED_WALLETS` flag header read preserved separately in 5 AI routes; `ai/chat` adds a `role` lookup). GitHub routes were already covered in T1.6.
+
+**Closeout audit (2026-05-29):** Full `rg "x-wallet-address" src/app/api/` sweep found **3 live employer-facing routes that BOTH T1.7 and T1.8 missed** because they live under `src/app/api/verification/**` (not `employer/**`): `verification/status` (GET), `verification/initiate` (POST), `verification/attempt` (POST+PATCH) — the employer employment-verification flow (`EmployerVerificationSection`/`DriverVerificationSection` still call them). Migrated all three to `getStormUserIdFromRequest()` (dropped the `ilike('wallet_address', …)` user lookups; `status` now reads `role` by id; removed the now-unused `walletAddress` param from `getEmployerVerificationSummary`). Lint clean.
+
+**Remaining `x-wallet-address` matches are all intentional** (verified by category): 6 = `STORMI_UNLIMITED_WALLETS` flag reads (route auth already migrated), 4 = create-on-write wallet fallback (helper-first), ~8 = stale doc-comments (code uses helper), `storm/history` = legacy STORM (Option-B removal target), `driver/public/[token]` = public share route (wallet is optional employer ID, token-based auth). **The only true holdout = the 5 admin routes** → carved into **T1.8-admin** below.
+
+#### T1.8-admin — Admin route auth (deferred, distinct model) · ⬜ Pending
+The 5 `src/app/api/admin/**` routes (`admin/jobs`, `admin/employer-requests` [+`/[id]`], `admin/companies/[id]/members` [+`/[memberId]`]) gate on the **`ADMIN_WALLETS` env allowlist** via `isAdmin(walletAddress)`, NOT per-user session resolution — so the `getStormUserIdFromRequest` swap is the wrong tool. Needs an **admin-email/role allowlist decision** first (lockout risk if done blind). Track separately from the candidate/employer cutover; the final repo-wide zero-check can't pass until this + T1.12 land.
 
 
 **Goal:** Migrate remaining routes — admin, AI, GitHub, share-token, etc. Lower risk; brief verification.
@@ -588,7 +595,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 |                        |                               |
 | ---------------------- | ----------------------------- |
-| Status                 | ⬜ Not started                 |
+| Status                 | ✅ Done · 2026-05-29 · 151 created, 0 errors, missing=0, 151/151 id-aligned |
 | Pre-conditions         | T1.8                          |
 | Estimated session size | M                             |
 | Pace risk              | Medium (touches user records) |
@@ -596,7 +603,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 **Goal:** One-time script that reads existing `users` rows with `wallet_address IS NOT NULL` and no matching `auth.users.id`, then calls `supabase.auth.admin.createUser({ id: users.id, email: <eff_email>, email_confirm: false })` for each. The crucial trick: pass the existing `users.id` UUID as the new `auth.users.id` so the foreign key from T1.3 lines up automatically. After this script runs, every Storm user has both a `users` row and a matching `auth.users` row, ready for the cutover email in T1.12.
 
-> **⚠️ CORRECTION (2026-05-29 live data audit) — implementation details in [`AUTH_BUILD_SPEC.md`](./AUTH_BUILD_SPEC.md) T1.9.** Email is in **`user_profiles.email`**, NOT `users.email` (only the 5 employers have `users.email`). Source query must `coalesce(users.email, user_profiles.email)`. Audit of 164 users: **157 migratable**, **7 ghosts** (no email/profile → skip, they re-register), **3 duplicate emails** — `dallasnash24@gmail.com`, `zaebrown444@gmail.com`, `metro@pacedrivers.com` (**Pace**) — each is one human with two wallet accounts + split data. Supabase Auth enforces unique email, so the script **skips collisions and logs them for a manual merge** (the Pace pair needs care — pick the row owning the live company/jobs/screenings). No data is at risk: all app data is keyed to `users.id` and untouched.
+> **⚠️ CORRECTION (2026-05-29 live data audit) — implementation details in [`AUTH_BUILD_SPEC.md`](./AUTH_BUILD_SPEC.md) T1.9.** Email is in **`user_profiles.email`**, NOT `users.email` (only the 5 employers have `users.email`). Source query must `coalesce(users.email, user_profiles.email)`. Audit of 164 users: **157 with email**, **151 unique-email (would create)**, **7 ghosts** (no email/profile → skip, they re-register), **3 duplicate emails / 6 users skipped** — `dallasnash24@gmail.com`, `zaebrown444@gmail.com`, `metro@pacedrivers.com` (**Pace**) — each is one human with two wallet accounts + split data. Supabase Auth enforces unique email, so the script **skips collisions and logs them for a manual merge** (the Pace pair needs care — pick the row owning the live company/jobs/screenings). No data is at risk: all app data is keyed to `users.id` and untouched.
 
 **Files to change:**
 
@@ -623,7 +630,7 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 |                        |               |
 | ---------------------- | ------------- |
-| Status                 | ⬜ Not started |
+| Status                 | ✅ Done · pending-commit · 2026-05-29 |
 | Pre-conditions         | T1.9          |
 | Estimated session size | M             |
 | Pace risk              | Medium        |
@@ -631,44 +638,51 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 
 **Goal:** `useAuthStore` currently exposes `walletAddress`. Add a parallel `sessionUserId` populated from Supabase's `supabase.auth.getUser()` (via `@supabase/ssr`'s browser client). Components keep reading `walletAddress` during transition; new code uses `sessionUserId`.
 
-**Files to change:**
+**✅ Shipped as (differs from original plan — implementation simpler + reuses bootstrap):**
 
-- `src/stores/auth-store.ts` — add `sessionUserId: string | null`, hydrate from Supabase session on mount, subscribe to `onAuthStateChange`.
-- `src/app/layout.tsx` (or `AppShell.tsx`) — initialize the auth-state subscription using the browser Supabase client.
+- `src/stores/auth-store.ts` — added `sessionUserId: string | null` + `setSessionUserId` (NOT persisted — hydrated live). Done.
+- `src/hooks/use-supabase-auth-sync.ts` (new) — subscribes to `onAuthStateChange`, sets `sessionUserId`, and bridges Supabase users into the wallet-shaped store via an `auth:<userId>` placeholder address so existing wallet-keyed UI keeps working in dual-mode. Calls `/api/auth/sync` to bootstrap the `public.users` row.
+- `src/app/api/auth/sync/route.ts` (new) — gets the Supabase user from the session cookie, calls `ensureUserRow()` (service-role) to guarantee `public.users.id == auth.users.id`.
+- `src/app/page.tsx` — calls `useSupabaseAuthSync()` (line ~105); `handleLogout` now also calls Supabase `signOut()`.
+- Original plan used a `layout.tsx` subscription; we used a hook in `page.tsx` instead (cleaner — keeps the server-component layout untouched).
 
-**DO NOT TOUCH:** existing `walletAddress` reads in components yet.
+**Verification:** Build green, lint clean. Live verify deferred to T1.11c smoke test (needs the sign-in front door wired).
 
-**Verification:** Sign in via Supabase Auth → store has both `walletAddress` (null if Supabase-only) and `sessionUserId` populated. Sign in via Alchemy → store has `walletAddress` populated; `sessionUserId` is null until T1.12 cutover (acceptable during dual-mode — `getStormUserIdFromRequest` still works because it tries both paths server-side).
-
-**Commit:** `feat(auth): expose sessionUserId in useAuthStore (T1.10)`
+**Commit:** `feat(auth): expose sessionUserId + Supabase session bridge (T1.10)`
 
 ---
 
-### T1.11 — Build sign-in / sign-up UI
+### T1.11 — Build sign-in / sign-up UI (split into a/b/c)
 
 
 |                        |                            |
 | ---------------------- | -------------------------- |
-| Status                 | ⬜ Not started              |
+| Status                 | 🟡 a + b Done · **c pending** (the visible cutover) |
 | Pre-conditions         | T1.10                      |
 | Estimated session size | M                          |
 | Pace risk              | Medium (visible UI change) |
 
 
-**Goal:** Drop the Alchemy SDK sign-in widget. Build sign-in and sign-up pages using Storm's existing UI primitives (`Card`, `Button`, `Input` from `@/components/ui`). Email/password + Google OAuth + magic link options. Wallet-based sign-in is still possible during T1.12 via direct API access, but the UI no longer offers it.
+**Goal:** Drop the Alchemy SDK sign-in widget. Build sign-in and sign-up pages using Storm's existing UI primitives. Wallet-based sign-in still works during T1.12 via dual-mode, but the UI no longer offers it.
 
-**Files to change:**
+> **Why split into a/b/c:** the form markup (a) is high-volume low-risk → Auto. The callback route (b) handles `@supabase/ssr` cookie exchange → security-sensitive, premium. The `page.tsx` gating (c) is the **user-visible flip** that decides whether people see Supabase or Alchemy on boot → premium, done last + behind a smoke test. Splitting keeps the dangerous part isolated.
 
-- `src/app/sign-in/page.tsx` (new — custom form built with `@/components/ui` primitives, calling `supabase.auth.signInWithPassword`, `supabase.auth.signInWithOAuth({ provider: 'google' })`, `supabase.auth.signInWithOtp` for magic links)
-- `src/app/sign-up/page.tsx` (new — same primitives, calling `supabase.auth.signUp`)
-- `src/app/auth/callback/route.ts` (new — server route that exchanges the auth code for a session, calls `ensureUserRow()` from T1.3, redirects to the hub)
-- `src/app/page.tsx` — remove the Alchemy sign-in UI; redirect unauthed users to `/sign-in`
+#### T1.11a — Sign-in / sign-up form UI · Owner: Auto · ✅ Done · 2026-05-29
+- `src/app/sign-in/page.tsx` (new) — email/password + Google OAuth + magic link + "Forgot password?". Built on `@/components/ui` (`Card`, `Button`, `Input`).
+- `src/app/sign-up/page.tsx` (new) — email/password sign-up.
+- `src/components/ui/Input.tsx` (new) — shared input primitive (label + error + dark mode).
 
-**DO NOT TOUCH:** `AlchemyProvider`, the Alchemy SDK in `package.json` (those go in T1.12).
+#### T1.11b — Auth callback route · Owner: PREMIUM · ✅ Done · 2026-05-29
+- `src/app/auth/callback/route.ts` (new) — `exchangeCodeForSession(code)` via the server `@supabase/ssr` client, sets cookies, redirects to `next` or `/`; errors redirect to `/sign-in?error=...`. (User-row bootstrap happens in `/api/auth/sync` from T1.10, not here.)
 
-**Optional:** `@supabase/auth-ui-react` provides drop-in components if custom forms feel like overkill. Recommend custom: it gives Storm full control of branding and form layout, and the components are small (~150 lines each).
+#### T1.11c — `page.tsx` gating (dual-door) · Owner: PREMIUM · 🟡 Done (redirect) · middleware deferred to T1.12 · 2026-05-29
+**Shipped — `/sign-in` is now the default front door.** DEC: **dual door** (user-approved) so Pace is never locked out before the coordinated T1.12 cutover.
+- `src/app/page.tsx` — unauthenticated visitors are redirected to `/sign-in` via a `router.push` effect, **gated on `sessionSettled && !user && !isConnected && !showGuidedMode && !walletMode`**. The **`!isConnected` guard is load-bearing**: a returning Alchemy user (Pace) is never bounced while their session restores (isConnected flips true before the session-sync effect sets `user`). A `<LoadingScreen>` covers the settle+redirect window so the legacy Alchemy landing never flashes. The unauth `DriverShell` branch now renders **only** in wallet mode.
+- **Escape hatches preserved:** `?wallet=1` → legacy Alchemy login in DriverShell (the "Returning Storm user? Use the previous sign-in" link on `/sign-in`); `?guided=1` → Guided Mode job browsing (the "Just browsing?" link) so the Indeed-style guest hook still works.
+- `src/app/sign-in/page.tsx` — added a **self-correcting session guard** (`supabase.auth.getUser()` on mount → `router.replace('/')` if already authed) so a returning user bounced here during a slow restore lands back on the hub; plus the two escape-hatch links.
+- **Middleware `/api/*` re-include DEFERRED to T1.12.** Re-including it runs `updateSession` on every Accio/Stripe webhook (Pace-critical mutating paths) — out of bounds for a dual-door testing change. Session *reads* work without it (cookie set by `/auth/callback`, read by `getStormUserIdFromRequest`); only proactive token refresh needs it, which belongs with the coordinated cutover.
 
-**Verification:** New users can sign up and reach the candidate hub. Pre-existing Pace users (after T1.9 backfill) can sign in by clicking "Forgot password?" and setting a fresh one — their `users.id` and all their data carry over because of T1.3 + T1.9.
+**Verification (after c):** New users sign up → candidate hub. Existing users sign in via "Forgot password?" → same `users.id`, all data carries over (T1.3 + T1.9). Smoke test: Supabase sign-in populates `sessionUserId` in the store; Alchemy sign-in still works (dual-mode).
 
 **Commit:** `feat(auth): sign-in / sign-up UI on Supabase Auth (T1.11)`
 
