@@ -11,7 +11,7 @@ import { requireAdmin } from '@/lib/admin-auth'
  *   - employer-initiated orders (CRA-isolated, scoped by ordered_by_company_id)
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)

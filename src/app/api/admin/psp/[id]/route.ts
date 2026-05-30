@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -140,7 +140,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -166,7 +166,7 @@ export async function DELETE(
     }
 
     console.log(
-      `[ADMIN] PSP order deleted: ${id} (state: ${row.dl_state}, accio: ${row.accio_order_number}) by admin: ${auth.walletAddress}`,
+      `[ADMIN] PSP order deleted: ${id} (state: ${row.dl_state}, accio: ${row.accio_order_number}) by admin: ${auth.email}`,
     )
 
     return NextResponse.json({

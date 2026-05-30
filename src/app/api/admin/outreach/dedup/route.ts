@@ -15,7 +15,7 @@ import { requireAdmin } from '@/lib/admin-auth'
  *   ?dry=true — returns what would be cancelled without changing anything
  */
 export async function POST(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)

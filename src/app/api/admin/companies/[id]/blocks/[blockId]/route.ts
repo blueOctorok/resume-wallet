@@ -3,18 +3,6 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
 
-async function resolveActorUserId(
-  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
-  walletAddress: string,
-): Promise<string | null> {
-  const { data } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('wallet_address', walletAddress)
-    .maybeSingle()
-  return data?.id ?? null
-}
-
 /**
  * DELETE /api/admin/companies/[id]/blocks/[blockId]
  * blockId = employer_hub_blocks.id (UUID). Reason required for audit trail.
@@ -23,7 +11,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; blockId: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -64,15 +52,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to remove block' }, { status: 500 })
     }
 
-    const actorUserId = auth.walletAddress
-      ? await resolveActorUserId(supabase, auth.walletAddress)
-      : null
-
     await logEmployerBlockAudit(supabase, {
       companyId,
       blockType: row.block_type,
       action: 'removed',
-      actorUserId,
+      actorUserId: auth.userId,
       actorKind: 'storm_admin',
       reason,
     })

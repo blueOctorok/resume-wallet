@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.8-admin — Email-gated central admin (replaces `ADMIN_WALLETS`)** (2026-05-30)
+
+Central admin was still gated by wallet (`ADMIN_WALLETS` + `x-wallet-address` header). Post-cutover that's backwards: identity is now the Supabase session, and **brand-new email signups get an `auth:<uuid>` placeholder that can never be in a wallet allowlist** — so no new admin could ever be added, and the existing two only worked because their migrated DB wallet happened to be on the list. The third listed wallet (metro) was already dead after the orphan cleanup in migration 093.
+
+**Root cause:** admin authorization keyed on a wallet string instead of the authenticated email.
+
+**Fix — admin now resolves identity from the session cookie and checks an email allowlist:**
+
+| File | Change |
+|---|---|
+| `src/lib/admin-auth.ts` | Rewritten. `requireAdmin` is now **async**, reads the Supabase session (`createServerSupabase().auth.getUser()`), and gates on `isAdminEmail(email)` against `ADMIN_EMAILS`. Returns `{ authorized, userId, email, error }`. Dropped `isAdminWallet` / `getAdminWallets` / all `ADMIN_WALLETS` logic. |
+| `.env.local` | `ADMIN_WALLETS` → `ADMIN_EMAILS=blahasam@gmail.com,jaypat1224@gmail.com`. **Set `ADMIN_EMAILS` in Vercel/prod env too.** |
+| 33 admin routes | `const auth = requireAdmin(request)` → `await requireAdmin(request)`; audit/log `auth.walletAddress` → `auth.email`. |
+| `companies/[id]/blocks/route.ts` + `[blockId]/route.ts` | Dropped the wallet→id `resolveActorUserId` lookup; the audit `actorUserId` is now `auth.userId` directly (session id = `users.id`). |
+| `employer-requests/[id]/route.ts` | `reviewed_by` / `approved_by` now use `auth.userId` instead of a wallet lookup. |
+| 5 inline routes (`employer-requests`, `employer-requests/[id]`, `jobs`, `companies/[id]/members`, `companies/[id]/members/[memberId]`) | Removed their own local `ADMIN_WALLETS` const + `isAdmin(wallet)` helper; now use `await requireAdmin(request)`. |
+| `users/route.ts`, `users/[id]/route.ts` | The per-row admin badge / delete-warning use `isAdminEmail(email)` instead of `isAdminWallet(wallet)`. |
+| `src/components/admin/AdminDashboardShell.tsx` | Shows the admin's **email** (not a raw `auth:<uuid>`) in the sidebar + access-denied screen; updated copy and stale comment. The vestigial `x-wallet-address` header sends remain (now ignored server-side) — stripping them is the T1.12b-style cleanup. |
+
+**Why `requireAdmin` keeps an ignored `_request` arg:** so the ~33 callers only needed `await` added — no signature edits, smaller diff.
+
+**Not done (follow-up):** strip the 41 now-ignored `x-wallet-address` sends across the 18 admin UI files (functional no-op; server uses the session cookie).
+
+---
+
 ## **Positioning · Celebrate the chain (narrative), keep gating interaction** (2026-05-30)
 
 Docs-only positioning change — **no code touched.** The old language rules suppressed *all* customer-facing mention of "blockchain / on-chain / Midnight" until Phase 3. That conflated three separate things; we now split them:

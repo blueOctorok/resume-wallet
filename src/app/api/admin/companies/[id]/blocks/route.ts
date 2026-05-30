@@ -4,18 +4,6 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { getInstallableEmployerBlockDefinitions, getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
 
-async function resolveActorUserId(
-  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
-  walletAddress: string,
-): Promise<string | null> {
-  const { data } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('wallet_address', walletAddress)
-    .maybeSingle()
-  return data?.id ?? null
-}
-
 /**
  * GET /api/admin/companies/[id]/blocks — installed blocks + recent audit (Storm admin)
  */
@@ -23,7 +11,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -92,7 +80,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -148,15 +136,11 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to install block' }, { status: 500 })
     }
 
-    const actorUserId = auth.walletAddress
-      ? await resolveActorUserId(supabase, auth.walletAddress)
-      : null
-
     await logEmployerBlockAudit(supabase, {
       companyId,
       blockType,
       action: 'installed',
-      actorUserId,
+      actorUserId: auth.userId,
       actorKind: 'storm_admin',
       reason,
     })

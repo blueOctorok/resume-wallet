@@ -51,7 +51,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (auth.error) return auth.error
 
   const { orderId } = await params
@@ -104,7 +104,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (auth.error) return auth.error
 
   const { orderId } = await params

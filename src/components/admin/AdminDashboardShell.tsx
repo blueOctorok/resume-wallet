@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useWalletAddress } from '@/stores/auth-store'
+import { useWalletAddress, useAuthStore } from '@/stores/auth-store'
 import {
   Users,
   FileText,
@@ -51,12 +51,15 @@ function AdminDashboardContent() {
   /** Admin tabs/modals only branch on dark vs not-dark; paper/icy use the light styling path. */
   const adminUiTheme: 'light' | 'dark' = isDarkTheme(theme) ? 'dark' : 'light'
 
-  // Admin identity now comes from the synced Supabase session (auth-store is
-  // persisted, so the boss's DB wallet survives navigating from / to /admin).
-  // The boss's DB wallet is in ADMIN_WALLETS, so requireAdmin still gates every
-  // admin route on the x-wallet-address header. Proper email/role allowlist is
-  // future work (T1.8-admin).
+  // Admin is gated server-side by email (ADMIN_EMAILS) off the Supabase session
+  // cookie — see requireAdmin in @/lib/admin-auth. Same-origin fetches carry that
+  // cookie, so the admin check works for any login (incl. brand-new email signups
+  // that have no real wallet). The `x-wallet-address` header is still sent below
+  // but is now ignored by the server; stripping it is the vestigial-header cleanup.
   const walletAddress = useWalletAddress() ?? undefined
+  // Email is the real admin identity now; show it instead of a raw `auth:<uuid>`.
+  const adminEmail = useAuthStore((s) => s.user?.email)
+  const adminIdentity = adminEmail ?? walletAddress
 
   const [activeTab, setActiveTab] = useState<TabId>('users')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -222,11 +225,11 @@ function AdminDashboardContent() {
             Access Denied
           </h2>
           <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
-            Your wallet is not authorized to access the admin panel.
+            Your account is not authorized to access the admin panel.
           </p>
-          {walletAddress && (
+          {adminIdentity && (
             <p className={`mt-4 text-xs font-mono ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-              {walletAddress}
+              {adminIdentity}
             </p>
           )}
         </div>
@@ -241,7 +244,7 @@ function AdminDashboardContent() {
         <div className='text-center'>
           <Loader2 className='w-8 h-8 animate-spin text-indigo-400 mx-auto mb-4' />
           <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
-            {walletAddress ? 'Checking admin access...' : 'Waiting for wallet connection...'}
+            {walletAddress ? 'Checking admin access...' : 'Waiting for sign-in...'}
           </p>
         </div>
       </div>
@@ -317,7 +320,7 @@ function AdminDashboardContent() {
               Central Admin
             </h1>
             <p className={`text-xs mt-1 font-mono ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-              {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+              {adminIdentity}
             </p>
           </div>
 

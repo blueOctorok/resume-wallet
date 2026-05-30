@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -53,7 +53,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -83,7 +83,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
     }
 
-    console.log(`[ADMIN] Application ${id} status updated to ${status} by admin: ${auth.walletAddress}`)
+    console.log(`[ADMIN] Application ${id} status updated to ${status} by admin: ${auth.email}`)
 
     return NextResponse.json({
       success: true,
@@ -104,7 +104,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -151,7 +151,7 @@ export async function DELETE(
 
     const jobTitle = (application as any).job_postings?.title || 'Unknown Job'
 
-    console.log(`[ADMIN] Application deleted: ${id} (${userName} -> ${jobTitle}) by admin: ${auth.walletAddress}`)
+    console.log(`[ADMIN] Application deleted: ${id} (${userName} -> ${jobTitle}) by admin: ${auth.email}`)
 
     return NextResponse.json({
       success: true,

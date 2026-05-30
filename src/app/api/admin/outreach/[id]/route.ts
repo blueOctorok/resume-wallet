@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -51,7 +51,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -81,7 +81,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update outreach invite' }, { status: 500 })
     }
 
-    console.log(`[ADMIN] Outreach ${id} status updated to ${status} by admin: ${auth.walletAddress}`)
+    console.log(`[ADMIN] Outreach ${id} status updated to ${status} by admin: ${auth.email}`)
 
     return NextResponse.json({
       success: true,
@@ -102,7 +102,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -138,7 +138,7 @@ export async function DELETE(
     const candidateName = invite.candidate_name || invite.candidate_email || 'Unknown'
     const companyName = (invite as any).companies?.company_name || 'Unknown Company'
 
-    console.log(`[ADMIN] Outreach invite deleted: ${id} (to ${candidateName} from ${companyName}) by admin: ${auth.walletAddress}`)
+    console.log(`[ADMIN] Outreach invite deleted: ${id} (to ${candidateName} from ${companyName}) by admin: ${auth.email}`)
 
     return NextResponse.json({
       success: true,

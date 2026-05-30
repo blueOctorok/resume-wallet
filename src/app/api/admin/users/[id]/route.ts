@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { requireAdmin, isAdminWallet } from '@/lib/admin-auth'
+import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
 import {
   getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation,
   getDevGithub, getDevPortfolio, getDevProfile,
@@ -14,7 +14,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -125,7 +125,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -136,7 +136,7 @@ export async function DELETE(
     // Verify user exists
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, wallet_address')
+      .select('id, wallet_address, email')
       .eq('id', id)
       .single()
 
@@ -144,10 +144,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Admin access is env-based (ADMIN_WALLETS), not DB-based — deleting
+    // Admin access is env-based (ADMIN_EMAILS), not DB-based — deleting
     // the user row doesn't affect admin capabilities. Just log it.
-    if (isAdminWallet(user.wallet_address)) {
-      console.warn(`[ADMIN] Deleting admin wallet user: ${user.wallet_address} by: ${auth.walletAddress}`)
+    if (isAdminEmail(user.email)) {
+      console.warn(`[ADMIN] Deleting admin user: ${user.email} by: ${auth.email}`)
     }
 
     // Delete in order (respecting foreign key constraints)
@@ -247,7 +247,7 @@ export async function DELETE(
     }
 
     console.log(
-      `[ADMIN] User deleted: ${user.wallet_address} by admin: ${auth.walletAddress}`
+      `[ADMIN] User deleted: ${user.wallet_address} by admin: ${auth.email}`
     )
 
     return NextResponse.json({

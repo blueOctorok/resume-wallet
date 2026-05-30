@@ -13,7 +13,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ requestId: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { requestId } = await params

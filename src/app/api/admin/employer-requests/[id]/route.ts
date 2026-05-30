@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-
-const ADMIN_WALLETS = (process.env.ADMIN_WALLETS || '').toLowerCase().split(',').map(w => w.trim()).filter(Boolean)
-
-function isAdmin(walletAddress: string | null): boolean {
-  if (!walletAddress) return false
-  return ADMIN_WALLETS.includes(walletAddress.toLowerCase())
-}
+import { requireAdmin } from '@/lib/admin-auth'
 
 /**
  * PATCH /api/admin/employer-requests/[id]
@@ -21,14 +15,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const { id } = await params
     const body = await request.json()
     const { action, rejectionReason } = body
-
-    if (!isAdmin(walletAddress)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
 
     if (!action || !['approve', 'reject'].includes(action)) {
       return NextResponse.json(
@@ -39,12 +31,8 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get the admin user for tracking who reviewed
-    const { data: adminUser } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress!)
-      .maybeSingle()
+    // The reviewer is the authenticated admin (auth.users.id = users.id).
+    const reviewerId = auth.userId
 
     // Get the request
     const { data: accessRequest, error: fetchError } = await supabase
@@ -72,7 +60,7 @@ export async function PATCH(
         .update({
           status: 'rejected',
           rejection_reason: rejectionReason || null,
-          reviewed_by: adminUser?.id || null,
+          reviewed_by: reviewerId,
           reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -187,7 +175,7 @@ export async function PATCH(
           designated_owner_email: accessRequest.email,
           status: 'active',
           approved_at: new Date().toISOString(),
-          approved_by: adminUser?.id || null,
+          approved_by: reviewerId,
           onboarding_completed: false,
         })
         .select('id')
@@ -227,7 +215,7 @@ export async function PATCH(
       .from('employer_access_requests')
       .update({
         status: 'approved',
-        reviewed_by: adminUser?.id || null,
+        reviewed_by: reviewerId,
         reviewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -265,12 +253,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    const { id } = await params
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
 
-    if (!isAdmin(walletAddress)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    const { id } = await params
 
     const supabase = await getAdminSupabaseClient()
 

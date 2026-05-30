@@ -22,7 +22,7 @@ import { saveMvrData } from '@/lib/block-data'
  *   { mvr: { processed, updated, errors }, psp: { processed, updated, errors } }
  */
 export async function POST(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const body = await request.json().catch(() => ({})) as {

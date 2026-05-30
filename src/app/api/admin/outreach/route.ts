@@ -13,7 +13,7 @@ import { requireAdmin } from '@/lib/admin-auth'
  *   offset - Pagination offset
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {

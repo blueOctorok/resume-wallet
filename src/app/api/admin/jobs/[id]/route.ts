@@ -10,7 +10,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -87,7 +87,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to delete job' }, { status: 500 })
     }
 
-    console.log(`[ADMIN JOBS DELETE] Deleted job "${job.title}" (${jobId}) by admin ${auth.walletAddress}`)
+    console.log(`[ADMIN JOBS DELETE] Deleted job "${job.title}" (${jobId}) by admin ${auth.email}`)
 
     return NextResponse.json({ success: true, message: 'Job deleted permanently' })
   } catch (error) {
@@ -104,7 +104,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -131,7 +131,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update job' }, { status: 500 })
     }
 
-    console.log(`[ADMIN JOBS PATCH] Updated job "${job.title}" (${jobId}) by admin ${auth.walletAddress}`)
+    console.log(`[ADMIN JOBS PATCH] Updated job "${job.title}" (${jobId}) by admin ${auth.email}`)
 
     return NextResponse.json({ success: true, job })
   } catch (error) {

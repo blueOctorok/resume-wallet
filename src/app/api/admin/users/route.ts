@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { requireAdmin, isAdminWallet } from '@/lib/admin-auth'
+import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
 
 /**
  * Maps a block_type string (e.g. "driver-mvr") to its category prefix.
@@ -24,7 +24,7 @@ function blockCategory(blockType: string): 'drivers' | 'developers' | 'general' 
  *   offset      - Pagination offset (default 0)
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
         resumeCount: resumeCountMap.get(user.id) || 0,
         dotAppCount: dotAppCountMap.get(user.id) || 0,
         devProjectCount: devProjectCountMap.get(user.id) || 0,
-        isAdmin: isAdminWallet(user.wallet_address),
+        isAdmin: isAdminEmail(displayEmail),
         installedBlocks,
         blockCategories,
       }

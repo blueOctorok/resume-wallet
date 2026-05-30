@@ -50,7 +50,7 @@ import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/sc
  * }
  */
 export async function POST(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
       webhookGuid,
     })
 
-    console.log('[ADMIN MVR] Placing order for:', { firstName: n.firstName, lastName: n.lastName, dlState: n.dlState, orderedBy: auth.walletAddress })
+    console.log('[ADMIN MVR] Placing order for:', { firstName: n.firstName, lastName: n.lastName, dlState: n.dlState, orderedBy: auth.email })
 
     // Send order to Accio
     let accioResponse: string
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
  * List all admin-placed MVR orders
  */
 export async function GET(request: NextRequest) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   try {

@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-
-const ADMIN_WALLETS = (process.env.ADMIN_WALLETS || '').toLowerCase().split(',').map(w => w.trim()).filter(Boolean)
-
-function isAdmin(walletAddress: string | null): boolean {
-  if (!walletAddress) return false
-  return ADMIN_WALLETS.includes(walletAddress.toLowerCase())
-}
+import { requireAdmin } from '@/lib/admin-auth'
 
 /**
  * GET /api/admin/companies/[id]/members
@@ -18,12 +12,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    const { id: companyId } = await params
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
 
-    if (!isAdmin(walletAddress)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+    const { id: companyId } = await params
 
     const supabase = await getAdminSupabaseClient()
 

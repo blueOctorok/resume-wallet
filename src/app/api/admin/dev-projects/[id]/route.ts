@@ -10,7 +10,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -71,7 +71,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdmin(request)
+  const auth = await requireAdmin(request)
   if (!auth.authorized) return auth.error!
 
   const { id } = await params
@@ -108,7 +108,7 @@ export async function DELETE(
     }
 
     console.log(
-      `[ADMIN] Developer project deleted: ${id} (${project.name}) by admin: ${auth.walletAddress}`
+      `[ADMIN] Developer project deleted: ${id} (${project.name}) by admin: ${auth.email}`
     )
 
     return NextResponse.json({
