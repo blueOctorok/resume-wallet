@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/candidate/requests
@@ -9,22 +10,18 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get the candidate user
+    // CASE 3: still need the user's role to gate employers out of this endpoint.
     const { data: user } = await supabase
       .from('users')
       .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) {
@@ -53,7 +50,7 @@ export async function GET(request: NextRequest) {
         created_at,
         company:companies(id, company_name, logo_url, employer_user_id)
       `)
-      .eq('candidate_user_id', user.id)
+      .eq('candidate_user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) {

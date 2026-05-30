@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { buildJobMatchCandidateBrief } from '@/lib/job-match-candidate-brief'
 import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
 
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI service is not configured.' }, { status: 503 })
     }
 
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -45,12 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
-
-    const brief = await buildJobMatchCandidateBrief(supabase, user.id)
+    const brief = await buildJobMatchCandidateBrief(supabase, userId)
 
     const response = await anthropic.messages.create({
       model: ANTHROPIC_MODEL_HAIKU,

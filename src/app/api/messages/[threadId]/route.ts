@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/messages/[threadId]
@@ -21,20 +22,13 @@ export async function GET(
 ) {
   try {
     const { threadId } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     // Verify user is a participant
     const { data: thread } = await supabase
@@ -46,8 +40,8 @@ export async function GET(
     if (!thread) return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
 
     const isParticipant =
-      thread.participant_a_user_id === user.id ||
-      thread.participant_b_user_id === user.id
+      thread.participant_a_user_id === userId ||
+      thread.participant_b_user_id === userId
 
     if (!isParticipant) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -67,7 +61,7 @@ export async function GET(
 
     // Mark unread messages from the other participant as read (fire-and-forget)
     const unreadIds = (msgs || [])
-      .filter(m => m.sender_user_id !== user.id && !m.read_at)
+      .filter(m => m.sender_user_id !== userId && !m.read_at)
       .map(m => m.id)
 
     if (unreadIds.length > 0) {
@@ -80,7 +74,7 @@ export async function GET(
 
     // Get the other participant's display info for context
     const otherId =
-      thread.participant_a_user_id === user.id
+      thread.participant_a_user_id === userId
         ? thread.participant_b_user_id
         : thread.participant_a_user_id
 
@@ -131,7 +125,7 @@ export async function GET(
         body: m.body,
         readAt: m.read_at,
         createdAt: m.created_at,
-        isMine: m.sender_user_id === user.id,
+        isMine: m.sender_user_id === userId,
       })),
     })
   } catch (err) {
@@ -148,9 +142,10 @@ export async function POST(
 ) {
   try {
     const { threadId } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { body: messageBody }: { body: string } = await request.json()
@@ -164,10 +159,11 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
+    // CASE 3: the notification sender name needs the user's role, so we still load the row by id.
     const { data: user } = await supabase
       .from('users')
       .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })

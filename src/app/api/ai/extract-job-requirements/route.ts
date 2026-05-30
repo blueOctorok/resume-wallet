@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
 
 /**
@@ -40,9 +40,9 @@ function heuristicRequirements(title: string, description: string): RequirementR
 
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = (await request.json()) as {
@@ -61,10 +61,6 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
 
     const { data: cached } = await supabase
       .from('external_job_requirements')

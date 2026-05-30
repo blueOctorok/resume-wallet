@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getDevGithub } from '@/lib/block-data'
 
 /**
@@ -55,12 +56,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const shareToken = searchParams.get('token')
-    const wallet = request.headers.get('x-wallet-address')
     const yearParam = searchParams.get('year')
 
-    if (!shareToken && !wallet) {
+    // Public callers pass ?token= (no auth). Self-view resolves the user from
+    // the session/wallet helper instead of reading the header directly.
+    const selfUserId = shareToken ? null : await getStormUserIdFromRequest(request)
+
+    if (!shareToken && !selfUserId) {
       return NextResponse.json(
-        { error: 'Share token or wallet address is required' },
+        { error: 'Share token or authentication is required' },
         { status: 400 }
       )
     }
@@ -78,7 +82,7 @@ export async function GET(request: NextRequest) {
     // Resolve user from share_token (public view) or wallet address (self view)
     const userQuery = shareToken
       ? supabase.from('users').select('id').eq('share_token', shareToken).single()
-      : supabase.from('users').select('id').ilike('wallet_address', wallet!).single()
+      : supabase.from('users').select('id').eq('id', selfUserId!).single()
 
     const { data: user, error: userError } = await userQuery
 

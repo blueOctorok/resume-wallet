@@ -77,36 +77,17 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .maybeSingle()
-
-    if (userError) {
-      if (isSupabaseNetworkError(userError.message)) {
-        return NextResponse.json({ error: 'Database unavailable' }, { status: 503 })
-      }
-      console.error('[NOTIFICATIONS] User lookup error:', userError)
-      return NextResponse.json({ error: 'Failed to resolve user' }, { status: 500 })
-    }
-
-    if (!user) {
-      return NextResponse.json({ ok: true, message: 'No user record yet' })
-    }
-
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('read', false)
 
     if (error) {

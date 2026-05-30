@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmploymentFromResumes } from '@/lib/developer-employment-from-resumes'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function GET(
   req: NextRequest,
@@ -12,26 +12,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const walletAddress = req.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user (case-insensitive)
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Get resume and verify ownership
     const { data: resume, error: resumeError } = await supabase
       .from('resumes')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (resumeError || !resume) {
@@ -54,26 +47,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const walletAddress = req.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user (case-insensitive)
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Verify ownership before deleting
     const { data: resume, error: resumeError } = await supabase
       .from('resumes')
       .select('id, user_id, title, resume_type')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (resumeError || !resume) {
@@ -87,7 +73,7 @@ export async function DELETE(
       .from('resumes')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (deleteError) {
       console.error('❌ Resume API: Error deleting resume', deleteError)
@@ -100,9 +86,9 @@ export async function DELETE(
     // If it was a developer resume, recompute employment_history from remaining resumes
     // so Employment Verification section no longer shows jobs from the deleted resume
     if (wasDeveloperBuilt) {
-      const employmentHistory = await getEmploymentFromResumes(supabase, user.id)
+      const employmentHistory = await getEmploymentFromResumes(supabase, userId)
       const { saveDevProfile } = await import('@/lib/block-data')
-      await saveDevProfile(supabase, user.id, { employment_history: employmentHistory })
+      await saveDevProfile(supabase, userId, { employment_history: employmentHistory })
     }
 
     return NextResponse.json({ success: true, message: 'Resume deleted successfully' })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 
@@ -19,9 +20,9 @@ import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -48,10 +49,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
+    // CASE 3: the screening order needs the user's email, so we still load the row by id.
     const { data: user } = await supabase
       .from('users')
       .select('id, email')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) {

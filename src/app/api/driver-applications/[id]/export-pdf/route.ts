@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { generateDotApplicationPDF } from '@/lib/dot-application-pdf'
 
 /**
@@ -12,23 +12,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { id } = await params
     const { data: app, error } = await supabase
       .from('driver_applications')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (error || !app) {
@@ -43,7 +39,7 @@ export async function GET(
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('first_name, last_name')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     const candidateName =

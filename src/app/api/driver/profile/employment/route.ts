@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getDriverEmployment, saveDriverEmployment } from '@/lib/block-data'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * DELETE /api/driver/profile/employment
@@ -9,9 +10,9 @@ import { getDriverEmployment, saveDriverEmployment } from '@/lib/block-data'
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json().catch(() => ({}))
@@ -25,17 +26,7 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const current = await getDriverEmployment(supabase, user.id)
+    const current = await getDriverEmployment(supabase, userId)
     const updated = current.filter((e) => e.id !== employmentId)
     if (updated.length === current.length) {
       return NextResponse.json(
@@ -45,7 +36,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     try {
-      await saveDriverEmployment(supabase, user.id, updated)
+      await saveDriverEmployment(supabase, userId, updated)
     } catch (err) {
       console.error('[DRIVER PROFILE] Remove employment error:', err)
       return NextResponse.json({ error: 'Failed to remove employment' }, { status: 500 })

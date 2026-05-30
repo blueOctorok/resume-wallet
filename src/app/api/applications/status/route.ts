@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * PATCH /api/applications/status
@@ -14,9 +15,9 @@ type CandidateStatus = (typeof VALID_STATUSES)[number]
 
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { applicationId, candidateStatus } = (await request.json()) as {
@@ -34,21 +35,11 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await createClient()
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const { error: updateError } = await supabase
       .from('applications')
       .update({ candidate_status: candidateStatus })
       .eq('id', applicationId)
-      .eq('applicant_user_id', user.id)
+      .eq('applicant_user_id', userId)
 
     if (updateError) {
       console.error('[APPLICATION STATUS] Update error:', updateError)

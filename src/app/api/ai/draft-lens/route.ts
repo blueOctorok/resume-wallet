@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
 import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
 
@@ -77,9 +77,9 @@ function heuristicDraft(jobTitle: string, installed: string[]): DraftLens {
 
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = (await request.json()) as {
@@ -98,16 +98,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
 
     // Cache hit — never re-call Haiku for the same (user, job, source).
     const cached = await supabase
       .from('career_card_lens_drafts')
       .select('draft_json, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('job_id', jobId)
       .eq('source', source)
       .maybeSingle()
@@ -125,7 +121,7 @@ export async function POST(request: NextRequest) {
     const { data: hubRows } = await supabase
       .from('hub_blocks')
       .select('block_type')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     const installed = (hubRows ?? []).map((r) => r.block_type as string)
     if (installed.length === 0) {
@@ -220,7 +216,7 @@ Installed blocks: ${installedWithLabels}`
 
     const { error: upsertErr } = await supabase.from('career_card_lens_drafts').upsert(
       {
-        user_id: user.id,
+        user_id: userId,
         job_id: jobId,
         source,
         draft_json: draft,

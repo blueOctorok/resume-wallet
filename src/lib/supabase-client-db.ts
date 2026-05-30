@@ -166,41 +166,35 @@ export interface DriverApplicationRecord {
 export async function saveDriverApplicationClient(
   userAddress: string,
   applicationData: DriverApplicationData,
-  currentStep: number
+  currentStep: number,
+  // T1.6: when the caller already resolved the Storm users.id (via the dual-mode
+  // session helper), pass it here to skip the wallet get-or-create entirely.
+  // Legacy callers omit it and keep the wallet-keyed behavior unchanged.
+  resolvedUserId?: string
 ): Promise<DriverApplicationRecord> {
-  console.log('💾 Driver App DB: Saving application for user:', userAddress)
+  console.log('💾 Driver App DB: Saving application for user:', resolvedUserId || userAddress)
   console.log('💾 Driver App DB: Current step:', currentStep)
 
   // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Normalize wallet address to lowercase for consistent lookup
-    const normalizedAddress = userAddress.toLowerCase()
-    
-    console.log('💾 Driver App DB: Looking up user:', {
-      original: userAddress,
-      normalized: normalizedAddress,
-    })
-    
-    // Single place for get-or-create user by wallet (avoids duplicate user rows)
-    const { getOrCreateUserByWallet } = await import('@/lib/user-by-wallet')
-    const { user: userData, isNew } = await getOrCreateUserByWallet(
-      supabase,
-      userAddress
-    )
-
-    console.log('💾 Driver App DB: User lookup result:', {
-      found: true,
-      userId: userData.id,
-      isNew,
-    })
+    let userId: string
+    if (resolvedUserId) {
+      userId = resolvedUserId
+    } else {
+      // Legacy wallet path: single place for get-or-create user by wallet
+      // (avoids duplicate user rows).
+      const { getOrCreateUserByWallet } = await import('@/lib/user-by-wallet')
+      const { user: userData } = await getOrCreateUserByWallet(supabase, userAddress)
+      userId = userData.id
+    }
 
     // Check if an application already exists for this user
     const { data: existingApp, error: fetchError } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
@@ -225,7 +219,7 @@ export async function saveDriverApplicationClient(
           current_step: currentStep,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userData.id)
+        .eq('user_id', userId)
         .select()
         .single()
 
@@ -241,7 +235,7 @@ export async function saveDriverApplicationClient(
       const { data, error } = await supabase
         .from('driver_applications')
         .insert({
-          user_id: userData.id,
+          user_id: userId,
           application_data: applicationData,
           current_step: currentStep,
           is_complete: false,

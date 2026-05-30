@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/developer/share
@@ -7,17 +8,18 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
+    // CASE 3: needs share_token/settings columns, so we keep a lookup (by id).
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, share_token, share_settings, share_token_created_at, share_views_count')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (userError || !user) {
@@ -59,20 +61,22 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const body = await request.json().catch(() => ({}))
     const { regenerate = false } = body
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
-    }
-
     const supabase = await getAdminSupabaseClient()
 
+    // CASE 3: this handler needs share_token (not just the id), so we still
+    // read the row — but keyed by the resolved userId instead of the wallet.
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, share_token')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (userError || !user) {
@@ -126,12 +130,12 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    const body = await request.json()
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    const body = await request.json()
 
     const { shareSettings } = body
     if (!shareSettings || typeof shareSettings !== 'object') {
@@ -140,20 +144,10 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const { error: updateError } = await supabase
       .from('users')
       .update({ share_settings: shareSettings })
-      .eq('id', user.id)
+      .eq('id', userId)
 
     if (updateError) {
       console.error('[DEVELOPER SHARE] Error updating settings:', updateError)

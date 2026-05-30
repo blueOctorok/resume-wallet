@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/candidate/bgcheck-consent/:consentId
@@ -12,25 +13,14 @@ export async function GET(
   { params }: { params: Promise<{ consentId: string }> }
 ) {
   const { consentId } = await params
-  const walletAddress = request.headers.get('x-wallet-address')
 
-  if (!walletAddress) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  const userId = await getStormUserIdFromRequest(request)
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
 
   try {
     const supabase = await getAdminSupabaseClient()
-
-    // Look up the user by wallet address
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Fetch consent: try by id first, then by request_id (in case frontend sent request id)
     const byId = await supabase
@@ -60,7 +50,7 @@ export async function GET(
     }
 
     // Verify the user owns this consent (driver_user_id on consent, or candidate on request)
-    if (consent.driver_user_id !== user.id) {
+    if (consent.driver_user_id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

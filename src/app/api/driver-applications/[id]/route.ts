@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * DELETE /api/driver-applications/[id]
@@ -12,34 +12,21 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[DOT DELETE] Deleting application:', id, 'for wallet:', walletAddress)
+    console.log('[DOT DELETE] Deleting application:', id, 'for user:', userId)
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user_id from wallet address (case-insensitive)
-    const userData = await getUserByWallet(supabase, walletAddress)
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
 
     // Get the application to verify ownership and blockchain status
     const { data: application, error: appError } = await supabase
       .from('driver_applications')
       .select('id, user_id, blockchain_tx_hash')
       .eq('id', id)
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .single()
 
     if (appError || !application) {
@@ -65,7 +52,7 @@ export async function DELETE(
       .from('driver_applications')
       .delete()
       .eq('id', id)
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
 
     if (deleteError) {
       console.error('[DOT DELETE] Failed to delete:', deleteError)

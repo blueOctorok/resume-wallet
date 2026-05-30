@@ -7,7 +7,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { PinataSDK } from 'pinata-web3'
 import { ethers } from 'ethers'
 import { generateStyledResumePDF } from '@/lib/resume-pdf-generator'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { addResumeOnChain } from '@/lib/resume-registry-onchain'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import { generateDeveloperResumePDFBuffer } from '@/lib/developer-resume-pdf'
@@ -71,28 +71,21 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const walletAddress = req.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     console.log('🔐 Verify Resume API: Starting verification for resume:', id)
 
     const supabase = await getAdminSupabaseClient()
 
-    // 1. Verify user owns this resume (case-insensitive lookup)
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // 2. Get the resume with structured data
     const { data: resume, error: resumeError } = await supabase
       .from('resumes')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (resumeError || !resume) {

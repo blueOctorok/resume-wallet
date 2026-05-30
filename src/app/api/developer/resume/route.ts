@@ -62,13 +62,9 @@ async function syncStructuredDataToDevProfile(
 
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -83,22 +79,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user ID
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Create new resume
     const { data: resume, error: createError } = await supabase
       .from('resumes')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         title: title || 'Developer Resume',
         filename: `${structuredData.personalInfo?.firstName || 'Developer'}_${structuredData.personalInfo?.lastName || 'Resume'}.pdf`,
         resume_type: 'developer_built',
@@ -118,7 +103,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await syncStructuredDataToDevProfile(supabase, user.id, structuredData)
+    await syncStructuredDataToDevProfile(supabase, userId, structuredData)
 
     return NextResponse.json({
       success: true,
@@ -136,13 +121,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -157,17 +138,6 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user ID
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Verify ownership
     const { data: existing, error: checkError } = await supabase
       .from('resumes')
@@ -179,7 +149,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 })
     }
 
-    if (existing.user_id !== user.id) {
+    if (existing.user_id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -206,7 +176,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    await syncStructuredDataToDevProfile(supabase, user.id, structuredData)
+    await syncStructuredDataToDevProfile(supabase, userId, structuredData)
 
     return NextResponse.json({
       success: true,

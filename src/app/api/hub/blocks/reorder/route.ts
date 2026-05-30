@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 interface ReorderItem {
   id: string
@@ -18,9 +18,9 @@ interface ReorderItem {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -31,10 +31,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Verify all block IDs belong to this user before updating anything.
     // This prevents a user from reordering another user's blocks via crafted IDs.
@@ -42,7 +38,7 @@ export async function PATCH(request: NextRequest) {
     const { data: ownedBlocks, error: checkError } = await supabase
       .from('hub_blocks')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('id', ids)
 
     if (checkError) {
@@ -62,7 +58,7 @@ export async function PATCH(request: NextRequest) {
         .from('hub_blocks')
         .update({ position })
         .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
     )
 
     const results = await Promise.all(updates)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   VerificationRequestRow,
   rowToVerificationRequest,
@@ -33,12 +34,9 @@ function toDateOnly(value: string | null | undefined): string | null {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -53,17 +51,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const devProfile = await getDevProfile(supabase, user.id)
+    const devProfile = await getDevProfile(supabase, userId)
 
     if (!devProfile) {
       return NextResponse.json(
@@ -108,7 +96,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRequest } = await supabase
       .from('employment_verification_requests')
       .select('id, status')
-      .eq('driver_id', user.id)
+      .eq('driver_id', userId)
       .eq('employment_id', employmentId)
       .eq('initiated_by', 'applicant')
       .eq('applicant_type', 'developer')
@@ -127,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertData = {
-      driver_id: user.id,
+      driver_id: userId,
       employment_id: employmentId,
       requesting_company_id: null,
       initiated_by: 'applicant',

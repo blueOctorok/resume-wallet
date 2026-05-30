@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
   checkResumeParseUsage,
@@ -28,9 +29,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI service is not configured.' }, { status: 503 })
     }
 
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -40,16 +41,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: resume, error: resErr } = await supabase
       .from('resumes')
       .select('id, user_id, ipfs_url, mime_type, title')
       .eq('id', resumeId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (resErr || !resume) {
@@ -63,8 +60,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
-    const usage = await getOrCreateUsage(supabase, user.id)
+    // STORMI_UNLIMITED_WALLETS is a legacy wallet allowlist with no session
+    // equivalent — read the header directly. Removed at the wallet cutover.
+    const walletAddress = request.headers.get('x-wallet-address')
+    const isUnlimited = walletAddress
+      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+      : false
+    const usage = await getOrCreateUsage(supabase, userId)
     const check = checkResumeParseUsage(usage, isUnlimited)
 
     if (!check.allowed) {
@@ -108,9 +110,9 @@ export async function POST(request: NextRequest) {
 
     if (!isUnlimited) {
       if (check.usingCredits) {
-        await consumeCredit(supabase, user.id)
+        await consumeCredit(supabase, userId)
       } else {
-        await incrementResumeParseDaily(supabase, user.id)
+        await incrementResumeParseDaily(supabase, userId)
       }
     }
 

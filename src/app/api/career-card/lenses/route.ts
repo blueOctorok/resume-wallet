@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   FULL_PROFILE_LENS_NAME,
@@ -45,9 +44,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json().catch(() => null)
@@ -84,12 +83,8 @@ export async function POST(request: NextRequest) {
         : null
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
-    const existing = await listLensesForUser(supabase, user.id)
+    const existing = await listLensesForUser(supabase, userId)
     if (existing.length >= HARD_LENS_LIMIT) {
       return NextResponse.json(
         {
@@ -102,7 +97,7 @@ export async function POST(request: NextRequest) {
     const { data: inserted, error } = await supabase
       .from('career_card_lenses')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         name,
         is_default: false,
         visible_block_types: visibleBlockTypes === undefined ? null : visibleBlockTypes,

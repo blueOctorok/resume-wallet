@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   VerificationRequestRow,
   VerificationAttemptRow,
@@ -21,12 +22,9 @@ import { getDriverEmployment } from '@/lib/block-data'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -35,22 +33,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     if (requestId) {
-      return getDriverVerificationDetails(supabase, user.id, requestId)
+      return getDriverVerificationDetails(supabase, userId, requestId)
     }
 
     // Employment history from block table
-    const employmentHistory = await getDriverEmployment(supabase, user.id)
+    const employmentHistory = await getDriverEmployment(supabase, userId)
     const totalEmployments = employmentHistory.length
 
     let query = supabase
@@ -59,7 +47,7 @@ export async function GET(request: NextRequest) {
         *,
         companies:requesting_company_id ( company_name )
       `)
-      .eq('driver_id', user.id)
+      .eq('driver_id', userId)
       .eq('applicant_type', 'driver')
       .order('created_at', { ascending: false })
 

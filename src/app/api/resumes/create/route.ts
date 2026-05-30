@@ -3,15 +3,27 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getOrCreateUserByWallet, getUserByWallet } from '@/lib/user-by-wallet'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(req: NextRequest) {
   try {
     console.log('📝 Resume Builder API: Creating new built resume')
 
-    const walletAddress = req.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Use admin client to bypass RLS (we validate the caller's identity manually)
+    const adminClient = await getAdminSupabaseClient()
+
+    // CASE 2: create-on-write. Session first, then fall back to the legacy
+    // wallet header with getOrCreateUserByWallet so first-time builders still
+    // get a user row created.
+    let userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      const walletAddress = req.headers.get('x-wallet-address')
+      if (!walletAddress) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      }
+      const { user } = await getOrCreateUserByWallet(adminClient, walletAddress)
+      userId = user.id
     }
 
     const body = await req.json()
@@ -24,17 +36,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Use admin client to bypass RLS (we validate wallet address manually)
-    const adminClient = await getAdminSupabaseClient()
-
-    // Get or create user (uses case-insensitive lookup, handles duplicates)
-    const { user } = await getOrCreateUserByWallet(adminClient, walletAddress)
-
     // Create built resume
     const { data: resume, error: resumeError } = await adminClient
       .from('resumes')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         title,
         filename: `${title.replace(/[^a-z0-9]/gi, '_')}.json`, // Placeholder filename
         file_size: JSON.stringify(structuredData).length, // Approximate size
@@ -92,9 +98,9 @@ export async function PUT(req: NextRequest) {
   try {
     console.log('📝 Resume Builder API: Updating built resume')
 
-    const walletAddress = req.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -107,14 +113,8 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    // Use admin client to bypass RLS (we validate wallet address manually)
+    // Use admin client to bypass RLS (we validate the caller's identity manually)
     const adminClient = await getAdminSupabaseClient()
-
-    // Verify user exists (case-insensitive lookup)
-    const user = await getUserByWallet(adminClient, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Verify resume belongs to user
     const { data: existingResume } = await adminClient
@@ -127,7 +127,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 })
     }
 
-    if (existingResume.user_id !== user.id) {
+    if (existingResume.user_id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

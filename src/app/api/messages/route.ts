@@ -153,9 +153,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -183,10 +183,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
+    // CASE 3: the spam-protection branch needs the user's role, so we still load the row by id.
     const { data: user } = await supabase
       .from('users')
       .select('id, role')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .single()
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 
 /**
@@ -9,33 +10,18 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Fetch projects
     const { data: projects, error: projectsError } = await supabase
       .from('developer_projects')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
 
@@ -91,13 +77,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -129,22 +111,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user and profile
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Get next display order
     const { data: existingProjects } = await supabase
       .from('developer_projects')
       .select('display_order')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('display_order', { ascending: false })
       .limit(1)
 
@@ -156,7 +127,7 @@ export async function POST(request: NextRequest) {
     const { data: project, error: createError } = await supabase
       .from('developer_projects')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         developer_profile_id: null,
         title,
         description: description || null,
@@ -207,13 +178,9 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -228,23 +195,12 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Verify ownership
     const { data: existingProject } = await supabase
       .from('developer_projects')
       .select('id')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (!existingProject) {
@@ -289,7 +245,7 @@ export async function PUT(request: NextRequest) {
       .from('developer_projects')
       .update(dbUpdates)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -321,15 +277,12 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
     const url = new URL(request.url)
     const projectId = url.searchParams.get('id')
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!projectId) {
@@ -341,23 +294,12 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Delete project (ownership verified by user_id match)
     const { error: deleteError } = await supabase
       .from('developer_projects')
       .delete()
       .eq('id', projectId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (deleteError) {
       console.error('[PROJECTS DELETE] Error:', deleteError)

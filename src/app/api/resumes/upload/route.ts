@@ -7,31 +7,36 @@ import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadToIPFS } from '@/lib/ipfs'
-import { getOrCreateUserByWallet, getUserByWallet } from '@/lib/user-by-wallet'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(req: NextRequest) {
   try {
     console.log('📝 Resume Upload API: Starting hash-first validation')
 
-    const walletAddress = req.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    console.log('👤 Resume Upload API: Wallet address:', walletAddress)
-
-    // Get or create user (single place — avoids duplicate user rows)
+    // CASE 2: create-on-write. Session first, then fall back to the legacy
+    // wallet header with getOrCreateUserByWallet so first-time uploaders still
+    // get a user row created.
     const supabaseAdmin = await getAdminSupabaseClient()
     let user: { id: string }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabaseAdmin, walletAddress)
-      user = { id: u.id }
-    } catch (err) {
-      console.error('❌ Resume Upload API: Error get/create user:', err)
-      return NextResponse.json(
-        { error: 'Failed to get or create user' },
-        { status: 500 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(req)
+    if (sessionUserId) {
+      user = { id: sessionUserId }
+    } else {
+      const walletAddress = req.headers.get('x-wallet-address')
+      if (!walletAddress) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      }
+      try {
+        const { user: u } = await getOrCreateUserByWallet(supabaseAdmin, walletAddress)
+        user = { id: u.id }
+      } catch (err) {
+        console.error('❌ Resume Upload API: Error get/create user:', err)
+        return NextResponse.json(
+          { error: 'Failed to get or create user' },
+          { status: 500 }
+        )
+      }
     }
 
     const supabase = await createClient()
@@ -263,7 +268,9 @@ export async function POST(req: NextRequest) {
             .replace('.doc', '')
             .replace('.docx', ''),
         filename: file.name,
-        userAddress: walletAddress,
+        // Legacy IPFS/blockchain field (removed in Phase 1). Read straight from
+        // the header for back-compat; null on the session-auth path.
+        userAddress: req.headers.get('x-wallet-address'),
         isPublic: false,
       },
     })
@@ -282,20 +289,12 @@ export async function POST(req: NextRequest) {
 // GET endpoint to check upload eligibility
 export async function GET(req: NextRequest) {
   try {
-    const walletAddress = req.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const supabase = await createClient()
-    
-    // Get user (case-insensitive)
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const eligibility = await checkUploadEligibility(user.id)
+    const eligibility = await checkUploadEligibility(userId)
     return NextResponse.json(eligibility)
   } catch (error) {
     console.error('❌ Resume Upload API: Eligibility check error:', error)

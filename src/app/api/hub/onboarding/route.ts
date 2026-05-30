@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { suggestCategories } from '@/lib/block-registry'
 
 /**
@@ -15,9 +15,9 @@ import { suggestCategories } from '@/lib/block-registry'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -31,17 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Derive suggested categories from free-text answers using the block registry
     // keyword matcher. Stored so the picker can pre-filter without re-running logic.
     const suggested = suggestCategories(occupation.trim(), seekingReason.trim())
 
     const payload: Record<string, unknown> = {
-      user_id: user.id,
+      user_id: userId,
       occupation: occupation.trim(),
       seeking_reason: seekingReason.trim(),
       suggested_categories: suggested,

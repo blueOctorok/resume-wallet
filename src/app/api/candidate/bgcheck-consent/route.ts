@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { createNotification } from '@/lib/create-notification'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
@@ -19,10 +20,9 @@ import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-can
  * }
  */
 export async function POST(request: NextRequest) {
-  const walletAddress = request.headers.get('x-wallet-address')
-
-  if (!walletAddress) {
-    return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+  const userId = await getStormUserIdFromRequest(request)
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
 
   const { requestId, companyName, signedName, formData } = await request.json()
@@ -37,21 +37,11 @@ export async function POST(request: NextRequest) {
   const supabase = await getAdminSupabaseClient()
 
   // Verify the candidate owns this request
-  const { data: user } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('wallet_address', walletAddress)
-    .single()
-
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  }
-
   const { data: candidateRequest } = await supabase
     .from('candidate_requests')
     .select('id, company_id, candidate_user_id, request_type, target_block_type, status')
     .eq('id', requestId)
-    .eq('candidate_user_id', user.id)
+    .eq('candidate_user_id', userId)
     .single()
 
   if (!candidateRequest) {
@@ -85,7 +75,7 @@ export async function POST(request: NextRequest) {
       request_id: requestId,
       company_id: candidateRequest.company_id,
       company_name: companyName,
-      driver_user_id: user.id,
+      driver_user_id: userId,
       signed_name: signedName.trim(),
       form_data: formData || {},
     })
@@ -128,8 +118,8 @@ export async function POST(request: NextRequest) {
       employerUserId: requestingUser.requested_by_user_id as string,
       companyId: candidateRequest.company_id as string,
       companyName: companyName || 'your company',
-      candidateUserId: user.id,
-      notificationData: { requestId, driverUserId: user.id, companyName },
+      candidateUserId: userId,
+      notificationData: { requestId, driverUserId: userId, companyName },
     })
   } else if (requestingUser?.requested_by_user_id && isPspRequest) {
     // PSP path: only in-app nudge — full email goes out when the bundle or order completes
@@ -151,7 +141,7 @@ export async function POST(request: NextRequest) {
 
   // Notify the driver that their consent was recorded
   createNotification({
-    userId: user.id,
+    userId: userId,
     type: 'consent_signed',
     title: 'Background check authorization sent',
     body: `Your signed authorization for ${companyName || 'the employer'} has been submitted successfully.`,

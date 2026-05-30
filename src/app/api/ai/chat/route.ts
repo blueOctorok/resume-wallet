@@ -7,7 +7,7 @@ import {
 } from '@/lib/ava-context'
 import type { HubContext, BlockContext, EmployerHubContext, SimpleModeContext } from '@/lib/ava-context'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
   checkUsage,
@@ -41,7 +41,7 @@ const anthropic = new Anthropic({
  *
  * Stormi's conversational endpoint.
  * Free tier (10/day) uses Sonnet 4.6, paid credits use Haiku 4.5.
- * Requires x-wallet-address header for auth + usage tracking.
+ * Auth + usage tracking resolve the Storm user via getStormUserIdFromRequest.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -54,10 +54,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Auth gate
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing wallet address' },
+        { error: 'Authentication required' },
         { status: 401 }
       )
     }
@@ -133,17 +133,18 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       )
     }
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found. Connect your wallet first.' },
-        { status: 401 }
-      )
-    }
+    // The helper already proves the caller exists; we still need their role to
+    // gate employer chat (auth.users.id === users.id by convention, T1.3).
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+    const userRole = userRow?.role ?? null
 
     const isEmployerChat = audience === 'employer'
     if (isEmployerChat) {
-      if (user.role !== 'employer') {
+      if (userRole !== 'employer') {
         return NextResponse.json(
           { error: 'Employer Stormi chat is only available for employer accounts.' },
           { status: 403 }
@@ -174,12 +175,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Whitelisted wallets skip usage limits entirely (always Sonnet)
-    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    // STORMI_UNLIMITED_WALLETS is a legacy wallet allowlist with no session
+    // equivalent — read the header directly. Removed at the wallet cutover.
+    // Whitelisted wallets skip usage limits entirely (always Sonnet).
+    const walletAddress = request.headers.get('x-wallet-address')
+    const isUnlimited = walletAddress
+      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+      : false
 
     // Auto-welcome idempotency (DB) — no Anthropic call, no usage charge
     if (autoWelcome) {
-      const alreadyDone = await hasCompletedStormiAutoWelcome(supabase, user.id, autoWelcome)
+      const alreadyDone = await hasCompletedStormiAutoWelcome(supabase, userId, autoWelcome)
       if (alreadyDone) {
         if (isUnlimited) {
           return NextResponse.json({
@@ -194,7 +200,7 @@ export async function POST(request: NextRequest) {
             },
           })
         }
-        const usageRow = await getOrCreateUsage(supabase, user.id)
+        const usageRow = await getOrCreateUsage(supabase, userId)
         const dupCheck = checkUsage(usageRow)
         return NextResponse.json({
           success: true,
@@ -213,13 +219,13 @@ export async function POST(request: NextRequest) {
     let usageCheck: ReturnType<typeof checkUsage> | null = null
 
     if (!isUnlimited) {
-      const usage = await getOrCreateUsage(supabase, user.id)
+      const usage = await getOrCreateUsage(supabase, userId)
       usageCheck = checkUsage(usage)
 
       if (!usageCheck.allowed) {
         // Stop auto-welcome from retrying on every refresh while at 0 quota (same as prior localStorage behavior)
         if (autoWelcome) {
-          await markStormiAutoWelcomeComplete(supabase, user.id, autoWelcome)
+          await markStormiAutoWelcomeComplete(supabase, userId, autoWelcome)
         }
         return NextResponse.json(
           {
@@ -277,7 +283,7 @@ export async function POST(request: NextRequest) {
         conversationHistory,
         latestUserMessage: effectiveUserMessage,
         supabase,
-        userId: user.id,
+        userId,
         simpleModeAlternateDefaults: alternateDefaults,
       })
       reply = out.reply
@@ -299,14 +305,14 @@ export async function POST(request: NextRequest) {
     // Record usage AFTER successful response (skip for unlimited)
     if (!isUnlimited && usageCheck) {
       if (usageCheck.usingCredits) {
-        await consumeCredit(supabase, user.id)
+        await consumeCredit(supabase, userId)
       } else {
-        await incrementDailyUsage(supabase, user.id)
+        await incrementDailyUsage(supabase, userId)
       }
     }
 
     if (autoWelcome) {
-      await markStormiAutoWelcomeComplete(supabase, user.id, autoWelcome)
+      await markStormiAutoWelcomeComplete(supabase, userId, autoWelcome)
     }
 
     // Return usage info (unlimited wallets show effectively infinite)
@@ -324,7 +330,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const updatedUsage = await getOrCreateUsage(supabase, user.id)
+    const updatedUsage = await getOrCreateUsage(supabase, userId)
     const updatedCheck = checkUsage(updatedUsage)
 
     return NextResponse.json({

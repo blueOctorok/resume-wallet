@@ -121,28 +121,14 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
 
     const supabase = await getAdminSupabaseClient()
-
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, email')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Write to block tables directly
     const writes: Promise<void>[] = []
@@ -158,18 +144,18 @@ export async function PUT(request: NextRequest) {
     if (body.availableForWork !== undefined) devProfileFields.available_for_work = body.availableForWork
     if (body.certifications !== undefined) devProfileFields.certifications = body.certifications
     if (Object.keys(devProfileFields).length > 0) {
-      writes.push(saveDevProfile(supabase, user.id, devProfileFields))
+      writes.push(saveDevProfile(supabase, userId, devProfileFields))
     }
 
     // GitHub
     if (body.githubUsername !== undefined) {
-      writes.push(saveDevGithub(supabase, user.id, { username: body.githubUsername }))
+      writes.push(saveDevGithub(supabase, userId, { username: body.githubUsername }))
     }
 
     // Portfolio links
     if (body.portfolioUrl !== undefined || body.linkedinUrl !== undefined ||
         body.twitterUrl !== undefined || body.personalWebsite !== undefined) {
-      writes.push(saveDevPortfolio(supabase, user.id, {
+      writes.push(saveDevPortfolio(supabase, userId, {
         portfolio_url: body.portfolioUrl ?? undefined,
         linkedin_url: body.linkedinUrl ?? undefined,
         twitter_url: body.twitterUrl ?? undefined,
@@ -179,12 +165,12 @@ export async function PUT(request: NextRequest) {
 
     // Skills
     if (body.skills !== undefined) {
-      writes.push(saveSkills(supabase, user.id, body.skills))
+      writes.push(saveSkills(supabase, userId, body.skills))
     }
 
     // Education
     if (body.education !== undefined) {
-      writes.push(saveEducation(supabase, user.id, body.education))
+      writes.push(saveEducation(supabase, userId, body.education))
     }
 
     // Identity fields → user_profiles
@@ -198,7 +184,7 @@ export async function PUT(request: NextRequest) {
     if (Object.keys(identityFields).length > 0) {
       writes.push(
         supabase.from('user_profiles')
-          .upsert({ user_id: user.id, ...identityFields }, { onConflict: 'user_id' })
+          .upsert({ user_id: userId, ...identityFields }, { onConflict: 'user_id' })
           .then(({ error }) => {
             if (error) console.warn('[DEV PROFILE PUT] user_profiles upsert error:', error.message)
           })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/driver-applications/[id]/verify
@@ -17,22 +17,23 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[DOT VERIFY] Verifying application:', id, 'for wallet:', walletAddress)
+    console.log('[DOT VERIFY] Verifying application:', id, 'for user:', userId)
 
     // 1. Get application from database
     const supabase = await getAdminSupabaseClient()
 
-    // Get user_id from wallet address (case-insensitive)
-    const userData = await getUserByWallet(supabase, walletAddress)
+    // Need the full row (not just id): the blockchain submit below sends the
+    // user's wallet_address as `userAddress`, so resolve the user record by id.
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
     if (!userData) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -97,7 +98,7 @@ export async function POST(
         body: JSON.stringify({
           applicationHash,
           ipfsHash,
-          userAddress: walletAddress,
+          userAddress: userData.wallet_address,
         }),
       }
     )

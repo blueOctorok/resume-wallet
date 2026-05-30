@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getDevProfile, saveDevProfile } from '@/lib/block-data'
 
 /**
@@ -9,9 +10,9 @@ import { getDevProfile, saveDevProfile } from '@/lib/block-data'
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json().catch(() => ({}))
@@ -25,17 +26,7 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const devProfile = await getDevProfile(supabase, user.id)
+    const devProfile = await getDevProfile(supabase, userId)
 
     if (!devProfile) {
       return NextResponse.json({ error: 'Developer profile not found' }, { status: 404 })
@@ -51,7 +42,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     try {
-      await saveDevProfile(supabase, user.id, { employment_history: updated })
+      await saveDevProfile(supabase, userId, { employment_history: updated })
     } catch (err) {
       console.error('[DEVELOPER PROFILE] Remove employment error:', err)
       return NextResponse.json(

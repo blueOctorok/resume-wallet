@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { profileData, source, force } = await request.json()
@@ -112,15 +112,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: user, error: userError } = await supabase
-      .from('users').select('id').ilike('wallet_address', walletAddress).single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Read existing for conflict detection
-    const existingProfile = await getFullDriverProfile(supabase, user.id)
+    const existingProfile = await getFullDriverProfile(supabase, userId)
 
     // Conflict detection for uploaded resumes
     if (existingProfile && source === 'uploaded_resume' && !force) {
@@ -145,7 +139,7 @@ export async function PUT(request: NextRequest) {
     if (profileData.cdlNumber !== undefined || profileData.cdlState !== undefined ||
         profileData.cdlClass !== undefined || profileData.cdlExpiration !== undefined ||
         profileData.endorsements !== undefined || profileData.restrictions !== undefined) {
-      writes.push(saveCdlData(supabase, user.id, {
+      writes.push(saveCdlData(supabase, userId, {
         cdl_number: (profileData.cdlNumber as string) || null,
         cdl_state: (profileData.cdlState as string)?.slice(0, 2).toUpperCase() || null,
         cdl_class: (profileData.cdlClass as string) || null,
@@ -156,13 +150,13 @@ export async function PUT(request: NextRequest) {
     }
 
     if (profileData.employmentHistory !== undefined) {
-      writes.push(saveDriverEmployment(supabase, user.id, profileData.employmentHistory as UnifiedEmployment[]))
+      writes.push(saveDriverEmployment(supabase, userId, profileData.employmentHistory as UnifiedEmployment[]))
     }
 
     if (profileData.emergencyContactName !== undefined ||
         profileData.emergencyContactRelationship !== undefined ||
         profileData.emergencyContactPhone !== undefined) {
-      writes.push(saveEmergencyContact(supabase, user.id, {
+      writes.push(saveEmergencyContact(supabase, userId, {
         contact_name: (profileData.emergencyContactName as string) || null,
         contact_relationship: (profileData.emergencyContactRelationship as string) || null,
         contact_phone: (profileData.emergencyContactPhone as string) || null,
@@ -170,32 +164,32 @@ export async function PUT(request: NextRequest) {
     }
 
     if (profileData.drivingExperience !== undefined) {
-      writes.push(saveDrivingExperience(supabase, user.id, profileData.drivingExperience as DrivingExperience | null))
+      writes.push(saveDrivingExperience(supabase, userId, profileData.drivingExperience as DrivingExperience | null))
     }
 
     if (profileData.education !== undefined) {
-      writes.push(saveEducation(supabase, user.id, profileData.education as UnifiedEducation[]))
+      writes.push(saveEducation(supabase, userId, profileData.education as UnifiedEducation[]))
     }
 
     if (profileData.skills !== undefined) {
-      writes.push(saveSkills(supabase, user.id, profileData.skills as UnifiedSkill[]))
+      writes.push(saveSkills(supabase, userId, profileData.skills as UnifiedSkill[]))
     }
 
     if (profileData.references !== undefined) {
-      writes.push(saveReferences(supabase, user.id, profileData.references as UnifiedReference[]))
+      writes.push(saveReferences(supabase, userId, profileData.references as UnifiedReference[]))
     }
 
     // If no block data existed, ensure at least one row exists
     if (!existingProfile && writes.length === 0) {
-      writes.push(saveCdlData(supabase, user.id, {}))
+      writes.push(saveCdlData(supabase, userId, {}))
     }
 
     await Promise.all(writes)
 
     // Read back the updated profile
-    const updatedProfile = await getFullDriverProfile(supabase, user.id)
+    const updatedProfile = await getFullDriverProfile(supabase, userId)
 
-    console.log(`[DRIVER PROFILE PUT] Profile updated from ${source || 'manual'} for user:`, user.id)
+    console.log(`[DRIVER PROFILE PUT] Profile updated from ${source || 'manual'} for user:`, userId)
 
     return NextResponse.json({ success: true, profile: updatedProfile })
   } catch (error) {

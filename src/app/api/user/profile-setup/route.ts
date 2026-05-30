@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/user/profile-setup
@@ -9,16 +10,11 @@ import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
  * Called by ProfileSetupModal for ALL roles — user_profiles is the hub's
  * single source of truth for name display and the checkAndShowProfileSetup check.
  *
- * Headers: x-wallet-address
+ * Auth: Supabase session cookie (falls back to x-wallet-address until T1.12).
  * Body: { firstName, lastName, email?, phone?, city?, state? }
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { firstName, lastName, email, phone, city, state, headline } = body
 
@@ -27,7 +23,16 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { user } = await getOrCreateUserByWallet(supabase, walletAddress)
+
+    let userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      const walletAddress = request.headers.get('x-wallet-address')
+      if (!walletAddress) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      }
+      const { user } = await getOrCreateUserByWallet(supabase, walletAddress)
+      userId = user.id
+    }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const { error: upsertError } = await supabase
       .from('user_profiles')
-      .upsert({ user_id: user.id, ...profileData }, { onConflict: 'user_id' })
+      .upsert({ user_id: userId, ...profileData }, { onConflict: 'user_id' })
 
     if (upsertError) {
       console.error('[PROFILE SETUP] Upsert error:', upsertError)

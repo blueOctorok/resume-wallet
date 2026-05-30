@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { encryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { hasCdlisWrittenConsent } from '@/lib/screening-consent-bundle'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
@@ -19,9 +20,9 @@ interface DeferredConsent {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json() as {
@@ -55,16 +56,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: user } = await supabase.from('users').select('id').ilike('wallet_address', walletAddress).single()
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: candidateRequest } = await supabase
       .from('candidate_requests')
       .select('id, company_id, candidate_user_id, request_type, target_block_type, status, requested_by_user_id')
       .eq('id', requestId)
-      .eq('candidate_user_id', user.id)
+      .eq('candidate_user_id', userId)
       .single()
 
     if (!candidateRequest) {
@@ -100,7 +97,7 @@ export async function POST(request: NextRequest) {
         request_id: requestId,
         company_id: candidateRequest.company_id,
         company_name: resolvedCompanyName,
-        driver_user_id: user.id,
+        driver_user_id: userId,
         signed_name: deferredBgConsent.signedName.trim(),
         form_data: deferredBgConsent.formData ?? {},
       })
@@ -118,7 +115,7 @@ export async function POST(request: NextRequest) {
         request_id: requestId,
         company_id: candidateRequest.company_id,
         company_name: resolvedCompanyName,
-        driver_user_id: user.id,
+        driver_user_id: userId,
         signed_name: deferredPspConsent.signedName.trim(),
         form_data: mergedPspForm,
       })
@@ -153,7 +150,7 @@ export async function POST(request: NextRequest) {
     const { data: bundleRow, error: bundleErr } = await supabase
       .from('screening_consent_bundles')
       .insert({
-        driver_user_id: user.id,
+        driver_user_id: userId,
         company_id: candidateRequest.company_id,
         candidate_request_id: requestId,
         bgcheck_consent_id: bgRow.id,
@@ -179,7 +176,7 @@ export async function POST(request: NextRequest) {
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('id', requestId)
 
-    await ensureHubBlocksForPspMvrBundle(supabase, user.id)
+    await ensureHubBlocksForPspMvrBundle(supabase, userId)
 
     // Close out any matching outreach invite. This handles the orphan case
     // (Quantez Johnson 2026-05-28): an outreach invite was sent to the same
@@ -189,7 +186,7 @@ export async function POST(request: NextRequest) {
     void syncOutreachInviteForDriver(
       supabase,
       candidateRequest.company_id as string,
-      user.id,
+      userId,
     ).catch((err) => {
       console.error('[SCREENING CONSENT] outreach sync failed:', err)
     })
@@ -199,7 +196,7 @@ export async function POST(request: NextRequest) {
       employerUserId: candidateRequest.requested_by_user_id as string | null,
       companyId: candidateRequest.company_id as string,
       companyName: resolvedCompanyName,
-      candidateUserId: user.id,
+      candidateUserId: userId,
       notificationData: { requestId, bundleId: bundleRow.id, kind: 'screening_consent_bundle' },
     })
 

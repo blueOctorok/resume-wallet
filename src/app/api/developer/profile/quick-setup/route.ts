@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { saveDevGithub, saveDevProfile } from '@/lib/block-data'
 
 /**
@@ -15,9 +16,9 @@ import { saveDevGithub, saveDevProfile } from '@/lib/block-data'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -29,17 +30,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Resolve wallet → user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
     const cleanGithub = githubUsername?.trim()?.replace(/^@/, '') || null
@@ -47,10 +37,10 @@ export async function POST(request: NextRequest) {
     // Write to block tables
     const writes: Promise<void>[] = []
     if (cleanGithub) {
-      writes.push(saveDevGithub(supabase, user.id, { username: cleanGithub }))
+      writes.push(saveDevGithub(supabase, userId, { username: cleanGithub }))
     }
     // Ensure dev profile row exists
-    writes.push(saveDevProfile(supabase, user.id, {}))
+    writes.push(saveDevProfile(supabase, userId, {}))
 
     try {
       await Promise.all(writes)
@@ -70,7 +60,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('user_profiles')
       .upsert(
-        { user_id: user.id, ...identityData },
+        { user_id: userId, ...identityData },
         { onConflict: 'user_id' }
       )
 

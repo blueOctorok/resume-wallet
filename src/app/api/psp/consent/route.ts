@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { createNotification } from '@/lib/create-notification'
 
 /**
@@ -8,9 +9,9 @@ import { createNotification } from '@/lib/create-notification'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const self = request.nextUrl.searchParams.get('self')
@@ -19,20 +20,11 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: row } = await supabase
       .from('psp_consents')
       .select('id')
-      .eq('driver_user_id', user.id)
+      .eq('driver_user_id', userId)
       .is('request_id', null)
       .is('company_id', null)
       .is('consumed_at', null)
@@ -55,9 +47,9 @@ export async function GET(request: NextRequest) {
  * Stores FMCSA PSP Disclosure & Authorization (standalone). Marks candidate_requests completed when requestId is set.
  */
 export async function POST(request: NextRequest) {
-  const walletAddress = request.headers.get('x-wallet-address')
-  if (!walletAddress) {
-    return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+  const userId = await getStormUserIdFromRequest(request)
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
 
   try {
@@ -74,11 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: user } = await supabase.from('users').select('id').ilike('wallet_address', walletAddress).single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     let insertPayload: {
       request_id: string | null
@@ -94,7 +81,7 @@ export async function POST(request: NextRequest) {
         .from('candidate_requests')
         .select('id, company_id, candidate_user_id, request_type, target_block_type, status')
         .eq('id', requestId)
-        .eq('candidate_user_id', user.id)
+        .eq('candidate_user_id', userId)
         .single()
 
       if (!candidateRequest) {
@@ -120,7 +107,7 @@ export async function POST(request: NextRequest) {
         request_id: requestId,
         company_id: candidateRequest.company_id,
         company_name: (companyName || 'the employer').trim() || 'the employer',
-        driver_user_id: user.id,
+        driver_user_id: userId,
         signed_name: signedName.trim(),
         form_data: formData || {},
       }
@@ -130,7 +117,7 @@ export async function POST(request: NextRequest) {
         request_id: null,
         company_id: null,
         company_name: (companyName || 'Self-Request').trim() || 'Self-Request',
-        driver_user_id: user.id,
+        driver_user_id: userId,
         signed_name: signedName.trim(),
         form_data: formData || {},
       }
@@ -183,12 +170,12 @@ export async function POST(request: NextRequest) {
           type: 'consent_signed',
           title: 'PSP disclosure signed — CDLIS step remaining',
           body: `${driverName} signed the FMCSA PSP Disclosure & Authorization for ${insertPayload.company_name}. The order will be submitted after the CDLIS consent step.`,
-          data: { requestId, driverUserId: user.id, companyName: insertPayload.company_name, kind: 'psp_fmcsa' },
+          data: { requestId, driverUserId: userId, companyName: insertPayload.company_name, kind: 'psp_fmcsa' },
         }).catch(err => console.error('[PSP CONSENT] Employer notification error:', err))
       }
 
       createNotification({
-        userId: user.id,
+        userId: userId,
         type: 'consent_signed',
         title: 'PSP disclosure signed — one step left',
         body: `Your FMCSA PSP Disclosure for ${insertPayload.company_name} was recorded. Complete the CDLIS consent to submit the order.`,

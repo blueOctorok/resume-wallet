@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { saveCdlData } from '@/lib/block-data'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/driver/profile/quick-setup
@@ -15,9 +16,9 @@ import { saveCdlData } from '@/lib/block-data'
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -29,17 +30,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Resolve wallet → user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
     // Write CDL data to block table
@@ -48,7 +38,7 @@ export async function POST(request: NextRequest) {
     if (cdlState?.trim()) cdlData.cdl_state = cdlState.trim()
 
     try {
-      await saveCdlData(supabase, user.id, cdlData)
+      await saveCdlData(supabase, userId, cdlData)
     } catch (err) {
       console.error('[DRIVER QUICK SETUP] CDL block save error:', err)
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
@@ -67,7 +57,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('user_profiles')
       .upsert(
-        { user_id: user.id, ...identityData },
+        { user_id: userId, ...identityData },
         { onConflict: 'user_id' }
       )
 

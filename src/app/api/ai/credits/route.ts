@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
@@ -66,9 +65,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -93,14 +92,9 @@ export async function POST(request: NextRequest) {
       console.error('[Stormi Credits] POST Supabase init failed:', msg)
       return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
     }
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
-
     // Record payment in the payments table for audit trail
     await supabase.from('payments').insert({
-      user_id: user.id,
+      user_id: userId,
       type: 'AVA_CREDITS',
       amount_usdc: parseFloat(packInfo.priceUsdc),
       tx_hash: txHash,
@@ -108,10 +102,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Credit the user
-    await addCredits(supabase, user.id, packInfo.messages)
+    await addCredits(supabase, userId, packInfo.messages)
 
     // Return updated usage
-    const usage = await getOrCreateUsage(supabase, user.id)
+    const usage = await getOrCreateUsage(supabase, userId)
     const usageCheck = checkUsage(usage)
 
     return NextResponse.json({

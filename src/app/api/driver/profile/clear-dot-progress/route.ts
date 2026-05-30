@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmergencyContact, getDrivingExperience, saveEmergencyContact, saveDrivingExperience } from '@/lib/block-data'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 function isNetworkError(msg: string | undefined): boolean {
   const m = (msg ?? '').toLowerCase()
@@ -33,30 +34,12 @@ function isNetworkError(msg: string | undefined): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      if (userError && isNetworkError(userError.message)) {
-        console.warn('[CLEAR DOT PROGRESS] Network error (user lookup):', userError.message)
-        return NextResponse.json({ error: 'Could not reach database' }, { status: 503 })
-      }
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Delete in-progress DOT application rows so they disappear from the hub
     // Only delete apps that are BOTH: not on blockchain AND not complete
@@ -64,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { error: deleteAppsError } = await supabase
       .from('driver_applications')
       .delete()
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_complete', false)
       .is('blockchain_tx_hash', null)
 
@@ -78,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     // Check block tables for DOT-specific data to confirm profile exists
     const [emergency, experience] = await Promise.all([
-      getEmergencyContact(supabase, user.id),
-      getDrivingExperience(supabase, user.id),
+      getEmergencyContact(supabase, userId),
+      getDrivingExperience(supabase, userId),
     ])
 
     if (!emergency && !experience) {
@@ -89,12 +72,12 @@ export async function POST(request: NextRequest) {
     // Clear DOT-specific block data
     try {
       await Promise.all([
-        saveEmergencyContact(supabase, user.id, {
+        saveEmergencyContact(supabase, userId, {
           contact_name: null,
           contact_relationship: null,
           contact_phone: null,
         }),
-        saveDrivingExperience(supabase, user.id, null),
+        saveDrivingExperience(supabase, userId, null),
       ])
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''

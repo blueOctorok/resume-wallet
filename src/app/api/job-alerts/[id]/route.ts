@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   deleteJobAlertPreference,
   getJobAlertPreferenceForUser,
@@ -16,9 +16,9 @@ interface RouteParams {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { id } = await params
@@ -70,17 +70,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user?.id) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
-    const existing = await getJobAlertPreferenceForUser(supabase, user.id, id)
+    const existing = await getJobAlertPreferenceForUser(supabase, userId, id)
     if (!existing) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 })
     }
 
-    const updated = await updateJobAlertPreference(supabase, user.id, id, patch)
+    const updated = await updateJobAlertPreference(supabase, userId, id, patch)
     return NextResponse.json({ preference: updated })
   } catch (e) {
     console.error('[JOB_ALERTS] PATCH:', e)
@@ -93,9 +89,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { id } = await params
@@ -104,17 +100,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user?.id) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
-    const existing = await getJobAlertPreferenceForUser(supabase, user.id, id)
+    const existing = await getJobAlertPreferenceForUser(supabase, userId, id)
     if (!existing) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 })
     }
 
-    await deleteJobAlertPreference(supabase, user.id, id)
+    await deleteJobAlertPreference(supabase, userId, id)
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('[JOB_ALERTS] DELETE:', e)

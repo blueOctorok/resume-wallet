@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { FULL_PROFILE_LENS_NAME, rowToLens } from '@/lib/career-card-lenses'
 
 interface RouteContext {
@@ -19,9 +19,9 @@ interface RouteContext {
  */
 export async function PATCH(request: NextRequest, ctx: RouteContext) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { id } = await ctx.params
@@ -31,16 +31,12 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: current } = await supabase
       .from('career_card_lenses')
       .select('*')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (!current) {
@@ -109,7 +105,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
       .from('career_card_lenses')
       .update(update)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select('*')
       .single()
 
@@ -133,23 +129,19 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
  */
 export async function DELETE(request: NextRequest, ctx: RouteContext) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { id } = await ctx.params
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { data: current } = await supabase
       .from('career_card_lenses')
       .select('id, is_default')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (!current) {
@@ -167,7 +159,7 @@ export async function DELETE(request: NextRequest, ctx: RouteContext) {
       .from('career_card_lenses')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) {
       console.error('[LENSES] Delete error:', error)

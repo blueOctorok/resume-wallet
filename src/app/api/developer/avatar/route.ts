@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -14,20 +15,12 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const formData = await request.formData()
     const file = formData.get('file')
@@ -45,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
-    const storagePath = `developer/${user.id}.${ext}`
+    const storagePath = `developer/${userId}.${ext}`
     const bytes = await file.arrayBuffer()
 
     const { error: uploadError } = await supabase.storage
@@ -70,7 +63,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('user_profiles')
       .update({ avatar_url: avatarUrl })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (updateError) {
       console.error('[DEV AVATAR] Profile update error:', updateError)

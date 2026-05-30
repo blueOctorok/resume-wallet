@@ -7,6 +7,7 @@ import {
 import { sendVerificationEmail } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { getDriverEmployment } from '@/lib/block-data'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /** Normalize date string to PostgreSQL DATE (YYYY-MM-DD). Returns null for empty/unparseable. */
 function toDateOnly(value: string | null | undefined): string | null {
@@ -30,12 +31,9 @@ function toDateOnly(value: string | null | undefined): string | null {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -50,17 +48,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const employmentHistory = await getDriverEmployment(supabase, user.id)
+    const employmentHistory = await getDriverEmployment(supabase, userId)
 
     if (employmentHistory.length === 0) {
       return NextResponse.json(
@@ -106,7 +94,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRequest } = await supabase
       .from('employment_verification_requests')
       .select('id, status')
-      .eq('driver_id', user.id)
+      .eq('driver_id', userId)
       .eq('employment_id', employmentId)
       .eq('initiated_by', 'applicant')
       .eq('applicant_type', 'driver')
@@ -125,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertData = {
-      driver_id: user.id,
+      driver_id: userId,
       employment_id: employmentId,
       requesting_company_id: null,
       initiated_by: 'applicant',

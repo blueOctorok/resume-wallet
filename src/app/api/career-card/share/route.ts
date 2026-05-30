@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 function generateToken(length = 12): string {
@@ -57,16 +56,22 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json().catch(() => ({}))
     const { regenerate = false } = body
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
+
+    // CASE 3: we need the existing share_token to decide whether to reuse or regenerate.
+    const { data: user } = await supabase
+      .from('users')
+      .select('share_token')
+      .eq('id', userId)
+      .single()
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
         share_token_created_at: new Date().toISOString(),
         ...(regenerate ? { share_views_count: 0 } : {}),
       })
-      .eq('id', user.id)
+      .eq('id', userId)
 
     if (updateError) {
       console.error('[CAREER CARD SHARE] Token generation error:', updateError)
@@ -115,9 +120,9 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -128,15 +133,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const { error: updateError } = await supabase
       .from('users')
       .update({ share_settings: shareSettings })
-      .eq('id', user.id)
+      .eq('id', userId)
 
     if (updateError) {
       console.error('[CAREER CARD SHARE] Settings update error:', updateError)

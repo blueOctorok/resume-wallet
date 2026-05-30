@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveDriverApplicationClient } from '@/lib/supabase-client-db'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET — load saved application (form1–3) for edit / resume. Source of truth over localStorage.
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ application: null })
-    }
 
     const { data, error } = await supabase
       .from('driver_applications')
       .select('id, application_data, current_step, is_complete, updated_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (error) {
@@ -56,13 +53,21 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    // Dual-mode (T1.6): Supabase session first, else legacy wallet header.
+    // Wallet path preserves create-on-write via getOrCreateUserByWallet so a
+    // brand-new driver mid-application still gets a user row.
+    let userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      const walletAddress = request.headers.get('x-wallet-address')
+      if (!walletAddress) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        )
+      }
+      const supabase = await getAdminSupabaseClient()
+      const { user } = await getOrCreateUserByWallet(supabase, walletAddress)
+      userId = user.id
     }
 
     const { form1Data, form2Data, form3Data, currentStep } = await request.json()
@@ -82,19 +87,20 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[SAVE PROGRESS] Saving application progress:', {
-      walletAddress,
-      walletAddressLower: walletAddress.toLowerCase(),
+      userId,
       currentStep,
       hasForm1: !!form1Data,
       hasForm2: !!form2Data,
       hasForm3: !!form3Data,
     })
 
-    // Save to database (creates or updates existing application)
+    // Save to database (creates or updates existing application).
+    // Pass the resolved userId so the helper skips the wallet get-or-create.
     const result = await saveDriverApplicationClient(
-      walletAddress,
+      '',
       applicationData,
-      currentStep
+      currentStep,
+      userId
     )
 
     console.log('[SAVE PROGRESS] Application saved successfully:', {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 
@@ -20,17 +21,14 @@ export async function PATCH(
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
     const { requestId } = await params
     const body = await request.json()
 
     const { status, completedReferenceId } = body
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!requestId) {
@@ -50,17 +48,6 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get the candidate user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Verify the request belongs to this candidate
     const { data: existingRequest } = await supabase
       .from('candidate_requests')
@@ -74,7 +61,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    if (existingRequest.candidate_user_id !== user.id) {
+    if (existingRequest.candidate_user_id !== userId) {
       return NextResponse.json(
         { error: 'You can only update your own requests' },
         { status: 403 }
@@ -146,7 +133,7 @@ export async function PATCH(
           employerUserId: existingRequest.requested_by_user_id as string,
           companyId: existingRequest.company_id as string,
           companyName,
-          candidateUserId: user.id,
+          candidateUserId: userId,
           blockLabel: blockDef?.label ?? null,
           notificationData: {
             requestId,
@@ -188,28 +175,14 @@ export async function GET(
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
     const { requestId } = await params
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get the candidate user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Get the request with company info
     const { data: req, error } = await supabase
@@ -225,7 +198,7 @@ export async function GET(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    if (req.candidate_user_id !== user.id) {
+    if (req.candidate_user_id !== userId) {
       return NextResponse.json(
         { error: 'You can only view your own requests' },
         { status: 403 }

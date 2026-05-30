@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function PATCH(
   req: NextRequest,
@@ -11,10 +11,9 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const walletAddress = req.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(req)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -29,18 +28,12 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user (case-insensitive)
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Verify ownership before updating
     const { data: resume, error: resumeError } = await supabase
       .from('resumes')
       .select('id, user_id, is_public')
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (resumeError || !resume) {
@@ -54,7 +47,7 @@ export async function PATCH(
         is_public: isPublic
       })
       .eq('id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select('id, is_public')
       .single()
 

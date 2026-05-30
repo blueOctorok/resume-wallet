@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   getOrCreateUsage,
   checkUsage,
@@ -21,22 +22,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI service is not configured.' }, { status: 503 })
     }
 
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await request.json()
     const focus = typeof body.focus === 'string' ? body.focus.trim() : ''
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 })
-    }
 
-    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
-    const usage = await getOrCreateUsage(supabase, user.id)
+    // STORMI_UNLIMITED_WALLETS is a legacy wallet allowlist with no session
+    // equivalent — read the header directly. Removed at the wallet cutover.
+    const walletAddress = request.headers.get('x-wallet-address')
+    const isUnlimited = walletAddress
+      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+      : false
+    const usage = await getOrCreateUsage(supabase, userId)
     const check = checkUsage(usage)
 
     if (!isUnlimited && !check.allowed) {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const brief = await buildJobMatchCandidateBrief(supabase, user.id)
+    const brief = await buildJobMatchCandidateBrief(supabase, userId)
     const model = isUnlimited ? 'sonnet' : check.model
     const payload = await generateInterviewPrepMcq({
       candidateBrief: brief,
@@ -62,9 +64,9 @@ export async function POST(request: NextRequest) {
 
     if (!isUnlimited) {
       if (check.usingCredits) {
-        await consumeCredit(supabase, user.id)
+        await consumeCredit(supabase, userId)
       } else {
-        await incrementDailyUsage(supabase, user.id)
+        await incrementDailyUsage(supabase, userId)
       }
     }
 

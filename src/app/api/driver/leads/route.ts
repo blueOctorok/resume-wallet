@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/driver/leads
@@ -9,30 +10,12 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
 
     // Fetch leads for this driver
     const { data: leads, error: leadsError } = await supabase
@@ -57,7 +40,7 @@ export async function GET(request: NextRequest) {
           verified
         )
       `)
-      .eq('driver_user_id', user.id)
+      .eq('driver_user_id', userId)
       .order('created_at', { ascending: false })
 
     if (leadsError) {
@@ -122,16 +105,13 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { leadId, status } = body
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
-    }
 
     if (!leadId || !status) {
       return NextResponse.json(
@@ -150,22 +130,8 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
     // Update lead (only if driver owns it)
-    const updateData: any = { status }
+    const updateData: Record<string, string> = { status }
     if (status === 'contacted' || status === 'interviewing' || status === 'hired') {
       updateData.contacted_at = new Date().toISOString()
     }
@@ -174,7 +140,7 @@ export async function PATCH(request: NextRequest) {
       .from('driver_leads')
       .update(updateData)
       .eq('id', leadId)
-      .eq('driver_user_id', user.id)
+      .eq('driver_user_id', userId)
 
     if (updateError) {
       console.error('[LEADS] Error updating lead:', updateError)

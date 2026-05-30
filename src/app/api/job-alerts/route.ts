@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   countJobAlertPreferences,
@@ -43,9 +42,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = (await request.json()) as Record<string, unknown>
@@ -67,14 +66,10 @@ export async function POST(request: NextRequest) {
     const is_active = typeof body.is_active === 'boolean' ? body.is_active : true
 
     const supabase = await getAdminSupabaseClient()
-    const user = await getUserByWallet(supabase, walletAddress)
-    if (!user?.id) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const [maxAlerts, currentCount] = await Promise.all([
-      getMaxJobAlertsForUser(supabase, user.id),
-      countJobAlertPreferences(supabase, user.id),
+      getMaxJobAlertsForUser(supabase, userId),
+      countJobAlertPreferences(supabase, userId),
     ])
 
     if (currentCount >= maxAlerts) {
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const pref = await createJobAlertPreference(supabase, user.id, {
+    const pref = await createJobAlertPreference(supabase, userId, {
       label,
       keywords,
       location,

@@ -5,6 +5,29 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(request: NextRequest) {
   try {
+    // Phase 1 dual-mode: prefer a Supabase session (or wallet header) via the
+    // shared helper. When it resolves we already have the user, so skip the
+    // legacy Base-signature + upsert path below. Mirrors the GET handler.
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (sessionUserId) {
+      const body = await request.json()
+      const { title, filename, ipfsHash, isPublic } = body
+      if (!title || !filename || !ipfsHash) {
+        return NextResponse.json(
+          { error: 'Missing required fields: title, filename, ipfsHash' },
+          { status: 400 }
+        )
+      }
+      const resume = await createResume({
+        title,
+        filename,
+        ipfsHash,
+        isPublic: isPublic || false,
+        userId: sessionUserId,
+      })
+      return NextResponse.json(resume, { status: 201 })
+    }
+
     console.log('📝 Resume API: Starting POST request')
 
     // Check Supabase environment variables

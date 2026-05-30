@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getDevGithub, saveDevGithub } from '@/lib/block-data'
 
 /**
@@ -13,24 +14,14 @@ import { getDevGithub, saveDevGithub } from '@/lib/block-data'
  */
 export async function POST(request: NextRequest) {
   try {
-    const wallet = request.headers.get('x-wallet-address')
-    if (!wallet) {
-      return NextResponse.json({ error: 'Missing wallet' }, { status: 401 })
+    const userId = await getStormUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', wallet)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const github = await getDevGithub(supabase, user.id)
+    const github = await getDevGithub(supabase, userId)
     if (!github?.access_token || !github?.username) {
       return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 })
     }
@@ -109,7 +100,7 @@ export async function POST(request: NextRequest) {
       syncedAt: new Date().toISOString(),
     }
 
-    await saveDevGithub(supabase, user.id, { data: githubData })
+    await saveDevGithub(supabase, userId, { data: githubData })
 
     return NextResponse.json({
       success: true,
