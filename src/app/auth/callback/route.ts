@@ -15,7 +15,10 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   // `next` lets invite/onboard deep-links survive the auth round-trip.
-  const next = searchParams.get('next') ?? '/'
+  // Only accept a same-origin relative path (starts with a single "/") so a
+  // crafted ?next=//evil.com or ?next=https://evil.com can't open-redirect.
+  const rawNext = searchParams.get('next')
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/'
 
   if (!code) {
     return NextResponse.redirect(`${origin}/sign-in?error=missing_code`)

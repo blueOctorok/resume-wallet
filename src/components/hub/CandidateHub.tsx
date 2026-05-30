@@ -166,12 +166,7 @@ export default function CandidateHub() {
               onNavigateToDotApp={() => setCurrentPage('dotapp')}
             />
 
-            {walletAddress ? (
-              <HubAccountSection
-                walletAddress={walletAddress}
-                onReadWhitepaper={() => setCurrentPage('stormchain')}
-              />
-            ) : null}
+            {walletAddress ? <HubAccountSection /> : null}
           </div>
 
           <aside className='min-w-0 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:self-start'>

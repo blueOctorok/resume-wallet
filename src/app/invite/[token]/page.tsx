@@ -4,7 +4,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAccount, useUser } from '@account-kit/react'
+import { createClient } from '@/utils/supabase/client'
 import {
   Building2,
   Shield,
@@ -14,13 +14,7 @@ import {
   Clock,
   UserCheck,
 } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import { getDisplayRole } from '@/lib/employer-roles'
-
-const AlchemyAuth = dynamic(
-  () => import('@/components/AlchemyAuth').then((mod) => mod.default),
-  { ssr: false }
-)
 
 interface InviteData {
   role: string
@@ -42,28 +36,38 @@ interface InviteActionsProps {
 }
 
 /**
- * Separate component so Alchemy hooks only run inside the mounted provider.
- * This is dynamically imported with ssr:false below to avoid the
- * "must be used within AlchemyAccountProvider" error during SSR / pre-mount.
+ * Accept-invite actions. Auth is the Supabase session: if the visitor isn't
+ * signed in we bounce them to /sign-in?next=/invite/<token> and they return
+ * here. The accept-invite route resolves identity from the session cookie
+ * (getStormUserIdFromRequest), so no wallet header is needed.
  */
 function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProps) {
   const { theme } = useTheme()
-  const account = useAccount({ type: 'LightAccount' })
-  const alchemyUser = useUser()
   const router = useRouter()
 
-  const connectedWallet = account?.address ?? null
-  const connectedEmail = alchemyUser?.email ?? null
-
+  const [sessionChecked, setSessionChecked] = useState(false)
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [accepting, setAccepting] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
 
-  const emailMismatch = !!(connectedEmail && invite.email &&
-    connectedEmail.toLowerCase() !== invite.email.toLowerCase())
+  // Auth gate: no session → front door (and back here afterward).
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace(`/sign-in?next=${encodeURIComponent(`/invite/${token}`)}`)
+        return
+      }
+      setSessionEmail(data.user.email ?? null)
+      setSessionChecked(true)
+    })
+  }, [router, token])
+
+  const emailMismatch = !!(sessionEmail && invite.email &&
+    sessionEmail.toLowerCase() !== invite.email.toLowerCase())
 
   const handleAccept = async () => {
-    if (!connectedWallet) return
     if (!displayName.trim()) {
       setLocalError('Please enter your name')
       return
@@ -74,10 +78,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
     try {
       const res = await fetch('/api/employer/team/accept-invite', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': connectedWallet,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inviteToken: token, displayName: displayName.trim() }),
       })
 
@@ -95,17 +96,11 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
     }
   }
 
-  // Not signed in — show Alchemy auth UI with a prompt
-  if (!connectedWallet) {
+  // Resolving the session (or redirecting to /sign-in).
+  if (!sessionChecked) {
     return (
-      <div>
-        <p className={`text-center text-sm mb-4 font-medium ${
-          isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-        }`}>
-          Sign in with the email this invite was sent to:
-          <span className='block mt-1 text-indigo-400 font-semibold'>{invite.email}</span>
-        </p>
-        <AlchemyAuth />
+      <div className='flex items-center justify-center py-8'>
+        <Loader2 className='w-6 h-6 animate-spin text-indigo-400' />
       </div>
     )
   }
@@ -122,7 +117,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
             </p>
             <p className={`text-sm mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
               This invite was sent to <strong>{invite.email}</strong> but you&apos;re signed in as{' '}
-              <strong>{connectedEmail}</strong>. Sign out and use the invited email to continue.
+              <strong>{sessionEmail}</strong>. Sign out and use the invited email to continue.
             </p>
           </div>
         </div>
@@ -140,7 +135,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
       }`}>
         <CheckCircle className='w-4 h-4 text-green-500 flex-shrink-0' />
         <p className='text-sm text-green-500 font-medium'>
-          Signed in as {connectedEmail || `${connectedWallet.slice(0, 6)}...${connectedWallet.slice(-4)}`}
+          Signed in as {sessionEmail || 'your account'}
         </p>
       </div>
 
@@ -194,16 +189,6 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
     </div>
   )
 }
-
-// Dynamically import so Alchemy hooks only run after AlchemyProvider mounts
-const InviteActionsClient = dynamic(
-  () => Promise.resolve(InviteActions),
-  { ssr: false, loading: () => (
-    <div className='flex items-center justify-center py-8'>
-      <Loader2 className='w-6 h-6 animate-spin text-indigo-400' />
-    </div>
-  )}
-)
 
 export default function InvitePage() {
   const params = useParams()
@@ -348,9 +333,9 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Auth/accept actions — client-only so Alchemy hooks are safe */}
+        {/* Auth/accept actions — gated on the Supabase session */}
         {invite && (
-          <InviteActionsClient
+          <InviteActions
             invite={invite}
             token={token}
             onAccepted={() => setAccepted(true)}

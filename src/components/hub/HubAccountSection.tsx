@@ -2,25 +2,22 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Wallet } from 'lucide-react'
+import { ChevronDown, ChevronUp, Gift } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
-import STORMBalance from '@/components/STORMBalance'
 import ReferralBanner from '@/components/hub/ReferralBanner'
 
-export interface HubAccountSectionProps {
-  walletAddress: string
-  onReadWhitepaper: () => void
-}
-
 /**
- * STORM balance, USDC on-ramp, referral link, and whitepaper — one foldable card
- * so the hub stays about the career card first.
+ * Referral link in a foldable card so the hub stays career-card-first.
+ *
+ * The personal STORM/USDC wallet balance was removed at the T1.12 cutover
+ * (auth is Supabase-only, no signer). Referrals stay — they don't depend on a
+ * wallet.
  */
-export default function HubAccountSection({ walletAddress, onReadWhitepaper }: HubAccountSectionProps) {
+export default function HubAccountSection() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const [open, setOpen] = useState(false)
@@ -29,9 +26,9 @@ export default function HubAccountSection({ walletAddress, onReadWhitepaper }: H
     <HubSectionPanel isDark={isDark} accent='indigo'>
       <BlockCard
         variant='embed'
-        icon={Wallet}
-        title='Account & STORM'
-        description='Token balance, add funds, referrals, and docs.'
+        icon={Gift}
+        title='Refer a friend'
+        description='Share your invite link.'
         headerActions={
           <Button
             type='button'
@@ -56,17 +53,10 @@ export default function HubAccountSection({ walletAddress, onReadWhitepaper }: H
         }
       >
         {open ? (
-          <div className='space-y-6'>
-            <STORMBalance
-              walletAddress={walletAddress}
-              showBuyUsdc
-              onReadWhitepaper={onReadWhitepaper}
-            />
-            <ReferralBanner />
-          </div>
+          <ReferralBanner />
         ) : (
           <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
-            Wallet, STORM, USDC, and your referral link — expand when you need them.
+            Your referral link — expand when you need it.
           </p>
         )}
       </BlockCard>

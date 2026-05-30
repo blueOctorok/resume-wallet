@@ -191,24 +191,3 @@ export function navDropdownItemClass(isDark: boolean) {
 export function navDropdownItemBorderClass(isDark: boolean) {
   return cn('border-t', isDark ? 'border-gray-800' : 'border-gray-100')
 }
-
-export function navStormPillClass(isDark: boolean, theme?: Theme) {
-  if (paperLight(isDark, theme)) {
-    return cn(
-      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
-      'text-zinc-700 bg-zinc-100/95 hover:bg-zinc-200/95 border-zinc-300/90',
-    )
-  }
-  if (quietInk(isDark, theme)) {
-    return cn(
-      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
-      'text-zinc-300 bg-zinc-800/95 hover:bg-zinc-700/95 border-zinc-600/80',
-    )
-  }
-  return cn(
-    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
-    isDark
-      ? 'text-indigo-300 bg-indigo-500/[0.08] hover:bg-indigo-500/[0.14] border-indigo-500/35'
-      : 'text-indigo-700 bg-indigo-50/95 hover:bg-indigo-100/95 border-indigo-200/90',
-  )
-}

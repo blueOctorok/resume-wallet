@@ -42,14 +42,12 @@ import {
   RefreshCw,
   CreditCard,
   Wallet,
-  Coins,
   Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
-import STORMBalance from '@/components/STORMBalance'
 import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
@@ -1306,21 +1304,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           onClose={() => setCareerCardApplicantId(null)}
         />
       )}
-
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="indigo" className="pt-4">
-        <BlockCard
-          variant="embed"
-          icon={Coins}
-          title="STORM token"
-          description="Your wallet balance on Base — Sepolia and mainnet."
-        >
-          <STORMBalance
-            walletAddress={walletAddress}
-            onReadWhitepaper={() => onNavigate('stormchain')}
-            hubEmbed
-          />
-        </BlockCard>
-      </HubSectionPanel>
 
           </div>
       </div>

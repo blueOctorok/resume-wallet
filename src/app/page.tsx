@@ -9,14 +9,6 @@ import Navigation from '@/components/Navigation'
 import StormBackground from '@/components/StormBackground'
 import UserStatusModal from '@/components/UserStatusModal'
 import LoadingScreen from '@/components/LoadingScreen'
-import {
-  useSendUserOperation,
-  useSmartAccountClient,
-  useUser,
-  useAccount,
-  useSignerStatus,
-  useLogout,
-} from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
 import type { ResumeUploadEvent } from '@/types/assistant'
 import {
@@ -51,22 +43,13 @@ const ProfileSetupModal = dynamic(
 )
 
 // ============================================================
-// Inner component that uses Alchemy hooks (must be inside provider)
+// Inner component — auth state comes entirely from the Supabase session
+// (bridged into the store by useSupabaseAuthSync). No wallet SDK.
 // ============================================================
 const HomeContent = () => {
   // Next.js hooks
   const searchParams = useSearchParams()
   const router = useRouter()
-
-  // Alchemy SDK hooks
-  const { client } = useSmartAccountClient({ type: 'LightAccount' })
-  const { sendUserOperationAsync, isSendingUserOperation } =
-    // @ts-ignore - Type instantiation too deep (Alchemy SDK type complexity)
-    useSendUserOperation({ client })
-  const { isConnected, isInitializing } = useSignerStatus()
-  const alchemyUser = useUser()
-  const account = useAccount({ type: 'LightAccount' })
-  const { logout: alchemyLogout } = useLogout()
 
   // -------------------------------------------------------
   // Zustand Stores
@@ -83,7 +66,6 @@ const HomeContent = () => {
     isSettingRole, setIsSettingRole,
     companyName,
     setCompanyName,
-    isCheckingSession, setIsCheckingSession,
     referralCode, setReferralCode,
   } = authStore
 
@@ -105,10 +87,6 @@ const HomeContent = () => {
   // A Supabase user gets the auth:<id> placeholder wallet; the rest of page.tsx
   // (role fetch, shells) then treats them like any other authenticated user.
   useSupabaseAuthSync()
-
-  // Tracks whether the user explicitly signed out. Prevents the session-sync
-  // effect from immediately re-logging them in while Alchemy's async cleanup runs.
-  const didExplicitLogoutRef = useRef(false)
 
   // Page-level routing flag for guests entering Guided Mode without signing in
   // (Indeed-style lazy auth). Local useState is appropriate here — this is a
@@ -159,37 +137,6 @@ const HomeContent = () => {
       router.replace('/', { scroll: false })
     }
   }, [searchParams, router])
-
-  // -------------------------------------------------------
-  // Sync Alchemy session to Auth store (existing sessions + OAuth redirects)
-  //
-  // WHY we use account.address and NOT alchemyUser.address:
-  //   - useUser() returns the signer/EOA address (the underlying key)
-  //   - useAccount({ type: 'LightAccount' }) returns the SMART CONTRACT wallet address
-  //   - All data in our DB is indexed by the smart contract address
-  //   - Using alchemyUser.address would produce a completely different address
-  //
-  // WHY didExplicitLogoutRef exists:
-  //   - Alchemy's logout is async — isConnected/alchemyUser/account don't clear instantly
-  //   - Without this guard, the effect re-runs during cleanup, sees !user, and re-logs the user
-  // -------------------------------------------------------
-  useEffect(() => {
-    if (didExplicitLogoutRef.current) return
-    if (isConnected && !isInitializing && alchemyUser && account?.address && !user) {
-      setUser({
-        address: account.address,
-        email: alchemyUser.email,
-        userId: alchemyUser.userId,
-        method: 'alchemy-smart-wallet',
-        isConnected: true,
-        chain: 'Base Sepolia',
-        chainId: 84532,
-      })
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('stormchain-admin-wallet', account.address)
-      }
-    }
-  }, [isConnected, isInitializing, alchemyUser, account])
 
   // -------------------------------------------------------
   // Fetch user role on login
@@ -291,41 +238,21 @@ const HomeContent = () => {
   }, [userRole, isRoleLoading, walletAddress])
 
   // -------------------------------------------------------
-  // Session timeout (1.5s for Alchemy to detect existing session)
-  // -------------------------------------------------------
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!user) setIsCheckingSession(false)
-    }, 1500)
-    return () => clearTimeout(timeout)
-  }, [user])
-
-  // -------------------------------------------------------
-  // T1.11c — Supabase /sign-in is the front door (dual-door).
+  // Supabase /sign-in is the only front door.
   //
-  // Unauthenticated visitors are redirected to /sign-in UNLESS:
-  //   - they're browsing jobs in Guided Mode (Indeed-style lazy auth), or
-  //   - they explicitly chose the legacy wallet path (`?wallet=1`), which
-  //     renders the Alchemy login in DriverShell. That escape hatch stays
-  //     until the coordinated T1.12 cutover so Pace is never locked out.
+  // Unauthenticated visitors are redirected to /sign-in unless they're
+  // browsing jobs in Guided Mode (Indeed-style lazy auth).
   //
-  // `!isConnected` is the load-bearing guard: a returning user with an
-  // active Alchemy session must NEVER be bounced to /sign-in while it
-  // restores. isConnected flips true before the session-sync effect sets
-  // `user`, so checking it here avoids that race.
-  //
-  // Two more guards close a redirect LOOP: a user with a live Supabase
-  // session would otherwise be sent to /sign-in (because `user` lags behind
-  // the cookie), and /sign-in would send them straight back — flashing.
+  // Guards against a redirect LOOP with /sign-in (a user with a live Supabase
+  // session would otherwise be bounced before the wallet-shaped `user`
+  // hydrates):
   //   - `supabaseSessionChecked`: don't decide "guest" until Supabase's
   //     getUser() has actually resolved.
   //   - `!sessionUserId`: a resolved Supabase session counts as authenticated
-  //     even before the wallet-shaped `user` is hydrated.
+  //     even before `user` is hydrated.
   // -------------------------------------------------------
-  const walletMode = searchParams.get('wallet') === '1'
-  const sessionSettled = !isCheckingSession && !isInitializing && supabaseSessionChecked
-  const awaitingGuestRedirect =
-    !user && !sessionUserId && !isConnected && !showGuidedMode && !walletMode
+  const sessionSettled = supabaseSessionChecked
+  const awaitingGuestRedirect = !user && !sessionUserId && !showGuidedMode
 
   // Supabase session resolved but the wallet-shaped `user` hasn't hydrated yet
   // (the /api/auth/sync round-trip). Cover the gap so we don't flash a blank
@@ -341,45 +268,20 @@ const HomeContent = () => {
   // -------------------------------------------------------
   // Handlers
   // -------------------------------------------------------
-  const handleAuthSuccess = useCallback((userData: unknown) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const u = userData as any
-    // Clear the logout flag so the session-sync effect can work again if needed
-    didExplicitLogoutRef.current = false
-    setUser(u)
-    setIsCheckingSession(false)
-    setCurrentPage(null)
-    if (u?.address && typeof window !== 'undefined') {
-      window.localStorage.setItem('stormchain-admin-wallet', u.address)
-    }
-  }, [])
-
   const handleLogout = useCallback(async () => {
-    // Set flag FIRST so the session-sync effect doesn't re-login during cleanup
-    didExplicitLogoutRef.current = true
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('stormchain-admin-wallet')
     }
-    // Clear the Alchemy SDK session BEFORE clearing app state.
-    // Old approach used window.__alchemyLogout (set by AlchemyAuth), but that captured
-    // a stale closure from an unmounted component — the SDK logout never actually ran.
-    // Meanwhile setUser(null) triggered a re-render that remounted AlchemyAuth, which
-    // saw the still-active SDK session and immediately re-logged the user in.
-    try {
-      await alchemyLogout()
-    } catch (err) {
-      console.error('Alchemy logout error:', err)
-    }
-    // Also end any Supabase session (dual-mode). signOut fires onAuthStateChange
-    // → use-supabase-auth-sync clears the store, but we clear below regardless.
+    // End the Supabase session. signOut fires onAuthStateChange →
+    // use-supabase-auth-sync clears the store, but we clear below regardless
+    // so the UI updates immediately even if the listener is slow.
     try {
       await createSupabaseBrowserClient().auth.signOut()
     } catch (err) {
       console.error('Supabase logout error:', err)
     }
-    // NOW clear app state — AlchemyAuth remounts with no active SDK session
     setUser(null)
-  }, [alchemyLogout])
+  }, [setUser])
 
   const handleRoleSelection = useCallback(
     async (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => {
@@ -560,15 +462,14 @@ const HomeContent = () => {
             </ErrorBoundary>
           )}
 
-          {/* ── Driver hub, or the legacy Alchemy landing via ?wallet=1 ──
-             Unauthenticated visitors only reach DriverShell through the wallet
-             escape hatch now; everyone else is redirected to /sign-in above. */}
+          {/* ── Driver hub (legacy authenticated drivers) ──
+             Only authenticated users reach DriverShell now; unauthenticated
+             visitors are redirected to /sign-in above. */}
           {(!showGuidedMode || !!user) &&
-            ((!user && walletMode) || userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
+            (userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
             !isRoleLoading && (
               <ErrorBoundary section='Driver Hub'>
                 <DriverShell
-                  onAuthSuccess={handleAuthSuccess}
                   onResumeUploadEvent={handleResumeUploadEvent}
                   onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
                   onBrowseGuided={enterGuidedMode}

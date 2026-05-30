@@ -2,14 +2,24 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import StormBackground from '@/components/StormBackground'
 import LoadingScreen from '@/components/LoadingScreen'
 import { Button, Card, Input, StormChainWordmark } from '@/components/ui'
 
-function authCallbackUrl(): string {
-  return `${window.location.origin}/auth/callback`
+/**
+ * Only accept a same-origin relative path (starts with a single "/") as the
+ * post-sign-in destination. Guards against open-redirect via a crafted
+ * ?next=//evil.com or ?next=https://evil.com.
+ */
+function safeNext(next: string | null): string {
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
+}
+
+function authCallbackUrl(next: string): string {
+  const base = `${window.location.origin}/auth/callback`
+  return next === '/' ? base : `${base}?next=${encodeURIComponent(next)}`
 }
 
 const CALLBACK_ERRORS: Record<string, string> = {
@@ -26,9 +36,12 @@ const CALLBACK_ERRORS: Record<string, string> = {
  * email that has no account yet creates one (`shouldCreateUser: true`).
  */
 function SignInForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Where to land after sign-in. Invite/onboard deep-links pass ?next= so the
+  // user returns to the token page once their Supabase session exists.
+  const next = safeNext(searchParams.get('next'))
 
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -47,7 +60,10 @@ function SignInForm() {
     let active = true
     supabase.auth.getUser().then(({ data }) => {
       if (!active) return
-      if (data.user) router.replace('/')
+      // Hard navigation (see handleVerifyCode) so home boots fresh with the
+      // session and avoids the dual-provider soft-nav race. replace() keeps
+      // /sign-in out of history so back doesn't bounce here.
+      if (data.user) window.location.replace(next)
       else setCheckingSession(false)
     })
     return () => {
@@ -55,7 +71,7 @@ function SignInForm() {
     }
     // supabase client is stable for the page lifetime; intentionally run once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router])
+  }, [])
 
   useEffect(() => {
     const urlError = searchParams.get('error')
@@ -71,7 +87,7 @@ function SignInForm() {
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: authCallbackUrl() },
+        options: { redirectTo: authCallbackUrl(next) },
       })
       if (oauthError) {
         setError(oauthError.message)
@@ -100,7 +116,7 @@ function SignInForm() {
         email: email.trim(),
         // shouldCreateUser makes this double as sign-up for new emails.
         // emailRedirectTo covers users who click the link instead of typing the code.
-        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl() },
+        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(next) },
       })
       if (otpError) {
         setError(otpError.message)
@@ -136,10 +152,16 @@ function SignInForm() {
         setError(verifyError.message)
         return
       }
-      router.push('/')
+      // Hard navigation (not router.push) so the home page boots fresh with the
+      // new session cookie already in place. A soft nav keeps both auth providers
+      // (Alchemy SDK + Supabase) alive in the same JS context, and they race over
+      // "who's authenticated" — the prod-only login flicker. This matches what the
+      // Google OAuth path already does (server redirect from /auth/callback) and
+      // what a manual refresh does. Don't reset isVerifying: we're leaving the page.
+      window.location.assign(next)
+      return
     } catch {
       setError('Could not verify the code. Please try again.')
-    } finally {
       setIsVerifying(false)
     }
   }
@@ -284,17 +306,6 @@ function SignInForm() {
             className='font-medium text-teal-700 hover:text-teal-600 dark:text-teal-300 dark:hover:text-teal-200'
           >
             Just browsing? Explore jobs first
-          </Link>
-        </p>
-
-        {/* Escape hatch for existing users still on the previous (Alchemy) login.
-            Removed at the T1.12 cutover once everyone is on Supabase. */}
-        <p className='mt-4 text-center text-xs text-gray-500 dark:text-gray-400'>
-          <Link
-            href='/?wallet=1'
-            className='underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300'
-          >
-            Returning Storm user? Use the previous sign-in
           </Link>
         </p>
       </div>

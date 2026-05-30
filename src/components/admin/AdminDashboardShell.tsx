@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAccount } from '@account-kit/react'
+import { useWalletAddress } from '@/stores/auth-store'
 import {
   Users,
   FileText,
@@ -50,20 +50,13 @@ function AdminDashboardContent() {
   const { theme } = useTheme()
   /** Admin tabs/modals only branch on dark vs not-dark; paper/icy use the light styling path. */
   const adminUiTheme: 'light' | 'dark' = isDarkTheme(theme) ? 'dark' : 'light'
-  const account = useAccount({ type: 'LightAccount' })
 
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
-    if (typeof window !== 'undefined') {
-      return window.localStorage.getItem('stormchain-admin-wallet') || undefined
-    }
-    return undefined
-  })
-
-  useEffect(() => {
-    if (account?.address) {
-      setWalletAddress(account.address)
-    }
-  }, [account?.address])
+  // Admin identity now comes from the synced Supabase session (auth-store is
+  // persisted, so the boss's DB wallet survives navigating from / to /admin).
+  // The boss's DB wallet is in ADMIN_WALLETS, so requireAdmin still gates every
+  // admin route on the x-wallet-address header. Proper email/role allowlist is
+  // future work (T1.8-admin).
+  const walletAddress = useWalletAddress() ?? undefined
 
   const [activeTab, setActiveTab] = useState<TabId>('users')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)

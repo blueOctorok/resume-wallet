@@ -4,6 +4,56 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.12c — Supabase-only auth cutover (scoped)** (2026-05-30)
+
+Supabase Auth is now the **only** login. This is the point-of-no-return cutover, deliberately **scoped**: the Alchemy SDK + `AlchemyProvider` stay installed/mounted (the company-wallet + payment plumbing is a separate epic — **T1.12d** — tied to the Midnight/Stripe decision). Payments are non-existent today (Pace charges no one; Stripe later), so the now-signerless `MvrPaymentButton`/`PspPaymentButton`/`StormiCreditModal` are knowingly inert and left untouched.
+
+**Auth surgery:**
+
+| File | Change |
+|---|---|
+| `src/app/sign-in/page.tsx` | Honors a same-origin `?next=` (open-redirect guarded: must start with a single `/`); Google + email-OTP carry `next` through `/auth/callback`; OTP verify + already-authed guard land on `next`. Removed the legacy `/?wallet=1` link. |
+| `src/app/auth/callback/route.ts` | Validates `next` the same way before redirecting. |
+| `src/app/page.tsx` | **Rewritten Supabase-only.** Deleted the `@account-kit/react` import + all 6 hooks, the Alchemy session-sync effect, the `didExplicitLogoutRef` logic, the 1.5s `isCheckingSession` timer, and the `?wallet=1` dual-door. `sessionSettled` now derives from `supabaseSessionChecked`; `handleLogout` = `supabase.auth.signOut()`. Identity comes solely from `useSupabaseAuthSync`. |
+| `src/components/app/DriverShell.tsx` | Removed the `AlchemyAuth` login widget + `onAuthSuccess` prop (only authenticated users reach DriverShell now) and the personal `WalletTransactions` on the resume page. |
+| `src/app/onboard/[token]/page.tsx`, `src/app/invite/[token]/page.tsx` | Dropped the embedded `AuthCard`/`AlchemyAuth`. Unauthenticated visitors are redirected to `/sign-in?next=<token-page>`; on return, setup runs from the session (wallet resolved like `useSupabaseAuthSync` — migrated DB wallet or `auth:<uuid>` placeholder). `accept-invite`'s on-chain `addOwnerToCompanyWallet` confirmed best-effort (try/catch, never blocks the invite). |
+| `src/components/admin/AdminDashboardShell.tsx` | Swapped Alchemy `useAccount` for `useWalletAddress()` from the (persisted) auth store. Boss's DB wallet ∈ `ADMIN_WALLETS`, so `requireAdmin` still gates every admin route on `x-wallet-address`. Proper email/role allowlist is future **T1.8-admin**. |
+| `src/lib/auth-session.ts` (+ `.test.ts`) | **Point of no return: removed the `x-wallet-address` fallback** — `getStormUserIdFromRequest` now resolves the Supabase session only. The `request` arg is kept (ignored) so the ~30 callers don't churn. Unit tests rewritten (3 pass). |
+
+**Personal wallet UI removed** (scope decision: no wallet UI shown to users):
+
+| File | Change |
+|---|---|
+| `src/components/UserStatusModal.tsx` | Rewritten as a plain **Account** modal (email + role + Sign Out). Dropped all balances/send/receive/history tabs. |
+| `src/components/Navigation.tsx` | Removed the nav STORM-balance pill + `useStormTokenBalance`/`StormTokenMark`/`navStormPillClass`. |
+| `src/components/hub/HubAccountSection.tsx` | Dropped `STORMBalance`; now a referral-only card. `CandidateHub` call simplified. |
+| `src/components/EmployerHub.tsx` | Removed the personal `STORMBalance` block (+ `Coins` import). |
+| **Deleted** | `STORMBalance.tsx`, `USDCBalance.tsx`, `wallet/SendUSDC.tsx`, `wallet/SendSTORM.tsx`, `WalletTransactions.tsx`, `use-storm-token-balance.ts`, and the orphaned `navStormPillClass`. |
+
+**Kept (out of scope):** `WalletInfo.tsx` + `TransactionHistory.tsx` (still used by employer `CompanyWallet.tsx`); `AlchemyProvider` mount in `layout.tsx`; `@account-kit/*` + `alchemy-sdk` packages. `AlchemyAuth.tsx` is now orphaned and parked for **T1.12d**.
+
+**Verification:** `npm run build` green; `auth-session.test.ts` passes (3/3). **Manual gate still pending (Pace Monday):** real email-OTP → hub, Google → hub, logout → `/sign-in`, invite link → `/sign-in?next=` → returns and completes, admin dashboard loads + lists data, employer waived screening order succeeds.
+
+**Next:** **T1.12b** (now Auto-safe — strip the ~92 vestigial `x-wallet-address` client sends; the server already ignores the header. Exclude `admin/**` + `admin-auth.ts` + `storm/history` + `driver/public/[token]`), then **T1.12d** (remove `AlchemyProvider`/`@account-kit`, tear down company-wallet/payment, delete `AlchemyAuth.tsx`).
+
+---
+
+## **Phase 1 · T1.12a — Middleware re-includes `/api/*` for Supabase session refresh** (2026-05-30)
+
+The cutover (T1.12) needs `updateSession` to rotate the Supabase auth cookie on authenticated API calls, not just page loads — otherwise long-lived sessions go stale once the client stops sending `x-wallet-address`. T1.11c deferred this matcher change to the coordinated cutover; this is that piece.
+
+| File | Change |
+|---|---|
+| `src/middleware.ts` | Matcher now **includes** `/api/*` (was fully excluded). Still skips Next internals, static assets, favicon, **and the externally-called entrypoints** that carry no user session: `api/webhooks/*`, `api/mvr/webhook`, `api/psp/webhook` (Accio/Pace XML callbacks) and `api/github/callback` (OAuth handshake). |
+
+**Why it's Pace-safe:** `updateSession` only calls `supabase.auth.getUser()` (reads cookies) — it never reads the request body — so it cannot interfere with Accio's raw-XML webhook parsing. Belt-and-suspenders, the Accio webhook + OAuth-callback paths are *excluded* from the matcher anyway, so their behavior is byte-for-byte unchanged. No Stripe webhook exists yet (pre-Stripe era), so nothing Stripe-side is affected. Middleware remains double-guarded (outer try/catch in `middleware.ts` + defensive `updateSession`), so any refresh failure passes through instead of 500ing.
+
+**Verification:** matcher regex validated against sample paths — `/`, `/sign-in`, `/api/user/profile`, `/api/github/sync` → run; `/api/mvr/webhook`, `/api/psp/webhook`, `/api/webhooks/alchemy`, `/api/github/callback`, static, favicon → skip. Lint clean. `next.config.ts` has `typescript.ignoreBuildErrors: true`, so the repo's pre-existing route type errors stay non-blocking (unchanged by this edit).
+
+**Next:** T1.12b (migrate ~92 client fetch senders off `x-wallet-address` to cookie session) + T1.12c (remove Alchemy SDK, delete the wallet fallback in `auth-session.ts`). Both are premium + Pace-coordinated + behind a Vercel preview. See `docs/midnight/T1_12_BLAST_RADIUS.md` for the full touchpoint map.
+
+---
+
 ## **Phase 1 · Passwordless auth — Google + email OTP (no passwords)** (2026-05-29)
 
 Storm sign-in is now **passwordless**, matching the previous Alchemy experience (Google or an emailed code) and keeping Storm out of the password-reset helpdesk loop. Decision per user: "use google and email OTP… I don't want to manage passwords."
@@ -20,6 +70,18 @@ Storm sign-in is now **passwordless**, matching the previous Alchemy experience 
 **⚠️ Required dashboard step (not code):** the Supabase **Auth → Email Templates → "Magic Link"** template must include `{{ .Token }}` so users receive the 6-digit code (default template only sends `{{ .ConfirmationURL }}`). Until that's set, codes won't arrive. MCP doesn't expose template editing, so this is manual.
 
 **Deferred:** passkeys (WebAuthn) → **T1.14** (needs a supabase-js bump; do after the T1.12 cutover is stable).
+
+---
+
+## **Phase 1 · Fix prod-only OTP login flicker (soft-nav dual-provider race)** (2026-05-29)
+
+After the redirect-loop fix, an intermittent **prod-only** flicker remained: entering the OTP code flashed the nav + spinner until a manual refresh. OTP verify used `router.push('/')` (**soft** client nav). On soft nav, the home page boots with Alchemy SDK + Supabase both still alive in the same JS context; they race over auth state while session sync and role fetch settle. Prod network latency makes that race nondeterministic (sometimes fine on localhost, sometimes not in prod). A manual refresh fixes it because a refresh is a **hard** nav — full page load with the session cookie already in place.
+
+| File | Fix |
+|---|---|
+| `src/app/sign-in/page.tsx` | OTP verify success → `window.location.assign('/')` (hard nav). Already-authenticated guard → `window.location.replace('/')`. Removed now-unused `useRouter`. |
+
+Same pattern we'll use for Google once it's configured (`/auth/callback` already does a server redirect). Fully resolved once T1.12 removes Alchemy and there's only one provider.
 
 ---
 

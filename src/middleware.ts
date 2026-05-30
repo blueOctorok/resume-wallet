@@ -24,15 +24,23 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Skip:
-     *   - Next.js internals + image optimizer + favicon + static assets
-     *   - All API routes (auth still happens via x-wallet-address header in
-     *     dual-mode; Supabase cookies are not required server-side for APIs
-     *     until T1.5–T1.8 migrate them. Excluding /api here avoids running
-     *     middleware on Alchemy/Stripe/Accio webhook callbacks too.)
+     * T1.12a (2026-05-30): /api/* is now INCLUDED so updateSession refreshes
+     * the Supabase auth cookie on authenticated API calls (token rotation),
+     * which the Phase 1 cutover relies on once clients stop sending
+     * x-wallet-address.
      *
-     * Re-include /api once T1.5 starts migrating routes to Supabase sessions.
+     * updateSession only calls supabase.auth.getUser() (reads cookies) — it
+     * never touches the request body — so it is safe on routes that parse raw
+     * payloads. We still EXCLUDE the externally-called entrypoints below
+     * because they carry no user session and must stay byte-for-byte
+     * untouched:
+     *   - api/webhooks/* + api/mvr/webhook + api/psp/webhook — Accio (Pace) XML
+     *     callbacks, authenticated by their own contract, not Supabase cookies.
+     *   - api/github/callback — GitHub OAuth callback (own state handshake).
+     *
+     * Also skip Next.js internals, the image optimizer, favicon, and static
+     * assets.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mvr/webhook|api/psp/webhook|api/github/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

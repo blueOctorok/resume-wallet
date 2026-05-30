@@ -34,12 +34,10 @@ import {
   navDropdownPanelClass,
   navDropdownItemClass,
   navDropdownItemBorderClass,
-  navStormPillClass,
 } from '@/lib/navigation-styles'
 import ThemePicker from './ThemePicker'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import NavVaultShell from '@/components/ui/NavVaultShell'
-import StormTokenMark from '@/components/ui/StormTokenMark'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
@@ -49,7 +47,6 @@ import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
 import ModeToggle from './ui/ModeToggle'
-import { useStormTokenBalance } from '@/hooks/use-storm-token-balance'
 import { getDisplayRole } from '@/lib/employer-roles'
 
 // Define the navigation page type
@@ -116,11 +113,6 @@ export default function Navigation({
   const isPaperLight = !isDark && theme === 'paper'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
-
-  // STORM pill only renders when userRole is set; fetch balance for that smart-account address only.
-  const { display: stormBalanceDisplay, loading: stormBalanceLoading } = useStormTokenBalance(
-    userRole ? walletAddress ?? null : null,
-  )
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -739,30 +731,6 @@ export default function Navigation({
                   </div>
 
                   <div className='flex shrink-0 items-center gap-3'>
-                    {userRole && (
-                      <button
-                        type='button'
-                        onClick={() => handleNavigation('stormchain')}
-                        className={cn(navStormPillClass(isDark, theme))}
-                        title={`STORM balance: ${stormBalanceDisplay}`}
-                      >
-                        <StormTokenMark size='xs' className='scale-90' />
-                        {stormBalanceLoading ? (
-                          <span
-                            className={cn(
-                              'inline-block h-4 w-10 animate-pulse rounded',
-                              isDark ? 'bg-gray-700' : isPaperLight ? 'bg-zinc-300' : 'bg-slate-200',
-                            )}
-                            aria-hidden
-                          />
-                        ) : (
-                          <span className='font-mono tabular-nums'>{stormBalanceDisplay}</span>
-                        )}
-                        <span className='hidden sm:inline text-[10px] opacity-70'>
-                          STORM
-                        </span>
-                      </button>
-                    )}
                     <ThemePicker />
                   </div>
                 </div>

@@ -2,17 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useSignerStatus, useUser, useAccount, AuthCard } from '@account-kit/react'
+import { createClient } from '@/utils/supabase/client'
+import { authOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
 import { getBlockDefinition } from '@/lib/block-registry'
 import LoadingScreen from '@/components/LoadingScreen'
-import {
-  Shield,
-  Users,
-  Package,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,10 +38,6 @@ export default function OnboardPage() {
   const [inviteData, setInviteData] = useState<InviteData | null>(null)
   const [fetchError, setFetchError] = useState(false)
 
-  const { isConnected, isInitializing } = useSignerStatus()
-  const user = useUser()
-  const account = useAccount({ type: 'LightAccount' })
-
   const didRedirectRef = useRef(false)
   const [redirecting, setRedirecting] = useState(false)
 
@@ -77,19 +67,43 @@ export default function OnboardPage() {
     fetchInvite()
   }, [token])
 
-  // ─── Handle post-authentication redirect ────────────────────────────────────
+  // ─── Auth gate + post-authentication setup ──────────────────────────────────
+  // Supabase is the only front door now. If there's no session, bounce to
+  // /sign-in?next=<this page> so the user returns here once authenticated; the
+  // session cookie then authorizes every setup fetch below.
   useEffect(() => {
-    if (loading || isInitializing) return
+    if (loading) return
     if (!inviteData?.valid) return
-    if (!isConnected || !user || !account?.address) return
     if (didRedirectRef.current) return
-
     didRedirectRef.current = true
-    setRedirecting(true)
 
-    async function setupAndRedirect() {
+    async function gateAndSetup() {
+      const supabase = createClient()
+      const { data: { user: sessionUser } } = await supabase.auth.getUser()
+
+      if (!sessionUser) {
+        router.replace(`/sign-in?next=${encodeURIComponent(`/onboard/${token}`)}`)
+        return
+      }
+
+      setRedirecting(true)
+
+      // Resolve the client wallet exactly like useSupabaseAuthSync: prefer the
+      // migrated DB wallet, else the auth:<uuid> placeholder. Setup routes still
+      // key off walletAddress; the same-origin session cookie is what actually
+      // authorizes them.
+      let walletAddress = authOnlyWalletPlaceholder(sessionUser.id)
+      try {
+        const syncRes = await fetch('/api/auth/sync', { method: 'POST' })
+        if (syncRes.ok) {
+          const data = (await syncRes.json()) as { walletAddress?: string | null }
+          if (data.walletAddress) walletAddress = data.walletAddress
+        }
+      } catch {
+        // Non-fatal: the placeholder still resolves to the right user row.
+      }
+
       const targetBlockType = inviteData!.invite.targetBlockType
-      const walletAddress = account!.address
 
       try {
         // 1. Create/fetch user profile
@@ -158,8 +172,8 @@ export default function OnboardPage() {
       }
     }
 
-    setupAndRedirect()
-  }, [loading, isInitializing, isConnected, user, account, inviteData, token, router])
+    gateAndSetup()
+  }, [loading, inviteData, token, router])
 
   // ─── Loading states ─────────────────────────────────────────────────────────
 
@@ -206,99 +220,15 @@ export default function OnboardPage() {
     )
   }
 
-  // ─── Main render: invite info + auth card ───────────────────────────────────
-
-  const targetBlockType = inviteData.invite.targetBlockType
-  const blockDef = targetBlockType ? getBlockDefinition(targetBlockType) : null
-  const company = inviteData.company
-
-  const accentGradient = blockDef ? 'from-teal-600 to-teal-700' : 'from-slate-700 to-slate-800'
-  const icon = blockDef
-    ? <Package className="w-6 h-6" />
-    : <Users className="w-6 h-6" />
-  const label = blockDef?.label ?? 'Join Storm'
-  const description = blockDef
-    ? `Complete your ${blockDef.label} with blockchain-verified credentials.`
-    : 'Create your Storm account and set up your professional profile.'
-
+  // Valid invite, session check in flight: the gate effect is resolving the
+  // Supabase session and will either bounce to /sign-in or run setup. Show a
+  // neutral loading screen until it navigates.
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Top bar */}
-      <div className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-teal-400" />
-            <span className="font-bold text-white tracking-tight">Storm</span>
-          </div>
-          <span className="text-xs text-gray-500">Secure Login</span>
-        </div>
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <div className="text-center">
+        <Loader2 className="w-10 h-10 text-teal-400 animate-spin mx-auto mb-4" />
+        <p className="text-white font-medium">Checking your sign-in…</p>
       </div>
-
-      <main className="max-w-lg mx-auto px-4 py-10">
-        {/* Context card */}
-        <div className="rounded-2xl overflow-hidden border border-gray-800 shadow-xl mb-6">
-          <div className={`bg-gradient-to-br ${accentGradient} px-6 py-5`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-white">
-                {icon}
-              </div>
-              <div>
-                <p className="text-white/60 text-xs font-medium uppercase tracking-wide">
-                  {company?.name || 'Company'}
-                </p>
-                <p className="text-white font-semibold">{label}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gray-900 px-6 py-4">
-            <p className="text-gray-300 text-sm">{description}</p>
-          </div>
-        </div>
-
-        {/* Auth section */}
-        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
-          <h2 className="text-lg font-semibold text-white mb-1">
-            Sign in to continue
-          </h2>
-          <p className="text-gray-400 text-sm mb-6">
-            Enter your email to create your secure account. No password needed — we&apos;ll send you a verification code.
-          </p>
-
-          {isInitializing ? (
-            <div className="py-8 text-center">
-              <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Preparing secure login...</p>
-            </div>
-          ) : (
-            <div className="[&_*]:!font-sans">
-              <AuthCard />
-            </div>
-          )}
-
-          <div className="mt-6 pt-4 border-t border-gray-800">
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-teal-500" />
-                No password required
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-teal-500" />
-                Blockchain secured
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-center text-gray-500 text-sm mt-6">
-          Already have an account?{' '}
-          <button
-            onClick={() => router.push('/')}
-            className="text-teal-400 hover:text-teal-300 underline"
-          >
-            Go to Storm
-          </button>
-        </p>
-      </main>
     </div>
   )
 }

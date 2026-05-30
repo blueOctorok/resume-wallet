@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -29,11 +28,6 @@ const DriverHub = dynamic(
 const HomePage = dynamic(
   () => import('@/components/HomePage').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
-)
-
-const AlchemyAuth = dynamic(
-  () => import('@/components/AlchemyAuth').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading authentication...' fullScreen={false} /> }
 )
 
 const ResumeBuilder = dynamic(
@@ -71,14 +65,7 @@ const MvrViewModal = dynamic(
   { ssr: false }
 )
 
-const WalletTransactions = dynamic(
-  () => import('@/components/WalletTransactions').then((mod) => mod.WalletTransactions),
-  { ssr: false, loading: () => <LoadingScreen message='Loading transactions...' fullScreen={false} /> }
-)
-
 interface DriverShellProps {
-  /** Called when AlchemyAuth succeeds (new login) */
-  onAuthSuccess: (userData: unknown) => void
   /** Called to report a resume upload event to Stormi journey tracking */
   onResumeUploadEvent: (event: ResumeUploadEvent) => void
   /** Called to set the latest IPFS hash (for Stormi / form prefill) */
@@ -101,14 +88,13 @@ interface DriverShellProps {
  * All DOT application logic lives in <DotApplicationFlow />.
  */
 export default function DriverShell({
-  onAuthSuccess,
   onResumeUploadEvent,
   onSetLatestResumeIpfsHash,
   onBrowseGuided,
 }: DriverShellProps) {
   const { theme } = useTheme()
 
-  const { user, walletAddress, isCheckingSession } = useAuthStore()
+  const { user, walletAddress } = useAuthStore()
   const dotApp = useDotApplicationStore()
   const hubStore = useDriverHubStore()
   const {
@@ -339,7 +325,6 @@ export default function DriverShell({
                 triggerJourneyStep('driver.resumeBuilt')
               }}
             />
-            <WalletTransactions />
           </>
         ) : (
           // Non-driver (no role yet): show upload + create tabs
@@ -378,7 +363,6 @@ export default function DriverShell({
                 }}
               />
             )}
-            {user && <WalletTransactions />}
           </>
         )}
       </div>
@@ -423,32 +407,6 @@ export default function DriverShell({
           onBack={handleNavigateToHub}
           initialThreadId={initialThreadId}
         />
-      </div>
-    )
-  }
-
-  if (currentPage === 'signin' && !user) {
-    return (
-      <div className='max-w-md mx-auto overflow-hidden'>
-        {isCheckingSession ? (
-          <div className='relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 bg-gray-800/50 border-indigo-500/30'>
-            <div className='relative text-center'>
-              <div
-                className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
-                  !isDarkTheme(theme) ? 'border-indigo-600' : 'border-indigo-400'
-                }`}
-              />
-              <p className={!isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}>
-                Checking for existing session...
-              </p>
-            </div>
-          </div>
-        ) : (
-          <AlchemyAuth
-            onAuthSuccess={onAuthSuccess}
-            onLogoutSuccess={() => useAuthStore.getState().setUser(null)}
-          />
-        )}
       </div>
     )
   }
