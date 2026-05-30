@@ -25,6 +25,8 @@ import {
 } from '@/stores'
 import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
 import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
+import { useSupabaseAuthSync } from '@/hooks/use-supabase-auth-sync'
+import { createClient as createSupabaseBrowserClient } from '@/utils/supabase/client'
 import type { PageType } from '@/stores'
 
 // Shell components — each role gets its own shell
@@ -96,6 +98,11 @@ const HomeContent = () => {
     !!user && userRole === 'candidate' && !isRoleLoading,
     currentPage,
   )
+
+  // Bridge any Supabase Auth session into the wallet-shaped store (dual-mode).
+  // A Supabase user gets the auth:<id> placeholder wallet; the rest of page.tsx
+  // (role fetch, shells) then treats them like any other authenticated user.
+  useSupabaseAuthSync()
 
   // Tracks whether the user explicitly signed out. Prevents the session-sync
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
@@ -311,6 +318,13 @@ const HomeContent = () => {
       await alchemyLogout()
     } catch (err) {
       console.error('Alchemy logout error:', err)
+    }
+    // Also end any Supabase session (dual-mode). signOut fires onAuthStateChange
+    // → use-supabase-auth-sync clears the store, but we clear below regardless.
+    try {
+      await createSupabaseBrowserClient().auth.signOut()
+    } catch (err) {
+      console.error('Supabase logout error:', err)
     }
     // NOW clear app state — AlchemyAuth remounts with no active SDK session
     setUser(null)

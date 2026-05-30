@@ -23,6 +23,11 @@ interface AuthState {
   // User data
   user: AlchemyUser | null
   walletAddress: string | null
+
+  // Supabase Auth session user id (T1.10). Populated live from the Supabase
+  // session by use-supabase-auth-sync; null for Alchemy-only sessions. Never
+  // persisted — it rehydrates from the Supabase session cookie on load.
+  sessionUserId: string | null
   
   // Role state
   userRole: UserRole
@@ -46,6 +51,7 @@ interface AuthActions {
   // User actions
   setUser: (user: AlchemyUser | null) => void
   setWalletAddress: (address: string | null) => void
+  setSessionUserId: (id: string | null) => void
   
   // Role actions
   setUserRole: (role: UserRole) => void
@@ -79,6 +85,7 @@ interface AuthActions {
 const initialState: AuthState = {
   user: null,
   walletAddress: null,
+  sessionUserId: null,
   userRole: null,
   isRoleLoading: true,
   showRoleSelection: false,
@@ -108,6 +115,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setWalletAddress: (address) => set({ 
         walletAddress: address?.toLowerCase() ?? null 
       }),
+
+      setSessionUserId: (id) => set({ sessionUserId: id }),
 
       // Role actions
       setUserRole: (role) => set({ userRole: role }),

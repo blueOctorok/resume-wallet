@@ -592,7 +592,9 @@ This is the dual-mode helper that every API route migration calls in T1.5–T1.8
 | Pace risk              | Medium (touches user records) |
 
 
-**Goal:** One-time script that reads existing `users` rows with `wallet_address IS NOT NULL` and no matching `auth.users.id`, then calls `supabase.auth.admin.createUser({ id: users.id, email: users.email, email_confirm: false })` for each. The crucial trick: pass the existing `users.id` UUID as the new `auth.users.id` so the foreign key from T1.3 lines up automatically. After this script runs, every Storm user has both a `users` row and a matching `auth.users` row, ready for the cutover email in T1.12.
+**Goal:** One-time script that reads existing `users` rows with `wallet_address IS NOT NULL` and no matching `auth.users.id`, then calls `supabase.auth.admin.createUser({ id: users.id, email: <eff_email>, email_confirm: false })` for each. The crucial trick: pass the existing `users.id` UUID as the new `auth.users.id` so the foreign key from T1.3 lines up automatically. After this script runs, every Storm user has both a `users` row and a matching `auth.users` row, ready for the cutover email in T1.12.
+
+> **⚠️ CORRECTION (2026-05-29 live data audit) — implementation details in [`AUTH_BUILD_SPEC.md`](./AUTH_BUILD_SPEC.md) T1.9.** Email is in **`user_profiles.email`**, NOT `users.email` (only the 5 employers have `users.email`). Source query must `coalesce(users.email, user_profiles.email)`. Audit of 164 users: **157 migratable**, **7 ghosts** (no email/profile → skip, they re-register), **3 duplicate emails** — `dallasnash24@gmail.com`, `zaebrown444@gmail.com`, `metro@pacedrivers.com` (**Pace**) — each is one human with two wallet accounts + split data. Supabase Auth enforces unique email, so the script **skips collisions and logs them for a manual merge** (the Pace pair needs care — pick the row owning the live company/jobs/screenings). No data is at risk: all app data is keyed to `users.id` and untouched.
 
 **Files to change:**
 

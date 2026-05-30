@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.10/T1.11 (premium scaffolding) — Supabase session → wallet-shaped store bridge** (2026-05-29)
+
+> Build-green, lint-clean. **Not yet end-to-end tested** — needs the T1.11a sign-in UI (Auto) + smoke test. Alchemy untouched (dual-mode).
+
+The client is still wallet-keyed (shells + fetches read `walletAddress`); `page.tsx` only logged in via Alchemy. Rather than rewrite that surface, a Supabase user now carries the **`auth:<userId>` placeholder wallet** (`authOnlyWalletPlaceholder` from `user-bootstrap.ts`) so the wallet-keyed client works unchanged while the **server resolves real identity from the session cookie**. This is the deliberate dual-mode bridge, removed at T1.12 cutover.
+
+- `src/stores/auth-store.ts` — added `sessionUserId` + `setSessionUserId` (not persisted; rehydrated from session).
+- `src/hooks/use-supabase-auth-sync.ts` (new) — session → store bridge. Awaits `/api/auth/sync` (ensureUserRow) **before** setting the placeholder wallet, so no orphan `users` row is minted by the wallet-keyed role fetch. Won't clobber a live Alchemy session.
+- `src/app/auth/callback/route.ts` (new) — OAuth/magic-link/reset code exchange → redirect.
+- `src/app/api/auth/sync/route.ts` (new) — single place `ensureUserRow` runs for ALL sign-in methods; auth via session cookie, privileged write via admin client (RLS bypass).
+- `src/app/page.tsx` — calls the hook; `handleLogout` now also `supabase.auth.signOut()`.
+- Spec for the remaining Auto work (T1.11a UI, T1.7 routes): `docs/midnight/AUTH_BUILD_SPEC.md`.
+
+---
+
 ## **Strategic — Product identity locked: "an app that proves issuer-signed content" + provenance gate** (2026-05-29)
 
 > Docs/rules only (no code). Two decisions + one new rule. Foundational for all attestation/Midnight work going forward.
