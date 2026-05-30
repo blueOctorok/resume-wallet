@@ -422,9 +422,7 @@ export default function CandidateOutreach({
 
   const fetchInvites = useCallback(async () => {
     try {
-      const res = await fetch('/api/employer/invites', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/employer/invites')
       if (res.ok) {
         const data = await res.json()
         setInvites(data.invites || [])
@@ -439,9 +437,7 @@ export default function CandidateOutreach({
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch('/api/employer/jobs', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/employer/jobs')
       if (res.ok) {
         const data = await res.json()
         setJobs(data.jobs || [])
@@ -475,7 +471,7 @@ export default function CandidateOutreach({
       try {
         const res = await fetch(
           `/api/employer/talent/search?search=${encodeURIComponent(q)}&limit=6`,
-          { headers: { 'x-wallet-address': walletAddress } }
+          {  }
         )
         if (res.ok) {
           const { candidates } = await res.json()
@@ -555,7 +551,7 @@ export default function CandidateOutreach({
 
       const res = await fetch('/api/employer/invites', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           targetBlockType,
           candidateEmail: form.candidateEmail || undefined,
@@ -585,7 +581,7 @@ export default function CandidateOutreach({
     try {
       const res = await fetch('/api/employer/invites', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ id, status: 'cancelled' }),
       })
       if (res.ok) {
@@ -609,7 +605,6 @@ export default function CandidateOutreach({
     try {
       const res = await fetch(`/api/employer/invites?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to remove')
@@ -632,7 +627,7 @@ export default function CandidateOutreach({
     try {
       const res = await fetch('/api/employer/invites/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ inviteId: invite.id, email }),
       })
       const data = await res.json()
@@ -665,8 +660,8 @@ export default function CandidateOutreach({
   ) => {
     const res = await fetch('/api/employer/invites', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-      body: JSON.stringify({ id: inviteId, ...patch }),
+      headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ id: inviteId, ...patch }),
     })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
@@ -710,8 +705,8 @@ export default function CandidateOutreach({
       try {
         const res = await fetch('/api/employer/invites', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             id: inviteId,
             recruiterNotes: nextNotes === null ? null : nextNotes,
           }),
@@ -748,8 +743,8 @@ export default function CandidateOutreach({
       try {
         const res = await fetch('/api/employer/invites', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             targetBlockType: invite.targetBlockType ?? undefined,
             candidateEmail: invite.candidateEmail ?? undefined,
             candidateName: invite.candidateName ?? undefined,
@@ -790,8 +785,8 @@ export default function CandidateOutreach({
       try {
         const res = await fetch('/api/employer/invites', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             id: inviteId,
             status: nextStatus,
             employerStatusOverride: true,
@@ -979,7 +974,7 @@ export default function CandidateOutreach({
     try {
       const res = await fetch('/api/employer/invites', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ id, status: 'pending' }),
       })
       if (res.ok) {
@@ -2246,8 +2241,8 @@ function EditInviteModal({
       for (const blockType of selectedInvite) {
         const res = await fetch('/api/employer/invites', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             targetBlockType: blockType,
             candidateName: invite.candidateName || undefined,
             candidateEmail: invite.candidateEmail || undefined,
@@ -2279,7 +2274,7 @@ function EditInviteModal({
     try {
       const res = await fetch('/api/employer/screenings/order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           candidateUserId,
           type,

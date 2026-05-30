@@ -408,9 +408,7 @@ export default function ResumeBuilder({
       try {
         // ── Editing an existing resume ──────────────────────────────────────
         if (existingResumeId) {
-          const response = await fetch(`/api/resumes/${existingResumeId}`, {
-            headers: { 'x-wallet-address': wallet },
-          })
+          const response = await fetch(`/api/resumes/${existingResumeId}`)
 
           if (response.ok) {
             const data = await response.json()
@@ -447,9 +445,7 @@ export default function ResumeBuilder({
             setIsUploadedResumeFallback(
               data.resume_type === 'uploaded' || data.resume_type === 'UPLOADED' || !hasBuiltData,
             )
-            const profileResponse = await fetch('/api/driver/profile', {
-              headers: { 'x-wallet-address': wallet },
-            })
+            const profileResponse = await fetch('/api/driver/profile')
             if (profileResponse.ok) {
               const { profile } = await profileResponse.json()
               const prof = profile as UnifiedDriverProfile
@@ -477,9 +473,7 @@ export default function ResumeBuilder({
         }
 
         // ── New resume — prefill from unified profile if available ──────────
-        const profileResponse = await fetch('/api/driver/profile', {
-          headers: { 'x-wallet-address': wallet },
-        })
+        const profileResponse = await fetch('/api/driver/profile')
 
         if (profileResponse.ok) {
           const { profile } = await profileResponse.json()
@@ -534,8 +528,7 @@ export default function ResumeBuilder({
       // Save to resumes table (use internal ID to prevent duplicates)
       const response = await fetch('/api/resumes/create', {
         method: internalResumeId ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 'Content-Type': 'application/json',
           'x-wallet-address': user.address,
         },
         body: JSON.stringify({
@@ -572,11 +565,9 @@ export default function ResumeBuilder({
       try {
         const profileResponse = await fetch('/api/driver/profile', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': user.address,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             profileData,
             source: 'resume_builder',
           }),

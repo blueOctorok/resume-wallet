@@ -71,16 +71,12 @@ export function useEmployerScreenings(
         // user sees the result of their click.
         const reconcilePromise = fetch('/api/employer/screenings/reconcile', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: '{}',
+        body: '{}',
         }).catch(() => null)
 
-        const res = await fetch('/api/employer/screenings', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const res = await fetch('/api/employer/screenings')
         const data = (await res.json()) as ScreeningsResponse | { error: string }
         if (!res.ok || !('success' in data)) {
           throw new Error('error' in data ? data.error : 'Failed to load screenings')
@@ -100,9 +96,7 @@ export function useEmployerScreenings(
             const touched =
               (data2?.reconciled ?? 0) > 0 || (data2?.invitesCompleted ?? 0) > 0
             if (!touched) return
-            const res2 = await fetch('/api/employer/screenings', {
-              headers: { 'x-wallet-address': walletAddress },
-            })
+            const res2 = await fetch('/api/employer/screenings')
             if (res2.ok) {
               const fresh = (await res2.json()) as ScreeningsResponse
               if ('success' in fresh) {

@@ -58,9 +58,7 @@ export default function EmployerVerificationSection({
 
     try {
       setLoading(true)
-      const response = await fetch('/api/verification/status?role=employer', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/verification/status?role=employer')
 
       if (!response.ok) {
         throw new Error('Failed to fetch verification status')
@@ -86,9 +84,7 @@ export default function EmployerVerificationSection({
 
     try {
       setLoadingDetails(true)
-      const response = await fetch(`/api/verification/status?role=employer&requestId=${requestId}`, {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch(`/api/verification/status?role=employer&requestId=${requestId}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch request details')
@@ -111,9 +107,7 @@ export default function EmployerVerificationSection({
       setSendingAttempt(true)
       const response = await fetch('/api/verification/attempt', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           requestId,
@@ -145,9 +139,7 @@ export default function EmployerVerificationSection({
     try {
       const response = await fetch('/api/verification/attempt', {
         method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           requestId,

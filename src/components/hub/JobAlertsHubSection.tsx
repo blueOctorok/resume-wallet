@@ -66,9 +66,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/job-alerts', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/job-alerts')
       const data = await res.json()
       if (!res.ok) {
         setError(typeof data.error === 'string' ? data.error : 'Could not load alerts')
@@ -138,11 +136,9 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
       if (editing) {
         const res = await fetch(`/api/job-alerts/${editing.id}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+        body: JSON.stringify(payload),
         })
         const data = await res.json()
         if (!res.ok) {
@@ -152,11 +148,9 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
       } else {
         const res = await fetch('/api/job-alerts', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+        body: JSON.stringify(payload),
         })
         const data = await res.json()
         if (!res.ok) {
@@ -176,9 +170,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
     try {
       const res = await fetch(`/api/job-alerts/${p.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ is_active: !p.is_active }),
       })
@@ -194,7 +186,6 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
     try {
       const res = await fetch(`/api/job-alerts/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       if (res.ok) {
         setDeleteTarget(null)

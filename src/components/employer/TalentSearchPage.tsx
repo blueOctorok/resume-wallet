@@ -121,9 +121,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       setQuickRecruiting(true)
       const res = await fetch(`/api/employer/talent/${quickRecruitId}/recruit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify(
           useTalentPool
@@ -171,9 +169,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       params.append('limit', String(LIMIT))
       params.append('offset', String(currentOffset))
 
-      const response = await fetch(`/api/employer/talent/search?${params}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch(`/api/employer/talent/search?${params}`)
 
       if (!response.ok) {
         const data = await response.json()

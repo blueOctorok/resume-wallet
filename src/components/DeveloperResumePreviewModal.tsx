@@ -65,9 +65,7 @@ export default function DeveloperResumePreviewModal({
     try {
       const res = await fetch(`/api/resumes/${resume.id}/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ resumeType: 'developer' }),
       })
@@ -88,7 +86,6 @@ export default function DeveloperResumePreviewModal({
     try {
       const res = await fetch(`/api/resumes/${resume.id}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': userAddress },
       })
 
       if (res.ok) {

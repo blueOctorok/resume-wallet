@@ -46,9 +46,7 @@ export default function ProfileConflictModal({
     try {
       const response = await fetch('/api/driver/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           profileData: conflict.profileData,

@@ -136,9 +136,7 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
       // not yet created — same flow CareerCardShareModal uses.
       const res = await fetch('/api/career-card/share', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ enable: true }),
       })

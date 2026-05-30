@@ -72,10 +72,8 @@ export default function DriverEmploymentVerificationSection({
       setLoading(true)
       setError(null)
       const [profileRes, verificationRes] = await Promise.all([
-        fetch('/api/driver/profile', { headers: { 'x-wallet-address': userAddress } }),
-        fetch('/api/driver/verification/status?initiatedBy=applicant', {
-          headers: { 'x-wallet-address': userAddress },
-        }),
+        fetch('/api/driver/profile'),
+        fetch('/api/driver/verification/status?initiatedBy=applicant'),
       ])
       if (profileRes.ok) {
         const profileData = await profileRes.json()
@@ -112,9 +110,7 @@ export default function DriverEmploymentVerificationSection({
     try {
       const response = await fetch('/api/driver/verification/initiate-self', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           employmentId: employment.id,
@@ -153,9 +149,7 @@ export default function DriverEmploymentVerificationSection({
     try {
       const res = await fetch('/api/driver/profile/employment', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ employmentId: employment.id }),
       })

@@ -63,8 +63,9 @@ WITH o AS (SELECT u.id FROM public.users u LEFT JOIN auth.users a ON a.id = u.id
 DELETE FROM career_card_lens_drafts WHERE user_id IN (SELECT id FROM o);
 WITH o AS (SELECT u.id FROM public.users u LEFT JOIN auth.users a ON a.id = u.id WHERE a.id IS NULL)
 DELETE FROM career_card_lenses WHERE user_id IN (SELECT id FROM o);
-WITH o AS (SELECT u.id FROM public.users u LEFT JOIN auth.users a ON a.id = u.id WHERE a.id IS NULL)
-DELETE FROM career_cards WHERE user_id IN (SELECT id FROM o);
+-- NOTE: career_cards is a read-only VIEW over users + user_profiles + block_* tables.
+-- Its rows disappear automatically once the underlying users/block rows are deleted,
+-- so there is intentionally no DELETE FROM career_cards here (would error: not updatable).
 WITH o AS (SELECT u.id FROM public.users u LEFT JOIN auth.users a ON a.id = u.id WHERE a.id IS NULL)
 DELETE FROM company_members WHERE user_id IN (SELECT id FROM o);
 WITH o AS (SELECT u.id FROM public.users u LEFT JOIN auth.users a ON a.id = u.id WHERE a.id IS NULL)

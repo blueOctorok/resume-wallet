@@ -100,9 +100,7 @@ export default function JobPostingForm({
 
       const response = await fetch('/api/employer/jobs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           title,

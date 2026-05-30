@@ -93,9 +93,7 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
     try {
       const res = await fetch('/api/employer/company', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify(form),
       })

@@ -22,9 +22,7 @@ export default function GitHubPage({ userAddress, onBack }: GitHubPageProps) {
   const fetchProfile = useCallback(async () => {
     if (!userAddress) return
     try {
-      const res = await fetch('/api/developer/profile', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const res = await fetch('/api/developer/profile')
       if (!res.ok) return
       const data = await res.json()
       const p = data.profile
@@ -49,7 +47,6 @@ export default function GitHubPage({ userAddress, onBack }: GitHubPageProps) {
     try {
       await fetch('/api/github/sync', {
         method: 'POST',
-        headers: { 'x-wallet-address': userAddress },
       })
     } catch {
       // sync failed silently — profile fetch below still shows latest DB state

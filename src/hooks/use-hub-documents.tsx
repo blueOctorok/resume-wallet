@@ -104,9 +104,7 @@ export function useHubDocuments(refreshKey: number): {
       const docs: HubDocument[] = []
 
       if (needsHubData) {
-        const response = await fetch('/api/driver/hub', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const response = await fetch('/api/driver/hub')
         if (!response.ok) {
           setLoading(false)
           return
@@ -381,9 +379,7 @@ export function useHubDocuments(refreshKey: number): {
       }
 
       if (hasEmploymentVerificationBlock && walletAddress) {
-        const vr = await fetch('/api/candidate/verification/status?initiatedBy=applicant', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const vr = await fetch('/api/candidate/verification/status?initiatedBy=applicant')
         if (vr.ok) {
           const j = (await vr.json()) as { requests?: Array<{ status: string }> }
           const reqs = j.requests ?? []
@@ -441,7 +437,7 @@ export function useHubDocuments(refreshKey: number): {
         doc.type === 'resume' ? `/api/resumes/${doc.id}/verify` : `/api/driver-applications/${doc.id}/verify`
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
       })
       const data = await response.json()
       if (!response.ok && response.status !== 409) {
@@ -469,7 +465,6 @@ export function useHubDocuments(refreshKey: number): {
       const endpoint = doc.type === 'resume' ? `/api/resumes/${doc.id}` : `/api/driver-applications/${doc.id}`
       const response = await fetch(endpoint, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       if (!response.ok) {
         const data = await response.json()

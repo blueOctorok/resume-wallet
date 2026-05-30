@@ -215,9 +215,7 @@ export default function CandidateRequestsSection({
 
     try {
       setLoading(true)
-      const response = await fetch('/api/candidate/requests', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/candidate/requests')
 
       if (!response.ok) {
         throw new Error('Failed to fetch requests')
@@ -245,9 +243,7 @@ export default function CandidateRequestsSection({
       setUpdating(true)
       const response = await fetch(`/api/candidate/requests/${requestId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status }),
       })

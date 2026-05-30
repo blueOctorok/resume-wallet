@@ -75,10 +75,8 @@ export default function DeveloperEmploymentVerificationSection({
         ? `/api/developer/profile?syncFromResume=1`
         : '/api/developer/profile'
       const [profileRes, verificationRes] = await Promise.all([
-        fetch(profileUrl, { headers: { 'x-wallet-address': userAddress } }),
-        fetch('/api/developer/verification/status?initiatedBy=applicant', {
-          headers: { 'x-wallet-address': userAddress },
-        }),
+        fetch(profileUrl),
+        fetch('/api/developer/verification/status?initiatedBy=applicant'),
       ])
       if (profileRes.ok) {
         const profileData = await profileRes.json()
@@ -115,9 +113,7 @@ export default function DeveloperEmploymentVerificationSection({
     try {
       const response = await fetch('/api/developer/verification/initiate-self', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           employmentId: employment.id,
@@ -158,9 +154,7 @@ export default function DeveloperEmploymentVerificationSection({
     try {
       const res = await fetch('/api/developer/profile/employment', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ employmentId: employment.id }),
       })

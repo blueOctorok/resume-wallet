@@ -98,9 +98,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
       if (selectedJob !== 'all') params.append('jobId', selectedJob)
       if (selectedStatus !== 'all') params.append('status', selectedStatus)
 
-      const response = await fetch(`/api/employer/applicants?${params}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch(`/api/employer/applicants?${params}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch applicants')
@@ -123,9 +121,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
       setUpdatingStatus(applicationId)
       const response = await fetch(`/api/employer/applications/${applicationId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -470,9 +466,7 @@ function ApplicantDetailModal({
       setSavingNotes(true)
       const response = await fetch('/api/employer/applicants', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           applicationId: applicant.applicationId,

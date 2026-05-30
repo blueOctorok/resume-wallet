@@ -142,9 +142,7 @@ export default function StormApplyBridge({
         setLoading(true)
         setError(null)
         const qs = activeLensId ? `?lens=${encodeURIComponent(activeLensId)}` : ''
-        const res = await fetch(`/api/career-card${qs}`, {
-          headers: { 'x-wallet-address': userAddress },
-        })
+        const res = await fetch(`/api/career-card${qs}`)
         const data = await res.json()
         if (!res.ok || !data.card) {
           setError(data.error || 'Could not load your career card.')

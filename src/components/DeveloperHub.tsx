@@ -141,9 +141,7 @@ export default function DeveloperHub({
   const fetchResumes = useCallback(async () => {
     if (!userAddress) return
     try {
-      const res = await fetch('/api/developer/resume', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const res = await fetch('/api/developer/resume')
       if (res.ok) {
         const data = await res.json()
         setResumes(data.resumes || [])
@@ -161,9 +159,7 @@ export default function DeveloperHub({
     }
 
     try {
-      const response = await fetch('/api/developer/hub', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/developer/hub')
 
       if (!response.ok) throw new Error('Failed to fetch hub data')
 
@@ -209,9 +205,7 @@ export default function DeveloperHub({
     if (!userAddress) return
     setRefreshingPortfolio(true)
     try {
-      const response = await fetch('/api/developer/projects', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/developer/projects')
       if (response.ok) {
         const data = await response.json()
         setProjects(data.projects || [])
@@ -237,9 +231,7 @@ export default function DeveloperHub({
     if (!userAddress) return
     setRefreshingGithub(true)
     try {
-      const response = await fetch('/api/developer/hub', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/developer/hub')
       if (response.ok) {
         const data = await response.json()
         if (data.profile) {

@@ -29,9 +29,7 @@ export default function ReferralBanner() {
   const fetchReferral = useCallback(async () => {
     if (!walletAddress) return
     try {
-      const res = await fetch('/api/referrals', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/referrals')
       if (res.ok) {
         const data = await res.json()
         setReferralCode(data.referralCode)

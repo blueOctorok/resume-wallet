@@ -205,9 +205,7 @@ export default function GeneralResumeBuilder({
 
     try {
       if (existingResumeId) {
-        const res = await fetch(`/api/resumes/${existingResumeId}`, {
-          headers: { 'x-wallet-address': wallet },
-        })
+        const res = await fetch(`/api/resumes/${existingResumeId}`)
         if (!res.ok) {
           setLoadError('Could not load resume')
           return
@@ -228,7 +226,7 @@ export default function GeneralResumeBuilder({
         return
       }
 
-      const gr = await fetch('/api/general/resume', { headers: { 'x-wallet-address': wallet } })
+      const gr = await fetch('/api/general/resume')
       if (gr.ok) {
         const data = await gr.json()
         const latest = data.resumes?.[0]
@@ -310,9 +308,7 @@ export default function GeneralResumeBuilder({
         `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || 'Professional Resume'
       const res = await fetch('/api/general/resume', {
         method: internalResumeId ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': wallet,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           resumeId: internalResumeId,

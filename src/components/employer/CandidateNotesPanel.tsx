@@ -70,9 +70,7 @@ export default function CandidateNotesPanel({
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/employer/candidate-data/${candidateUserId}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch(`/api/employer/candidate-data/${candidateUserId}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch notes')
@@ -116,9 +114,7 @@ export default function CandidateNotesPanel({
       
       const response = await fetch('/api/employer/candidate-data', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           candidateUserId,

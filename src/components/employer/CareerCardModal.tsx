@@ -126,9 +126,7 @@ export default function CareerCardModal({
       else setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/employer/talent/${candidateUserId}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch(`/api/employer/talent/${candidateUserId}`)
 
       if (!response.ok) {
         const data = await response.json()
@@ -195,7 +193,7 @@ export default function CareerCardModal({
       setRequestLoading(blockType)
       const response = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(buildEmployerRequestBody(blockType)),
       })
       if (!response.ok) {
@@ -217,12 +215,12 @@ export default function CareerCardModal({
       setResendLoading(blockType)
       await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ requestId: pending.id }),
       })
       await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(buildEmployerRequestBody(blockType)),
       })
       await fetchCareerCard()
@@ -265,9 +263,7 @@ export default function CareerCardModal({
   const fetchJobPostings = async () => {
     try {
       setJobsLoading(true)
-      const response = await fetch('/api/employer/jobs', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch('/api/employer/jobs')
       const data = await response.json()
       setJobPostings((data.jobs || []).filter((j: JobPosting) => j.isActive))
     } catch { /* non-critical */ }
@@ -280,7 +276,7 @@ export default function CareerCardModal({
       setRecruitLoading(true)
       const response = await fetch(`/api/employer/talent/${candidateUserId}/recruit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ jobPostingId: selectedJobId, message: recruitMessage || undefined }),
       })
       const data = await response.json()
@@ -312,8 +308,8 @@ export default function CareerCardModal({
       if (useScreeningsOrderEndpoint) {
         const response = await fetch('/api/employer/screenings/order', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             candidateUserId,
             type: accioOrderProduct,
             consentBundleId: bundleId,
@@ -339,7 +335,7 @@ export default function CareerCardModal({
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           candidateUserId,
           paymentTxHash: txHash,

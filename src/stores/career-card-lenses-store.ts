@@ -57,9 +57,7 @@ async function request<T>(
 ): Promise<RequestResult<T>> {
   const res = await fetch(url, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-wallet-address': walletAddress,
+    headers: { 'Content-Type': 'application/json',
       ...(init.headers ?? {}),
     },
   })

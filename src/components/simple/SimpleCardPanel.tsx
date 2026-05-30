@@ -240,9 +240,7 @@ export default function SimpleCardPanel() {
     try {
       const res = await fetch('/api/ai/draft-lens', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           jobId: snap.id,

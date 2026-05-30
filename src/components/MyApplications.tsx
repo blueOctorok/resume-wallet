@@ -154,9 +154,7 @@ export default function MyApplications({
     try {
       const res = await fetch('/api/applications/status', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress ?? '',
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ applicationId: appId, candidateStatus: status }),
       })

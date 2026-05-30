@@ -180,9 +180,7 @@ export default function PortfolioPage({
 
     try {
       setIsLoading(true)
-      const response = await fetch('/api/developer/projects', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/developer/projects')
 
       if (!response.ok) throw new Error('Failed to fetch projects')
 
@@ -199,9 +197,7 @@ export default function PortfolioPage({
   const fetchPortfolioUrl = useCallback(async () => {
     if (!userAddress) return
     try {
-      const res = await fetch('/api/developer/profile', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const res = await fetch('/api/developer/profile')
       if (!res.ok) return
       const data = await res.json()
       setPortfolioUrl(data.profile?.portfolioUrl ?? '')
@@ -224,9 +220,7 @@ export default function PortfolioPage({
     try {
       const res = await fetch('/api/developer/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ portfolioUrl: portfolioUrl.trim() || null }),
       })
@@ -340,9 +334,7 @@ export default function PortfolioPage({
 
       const response = await fetch('/api/developer/projects', {
         method: editingProject ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       })
@@ -366,7 +358,6 @@ export default function PortfolioPage({
     try {
       const response = await fetch(`/api/developer/projects?id=${projectId}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': userAddress },
       })
 
       if (!response.ok) throw new Error('Failed to delete project')
@@ -384,9 +375,7 @@ export default function PortfolioPage({
     try {
       const response = await fetch('/api/developer/projects', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           id: project.id,

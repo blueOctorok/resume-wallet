@@ -277,9 +277,7 @@ export default function DeveloperResumeBuilder({
       try {
         if (existingResumeId) {
           // Load existing resume
-          const res = await fetch(`/api/resumes/${existingResumeId}`, {
-            headers: { 'x-wallet-address': userAddress },
-          })
+          const res = await fetch(`/api/resumes/${existingResumeId}`)
           if (res.ok) {
             // GET /api/resumes/[id] returns the row at the top level (not { resume })
             const row = await res.json() as {
@@ -295,9 +293,7 @@ export default function DeveloperResumeBuilder({
           }
         } else {
           // Prefer latest saved developer resume (so hub tile opens real data without My Files → Edit)
-          const listRes = await fetch('/api/developer/resume', {
-            headers: { 'x-wallet-address': userAddress },
-          })
+          const listRes = await fetch('/api/developer/resume')
           if (listRes.ok) {
             const listJson = await listRes.json()
             const rows = listJson.resumes as Array<{ id: string; structured_data?: DeveloperResumeData }> | undefined
@@ -310,9 +306,7 @@ export default function DeveloperResumeBuilder({
           }
 
           // Prefill from developer hub profile when no resume row yet
-          const res = await fetch('/api/developer/hub', {
-            headers: { 'x-wallet-address': userAddress },
-          })
+          const res = await fetch('/api/developer/hub')
           if (res.ok) {
             const { profile } = await res.json()
             if (profile) {
@@ -390,9 +384,7 @@ export default function DeveloperResumeBuilder({
 
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           resumeId,

@@ -44,9 +44,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
     else setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/career-card', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/career-card')
       if (!res.ok) throw new Error('Failed to load career card')
       const json = await res.json()
       setData(json.card)

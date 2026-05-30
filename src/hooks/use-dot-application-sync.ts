@@ -65,11 +65,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
       
       // GET method not supported by save-progress, use profile API or hub
       // Actually, let's use the driver hub API which already fetches this
-      const hubResponse = await fetch('/api/driver/hub', {
-        headers: {
-          'x-wallet-address': walletAddress,
-        },
-      })
+      const hubResponse = await fetch('/api/driver/hub')
       
       if (hubResponse.ok) {
         const hubData = await hubResponse.json()
@@ -123,8 +119,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
     try {
       const response = await fetch('/api/driver-applications/save-progress', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
         body: JSON.stringify({

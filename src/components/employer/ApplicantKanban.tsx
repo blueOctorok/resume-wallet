@@ -126,9 +126,7 @@ export default function ApplicantKanban({
     try {
       const res = await fetch(`/api/employer/talent/${applicantUserId}/request`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ requestType, documentType, message: 'Requested via Storm Hiring Pipeline' }),
       })

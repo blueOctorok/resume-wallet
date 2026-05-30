@@ -53,9 +53,7 @@ export function usePendingScreeningRequest(kind: Kind, walletAddress: string | n
     }
     setIsLoading(true)
     try {
-      const res = await fetch('/api/candidate/requests', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/candidate/requests')
       if (!res.ok) {
         setRequest(null)
         return

@@ -226,9 +226,6 @@ export default function DriverHub({
     try {
       const response = await fetch(`/api/resumes/${resume.id}`, {
         method: 'DELETE',
-        headers: {
-          'x-wallet-address': userAddress,
-        },
       })
 
       if (!response.ok) {
@@ -262,9 +259,7 @@ export default function DriverHub({
     try {
       const response = await fetch(`/api/resumes/${resume.id}/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
       })
 
@@ -311,9 +306,7 @@ export default function DriverHub({
         `/api/driver-applications/${dotApp.id}/verify`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': userAddress,
+          headers: { 'Content-Type': 'application/json',
           },
         },
       )
@@ -384,9 +377,6 @@ export default function DriverHub({
     try {
       const response = await fetch(`/api/driver-applications/${dotApp.id}`, {
         method: 'DELETE',
-        headers: {
-          'x-wallet-address': userAddress,
-        },
       })
 
       if (!response.ok) {
@@ -441,11 +431,7 @@ export default function DriverHub({
     setSelectedResumeData(null)
 
     try {
-      const response = await fetch(`/api/resumes/${resume.id}`, {
-        headers: {
-          'x-wallet-address': userAddress || '',
-        },
-      })
+      const response = await fetch(`/api/resumes/${resume.id}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch resume data')
@@ -486,11 +472,7 @@ export default function DriverHub({
       if (!silent) setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/driver/hub', {
-        headers: {
-          'x-wallet-address': userAddress,
-        },
-      })
+      const response = await fetch('/api/driver/hub')
 
       if (!response.ok) {
         throw new Error('Failed to load hub data')
@@ -553,9 +535,7 @@ export default function DriverHub({
     setRefreshingDotApps(true)
     try {
       // Re-fetch from hub endpoint but only update dot applications
-      const response = await fetch('/api/driver/hub', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/driver/hub')
       if (response.ok) {
         const data = await response.json()
         setHubData(prev => prev ? { 
@@ -576,9 +556,7 @@ export default function DriverHub({
     setRefreshingMvr(true)
     try {
       // Re-fetch from hub endpoint but only update MVR records
-      const response = await fetch('/api/driver/hub', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/driver/hub')
       if (response.ok) {
         const data = await response.json()
         setHubData(prev => prev ? { 

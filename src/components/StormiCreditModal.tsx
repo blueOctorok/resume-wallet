@@ -94,7 +94,7 @@ export default function StormiCreditModal({ walletAddress, onClose, onSuccess }:
       // Credit the user via API
       const creditRes = await fetch('/api/ai/credits', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ pack: selectedPack, txHash }),
       })
 

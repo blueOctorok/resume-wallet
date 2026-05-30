@@ -144,9 +144,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   fetchHubData: async (walletAddress) => {
     set({ isLoading: true, fetchError: null })
     try {
-      const res = await fetch('/api/hub/blocks', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/hub/blocks')
       if (!res.ok) throw new Error('Failed to fetch hub data')
       const data = await res.json()
 
@@ -236,9 +234,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     try {
       const res = await fetch('/api/hub/blocks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ blockType, position: nextPosition }),
       })
@@ -280,7 +276,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     try {
       const res = await fetch(`/api/hub/blocks/${blockId}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       if (!res.ok) throw new Error('Failed to remove block')
     } catch (err) {
@@ -301,9 +296,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     try {
       const res = await fetch('/api/hub/blocks/reorder', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           order: updated.map((b) => ({ id: b.id, position: b.position })),
@@ -331,9 +324,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     try {
       const res = await fetch(`/api/hub/blocks/${blockId}/config`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ config: configPatch }),
       })
@@ -360,9 +351,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     try {
       const res = await fetch('/api/hub/onboarding', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ occupation, seekingReason, extraContext: extraContext ?? undefined }),
       })

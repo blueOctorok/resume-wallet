@@ -399,7 +399,7 @@ function EditJobModal({
     try {
       const res = await fetch(`/api/employer/jobs/${job.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           title: form.title.trim(),
           description: form.description || null,
@@ -597,7 +597,7 @@ export default function JobPostingsSection({
     try {
       const res = await fetch(`/api/employer/jobs/${job.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ isActive: !job.isActive }),
       })
       if (!res.ok) throw new Error('Failed to update')
@@ -614,7 +614,6 @@ export default function JobPostingsSection({
     try {
       const res = await fetch(`/api/employer/jobs/${job.id}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       if (!res.ok) throw new Error('Failed to delete')
       setDeleteTarget(null)

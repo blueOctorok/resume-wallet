@@ -74,9 +74,7 @@ export default function MessageThread({ threadId, walletAddress, onBack }: Messa
   const fetchMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const res = await fetch(`/api/messages/${threadId}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch(`/api/messages/${threadId}`)
       if (!res.ok) throw new Error('Failed to load messages')
       const data = await res.json()
       setThread(data.thread)
@@ -113,9 +111,7 @@ export default function MessageThread({ threadId, walletAddress, onBack }: Messa
     try {
       const res = await fetch(`/api/messages/${threadId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ body: draft.trim() }),
       })

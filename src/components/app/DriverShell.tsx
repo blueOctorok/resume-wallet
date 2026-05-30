@@ -178,9 +178,7 @@ export default function DriverShell({
       console.log('🔄 [DriverShell] No resume found but DOT app is complete — auto-creating resume')
 
       try {
-        const profileRes = await fetch('/api/driver/profile', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const profileRes = await fetch('/api/driver/profile')
         if (!profileRes.ok) throw new Error('Failed to fetch profile')
         const { profile } = await profileRes.json()
         if (!profile) throw new Error('No profile data')
@@ -195,11 +193,10 @@ export default function DriverShell({
 
         const createRes = await fetch('/api/resumes/create', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          headers: { 'Content-Type': 'application/json',
             'x-wallet-address': walletAddress,
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             title: nameTitle ? `${nameTitle} - Resume` : 'My Resume',
             structuredData: {
               personalInfo: resumeData.personalInfo,
@@ -251,7 +248,6 @@ export default function DriverShell({
     if (!walletAddress) return
     const res = await fetch('/api/driver/profile/clear-dot-progress', {
       method: 'POST',
-      headers: { 'x-wallet-address': walletAddress },
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))

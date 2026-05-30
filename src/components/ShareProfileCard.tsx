@@ -90,9 +90,7 @@ export default function ShareProfileCard({
     if (!address) return
     try {
       setLoading(true)
-      const res = await fetch(shareApiUrl, {
-        headers: { 'x-wallet-address': address },
-      })
+      const res = await fetch(shareApiUrl)
       if (res.ok) {
         const data = await res.json()
         if (data.shareSettings) setSettings(data.shareSettings)
@@ -106,9 +104,7 @@ export default function ShareProfileCard({
     if (!address || !careerCardApiUrl) return
     try {
       setPreviewLoading(true)
-      const res = await fetch(careerCardApiUrl, {
-        headers: { 'x-wallet-address': address },
-      })
+      const res = await fetch(careerCardApiUrl)
       if (res.ok) {
         const json = await res.json()
         const cc = json.card
@@ -140,7 +136,7 @@ export default function ShareProfileCard({
       setSavingSettings(true)
       const res = await fetch(shareApiUrl, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': address },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ shareSettings: newSettings }),
       })
       if (res.ok) setSettings(newSettings)

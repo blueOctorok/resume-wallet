@@ -222,9 +222,7 @@ export default function BackgroundCheckDisclosure({
   const fetchSignedConsent = async () => {
     if (!consentId) return
     try {
-      const response = await fetch(`/api/candidate/bgcheck-consent/${consentId}`, {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch(`/api/candidate/bgcheck-consent/${consentId}`)
       if (response.ok) {
         const data = await response.json()
         const consent = data.consent
@@ -252,9 +250,7 @@ export default function BackgroundCheckDisclosure({
 
   const fetchDriverProfile = async () => {
     try {
-      const response = await fetch('/api/candidate/profile-info', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/candidate/profile-info')
       if (response.ok) {
         const data = await response.json()
         if (data.profile) {
@@ -309,9 +305,7 @@ export default function BackgroundCheckDisclosure({
       // Step 1: Save the disclosure consent
       const response = await fetch('/api/candidate/bgcheck-consent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           requestId,
@@ -334,11 +328,9 @@ export default function BackgroundCheckDisclosure({
         setOrderPlacing(true)
         const orderRes = await fetch('/api/candidate/fulfill-screening', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': userAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             requestId,
             type: 'mvr',
             formData: {

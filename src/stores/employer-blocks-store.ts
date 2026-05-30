@@ -43,9 +43,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
   fetchEmployerBlocks: async (walletAddress) => {
     set({ isLoading: true, fetchError: null })
     try {
-      const res = await fetch('/api/employer/hub/blocks', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/employer/hub/blocks')
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
         throw new Error((j as { error?: string }).error ?? 'Failed to load employer blocks')
@@ -84,9 +82,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
     try {
       const res = await fetch('/api/employer/hub/blocks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ blockType, reason: reason ?? undefined }),
       })
@@ -106,9 +102,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
     try {
       const res = await fetch(`/api/employer/hub/blocks/${rowId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ reason: reason ?? undefined }),
       })

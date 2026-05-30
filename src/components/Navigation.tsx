@@ -654,11 +654,9 @@ export default function Navigation({
                                     const nextDismissed = !walkthroughDismissed
                                     const res = await fetch('/api/user/profile', {
                                       method: 'PATCH',
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                        'x-wallet-address': walletAddress,
+                                      headers: { 'Content-Type': 'application/json',
                                       },
-                                      body: JSON.stringify({ walkthrough_dismissed: nextDismissed }),
+        body: JSON.stringify({ walkthrough_dismissed: nextDismissed }),
                                     })
                                     if (res.ok) {
                                       setWalkthroughDismissed(nextDismissed)

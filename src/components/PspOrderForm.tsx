@@ -79,9 +79,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   const refreshSelfPspConsent = useCallback(async () => {
     if (!userAddress) return
     try {
-      const res = await fetch('/api/psp/consent?self=1', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const res = await fetch('/api/psp/consent?self=1')
       if (res.ok) {
         const data = await res.json()
         if (data.hasUnconsumedSelfConsent && data.consentId) {

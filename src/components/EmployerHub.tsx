@@ -463,7 +463,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       try {
         const r = await fetch('/api/employer/company/ensure-wallet', {
           method: 'POST',
-          headers: { 'x-wallet-address': walletAddress },
         })
         const j = await r.json().catch(() => ({}))
         if (cancelled) return
@@ -500,11 +499,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       if (!silent) setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/employer/hub', {
-        headers: {
-          'x-wallet-address': walletAddress,
-        },
-      })
+      const response = await fetch('/api/employer/hub')
 
       if (!response.ok) {
         throw new Error('Failed to fetch hub data')
@@ -525,9 +520,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     if (!walletAddress) return
     setRefreshingPipeline(true)
     try {
-      const response = await fetch('/api/employer/hub', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const response = await fetch('/api/employer/hub')
       if (response.ok) {
         const result = await response.json()
         setData(prev =>
@@ -617,9 +610,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       
       const response = await fetch(`/api/employer/applications/${applicationId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: newStatus }),
       })
@@ -652,7 +643,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       setRemovingApplicationId(applicant.applicationId)
       const response = await fetch(`/api/employer/applications/${applicant.applicationId}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}))

@@ -40,9 +40,7 @@ export default function DriverCareerCardSection({
       else setLoading(true)
       setError(null)
 
-      const res = await fetch('/api/driver/career-card', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/driver/career-card')
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load career card')
       setData(json.careerCard)

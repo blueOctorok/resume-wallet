@@ -110,7 +110,7 @@ export default function OnboardPage() {
         await fetch('/api/user/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ walletAddress }),
         })
 
         if (targetBlockType) {
@@ -119,21 +119,21 @@ export default function OnboardPage() {
           await fetch('/api/user/set-role', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: 'candidate', walletAddress }),
+        body: JSON.stringify({ role: 'candidate', walletAddress }),
           })
 
           // Install the target block on the new user's hub
           await fetch('/api/hub/blocks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-            body: JSON.stringify({ blockType: targetBlockType }),
+            headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ blockType: targetBlockType }),
           })
 
           // Create minimal onboarding record so the hub doesn't show the onboarding form
           await fetch('/api/hub/onboarding', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-            body: JSON.stringify({
+            headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
               occupation: 'Invited via outreach',
               seekingReason: `Completing ${getBlockDefinition(targetBlockType)?.label ?? 'block'}`,
             }),
@@ -143,7 +143,7 @@ export default function OnboardPage() {
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ walletAddress }),
           }).catch(() => {})
 
           // Redirect to the block's page via the onboard query param
@@ -160,7 +160,7 @@ export default function OnboardPage() {
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ walletAddress }),
           }).catch(() => {})
 
           // Land on role selection → empty hub → onboarding form (existing flow)

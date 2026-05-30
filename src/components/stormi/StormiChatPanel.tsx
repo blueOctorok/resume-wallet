@@ -465,7 +465,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
 
   useEffect(() => {
     if (!walletAddress) return
-    fetch('/api/ai/credits', { headers: { 'x-wallet-address': walletAddress } })
+    fetch('/api/ai/credits')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {

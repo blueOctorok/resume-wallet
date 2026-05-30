@@ -41,9 +41,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
 
     try {
       setLoading(true)
-      const response = await fetch('/api/verification/status?role=driver', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/verification/status?role=driver')
 
       if (!response.ok) {
         throw new Error('Failed to fetch verification status')
@@ -69,9 +67,7 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
 
     try {
       setLoadingDetails(true)
-      const response = await fetch(`/api/verification/status?role=driver&requestId=${requestId}`, {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch(`/api/verification/status?role=driver&requestId=${requestId}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch request details')

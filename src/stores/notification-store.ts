@@ -39,9 +39,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
     fetchNotifications: async (walletAddress) => {
       set({ loading: true })
       try {
-        const res = await fetch('/api/notifications', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const res = await fetch('/api/notifications')
         if (!res.ok) return
         const { notifications, unreadCount } = await res.json()
         set({ notifications: notifications ?? [], unreadCount: unreadCount ?? 0 })
@@ -64,7 +62,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       try {
         await fetch(`/api/notifications/${id}`, {
           method: 'PATCH',
-          headers: { 'x-wallet-address': walletAddress },
         })
       } catch (err) {
         console.error('[NOTIFICATION STORE] Mark-read failed:', err)
@@ -83,7 +80,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       try {
         await fetch('/api/notifications', {
           method: 'PATCH',
-          headers: { 'x-wallet-address': walletAddress },
         })
       } catch (err) {
         console.error('[NOTIFICATION STORE] Mark-all-read failed:', err)

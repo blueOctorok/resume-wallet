@@ -145,9 +145,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
         try {
           // Use the hub blocks endpoint which returns user_profiles data
-          const res = await fetch('/api/hub/blocks', {
-            headers: { 'x-wallet-address': walletAddress },
-          })
+          const res = await fetch('/api/hub/blocks')
 
           if (!res.ok) {
             set({ showProfileSetup: true })

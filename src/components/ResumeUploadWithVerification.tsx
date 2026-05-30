@@ -119,11 +119,10 @@ export default function ResumeUploadWithVerification({
       try {
         const res = await fetch('/api/ai/parse-resume', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          headers: { 'Content-Type': 'application/json',
             'x-wallet-address': wallet,
           },
-          body: JSON.stringify({ resumeId }),
+        body: JSON.stringify({ resumeId }),
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
@@ -165,9 +164,7 @@ export default function ResumeUploadWithVerification({
     try {
       const res = await fetch(`/api/resumes/${pendingResumeId}/apply-extraction`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': account.address,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ extraction: parsedExtraction }),
       })
@@ -378,8 +375,7 @@ export default function ResumeUploadWithVerification({
 
       const blockchainResponse = await fetch('/api/blockchain/verify-resume', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           resumeId: uploadData.resume.id,

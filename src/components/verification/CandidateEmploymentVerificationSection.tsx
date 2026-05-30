@@ -63,7 +63,7 @@ export default function CandidateEmploymentVerificationSection({
       setError(null)
       const verificationRes = await fetch(
         '/api/candidate/verification/status?initiatedBy=applicant',
-        { headers: { 'x-wallet-address': userAddress } },
+        {  },
       )
       if (verificationRes.ok) {
         const data = await verificationRes.json()
@@ -97,9 +97,7 @@ export default function CandidateEmploymentVerificationSection({
     try {
       const response = await fetch('/api/candidate/verification/initiate-self', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           verificationKey: row.verificationKey,
@@ -139,9 +137,7 @@ export default function CandidateEmploymentVerificationSection({
     try {
       const res = await fetch('/api/driver/profile/employment', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ employmentId: row.id }),
       })

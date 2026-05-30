@@ -208,9 +208,6 @@ export default function ResumeDashboard({
     try {
       const response = await fetch(`/api/resumes/${resumeToDelete.id}`, {
         method: 'DELETE',
-        headers: {
-          'x-wallet-address': user.address,
-        },
       })
 
       if (!response.ok) {
@@ -427,9 +424,7 @@ export default function ResumeDashboard({
       try {
         const response = await fetch(`/api/resumes/${resume.id}/verify`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': user.address,
+          headers: { 'Content-Type': 'application/json',
           },
         })
 

@@ -177,8 +177,8 @@ export default function EmployerPspMvrBundleAttestationStep({
         }
         const res = await fetch('/api/candidate/screening-consent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({
             requestId,
             companyName: companyName.trim(),
             deferredBgConsent,
@@ -198,7 +198,7 @@ export default function EmployerPspMvrBundleAttestationStep({
       // ── 1. POST background check consent (step 1) ──────────────────────
       const bgRes = await fetch('/api/candidate/bgcheck-consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           requestId,
           companyName,
@@ -214,7 +214,7 @@ export default function EmployerPspMvrBundleAttestationStep({
       // ── 2. POST FMCSA PSP consent (step 2) ────────────────────────────
       const pspRes = await fetch('/api/psp/consent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           requestId,
           companyName,
@@ -240,7 +240,7 @@ export default function EmployerPspMvrBundleAttestationStep({
       }
       const patchRes = await fetch(`/api/psp/consent/${pspConsentId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ mergeFormData: { cdlisWrittenConsent: cdlisPayload } }),
       })
       if (!patchRes.ok) {
@@ -251,7 +251,7 @@ export default function EmployerPspMvrBundleAttestationStep({
       // ── 4. Place the Accio order ──────────────────────────────────────
       const orderRes = await fetch('/api/candidate/fulfill-screening', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           requestId,
           type: 'psp',

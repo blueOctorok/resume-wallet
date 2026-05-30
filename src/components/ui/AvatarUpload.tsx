@@ -66,7 +66,6 @@ export default function AvatarUpload({
 
       const res = await fetch(uploadEndpoint, {
         method: 'POST',
-        headers: { 'x-wallet-address': walletAddress },
         body: form,
       })
 

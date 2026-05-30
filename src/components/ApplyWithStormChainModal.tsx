@@ -107,9 +107,7 @@ export default function ApplyWithStormChainModal({
         setLoading(true)
         setError(null)
         const qs = activeLensId ? `?lens=${encodeURIComponent(activeLensId)}` : ''
-        const response = await fetch(`/api/career-card${qs}`, {
-          headers: { 'x-wallet-address': userAddress },
-        })
+        const response = await fetch(`/api/career-card${qs}`)
         const data = await response.json()
         if (!response.ok || !data.card) {
           setError(data.error || 'Could not load your career card.')
@@ -135,8 +133,7 @@ export default function ApplyWithStormChainModal({
     try {
       const response = await fetch('/api/ai/cover-letter', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 'Content-Type': 'application/json',
           'x-wallet-address': userAddress,
         },
         body: JSON.stringify({

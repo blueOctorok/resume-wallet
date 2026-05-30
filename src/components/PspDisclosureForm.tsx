@@ -217,9 +217,7 @@ export default function PspDisclosureForm({
   const fetchSignedConsent = async () => {
     if (!consentId) return
     try {
-      const response = await fetch(`/api/psp/consent/${consentId}`, {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch(`/api/psp/consent/${consentId}`)
       if (response.ok) {
         const data = await response.json()
         const c = data.consent
@@ -261,9 +259,7 @@ export default function PspDisclosureForm({
 
   const fetchDriverProfile = async () => {
     try {
-      const response = await fetch('/api/candidate/profile-info', {
-        headers: { 'x-wallet-address': userAddress },
-      })
+      const response = await fetch('/api/candidate/profile-info')
       if (response.ok) {
         const data = await response.json()
         if (data.profile) {
@@ -359,9 +355,7 @@ export default function PspDisclosureForm({
       // Step 1: Save PSP consent
       const response = await fetch('/api/psp/consent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           requestId: requestId || undefined,
@@ -401,11 +395,9 @@ export default function PspDisclosureForm({
         setOrderPlacing(true)
         const orderRes = await fetch('/api/candidate/fulfill-screening', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': userAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             requestId,
             type: 'psp',
             formData: {

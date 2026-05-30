@@ -212,9 +212,7 @@ export default function DotApplicationFlow({
       forceProfileLoadRef.current = false
 
       try {
-        const response = await fetch('/api/driver/profile', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const response = await fetch('/api/driver/profile')
         if (!response.ok) return
 
         const { profile } = await response.json()
@@ -358,8 +356,8 @@ export default function DotApplicationFlow({
 
         const profileResponse = await fetch('/api/driver/profile', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({ profileData, source: 'dot_application' }),
+          headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ profileData, source: 'dot_application' }),
         })
         if (!profileResponse.ok) {
           const errorData = await profileResponse.json()
@@ -371,7 +369,7 @@ export default function DotApplicationFlow({
           await fetch('/api/driver-applications/save-progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-            body: JSON.stringify({
+        body: JSON.stringify({
               form1Data: dotApp.form1Data,
               form2Data: dotApp.form2Data,
               form3Data: dotApp.form3Data,
@@ -458,7 +456,7 @@ export default function DotApplicationFlow({
         const syncResponse = await fetch('/api/driver/sync-from-dot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ walletAddress }),
         })
         if (syncResponse.ok) {
           console.log('✅ [DOT] Profile synced from DOT application')
@@ -472,7 +470,6 @@ export default function DotApplicationFlow({
       // Clear in-progress DOT state from profile (fire-and-forget)
       fetch('/api/driver/profile/clear-dot-progress', {
         method: 'POST',
-        headers: { 'x-wallet-address': walletAddress },
       }).catch((err) => console.warn('⚠️ [DOT] Clear progress non-fatal:', err))
 
       dotApp.completeApplication()
@@ -513,8 +510,8 @@ export default function DotApplicationFlow({
           }
           fetch('/api/driver/profile', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-            body: JSON.stringify({ profileData, source: 'dot_prefill' }),
+            headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ profileData, source: 'dot_prefill' }),
           }).catch((err) => console.warn('⚠️ [DOT] Prefill profile sync non-fatal:', err))
         } catch (err) {
           console.warn('⚠️ [DOT] Prefill profile sync error (non-fatal):', err)
@@ -585,7 +582,6 @@ export default function DotApplicationFlow({
       setResumeAutoCreateStatus('creating')
       try {
         const profileRes = await fetch('/api/driver/profile', {
-          headers: { 'x-wallet-address': walletAddress },
           signal,
         })
         if (!profileRes.ok) throw new Error('Failed to fetch profile')
@@ -616,11 +612,10 @@ export default function DotApplicationFlow({
 
         const createRes = await fetch('/api/resumes/create', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          headers: { 'Content-Type': 'application/json',
             'x-wallet-address': walletAddress,
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             title: title ? `${title} - Resume` : 'My Resume',
             structuredData,
             resumeType: 'built',

@@ -75,7 +75,7 @@ export default function GitHubContributionGraph({
           : `/api/github/contributions?year=${selectedYear}`
         const fetchOptions: RequestInit = shareToken
           ? {}
-          : { headers: { 'x-wallet-address': walletAddress ?? '' } }
+          : {  }
         const res = await fetch(url, fetchOptions)
         const data = await res.json()
 

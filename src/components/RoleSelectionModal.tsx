@@ -132,9 +132,7 @@ export default function RoleSelectionModal({
   const checkPendingRequest = useCallback(async () => {
     if (!walletAddress) return
     try {
-      const res = await fetch('/api/employer/access-request', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/employer/access-request')
       const data = await res.json()
       if (data.hasPendingRequest && data.request) {
         setPendingRequest({
@@ -176,9 +174,7 @@ export default function RoleSelectionModal({
     try {
       const res = await fetch('/api/employer/access-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           firstName: requestFirstName.trim(),

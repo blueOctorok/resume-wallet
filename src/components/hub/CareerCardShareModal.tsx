@@ -125,7 +125,7 @@ export default function CareerCardShareModal({
     if (!walletAddress) return
     setLoading(true)
     try {
-      const res = await fetch(SHARE_API, { headers: { 'x-wallet-address': walletAddress } })
+      const res = await fetch(SHARE_API)
       if (res.ok) {
         const data = await res.json()
         setShareToken(data.shareToken ?? null)
@@ -199,7 +199,7 @@ export default function CareerCardShareModal({
     try {
       const res = await fetch(SHARE_API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({ regenerate }),
       })
       if (res.ok) {
@@ -285,11 +285,9 @@ export default function CareerCardShareModal({
       try {
         const res = await fetch('/api/ai/social-posts', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+          headers: { 'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ cardUrl: fullUrl }),
+        body: JSON.stringify({ cardUrl: fullUrl }),
         })
         if (res.ok) {
           const data = await res.json()
@@ -325,9 +323,7 @@ export default function CareerCardShareModal({
     if (!walletAddress) return
     setPdfLoading(true)
     try {
-      const res = await fetch('/api/career-card/pdf', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/career-card/pdf')
       const isJsonError = res.headers.get('Content-Type')?.includes('application/json')
       if (!res.ok) {
         if (isJsonError) {

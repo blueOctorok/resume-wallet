@@ -47,9 +47,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
       // Fire-and-forget — UI is already flipped; server catches up for cross-device sync.
       void fetch('/api/user/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({ ui_mode_preference: next }),
       }).catch(() => {

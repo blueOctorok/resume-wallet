@@ -110,9 +110,7 @@ export default function ProfileSetup({
   useEffect(() => {
     const checkExistingProfiles = async () => {
       try {
-        const res = await fetch('/api/user/existing-profiles', {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const res = await fetch('/api/user/existing-profiles')
         if (!res.ok) return
         const data = await res.json()
 
@@ -167,9 +165,7 @@ export default function ProfileSetup({
 
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
       })

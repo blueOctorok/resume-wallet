@@ -82,8 +82,7 @@ export default function ProfileSetupModal({
       // Write identity to user_profiles — the single source of truth for name/email/phone/location.
       const profileSetupRes = await fetch('/api/user/profile-setup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
         body: JSON.stringify({

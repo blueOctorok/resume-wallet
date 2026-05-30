@@ -66,9 +66,7 @@ export default function MessageInbox({ walletAddress, onBack, initialThreadId }:
   const fetchThreads = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const res = await fetch('/api/messages', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/messages')
       if (!res.ok) throw new Error('Failed to load inbox')
       const data = await res.json()
       setThreads(data.threads)

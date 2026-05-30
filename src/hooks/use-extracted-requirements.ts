@@ -31,11 +31,9 @@ export function useExtractedRequirements(
 
     fetch('/api/ai/extract-job-requirements', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-wallet-address': walletAddress,
+      headers: { 'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
+        body: JSON.stringify({
         jobId: snap.id,
         source: 'adzuna',
         title: snap.title,

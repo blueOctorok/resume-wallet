@@ -81,9 +81,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       }
       setError(null)
 
-      const res = await fetch('/api/employer/team', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch('/api/employer/team')
 
       if (!res.ok) {
         const data = await res.json()
@@ -119,9 +117,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
     try {
       const res = await fetch('/api/employer/team', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+        headers: { 'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: inviteEmail.trim(),
@@ -156,7 +152,6 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
     try {
       const res = await fetch(`/api/employer/team/${memberId}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
       })
 
       if (!res.ok) {
@@ -175,11 +170,9 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
   const handleNameChange = async (memberId: string, newName: string) => {
     const res = await fetch(`/api/employer/team/${memberId}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-wallet-address': walletAddress,
+      headers: { 'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ displayName: newName }),
+        body: JSON.stringify({ displayName: newName }),
     })
 
     if (!res.ok) {

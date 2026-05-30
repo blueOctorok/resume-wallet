@@ -6,9 +6,7 @@ import { useDriverHubStore } from '@/stores/driver-hub-store'
  */
 export async function syncDriverHubFromApi(walletAddress: string): Promise<void> {
   try {
-    const res = await fetch('/api/driver/hub', {
-      headers: { 'x-wallet-address': walletAddress },
-    })
+    const res = await fetch('/api/driver/hub')
     if (!res.ok) return
     const data = await res.json()
     useDriverHubStore.getState().loadHubData({

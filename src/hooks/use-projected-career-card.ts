@@ -25,9 +25,7 @@ export function useProjectedCareerCard(
     setError(null)
     try {
       const qs = lensId ? `?lens=${encodeURIComponent(lensId)}` : ''
-      const res = await fetch(`/api/career-card${qs}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch(`/api/career-card${qs}`)
       if (!res.ok) throw new Error('Failed to load career card')
       const json = await res.json()
       setCard(json.card ?? null)

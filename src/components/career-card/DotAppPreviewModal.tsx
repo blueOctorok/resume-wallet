@@ -48,9 +48,7 @@ export default function DotAppPreviewModal({
         const q = applicationId
           ? `?applicationId=${encodeURIComponent(applicationId)}`
           : ''
-        const res = await fetch(`/api/employer/talent/${userId}/dot-app${q}`, {
-          headers: { 'x-wallet-address': walletAddress },
-        })
+        const res = await fetch(`/api/employer/talent/${userId}/dot-app${q}`)
         if (!res.ok) throw new Error('Failed to load DOT application')
         const json = (await res.json()) as DotAppPreviewData & { id?: string }
         if (!cancelled) setPreviewData(json)
@@ -72,9 +70,7 @@ export default function DotAppPreviewModal({
     if (!id || !walletAddress) return
     setPdfLoading(true)
     try {
-      const res = await fetch(`/api/driver-applications/${id}/export-pdf`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch(`/api/driver-applications/${id}/export-pdf`)
       if (!res.ok) throw new Error('PDF failed')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)

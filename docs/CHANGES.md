@@ -4,6 +4,32 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.12b — Strip vestigial client `x-wallet-address` headers** (2026-05-30)
+
+After T1.12c made `getStormUserIdFromRequest` session-only, most client fetches no longer need to send `x-wallet-address` — same-origin requests authorize via the Supabase cookie (middleware refreshes it on `/api/*` since T1.12a).
+
+**Removed** the header from ~56 client files (components, hooks, stores) where the target API route resolves identity via session only — employer hub/screenings/team/talent, notifications, messaging, hub blocks, career-card, verification sections, referrals, job alerts, avatar upload, auth-store profile sync, etc.
+
+**Intentionally kept** on routes that still read the header server-side (per cutover allowlist):
+
+| Keep header | Why |
+|---|---|
+| `src/components/admin/**` | Admin routes still gate on `ADMIN_WALLETS` via header (T1.8-admin) |
+| `/api/storm/history` | Legacy wallet-keyed STORM ledger |
+| `/api/resumes/create`, `/upload`, GET `/api/resumes` | Create-on-write still uses header → `getOrCreateUserByWallet` |
+| `/api/driver-applications/save-progress` | Same |
+| `/api/user/profile-setup` | Same |
+| `/api/ai/chat`, `cover-letter`, `parse-resume`, `interview-prep-quiz`, `job-talking-points` | `STORMI_UNLIMITED_WALLETS` flag reads header |
+| `lib/ava-chat.ts`, `lib/walkthrough-ai.ts` | Call `/api/ai/chat` |
+
+Did **not** remove `walletAddress` from Zustand stores or component props — that's **T1.13**.
+
+**Verification:** `npm run build` green.
+
+**Next:** T1.12d (remove `AlchemyProvider` / `@account-kit`) or T1.13 (drop `walletAddress` from stores after verifying no regressions).
+
+---
+
 ## **Phase 1 · T1.12.1-pre — Orphan-prevention fix + FK gate finding** (2026-05-30)
 
 Ran the **T1.12.1 hard-gate** query (`users` with no matching `auth.users`) before attempting the FK re-add. It returned **14 orphans**, so the FK is **NOT** applied — adding it now would fail the migration / lock those users out.
@@ -12,7 +38,7 @@ Ran the **T1.12.1 hard-gate** query (`users` with no matching `auth.users`) befo
 
 **Pace status:** owner `s.blaha@pacedrivers.com` is correctly aligned (canonical row + auth row + company ownership) — signs in fine Monday. `metro@pacedrivers.com` is **not** the owner (2 orphan rows, no auth row) — pending boss confirmation it's unused.
 
-**Migrations authored (owner-approved cleanup):** `093_cleanup_orphan_users_pre_fk.sql` (transactional delete of all 14 orphans + their child rows across 36 user-referencing columns; asserts 0 orphans before COMMIT) and `094_users_auth_fk_final.sql` (re-adds `users_id_fkey` **VALIDATED** — no `NOT VALID`, so it fails loudly if any orphan remains). **MCP is read-only**, so the boss runs these in the Supabase SQL editor (same as 089): run 093 → re-run the gate (must be 0) → run 094. See `docs/midnight/EXECUTION_CHECKLIST.md` → T1.12.1.
+**Migrations applied (✅ T1.12.1 done):** `093_cleanup_orphan_users_pre_fk.sql` (transactional delete of all 14 orphans + child rows across user-referencing columns; asserts 0 orphans before COMMIT) and `094_users_auth_fk_final.sql` (re-adds `users_id_fkey` **VALIDATED**). Applied via the Supabase dashboard 2026-05-30: `users_id_fkey convalidated=true`, **153 users / 0 orphans**, Pace owner + 3 members intact. Note: `093` originally tried to `DELETE FROM career_cards`, which is a **view** — removed that line (the view derives from base tables, so its rows clear automatically). See `docs/midnight/EXECUTION_CHECKLIST.md` → T1.12.1.
 
 ---
 

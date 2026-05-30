@@ -249,7 +249,7 @@ export default function CareerCard({
     setDotAppError(null)
     try {
       const res = await fetch(`/api/employer/talent/${data.userId}/dot-app`, {
-        headers: walletAddress ? { 'x-wallet-address': walletAddress } : {},
+        headers: walletAddress ? {} : {},
       })
       if (!res.ok) throw new Error('Failed to load DOT application')
       const json = await res.json()
