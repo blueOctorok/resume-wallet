@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -17,19 +17,27 @@ const CALLBACK_ERRORS: Record<string, string> = {
   auth_callback: 'Could not complete sign-in. Please try again.',
 }
 
+/**
+ * Passwordless sign-in: Google + email OTP code only (no passwords).
+ *
+ * This mirrors the previous Alchemy experience (Google or an emailed code) so
+ * existing users feel at home, and it keeps Storm out of the password-reset
+ * helpdesk business. The same flow handles sign-up and sign-in — entering an
+ * email that has no account yet creates one (`shouldCreateUser: true`).
+ */
 function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [isSigningIn, setIsSigningIn] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false)
-  const [isResetLoading, setIsResetLoading] = useState(false)
   // Self-correcting guard: if an already-authenticated user lands here (e.g. the
   // page.tsx guest redirect fired during a slow session restore), bounce them
   // back to the hub instead of showing a sign-in form they don't need.
@@ -56,40 +64,9 @@ function SignInForm() {
     }
   }, [searchParams])
 
-  const clearMessages = useCallback(() => {
-    setError(null)
-    setSuccess(null)
-  }, [])
-
-  const handlePasswordSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    clearMessages()
-
-    if (!email.trim() || !password) {
-      setError('Enter your email and password.')
-      return
-    }
-
-    setIsSigningIn(true)
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
-      if (signInError) {
-        setError(signInError.message)
-        return
-      }
-      router.push('/')
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setIsSigningIn(false)
-    }
-  }
-
   const handleGoogleSignIn = async () => {
-    clearMessages()
+    setError(null)
+    setInfo(null)
     setIsGoogleLoading(true)
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -100,63 +77,78 @@ function SignInForm() {
         setError(oauthError.message)
         setIsGoogleLoading(false)
       }
-      // OAuth redirects away — keep loading state if redirect succeeds.
+      // OAuth redirects away — keep the loading state if the redirect succeeds.
     } catch {
       setError('Could not start Google sign-in. Please try again.')
       setIsGoogleLoading(false)
     }
   }
 
-  const handleMagicLink = async () => {
-    clearMessages()
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setInfo(null)
 
     if (!email.trim()) {
-      setError('Enter your email to receive a sign-in link.')
+      setError('Enter your email to get a sign-in code.')
       return
     }
 
-    setIsMagicLinkLoading(true)
+    setIsSendingCode(true)
     try {
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: authCallbackUrl() },
+        // shouldCreateUser makes this double as sign-up for new emails.
+        // emailRedirectTo covers users who click the link instead of typing the code.
+        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl() },
       })
       if (otpError) {
         setError(otpError.message)
         return
       }
-      setSuccess('Check your email for a sign-in link.')
+      setCodeSent(true)
+      setInfo('We emailed you a 6-digit code. Enter it below to sign in.')
     } catch {
-      setError('Could not send magic link. Please try again.')
+      setError('Could not send a code. Please try again.')
     } finally {
-      setIsMagicLinkLoading(false)
+      setIsSendingCode(false)
     }
   }
 
-  const handleForgotPassword = async () => {
-    clearMessages()
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
 
-    if (!email.trim()) {
-      setError('Enter your email first, then click Forgot password.')
+    const token = code.trim()
+    if (token.length < 6) {
+      setError('Enter the 6-digit code from your email.')
       return
     }
 
-    setIsResetLoading(true)
+    setIsVerifying(true)
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim(),
-        { redirectTo: authCallbackUrl() },
-      )
-      if (resetError) {
-        setError(resetError.message)
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token,
+        type: 'email',
+      })
+      if (verifyError) {
+        setError(verifyError.message)
         return
       }
-      setSuccess('Check your email for a password reset link.')
+      router.push('/')
     } catch {
-      setError('Could not send reset email. Please try again.')
+      setError('Could not verify the code. Please try again.')
     } finally {
-      setIsResetLoading(false)
+      setIsVerifying(false)
     }
+  }
+
+  const resetToEmailStep = () => {
+    setCodeSent(false)
+    setCode('')
+    setError(null)
+    setInfo(null)
   }
 
   if (checkingSession) {
@@ -191,97 +183,99 @@ function SignInForm() {
             </div>
           ) : null}
 
-          {success ? (
+          {info ? (
             <div
               className='mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800 dark:border-teal-800/50 dark:bg-teal-950/30 dark:text-teal-200'
               role='status'
             >
-              {success}
+              {info}
             </div>
           ) : null}
 
-          <form onSubmit={handlePasswordSignIn} className='space-y-4'>
-            <Input
-              label='Email'
-              type='email'
-              autoComplete='email'
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                if (error || success) clearMessages()
-              }}
-              placeholder='you@example.com'
-              required
-            />
+          {codeSent ? (
+            <form onSubmit={handleVerifyCode} className='space-y-4'>
+              <Input
+                label={`Code sent to ${email.trim()}`}
+                type='text'
+                inputMode='numeric'
+                autoComplete='one-time-code'
+                maxLength={6}
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, ''))
+                  if (error) setError(null)
+                }}
+                placeholder='123456'
+                autoFocus
+                required
+              />
 
-            <Input
-              label='Password'
-              type='password'
-              autoComplete='current-password'
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                if (error) clearMessages()
-              }}
-              placeholder='••••••••'
-              required
-            />
+              <Button type='submit' className='w-full' isLoading={isVerifying}>
+                Verify &amp; sign in
+              </Button>
 
-            <div className='flex justify-end'>
+              <div className='flex items-center justify-between text-sm'>
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='sm'
+                  onClick={resetToEmailStep}
+                >
+                  Use a different email
+                </Button>
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='sm'
+                  isLoading={isSendingCode}
+                  onClick={() => handleSendCode({ preventDefault: () => {} } as React.FormEvent)}
+                >
+                  Resend code
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <form onSubmit={handleSendCode} className='space-y-4'>
+                <Input
+                  label='Email'
+                  type='email'
+                  autoComplete='email'
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (error || info) {
+                      setError(null)
+                      setInfo(null)
+                    }
+                  }}
+                  placeholder='you@example.com'
+                  autoFocus
+                  required
+                />
+
+                <Button type='submit' className='w-full' isLoading={isSendingCode}>
+                  Email me a sign-in code
+                </Button>
+              </form>
+
+              <div className='my-6 flex items-center gap-3'>
+                <div className='h-px flex-1 bg-gray-200 dark:bg-gray-700' />
+                <span className='text-xs text-gray-500 dark:text-gray-400'>or</span>
+                <div className='h-px flex-1 bg-gray-200 dark:bg-gray-700' />
+              </div>
+
               <Button
                 type='button'
-                variant='ghost'
-                size='sm'
-                isLoading={isResetLoading}
-                onClick={handleForgotPassword}
-                className='text-teal-700 hover:text-teal-600 dark:text-teal-300 dark:hover:text-teal-200'
+                variant='secondary'
+                className='w-full'
+                isLoading={isGoogleLoading}
+                onClick={handleGoogleSignIn}
               >
-                Forgot password?
+                Continue with Google
               </Button>
-            </div>
-
-            <Button type='submit' className='w-full' isLoading={isSigningIn}>
-              Sign in
-            </Button>
-          </form>
-
-          <div className='my-6 flex items-center gap-3'>
-            <div className='h-px flex-1 bg-gray-200 dark:bg-gray-700' />
-            <span className='text-xs text-gray-500 dark:text-gray-400'>or</span>
-            <div className='h-px flex-1 bg-gray-200 dark:bg-gray-700' />
-          </div>
-
-          <div className='space-y-3'>
-            <Button
-              type='button'
-              variant='secondary'
-              className='w-full'
-              isLoading={isGoogleLoading}
-              onClick={handleGoogleSignIn}
-            >
-              Continue with Google
-            </Button>
-
-            <Button
-              type='button'
-              variant='ghost'
-              className='w-full'
-              isLoading={isMagicLinkLoading}
-              onClick={handleMagicLink}
-            >
-              Email me a sign-in link
-            </Button>
-          </div>
-
-          <p className='mt-6 text-center text-sm text-gray-600 dark:text-gray-400'>
-            Need an account?{' '}
-            <Link
-              href='/sign-up'
-              className='font-semibold text-teal-700 hover:text-teal-600 dark:text-teal-300 dark:hover:text-teal-200'
-            >
-              Sign up
-            </Link>
-          </p>
+            </>
+          )}
         </Card>
 
         <p className='mt-6 text-center text-sm text-gray-600 dark:text-gray-400'>

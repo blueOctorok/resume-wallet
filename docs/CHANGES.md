@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · Passwordless auth — Google + email OTP (no passwords)** (2026-05-29)
+
+Storm sign-in is now **passwordless**, matching the previous Alchemy experience (Google or an emailed code) and keeping Storm out of the password-reset helpdesk loop. Decision per user: "use google and email OTP… I don't want to manage passwords."
+
+**`src/app/sign-in/page.tsx` — rewritten:**
+- Removed password sign-in + "forgot password".
+- **Email OTP code flow**: enter email → `signInWithOtp({ shouldCreateUser: true })` → enter the 6-digit code → `verifyOtp({ type: 'email' })`. Includes "resend code" + "use a different email". `shouldCreateUser: true` means a brand-new email creates the account, so this single flow doubles as sign-up.
+- **Google** kept (`signInWithOAuth` → `/auth/callback`).
+- `emailRedirectTo` still set so anyone who clicks the link instead of typing the code lands on the callback.
+- Kept the session guard + `?wallet=1` / `?guided=1` escape hatches.
+
+**`src/app/sign-up/page.tsx`:** collapsed to a redirect → `/sign-in` (passwordless = no separate registration). It was the only link to `/sign-up`, now removed.
+
+**⚠️ Required dashboard step (not code):** the Supabase **Auth → Email Templates → "Magic Link"** template must include `{{ .Token }}` so users receive the 6-digit code (default template only sends `{{ .ConfirmationURL }}`). Until that's set, codes won't arrive. MCP doesn't expose template editing, so this is manual.
+
+**Deferred:** passkeys (WebAuthn) → **T1.14** (needs a supabase-js bump; do after the T1.12 cutover is stable).
+
+---
+
 ## **Phase 1 · T1.11c — `/sign-in` is the front door (dual-door, Pace-safe)** (2026-05-29)
 
 Unauthenticated visitors now land on the Supabase `/sign-in` page instead of the legacy Alchemy connect UI. Implemented as a **dual door** (user-approved) so existing Alchemy users — including Pace — are not locked out before the coordinated T1.12 cutover.

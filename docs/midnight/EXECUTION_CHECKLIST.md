@@ -789,6 +789,30 @@ WHERE a.id IS NULL;
 
 ---
 
+### T1.14 — Passwordless polish (passkeys + OTP)
+
+|                        |                                                    |
+| ---------------------- | -------------------------------------------------- |
+| Status                 | ⬜ Not started (OTP shipped; passkeys deferred)     |
+| Pre-conditions         | T1.12 cutover stable                               |
+| Estimated session size | M                                                  |
+| Pace risk              | Low (additive auth method)                         |
+
+**Context:** Sign-in is already **passwordless** — Google + email OTP code shipped 2026-05-29 (per user: "use google and email OTP… I don't want to manage passwords"). Password sign-in/sign-up removed; `/sign-up` redirects to `/sign-in`. This step is the remaining polish.
+
+**Required config (do once, before relying on OTP in prod):**
+- Supabase **Auth → Email Templates → "Magic Link"** must include `{{ .Token }}` so users receive the 6-digit code (default template only renders `{{ .ConfirmationURL }}`). Optionally keep the link too (belt-and-suspenders: code-typers and link-clickers both work via `/auth/callback`).
+
+**Goal (passkeys):** Add WebAuthn passkeys as a phishing-resistant, no-email-roundtrip option alongside Google + OTP.
+- Requires a `@supabase/supabase-js` bump (passkey APIs are newer/experimental) — do **after** T1.12 so the cutover stays boring.
+- Add "Sign in with a passkey" + an enroll prompt in account settings.
+
+**Verification:** New email gets a 6-digit code and signs in; Google works; (passkeys) enroll + sign-in on a passkey-capable device.
+
+**Commit:** `feat(auth): passkey sign-in + OTP polish (T1.14)`
+
+---
+
 ## Track 2 — Stripe payments (USDC → cards)
 
 **Goal:** Replace USDC-on-Base payment flows with Stripe Checkout (one-time MVR/PSP) and Stripe Subscriptions (employer plans). Dual-mode during cutover so Pace's pending orders never lose state.
