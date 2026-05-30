@@ -24,6 +24,7 @@ import { authOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
 export function useSupabaseAuthSync() {
   const setSessionUserId = useAuthStore((s) => s.setSessionUserId)
   const setUser = useAuthStore((s) => s.setUser)
+  const setSupabaseSessionChecked = useAuthStore((s) => s.setSupabaseSessionChecked)
   // Guards the bootstrap fetch to once per session id (avoids re-syncing on
   // every onAuthStateChange tick, e.g. token refresh).
   const syncedFor = useRef<string | null>(null)
@@ -86,8 +87,12 @@ export function useSupabaseAuthSync() {
     }
 
     // Initial hydrate (covers post-OAuth/magic-link redirect landings).
+    // onSession sets sessionUserId synchronously before any await, so marking
+    // the check done right after means page.tsx sees the correct auth state
+    // before it decides whether to redirect a "guest" to /sign-in.
     supabase.auth.getUser().then(({ data }) => {
       onSession(data.user?.id ?? null, data.user?.email)
+      if (active) setSupabaseSessionChecked(true)
     })
 
     // Live updates (covers client-side password sign-in + sign-out).
@@ -99,5 +104,5 @@ export function useSupabaseAuthSync() {
       active = false
       sub.subscription.unsubscribe()
     }
-  }, [setSessionUserId, setUser])
+  }, [setSessionUserId, setUser, setSupabaseSessionChecked])
 }

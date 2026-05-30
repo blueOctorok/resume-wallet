@@ -28,6 +28,12 @@ interface AuthState {
   // session by use-supabase-auth-sync; null for Alchemy-only sessions. Never
   // persisted — it rehydrates from the Supabase session cookie on load.
   sessionUserId: string | null
+
+  // True once the initial Supabase getUser() has resolved (regardless of result).
+  // The guest → /sign-in redirect must NOT fire before this, or a user with a
+  // valid session gets bounced to /sign-in while the session restores — which
+  // then bounces them back, causing a redirect loop. Never persisted.
+  supabaseSessionChecked: boolean
   
   // Role state
   userRole: UserRole
@@ -52,6 +58,7 @@ interface AuthActions {
   setUser: (user: AlchemyUser | null) => void
   setWalletAddress: (address: string | null) => void
   setSessionUserId: (id: string | null) => void
+  setSupabaseSessionChecked: (checked: boolean) => void
   
   // Role actions
   setUserRole: (role: UserRole) => void
@@ -86,6 +93,7 @@ const initialState: AuthState = {
   user: null,
   walletAddress: null,
   sessionUserId: null,
+  supabaseSessionChecked: false,
   userRole: null,
   isRoleLoading: true,
   showRoleSelection: false,
@@ -117,6 +125,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       }),
 
       setSessionUserId: (id) => set({ sessionUserId: id }),
+
+      setSupabaseSessionChecked: (checked) => set({ supabaseSessionChecked: checked }),
 
       // Role actions
       setUserRole: (role) => set({ userRole: role }),
@@ -176,6 +186,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           isCheckingSession: false,
           isInitialized: true,
           isRoleLoading: false,
+          // The session was checked to get here; keep it true so the guest
+          // redirect to /sign-in fires immediately instead of waiting again.
+          supabaseSessionChecked: true,
         })
       },
 

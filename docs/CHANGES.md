@@ -23,6 +23,20 @@ Storm sign-in is now **passwordless**, matching the previous Alchemy experience 
 
 ---
 
+## **Phase 1 · Fix /sign-in ↔ / redirect loop (flashing nav + spinner)** (2026-05-29)
+
+After login, users with a valid Supabase session saw the nav + Storm spinner flash rapidly. Root cause: **two sources of truth for "authenticated."** `page.tsx` decided "guest → redirect to `/sign-in`" from the wallet-shaped Zustand `user` + a 1.5s Alchemy timer, while `/sign-in` decided "logged in → redirect to `/`" from `supabase.auth.getUser()`. When the Supabase session existed but `user` hadn't hydrated within 1.5s, the pages disagreed and ping-ponged.
+
+| File | Fix |
+|---|---|
+| `src/stores/auth-store.ts` | Added `supabaseSessionChecked` (not persisted); kept true through the compound `logout` reset so post-logout redirect still fires |
+| `src/hooks/use-supabase-auth-sync.ts` | Set `supabaseSessionChecked = true` once the initial `getUser()` resolves (after `sessionUserId` is set synchronously) |
+| `src/app/page.tsx` | `sessionSettled` now also requires `supabaseSessionChecked`; `awaitingGuestRedirect` also requires `!sessionUserId` (a resolved Supabase session counts as authenticated); added `awaitingSessionHydration` loading cover for the brief `sessionUserId` set / `user` not-yet-hydrated window |
+
+Note: the `/auth/v1/otp` **429** seen alongside this was a *separate* issue — Supabase's built-in email sender is throttled to ~a few/hour. Fix is Custom SMTP via the existing Resend account (dashboard config, captured in checklist).
+
+---
+
 ## **Phase 1 · Supabase login role fix for migrated wallet users** (2026-05-29)
 
 Existing users (e.g. Pace owner `s.blaha@pacedrivers.com`) who signed in via email OTP/Google were incorrectly shown the candidate/employer role picker. Root cause: the Supabase auth bridge set the client wallet to `auth:<uuid>`, but migrated users still have their real Alchemy smart-wallet in `users.wallet_address`; `/api/user/profile` looked up by wallet only and returned 404.

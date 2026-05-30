@@ -75,6 +75,8 @@ const HomeContent = () => {
   const {
     user, setUser,
     walletAddress,
+    sessionUserId,
+    supabaseSessionChecked,
     userRole, setUserRole,
     isRoleLoading, setIsRoleLoading,
     showRoleSelection, setShowRoleSelection,
@@ -311,10 +313,24 @@ const HomeContent = () => {
   // active Alchemy session must NEVER be bounced to /sign-in while it
   // restores. isConnected flips true before the session-sync effect sets
   // `user`, so checking it here avoids that race.
+  //
+  // Two more guards close a redirect LOOP: a user with a live Supabase
+  // session would otherwise be sent to /sign-in (because `user` lags behind
+  // the cookie), and /sign-in would send them straight back — flashing.
+  //   - `supabaseSessionChecked`: don't decide "guest" until Supabase's
+  //     getUser() has actually resolved.
+  //   - `!sessionUserId`: a resolved Supabase session counts as authenticated
+  //     even before the wallet-shaped `user` is hydrated.
   // -------------------------------------------------------
   const walletMode = searchParams.get('wallet') === '1'
-  const sessionSettled = !isCheckingSession && !isInitializing
-  const awaitingGuestRedirect = !user && !isConnected && !showGuidedMode && !walletMode
+  const sessionSettled = !isCheckingSession && !isInitializing && supabaseSessionChecked
+  const awaitingGuestRedirect =
+    !user && !sessionUserId && !isConnected && !showGuidedMode && !walletMode
+
+  // Supabase session resolved but the wallet-shaped `user` hasn't hydrated yet
+  // (the /api/auth/sync round-trip). Cover the gap so we don't flash a blank
+  // hub or the wrong shell during that brief window.
+  const awaitingSessionHydration = !user && !!sessionUserId
 
   useEffect(() => {
     if (sessionSettled && awaitingGuestRedirect) {
@@ -507,7 +523,9 @@ const HomeContent = () => {
           {/* Guest → /sign-in handoff (T1.11c). Covers both the session-check
               window and the moment the redirect fires, so guests never see the
               legacy Alchemy landing flash before reaching the Supabase front door. */}
-          {awaitingGuestRedirect && <LoadingScreen message='Loading…' />}
+          {(awaitingGuestRedirect || awaitingSessionHydration) && (
+            <LoadingScreen message='Loading…' />
+          )}
 
           {/* ── Employer ── */}
           {user && userRole === 'employer' && !isRoleLoading && (
