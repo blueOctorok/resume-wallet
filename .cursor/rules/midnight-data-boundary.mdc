@@ -1,0 +1,55 @@
+---
+description: What data may be attested / sent to Midnight. The provenance gate. Read before adding any "verified" fact, attestation, or on-chain proof.
+globs: src/lib/attestation-service*, src/lib/fact-registry*, src/lib/verify-*, src/lib/midnight-*, src/app/api/attestation/**, src/app/api/verify/**, compact/**
+alwaysApply: false
+---
+
+# Midnight Data Boundary — the Provenance Gate
+
+**Storm is an app that proves issuer-signed content.** That one sentence is the product. Everything attestable must trace back to a third party who signed the underlying fact.
+
+## The gate (non-negotiable)
+
+A fact may be **attested / sent to Midnight** only if it originates from a **third-party issuer** — a CRA (Accio), a regulator (state DMV, FMCSA), or another external authority whose signature anchors the data.
+
+**Self-reported data is display-only. It never gets an attestation, a "verified" badge, or an on-chain proof.**
+
+## Why (the crypto reason — internalize this)
+
+A ZK proof does **not** prove a fact is *true*. It proves: (1) you hold a credential **signed by issuer `I`**, and (2) a predicate over it holds — without revealing the contents. **Truth is inherited from `I`'s signature; the math launders the issuer's trust, it does not create it.** Garbage in → signed garbage out.
+
+So a self-reported claim has **no issuer to anchor to** — proving it only proves "the candidate said so," signed by the candidate. That carries zero more weight than the raw claim. **ZK on self-data is theater.**
+
+## Classification
+
+| Data | Origin | Attestable / Midnight-eligible? |
+|---|---|---|
+| MVR, PSP results | Accio → DMV / FMCSA (signed) | ✅ Yes |
+| CDL verification, license validity | DMV (signed) | ✅ Yes |
+| Employment verification (prior-employer response) | Third party attests | ✅ Yes |
+| Resume, skills, portfolio, headline, bio | Candidate types it | ❌ No — display only |
+| Self-entered DOT 391.21 fields | Candidate types it | ❌ No — "on file", not "verified" |
+| GitHub / developer blocks | Public / self | ❌ No |
+
+## Provenance is the gate, NOT role
+
+Do **not** write `if (role === 'driver')` to decide attestation eligibility. Gate on **data provenance** (is it issuer-signed?). Today the issuer-signed set happens to be driver screening blocks — that's incidental. If a nursing-license API appears tomorrow, nursing facts become attestable automatically under the same gate, with zero code change to the gate.
+
+```typescript
+// ❌ BAD — role-hardcoded, and attests self-reported data
+if (user.role === 'driver') {
+  return attest({ fact: 'has_5_years_experience', value: block.selfReportedYears })
+}
+
+// ✅ GOOD — gate on provenance; self-reported stays display-only
+if (fact.source === 'third_party') {
+  return attestationService.proveFact({ candidateUserId, factType })
+}
+// self-reported → render as "submitted / on file", never a verified/proof surface
+```
+
+## "Verified" means a named third party attested
+
+Every attestation must **cite its issuer** (e.g. "derived from MVR pulled by Accio on 2026-05-12"). Never "trust us." See `attestation-architecture.mdc` for the `AttestationService` interface and `FactType.source` field that encodes this.
+
+The app stays **open-ended** — anyone builds a career card from self-reported blocks. Only issuer-attested facts light up the verified / Midnight path.

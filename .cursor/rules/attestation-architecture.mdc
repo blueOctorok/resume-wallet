@@ -15,6 +15,8 @@ alwaysApply: false
 
 The strategic context for this rule lives in `.cursor/rules/strategic-direction.mdc` and `docs/midnight/ARCHITECTURE.md`. Read those first if you haven't.
 
+> **Provenance gate (DEC-2026-05-014):** before a fact can be attested at all, it must originate from a **third-party issuer**. Self-reported data is display-only — never attested, never on-chain. The full rule is `.cursor/rules/midnight-data-boundary.mdc`. The fact-registry `source` field below is how that gate is encoded; honor it.
+
 ---
 
 ## The core architectural rule
@@ -131,7 +133,7 @@ interface FactDefinition {
 2. **Add a `FactDefinition`** to the registry export. Without this, `proveFact()` rejects requests for the fact.
 3. **Implement `proveImpl`.** This is the function that reads from `block_*` / `mvr_results` / wherever, computes the fact, and returns `{ true | false, disclosedFields }`.
 4. **Decide `disclosedFields` carefully.** This is the selectively-disclosed surface. Only include fields the carrier *needs* to evaluate the fact. For `cdl_valid_through`, include the expiration date (the carrier needs it). For `mvr_clean_36_months`, do NOT include the underlying MVR data — only the boolean fact and the verification date.
-5. **Set `source` honestly.** Per `PROJECT_ROADMAP.md` blockchain policy, only third-party-sourced facts get the strongest verification language ("tamper-proof"). Self-reported facts get "submitted" / "on-file" language.
+5. **Set `source` honestly — and treat it as a hard gate, not just a label.** Only `source: 'third_party'` facts may produce a `ProofArtifact` (signed JWT now, Midnight ZK later) or render a "verified" badge. `source: 'self_reported'` facts are **display-only** — surface them as "submitted" / "on file" and never route them through `proveFact()` or to Midnight. See `.cursor/rules/midnight-data-boundary.mdc` and DEC-2026-05-014. The crypto reason: a proof launders the *issuer's* trust; a self-claim has no issuer, so proving it proves nothing.
 6. **Add a UI mapping** in the appropriate fact panel component (e.g. `CredentialFactsPanel.tsx`).
 
 ### Don't add a fact if

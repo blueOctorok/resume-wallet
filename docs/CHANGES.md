@@ -4,6 +4,68 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Strategic — Product identity locked: "an app that proves issuer-signed content" + provenance gate** (2026-05-29)
+
+> Docs/rules only (no code). Two decisions + one new rule. Foundational for all attestation/Midnight work going forward.
+
+- **DEC-2026-05-014** — Storm's product identity is **"an app that proves issuer-signed content."** The **provenance gate**: a fact is attestable / Midnight-eligible **only if it comes from a third-party issuer** (CRA/regulator/external authority). **Self-reported data is display-only — never attested, never a "verified" badge, never on-chain.** Crypto rationale: a ZK proof launders the *issuer's* trust (proves "issuer `I` signed this + predicate holds"), it cannot manufacture truth from a self-claim. Gate on **provenance, not role** — no `if (driver)`; the issuer-signed set is driver screening blocks today purely by circumstance. App stays open-ended.
+- **DEC-2026-05-015** — **Sideline the developer vertical: hide, don't convert, delete later.** Devs have no issuer-signed credential, so they can't use the moat. Stop investing, hide dev blocks from new users, keep `DeveloperShell` frozen, spend zero migration effort on dev code. Deliberate removal is a separate post-Phase-1-auth cleanup track (per `block-development.mdc` removal checklist).
+- **New rule:** `.cursor/rules/midnight-data-boundary.mdc` — the enforceable provenance gate (classification table + good/bad examples). `attestation-architecture.mdc` reinforced: `source: 'self_reported'` is a hard gate (no `ProofArtifact`), not just softer copy.
+
+**Files:** `docs/midnight/DECISION_LOG.md` (DEC-014, DEC-015); `.cursor/rules/midnight-data-boundary.mdc` (new); `.cursor/rules/attestation-architecture.mdc` (reinforced).
+
+---
+
+## **Phase 1 · T1.8 (partial) — AI routes + misc straggler migrated to session helper** (2026-05-29)
+
+> **Status: code complete, pending commit.** Build green; lint-clean; zero new type errors. See `docs/midnight/EXECUTION_CHECKLIST.md` step T1.8. **NOT the full T1.8** — employer routes (T1.7) and admin routes (see below) are intentionally still pending, so the "zero `x-wallet-address` in `src/app/api/`" end-state is not yet reached.
+
+Migrated the candidate-facing **AI routes** and the last candidate **misc** straggler to the dual-mode `getStormUserIdFromRequest()` helper:
+
+- **9 AI routes** (`ai/cover-letter`, `ai/parse-resume`, `ai/chat`, `ai/draft-lens`, `ai/job-talking-points`, `ai/interview-prep-quiz`, `ai/extract-job-requirements`, `ai/social-posts`, `ai/credits` POST). CASE 1 user resolution. **Preserved** the legacy `STORMI_UNLIMITED_WALLETS` allowlist flag in 5 of them via a *separate* header read (it's a feature flag, not auth — no session equivalent, removed at cutover). `ai/chat` needed a `users.role` lookup (employer-chat gate) so it resolves `userId` then `select('role').eq('id', userId)`. `ai/extract-job-requirements` used the wallet only as an auth gate (no `user.id` usage), so the lookup was dropped entirely.
+- **`applications/status`** (PATCH) — candidate self-reported application outcome; deferred out of T1.5 (PATCH-only). Uses the session-aware `createClient` server client; resolves `userId` and scopes the update by `applicant_user_id`.
+
+**Deliberately deferred (NOT done in this session):**
+
+- **Employer routes → T1.7.** Pace-critical (`src/app/api/employer/**`); held pending explicit confirmation + Monday live Pace testing. Includes the employer-initiated `verification/initiate|attempt|status` flow.
+- **Admin routes → dedicated admin-auth step (NEW deferral).** `admin/*` routes do **not** use per-user resolution — they gate on an `ADMIN_WALLETS` env allowlist (`isAdmin(walletAddress)`). Migrating that to Supabase sessions is an *authorization* decision (needs an admin-email/role allowlist) with admin-lockout risk, so it's wrong to fold into the mechanical user-id swap. Tracked as its own step; `getStormUserIdFromRequest` is not the right tool here.
+
+**Files:** 9 `src/app/api/ai/**` routes; `src/app/api/applications/status/route.ts`; `docs/midnight/EXECUTION_CHECKLIST.md`.
+
+---
+
+## **Phase 1 · T1.6 — candidate WRITE routes migrated to session helper (dual-mode)** (2026-05-29)
+
+> **Status: code complete, pending commit.** Phase 1 auth migration (Alchemy wallets → Supabase Auth). See `docs/midnight/EXECUTION_CHECKLIST.md` step T1.6. Build green; all edited files lint-clean; zero new type errors.
+
+Migrated all candidate-side **write** handlers (POST/PUT/PATCH/DELETE) — plus a handful of straggler GETs T1.5 missed — from the legacy `x-wallet-address` header to the dual-mode `getStormUserIdFromRequest()` helper. Done across ~45 route files via four parallel sub-batches (driver, developer/github, resumes/general/hub, candidate-misc/consents/comms) with a verified canonical pattern, then a manual straggler sweep.
+
+**The migration pattern (3 cases):**
+
+| Case | When | Transform |
+|---|---|---|
+| **1 — lookup-only** | handler only needs `users.id` | replace the wallet-read + `getUserByWallet`/`ilike` lookup with the 3-line `getStormUserIdFromRequest` resolve; `user.id` → `userId`; drop the now-unused `getUserByWallet` import |
+| **2 — create-on-write** | handler used `getOrCreateUserByWallet` (lazily creates the user row on first write) | **prepend** the session path, keep `getOrCreateUserByWallet` as the *wallet fallback* so brand-new wallet users still get a row. Routes: `resumes/create`, `resumes/upload`, `user/profile-setup`, `driver-applications/save-progress` |
+| **3 — needs extra columns** | handler reads `user.email` / `user.role` / `share_token` | resolve `userId`, then `select('…').eq('id', userId)` instead of `ilike('wallet_address', …)`. Routes: `candidate/fulfill-screening`, `messages` (POST + thread), `career-card/share`, `driver`/`developer` `share` GET |
+
+**Why this is safe to ship alone:** dual-mode. The helper tries the Supabase session first, then falls back to the wallet header — so current Alchemy users are unaffected. The session path stays dormant until the sign-in UI ships (T1.11). Pure additive plumbing on the candidate surface; **no employer routes touched** (those are T1.7, Pace-critical).
+
+**Supporting change:** `saveDriverApplicationClient()` (`src/lib/supabase-client-db.ts`) gained an optional 4th arg `resolvedUserId` — when the caller already resolved the Storm `users.id`, the helper skips its internal wallet get-or-create. Legacy callers (omit the arg) keep identical behavior.
+
+**Deliberate scope (what was NOT migrated in T1.6):**
+
+- **Employer routes** → T1.7. This includes the employment-verification flow `verification/initiate` · `verification/attempt` · `verification/status` — these are **employer-initiated** (a future employer verifying a driver's history), so they belong with the employer batch, not here.
+- **Admin + AI routes** → T1.8 (all `admin/*`, all `ai/*`).
+- **Skipped (legacy, Track-2/cleanup targets):** `storm/history` (STORM-on-Base, wallet-keyed), the legacy USDC candidate payment routes (`mvr/*`, `psp/order`, `psp/payment`), and `user/set-role` (auth bootstrap — handled with the sign-in UI in T1.11).
+- **`driver/public/[token]`** keeps an *optional* wallet read for anonymous-employer identity — not auth, left as-is.
+- **`jobs/recommended`** keeps a direct header read for the `STORMI_UNLIMITED_WALLETS` allowlist (a feature flag with no session equivalent) — removed at the wallet cutover.
+
+**Verification:** `npm run build` green (exit 0) after each sub-batch + the straggler sweep. A `headers.get('x-wallet-address')` grep confirms every remaining live read is one of: an intentional CASE-2 fallback, an employer route (T1.7), an admin/AI route (T1.8), or a documented legacy/special case above.
+
+**Files:** ~45 route files under `src/app/api/**` (candidate side); `src/lib/supabase-client-db.ts`; `docs/midnight/EXECUTION_CHECKLIST.md` (T1.6 status + handoff log).
+
+---
+
 ## **Hotfix — Alchemy login broken by CORS preflight on bare `/v2` node endpoint** (2026-05-29)
 
 > **Status: code complete, pending commit + deploy.** Production login outage (email-OTP + Google both stuck). NOT caused by our T1.x changes — an Alchemy-side CORS behavior change.

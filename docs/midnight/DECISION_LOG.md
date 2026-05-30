@@ -6,6 +6,71 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-05-015 — Sideline the developer vertical (hide, don't convert)
+
+**Date:** 2026-05-29
+**Status:** Accepted
+**Decided by:** Sole engineer
+
+### Context
+
+T1.6 surfaced how many API routes exist (~115). Much of it is **parallel role stacks** — `driver/*`, `developer/*`, `general/*` each mirror profile / resume / share / verification / avatar / hub / career-card. The developer vertical (dev blocks, `developer/*` routes, `github/*`, `dev-card/[token]`, `block_dev_*` tables, `DeveloperShell`) duplicates the driver vertical but **cannot use the Midnight moat** — developers have no regulated, third-party-signed credential equivalent (see DEC-2026-05-014). GitHub data is public/self-reported.
+
+### Decision
+
+**Sideline developers — hide, don't convert, don't delete (yet).**
+
+1. The app stays **open-ended**: anyone can sign up and build a career card. No driver-only hardcoding.
+2. **Stop investing** in the developer vertical. No new dev blocks/features.
+3. **Hide** developer blocks from the picker/suggestions so new users don't add them; `DeveloperShell` stays frozen (already legacy per `architecture.mdc`).
+4. **Do not spend migration effort converting dev code** (auth, attestation, etc.). It rides along passively.
+5. **Deliberate deletion is a SEPARATE, post-Phase-1-auth cleanup track** — the `block-development.mdc` removal checklist is long (registry, shell, journey map, My Files, career card, projected card, illustrations, `block_dev_*` tables, `dev-card`). Deleting mid-auth-migration is churn-on-churn; don't.
+
+### Consequences
+
+- Route/feature surface stops growing on the dev side immediately; real reduction comes later via the dedicated removal track + Phase 1 legacy-blockchain removal.
+- Existing dev users/data are untouched until the deliberate removal pass.
+
+### Related
+
+- DEC-2026-05-014 (provenance gate — why devs can't use the moat)
+- `.cursor/rules/block-development.mdc` (removal checklist for the eventual deletion)
+
+---
+
+## DEC-2026-05-014 — Product identity: "an app that proves issuer-signed content"; provenance gates attestation
+
+**Date:** 2026-05-29
+**Status:** Accepted (foundational — supersedes ambiguity in prior "verified" language)
+**Decided by:** Sole engineer
+
+### Context
+
+While reasoning about route sprawl and what Storm actually is, the core question crystallized: *what can a ZK proof actually prove?* A ZK credential proof does not prove a fact is **true** — it proves you hold a credential **signed by an issuer** and that a predicate over it holds, without revealing the contents. **Truth is inherited from the issuer's signature; the math launders the issuer's trust, it does not create it.** Therefore a self-reported claim — which has no external issuer — cannot be made trustworthy by ZK. Proving "the candidate asserted X" (signed by the candidate) is worthless.
+
+### Decision
+
+**Storm is an app that proves issuer-signed content.** This is the product identity; build around it.
+
+1. **Provenance gate:** a fact is attestable / Midnight-eligible **only if it originates from a third-party issuer** (CRA / regulator / external authority whose signature anchors it). **Self-reported data is display-only — never attested, never a "verified" badge, never on-chain.**
+2. **Gate on provenance, not role.** No `if (driver)` for attestation eligibility. Today the issuer-signed set is driver screening blocks (MVR/PSP/CDL/employment-verification); that's incidental. A future nursing-license API becomes attestable automatically under the same gate.
+3. **App stays open-ended.** Anyone builds a career card from self-reported blocks; only issuer-attested facts light up the verified / Midnight path. ZK is driver-only *for the foreseeable future* purely because that's where the third-party issuers are today.
+4. **"Verified" must cite the issuer** (e.g. "derived from MVR pulled by Accio on YYYY-MM-DD"). Never "trust us."
+
+### Consequences
+
+- New rule authored: `.cursor/rules/midnight-data-boundary.mdc` (the enforceable gate).
+- `attestation-architecture.mdc` reinforced: `FactType.source === 'self_reported'` facts are display-only and must never produce a `ProofArtifact`.
+- Reinforces the candidate-as-agent / not-a-CRA posture (DEC-2026-05-011): Storm proves *third-party facts the candidate chose to disclose*, it does not originate or vouch for claims.
+
+### Related
+
+- DEC-2026-05-011 (candidate-agent posture, cite originating CRA)
+- DEC-2026-05-015 (devs sidelined — they have no issuer-signed data)
+- `.cursor/rules/midnight-data-boundary.mdc`, `.cursor/rules/attestation-architecture.mdc`
+
+---
+
 ## DEC-2026-05-013 — Driver credential monetization: Storm-mediated cached-attestation marketplace, deferred to Phase 4
 
 **Date:** 2026-05-27
