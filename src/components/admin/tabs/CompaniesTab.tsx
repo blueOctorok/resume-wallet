@@ -75,12 +75,15 @@ export default function CompaniesTab({
       if (data.success) {
         setCompanies(data.companies)
         setCompanyStats(data.stats)
-        setTotalCount(data.stats.total)
+        setTotalCount(data.companies.length)
       }
     } catch (err) {
       console.error('Failed to fetch companies:', err)
     }
   }, [walletAddress, searchQuery, companyStatusFilter, setTotalCount])
+
+  const pageOffset = (currentPage - 1) * pageSize
+  const pagedCompanies = companies.slice(pageOffset, pageOffset + pageSize)
 
   useEffect(() => {
     fetchData()
@@ -217,7 +220,7 @@ export default function CompaniesTab({
       </div>
 
       {/* Companies Grid */}
-      {companies.length === 0 ? (
+      {pagedCompanies.length === 0 ? (
         <div className='text-center py-12'>
           <Building2 className='w-12 h-12 mx-auto mb-4 opacity-30' />
           <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}>
@@ -226,7 +229,7 @@ export default function CompaniesTab({
         </div>
       ) : (
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-          {companies.map((company) => (
+          {pagedCompanies.map((company) => (
             <div
               key={company.id}
               className={`rounded-xl border p-5 ${

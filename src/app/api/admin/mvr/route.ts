@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import {
+  anyFieldMatchesSearch,
+  paginateInMemory,
+  resolveUserIdsMatchingSearch,
+} from '@/lib/admin-search'
 
 /**
  * GET /api/admin/mvr
@@ -11,20 +16,27 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
   const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const hasSearch = search.length > 0
 
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const { data: orders, error, count } = await supabase
+    let ordersQuery = supabase
       .from('mvr_orders')
       .select(
         'id, driver_user_id, status, dl_state, ordered_at, created_at, accio_order_number, ordered_by_company_id, ordered_by_employer',
-        { count: 'exact' },
+        { count: hasSearch ? undefined : 'exact' },
       )
       .order('ordered_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+
+    if (!hasSearch) {
+      ordersQuery = ordersQuery.range(offset, offset + limit - 1)
+    }
+
+    const { data: orders, error, count } = await ordersQuery
 
     if (error) {
       console.error('[ADMIN MVR] Query error:', error)
@@ -78,6 +90,10 @@ export async function GET(request: NextRequest) {
       (results || []).map((r: { mvr_order_id: string }) => [r.mvr_order_id, r])
     )
 
+    const matchingUserIds = hasSearch
+      ? new Set(await resolveUserIdsMatchingSearch(supabase, search))
+      : null
+
     const mvrList = (orders || []).map((o: Record<string, unknown>) => {
       const wallet = userMap.get(o.driver_user_id as string) || 'Unknown'
       const driverName = profileMap.get(o.driver_user_id as string) || 'Unknown'
@@ -94,8 +110,6 @@ export async function GET(request: NextRequest) {
         orderedAt: o.ordered_at,
         createdAt: o.created_at,
         accioOrderNumber: o.accio_order_number,
-        // FCRA-relevant: who placed this order? Self-orders go to the candidate's hub;
-        // employer-orders are CRA-isolated and only visible to the ordering company.
         orderedBy: companyId
           ? { type: 'employer' as const, companyId, companyName: orderedByCompanyName }
           : { type: 'self' as const },
@@ -106,10 +120,29 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const filtered = hasSearch
+      ? mvrList.filter(
+          (row) =>
+            matchingUserIds?.has(row.driverUserId as string) ||
+            anyFieldMatchesSearch(
+              search,
+              row.driverName as string,
+              row.walletAddress as string,
+              row.accioOrderNumber as string | null,
+              row.orderedBy.type === 'employer'
+                ? (row.orderedBy.companyName as string | null)
+                : null,
+              row.dlState as string | null,
+            ),
+        )
+      : mvrList
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
+
     return NextResponse.json({
       success: true,
-      mvrOrders: mvrList,
-      total: count ?? 0,
+      mvrOrders: page,
+      total: hasSearch ? filtered.length : (count ?? 0),
     })
   } catch (err) {
     console.error('[ADMIN MVR] Error:', err)

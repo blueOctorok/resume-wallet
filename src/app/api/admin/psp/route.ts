@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import {
+  anyFieldMatchesSearch,
+  paginateInMemory,
+  resolveUserIdsMatchingSearch,
+} from '@/lib/admin-search'
 
 /**
  * GET /api/admin/psp
@@ -15,20 +20,27 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
   const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const hasSearch = search.length > 0
 
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const { data: orders, error, count } = await supabase
+    let ordersQuery = supabase
       .from('psp_orders')
       .select(
         'id, driver_user_id, status, dl_state, ordered_at, created_at, accio_order_number, ordered_by_company_id, ordered_by_employer',
-        { count: 'exact' },
+        { count: hasSearch ? undefined : 'exact' },
       )
       .order('ordered_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+
+    if (!hasSearch) {
+      ordersQuery = ordersQuery.range(offset, offset + limit - 1)
+    }
+
+    const { data: orders, error, count } = await ordersQuery
 
     if (error) {
       console.error('[ADMIN PSP] Query error:', error)
@@ -77,6 +89,10 @@ export async function GET(request: NextRequest) {
       (results || []).map((r: { psp_order_id: string }) => [r.psp_order_id, r]),
     )
 
+    const matchingUserIds = hasSearch
+      ? new Set(await resolveUserIdsMatchingSearch(supabase, search))
+      : null
+
     const pspList = (orders || []).map((o: Record<string, unknown>) => {
       const driverUserId = o.driver_user_id as string
       const wallet = userMap.get(driverUserId) || 'Unknown'
@@ -103,10 +119,27 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const filtered = hasSearch
+      ? pspList.filter(
+          (row) =>
+            matchingUserIds?.has(row.driverUserId) ||
+            anyFieldMatchesSearch(
+              search,
+              row.driverName,
+              row.walletAddress,
+              row.accioOrderNumber as string | null,
+              row.orderedBy.type === 'employer' ? row.orderedBy.companyName : null,
+              row.dlState as string | null,
+            ),
+        )
+      : pspList
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
+
     return NextResponse.json({
       success: true,
-      pspOrders: pspList,
-      total: count ?? 0,
+      pspOrders: page,
+      total: hasSearch ? filtered.length : (count ?? 0),
     })
   } catch (err) {
     console.error('[ADMIN PSP] Error:', err)

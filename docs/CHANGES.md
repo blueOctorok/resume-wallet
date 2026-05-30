@@ -31,7 +31,13 @@ Central admin was still gated by wallet (`ADMIN_WALLETS` + `x-wallet-address` he
 
 ---
 
-## **Positioning · Celebrate the chain (narrative), keep gating interaction** (2026-05-30)
+## **Admin · Global search across paginated tables** (2026-05-30)
+
+Admin search only matched rows on the **current page** on several tabs because some API routes paginated in the database first, then filtered by search in memory on that page slice only (`applications`, `outreach`). The Users tab also missed `user_profiles` name/email (most identity lives there post-T1.9).
+
+**Fix:** Added `src/lib/admin-search.ts` (`resolveUserIdsMatchingSearch`, `paginateInMemory`, `anyFieldMatchesSearch`). Routes now **filter globally, then paginate** when search spans joined/enriched fields. Users/resumes/profiles search includes `user_profiles`. Wired search param on DOT apps, MVR, PSP, verifications, bgcheck, and access-request tabs. Companies/Jobs tabs now slice the filtered full list for shell pagination.
+
+---
 
 Docs-only positioning change — **no code touched.** The old language rules suppressed *all* customer-facing mention of "blockchain / on-chain / Midnight" until Phase 3. That conflated three separate things; we now split them:
 

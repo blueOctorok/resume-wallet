@@ -52,6 +52,9 @@ export default function JobsTab({
     }
   }, [walletAddress, searchQuery, jobsFilter, sourceFilter, setTotalCount])
 
+  const pageOffset = (currentPage - 1) * pageSize
+  const pagedJobs = jobs.slice(pageOffset, pageOffset + pageSize)
+
   useEffect(() => {
     fetchData()
   }, [fetchData, currentPage])
@@ -101,7 +104,7 @@ export default function JobsTab({
 
       {/* Jobs Grid */}
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-        {jobs.map((job) => (
+        {pagedJobs.map((job) => (
           <div
             key={job.id}
             className={`p-4 rounded-xl border ${
@@ -208,7 +211,7 @@ export default function JobsTab({
         ))}
       </div>
 
-      {jobs.length === 0 && (
+      {pagedJobs.length === 0 && (
         <div className='text-center py-12'>
           <Briefcase className={`w-12 h-12 mx-auto mb-4 ${
             isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'

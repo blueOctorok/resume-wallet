@@ -15,6 +15,7 @@ interface PspDetail {
 export default function PspTab({
   theme,
   walletAddress,
+  searchQuery,
   currentPage,
   pageSize,
   setTotalCount,
@@ -32,9 +33,10 @@ export default function PspTab({
     if (!walletAddress) return
     try {
       const offset = (currentPage - 1) * pageSize
-      const res = await fetch(`/api/admin/psp?limit=${pageSize}&offset=${offset}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
+      const res = await fetch(
+        `/api/admin/psp?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
+        { headers: { 'x-wallet-address': walletAddress } },
+      )
       const data = await res.json()
       if (data.success) {
         setPspOrders(data.pspOrders || [])
@@ -43,7 +45,7 @@ export default function PspTab({
     } catch (err) {
       console.error('Failed to fetch PSP orders:', err)
     }
-  }, [walletAddress, currentPage, pageSize, setTotalCount])
+  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

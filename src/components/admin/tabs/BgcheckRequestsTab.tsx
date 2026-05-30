@@ -25,7 +25,7 @@ export default function BgcheckRequestsTab({
     const offset = (currentPage - 1) * pageSize
     try {
       const res = await fetch(
-        `/api/admin/bgcheck-requests?limit=${pageSize}&offset=${offset}`,
+        `/api/admin/bgcheck-requests?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
         { headers: { 'x-wallet-address': walletAddress } }
       )
       const data = await res.json()
@@ -36,7 +36,7 @@ export default function BgcheckRequestsTab({
     } catch (err) {
       console.error('Failed to fetch bgcheck requests:', err)
     }
-  }, [walletAddress, currentPage, pageSize, setTotalCount])
+  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

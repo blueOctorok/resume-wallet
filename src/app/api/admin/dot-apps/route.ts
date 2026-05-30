@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { anyFieldMatchesSearch, paginateInMemory, resolveUserIdsMatchingSearch } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/dot-apps
@@ -17,16 +18,19 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status') || 'all'
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
+  const hasSearch = search.length > 0
 
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Build query
     let query = supabase
       .from('driver_applications')
-      .select('id, user_id, is_complete, current_step, verification_status, blockchain_tx_hash, created_at, updated_at', { count: 'exact' })
+      .select('id, user_id, is_complete, current_step, verification_status, blockchain_tx_hash, created_at, updated_at', {
+        count: hasSearch ? undefined : 'exact',
+      })
 
     // Apply status filter
     if (status === 'complete') {
@@ -35,10 +39,13 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_complete', false)
     }
 
-    // Apply pagination and ordering
+    if (!hasSearch) {
+      query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+    } else {
+      query = query.order('created_at', { ascending: false })
+    }
+
     const { data: apps, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('[ADMIN DOT APPS] Query error:', error)
@@ -60,6 +67,10 @@ export async function GET(request: NextRequest) {
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
     const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
 
+    const matchingUserIds = hasSearch
+      ? new Set(await resolveUserIdsMatchingSearch(supabase, search))
+      : null
+
     const enrichedApps = apps?.map(app => {
       const user = userMap.get(app.user_id)
       const profile = profileMap.get(app.user_id)
@@ -71,10 +82,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const filtered = hasSearch
+      ? (enrichedApps ?? []).filter(
+          (app) =>
+            matchingUserIds?.has(app.user_id) ||
+            anyFieldMatchesSearch(search, app.applicantName, app.email, app.walletAddress),
+        )
+      : enrichedApps ?? []
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
+
     return NextResponse.json({
       success: true,
-      dotApps: enrichedApps,
-      total: count || 0,
+      dotApps: page,
+      total: hasSearch ? filtered.length : (count || 0),
       limit,
       offset,
     })

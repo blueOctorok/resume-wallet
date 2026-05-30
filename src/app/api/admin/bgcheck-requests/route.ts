@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { anyFieldMatchesSearch, paginateInMemory } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/bgcheck-requests
@@ -13,14 +14,15 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
   const offset = parseInt(searchParams.get('offset') || '0', 10)
   const status = searchParams.get('status') // 'pending', 'signed', 'all'
+  const hasSearch = search.length > 0
 
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Get all MVR-type candidate requests
     let requestQuery = supabase
       .from('candidate_requests')
       .select(`
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
         updated_at,
         expires_at,
         completed_at
-      `, { count: 'exact' })
+      `, { count: hasSearch ? undefined : 'exact' })
       .or(
         'request_type.eq.mvr_order,and(request_type.eq.block_request,target_block_type.eq.driver-mvr)',
       )
@@ -48,8 +50,11 @@ export async function GET(request: NextRequest) {
       requestQuery = requestQuery.eq('status', 'completed')
     }
 
+    if (!hasSearch) {
+      requestQuery = requestQuery.range(offset, offset + limit - 1)
+    }
+
     const { data: requests, error: reqError, count } = await requestQuery
-      .range(offset, offset + limit - 1)
 
     if (reqError) {
       console.error('[ADMIN BGCHECK] Request query error:', reqError)
@@ -119,10 +124,25 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    const filtered = hasSearch
+      ? result.filter((row) =>
+          anyFieldMatchesSearch(
+            search,
+            row.companyName,
+            row.driverName,
+            row.driverEmail,
+            row.driverWallet,
+            row.signedName,
+          ),
+        )
+      : result
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
+
     return NextResponse.json({
       success: true,
-      requests: result,
-      total: count ?? 0,
+      requests: page,
+      total: hasSearch ? filtered.length : (count ?? 0),
     })
 
   } catch (err) {

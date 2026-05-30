@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { anyFieldMatchesSearch, paginateInMemory } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/applications
@@ -21,14 +22,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     const status = searchParams.get('status')
-    const search = searchParams.get('search')?.toLowerCase()
+    const search = searchParams.get('search')?.trim() ?? ''
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = parseInt(searchParams.get('offset') || '0')
+    const hasSearch = search.length > 0
 
     // Build query with joins to get all related data
     // Note: We fetch user data separately since the FK name may vary
     // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
     // Note: applications table uses 'applied_at' not 'created_at'
+    //
+    // Search spans joined fields (name, job, company) — when active we fetch the
+    // status-filtered set WITHOUT range, filter in memory, then paginate. Otherwise
+    // we'd only search the current page (the old bug).
     let query = supabase
       .from('applications')
       .select(`
@@ -37,7 +43,7 @@ export async function GET(request: NextRequest) {
         job_postings(id, title, companies(id, company_name)),
         resumes(id, title, filename),
         driver_applications(id, is_complete, verification_status)
-      `, { count: 'exact' })
+      `, { count: hasSearch ? undefined : 'exact' })
       .order('applied_at', { ascending: false })
 
     // Apply filters
@@ -45,8 +51,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1)
+    if (!hasSearch) {
+      query = query.range(offset, offset + limit - 1)
+    }
 
     const { data: applications, error, count } = await query
 
@@ -100,22 +107,31 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Filter by search (post-query since we need to search across joined fields)
-    let filtered = transformed
-    if (search) {
-      filtered = transformed.filter((app: any) => 
-        app.applicantName?.toLowerCase().includes(search) ||
-        app.applicantEmail?.toLowerCase().includes(search) ||
-        app.jobTitle?.toLowerCase().includes(search) ||
-        app.companyName?.toLowerCase().includes(search) ||
-        app.applicantWallet?.toLowerCase().includes(search)
-      )
-    }
+    const filtered = hasSearch
+      ? transformed.filter((app: {
+          applicantName: string | null
+          applicantEmail: string | null
+          jobTitle: string
+          companyName: string
+          applicantWallet: string | undefined
+        }) =>
+          anyFieldMatchesSearch(
+            search,
+            app.applicantName,
+            app.applicantEmail,
+            app.jobTitle,
+            app.companyName,
+            app.applicantWallet,
+          ),
+        )
+      : transformed
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
 
     return NextResponse.json({
       success: true,
-      applications: filtered,
-      total: search ? filtered.length : (count || 0),
+      applications: page,
+      total: hasSearch ? filtered.length : (count || 0),
       limit,
       offset,
     })

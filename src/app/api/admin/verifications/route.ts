@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import {
+  anyFieldMatchesSearch,
+  paginateInMemory,
+  resolveUserIdsMatchingSearch,
+} from '@/lib/admin-search'
 
 /**
  * GET /api/admin/verifications
@@ -11,19 +16,27 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
   const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const hasSearch = search.length > 0
 
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const { data: rows, error } = await supabase
+    let rowsQuery = supabase
       .from('employment_verification_requests')
       .select(
-        'id, driver_id, employment_id, initiated_by, applicant_type, previous_employer_name, previous_employer_email, claimed_position, claimed_start_date, claimed_end_date, status, attempt_count, created_at'
+        'id, driver_id, employment_id, initiated_by, applicant_type, previous_employer_name, previous_employer_email, claimed_position, claimed_start_date, claimed_end_date, status, attempt_count, created_at',
+        { count: hasSearch ? undefined : 'exact' },
       )
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+
+    if (!hasSearch) {
+      rowsQuery = rowsQuery.range(offset, offset + limit - 1)
+    }
+
+    const { data: rows, error, count } = await rowsQuery
 
     if (error) {
       console.error('[ADMIN VERIFICATIONS] Query error:', error)
@@ -45,6 +58,10 @@ export async function GET(request: NextRequest) {
       (users || []).map((u: { id: string; wallet_address: string }) => [u.id, u.wallet_address])
     )
 
+    const matchingUserIds = hasSearch
+      ? new Set(await resolveUserIdsMatchingSearch(supabase, search))
+      : null
+
     const verifications = (rows || []).map((r: Record<string, unknown>) => ({
       id: r.id,
       driverId: r.driver_id,
@@ -62,14 +79,27 @@ export async function GET(request: NextRequest) {
       createdAt: r.created_at,
     }))
 
-    const { count } = await supabase
-      .from('employment_verification_requests')
-      .select('id', { count: 'exact', head: true })
+    const filtered = hasSearch
+      ? verifications.filter(
+          (row) =>
+            matchingUserIds?.has(row.driverId as string) ||
+            anyFieldMatchesSearch(
+              search,
+              row.applicantWallet,
+              row.previousEmployerName as string,
+              row.previousEmployerEmail as string | null,
+              row.claimedPosition as string,
+              row.status as string,
+            ),
+        )
+      : verifications
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
 
     return NextResponse.json({
       success: true,
-      verifications,
-      total: count ?? verifications.length,
+      verifications: page,
+      total: hasSearch ? filtered.length : (count ?? 0),
     })
   } catch (err) {
     console.error('[ADMIN VERIFICATIONS] Error:', err)

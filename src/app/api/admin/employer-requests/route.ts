@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { anyFieldMatchesSearch, paginateInMemory } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/employer-requests
@@ -8,6 +9,8 @@ import { requireAdmin } from '@/lib/admin-auth'
  * Lists all employer access requests for admin review.
  * Query params:
  *   - status: 'pending' | 'approved' | 'rejected' | 'all' (default: 'pending')
+ *   - search: company name, requester name, or email
+ *   - limit, offset: pagination (optional)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +19,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'pending'
+    const search = searchParams.get('search')?.trim() ?? ''
+    const limit = parseInt(searchParams.get('limit') || '0', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
+    const paginate = limit > 0
 
     const supabase = await getAdminSupabaseClient()
 
@@ -59,9 +66,24 @@ export async function GET(request: NextRequest) {
       name: req.name || [req.first_name, req.last_name].filter(Boolean).join(' ') || 'Unknown',
     }))
 
+    const filtered = search
+      ? mappedRequests.filter((req) =>
+          anyFieldMatchesSearch(
+            search,
+            req.company_name as string,
+            req.name as string,
+            req.email as string | null,
+            req.wallet_address as string,
+          ),
+        )
+      : mappedRequests
+
+    const page = paginate ? paginateInMemory(filtered, offset, limit) : filtered
+
     return NextResponse.json({
       success: true,
-      requests: mappedRequests,
+      requests: page,
+      total: filtered.length,
       stats,
     })
 

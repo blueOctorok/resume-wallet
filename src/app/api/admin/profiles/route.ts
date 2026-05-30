@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { resolveUserIdsMatchingSearch } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/profiles
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
-  const search = searchParams.get('search')?.toLowerCase() || ''
+  const search = searchParams.get('search')?.trim() ?? ''
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
 
@@ -29,7 +30,15 @@ export async function GET(request: NextRequest) {
       .select('id, user_id, cdl_number, cdl_state, created_at, updated_at', { count: 'exact' })
 
     if (search) {
-      query = query.or(`cdl_number.ilike.%${search}%`)
+      const profileUserIds = await resolveUserIdsMatchingSearch(supabase, search)
+      const pattern = `%${search}%`
+      if (profileUserIds.length > 0) {
+        query = query.or(
+          `cdl_number.ilike.${pattern},user_id.in.(${profileUserIds.join(',')})`,
+        )
+      } else {
+        query = query.ilike('cdl_number', pattern)
+      }
     }
 
     const { data: profiles, error, count } = await query

@@ -25,7 +25,7 @@ export default function DotAppsTab({
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
-        `/api/admin/dot-apps?limit=${pageSize}&offset=${offset}`,
+        `/api/admin/dot-apps?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
         { headers: { 'x-wallet-address': walletAddress } }
       )
       const data = await res.json()
@@ -36,7 +36,7 @@ export default function DotAppsTab({
     } catch (err) {
       console.error('Failed to fetch DOT apps:', err)
     }
-  }, [walletAddress, currentPage, pageSize, setTotalCount])
+  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

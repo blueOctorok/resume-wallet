@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { resolveUserIdsMatchingSearch } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/resumes
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
-  const search = searchParams.get('search')?.toLowerCase() || ''
+  const search = searchParams.get('search')?.trim() ?? ''
   const type = searchParams.get('type') || 'all'
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
@@ -30,9 +31,17 @@ export async function GET(request: NextRequest) {
       .from('resumes')
       .select('id, user_id, title, filename, verification_status, resume_type, file_size, ipfs_hash, blockchain_tx_hash, created_at', { count: 'exact' })
 
-    // Apply search filter
+    // Apply search filter (title/filename on row, owner name/email/wallet via user_profiles)
     if (search) {
-      query = query.or(`title.ilike.%${search}%,filename.ilike.%${search}%`)
+      const ownerIds = await resolveUserIdsMatchingSearch(supabase, search)
+      const pattern = `%${search}%`
+      if (ownerIds.length > 0) {
+        query = query.or(
+          `title.ilike.${pattern},filename.ilike.${pattern},user_id.in.(${ownerIds.join(',')})`,
+        )
+      } else {
+        query = query.or(`title.ilike.${pattern},filename.ilike.${pattern}`)
+      }
     }
 
     // Apply type filter

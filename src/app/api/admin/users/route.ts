@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
+import { resolveUserIdsMatchingSearch } from '@/lib/admin-search'
 
 /**
  * Maps a block_type string (e.g. "driver-mvr") to its category prefix.
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
   if (!auth.authorized) return auth.error!
 
   const { searchParams } = new URL(request.url)
-  const search = searchParams.get('search')?.toLowerCase() || ''
+  const search = searchParams.get('search')?.trim() ?? ''
   const blockFilter = searchParams.get('blockFilter') || ''
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
@@ -77,9 +78,11 @@ export async function GET(request: NextRequest) {
       })
 
     if (search) {
-      query = query.or(
-        `wallet_address.ilike.%${search}%,email.ilike.%${search}%`
-      )
+      const matchingIds = await resolveUserIdsMatchingSearch(supabase, search)
+      if (matchingIds.length === 0) {
+        return NextResponse.json({ success: true, users: [], total: 0, limit, offset })
+      }
+      query = query.in('id', matchingIds)
     }
 
     if (blockFilteredIds !== null) {

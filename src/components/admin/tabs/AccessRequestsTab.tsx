@@ -38,19 +38,26 @@ export default function AccessRequestsTab({
   const fetchData = useCallback(async () => {
     if (!walletAddress) return
     try {
-      const res = await fetch('/api/admin/employer-requests?status=all', {
+      const offset = (currentPage - 1) * pageSize
+      const params = new URLSearchParams({
+        status: 'all',
+        search: searchQuery,
+        limit: String(pageSize),
+        offset: String(offset),
+      })
+      const res = await fetch(`/api/admin/employer-requests?${params}`, {
         headers: { 'x-wallet-address': walletAddress },
       })
       const data = await res.json()
       if (data.success) {
         setAccessRequests(data.requests)
         setAccessRequestsStats(data.stats)
-        setTotalCount(data.stats.total)
+        setTotalCount(data.total ?? data.requests.length)
       }
     } catch (err) {
       console.error('Failed to fetch access requests:', err)
     }
-  }, [walletAddress, setTotalCount])
+  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

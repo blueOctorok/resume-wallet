@@ -34,7 +34,7 @@ export default function MvrTab({
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
-        `/api/admin/mvr?limit=${pageSize}&offset=${offset}`,
+        `/api/admin/mvr?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
         { headers: { 'x-wallet-address': walletAddress } }
       )
       const data = await res.json()
@@ -45,7 +45,7 @@ export default function MvrTab({
     } catch (err) {
       console.error('Failed to fetch MVR orders:', err)
     }
-  }, [walletAddress, currentPage, pageSize, setTotalCount])
+  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { anyFieldMatchesSearch, paginateInMemory } from '@/lib/admin-search'
 
 /**
  * GET /api/admin/outreach
@@ -21,11 +22,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     const status = searchParams.get('status')
-    const search = searchParams.get('search')?.toLowerCase()
+    const search = searchParams.get('search')?.trim() ?? ''
     const limit = parseInt(searchParams.get('limit') || '20')
     const offset = parseInt(searchParams.get('offset') || '0')
+    const hasSearch = search.length > 0
 
-    // Build query with joins to get all related data
+    // Search spans joined company/job/creator fields — fetch without range when
+    // searching, filter globally, then paginate in memory.
     let query = supabase
       .from('application_invites')
       .select(`
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
         company_id, job_posting_id, created_by_user_id,
         companies(id, company_name),
         job_postings(id, title)
-      `, { count: 'exact' })
+      `, { count: hasSearch ? undefined : 'exact' })
       .order('created_at', { ascending: false })
 
     // Apply status filter
@@ -42,8 +45,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1)
+    if (!hasSearch) {
+      query = query.range(offset, offset + limit - 1)
+    }
 
     const { data: invites, error, count } = await query
 
@@ -100,22 +104,31 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Filter by search (post-query since we search across joined fields)
-    let filtered = transformed
-    if (search) {
-      filtered = transformed.filter((invite: any) => 
-        invite.candidateName?.toLowerCase().includes(search) ||
-        invite.candidateEmail?.toLowerCase().includes(search) ||
-        invite.companyName?.toLowerCase().includes(search) ||
-        invite.jobTitle?.toLowerCase().includes(search) ||
-        invite.createdByEmail?.toLowerCase().includes(search)
-      )
-    }
+    const filtered = hasSearch
+      ? transformed.filter((invite: {
+          candidateName: string | null
+          candidateEmail: string | null
+          companyName: string
+          jobTitle: string | null
+          createdByEmail: string | null | undefined
+        }) =>
+          anyFieldMatchesSearch(
+            search,
+            invite.candidateName,
+            invite.candidateEmail,
+            invite.companyName,
+            invite.jobTitle,
+            invite.createdByEmail,
+          ),
+        )
+      : transformed
+
+    const page = hasSearch ? paginateInMemory(filtered, offset, limit) : filtered
 
     return NextResponse.json({
       success: true,
-      outreach: filtered,
-      total: search ? filtered.length : (count || 0),
+      outreach: page,
+      total: hasSearch ? filtered.length : (count || 0),
       limit,
       offset,
     })
