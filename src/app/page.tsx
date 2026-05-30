@@ -17,7 +17,6 @@ import {
 } from '@/stores'
 import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
 import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
-import { useSupabaseAuthSync } from '@/hooks/use-supabase-auth-sync'
 import { createClient as createSupabaseBrowserClient } from '@/utils/supabase/client'
 import type { PageType } from '@/stores'
 
@@ -83,10 +82,9 @@ const HomeContent = () => {
     currentPage,
   )
 
-  // Bridge any Supabase Auth session into the wallet-shaped store (dual-mode).
-  // A Supabase user gets the auth:<id> placeholder wallet; the rest of page.tsx
-  // (role fetch, shells) then treats them like any other authenticated user.
-  useSupabaseAuthSync()
+  // The Supabase-session → store bridge is mounted globally in the root layout
+  // (<SupabaseAuthSync/>), so it covers every route — not just `/`. page.tsx just
+  // reads the resulting `user`/`userRole`/`sessionSettled` from the store below.
 
   // Page-level routing flag for guests entering Guided Mode without signing in
   // (Indeed-style lazy auth). Local useState is appropriate here — this is a

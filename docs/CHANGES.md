@@ -25,6 +25,8 @@ Central admin was still gated by wallet (`ADMIN_WALLETS` + `x-wallet-address` he
 
 **Why `requireAdmin` keeps an ignored `_request` arg:** so the ~33 callers only needed `await` added — no signature edits, smaller diff.
 
+**Follow-up fix (same day) — `/admin` spun on "Waiting for sign-in…":** the Supabase-session → store bridge (`useSupabaseAuthSync`) was only mounted in `src/app/page.tsx` (the `/` route). `/admin` renders its own shell directly, so a fresh tab on `/admin` never populated `walletAddress` and the admin gate (still keyed on `if (walletAddress)`) hung forever. Moved the bridge to a global `<SupabaseAuthSync/>` mounted once in the root layout (`src/app/layout.tsx`) and removed the redundant call from `page.tsx`. Now **every** route hydrates the session into the store. Build green.
+
 **Not done (follow-up):** strip the 41 now-ignored `x-wallet-address` sends across the 18 admin UI files (functional no-op; server uses the session cookie).
 
 ---
