@@ -1,5 +1,6 @@
 export { default as Button } from './Button'
 export { default as Card } from './Card'
+export { default as Input } from './Input'
 export { default as BlockCard } from './BlockCard'
 export { default as BackToHubButton } from './BackToHubButton'
 export { default as JourneyModal } from './JourneyModal'

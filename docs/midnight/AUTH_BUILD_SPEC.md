@@ -93,6 +93,8 @@ The Supabase-session→store bridge is already written. **Auto: do not create a 
 
 ## T1.11a — Sign-in / sign-up UI  · Owner: Auto
 
+**Status:** ✅ Done · 2026-05-29
+
 **Files:** `src/app/sign-in/page.tsx`, `src/app/sign-up/page.tsx` (both `'use client'`).
 
 **Contract:**

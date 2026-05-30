@@ -4,9 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.11a — Supabase sign-in / sign-up UI** (2026-05-29)
+
+> Build green. Session wiring (premium) unchanged. Alchemy untouched.
+
+- **`src/app/sign-in/page.tsx`** — email/password, Google OAuth, magic link, forgot password; callback URL → `/auth/callback`; password success → `/`; handles `?error=` from callback.
+- **`src/app/sign-up/page.tsx`** — email/password sign-up with confirm; redirects to `/` if session returned immediately, else confirmation message.
+- **`src/components/ui/Input.tsx`** (new) — shared form input primitive with dark mode; exported from `@/components/ui`.
+
+**Smoke:** visit `/sign-in` and `/sign-up` → sign up with fresh email → should land on hub via premium hook on `/`.
+
+---
+
 ## **Phase 1 · T1.10/T1.11 (premium scaffolding) — Supabase session → wallet-shaped store bridge** (2026-05-29)
 
-> Build-green, lint-clean. **Not yet end-to-end tested** — needs the T1.11a sign-in UI (Auto) + smoke test. Alchemy untouched (dual-mode).
+> Build-green, lint-clean. Alchemy untouched (dual-mode).
 
 The client is still wallet-keyed (shells + fetches read `walletAddress`); `page.tsx` only logged in via Alchemy. Rather than rewrite that surface, a Supabase user now carries the **`auth:<userId>` placeholder wallet** (`authOnlyWalletPlaceholder` from `user-bootstrap.ts`) so the wallet-keyed client works unchanged while the **server resolves real identity from the session cookie**. This is the deliberate dual-mode bridge, removed at T1.12 cutover.
 
