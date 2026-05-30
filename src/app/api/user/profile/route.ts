@@ -6,21 +6,39 @@ import { isSupabaseNetworkError } from '@/lib/supabase-errors'
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress } = await request.json();
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      );
-    }
+    const body = (await request.json()) as { walletAddress?: string }
+    const walletAddress = body.walletAddress?.trim()
 
     const supabase = await getAdminSupabaseClient();
-    console.log('[PROFILE API] Fetching user with wallet:', walletAddress);
+
+    // Supabase session wins over the client wallet string. Migrated wallet users
+    // keep their real chain wallet in users.wallet_address, but the Supabase
+    // auth bridge sets the client to auth:<uuid> — lookup by id avoids a false
+    // "new user" role prompt for existing employers like Pace.
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
     let profile: { id: string; wallet_address?: string; email?: string | null; role?: string | null; created_at?: string } | null = null;
     try {
-      profile = await getUserByWallet(supabase, walletAddress);
+      if (sessionUserId) {
+        console.log('[PROFILE API] Fetching user by session id:', sessionUserId)
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', sessionUserId)
+          .maybeSingle()
+        if (error) {
+          throw new Error(`Failed to fetch user by id: ${error.message}`)
+        }
+        profile = data
+      } else if (walletAddress) {
+        console.log('[PROFILE API] Fetching user with wallet:', walletAddress)
+        profile = await getUserByWallet(supabase, walletAddress)
+      } else {
+        return NextResponse.json(
+          { error: 'Wallet address or authenticated session is required' },
+          { status: 400 }
+        )
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (isSupabaseNetworkError(message)) {
@@ -50,11 +68,13 @@ export async function POST(request: Request) {
     }
 
     if (!profile) {
-      console.error('[PROFILE API] User not found for wallet:', walletAddress);
+      console.error('[PROFILE API] User not found:', sessionUserId ?? walletAddress)
       return NextResponse.json(
         {
           error: 'User not found',
-          details: `No user record found for wallet address: ${walletAddress}. User may need to sign in first.`,
+          details: sessionUserId
+            ? `No user record found for session id: ${sessionUserId}.`
+            : `No user record found for wallet address: ${walletAddress}. User may need to sign in first.`,
         },
         { status: 404 }
       );

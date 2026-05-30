@@ -23,6 +23,18 @@ Storm sign-in is now **passwordless**, matching the previous Alchemy experience 
 
 ---
 
+## **Phase 1 · Supabase login role fix for migrated wallet users** (2026-05-29)
+
+Existing users (e.g. Pace owner `s.blaha@pacedrivers.com`) who signed in via email OTP/Google were incorrectly shown the candidate/employer role picker. Root cause: the Supabase auth bridge set the client wallet to `auth:<uuid>`, but migrated users still have their real Alchemy smart-wallet in `users.wallet_address`; `/api/user/profile` looked up by wallet only and returned 404.
+
+| File | Fix |
+|---|---|
+| `src/app/api/user/profile/route.ts` (POST) | Prefer `getStormUserIdFromRequest()` session lookup by `users.id`; wallet body param remains legacy fallback |
+| `src/app/api/auth/sync/route.ts` | Return `walletAddress` from the existing `users` row |
+| `src/hooks/use-supabase-auth-sync.ts` | After sync, set client `address` to DB wallet (cached in ref) so role fetch + `x-wallet-address` headers match migrated accounts |
+
+---
+
 ## **Phase 1 · T1.11c — `/sign-in` is the front door (dual-door, Pace-safe)** (2026-05-29)
 
 Unauthenticated visitors now land on the Supabase `/sign-in` page instead of the legacy Alchemy connect UI. Implemented as a **dual door** (user-approved) so existing Alchemy users — including Pace — are not locked out before the coordinated T1.12 cutover.

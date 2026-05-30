@@ -27,6 +27,7 @@ export function useSupabaseAuthSync() {
   // Guards the bootstrap fetch to once per session id (avoids re-syncing on
   // every onAuthStateChange tick, e.g. token refresh).
   const syncedFor = useRef<string | null>(null)
+  const resolvedWallet = useRef<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -39,6 +40,7 @@ export function useSupabaseAuthSync() {
         // Supabase signed out. Only clear the store if a Supabase user owns it —
         // never clobber a live Alchemy session during dual-mode.
         syncedFor.current = null
+        resolvedWallet.current = null
         setSessionUserId(null)
         if (useAuthStore.getState().user?.method === 'supabase') setUser(null)
         return
@@ -50,11 +52,24 @@ export function useSupabaseAuthSync() {
       const current = useAuthStore.getState().user
       if (current && current.method !== 'supabase') return
 
+      let walletForClient =
+        resolvedWallet.current ?? authOnlyWalletPlaceholder(sessionUserId)
+
       // Bootstrap public.users exactly once per session, before any wallet-keyed fetch.
       if (syncedFor.current !== sessionUserId) {
         syncedFor.current = sessionUserId
+        resolvedWallet.current = null
         try {
-          await fetch('/api/auth/sync', { method: 'POST' })
+          const res = await fetch('/api/auth/sync', { method: 'POST' })
+          if (res.ok) {
+            const data = (await res.json()) as { walletAddress?: string | null }
+            // Prefer the DB wallet so migrated Alchemy users keep working client-side
+            // (role fetch, x-wallet-address headers) until T1.12 goes fully session-based.
+            if (data.walletAddress) {
+              resolvedWallet.current = data.walletAddress
+              walletForClient = data.walletAddress
+            }
+          }
         } catch {
           // Non-fatal: row likely already exists; the role fetch surfaces real errors.
         }
@@ -62,7 +77,7 @@ export function useSupabaseAuthSync() {
 
       if (!active) return
       setUser({
-        address: authOnlyWalletPlaceholder(sessionUserId),
+        address: walletForClient,
         email: email ?? undefined,
         method: 'supabase',
         userId: sessionUserId,
