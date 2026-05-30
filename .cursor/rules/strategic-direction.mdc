@@ -15,7 +15,7 @@ Master reference: `docs/midnight/ARCHITECTURE.md`. When this rule is ambiguous, 
 
 A **portable, composable Driver Qualification (DQ) file platform** for trucking, where verified credential facts are eventually backed by **selective-disclosure cryptographic proofs**. The moat is *selective disclosure of verified facts* — competitors (Tenstreet, HireRight, DriverFacts) cannot retrofit it without rebuilding their CRA business model.
 
-The chain is implementation detail of the moat, not the moat itself. Users will never see Midnight, install a wallet, or write down a seed phrase.
+The chain is never the moat itself — the moat is *selective disclosure of verified facts*. But "the chain is invisible" applies to **interaction, not narrative**. Users never *interact with* the chain: no wallet, no seed phrase, no gas, no signing. They may absolutely *read about* it — Storm celebrates Midnight / zero-knowledge / selective disclosure as its public credibility story (the domain is `stormchain.ai` on purpose; the in-app product is simply "Storm"). The split is **narrative (encouraged) vs. interaction (gated) vs. per-fact claim (provenance-gated)**. See `DECISION_LOG.md` DEC-2026-05-016.
 
 ---
 
@@ -107,23 +107,28 @@ This is where the moat lives. Special care:
 
 ## Language rules (carries into UI copy and Stormi prompts)
 
-### Use
+Revised 2026-05-30 (DEC-2026-05-016): the chain is now part of the **public narrative**. The rules below separate what you may *celebrate* from the guardrails that keep the moat honest.
+
+### Use / celebrate
 - "Verified by Storm" / "Verified credentials"
 - "Selective disclosure"
 - "Proof of [fact]" — e.g. "Proof of clean MVR"
 - "Tamper-proof" (for facts derived from third-party sources)
 - "Storm Points" (if rewards return)
+- **"Blockchain" / "Midnight" / "zero-knowledge" / "on-chain"** as the public credibility narrative — marketing site, decks, talks. Celebrating the chain is encouraged. The domain `stormchain.ai` leans into this on purpose.
 
-### Don't use
-- "Blockchain-verified" (especially for self-reported data — see `PROJECT_ROADMAP.md` blockchain policy)
-- "On-chain" in customer-facing copy until Phase 3 ships
-- "Crypto wallet" / "smart wallet" / "USDC" anywhere user-facing
-- "STORM token" (post-decision in DEC-2026-05-005)
-- "Web3" as a positioning term
+### Guardrails when you DO say "blockchain / on-chain / verified" (moat integrity — never loosen)
+- **Provenance gate:** only **issuer-signed / third-party facts** (MVR, PSP, employment verification, future CDLIS) may carry a "verified / tamper-proof / on-chain" claim. **Self-reported data (resume, DOT app, skills, education) is NEVER "blockchain-verified."** See DEC-2026-05-014 + `PROJECT_ROADMAP.md` blockchain policy.
+- **Honesty about phase:** narrate the architecture/vision ("built on Midnight", "designed for selective disclosure") — but don't claim a *specific* fact is *live* ZK-proven on-chain before Phase 3 ships. Present-continuous vision copy is fine; per-fact "proven on Midnight right now" is not, until the proof is real (DEC-2026-05-004).
+- **Interaction stays invisible:** never ask a user to touch a wallet, seed phrase, gas, signing, or a token. The chain is something users *read about*, never operate.
+
+### Discouraged (brand taste, not a moat rule)
+- "Web3" as a *positioning* term — dated / crypto-bro coded. Prefer "blockchain", "zero-knowledge", "verifiable credentials".
+- "Crypto wallet" / "smart wallet" / "USDC" anywhere user-facing — these are interaction artifacts we removed.
+- "STORM token" as a *current* product — it's off-chain "Storm Points" today (DEC-2026-05-005). A future Midnight-native token may be narrated as roadmap.
 
 ### Internally OK (engineering docs, decision logs)
-- ZK, zero-knowledge, Compact, Midnight, DUST, NIGHT, Aztec, RISC Zero
-- These belong in `/docs/midnight/`, decision logs, technical comments — not user-facing strings
+- Compact, DUST, NIGHT, Aztec, RISC Zero, witness / `disclose()` internals — implementation detail. These belong in `/docs/midnight/`, decision logs, and technical comments, not user-facing strings.
 
 ---
 

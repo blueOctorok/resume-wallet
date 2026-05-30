@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Positioning · Celebrate the chain (narrative), keep gating interaction** (2026-05-30)
+
+Docs-only positioning change — **no code touched.** The old language rules suppressed *all* customer-facing mention of "blockchain / on-chain / Midnight" until Phase 3. That conflated three separate things; we now split them:
+
+| Axis | Old | New |
+|---|---|---|
+| **Narrative** (marketing/talks) | suppressed | **encouraged** — celebrate Midnight / ZK / selective disclosure; `stormchain.ai` leans in |
+| **Interaction** (wallet/seed/gas) | gated | **unchanged** — users never touch the chain |
+| **Per-fact claim** ("verified") | issuer-signed only | **unchanged** — self-reported data is NEVER "blockchain-verified"; no live-proof claims before Phase 3 |
+
+**Why:** the engineer's public talks lean into the blockchain story to strong response; suppressing the narrative left credibility on the table. The thing that spooks non-crypto B2B buyers is *doing* crypto, not *hearing* about it.
+
+**Files:**
+
+| File | Change |
+|---|---|
+| `docs/midnight/DECISION_LOG.md` | Added **DEC-2026-05-016**; bumped "Last updated" to 2026-05-30 |
+| `.cursor/rules/strategic-direction.mdc` | Reworded the "chain is invisible" line (interaction, not narrative); rewrote "Language rules" into Use / Guardrails / Discouraged |
+| `docs/PROJECT_ROADMAP.md` | Added a narrative-vs-claim note atop "Blockchain policy" (provenance gate unchanged) |
+
+---
+
 ## **Phase 1 · T1.12b — Strip vestigial client `x-wallet-address` headers** (2026-05-30)
 
 After T1.12c made `getStormUserIdFromRequest` session-only, most client fetches no longer need to send `x-wallet-address` — same-origin requests authorize via the Supabase cookie (middleware refreshes it on `/api/*` since T1.12a).

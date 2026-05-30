@@ -6,6 +6,48 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-05-016 — Public positioning: celebrate the chain (narrative), keep gating chain interaction (UX)
+
+**Date:** 2026-05-30
+**Status:** Accepted (revises the customer-facing language rules only; does NOT touch the provenance gate or the interaction gate)
+**Decided by:** Sole engineer
+
+### Context
+
+The prior language rules (`.cursor/rules/strategic-direction.mdc`) suppressed *all* customer-facing mention of "blockchain," "on-chain," "Midnight," and "Web3" until Phase 3 shipped. The intent was sound — don't spook a non-crypto trucking B2B audience, and don't over-claim verification that isn't live yet. But it collapsed **three different things** into one blanket "don't say blockchain":
+
+1. **Narrative** — talking about cryptography / Midnight as the credibility story.
+2. **Interaction** — making a user touch a wallet, seed phrase, gas, or signing.
+3. **Claim** — attaching a "verified / on-chain" badge to a specific fact.
+
+The domain is **`stormchain.ai`**; the in-app product is simply **"Storm."** The engineer presents Storm publicly (tech-week talks) leaning into the blockchain story and gets strong, positive audience response. Suppressing the *narrative* leaves credibility and excitement on the table for no benefit — the thing that actually spooks non-crypto B2B buyers is being asked to *do* crypto, not *hear* about it.
+
+### Decision
+
+Split the blanket rule into three axes and only loosen the narrative one:
+
+1. **Narrative — now ENCOURAGED publicly.** Storm may celebrate Midnight, zero-knowledge proofs, selective disclosure, and "blockchain" as its trust/credibility story on the marketing site, decks, and talks. The domain `stormchain.ai` leans into this on purpose. Domain ≠ product name: the URL carries the chain story, the in-app voice stays "Storm / Stormi."
+2. **Interaction — gate UNCHANGED.** Users still never touch a wallet, seed phrase, signing, gas, or token UX. Web2-simplicity invariant from DEC-2026-05-001; absolute.
+3. **Claim — gate UNCHANGED (provenance + honesty).**
+   - Only **issuer-signed / third-party facts** (MVR, PSP, employment verification, future CDLIS) may carry a "verified / tamper-proof / on-chain" claim (DEC-2026-05-014 provenance gate + `PROJECT_ROADMAP.md` blockchain policy). **Self-reported data is NEVER "blockchain-verified."** Iron-clad; not touched here.
+   - Don't claim a specific fact is *currently* ZK-proven on Midnight before Phase 3 ships. Narrate the architecture/vision in "built on / designed for" framing, not a per-fact "this MVR is proven on Midnight right now" claim, until the proof is real (DEC-2026-05-004).
+
+### Consequences
+
+- `strategic-direction.mdc` "Language rules" rewritten: blockchain / Midnight / on-chain / ZK / selective disclosure move from **Don't use** to an **encouraged narrative** list, with the provenance + honesty + interaction guardrails spelled out beside it.
+- "Web3" stays **discouraged as a positioning term** — dated / crypto-bro coded — even though "blockchain" is now fine. Brand-taste call, not a moat rule.
+- The "Users will never see Midnight" line is reworded to "Users never *interact with* the chain" — they may very well *read about* it.
+- **No code changes.** Per-fact verification UI still flows through `attestationService` and still obeys the provenance gate.
+
+### Related
+
+- DEC-2026-05-001 (Web2 simplicity — origin of the interaction gate)
+- DEC-2026-05-014 (provenance gate — the claim gate, unchanged)
+- DEC-2026-05-004 (Phase 3 deferred — honesty constraint on live-proof claims)
+- `docs/PROJECT_ROADMAP.md` "Blockchain policy — honest usage only" (per-fact claim rules, unchanged)
+
+---
+
 ## DEC-2026-05-015 — Sideline the developer vertical (hide, don't convert)
 
 **Date:** 2026-05-29
@@ -654,4 +696,4 @@ Sole engineer works on Windows. Concerns raised: Midnight's Compact compiler is 
 
 ---
 
-**Last updated:** 2026-05-22
+**Last updated:** 2026-05-30

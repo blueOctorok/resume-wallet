@@ -63,6 +63,8 @@ Storm is a **portable, composable DQ (Driver Qualification) file platform**. Dri
 
 ### Blockchain policy — honest usage only
 
+> **Narrative vs. claim (DEC-2026-05-016, 2026-05-30):** Storm now *celebrates* blockchain / Midnight / zero-knowledge as its public credibility story (the domain is `stormchain.ai`). That loosening applies to the **narrative** only. The **per-fact claim** rules below are unchanged and iron-clad: a "verified / on-chain" badge still attaches only to issuer-signed third-party facts, never to self-reported data — and users still never touch a wallet.
+
 Blockchain is an immutable timestamp ledger. It proves data existed at a time and hasn't been altered. It does NOT make data true.
 
 **Use blockchain ONLY when all three conditions are met:**
