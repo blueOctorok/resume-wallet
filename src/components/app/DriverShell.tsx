@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
-import StormChainView from '@/components/StormChainView'
 import DriverCareerCardSection from '@/components/app/DriverCareerCardSection'
 import MessageInbox from '@/components/messaging/MessageInbox'
 import ProfileSetup from '@/components/app/ProfileSetup'
@@ -391,10 +390,6 @@ export default function DriverShell({
     )
   }
 
-  if (currentPage === 'stormchain') {
-    return <StormChainView onBack={handleNavigateToHub} />
-  }
-
   if (currentPage === 'messages') {
     return (
       <div className='max-w-2xl mx-auto'>
@@ -419,7 +414,7 @@ export default function DriverShell({
             onNavigate={(page) => {
               if (
                 page === 'resume' || page === 'dotapp' || page === 'jobs' ||
-                page === 'applications' || page === 'mvr' || page === 'stormchain' ||
+                page === 'applications' || page === 'mvr' ||
                 page === 'career-card' || page === 'profile-setup' || page === 'messages'
               ) {
                 setCurrentPage(page)

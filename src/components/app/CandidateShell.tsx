@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import ProfileSetup from '@/components/app/ProfileSetup'
 import MessageInbox from '@/components/messaging/MessageInbox'
-import StormChainView from '@/components/StormChainView'
 import DotApplicationFlow from '@/components/app/DotApplicationFlow'
 import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
@@ -36,7 +35,6 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   // job-discovery surface across the app.
   'hunt-desk',
   'applications',
-  'stormchain',
   'career-card',
   'messages',
 ]
@@ -269,10 +267,6 @@ export default function CandidateShell() {
         <MyApplications onBack={goBack} userAddress={user?.address ?? null} />
       </div>
     )
-  }
-
-  if (currentPage === 'stormchain') {
-    return <StormChainView onBack={goBack} />
   }
 
   if (currentPage === 'career-card') {

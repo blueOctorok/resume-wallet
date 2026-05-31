@@ -47,14 +47,6 @@ const TeamManagement = dynamic(
   }
 )
 
-const StormChainView = dynamic(
-  () => import('@/components/StormChainView').then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => <LoadingScreen message='Loading STORM Token...' fullScreen={false} />,
-  }
-)
-
 interface EmployerShellProps {
   walletAddress: string
 }
@@ -67,7 +59,6 @@ const KNOWN_PAGES = new Set([
   'post-job',
   'team',
   'company-profile',
-  'stormchain',
   'messages',
 ])
 
@@ -129,10 +120,6 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
         showBackButton={true}
       />
     )
-  }
-
-  if (currentPage === 'stormchain') {
-    return <StormChainView onBack={goBack} />
   }
 
   if (currentPage === 'messages') {

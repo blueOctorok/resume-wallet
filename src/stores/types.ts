@@ -21,7 +21,6 @@ export type PageType =
   | 'mvr'
   | 'psp'
   | 'hub'
-  | 'stormchain'
   | 'applicants'
   | 'talent-search'
   | 'post-job'

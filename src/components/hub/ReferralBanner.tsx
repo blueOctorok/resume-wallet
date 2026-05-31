@@ -59,15 +59,13 @@ export default function ReferralBanner() {
 
   if (loading || !referralCode) return null
 
-  const stormEarned = (stats?.rewarded ?? 0) * 2.5
-
   return (
     <HubSectionPanel isDark={isDark} accent='violet'>
       <BlockCard
         variant='embed'
         icon={Users}
-        title='Refer & earn STORM'
-        description='You both earn 2.5 STORM when they complete their first paid action.'
+        title='Refer a friend'
+        description='Share your link — when they join Storm, we track the referral on your account.'
         headerActions={
           <Button
             type='button'
@@ -97,12 +95,7 @@ export default function ReferralBanner() {
             )}
           >
             <span>{stats.totalReferred} referred</span>
-            <span>{stats.rewarded} rewarded</span>
-            {stormEarned > 0 && (
-              <span className={cn('font-semibold', isDark ? 'text-violet-300' : 'text-violet-700')}>
-                +{stormEarned} STORM earned
-              </span>
-            )}
+            <span>{stats.signedUp} signed up</span>
           </div>
         )}
       </BlockCard>

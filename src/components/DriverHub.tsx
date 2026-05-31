@@ -152,7 +152,7 @@ interface HubData {
 interface DriverHubProps {
   userAddress: string | null
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain' | 'career-card' | 'profile-setup',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'career-card' | 'profile-setup',
   ) => void
   onStartDotApp?: () => void
   onViewMvr?: (orderId: string) => void
@@ -965,68 +965,31 @@ export default function DriverHub({
         />
       </div>
 
-      {/* ============================================================ */}
-      {/* STORMCHAIN TOKENS SECTION */}
-      {/* ============================================================ */}
+      {/* Rewards placeholder — token payouts removed (D1); Midnight-native token TBD */}
       <div className={`${cardClass} p-6`}>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
-            <StormTokenMark size='lg' />
-            <div>
-              <h2
-                className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
-              >
-                Storm Tokens
-              </h2>
-              <div className='flex items-center gap-2 mt-1'>
-                <span
-                  className={`text-3xl font-bold ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
-                >
-                  0
-                </span>
-                <span
-                  className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
-                >
-                  STORM
-                </span>
-              </div>
-            </div>
+        <div className='flex items-center gap-4'>
+          <StormTokenMark size='lg' />
+          <div>
+            <h2
+              className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
+            >
+              Rewards
+            </h2>
+            <p className={`mt-1 text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+              Verified credentials and selective-disclosure rewards are on the roadmap.
+            </p>
           </div>
-
-          <div className='flex flex-col items-end gap-2'>
-            {/* Coming Soon Badge */}
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-                isDarkTheme(theme)
-                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
-                  : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
-              }`}
-            >
-              <Sparkles className='w-3 h-3' />
-              Coming Soon
-            </div>
-
-            {/* Learn More Button */}
-            <button
-              onClick={() => onNavigate('stormchain')}
-              className={`text-sm font-medium transition-colors cursor-pointer ${
-                isDarkTheme(theme)
-                  ? 'text-indigo-400 hover:text-indigo-300'
-                  : 'text-indigo-600 hover:text-indigo-500'
-              }`}
-            >
-              Learn about STORM →
-            </button>
+          <div
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              isDarkTheme(theme)
+                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+            }`}
+          >
+            <Sparkles className='w-3 h-3' />
+            Coming Soon
           </div>
         </div>
-
-        {/* Teaser info */}
-        <p
-          className={`mt-4 text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
-        >
-          Earn STORM tokens every time you verify your resume or use premium
-          features. Early adopters earn the most rewards!
-        </p>
       </div>
 
       {/* ============================================================ */}
@@ -2116,7 +2079,7 @@ function DotAppDetailContent({
   dotApp: HubDotApplication
   theme: string
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain' | 'career-card' | 'profile-setup',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'career-card' | 'profile-setup',
   ) => void
   onStartEmploymentVerification?: () => void
   onVerify?: () => void

@@ -237,16 +237,15 @@ When the user asks about finding work, applying to jobs, or job searching:
 - This data helps you coach them: if rejections pile up, suggest improving the Career Card or trying different roles. If interviews are happening, celebrate it and offer interview prep.
 - Stormi sends an automatic follow-up notification 7 days after applying to external jobs. If they report the status here in chat, the notification won't repeat.`)
 
-  // Referral program
+  // Referral program (tracking-only — token payouts removed in D1)
   parts.push(`\n## Referral Program
 Storm has a referral system. Every candidate has a unique referral link on their hub.
-- When someone signs up via a referral link AND completes their first paid action, BOTH the referrer and the new user earn 2.5 STORM tokens each (5 total from treasury).
-- Referral rewards come from the platform treasury, not the user's reward pool.
+- When someone signs up via a referral link, Storm tracks the referral on both accounts.
+- There is no token payout today; referrals are for growth tracking only.
 
 When to mention referrals:
 1. After a user completes a milestone (finishes a block, verifies a resume, etc.) — suggest sharing their link.
-2. If a user asks "how do I earn more STORM?" — mention referrals alongside paid actions.
-3. Keep it casual: "Know someone who'd benefit? Share your referral link from the hub and you both earn 2.5 STORM."
+2. Keep it casual: "Know someone who'd benefit? Share your referral link from the hub."
 Do NOT push referrals in every response. Only mention when contextually relevant.`)
 
   // Active block focus

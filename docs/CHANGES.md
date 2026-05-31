@@ -4,6 +4,44 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Track 2 · D1 — Drop STORM ERC-20 token (Base Sepolia)** (2026-05-31)
+
+STORM was a Base-Sepolia ERC-20 that **never reached a real user**. Removed all live token distribution code; archived Solidity for a possible future Midnight-native token (DEC-2026-05-005 Option B). Did **not** add `users.storm_points` — deferred until a real reward model exists.
+
+**Owner decisions (locked for this step):**
+- **Referrals:** strip payout entirely — tracking + anti-sybil guards stay; no token reward ever.
+- **StormChainView:** unwired from UI (homepage whitepaper link + shell routes) but **file kept on disk** for future Midnight token economics page.
+
+**Deleted:**
+
+| File | Why |
+|---|---|
+| `src/lib/storm-rewards.ts` + `.test.ts` | Decay formula + `triggerStormReward` / `triggerReferralReward` |
+| `src/lib/storm-contract.ts` | On-chain `RewardDistributor` / `TreasuryDistributor` client |
+| `src/app/api/storm/distribute/route.ts` | USDC→STORM mint API |
+| `src/app/api/storm/history/route.ts` | Wallet-keyed earnings history |
+| `src/app/api/referrals/claim/route.ts` | Treasury payout route (internal secret) |
+| `scripts/deploy-storm-token.js` | Deploy script |
+
+**Archived → `contracts/legacy/`:** `StormToken.sol`, `RewardDistributor.sol`, `TreasuryDistributor.sol`, `FounderVesting.sol` (+ README). Registry contracts **not** moved (D2).
+
+**Surgical edits:**
+
+| File | Change |
+|---|---|
+| `src/app/api/mvr/payment/route.ts`, `psp/payment/route.ts` | Removed `triggerStormReward` calls (USDC routes unchanged otherwise — D3) |
+| Candidate/Employer/Driver shells + `page.tsx` | Removed `stormchain` page route; dropped `PageType` `'stormchain'` |
+| `HomePage.tsx` | Removed whitepaper modal + "Read the whitepaper" CTA; updated Construct Mode copy |
+| `ReferralBanner.tsx`, `journey-progress.ts`, `ava-context.ts` | Neutralized "earn 2.5 STORM" copy — referrals are tracking-only |
+| `DriverHub.tsx` | Replaced STORM token teaser with generic "Rewards — coming soon" |
+| `auth-session.ts` | Comment: removed stale `/api/storm/history` allowlist mention |
+
+**Preserved:** `StormTokenMark.tsx` (brand logo, not token UI); `StormChainView.tsx` on disk; `referrals` table + `storm_tx_hash` column (no migration); referral creation in set-role.
+
+Build green.
+
+---
+
 ## **Phase 1 · T1.13 (partial) — Delete orphaned personal wallet UI dead code** (2026-05-30)
 
 Read-only teardown map: `docs/midnight/T1_13_WALLET_TEARDOWN_MAP.md`. Personal wallet UI was already disconnected at T1.12c; this pass removes unreachable files (zero importers) and fixes two session gates. **Not in scope:** `@account-kit`, company wallet rail, payment buttons, `walletAddress` store field — deferred to **T1.12d** / T1.13 remainder.

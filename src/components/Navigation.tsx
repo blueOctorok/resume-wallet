@@ -62,7 +62,6 @@ type NavPage =
   | 'applications'
   | 'home'
   | 'hub'
-  | 'stormchain'
 
 interface NavigationProps {
   isAuthenticated?: boolean

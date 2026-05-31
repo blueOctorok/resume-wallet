@@ -375,7 +375,7 @@ export function calculateBlockJourney(
     ? {
         id: 'referral',
         label: 'Share Your Referral Link',
-        description: 'Invite a friend — you both earn 2.5 STORM when they take a paid action',
+        description: 'Invite a friend — share your referral link from the hub',
         status: 'pending', // stays pending — it's a perpetual nudge, not a gate
         isOptional: true,
       }

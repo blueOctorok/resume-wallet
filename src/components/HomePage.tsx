@@ -1,11 +1,10 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   ArrowRight,
-  BookOpen,
   Briefcase,
   Building2,
   CheckCircle,
@@ -19,7 +18,6 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react'
-import StormChainView from '@/components/StormChainView'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
@@ -37,10 +35,8 @@ interface HomePageProps {
 
 /**
  * Scroll-reveal hook — adds a `revealed` class when an element enters the viewport.
- * `reattachKey` is the modal-open flag: when the whitepaper closes we re-observe
- * the fresh DOM nodes so the homepage animates back in cleanly.
  */
-function useScrollReveal(reattachKey: unknown) {
+function useScrollReveal() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,7 +57,7 @@ function useScrollReveal(reattachKey: unknown) {
 
     container.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el))
     return () => observer.disconnect()
-  }, [reattachKey])
+  }, [])
 
   return containerRef
 }
@@ -358,21 +354,7 @@ function PhoneFrame({ children, isDark }: { children: React.ReactNode; isDark: b
 export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }: HomePageProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const [showWhitepaper, setShowWhitepaper] = useState(false)
-  const revealRef = useScrollReveal(showWhitepaper)
-
-  const openWhitepaper = () => {
-    setShowWhitepaper(true)
-    window.scrollTo({ top: 0 })
-  }
-  const closeWhitepaper = () => {
-    setShowWhitepaper(false)
-    window.scrollTo({ top: 0 })
-  }
-
-  if (showWhitepaper) {
-    return <StormChainView onBack={closeWhitepaper} backLabel='Back to Home' />
-  }
+  const revealRef = useScrollReveal()
 
   // The connect/dashboard CTA label flips for signed-in users.
   const primaryLabel = isAuthenticated ? 'Go to dashboard' : 'Connect a wallet'
@@ -651,7 +633,6 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
          ═══════════════════════════════════════════════════════════════════════
          SECTION 4 — The Hub (graduation path)
          For users who get hooked and want full ownership of their career.
-         Token + whitepaper live inside the third pillar, not their own band.
          ═══════════════════════════════════════════════════════════════════════
         */}
         <section id='hub' className='scroll-mt-24 py-16 sm:py-24'>
@@ -668,7 +649,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   isDark ? 'text-gray-300' : 'text-slate-700',
                 )}
               >
-                Most users get what they need from Apply Mode and that&rsquo;s fine. When you want full ownership of your career, switch to Construct Mode &mdash; every block category, open chat with Stormi, your STORM balance, and tools to maintain your verified identity over time.
+                Most users get what they need from Apply Mode and that&rsquo;s fine. When you want full ownership of your career, switch to Construct Mode &mdash; every block category, open chat with Stormi, verified credentials, and tools to maintain your professional identity over time.
               </p>
 
               <div className='mt-8 grid gap-4 lg:grid-cols-3'>
@@ -694,19 +675,17 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                     ),
                     accent: isDark ? 'text-violet-300' : 'text-violet-700',
                     ring: isDark ? 'ring-violet-400/30 bg-violet-500/15' : 'ring-violet-200 bg-violet-50',
-                    isWhitepaper: false,
                   },
                   {
                     icon: Link2,
-                    title: 'STORM token and on-chain identity.',
+                    title: 'Verified credentials.',
                     body: (
                       <>
-                        Earn verifications, manage credential issuers, and put your credibility on the chain.
+                        Selective disclosure of third-party-verified facts &mdash; built for carriers who need trust without the PDF mess.
                       </>
                     ),
                     accent: isDark ? 'text-cyan-300' : 'text-cyan-700',
                     ring: isDark ? 'ring-cyan-400/30 bg-cyan-500/15' : 'ring-cyan-200 bg-cyan-50',
-                    isWhitepaper: true,
                   },
                 ].map((cell) => {
                   const Icon = cell.icon
@@ -734,19 +713,6 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                       <p className={cn('mt-1 text-sm leading-relaxed', isDark ? 'text-gray-400' : 'text-slate-600')}>
                         {cell.body}
                       </p>
-                      {cell.isWhitepaper && (
-                        <button
-                          type='button'
-                          onClick={openWhitepaper}
-                          className={cn(
-                            'mt-3 inline-flex items-center gap-1.5 text-xs font-semibold underline-offset-4 hover:underline',
-                            isDark ? 'text-cyan-300' : 'text-cyan-700',
-                          )}
-                        >
-                          <BookOpen className='h-3.5 w-3.5' />
-                          Read the whitepaper
-                        </button>
-                      )}
                     </div>
                   )
                 })}

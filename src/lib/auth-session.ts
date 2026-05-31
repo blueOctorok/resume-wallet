@@ -8,8 +8,8 @@
  * The legacy `x-wallet-address` fallback was REMOVED at the T1.12 cutover:
  * every login is now Supabase, and same-origin fetches carry the session
  * cookie (the middleware refreshes it). Routes that still read
- * `x-wallet-address` directly — `requireAdmin`, `/api/storm/history`,
- * `/api/driver/public/[token]` — are independent of this helper and unaffected.
+ * `x-wallet-address` directly — `requireAdmin`, `/api/driver/public/[token]` —
+ * are independent of this helper and unaffected.
  *
  * The `request` argument is retained (now ignored) so the ~30 existing callers
  * keep compiling without an edit; it can be dropped in a later cleanup.

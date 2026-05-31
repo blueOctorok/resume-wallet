@@ -388,7 +388,7 @@ const HomeContent = () => {
           onNavigate={(page) => {
             // 'jobs' removed: navigation's "Browse jobs" guest button now flips into
             // Guided Mode via `onBrowseGuided` rather than navigating to a 'jobs' page.
-            const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'psp', 'stormchain']
+            const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'psp']
             const mapped = page === 'home' || page === 'hub' ? null : page as PageType
             if (page === 'home' || page === 'hub' || validPages.includes(page as PageType)) {
               // Exit guest Guided Mode when going home or to sign-in so the

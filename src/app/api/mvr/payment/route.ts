@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { triggerStormReward } from '@/lib/storm-rewards'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 /**
@@ -136,20 +135,6 @@ export async function POST(request: NextRequest) {
 
       console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
 
-      console.log('[MVR PAYMENT] ⛈️ Distributing STORM for existing payment (user paid, user gets rewarded)')
-      try {
-        await triggerStormReward(
-          walletAddress,
-          existingPayment.amount_usdc,
-          existingPayment.id,
-          'MVR_ORDER',
-          userType,
-          companyId
-        )
-      } catch (stormError) {
-        console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
-      }
-
       return NextResponse.json({
         success: true,
         payment: {
@@ -191,22 +176,6 @@ export async function POST(request: NextRequest) {
       type: 'MVR_ORDER',
       status: 'COMPLETED'
     })
-
-    // Distribute STORM rewards at the caller's rate (applicant = 1x, employer = 0.5x)
-    // Must await in serverless - unawaited promises get terminated when response is sent
-    try {
-      await triggerStormReward(
-        walletAddress,
-        payment.amount_usdc,
-        payment.id,
-        'MVR_ORDER',
-        userType,
-        companyId
-      )
-    } catch (stormError) {
-      // Log but don't fail the payment
-      console.error('[MVR PAYMENT] STORM reward failed (non-fatal):', stormError)
-    }
 
     return NextResponse.json({
       success: true,

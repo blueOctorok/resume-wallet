@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { triggerStormReward } from '@/lib/storm-rewards'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 /**
@@ -88,19 +87,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      try {
-        await triggerStormReward(
-          walletAddress,
-          existingPayment.amount_usdc,
-          existingPayment.id,
-          'PSP_ORDER',
-          userType,
-          companyId,
-        )
-      } catch (stormError) {
-        console.error('[PSP PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
-      }
-
       return NextResponse.json({
         success: true,
         payment: {
@@ -128,12 +114,6 @@ export async function POST(request: NextRequest) {
     if (paymentError) {
       console.error('[PSP PAYMENT] insert error:', paymentError)
       return NextResponse.json({ error: 'Failed to record payment', details: paymentError.message }, { status: 500 })
-    }
-
-    try {
-      await triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'PSP_ORDER', userType, companyId)
-    } catch (stormError) {
-      console.error('[PSP PAYMENT] STORM reward failed (non-fatal):', stormError)
     }
 
     return NextResponse.json({
