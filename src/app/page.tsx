@@ -213,6 +213,28 @@ const HomeContent = () => {
   }, [walletAddress])
 
   // -------------------------------------------------------
+  // Resume an invite that lost its ?next during the Supabase auth round-trip.
+  // /onboard/[token] stashes the token before bouncing to /sign-in. If the user
+  // returns to `/` instead of the onboard page (the magic-link redirect can fall
+  // back to the Site URL), pick the flow back up so role + block setup actually
+  // runs — otherwise they're stranded on the hub with a role-selection prompt.
+  // We clear the token before redirecting so a failed/invalid invite can't loop.
+  // -------------------------------------------------------
+  const didResumeInviteRef = useRef(false)
+  useEffect(() => {
+    if (didResumeInviteRef.current) return
+    if (!sessionUserId && !user) return
+    const pendingToken =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('stormchain_invite_token')
+        : null
+    if (!pendingToken) return
+    didResumeInviteRef.current = true
+    window.localStorage.removeItem('stormchain_invite_token')
+    router.replace(`/onboard/${pendingToken}`)
+  }, [sessionUserId, user, router])
+
+  // -------------------------------------------------------
   // Handle onboard redirect (from /onboard/[token] flow)
   // When user logs in via invite, they land here with ?onboard=dot-application
   // We wait for role to be set, then navigate to the appropriate page

@@ -55,8 +55,6 @@ export default function OnboardPage() {
         }
         const data = await res.json()
         setInviteData(data)
-
-        sessionStorage.setItem('stormchain_invite_token', token)
       } catch {
         setFetchError(true)
       } finally {
@@ -82,11 +80,25 @@ export default function OnboardPage() {
       const { data: { user: sessionUser } } = await supabase.auth.getUser()
 
       if (!sessionUser) {
+        // Stash the token so we can resume this exact invite even if the
+        // ?next= round-trip is lost during auth (e.g. the Supabase magic-link
+        // redirect falls back to the Site URL and lands the user on `/`).
+        // localStorage (not sessionStorage) so it survives the magic-link
+        // opening in a NEW tab. page.tsx reads this and routes back here.
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('stormchain_invite_token', token)
+        }
         router.replace(`/sign-in?next=${encodeURIComponent(`/onboard/${token}`)}`)
         return
       }
 
       setRedirecting(true)
+
+      // We have a session and are committing to setup — consume the resume token
+      // so neither flow below loops back here via page.tsx.
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('stormchain_invite_token')
+      }
 
       // Resolve the client wallet exactly like useSupabaseAuthSync: prefer the
       // migrated DB wallet, else the auth:<uuid> placeholder. Setup routes still

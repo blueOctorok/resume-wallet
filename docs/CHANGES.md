@@ -4,18 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Fix · Outreach consent deep-link lost after auth cutover** (2026-05-30)
+## **Fix · Outreach invite stranded candidates on the hub after auth cutover** (2026-05-30)
 
-Employer outreach (e.g. a `driver-screening-consent` request) emails the candidate `/apply/[token]`. They click → `/onboard/[token]`, sign in, and should land on the requested block. After the Supabase auth cutover they landed on the **candidate hub** instead — the target block was lost.
+Employer outreach (e.g. a `driver-screening-consent` request) emails the candidate `/apply/[token]`. They click → `/onboard/[token]` → sign in → should land on the requested block. After the Supabase auth cutover they instead got the **role-selection prompt** and landed on the hub — onboard setup (role + block install) never ran.
 
-**Root cause:** the target route was carried only as the `?onboard=<route>` query param on the final `/?onboard=…` redirect. The pre-cutover flow authenticated **inline** on the onboard page (Alchemy `AuthCard`), so there were no further redirects. The cutover added two post-setup hops that can strip the query string before `page.tsx` reads it: the `/sign-in` round-trip and the new guest-redirect (`router.push('/sign-in')` with no `next`). The role-fetch effect's `setCurrentPage(null)` (go-to-hub) also raced the onboard handler.
+**Root cause (two layers):**
+1. **Setup never ran.** `/onboard/[token]` bounces a signed-out user to `/sign-in?next=/onboard/[token]`. The `next` round-trip is unreliable post-cutover — the Supabase **magic-link** redirect can fall back to the Site URL (`/`), so the user finishes auth on `/` and never returns to the onboard page to set role/install the block → role-selection prompt.
+2. **Even when setup ran, the target could be lost.** The target route rode only on the `?onboard=<route>` query of the final `/?onboard=…` redirect, which the new guest-redirect / sign-in hops can strip. (The pre-cutover flow authed inline on the onboard page, so there were zero post-setup redirects.)
 
-**Fix — make the deep-link survive every hop via `sessionStorage`:**
+**Fix:**
 
 | File | Change |
 |---|---|
-| `src/app/onboard/[token]/page.tsx` | Before redirecting, stash the block `pageRoute` in `sessionStorage['storm_onboard_target']` (survives the sign-in/guest-redirect hops in the same tab). Query param still sent for back-compat. |
-| `src/app/page.tsx` | Onboard handler reads the target from `?onboard=` **or** `sessionStorage`, then clears the key once consumed. Role-fetch no longer resets `currentPage` to the hub while a deep-link target is pending. Added `ONBOARD_TARGET_KEY` const (kept in sync across both files). |
+| `src/app/onboard/[token]/page.tsx` | When bouncing a signed-out user to `/sign-in`, stash the invite token in **`localStorage['stormchain_invite_token']`** (localStorage, not sessionStorage, so it survives the magic-link opening in a new tab). Consume/clear it once a session is confirmed and setup begins. Also stash the block `pageRoute` in `sessionStorage['storm_onboard_target']` before the final redirect. |
+| `src/app/page.tsx` | **Resume effect:** on `/`, if authed and a pending invite token exists, clear it and `router.replace('/onboard/[token]')` so setup actually runs (loop-safe — token cleared before redirect). Onboard handler reads the target from `?onboard=` **or** `sessionStorage`; role-fetch no longer resets `currentPage` to the hub while a deep-link is pending. |
+
+**Known gap:** resume relies on `localStorage`, which is per-browser. If the candidate opens the magic link in a *different* browser/device than where they started, the token isn't there — they'll need a server-side pending-invite lookup (future work). Same-browser (incl. magic-link-in-new-tab) and OTP-code flows are covered.
 
 Build green; lint clean.
 
