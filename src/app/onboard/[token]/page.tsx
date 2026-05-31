@@ -146,9 +146,16 @@ export default function OnboardPage() {
         body: JSON.stringify({ walletAddress }),
           }).catch(() => {})
 
-          // Redirect to the block's page via the onboard query param
+          // Redirect to the block's page via the onboard query param. We ALSO stash
+          // the target route in sessionStorage so it survives the auth round-trip and
+          // the guest-redirect hop on `/` that would otherwise strip the query string —
+          // the bug where invited candidates landed on the hub instead of their block.
+          // Key must stay in sync with src/app/page.tsx.
           const blockDef = getBlockDefinition(targetBlockType)
           const pageRoute = blockDef?.pageRoute
+          if (pageRoute && typeof window !== 'undefined') {
+            window.sessionStorage.setItem('storm_onboard_target', pageRoute)
+          }
           const destination = pageRoute
             ? `/?onboard=${pageRoute}&invite=${token}`
             : `/?invite=${token}`

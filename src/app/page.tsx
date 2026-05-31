@@ -31,6 +31,11 @@ import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal } from '@/components/ui'
 import StormiJourneyGuide from '@/components/StormiJourneyGuide'
 
+// Invite deep-link target stashed by /onboard/[token] before it redirects to `/`.
+// sessionStorage survives the sign-in round-trip + guest-redirect hops that strip
+// the ?onboard= query param. Key must stay in sync with src/app/onboard/[token]/page.tsx.
+const ONBOARD_TARGET_KEY = 'storm_onboard_target'
+
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
@@ -176,7 +181,17 @@ const HomeContent = () => {
             if (!validRole) setShowRoleSelection(true)
             else {
               setShowRoleSelection(false)
-              if (!currentPage || currentPage === 'signin') setCurrentPage(null)
+              // Don't bounce to the hub when an invite deep-link is pending — the
+              // onboard effect routes to the target block once role is known.
+              // Resetting here races that effect and was dropping invited
+              // candidates on the hub after the Supabase auth cutover.
+              const hasPendingOnboard =
+                searchParams.get('onboard') ||
+                (typeof window !== 'undefined' &&
+                  window.sessionStorage.getItem(ONBOARD_TARGET_KEY))
+              if (!hasPendingOnboard && (!currentPage || currentPage === 'signin')) {
+                setCurrentPage(null)
+              }
             }
           } else {
             setUserRole(null)
@@ -204,12 +219,23 @@ const HomeContent = () => {
   // -------------------------------------------------------
   const didHandleOnboardRef = useRef(false)
   useEffect(() => {
-    const onboardAction = searchParams.get('onboard')
+    // Invite deep-links pass the target block via ?onboard=<route>. We ALSO read it
+    // from sessionStorage (written by /onboard/[token]) as a fallback: the Supabase
+    // sign-in round-trip and the guest-redirect below can strip the query string
+    // before this effect runs, but the sessionStorage copy survives every hop.
+    const storedTarget =
+      typeof window !== 'undefined'
+        ? window.sessionStorage.getItem(ONBOARD_TARGET_KEY)
+        : null
+    const onboardAction = searchParams.get('onboard') ?? storedTarget
     if (!onboardAction) return
     if (didHandleOnboardRef.current) return
     if (isRoleLoading || !userRole) return
 
     didHandleOnboardRef.current = true
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(ONBOARD_TARGET_KEY)
+    }
 
     // onboard param is the block's `pageRoute` from the registry (e.g. 'dotapp', 'resume', 'mvr').
     // Cast directly — these already match PageType values in CandidateShell.

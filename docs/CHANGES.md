@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix · Outreach consent deep-link lost after auth cutover** (2026-05-30)
+
+Employer outreach (e.g. a `driver-screening-consent` request) emails the candidate `/apply/[token]`. They click → `/onboard/[token]`, sign in, and should land on the requested block. After the Supabase auth cutover they landed on the **candidate hub** instead — the target block was lost.
+
+**Root cause:** the target route was carried only as the `?onboard=<route>` query param on the final `/?onboard=…` redirect. The pre-cutover flow authenticated **inline** on the onboard page (Alchemy `AuthCard`), so there were no further redirects. The cutover added two post-setup hops that can strip the query string before `page.tsx` reads it: the `/sign-in` round-trip and the new guest-redirect (`router.push('/sign-in')` with no `next`). The role-fetch effect's `setCurrentPage(null)` (go-to-hub) also raced the onboard handler.
+
+**Fix — make the deep-link survive every hop via `sessionStorage`:**
+
+| File | Change |
+|---|---|
+| `src/app/onboard/[token]/page.tsx` | Before redirecting, stash the block `pageRoute` in `sessionStorage['storm_onboard_target']` (survives the sign-in/guest-redirect hops in the same tab). Query param still sent for back-compat. |
+| `src/app/page.tsx` | Onboard handler reads the target from `?onboard=` **or** `sessionStorage`, then clears the key once consumed. Role-fetch no longer resets `currentPage` to the hub while a deep-link target is pending. Added `ONBOARD_TARGET_KEY` const (kept in sync across both files). |
+
+Build green; lint clean.
+
+---
+
 ## **Phase 1 · T1.8-admin — Email-gated central admin (replaces `ADMIN_WALLETS`)** (2026-05-30)
 
 Central admin was still gated by wallet (`ADMIN_WALLETS` + `x-wallet-address` header). Post-cutover that's backwards: identity is now the Supabase session, and **brand-new email signups get an `auth:<uuid>` placeholder that can never be in a wallet allowlist** — so no new admin could ever be added, and the existing two only worked because their migrated DB wallet happened to be on the list. The third listed wallet (metro) was already dead after the orphan cleanup in migration 093.
