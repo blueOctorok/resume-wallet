@@ -235,6 +235,21 @@ Outreach is **registry-driven**. See section 5 for the full rules. Quick referen
 - Hardcode notification URLs — always derive from `getBlockDefinition(blockType).pageRoute`
 - Hardcode employer block checks in `CareerCardModal` — use `employerCanRequest()` from the registry
 
+### Invite deep-links MUST survive the Supabase auth round-trip (post-Alchemy)
+
+Auth is **Supabase-only** now. An outreach email lands on `/apply/[token]` → `/onboard/[token]`, which bounces a signed-out user to `/sign-in`. The Supabase magic-link redirect does **not** reliably preserve `?next=` — it can fall back to the Site URL and drop the user on `/`, skipping block setup. This silently broke screening-consent outreach during the cutover.
+
+The fix is a **localStorage resume token**, NOT anything wallet/Alchemy-based:
+
+- `/onboard/[token]` stashes `localStorage['stormchain_invite_token']` **before** redirecting to `/sign-in`, and clears it once setup begins.
+- `page.tsx` has a one-shot effect: for an authenticated user with a pending `stormchain_invite_token`, it clears the token and `router.replace(`/onboard/${token}`)` to resume setup.
+- Use **`localStorage`, not `sessionStorage`** — magic links frequently open in a **new tab**, and `sessionStorage` is per-tab.
+
+When building any new invite/onboard/deep-link flow:
+- **Never** key the resume/identity on a wallet address, `x-wallet-address`, or any Alchemy hook. Identity comes from the Supabase session (`getStormUserIdFromRequest` server-side; `useSupabaseAuthSync` → store client-side).
+- Always assume `?next=` can be lost across the auth hop and provide a `localStorage`-based resume fallback.
+- See `docs/CHANGES.md` (2026-05-30 "Outreach consent deep-link") for the full incident write-up.
+
 ## 13. Removing / Deprecating a Block
 
 There is NO shortcut for removal. Every file touched by "adding a block" must be reversed, plus data cleanup. Follow every step.
