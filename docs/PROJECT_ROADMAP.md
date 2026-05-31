@@ -4,21 +4,25 @@
 
 > **Read this first.** A late-May 2026 strategy review concluded that Storm's user-facing infrastructure (Alchemy smart wallets, USDC payments, IPFS, on-chain registries, STORM ERC-20) is decorative — it adds operational complexity without delivering a real moat. The new direction puts a Web2 stack underneath the product and treats cryptographic verification as a deferred upgrade behind a stable interface. **Full strategic + architectural context lives in [`docs/midnight/ARCHITECTURE.md`](midnight/ARCHITECTURE.md). The moat thesis is in [`docs/midnight/MOAT_THESIS.md`](midnight/MOAT_THESIS.md). Decision rationale is in [`docs/midnight/DECISION_LOG.md`](midnight/DECISION_LOG.md).**
 
-The Foundation Reset is **the highest-priority work track** until Phases 1 and 2 ship. DQ File Completion (below) continues in parallel where it doesn't depend on the legacy stack.
+The Foundation Reset is **the highest-priority work track** until the selective-disclosure moat (Phase 2) ships. DQ File Completion (below) continues in parallel where it doesn't depend on the legacy stack.
 
-| Phase | Goal | Effort | Status |
-|---|---|---|---|
-| **Phase 1 — Web2 cleanup** | Replace Alchemy/Base/USDC/IPFS/STORM-on-Base with **Supabase Auth + Stripe + Supabase Storage**. End-user experience: 30s onboarding, credit-card payments, no crypto in UI. | 4–6 weeks | 🔲 Pre-flight decisions locked 2026-05-22; ready to start at T1.1 |
-| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `AttestationService` interface. | 3–4 weeks | 🔲 Not started |
-| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind same `AttestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case has emerged. Users still never see Midnight. | 4–6 weeks | ⏸ **Deferred — customer-driven trigger only** |
+**Where we are (2026-05-30):** the auth swap is **done and live** — Supabase is the only login, Pace works on it. The active work is **demolishing the leftover Web3 cruft**, then building the attestation moat. Midnight and Stripe are both deferred "swap in later" tracks that don't block the moat.
+
+| Track | Goal | Status |
+|---|---|---|
+| **Auth swap (Alchemy → Supabase)** | Email/Google passwordless login; ~115 API routes off `x-wallet-address`; admin gated by `ADMIN_EMAILS`. | ✅ **DONE & live** |
+| **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | 🔨 **Active** |
+| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | 🎯 **Next** |
+| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never see Midnight. | ⏸ **Deferred — customer-driven trigger only** |
+| **Payments (Stripe)** | Greenfield Checkout (one-time) + Subscriptions, added **when a paying non-Pace customer exists**. *Not* a USDC→Stripe conversion — USDC is being deleted in demolition, so there's nothing to migrate. | ⏸ **Deferred** |
 
 ### Pre-flight decisions (resolved 2026-05-22)
 
-- **Auth provider:** ✅ **Supabase Auth** (DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; one vendor surface. Custom sign-in UI built with Storm's `@/components/ui` primitives.
-- **STORM token:** ✅ **Option B** (DEC-2026-05-005) — drop Base Sepolia ERC-20 in Phase 1, replace with off-chain `users.storm_points` ledger; preserve optionality to reissue as Midnight-native shielded token in Phase 3.
-- **Payment shape:** ✅ **Stripe Checkout (one-time) + Subscriptions** (DEC-2026-05-006) — full capability built; **Pace billing deferred** (Pace continues operating without enforced billing during the migration; new/non-Pace customers use Stripe from day one).
+- **Auth provider:** ✅ **Supabase Auth** (DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; one vendor surface. Custom sign-in UI built with Storm's `@/components/ui` primitives. **Shipped.**
+- **STORM token:** ✅ **Option B** (DEC-2026-05-005) — drop Base Sepolia ERC-20, preserve optionality to reissue as a Midnight-native shielded token in Phase 3. The off-chain `storm_points` ledger is **deferred until a real reward concept exists** (STORM never reached a real user, so there's nothing to migrate now).
+- **Payment shape:** ✅ **Stripe Checkout (one-time) + Subscriptions** (DEC-2026-05-006) — locked shape, but now a **deferred greenfield add, not a USDC conversion**. Pace stays on free admin placement; billing is enforced only for new/non-Pace customers when Stripe lands.
 
-Atomic per-step execution: [`docs/midnight/EXECUTION_CHECKLIST.md`](midnight/EXECUTION_CHECKLIST.md). Strategic-level breakdown: [`docs/midnight/PHASE_1_PLAN.md`](midnight/PHASE_1_PLAN.md).
+Atomic per-step execution: [`docs/midnight/EXECUTION_CHECKLIST.md`](midnight/EXECUTION_CHECKLIST.md) (auth track collapsed to a DONE table; active work is the demolition `D1–D5` steps). Strategic-level breakdown: [`docs/midnight/PHASE_1_PLAN.md`](midnight/PHASE_1_PLAN.md).
 
 ### Phase 3 trigger criteria (defer until at least one is true)
 
