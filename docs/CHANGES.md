@@ -4,6 +4,37 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 · T1.13 (partial) — Delete orphaned personal wallet UI dead code** (2026-05-30)
+
+Read-only teardown map: `docs/midnight/T1_13_WALLET_TEARDOWN_MAP.md`. Personal wallet UI was already disconnected at T1.12c; this pass removes unreachable files (zero importers) and fixes two session gates. **Not in scope:** `@account-kit`, company wallet rail, payment buttons, `walletAddress` store field — deferred to **T1.12d** / T1.13 remainder.
+
+**Deleted (9 files):**
+
+| File | Why safe |
+|---|---|
+| `src/components/WalletCard.tsx` | Zero importers |
+| `src/components/BuyUSDCButton.tsx` | Only used by `WalletCard` |
+| `src/components/BaseWalletConnect.tsx` | Zero importers |
+| `src/components/StormEarningsHistory.tsx` | Zero importers (`/api/storm/history` route kept) |
+| `src/components/wallet/ReceiveUSDC.tsx` | Zero importers |
+| `src/components/AlchemyAuth.tsx` | Removed from shells at T1.12c |
+| `src/app/api/onramp/session/route.ts` | Coinbase onramp — only caller was `BuyUSDCButton` |
+| `src/lib/alchemy-simulation-api.ts` | Zero importers |
+| `src/lib/erc20-gas-payment.ts` | Zero importers |
+
+**Gate fixes (session, not wallet):**
+
+| File | Change |
+|---|---|
+| `src/components/hub/CandidateHub.tsx` | `HubAccountSection` gated on `sessionUserId` instead of `walletAddress` |
+| `src/components/simple/SimpleCardPanel.tsx` | `isGuest` uses `sessionUserId` instead of `walletAddress` |
+
+**Still pending for full T1.13:** drop `useAuthStore.walletAddress` (~120 consumers), employer `CompanyWallet` / `WalletInfo` / `TransactionHistory`, `@account-kit` provider removal (T1.12d).
+
+Build green; lint clean.
+
+---
+
 ## **Fix · Outreach invite stranded candidates on the hub after auth cutover** (2026-05-30)
 
 Employer outreach (e.g. a `driver-screening-consent` request) emails the candidate `/apply/[token]`. They click → `/onboard/[token]` → sign in → should land on the requested block. After the Supabase auth cutover they instead got the **role-selection prompt** and landed on the hub — onboard setup (role + block install) never ran.

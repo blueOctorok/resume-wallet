@@ -143,10 +143,12 @@ export default function SimpleCardPanel() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const user = useAuthStore((s) => s.user)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const walletAddress = useAuthStore((s) => s.walletAddress)
-  // sessionStorage may hold a stale walletAddress after the Alchemy session
-  // expires. Guard against it: treat as guest if there's no live user object.
-  const isGuest = !user || !walletAddress
+  // sessionStorage may hold a stale user snapshot after sign-out. Guard against it:
+  // treat as guest if there's no live Supabase session (not wallet — auth users
+  // use auth:<uuid> placeholder in walletAddress).
+  const isGuest = !user || !sessionUserId
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)

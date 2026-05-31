@@ -62,6 +62,7 @@ export default function CandidateHub() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
 
@@ -166,7 +167,7 @@ export default function CandidateHub() {
               onNavigateToDotApp={() => setCurrentPage('dotapp')}
             />
 
-            {walletAddress ? <HubAccountSection /> : null}
+            {sessionUserId ? <HubAccountSection /> : null}
           </div>
 
           <aside className='min-w-0 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:self-start'>
