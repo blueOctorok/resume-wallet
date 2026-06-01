@@ -26,10 +26,8 @@ import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/c
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import {
   OUTREACH_KANBAN_COLUMNS,
-  OUTREACH_STALE_COMPLETED_DAYS,
   isInviteInArchiveTab,
   isInviteOnActiveKanban,
-  isStaleCompletedOutreach,
 } from '@/lib/outreach-invite-buckets'
 import {
   Link2,
@@ -832,8 +830,8 @@ export default function CandidateOutreach({
   )
 
   // ── Derived: tab buckets, filter chips, "ready to view" count ─────────────
-  // Board = candidate lifecycle (pending → completed) minus stale completed.
-  // Archive tab = cancelled / expired + completed older than OUTREACH_STALE_COMPLETED_DAYS.
+  // Board = full candidate lifecycle (pending → completed); completed stays on
+  // the board indefinitely. Archive tab = cancelled / expired only.
   const boardInvites = useMemo(() => {
     const active = invites.filter(isInviteOnActiveKanban)
 
@@ -1454,9 +1452,9 @@ export default function CandidateOutreach({
         )}
 
         {/* ── Tabs + body ───────────────────────────────────────────────────
-             Active = kanban by candidate invite status; stale completed → Archive.
+             Active = kanban by candidate invite status; completed stays on the board.
              Vault  = every paid screening, even if the invite is gone.
-             Archive = cancelled / expired + completed older than OUTREACH_STALE_COMPLETED_DAYS. */}
+             Archive = cancelled / expired invites only. */}
         {!isCollapsed && (
           <div
             className={cn(
@@ -1525,8 +1523,8 @@ export default function CandidateOutreach({
                       Nothing on your main board
                     </p>
                     <p className={cn('mx-auto mt-1 max-w-md text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600')}>
-                      Completed outreaches move to Archive after {OUTREACH_STALE_COMPLETED_DAYS} days so daily work stays
-                      uncluttered. Cancelled and expired invites are there too.
+                      Completed outreaches stay on the board so you can keep working them. Cancelled and expired
+                      invites live in Archive.
                     </p>
                     {archivedTabInvites.length > 0 && (
                       <Button
@@ -1667,8 +1665,7 @@ export default function CandidateOutreach({
                       No archived invites
                     </p>
                     <p className={cn('mt-1 text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
-                      Cancelled or expired invites, plus completed outreaches older than {OUTREACH_STALE_COMPLETED_DAYS}{' '}
-                      days. Files stay in the vault.
+                      Cancelled or expired invites. Files stay in the vault.
                     </p>
                   </div>
                 ) : (
@@ -2015,7 +2012,6 @@ function ArchiveTabContent({
               ? screeningsByUserId?.get(invite.usedByUserId) ?? []
               : []
             const consentBundle = invite.usedByUserId ? bundleMap.get(invite.usedByUserId) : undefined
-            const isStaleCompleted = invite.status === 'completed' && isStaleCompletedOutreach(invite)
             const canRestore = invite.status === 'cancelled'
             const isExpired = invite.status === 'expired'
             const isRemoving = removingId === invite.id
@@ -2033,28 +2029,22 @@ function ArchiveTabContent({
                       {invite.candidateName || invite.candidateEmail || 'Anonymous invite'}
                     </p>
                     <p className={cn('truncate text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                      {isStaleCompleted
-                        ? `Completed · auto-archived after ${OUTREACH_STALE_COMPLETED_DAYS}+ days on the board`
-                        : `${STATUS_CHIP_LABEL[invite.status]} · created ${new Date(invite.createdAt).toLocaleDateString()}`}
+                      {`${STATUS_CHIP_LABEL[invite.status]} · created ${new Date(invite.createdAt).toLocaleDateString()}`}
                     </p>
                   </div>
                   <span
                     className={cn(
                       'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                      isStaleCompleted
+                      isExpired
                         ? isDark
-                          ? 'bg-emerald-900/35 text-emerald-200'
-                          : 'bg-emerald-50 text-emerald-800'
-                        : isExpired
-                          ? isDark
-                            ? 'bg-gray-800 text-gray-400'
-                            : 'bg-gray-100 text-gray-600'
-                          : isDark
-                            ? 'bg-red-500/15 text-red-300'
-                            : 'bg-red-50 text-red-700',
+                          ? 'bg-gray-800 text-gray-400'
+                          : 'bg-gray-100 text-gray-600'
+                        : isDark
+                          ? 'bg-red-500/15 text-red-300'
+                          : 'bg-red-50 text-red-700',
                     )}
                   >
-                    {isStaleCompleted ? 'Archived' : STATUS_CHIP_LABEL[invite.status]}
+                    {STATUS_CHIP_LABEL[invite.status]}
                   </span>
                 </div>
 

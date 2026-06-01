@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import {
   OUTREACH_KANBAN_COLUMNS,
   OUTREACH_KANBAN_LABEL,
-  OUTREACH_STALE_COMPLETED_DAYS,
 } from '@/lib/outreach-invite-buckets'
 
 interface OutreachKanbanInfoModalProps {
@@ -52,9 +51,9 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
               <li key={id}>
                 <span className="font-medium">{OUTREACH_KANBAN_LABEL[id]}</span>
                 {id === 'pending' && ' — link created, not opened yet.'}
-                {id === 'viewed' && ' — they opened the invite.'}
-                {id === 'in_progress' && ' — they started the flow.'}
-                {id === 'completed' && ' — consent done and every paid MVR/PSP report has returned (clear or needs review).'}
+                {id === 'viewed' && ' — they opened the invite (or signed in) but haven’t signed consent yet.'}
+                {id === 'in_progress' && ' — consent forms are fully filled out and signed. Their part is done; order MVR/PSP next.'}
+                {id === 'completed' && ' — you ordered MVR or PSP and a result came back. Stays here so you can keep working the candidate.'}
               </li>
             ))}
           </ul>
@@ -92,10 +91,9 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
           </h4>
           <p>
             <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Cancelled</strong> and <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>expired</strong> invites
-            live there so they don&apos;t clutter daily work.{' '}
-            <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Completed</strong> invites also move there after{' '}
-            <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>{OUTREACH_STALE_COMPLETED_DAYS} days</strong> based on last activity
-            (we use the invite&apos;s update time). Paid screening files stay available from the Files vault.
+            live there so they don&apos;t clutter daily work. <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Completed</strong> invites
+            stay on the active board (they are not auto-archived) so you can keep acting on a candidate after their screenings return.
+            Paid screening files stay available from the Files vault.
           </p>
         </section>
 

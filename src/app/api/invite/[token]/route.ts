@@ -173,23 +173,30 @@ export async function POST(
       userId = user?.id || null
     }
 
-    // Update invite status
-    const updateData: Record<string, unknown> = {
-      status: 'in_progress',
-    }
+    // Starting onboarding ≠ consent signed. We record who claimed the invite
+    // and mark it `viewed` (engaged), but NOT `in_progress` — that status is
+    // reserved for "consent bundle fully filled out + signed" and is set by
+    // sync-outreach-invite-status once the bundle is complete. Never downgrade
+    // an invite that already advanced (in_progress / completed handled above).
+    const updateData: Record<string, unknown> = {}
     if (userId) {
       updateData.used_by_user_id = userId
       updateData.used_at = new Date().toISOString()
     }
+    if (invite.status === 'pending') {
+      updateData.status = 'viewed'
+    }
 
-    const { error: updateError } = await supabase
-      .from('application_invites')
-      .update(updateData)
-      .eq('id', invite.id)
+    if (Object.keys(updateData).length > 0) {
+      const { error: updateError } = await supabase
+        .from('application_invites')
+        .update(updateData)
+        .eq('id', invite.id)
 
-    if (updateError) {
-      console.error('[INVITE START] Update error:', updateError)
-      return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
+      if (updateError) {
+        console.error('[INVITE START] Update error:', updateError)
+        return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
+      }
     }
 
     // For screening blocks (MVR, PSP, unified consent), create a candidate_requests

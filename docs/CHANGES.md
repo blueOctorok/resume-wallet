@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach kanban — redefine `in_progress` / `completed` semantics** (2026-06-01)
+
+Pace's outreach board status no longer reflected reality: invites flipped to `in_progress` the moment a candidate **signed in** (before signing any consent), consent completion didn't advance the card, and completed cards auto-archived after 14 days. Reworked the lifecycle to match how Pace actually thinks about it.
+
+**New semantics (locked 2026-06-01):**
+
+| Status | Means |
+|---|---|
+| `pending` | Link sent, not opened |
+| `viewed` | Opened the link / signed in, but **consent not yet signed** |
+| `in_progress` | **Consent bundle fully filled out + signed** (`screening_consent_bundles.status='complete'`) |
+| `completed` | Pace ordered MVR or PSP and **any one result came back** (terminal). **Stays on the board** — no auto-archive |
+
+**Root cause:** `POST /api/invite/[token]` set `in_progress` unconditionally during onboarding setup; the sync explicitly skipped completing consent invites; and `outreach-invite-buckets` archived completed invites after 14 days.
+
+**Fixes:**
+
+| File | Change |
+|---|---|
+| `src/app/api/invite/[token]/route.ts` | Onboarding start no longer sets `in_progress` — only records `used_by_user_id` and marks `viewed` (never downgrades an advanced invite). |
+| `src/lib/sync-outreach-invite-status.ts` | Rewrote transitions: completed consent bundle → `in_progress` (linked **and** orphan invites); **any** terminal MVR/PSP order → `completed` (was: all orders terminal; consent invite was skipped entirely). |
+| `src/lib/outreach-invite-buckets.ts` | Completed invites stay on the active board indefinitely. Removed `OUTREACH_STALE_COMPLETED_DAYS`, `isStaleCompletedOutreach`, `daysSince` (auto-archive deleted). Archive = cancelled/expired only. |
+| `src/components/employer/CandidateOutreach.tsx` | Dropped stale-completed imports/branches; updated empty-state + archive copy. |
+| `src/components/employer/outreach/OutreachKanbanInfoModal.tsx` | Column + archive copy rewritten to the new semantics. |
+| `supabase/migrations/095_backfill_premature_in_progress_invites.sql` | Demotes any `in_progress` consent invite with **no** completed bundle (and no returned screening) back to `viewed`. Idempotent; dry-run matched **0 rows** in prod (existing `in_progress` invites all have complete bundles). **Not yet applied** — MCP was read-only; apply via Supabase dashboard like `093`/`094`. |
+
+**Note:** consent-done → `in_progress` and screening-returned → `completed` self-heal via `syncOutreachInvitesForCompany` on the next board load, so no broad data migration is needed beyond 095.
+
+**Display caveat:** the build Pace was running merged Viewed+In-progress into one column (older deploy). A redeploy is required for the corrected 4-column board to show.
+
+**Verification:** `npm run build` — see session.
+
+**Pace-critical:** touched `sync-outreach-invite-status.ts` + `components/employer/**` per the strategic-direction DO-NOT-TOUCH list; change set was reviewed/approved before edits.
+
+---
+
 ## **Track 2 · D1 — Drop STORM ERC-20 token (Base Sepolia)** (2026-05-31)
 
 STORM was a Base-Sepolia ERC-20 that **never reached a real user**. Removed all live token distribution code; archived Solidity for a possible future Midnight-native token (DEC-2026-05-005 Option B). Did **not** add `users.storm_points` — deferred until a real reward model exists.
