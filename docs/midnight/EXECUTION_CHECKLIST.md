@@ -90,7 +90,7 @@ When touching any of these, double-verify the change preserves I-1 through I-10:
 - `src/lib/employer-company-access.ts`
 
 ### Pace check-in cadence
-- **Auth cutover (done):** confirm Pace team can sign in with Supabase — **Monday live verification gate** (multi-user: owner + Nick + Jared see the same Jason Peterson orders).
+- **Auth cutover (done):** ✅ **Monday live verification gate GREEN (2026-06-01)** — Pace team signs in with Supabase and logins route to the right places. Multi-user company-scoped data confirmed. **This clears the D3 pre-condition.**
 - **After demolition (Track 2):** confirm Pace hub + screening flows still load with all crypto removed.
 - **Before Phase 2 carrier panels ship:** brief Pace on what verified fact panels will look like.
 - **If/when Stripe lands:** confirm Pace's free-placement path is untouched before enforcing any billing.
@@ -190,11 +190,65 @@ Delete everything crypto-shaped that does nothing for real users. Verified safe 
 
 **Commit:** `chore(demolition): decommission Base-Sepolia registries (D2)`
 
+<details><summary><strong>📋 Auto prompt — copy-paste (D2)</strong></summary>
+
+```text
+TASK: Execute step D2 — "Decommission Base-Sepolia registries" — from docs/midnight/EXECUTION_CHECKLIST.md (Track 2 — Web3 demolition).
+
+FIRST read: docs/midnight/EXECUTION_CHECKLIST.md (the "Track 2" intro + step D2) and .cursor/rules/strategic-direction.mdc (alwaysApply rule). Confirm the strategic rule is in context.
+
+WHY: ResumeRegistry + ProductionDriverRegistry were Base-Sepolia contracts holding hash anchors for resume/DOT verification. Only ~7 TEST resumes + test DOT apps were ever anchored — disposable. On-chain "verification" becomes a DB-flag placeholder until Phase 2 attestation ships. Archive (don't delete) the registry Solidity for historical reference.
+
+CRITICAL — TWO DIFFERENT "VERIFICATIONS" (do not confuse):
+- ON-CHAIN registry verify (resume/DOT hash on Base) → THIS is what D2 removes.
+- ACCIO MVR/PSP SCREENING (the real third-party credential checks) → Pace-critical, COMPLETELY UNRELATED, DO NOT TOUCH.
+
+DELETE (verify zero remaining importers with rg before each delete):
+- src/app/api/blockchain/submit-driver-application/route.ts
+- src/app/api/blockchain/verify-resume/route.ts
+- src/lib/resume-registry-onchain.ts
+- src/lib/driver-contract.ts
+- src/lib/contract.ts
+- src/lib/contract-constants.ts
+- src/lib/typed-data.ts
+- src/lib/alchemy-webhooks.ts  (registers webhooks for the registry contracts — confirm unused, then delete)
+- scripts/deploy-resume-registry.js + any scripts/test-contract*.js that only target the registry
+
+ARCHIVE (git mv → contracts/legacy/, append to the existing contracts/legacy/README.md):
+- contracts/ResumeRegistry.sol
+- contracts/ProductionDriverRegistry.sol
+- Delete matching build output: artifacts/contracts/ResumeRegistry.sol/, artifacts/contracts/ProductionDriverRegistry.sol/. Leave other artifacts.
+
+EDIT (surgical — drop ONLY the on-chain branch, keep the route working via a DB flag):
+- src/app/api/resumes/[id]/verify/route.ts — remove the blockchain submit/verify branch + its imports. "Verify" still returns a verified state from the DB column. Leave IPFS logic alone (that's D4).
+- src/app/api/driver-applications/[id]/verify/route.ts — same: remove the on-chain branch, keep DB-flag verify.
+- src/components/ResumeUploadWithVerification.tsx + src/components/driver-application/EmploymentVerificationForm.tsx — remove any direct on-chain verify calls; keep the upload + DB verify-status UI intact. (rg these for contract/registry imports; if a component becomes a thin wrapper, leave it functioning — do NOT redesign UI.)
+- package.json — remove the registry-only npm script entries: deploy:local, deploy:base-sepolia, deploy:base, verify:base-sepolia, verify:base. Leave hardhat/ethers installed (D5 removes deps).
+
+DO NOT TOUCH:
+- Accio screening: /api/mvr/webhook, /api/psp/webhook, lib/process-*-accio-webhook.ts, lib/place-screening-order.ts, lib/reconcile-pending-screenings.ts, lib/accio-*, src/app/api/employer/**, src/components/employer/**.
+- IPFS / Pinata (that's D4). `users.wallet_address` (that's D3/historical).
+- Do not write a destructive migration; the resume/DOT verified-status columns already exist — just stop writing the chain tx hash.
+
+VERIFY before done:
+- rg -n "resume-registry-onchain|driver-contract|/api/blockchain|RESUME_REGISTRY|DRIVER_APP_REGISTRY|ResumeRegistry|ProductionDriverRegistry" src/  → 0 (only contracts/legacy + docs may match elsewhere).
+- "Verify resume" and "verify DOT app" still produce a verified state (DB flag); no on-chain call attempted.
+- npm run build green; lint clean; 0 new TS errors.
+
+DOCS: add a dated D2 entry to docs/CHANGES.md (deleted/archived/edited + note ~7 test anchors, DB-flag placeholder, Accio untouched). In docs/midnight/EXECUTION_CHECKLIST.md set D2 Status to "✅ Done · {commit-hash} · {date}" and append a Session handoff log row (newest at top).
+
+COMMIT: chore(demolition): decommission Base-Sepolia registries (D2)
+
+Pace risk: None — no Pace-critical screening file is touched. Mechanical + a few surgical route edits.
+```
+
+</details>
+
 ### D3 — Remove USDC + company wallet + `@account-kit` (absorbs T1.12d & T1.13 remainder)
 | | |
 |---|---|
 | Status | ⬜ Not started |
-| Pre-conditions | D1, D2 · **Pace Monday auth gate green** |
+| Pre-conditions | D1 ✅ · D2 · ~~Pace Monday auth gate~~ ✅ **green 2026-06-01** |
 | Estimated session size | **L — split into substeps** |
 | Pace risk | **Medium** — company-wallet code sits near employer flows; verify I-1/I-2/I-4 after each substep |
 
@@ -209,6 +263,51 @@ Delete everything crypto-shaped that does nothing for real users. Verified safe 
 **Verification:** `rg "@account-kit|AlchemyProvider|walletAddress" src/` → 0 (or only `users.wallet_address` DB references). New-user incognito: sign in → hub → employer screening order all work. Build green.
 
 **Commit:** `chore(demolition): remove USDC + company wallet + account-kit (D3)`
+
+> ⚠️ **D3 is the human-audit checkpoint.** `walletAddress` appears in ~190 files (most are prop/type names, not real auth). Auto must work in the 4 substeps below as **separate commits**, build-green after each, and **STOP before substep 4** (the store-field drop) for human review. Do not one-shot this.
+
+<details><summary><strong>📋 Auto prompt — copy-paste (D3, substepped)</strong></summary>
+
+```text
+TASK: Execute step D3 — "Remove USDC + company wallet + @account-kit" — from docs/midnight/EXECUTION_CHECKLIST.md (Track 2). This absorbs the deferred T1.12d + T1.13 remainder.
+
+FIRST read: docs/midnight/EXECUTION_CHECKLIST.md (Track 2 intro + step D3), .cursor/rules/strategic-direction.mdc, and .cursor/rules/architecture.mdc (API Route Standards — auth section). Confirm in context.
+
+PRE-CONDITIONS: D1 ✅, D2 done, Pace Monday auth gate ✅ green. Auth is Supabase-only; identity = Supabase session (sessionUserId). The chain is interaction-gated (users never touch a wallet/gas/token).
+
+GROUND RULES:
+- Work in 4 SEPARATE substep commits. Run `npm run build` after EACH substep; do not proceed if red.
+- After substeps 1–3, STOP and hand back for human audit BEFORE doing substep 4 (the walletAddress store-field drop). Substep 4 is the risky one.
+- DO NOT TOUCH Pace-critical files: src/app/api/employer/**, src/components/employer/** (except the wallet-only components named below), lib/place-screening-order.ts, lib/reconcile-pending-screenings.ts, lib/accio-*, lib/sync-outreach-invite-status.ts, lib/employer-*.
+- Keep DB columns for history: mvr_orders/psp_orders.payment_tx_hash, companies wallet columns, users.wallet_address. Stop WRITING them from the UI; do not drop columns.
+
+── SUBSTEP 1 — USDC payments UI ──  commit: chore(demolition): remove USDC payment buttons (D3.1)
+DELETE: src/components/MvrPaymentButton.tsx, src/components/PspPaymentButton.tsx, src/components/ApplyWithStormChainModal.tsx (if USDC-gated), wallet/SendUSDC.tsx + wallet/SendSTORM.tsx if present.
+EDIT: src/components/StormiCreditModal.tsx — remove Coinbase Onramp / USDC paths. In MvrOrderForm/PspOrderForm and /api/mvr/order + /api/psp/order, stop passing/requiring paymentTxHash from the UI (order flow continues without a crypto payment step; leave the column write optional/null).
+VERIFY: rg -n "MvrPaymentButton|PspPaymentButton|onramp|USDC|SendUSDC" src/ → 0 (DB column names ok). Build green.
+
+── SUBSTEP 2 — Company wallet stack ──  commit: chore(demolition): remove company wallet provisioning (D3.2)
+DELETE: src/components/employer/CompanyWallet.tsx, src/components/WalletInfo.tsx, src/components/TransactionHistory.tsx, src/app/api/wallet/mvr-config/route.ts, src/app/api/wallet/psp-config/route.ts, src/app/api/employer/company/ensure-wallet/route.ts, src/lib/persist-company-wallet.ts, src/lib/company-wallet-server.ts, src/lib/company-wallet-public.ts, src/lib/alchemy-token-api.ts, src/lib/alchemy-transfers-api.ts.
+EDIT: src/app/api/employer/team/accept-invite/route.ts — remove the addOwnerToCompanyWallet call (it's already best-effort/try-catch; invite acceptance must still succeed). Remove wallet tabs/links from EmployerHub.tsx (only the wallet UI entry points — leave jobs/talent/applicants/messaging).
+VERIFY: rg -n "CompanyWallet|ensure-wallet|company-wallet|alchemy-token-api|alchemy-transfers" src/ → 0. Employer hub still renders; build green.
+
+── SUBSTEP 3 — Alchemy provider + SDK ──  commit: chore(demolition): remove AlchemyProvider + account-kit SDK (D3.3)
+DELETE: src/components/AlchemyProvider.tsx, src/lib/alchemy-account-config.ts, src/components/AlchemyAuth.tsx (if present).
+EDIT: src/app/layout.tsx — remove <AlchemyProvider> wrapper; ensure SupabaseAuthSync / query-client providers still wrap the tree correctly.
+UNINSTALL: npm uninstall @account-kit/core @account-kit/react @account-kit/smart-contracts @aa-sdk/core alchemy-sdk @coinbase/cdp-sdk @coinbase/onchainkit @base-org/account @base-org/account-ui   (run rg to confirm each has 0 src/ imports first; skip any that are still referenced and report it).
+VERIFY: rg -n "@account-kit|@aa-sdk|alchemy-sdk|@coinbase|@base-org|AlchemyProvider" src/ → 0. App boots; sign-in still works (Supabase). Build green.
+*** STOP HERE — hand back for human audit before substep 4. ***
+
+── SUBSTEP 4 — Drop walletAddress store field (RISKY — only after audit) ──  commit: refactor(auth): drop walletAddress store field, use sessionUserId (D3.4)
+- In src/stores/auth-store.ts remove the walletAddress field. Replace every read with sessionUserId (Supabase user id). Most "walletAddress" occurrences are prop/type names — rename or repoint to sessionUserId; do not blindly delete props that other components pass.
+- API routes already resolve identity via getStormUserIdFromRequest (auth-session.ts) — confirm none still depend on an x-wallet-address header.
+- Keep users.wallet_address column (historical). Mark deprecated in a comment.
+VERIFY: rg -n "walletAddress" src/ → 0 (or only a deprecated users.wallet_address DB reference). New-user incognito flow end-to-end: sign in → candidate hub → employer screening order. Build + lint green.
+
+DOCS (after the full step): docs/CHANGES.md dated D3 entry (per-substep summary). Set D3 Status in EXECUTION_CHECKLIST.md to "✅ Done · {final-commit} · {date}", append handoff-log row noting it absorbed T1.12d + T1.13 remainder.
+```
+
+</details>
 
 ### D4 — IPFS → Supabase Storage (downscoped)
 | | |
@@ -229,6 +328,43 @@ Delete everything crypto-shaped that does nothing for real users. Verified safe 
 
 **Commit:** `feat(storage): move documents from IPFS to Supabase Storage (D4)`
 
+<details><summary><strong>📋 Auto prompt — copy-paste (D4)</strong></summary>
+
+```text
+TASK: Execute step D4 — "IPFS → Supabase Storage" — from docs/midnight/EXECUTION_CHECKLIST.md (Track 2). Can run independently of D2/D3.
+
+FIRST read: docs/midnight/EXECUTION_CHECKLIST.md (step D4), .cursor/rules/block-development.mdc (data layer), .cursor/rules/architecture.mdc (Data Layer / API Route Standards). Confirm in context.
+
+WHY: Documents currently upload to Pinata/IPFS via NEXT_PUBLIC_PINATA_JWT (client-side) and render from gateway.pinata.cloud/ipfs/<hash>. Only ~7 TEST docs exist on IPFS — disposable. Move to a PRIVATE Supabase Storage bucket with signed URLs. NO dual-write / backfill needed; accept loss of the test docs (or one-shot copy).
+
+ARCHITECTURE NOTE (important): IPFS upload is client-side today; Supabase Storage signed URLs should be issued SERVER-side. So uploads move behind an API route that uses the service-role client, and reads switch from a public gateway URL to a short-lived signed URL.
+
+BUILD (new infra):
+- Migration supabase/migrations/XXX_document_storage.sql: create private buckets `resumes`, `dot-applications`, `screening-reports`. RLS: a user can read/write only their own objects (path prefixed by users.id); employer-scope reads for screening reports follow existing company access.
+- New src/lib/document-storage.ts (server helper using getAdminSupabaseClient): uploadDocument(userId, kind, file) → returns storage path; getSignedUrl(path, expirySeconds) ; deleteDocument(path). Keep it small (KISS) — no speculative APIs.
+
+SWITCH (uploads):
+- /api/resumes/upload (+ /api/resumes/create if it stores files), and the components that upload: UploadResumeModal.tsx, ResumeUploadWithPrefill.tsx, ResumeUpload.tsx, ResumeUploadWithVerification.tsx — route file bytes through document-storage.ts instead of uploadToIPFS. Store the returned path (reuse the existing ipfs_hash column to hold the storage path, OR add a storage_path column via the migration — pick one and note it; prefer a new nullable storage_path column to avoid overloading semantics).
+- DotApplicationFlow.tsx / use-dot-application-sync.ts if they upload PDFs.
+
+SWITCH (reads — grep every gateway URL construction):
+- rg -n "gateway.pinata|ipfs/|ipfsHash|ipfs_hash" src/  → for each render/download site (CareerCard.tsx, career-card/sections/ResumeSection.tsx, ProjectedCareerCard.tsx, public token pages src/app/d/[token]/page.tsx + src/app/dev-card/[token]/page.tsx, hooks/use-hub-documents.tsx, ShareProfileCard, employer/ApplicantsPage, admin/resumes) replace the gateway URL with a getSignedUrl() call (server-issued; pass the signed URL down as a prop or fetch via a small API).
+
+REMOVE:
+- Delete src/lib/ipfs.ts and src/lib/resume-ipfs-guards.ts (verify unused). npm uninstall pinata-web3.
+- Remove Pinata env vars from .env.local + Vercel: NEXT_PUBLIC_PINATA_JWT, NEXT_PUBLIC_PINATA_GATEWAY.
+
+DO NOT TOUCH: Accio screening order/webhook logic; on-chain registry (D2 already handled it).
+
+VERIFY: upload a new resume → it renders/downloads via a signed URL (not a pinata gateway). rg -n "ipfs|pinata|uploadToIPFS" src/ → 0. Share-card download works. Build + lint green.
+
+DOCS: docs/CHANGES.md dated D4 entry (new bucket + document-storage.ts, switched upload+read sites, removed ipfs.ts/pinata, env vars dropped, ~7 test docs not migrated). Set D4 Status "✅ Done · {commit} · {date}" + handoff-log row.
+
+COMMIT: feat(storage): move documents from IPFS to Supabase Storage (D4)
+```
+
+</details>
+
 ### D5 — Env + dependency sweep
 | | |
 |---|---|
@@ -241,6 +377,39 @@ Delete everything crypto-shaped that does nothing for real users. Verified safe 
 **Verification:** `rg "from 'ethers'|from 'viem'" src/` → 0. Build + lint green.
 
 **Commit:** `chore(deps): remove crypto deps + env after demolition (D5)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (D5)</strong></summary>
+
+```text
+TASK: Execute step D5 — "Env + dependency sweep" — from docs/midnight/EXECUTION_CHECKLIST.md (Track 2). FINAL demolition step.
+
+FIRST read: docs/midnight/EXECUTION_CHECKLIST.md (step D5) and confirm D1–D4 are marked ✅ Done. If any of D1–D4 is not done, STOP and report — D5 only removes deps that nothing imports anymore.
+
+RULE: For EVERY package, run rg to prove zero src/ imports BEFORE uninstalling. If something still imports it, do NOT uninstall — list it and stop.
+
+DEPENDENCIES to remove (verify-then-uninstall):
+- ethers  (registry helpers removed in D2 — confirm: rg -n "from 'ethers'" src/ → 0)
+- viem    (company-wallet + payment removed in D3 — confirm: rg -n "from 'viem'" src/ → 0; note package.json's payment:address script also uses viem/accounts — remove that script entry too)
+- Any @account-kit/*, @aa-sdk/*, alchemy-sdk, @coinbase/*, @base-org/*, pinata-web3 still left in package.json after D3/D4 (should already be gone — sweep up stragglers).
+
+DEV DEPS + scripts (hardhat toolchain is now dead — registries archived in D2):
+- npm uninstall hardhat @nomicfoundation/hardhat-ethers @nomicfoundation/hardhat-toolbox @nomicfoundation/hardhat-verify @openzeppelin/contracts
+- Remove dead npm script entries from package.json: compile, test (hardhat), test:local, deploy:*, transfer-ownership, verify:base*, payment:* (the crypto payment-wallet scripts). KEEP: dev, build, start, lint, test:app (vitest), supabase:test, backfill/inspect tsx scripts.
+- Delete hardhat.config.* and the scripts/ files those npm entries pointed at (create-payment-wallet.js, backup-payment-wallet.js, test-x402-payment.js, list-payments.js, check-credits.js, test-contract-local.js, deploy-resume-registry.js) — verify each is unreferenced first.
+
+ENV VARS — remove from .env.local AND Vercel (document which in CHANGES):
+NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS, NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS, ALCHEMY_BASE_SEPOLIA_URL (+ any ALCHEMY_* / NEXT_PUBLIC_ALCHEMY_*), PRIVATE_KEY, X402_PAYMENT_PRIVATE_KEY, NEXT_PUBLIC_PINATA_JWT, NEXT_PUBLIC_PINATA_GATEWAY, and any remaining STORM/registry/USDC vars. Keep all SUPABASE_*, STRIPE_* (future), ADMIN_EMAILS, RESEND/Accio keys.
+
+OPTIONAL: run `npx depcheck` and report unused deps (do not auto-remove anything depcheck flags that you haven't manually verified).
+
+VERIFY: rg -n "from 'ethers'|from 'viem'|hardhat" src/ → 0. npm run build + lint green. App boots; sign-in + a screening order still work.
+
+DOCS: docs/CHANGES.md dated D5 entry (deps removed, scripts/env cleaned). Set D5 Status "✅ Done · {commit} · {date}" + handoff-log row. If this completes D1–D5, add a one-line "Track 2 — Web3 demolition COMPLETE" note to the Where-we-are snapshot at the top of the checklist.
+
+COMMIT: chore(deps): remove crypto deps + env after demolition (D5)
+```
+
+</details>
 
 ---
 
