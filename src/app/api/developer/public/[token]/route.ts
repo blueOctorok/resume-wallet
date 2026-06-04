@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 import {
   getDevProfile,
   getDevGithub,
@@ -156,13 +157,14 @@ export async function GET(
       type: string
       createdAt: string
       ipfsHash: string | null
+      documentUrl: string | null
       structuredData?: unknown
     } | null = null
     if (settings.showResume) {
       const { data: devResumeData } = await supabase
         .from('resumes')
         .select(
-          'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data'
+          'id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data'
         )
         .eq('user_id', userId)
         .eq('resume_type', 'developer_built')
@@ -180,13 +182,14 @@ export async function GET(
           type: 'developer_built',
           createdAt: devResumeData.created_at,
           ipfsHash: devResumeData.ipfs_hash ?? null,
+          documentUrl: await resolveResumeDocumentSignedUrl(devResumeData),
           structuredData: devResumeData.structured_data,
         }
       } else {
         const { data: resumeData } = await supabase
           .from('resumes')
           .select(
-            'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type'
+            'id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, created_at, resume_type'
           )
           .eq('user_id', userId)
           .eq('verification_status', 'VERIFIED')
@@ -204,6 +207,7 @@ export async function GET(
             type: (resumeData.resume_type as string) ?? 'file',
             createdAt: resumeData.created_at,
             ipfsHash: resumeData.ipfs_hash ?? null,
+            documentUrl: await resolveResumeDocumentSignedUrl(resumeData),
           }
         }
       }

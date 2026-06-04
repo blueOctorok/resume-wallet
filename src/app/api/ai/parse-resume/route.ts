@@ -14,6 +14,7 @@ import {
   getResumeParseDailyRemaining,
 } from '@/lib/ava-usage'
 import { extractResumeWithAi } from '@/lib/resume-parse-ai'
+import { getSignedDocumentUrl } from '@/lib/document-storage'
 
 export const runtime = 'nodejs'
 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const { data: resume, error: resErr } = await supabase
       .from('resumes')
-      .select('id, user_id, ipfs_url, mime_type, title')
+      .select('id, user_id, storage_path, mime_type, title')
       .eq('id', resumeId)
       .eq('user_id', userId)
       .maybeSingle()
@@ -53,9 +54,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 })
     }
 
-    if (!resume.ipfs_url || !String(resume.mime_type || '').includes('pdf')) {
+    if (!resume.storage_path || !String(resume.mime_type || '').includes('pdf')) {
       return NextResponse.json(
-        { error: 'Only PDF resumes uploaded to IPFS can be parsed' },
+        { error: 'Only PDF resumes stored in Supabase can be parsed' },
         { status: 400 },
       )
     }
@@ -84,16 +85,17 @@ export async function POST(request: NextRequest) {
 
     let pdfBuffer: ArrayBuffer
     try {
+      const signedUrl = await getSignedDocumentUrl('resumes', resume.storage_path)
       const ac = new AbortController()
       const t = setTimeout(() => ac.abort(), 60_000)
-      const res = await fetch(resume.ipfs_url, { signal: ac.signal })
+      const res = await fetch(signedUrl, { signal: ac.signal })
       clearTimeout(t)
       if (!res.ok) {
-        return NextResponse.json({ error: 'Failed to fetch resume from IPFS' }, { status: 502 })
+        return NextResponse.json({ error: 'Failed to fetch resume file' }, { status: 502 })
       }
       pdfBuffer = await res.arrayBuffer()
     } catch (e) {
-      console.error('[PARSE RESUME] IPFS fetch', e)
+      console.error('[PARSE RESUME] storage fetch', e)
       return NextResponse.json({ error: 'Failed to download resume file' }, { status: 502 })
     }
 

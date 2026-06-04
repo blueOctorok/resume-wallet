@@ -17,6 +17,8 @@ export interface ResumeData {
   title: string
   filename: string
   ipfsHash: string
+  storagePath?: string | null
+  documentUrl?: string | null
   verificationStatus: string
   /** Base Sepolia tx when resume registered on-chain */
   blockchainTxHash?: string | null

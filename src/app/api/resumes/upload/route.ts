@@ -6,7 +6,7 @@ import { uploadRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
 import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { uploadToIPFS } from '@/lib/ipfs'
+import { uploadDocument, getSignedDocumentUrl } from '@/lib/document-storage'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('✅ Resume Upload API: No duplicate file hash found - proceeding with IPFS upload')
+    console.log('✅ Resume Upload API: No duplicate file hash found - proceeding with storage upload')
 
     // 8. Check payment requirement (only check if not duplicate)
     if (eligibility.requiresPayment && !paymentTxHash) {
@@ -185,18 +185,12 @@ export async function POST(req: NextRequest) {
       console.log('✅ Resume Upload API: Payment recorded')
     }
 
-    // 10. Upload to IPFS (only reached if not duplicate and payment verified)
-    console.log('📁 Resume Upload API: Uploading to IPFS')
-    const ipfsResult = await uploadToIPFS(file)
+    // 10. Upload to Supabase Storage (only reached if not duplicate and payment verified)
+    console.log('[RESUME UPLOAD] Uploading to Supabase Storage')
+    const { storagePath } = await uploadDocument(user.id, 'resumes', file, file.name, file.type)
+    const documentUrl = await getSignedDocumentUrl('resumes', storagePath)
 
-    if (!ipfsResult || !ipfsResult.ipfsHash) {
-      throw new Error('IPFS upload failed')
-    }
-
-    console.log(
-      '✅ Resume Upload API: IPFS upload complete:',
-      ipfsResult.ipfsHash
-    )
+    console.log('[RESUME UPLOAD] Storage upload complete:', storagePath)
 
     // 11. Save to database (WITH FILE HASH + IPFS HASH) - only reached if IPFS upload succeeded
     console.log('💾 Resume Upload API: Saving to database')
@@ -212,9 +206,10 @@ export async function POST(req: NextRequest) {
             .replace('.doc', '')
             .replace('.docx', ''),
         filename: file.name,
-        file_hash: fileHash, // SHA-256 hash for duplicate detection
-        ipfs_hash: ipfsResult.ipfsHash,
-        ipfs_url: ipfsResult.url,
+        file_hash: fileHash,
+        storage_path: storagePath,
+        ipfs_hash: null,
+        ipfs_url: null,
         file_size: file.size,
         mime_type: file.type,
         is_public: false,
@@ -248,8 +243,10 @@ export async function POST(req: NextRequest) {
             .replace('.pdf', '')
             .replace('.doc', '')
             .replace('.docx', ''),
-        ipfsHash: ipfsResult.ipfsHash,
-        ipfsUrl: ipfsResult.url,
+        ipfsHash: storagePath,
+        ipfsUrl: documentUrl,
+        storagePath,
+        documentUrl,
         createdAt: resume.created_at,
         wasPaid: eligibility.requiresPayment,
         costUSDC: eligibility.requiresPayment ? eligibility.costUSDC : 0,
@@ -260,7 +257,7 @@ export async function POST(req: NextRequest) {
       },
       // Data needed for blockchain verification step
       blockchainData: {
-        ipfsHash: ipfsResult.ipfsHash,
+        storagePath,
         title:
           title ||
           file.name

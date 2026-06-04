@@ -100,6 +100,7 @@ interface Resume {
   blockchainVerified: boolean
   type: string
   createdAt: string
+  documentUrl?: string | null
   ipfsHash: string
   structuredData?: DriverResumeStructuredData
 }
@@ -351,9 +352,9 @@ export default function PublicDriverProfile() {
             </div>
             {/* Quick Links */}
             <div className='flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-700/50'>
-              {resume?.ipfsHash && !resume.ipfsHash.startsWith('built_') && (
+              {resume?.documentUrl && !resume.ipfsHash?.startsWith('built_') && (
                 <a
-                  href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                  href={resume.documentUrl ?? '#'}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-2 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-xl text-green-400 transition-all hover:scale-105 border border-green-500/30'
@@ -572,9 +573,9 @@ export default function PublicDriverProfile() {
                       Blockchain Verified
                     </span>
                   )}
-                  {resume.ipfsHash && !resume.ipfsHash.startsWith('built_') && (
+                  {resume.documentUrl && !resume.ipfsHash?.startsWith('built_') && (
                     <a
-                      href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                      href={resume.documentUrl ?? '#'}
                       target='_blank'
                       rel='noopener noreferrer'
                       className='flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline'
@@ -710,9 +711,9 @@ export default function PublicDriverProfile() {
                 </>
               ) : (
                 <p className='text-sm text-gray-400'>
-                  {resume.ipfsHash && !resume.ipfsHash.startsWith('built_') ? (
+                  {resume.documentUrl && !resume.ipfsHash?.startsWith('built_') ? (
                     <a
-                      href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                      href={resume.documentUrl ?? '#'}
                       target='_blank'
                       rel='noopener noreferrer'
                       className='text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'

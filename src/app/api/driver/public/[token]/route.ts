@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation } from '@/lib/block-data'
+import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 
 /**
  * Normalizes resume structured_data from different formats (old uploaded vs new builder)
@@ -262,7 +263,7 @@ export async function GET(
     if (settings.showResume) {
       const { data: resumeData } = await supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data')
+        .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data')
         .eq('user_id', userId)
         .or('resume_type.neq.developer_built,resume_type.is.null')
         .order('created_at', { ascending: false })
@@ -271,7 +272,8 @@ export async function GET(
 
       if (resumeData) {
         const normalizedData = normalizeResumeStructuredData(resumeData.structured_data)
-        
+        const documentUrl = await resolveResumeDocumentSignedUrl(resumeData)
+
         resume = {
           id: resumeData.id,
           title: resumeData.title,
@@ -281,6 +283,8 @@ export async function GET(
           type: resumeData.resume_type,
           createdAt: resumeData.created_at,
           ipfsHash: resumeData.ipfs_hash,
+          storagePath: resumeData.storage_path ?? null,
+          documentUrl,
           structuredData: normalizedData,
         }
       }

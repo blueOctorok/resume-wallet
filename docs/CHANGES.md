@@ -4,6 +4,33 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Track 2 · D4 — IPFS → Supabase Storage** (2026-06-04)
+
+Documents moved off Pinata/IPFS to **private Supabase Storage** with **server-issued signed URLs**. Only ~7 test docs existed on IPFS — not migrated. Accio screening untouched.
+
+**Apply migration:** `supabase/migrations/097_document_storage.sql` via Supabase dashboard (creates buckets + `storage_path` column + RLS).
+
+**New infra:**
+
+| File | Role |
+|---|---|
+| `supabase/migrations/097_document_storage.sql` | Buckets `resumes`, `dot-applications`, `screening-reports`; `resumes.storage_path`; `ipfs_hash` nullable |
+| `src/lib/document-storage.ts` | `uploadDocument`, `getSignedDocumentUrl`, `deleteDocument`, `hasStoredResumeFile` |
+| `src/app/api/documents/signed-url/route.ts` | Auth-gated signed URL for resume owner or employer with application |
+| `src/lib/fetch-document-url.ts` | Client helper `fetchResumeSignedUrl(resumeId)` |
+
+**Upload paths switched:** `/api/resumes/upload`, `/api/resumes/[id]/verify`, `ResumeUpload.tsx`, `ResumeUploadWithPrefill.tsx`, `ResumeUploadWithVerification.tsx`; `/api/ai/parse-resume` fetches PDF via signed URL.
+
+**Read paths switched:** Driver hub, career-card, projected career card, public share APIs (`/api/driver/public`, `/api/developer/public`) emit `documentUrl`; UI surfaces (CareerCard, ResumeSection, DriverHub, share pages, ApplicantsPage, hub My Files) use signed URLs — no `gateway.pinata.cloud` links.
+
+**Removed:** `src/lib/ipfs.ts`, `src/lib/resume-ipfs-guards.ts`, npm package `pinata-web3`. Remove `NEXT_PUBLIC_PINATA_JWT` / `NEXT_PUBLIC_PINATA_GATEWAY` from `.env.local` and Vercel.
+
+**Note:** Legacy API/DB field names `ipfs_hash` / `ipfsHash` remain on some rows/types for compat; new uploads write `storage_path` and leave `ipfs_hash` null.
+
+**Verification:** `rg pinata|uploadToIPFS|gateway.pinata src/` → 0. `npm run build` green.
+
+---
+
 ## **Track 2 · D2 — Decommission Base-Sepolia registries** (2026-06-01)
 
 ResumeRegistry + ProductionDriverRegistry on Base Sepolia held hash anchors for resume/DOT "verification." Only ~7 test resumes and test DOT apps were ever anchored — disposable. On-chain verification is removed; verify routes now set a **DB flag** (`verification_status='VERIFIED'`) as a placeholder until Phase 2 attestation ships. Accio MVR/PSP screening is unrelated and untouched.
@@ -28,15 +55,13 @@ ResumeRegistry + ProductionDriverRegistry on Base Sepolia held hash anchors for 
 
 | File | Change |
 |---|---|
-| `src/app/api/resumes/[id]/verify/route.ts` | PDF/IPFS flow kept; dropped ethers + on-chain `addResume` — marks `VERIFIED` in DB only |
+| `src/app/api/resumes/[id]/verify/route.ts` | PDF flow kept; dropped ethers + on-chain `addResume` — marks `VERIFIED` in DB only |
 | `src/app/api/driver-applications/[id]/verify/route.ts` | Dropped internal fetch to blockchain route — sets `verification_status='VERIFIED'` |
 | `src/components/ResumeUploadWithVerification.tsx` | Step 3 calls `/api/resumes/[id]/verify` instead of `/api/blockchain/verify-resume` |
 | `src/components/driver-application/EmploymentVerificationForm.tsx` | DB save only; removed on-chain submit after save |
-| `package.json` | Removed registry npm scripts (`deploy:local`, `deploy:base-*`, `verify:base-*`, `test:local`) |
+| `package.json` | Removed registry npm scripts |
 
 **Verification:** `rg` on registry patterns in `src/` → 0. `npm run build` green.
-
-**Pace-critical:** Accio screening paths not touched.
 
 ---
 

@@ -69,6 +69,8 @@ export interface ResumeData {
   title: string
   filename: string
   ipfsHash: string | null
+  storagePath?: string | null
+  documentUrl?: string | null
   verificationStatus: string
   blockchainTxHash: string | null
   createdAt: string

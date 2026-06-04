@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile } from '@/lib/document-storage'
 import Modal from './ui/Modal'
 import { 
   Trash2, 
@@ -24,6 +24,7 @@ interface ResumeRecord {
   title: string
   filename: string
   ipfs_hash: string
+  storage_path?: string | null
   ipfs_url?: string
   verification_status?: string
   blockchain_tx_hash?: string
@@ -409,7 +410,8 @@ export default function ResumeDashboard({
     const canOneClickVerify =
       (resume.resume_type === 'built' && resume.structured_data) ||
       (resume.resume_type === 'developer_built' && resume.structured_data) ||
-      (resume.resume_type === 'uploaded' && isLiveResumeIpfsHash(resume.ipfs_hash ?? null))
+      (resume.resume_type === 'uploaded' &&
+        hasStoredResumeFile({ storage_path: resume.storage_path, ipfs_hash: resume.ipfs_hash }))
 
     if (canOneClickVerify) {
       setIsVerifying(true)

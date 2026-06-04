@@ -172,9 +172,18 @@ export default function StormApplyBridge({
       ['storm-resume', 'driver-resume', 'developer-resume', 'general-resume'].includes(s.blockType),
     )
     if (!sec) return null
-    const d = sec.data as { ipfsHash?: string; filename?: string; title?: string; id?: string }
-    if (!d.ipfsHash || d.id === '__storm_resume_placeholder__') return null
-    return { title: d.title || d.filename || 'Resume', url: `https://gateway.pinata.cloud/ipfs/${d.ipfsHash}` }
+    const d = sec.data as {
+      ipfsHash?: string
+      documentUrl?: string | null
+      filename?: string
+      title?: string
+      id?: string
+    }
+    if (d.id === '__storm_resume_placeholder__' || !d.documentUrl) return null
+    return {
+      title: d.title || d.filename || 'Resume',
+      url: d.documentUrl,
+    }
   }, [card])
 
   const handleGenerateCoverLetter = async () => {

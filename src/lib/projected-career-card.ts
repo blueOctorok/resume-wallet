@@ -123,6 +123,7 @@ function computeCareerCardSignals(
   }
 }
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 import { applyLensOrderAndFilterPerPage, getLensOrDefault } from '@/lib/career-card-lenses'
 import { readCardPage } from '@/lib/hub-block-config'
 import {
@@ -465,7 +466,7 @@ async function fetchLatestResumeForUser(
 ): Promise<ResumeData | null> {
   const { data } = await supabase
     .from('resumes')
-    .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
+    .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -477,6 +478,8 @@ async function fetchLatestResumeForUser(
     title: data.title,
     filename: data.filename,
     ipfsHash: data.ipfs_hash,
+    storagePath: data.storage_path ?? null,
+    documentUrl: await resolveResumeDocumentSignedUrl(data),
     verificationStatus: data.verification_status,
     blockchainTxHash: data.blockchain_tx_hash,
     structuredData: data.structured_data,
@@ -493,7 +496,7 @@ async function fetchResumeData(
     blockType === 'developer-resume' ? 'developer' : blockType === 'general-resume' ? 'general' : 'driver'
   const { data } = await supabase
     .from('resumes')
-    .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
+    .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
     .eq('user_id', userId)
     .eq('source_role', sourceRole)
     .order('created_at', { ascending: false })
@@ -506,6 +509,8 @@ async function fetchResumeData(
     title: data.title,
     filename: data.filename,
     ipfsHash: data.ipfs_hash,
+    storagePath: data.storage_path ?? null,
+    documentUrl: await resolveResumeDocumentSignedUrl(data),
     verificationStatus: data.verification_status,
     blockchainTxHash: data.blockchain_tx_hash,
     structuredData: data.structured_data,

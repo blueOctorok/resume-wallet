@@ -11,7 +11,7 @@ import {
   Sparkles,
   Brain,
 } from 'lucide-react'
-import { uploadToIPFS } from '@/lib/ipfs'
+import { calculateFileHash } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 
@@ -85,18 +85,31 @@ export default function ResumeUploadWithPrefill({
     setErrorMessage('')
 
     try {
-      // Step 1: Upload to IPFS
-      console.log('📤 [PREFILL] Step 1: Uploading to IPFS...')
-      const result = await uploadToIPFS(file)
-      setIpfsHash(result.ipfsHash)
-      
-      // Notify parent to store IPFS hash for later prefill confirmation
+      console.log('[PREFILL] Step 1: Uploading to storage...')
+      const fileHash = await calculateFileHash(file)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
+      formData.append('fileHash', fileHash)
+
+      const uploadRes = await fetch('/api/resumes/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}))
+        throw new Error(err.error || err.message || 'Upload failed')
+      }
+      const uploadData = await uploadRes.json()
+      const storagePath = uploadData.resume?.storagePath ?? uploadData.resume?.ipfsHash ?? ''
+      setIpfsHash(storagePath)
+
       if (onIpfsHashReady) {
-        onIpfsHashReady(result.ipfsHash)
+        onIpfsHashReady(storagePath)
       }
 
-      console.log('✅ [PREFILL] IPFS upload successful:', result.ipfsHash)
-      console.log('   Gateway URL:', result.url)
+      console.log('[PREFILL] Storage upload successful:', storagePath)
 
       // AI prefill is being rebuilt with Claude — resume is uploaded to IPFS successfully
       // Prefill extraction will return as a composable hub block
@@ -105,7 +118,7 @@ export default function ResumeUploadWithPrefill({
       notifyResumeUploadEvent?.({
         type: 'analysis_ready',
         step: 'prefill',
-        data: { ipfsHash: result.ipfsHash },
+        data: { ipfsHash: storagePath },
         message: '✅ Resume uploaded successfully! AI extraction is being upgraded and will return soon.',
       })
     } catch (error) {
@@ -138,7 +151,7 @@ export default function ResumeUploadWithPrefill({
       case 'uploading':
         return {
           icon: <Loader2 className='w-5 h-5 animate-spin' />,
-          text: 'Uploading to IPFS...',
+          text: 'Uploading...',
           color: 'text-blue-600',
         }
       case 'extracting':

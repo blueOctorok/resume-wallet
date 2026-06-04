@@ -11,7 +11,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useInstalledBlocks } from '@/stores/hub-blocks-store'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile } from '@/lib/document-storage'
 import type { PageType } from '@/stores/types'
 import type { HubDocument } from '@/lib/hub-document-types'
 import { hubDocStatusFromScreeningOrder } from '@/lib/hub-document-types'
@@ -132,7 +132,12 @@ export function useHubDocuments(refreshKey: number): {
             if (role !== 'driver' && role !== 'developer' && role !== 'general') continue
             const isBuilt = resume.resumeType === 'built' || resume.resumeType === 'developer_built'
             const uploadedCanVerify =
-              !isBuilt && !resume.blockchainTxHash && isLiveResumeIpfsHash(resume.ipfsHash ?? null)
+              !isBuilt &&
+              !resume.blockchainTxHash &&
+              hasStoredResumeFile({
+                storage_path: resume.storagePath,
+                ipfs_hash: resume.ipfsHash,
+              })
             docs.push({
               id: resume.id,
               type: 'resume',
@@ -153,6 +158,8 @@ export function useHubDocuments(refreshKey: number): {
                     ? 'general-resume'
                     : 'resume',
               ipfsHash: resume.ipfsHash ?? null,
+              storagePath: resume.storagePath ?? null,
+              documentUrl: resume.documentUrl ?? null,
               structuredData: resume.structuredData ?? null,
               resumeSourceRole: role,
             })
@@ -481,10 +488,13 @@ export function useHubDocuments(refreshKey: number): {
 
   const myFilesResumeCanView = (doc: HubDocument) => {
     if (doc.type !== 'resume') return false
-    const ipfs = isLiveResumeIpfsHash(doc.ipfsHash ?? undefined)
+    const stored = hasStoredResumeFile({
+      storage_path: doc.storagePath,
+      ipfs_hash: doc.ipfsHash,
+    })
     const sd = doc.structuredData
     const built = sd != null && typeof sd === 'object' && Object.keys(sd as object).length > 0
-    return ipfs || built
+    return stored || built
   }
 
   const renderModals = () => (

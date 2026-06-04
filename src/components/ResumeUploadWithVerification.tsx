@@ -347,7 +347,8 @@ export default function ResumeUploadWithVerification({
       updateStep('upload', 'success', {
         resumeId: uploadData.resume.id,
         ipfsHash: uploadData.resume.ipfsHash,
-        ipfsUrl: uploadData.resume.ipfsUrl,
+        documentUrl: uploadData.resume.documentUrl,
+        ipfsUrl: uploadData.resume.documentUrl ?? uploadData.resume.ipfsUrl,
         wasPaid: uploadData.resume.wasPaid,
         costUSDC: uploadData.resume.costUSDC,
         eligibility: uploadData.eligibility,
@@ -420,7 +421,8 @@ export default function ResumeUploadWithVerification({
 
       const resultPayload = {
         ipfsHash: uploadData.resume.ipfsHash,
-        ipfsUrl: uploadData.resume.ipfsUrl,
+        documentUrl: uploadData.resume.documentUrl,
+        ipfsUrl: uploadData.resume.documentUrl ?? uploadData.resume.ipfsUrl,
         databaseId: uploadData.resume.id,
         wasPaid: uploadData.resume.wasPaid,
         costUSDC: uploadData.resume.costUSDC,
@@ -789,7 +791,7 @@ export default function ResumeUploadWithVerification({
             <div>
               <strong>IPFS:</strong>{' '}
               <a
-                href={finalResult.ipfsUrl}
+                href={finalResult.documentUrl ?? finalResult.ipfsUrl}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='text-blue-600 hover:underline'

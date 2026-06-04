@@ -125,6 +125,7 @@ interface Resume {
   blockchainVerified: boolean
   type: string
   createdAt: string
+  documentUrl?: string | null
   ipfsHash: string | null
   structuredData?: ResumeStructuredData
 }
@@ -368,11 +369,7 @@ export default function PublicDeveloperCard() {
               )}
               {resume && (
                 <a
-                  href={
-                    resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
-                      ? `https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`
-                      : '#'
-                  }
+                  href={resume.documentUrl ?? '#'}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-2 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-xl text-green-400 transition-all hover:scale-105 border border-green-500/30'

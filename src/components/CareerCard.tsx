@@ -95,6 +95,8 @@ export interface CareerCardData {
     title: string
     filename: string
     ipfsHash: string
+    storagePath?: string | null
+    documentUrl?: string | null
     verificationStatus: string
     blockchainTxHash?: string | null
     structuredData: Record<string, unknown> | null
@@ -493,9 +495,9 @@ export default function CareerCard({
         action={
           data.resume ? (
             // IPFS-stored resume → external link; built resume → inline preview
-            data.resume.ipfsHash && !data.resume.ipfsHash.startsWith('built_') ? (
+            data.resume.documentUrl ? (
               <a
-                href={`https://gateway.pinata.cloud/ipfs/${data.resume.ipfsHash}`}
+                href={data.resume.documentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`flex items-center gap-1 text-sm ${

@@ -1,5 +1,5 @@
 import type { PageType } from '@/stores/types'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile } from '@/lib/document-storage'
 
 /** Employer screening — candidate sees progress only; full report opens for the employer purchaser. */
 export interface HubPendingEmployerScreening {
@@ -86,6 +86,8 @@ export interface HubDocument {
   canDelete: boolean
   editPage: PageType | null
   ipfsHash?: string | null
+  storagePath?: string | null
+  documentUrl?: string | null
   structuredData?: unknown | null
   resumeSourceRole?: 'driver' | 'developer' | 'general'
   portfolioUrl?: string | null
@@ -139,12 +141,16 @@ export function pickHubDocForCareerBlock(documents: HubDocument[], blockType: st
 
 export function myFilesResumeCanView(doc: {
   type: string
+  storagePath?: string | null
   ipfsHash?: string | null
   structuredData?: unknown | null
 }): boolean {
   if (doc.type !== 'resume') return false
-  const ipfs = isLiveResumeIpfsHash(doc.ipfsHash ?? undefined)
+  const stored = hasStoredResumeFile({
+    storage_path: doc.storagePath,
+    ipfs_hash: doc.ipfsHash,
+  })
   const sd = doc.structuredData
   const built = sd != null && typeof sd === 'object' && Object.keys(sd as object).length > 0
-  return ipfs || built
+  return stored || built
 }

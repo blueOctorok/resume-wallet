@@ -14,6 +14,7 @@ import CandidateRequestsSection from './CandidateRequestsSection'
 import ResumePreviewModal from './ResumePreviewModal'
 import UploadResumeModal from './UploadResumeModal'
 import Modal, { ModalHeader } from './ui/Modal'
+import { fetchResumeSignedUrl } from '@/lib/fetch-document-url'
 import {
   FileText,
   ClipboardList,
@@ -49,6 +50,7 @@ interface HubResume {
   title: string
   filename: string
   ipfsHash: string
+  documentUrl?: string | null
   verificationStatus: string
   blockchainTxHash: string | null
   createdAt: string
@@ -409,18 +411,13 @@ export default function DriverHub({
   const handleSelectResume = async (resume: HubResume) => {
     // Only built resumes have structured data for preview
     if (resume.resumeType !== 'built') {
-      // For uploaded resumes, just open in browser if we have IPFS hash
-      const hasRealIpfsHash =
-        resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
-      if (hasRealIpfsHash) {
-        window.open(
-          `https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`,
-          '_blank',
-        )
+      const url = resume.documentUrl ?? (await fetchResumeSignedUrl(resume.id))
+      if (url) {
+        window.open(url, '_blank')
       } else {
         setResumeActionMessage({
           type: 'error',
-          text: 'Cannot preview uploaded resume without IPFS hash',
+          text: 'Cannot preview uploaded resume — file not available',
         })
       }
       return

@@ -6,6 +6,7 @@ import {
   pickPendingEmployerScreening,
   type CandidateRequestScreeningRow,
 } from '@/lib/pending-employer-screening'
+import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 
 /**
  * GET /api/driver/hub
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
       // 10. Driver resumes only
       supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
+        .select('id, title, filename, ipfs_hash, storage_path, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
         .eq('user_id', user.id)
         .in('source_role', ['driver', 'developer', 'general'])
         .order('created_at', { ascending: false }),
@@ -292,20 +293,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Process resumes
-    const resumes = (resumesResult.data || []).map(resume => ({
-      id: resume.id,
-      title: resume.title,
-      filename: resume.filename,
-      ipfsHash: resume.ipfs_hash,
-      structuredData: resume.structured_data ?? null,
-      sourceRole: resume.source_role as 'driver' | 'developer' | 'general',
-      verificationStatus: resume.verification_status || 'PENDING',
-      blockchainTxHash: resume.blockchain_tx_hash,
-      createdAt: resume.created_at,
-      fileSize: resume.file_size,
-      resumeType: resume.resume_type || 'uploaded',
-      isPaid: resume.is_paid,
-    }))
+    const resumes = await Promise.all(
+      (resumesResult.data || []).map(async (resume) => {
+        const documentUrl = await resolveResumeDocumentSignedUrl(resume)
+        return {
+          id: resume.id,
+          title: resume.title,
+          filename: resume.filename,
+          ipfsHash: resume.ipfs_hash,
+          storagePath: resume.storage_path ?? null,
+          documentUrl,
+          structuredData: resume.structured_data ?? null,
+          sourceRole: resume.source_role as 'driver' | 'developer' | 'general',
+          verificationStatus: resume.verification_status || 'PENDING',
+          blockchainTxHash: resume.blockchain_tx_hash,
+          createdAt: resume.created_at,
+          fileSize: resume.file_size,
+          resumeType: resume.resume_type || 'uploaded',
+          isPaid: resume.is_paid,
+        }
+      }),
+    )
 
     // Extract applicant name from application_data.form1 (DOT form1 first/last name)
     const getApplicantNameFromApp = (app: { application_data?: { form1?: { firstName?: string; lastName?: string } } }): string | null => {

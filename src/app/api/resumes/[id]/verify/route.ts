@@ -4,10 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { PinataSDK } from 'pinata-web3'
 import { generateStyledResumePDF } from '@/lib/resume-pdf-generator'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile, uploadDocument, getSignedDocumentUrl } from '@/lib/document-storage'
 import { generateDeveloperResumePDFBuffer } from '@/lib/developer-resume-pdf'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 
@@ -97,8 +96,8 @@ export async function POST(
     const isDeveloperBuilt = resume.resume_type === 'developer_built'
     const isDriverBuilt = resume.resume_type === 'built'
 
-    // Uploaded PDF: IPFS hash already set — mark verified in DB (no on-chain registry)
-    if (!isDriverBuilt && !isDeveloperBuilt && isLiveResumeIpfsHash(resume.ipfs_hash)) {
+    // Uploaded PDF already in storage — mark verified in DB
+    if (!isDriverBuilt && !isDeveloperBuilt && hasStoredResumeFile(resume)) {
       const { error: upErr } = await supabase
         .from('resumes')
         .update({
@@ -286,34 +285,26 @@ export async function POST(
       pdfBuffer = generateStyledResumePDF(resumeData)
     }
 
-    console.log('[VERIFY RESUME] Uploading to IPFS...')
-
-    const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT
-    const pinataGateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY
-
-    if (!pinataJwt || !pinataGateway) {
-      return NextResponse.json({ error: 'IPFS configuration missing' }, { status: 500 })
-    }
-
-    const pinata = new PinataSDK({
-      pinataJwt,
-      pinataGateway,
-    })
+    console.log('[VERIFY RESUME] Uploading PDF to Supabase Storage...')
 
     const fileName = `${resume.title.replace(/[^a-z0-9]/gi, '_')}_Resume.pdf`
-    const pdfFile = new File([pdfBuffer], fileName, { type: 'application/pdf' })
+    const { storagePath } = await uploadDocument(
+      userId,
+      'resumes',
+      pdfBuffer,
+      fileName,
+      'application/pdf',
+    )
+    const documentUrl = await getSignedDocumentUrl('resumes', storagePath)
 
-    const uploadResult = await pinata.upload.file(pdfFile)
-    const ipfsHash = uploadResult.IpfsHash
-    const ipfsUrl = `${pinataGateway}/ipfs/${ipfsHash}`
-
-    console.log('[VERIFY RESUME] Uploaded to IPFS:', ipfsHash)
+    console.log('[VERIFY RESUME] Stored at:', storagePath)
 
     const { error: updateError } = await supabase
       .from('resumes')
       .update({
-        ipfs_hash: ipfsHash,
-        ipfs_url: ipfsUrl,
+        storage_path: storagePath,
+        ipfs_hash: null,
+        ipfs_url: null,
         filename: fileName,
         file_size: pdfBuffer.length,
         mime_type: 'application/pdf',
@@ -332,8 +323,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       resumeId: id,
-      ipfsHash,
-      ipfsUrl,
+      storagePath,
+      documentUrl,
       verified: true,
     })
   } catch (error) {

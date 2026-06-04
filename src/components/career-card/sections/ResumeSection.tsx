@@ -11,7 +11,7 @@ import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import type { ResumeData } from '@/types/career-card'
 import type { CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile } from '@/lib/document-storage'
 import { isDeveloperResumeStructured } from '@/lib/career-card-resume-shape'
 
 interface ResumeSectionProps {
@@ -271,7 +271,10 @@ export default function ResumeSection({
     )
   }
 
-  const isIpfsResume = isLiveResumeIpfsHash(data.ipfsHash)
+  const isStoredFile = hasStoredResumeFile({
+    storage_path: data.storagePath,
+    ipfs_hash: data.ipfsHash,
+  })
   const rawSd = data.structuredData
   const structuredRecord =
     rawSd != null && typeof rawSd === 'object' ? (rawSd as Record<string, unknown>) : null
@@ -283,7 +286,7 @@ export default function ResumeSection({
       : null
   const isAiExtracted = stormMeta?.source === 'ai-extracted'
 
-  const canOpenFull = isIpfsResume || isBuiltResume
+  const canOpenFull = isStoredFile || isBuiltResume
 
   return (
     <>
@@ -332,7 +335,7 @@ export default function ResumeSection({
               size='sm'
               className='flex-shrink-0'
               onClick={() => {
-                if (isIpfsResume) setShowIpfsPreview(true)
+                if (isStoredFile && data.documentUrl) setShowIpfsPreview(true)
                 else if (isDevShape) setShowDevPreview(true)
                 else setShowDriverPreview(true)
               }}
@@ -386,25 +389,25 @@ export default function ResumeSection({
         {isBuiltResume && structuredRecord && !isDevShape && (
           <DriverGeneralResumeSnapshot sd={structuredRecord} isDark={isDark} />
         )}
-        {isIpfsResume && !isBuiltResume && (
+        {isStoredFile && !isBuiltResume && (
           <div
             className={cn(
               'mt-3 rounded-xl border px-4 py-3 text-sm',
               isDark ? 'border-gray-600 bg-gray-900/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-600',
             )}
           >
-            PDF resume on IPFS — open <strong className={isDark ? 'text-gray-300' : 'text-gray-800'}>Full resume</strong>{' '}
+            Stored resume — open <strong className={isDark ? 'text-gray-300' : 'text-gray-800'}>Full resume</strong>{' '}
             for the complete document.
           </div>
         )}
       </div>
 
-      {showIpfsPreview && data.ipfsHash && (
+      {showIpfsPreview && isStoredFile && data.documentUrl && (
         <ResumeFilePreviewModal
           isOpen={showIpfsPreview}
           onClose={() => setShowIpfsPreview(false)}
           title={data.title || data.filename || 'Resume'}
-          ipfsUrl={`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`}
+          ipfsUrl={data.documentUrl}
           isDark={isDark}
         />
       )}

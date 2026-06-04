@@ -8,8 +8,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react'
-import { uploadToIPFS } from '@/lib/ipfs'
-import { createAuthToken } from '@/lib/base-auth-middleware'
+import { calculateFileHash } from '@/lib/hash-utils'
 import { useAuthStore } from '@/stores'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
@@ -137,27 +136,30 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
     setErrorMessage('')
 
     try {
-      // Step 1: Upload to IPFS
-      const result = await uploadToIPFS(file)
+      const fileHash = await calculateFileHash(file)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', title.trim())
+      formData.append('fileHash', fileHash)
 
-      // Step 2: Save to database
-      await saveResumeToDatabase({
-        title,
-        filename: file.name,
-        ipfsHash: result.ipfsHash,
-        isPublic,
+      const response = await fetch('/api/resumes/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
       })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || err.message || 'Upload failed')
+      }
+
+      const uploadData = await response.json()
+      const wa = walletAddress || user?.address
+      if (wa) void syncDriverHubFromApi(wa)
 
       setUploadStatus('success')
 
-      // Log the complete upload result
-      console.log('Resume uploaded successfully:', {
-        ipfsHash: result.ipfsHash,
-        url: result.url,
-        filename: file.name,
-        isPublic,
-        title,
-      })
+      console.log('Resume uploaded successfully:', uploadData.resume)
 
       // Reset form after successful upload
       setFile(null)

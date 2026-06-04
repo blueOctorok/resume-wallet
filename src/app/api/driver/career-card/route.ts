@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getCdlData, getDriverEmployment, getSkills, getEducation, getDevGithub, getDevPortfolio, getDevProfile } from '@/lib/block-data'
 
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
     if (careerCard.resume_id) {
       const { data: res } = await supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
+        .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
         .eq('id', careerCard.resume_id)
         .single()
       resume = res
@@ -205,6 +206,8 @@ export async function GET(request: NextRequest) {
               title: resume.title,
               filename: resume.filename,
               ipfsHash: resume.ipfs_hash,
+              storagePath: resume.storage_path ?? null,
+              documentUrl: await resolveResumeDocumentSignedUrl(resume),
               verificationStatus: resume.verification_status,
               blockchainTxHash: resume.blockchain_tx_hash ?? null,
               structuredData: resume.structured_data,

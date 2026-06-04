@@ -3,6 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { fetchResumeSignedUrl } from '@/lib/fetch-document-url'
 import {
   Users,
   Search,
@@ -570,15 +571,18 @@ function ApplicantDetailModal({
                 {applicant.resumeVerified && (
                   <span className="text-xs text-green-500">✓ Verified</span>
                 )}
-                {applicant.resumeIpfsHash && !applicant.resumeIpfsHash.startsWith('built_') && (
-                  <a
-                    href={`https://gateway.pinata.cloud/ipfs/${applicant.resumeIpfsHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {applicant.resumeId && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!applicant.resumeId) return
+                      const url = await fetchResumeSignedUrl(applicant.resumeId)
+                      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                    }}
                     className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
                     View <ExternalLink className="w-3 h-3 inline" />
-                  </a>
+                  </button>
                 )}
               </div>
             </div>

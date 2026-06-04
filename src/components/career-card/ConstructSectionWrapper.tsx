@@ -18,7 +18,8 @@ import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
-import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { hasStoredResumeFile } from '@/lib/document-storage'
+import { fetchResumeSignedUrl } from '@/lib/fetch-document-url'
 import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
 
 const btn =
@@ -182,13 +183,22 @@ export default function ConstructSectionWrapper({
                 hub.myFilesResumeCanView(doc) && (
                   <button
                     type='button'
-                    onClick={() => {
+                    onClick={async () => {
                       if (!doc) return
-                      if (isLiveResumeIpfsHash(doc.ipfsHash)) {
-                        hub.setResumeFilePreview({
-                          title: doc.title,
-                          url: `https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`,
+                      if (
+                        hasStoredResumeFile({
+                          storage_path: doc.storagePath,
+                          ipfs_hash: doc.ipfsHash,
                         })
+                      ) {
+                        const url =
+                          doc.documentUrl ?? (doc.type === 'resume' ? await fetchResumeSignedUrl(doc.id) : null)
+                        if (url) {
+                          hub.setResumeFilePreview({
+                            title: doc.title,
+                            url,
+                          })
+                        }
                         return
                       }
                       if (doc.resumeSourceRole === 'developer' && doc.structuredData) {
