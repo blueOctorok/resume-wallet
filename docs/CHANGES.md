@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer consent viewing — read signed FCRA / PSP / CDLIS packages** (2026-06-03)
+
+Pace could see consent package metadata (signer names, dates) in the Files vault and on outreach cards, but could not open the actual signed documents. Added a company-scoped employer API, audit trail, and a tabbed modal reusing the existing disclosure viewers.
+
+**Fixes:**
+
+| File | Change |
+|---|---|
+| `supabase/migrations/096_consent_access_log.sql` | New append-only `consent_access_log` table (who viewed which bundle, when). RLS: employers SELECT own company; inserts via service role only. **Apply via Supabase dashboard.** |
+| `src/app/api/employer/screenings/consent/[bundleId]/route.ts` | **New** — returns FCRA + PSP + CDLIS content for a bundle; verifies `bundle.company_id === ctx.companyId`; strips SSN from all `formData`; writes audit row on each view. |
+| `src/components/BackgroundCheckDisclosure.tsx` | `presetConsent` prop — preloads signed FCRA without candidate-only fetch. |
+| `src/components/PspDisclosureForm.tsx` | Same `presetConsent` pattern for FMCSA PSP. |
+| `src/components/employer/EmployerConsentPackageModal.tsx` | **New** — tabbed modal (FCRA · FMCSA PSP · CDLIS) with inline read-only disclosure components + CDLIS summary block. |
+| `src/components/employer/outreach/FilesVault.tsx` | **View** button on complete consent packages. |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Clickable consent pill opens the modal. |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Threads `onViewConsent` to detail card. |
+| `src/components/employer/CandidateOutreach.tsx` | Wires modal state + vault, kanban, and archive entry points. |
+
+**Plan:** `docs/plans/employer-consent-viewing.md`
+
+**Pace-critical:** touched `api/employer/**` and `components/employer/**`.
+
+---
+
 ## **Outreach kanban — redefine `in_progress` / `completed` semantics** (2026-06-01)
 
 Pace's outreach board status no longer reflected reality: invites flipped to `in_progress` the moment a candidate **signed in** (before signing any consent), consent completion didn't advance the card, and completed cards auto-archived after 14 days. Reworked the lifecycle to match how Pace actually thinks about it.

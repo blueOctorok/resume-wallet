@@ -140,6 +140,8 @@ interface OutreachCandidateCardProps {
   onCancel: (id: string) => void
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
+  /** Open read-only signed consent package (FCRA + PSP + CDLIS). */
+  onViewConsent?: (bundle: ConsentBundleSummary) => void
   onEdit: (invite: Invite) => void
   onAskStormi: (invite: Invite) => void
   /** Persist internal team notes (blur-to-save). */
@@ -186,6 +188,7 @@ export default function OutreachCandidateCard({
   onCancel,
   onRemove,
   onViewFile,
+  onViewConsent,
   onEdit,
   onAskStormi,
   onRecruiterNotesSave,
@@ -498,32 +501,62 @@ export default function OutreachCandidateCard({
           </div>
           <ul className="space-y-1.5">
             {consentBundle && (
-              <li
-                className={cn(
-                  'flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 text-xs',
-                  isDark ? 'border-teal-500/30 bg-teal-950/25 text-teal-100' : 'border-teal-200 bg-teal-50/90 text-teal-900',
-                )}
-              >
-                <FileCheck className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
-                <span className="font-semibold">Signed consent package</span>
-                <span
+              consentBundle.status === 'complete' && onViewConsent ? (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onViewConsent(consentBundle)}
+                    aria-label={`View signed consent package for ${invite.candidateName || invite.candidateEmail || 'candidate'}`}
+                    className={cn(
+                      'flex w-full flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition-colors',
+                      isDark
+                        ? 'border-teal-500/30 bg-teal-950/25 text-teal-100 hover:border-teal-400/50 hover:bg-teal-950/40'
+                        : 'border-teal-200 bg-teal-50/90 text-teal-900 hover:border-teal-300 hover:bg-teal-50',
+                    )}
+                  >
+                    <FileCheck className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                    <span className="font-semibold">Signed consent package</span>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                        isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-800',
+                      )}
+                    >
+                      Complete
+                    </span>
+                    <span className={cn('ml-auto text-[10px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
+                      FCRA + FMCSA + CDLIS · View
+                    </span>
+                  </button>
+                </li>
+              ) : (
+                <li
                   className={cn(
-                    'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
-                    consentBundle.status === 'complete'
-                      ? isDark
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-emerald-100 text-emerald-800'
-                      : isDark
-                        ? 'bg-amber-500/20 text-amber-200'
-                        : 'bg-amber-100 text-amber-900',
+                    'flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 text-xs',
+                    isDark ? 'border-teal-500/30 bg-teal-950/25 text-teal-100' : 'border-teal-200 bg-teal-50/90 text-teal-900',
                   )}
                 >
-                  {consentBundle.status === 'complete' ? 'Complete' : 'Pending'}
-                </span>
-                <span className={cn('ml-auto text-[10px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
-                  FCRA + FMCSA + CDLIS · Files vault
-                </span>
-              </li>
+                  <FileCheck className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                  <span className="font-semibold">Signed consent package</span>
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                      consentBundle.status === 'complete'
+                        ? isDark
+                          ? 'bg-emerald-500/20 text-emerald-300'
+                          : 'bg-emerald-100 text-emerald-800'
+                        : isDark
+                          ? 'bg-amber-500/20 text-amber-200'
+                          : 'bg-amber-100 text-amber-900',
+                    )}
+                  >
+                    {consentBundle.status === 'complete' ? 'Complete' : 'Pending'}
+                  </span>
+                  <span className={cn('ml-auto text-[10px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
+                    FCRA + FMCSA + CDLIS · Files vault
+                  </span>
+                </li>
+              )
             )}
             {files.map((file) => (
               <FilePill key={`${file.kind}-${file.id}`} file={file} isDark={isDark} onView={() => onViewFile(file)} />

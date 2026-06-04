@@ -63,6 +63,13 @@ interface BackgroundCheckDisclosureProps {
   deferSubmit?: boolean
   /** Pre-populate form fields when returning to this step (back navigation). */
   initialFormData?: Record<string, string> | null
+  /** Preloaded signed consent — skips candidate-only fetch (employer view). */
+  presetConsent?: {
+    signedName: string
+    signedAt: string | null
+    companyName: string
+    formData: Record<string, string>
+  }
 }
 
 /**
@@ -164,6 +171,7 @@ export default function BackgroundCheckDisclosure({
   onOrderPlaced,
   deferSubmit = false,
   initialFormData,
+  presetConsent,
 }: BackgroundCheckDisclosureProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
@@ -212,12 +220,26 @@ export default function BackgroundCheckDisclosure({
   const [orderPlacing, setOrderPlacing] = useState(false)
 
   useEffect(() => {
-    if (viewMode && consentId) {
+    if (viewMode && presetConsent) {
+      setSignedName(presetConsent.signedName || '')
+      setSignedDate(
+        presetConsent.signedAt
+          ? new Date(presetConsent.signedAt).toLocaleDateString('en-US', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric',
+            })
+          : '',
+      )
+      setViewCompanyName(presetConsent.companyName || companyName)
+      setProfile((prev) => ({ ...prev, ...presetConsent.formData }))
+      setProfileLoading(false)
+    } else if (viewMode && consentId) {
       fetchSignedConsent()
     } else if (!initialFormData) {
       fetchDriverProfile()
     }
-  }, [userAddress, viewMode, consentId])
+  }, [userAddress, viewMode, consentId, presetConsent, companyName, initialFormData])
 
   const fetchSignedConsent = async () => {
     if (!consentId) return

@@ -22,6 +22,7 @@ import FilesVault from '@/components/employer/outreach/FilesVault'
 import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdown'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
+import EmployerConsentPackageModal from '@/components/employer/EmployerConsentPackageModal'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from '@/components/employer/outreach/types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import {
@@ -357,6 +358,7 @@ export default function CandidateOutreach({
   const [mvrViewOrderId, setMvrViewOrderId] = useState<string | null>(null)
   const [pspViewOrderId, setPspViewOrderId] = useState<string | null>(null)
   const [activeFileCandidateId, setActiveFileCandidateId] = useState<string | null>(null)
+  const [consentView, setConsentView] = useState<{ bundleId: string; candidateName: string } | null>(null)
 
   const [form, setForm] = useState({
     candidateEmail: '',
@@ -991,6 +993,13 @@ export default function CandidateOutreach({
     else setPspViewOrderId(file.id)
   }
 
+  const openConsent = useCallback((bundle: ConsentBundleSummary) => {
+    setConsentView({
+      bundleId: bundle.id,
+      candidateName: bundle.candidateName ?? 'Candidate',
+    })
+  }, [])
+
   const canSubmit = selectedBlockType !== null
 
   // ── Shared styling shortcuts ───────────────────────────────────────────────
@@ -1619,6 +1628,7 @@ export default function CandidateOutreach({
                         onCancel={handleCancel}
                         onRemove={handleRemove}
                         onViewFile={handleViewFile}
+                        onViewConsent={openConsent}
                         onEdit={setEditingInvite}
                         onAskStormi={handleAskStormi}
                         onRecruiterNotesSave={handleRecruiterNotesSave}
@@ -1643,6 +1653,7 @@ export default function CandidateOutreach({
                 error={screeningsError}
                 theme={theme}
                 onView={handleViewFile}
+                onViewConsent={openConsent}
               />
             )}
 
@@ -1685,6 +1696,7 @@ export default function CandidateOutreach({
                     screeningsByUserId={screeningsByUserId}
                     consentBundleByUserId={consentBundleMap}
                     onViewFile={handleViewFile}
+                    onViewConsent={openConsent}
                   />
                 )}
               </>
@@ -1804,6 +1816,13 @@ export default function CandidateOutreach({
           walletAddress={walletAddress}
           orderId={pspViewOrderId}
           employerCandidateUserId={activeFileCandidateId}
+        />
+      )}
+      {consentView && (
+        <EmployerConsentPackageModal
+          bundleId={consentView.bundleId}
+          candidateName={consentView.candidateName}
+          onClose={() => setConsentView(null)}
         />
       )}
     </>
@@ -1969,6 +1988,7 @@ function ArchiveTabContent({
   screeningsByUserId,
   consentBundleByUserId,
   onViewFile,
+  onViewConsent,
 }: {
   invites: Invite[]
   totalCount: number
@@ -1985,6 +2005,7 @@ function ArchiveTabContent({
   screeningsByUserId?: ScreeningsByUserId
   consentBundleByUserId?: Map<string, ConsentBundleSummary>
   onViewFile: (file: ScreeningRow) => void
+  onViewConsent?: (bundle: ConsentBundleSummary) => void
 }) {
   const isDark = isDarkTheme(theme)
   const bundleMap = consentBundleByUserId ?? EMPTY_CONSENT_BUNDLE_BY_USER_ID
@@ -2058,7 +2079,19 @@ function ArchiveTabContent({
                     <p className={cn('mb-1 text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-gray-500' : 'text-gray-500')}>
                       Files preserved
                     </p>
-                    {consentBundle && (
+                    {consentBundle && consentBundle.status === 'complete' && onViewConsent ? (
+                      <button
+                        type="button"
+                        onClick={() => onViewConsent(consentBundle)}
+                        className={cn(
+                          'mb-0.5 inline-flex w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-left transition-colors',
+                          isDark ? 'bg-teal-950/40 text-teal-200 hover:bg-teal-950/60' : 'bg-teal-50 text-teal-900 hover:bg-teal-100',
+                        )}
+                      >
+                        <FileCheck className="h-3 w-3 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                        Signed consent package · View
+                      </button>
+                    ) : consentBundle ? (
                       <div
                         className={cn(
                           'mb-0.5 inline-flex w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px]',
@@ -2068,7 +2101,7 @@ function ArchiveTabContent({
                         <FileCheck className="h-3 w-3 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
                         Signed consent package · {consentBundle.status === 'complete' ? 'Complete' : 'Pending'}
                       </div>
-                    )}
+                    ) : null}
                     {files.map((f) => (
                       <button
                         key={`${f.kind}-${f.id}`}

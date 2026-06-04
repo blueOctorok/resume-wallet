@@ -34,6 +34,7 @@ interface FilesVaultProps {
   error: string | null
   theme: string
   onView: (row: ScreeningRow) => void
+  onViewConsent?: (bundle: ConsentBundleSummary) => void
 }
 
 /**
@@ -47,7 +48,7 @@ interface FilesVaultProps {
  *
  * Filtering: search by name, type chips (MVR/PSP), outcome chips (Clear/Hits/etc).
  */
-export default function FilesVault({ rows, consentBundles = [], loading, error, theme, onView }: FilesVaultProps) {
+export default function FilesVault({ rows, consentBundles = [], loading, error, theme, onView, onViewConsent }: FilesVaultProps) {
   const isDark = isDarkTheme(theme)
 
   const [search, setSearch] = useState('')
@@ -215,7 +216,12 @@ export default function FilesVault({ rows, consentBundles = [], loading, error, 
           </h3>
           <ul className="space-y-3">
             {consentBundles.map((bundle) => (
-              <ConsentBundleRow key={bundle.id} bundle={bundle} isDark={isDark} />
+              <ConsentBundleRow
+                key={bundle.id}
+                bundle={bundle}
+                isDark={isDark}
+                onViewConsent={onViewConsent}
+              />
             ))}
           </ul>
         </section>
@@ -442,7 +448,15 @@ function csvCell(value: string): string {
   return value
 }
 
-function ConsentBundleRow({ bundle, isDark }: { bundle: ConsentBundleSummary; isDark: boolean }) {
+function ConsentBundleRow({
+  bundle,
+  isDark,
+  onViewConsent,
+}: {
+  bundle: ConsentBundleSummary
+  isDark: boolean
+  onViewConsent?: (bundle: ConsentBundleSummary) => void
+}) {
   const name = bundle.candidateName ?? 'Unknown candidate'
   const isComplete = bundle.status === 'complete'
   const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : null)
@@ -492,6 +506,12 @@ function ConsentBundleRow({ bundle, isDark }: { bundle: ConsentBundleSummary; is
           <span className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
             · Completed {fmt(bundle.completedAt)}
           </span>
+        )}
+        {isComplete && onViewConsent && (
+          <Button type="button" variant="secondary" size="sm" className="ml-auto" onClick={() => onViewConsent(bundle)}>
+            <Eye className="mr-1 h-3.5 w-3.5" />
+            View
+          </Button>
         )}
       </div>
     </li>

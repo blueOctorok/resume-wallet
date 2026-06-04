@@ -72,6 +72,14 @@ export interface PspDisclosureFormProps {
    * `onConsentSigned` fires with `deferredConsentPayload` instead of `consentId`.
    */
   deferSubmit?: boolean
+  /** Preloaded signed consent — skips candidate-only fetch (employer view). */
+  presetConsent?: {
+    signedName: string
+    signedAt: string | null
+    companyName: string
+    formData: Record<string, string>
+    formVersion?: string | null
+  }
 }
 
 /** html2canvas: force SVG strokes to rgb for reliable capture (same idea as BackgroundCheckDisclosure). */
@@ -159,6 +167,7 @@ export default function PspDisclosureForm({
   onOrderPlaced,
   initialProfile,
   deferSubmit = false,
+  presetConsent,
 }: PspDisclosureFormProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
@@ -201,7 +210,35 @@ export default function PspDisclosureForm({
   const employerDisplay = viewCompanyName.trim() || companyName.trim() || 'Self-Request'
 
   useEffect(() => {
-    if (viewMode && consentId) {
+    if (viewMode && presetConsent) {
+      setSignedName(presetConsent.signedName || '')
+      setPrintedName(presetConsent.formData.printedName || presetConsent.signedName || '')
+      setSignedDate(
+        presetConsent.signedAt
+          ? new Date(presetConsent.signedAt).toLocaleDateString('en-US', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric',
+            })
+          : '',
+      )
+      setViewCompanyName(presetConsent.companyName || companyName)
+      const fd = presetConsent.formData
+      setProfile((prev) => ({
+        ...prev,
+        firstName: fd.firstName || prev.firstName,
+        lastName: fd.lastName || prev.lastName,
+        dateOfBirth: fd.dateOfBirth || prev.dateOfBirth,
+        address: fd.address || prev.address,
+        city: fd.city || prev.city,
+        state: fd.state || prev.state,
+        zip: fd.zip || prev.zip,
+        dlNumber: fd.dlNumber || prev.dlNumber,
+        dlState: fd.dlState || prev.dlState,
+        email: fd.email || prev.email,
+      }))
+      setProfileLoading(false)
+    } else if (viewMode && consentId) {
       void fetchSignedConsent()
     } else if (initialProfile) {
       // Wizard prefilled us — skip the profile fetch entirely so we don't
@@ -212,7 +249,7 @@ export default function PspDisclosureForm({
     } else {
       void fetchDriverProfile()
     }
-  }, [userAddress, viewMode, consentId, initialProfile])
+  }, [userAddress, viewMode, consentId, initialProfile, presetConsent, companyName])
 
   const fetchSignedConsent = async () => {
     if (!consentId) return

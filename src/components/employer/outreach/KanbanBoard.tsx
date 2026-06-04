@@ -51,6 +51,7 @@ export interface KanbanBoardProps {
   onCancel: (id: string) => void
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
+  onViewConsent?: (bundle: ConsentBundleSummary) => void
   onEdit: (invite: Invite) => void
   onAskStormi: (invite: Invite) => void
   onRecruiterNotesSave: (inviteId: string, notes: string) => void | Promise<void>
@@ -90,6 +91,7 @@ export default function KanbanBoard({
   onCancel,
   onRemove,
   onViewFile,
+  onViewConsent,
   onEdit,
   onAskStormi,
   onRecruiterNotesSave,
@@ -247,6 +249,7 @@ export default function KanbanBoard({
                 setActiveInviteId(null)
               }}
               onViewFile={onViewFile}
+              onViewConsent={onViewConsent}
               onEdit={(inv) => {
                 setActiveInviteId(null)
                 onEdit(inv)
