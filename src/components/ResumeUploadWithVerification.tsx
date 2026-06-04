@@ -361,81 +361,63 @@ export default function ResumeUploadWithVerification({
           wasPaid: uploadData.resume.wasPaid,
           costUSDC: uploadData.resume.costUSDC,
         },
-        message: '✅ Resume uploaded to IPFS! Now verifying on blockchain...',
+        message: '✅ Resume uploaded to IPFS! Marking as verified...',
       })
 
-      // Step 3: Blockchain Verification (Optional)
+      // Step 3: DB verification (Phase 2 attestation replaces on-chain registry)
       updateStep('blockchain', 'loading')
       notifyResumeUploadEvent?.({
         type: 'blockchain_start',
         step: 'blockchain',
-        message: '⛓️ Verifying your resume on the blockchain (almost done!)...',
+        message: 'Verifying your resume (almost done!)...',
       })
-      console.log('🔄 Step 3: Blockchain verification...')
+      console.log('🔄 Step 3: Resume verification...')
 
-      const blockchainResponse = await fetch('/api/blockchain/verify-resume', {
+      const verifyResponse = await fetch(`/api/resumes/${uploadData.resume.id}/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resumeId: uploadData.resume.id,
-          ...uploadData.blockchainData,
-        }),
+        credentials: 'include',
       })
 
-      let blockchainPayload: {
-        transactionHash?: string
-        resumeId?: string
-        contractAddress?: string
-        explorerUrl?: string
-      } | null = null
+      let verifyPayload: { resumeId?: string; verified?: boolean } | null = null
 
-      if (!blockchainResponse.ok) {
-        console.warn('⚠️ Blockchain verification failed, but upload succeeded')
+      if (!verifyResponse.ok) {
+        console.warn('⚠️ Verification failed, but upload succeeded')
         updateStep(
           'blockchain',
           'error',
           undefined,
-          'Blockchain verification failed, but your resume was uploaded successfully'
+          'Verification failed, but your resume was uploaded successfully',
         )
         notifyResumeUploadEvent?.({
           type: 'upload_error',
           step: 'blockchain',
-          error: 'Blockchain verification failed',
-          message: '⚠️ Blockchain verification failed, but your resume was uploaded successfully. You can verify it later.',
+          error: 'Verification failed',
+          message:
+            '⚠️ Verification failed, but your resume was uploaded successfully. You can verify it later.',
         })
       } else {
-        const blockchainData = await blockchainResponse.json()
-        console.log(
-          '✅ Step 3 Complete: Blockchain verification:',
-          blockchainData
-        )
+        const verifyData = await verifyResponse.json()
+        console.log('✅ Step 3 Complete: Resume verified:', verifyData)
 
-        blockchainPayload = {
-          transactionHash: blockchainData.transactionHash,
-          resumeId: blockchainData.resumeId,
-          contractAddress: blockchainData.contractAddress,
-          explorerUrl: blockchainData.explorerUrl,
+        verifyPayload = {
+          resumeId: verifyData.resumeId,
+          verified: verifyData.verified ?? verifyData.success,
         }
 
         updateStep('blockchain', 'success', {
-          transactionHash: blockchainData.transactionHash,
-          resumeId: blockchainData.resumeId,
-          contractAddress: blockchainData.contractAddress,
-          explorerUrl: blockchainData.explorerUrl,
+          resumeId: verifyData.resumeId,
         })
         notifyResumeUploadEvent?.({
           type: 'blockchain_complete',
           step: 'blockchain',
           data: {
-            transactionHash: blockchainData.transactionHash,
-            resumeId: blockchainData.resumeId,
+            resumeId: verifyData.resumeId,
           },
-          message: '🎉 All done! Your resume is now verified on the blockchain. Analyzing it now to extract key information...',
+          message:
+            '🎉 All done! Your resume is verified. Analyzing it now to extract key information...',
         })
       }
 
-      // Set final result (use live blockchain payload — React state updates are async)
       const resultPayload = {
         ipfsHash: uploadData.resume.ipfsHash,
         ipfsUrl: uploadData.resume.ipfsUrl,
@@ -443,7 +425,7 @@ export default function ResumeUploadWithVerification({
         wasPaid: uploadData.resume.wasPaid,
         costUSDC: uploadData.resume.costUSDC,
         eligibility: uploadData.eligibility,
-        blockchainData: blockchainPayload,
+        blockchainData: verifyPayload,
       }
 
       setFinalResult(resultPayload)

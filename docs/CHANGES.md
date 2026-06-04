@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Track 2 · D2 — Decommission Base-Sepolia registries** (2026-06-01)
+
+ResumeRegistry + ProductionDriverRegistry on Base Sepolia held hash anchors for resume/DOT "verification." Only ~7 test resumes and test DOT apps were ever anchored — disposable. On-chain verification is removed; verify routes now set a **DB flag** (`verification_status='VERIFIED'`) as a placeholder until Phase 2 attestation ships. Accio MVR/PSP screening is unrelated and untouched.
+
+**Deleted:**
+
+| File | Why |
+|---|---|
+| `src/app/api/blockchain/submit-driver-application/route.ts` | DOT on-chain submit |
+| `src/app/api/blockchain/verify-resume/route.ts` | Resume on-chain verify |
+| `src/lib/resume-registry-onchain.ts` | Shared `addResumeOnChain` helper |
+| `src/lib/driver-contract.ts` | Driver registry client |
+| `src/lib/contract.ts` | ResumeRegistry frontend config |
+| `src/lib/contract-constants.ts` | Registry bytecode/ABI constants |
+| `src/lib/typed-data.ts` | EIP-712 typed data for registry |
+| `src/lib/alchemy-webhooks.ts` | Registry contract webhooks |
+| `scripts/deploy-resume-registry.js`, `scripts/test-contract-local.js` | Registry deploy/test scripts |
+
+**Archived → `contracts/legacy/`:** `ResumeRegistry.sol`, `ProductionDriverRegistry.sol` (+ README update). Removed matching Hardhat artifacts.
+
+**Edited:**
+
+| File | Change |
+|---|---|
+| `src/app/api/resumes/[id]/verify/route.ts` | PDF/IPFS flow kept; dropped ethers + on-chain `addResume` — marks `VERIFIED` in DB only |
+| `src/app/api/driver-applications/[id]/verify/route.ts` | Dropped internal fetch to blockchain route — sets `verification_status='VERIFIED'` |
+| `src/components/ResumeUploadWithVerification.tsx` | Step 3 calls `/api/resumes/[id]/verify` instead of `/api/blockchain/verify-resume` |
+| `src/components/driver-application/EmploymentVerificationForm.tsx` | DB save only; removed on-chain submit after save |
+| `package.json` | Removed registry npm scripts (`deploy:local`, `deploy:base-*`, `verify:base-*`, `test:local`) |
+
+**Verification:** `rg` on registry patterns in `src/` → 0. `npm run build` green.
+
+**Pace-critical:** Accio screening paths not touched.
+
+---
+
 ## **Employer consent viewing — read signed FCRA / PSP / CDLIS packages** (2026-06-03)
 
 Pace could see consent package metadata (signer names, dates) in the Files vault and on outreach cards, but could not open the actual signed documents. Added a company-scoped employer API, audit trail, and a tabbed modal reusing the existing disclosure viewers.

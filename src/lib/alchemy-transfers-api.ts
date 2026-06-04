@@ -211,7 +211,7 @@ export async function getTransactionsTo(
 
 /**
  * Get resume verification transactions specifically
- * Filters for interactions with our ResumeRegistry contract using contractAddresses filter
+ * Filters for interactions with a specific contract address using contractAddresses filter
  * Following the official Alchemy tutorial for contract-specific transfers
  */
 export async function getResumeVerificationHistory(

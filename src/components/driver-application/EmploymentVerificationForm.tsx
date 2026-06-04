@@ -261,51 +261,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
       console.log('✅ Employment verification saved to Supabase successfully')
 
-      // 2. Submit to blockchain for verification (after DB save succeeds)
-      console.log('📝 Submitting to blockchain for verification...')
-      const res = await fetch('/api/blockchain/submit-driver-application', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          applicationHash, 
-          ipfsHash,
-          userAddress: userAddress,
-        }),
-      })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        // Database save succeeded, but blockchain failed - log and continue
-        console.error('⚠️ Blockchain submission failed, but data is saved:', err)
-        throw new Error(err.error || 'Failed to submit to blockchain (data is saved to database)')
-      }
-
-      const data = await res.json()
-      setTxHash(data.transactionHash)
-      setExplorerUrl(data.explorerUrl)
-
-      // 3. Update database with blockchain transaction details
-      try {
-        const updateResponse = await fetch('/api/driver-applications/save-employment-verification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userAddress,
-            employmentVerificationData: formData,
-            applicationHash,
-            ipfsHash,
-            transactionHash: data.transactionHash,
-            applicationId: data.applicationId,
-          }),
-        })
-        if (updateResponse.ok) {
-          console.log('✅ Database updated with blockchain verification details')
-        }
-      } catch (updateError) {
-        console.warn('⚠️ Failed to update database with blockchain details (non-critical):', updateError)
-      }
-
-      // Notify parent that employment verification is complete
+      // On-chain registry removed (D2) — DB is source of truth until Phase 2 attestation
       onComplete?.()
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
