@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.1 — `attestations` table migration** (2026-06-05)
+
+First Phase 2 step: additive schema for selective-disclosure signed facts. No app code yet.
+
+**Migration:** `supabase/migrations/098_attestations.sql`
+
+| Column / object | Purpose |
+|---|---|
+| Core | `candidate_user_id`, `fact_type`, `fact_summary`, `disclosed_fields`, `proof_artifact` |
+| Timing | `issued_at`, `expires_at`, `valid_until` (Phase-4 marketplace freshness) |
+| Provenance | `source_cra`, `source_pull_id` (CRA citation — Storm is not the CRA) |
+| Scoping | `audience_id → companies` (per-carrier selective disclosure) |
+| Immutability | `superseded_by` — new row supersedes old; no client UPDATE policies |
+| Phase-4 | `query_count` (verify call counter) |
+
+**Indexes:** `(candidate_user_id, fact_type)`; partial current rows `WHERE superseded_by IS NULL`; partial `(audience_id) WHERE NOT NULL`; `issued_at DESC`.
+
+**RLS:**
+- Candidates `SELECT` own rows (`candidate_user_id = auth.uid()`).
+- Employer members `SELECT` rows where `audience_id` matches their `company_members` company.
+- No `INSERT`/`UPDATE`/`DELETE` policies — issuance + supersede via service-role only.
+
+**Apply manually:** run `098_attestations.sql` in Supabase dashboard (same as 097).
+
+**Commit:** `8edd340`
+
+**Next:** P2.2 — `attestationService` interface + signed-JWT implementation.
+
+---
+
 ## **Track 2 · D5 — Env + dependency sweep (Web3 demolition COMPLETE)** (2026-06-05)
 
 Final Track 2 step: removed dead crypto packages, scripts, API routes, and documented env vars to drop from Vercel / `.env.local`.
