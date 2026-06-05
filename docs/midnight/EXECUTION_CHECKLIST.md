@@ -494,7 +494,7 @@ COMMIT: feat(attestation): add attestations table + RLS (P2.1)
 ### P2.2 — `attestationService` interface + registry + signed-JWT implementation
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · pending commit · 2026-06-05 |
 | Pre-conditions | P2.1 |
 | Pace risk | None — new lib, nothing imports it yet |
 
@@ -839,6 +839,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-05 | P2.2 — attestationService + signed-JWT impl | Composer | pending | **New:** `attestation-service.ts` (interface/types), `signed-jwt-attestation-service.ts` (factory + prove/verify + DB supersede), `attestation-service-registry.ts` (export only). **Tests:** round-trip, tamper, expiry (vitest). **Env:** `ATTESTATION_JWT_PRIVATE_KEY`, `ATTESTATION_ISSUER`, optional `ATTESTATION_BACKEND`. Registry `proveFact` throws until P2.3 fact registry wired. `npm run test:app` + `npm run build` green. **Next:** P2.3 fact registry. |
 | 2026-06-05 | P2.1 — `attestations` table migration | Composer | 465f83b | **Migration:** `098_attestations.sql` — immutable attestations store + Phase-4 forward-compat cols (`valid_until`, `source_cra`, `source_pull_id`, `query_count`). **RLS:** candidate SELECT own rows; employer SELECT audience-scoped via `company_members`; no client INSERT/UPDATE/DELETE (service-role issuance). **Indexes:** candidate+fact, current (unsuperseded), audience partial. **Apply manually** on remote via dashboard. No app code. `npm run build` green. **Next:** P2.2 attestationService + signed-JWT. |
 | 2026-06-05 | D5 — env + dependency sweep (**Track 2 COMPLETE**) | Composer | 1e5ddb0 | **Uninstalled:** `viem`, `ethers`, `hardhat` + toolbox/verify/openzeppelin (~469 pkgs). **Deleted:** `hardhat.config.js`, 17 crypto `scripts/*.js`, `lib/alchemy.ts`, `base-auth-middleware.ts`, `/api/auth/verify`, `/api/webhooks/alchemy`. **Refactored:** `check-duplicate-global` → DB-only. **Also in commit:** D3.4 audit fixes (`user-by-wallet`, `supabase-db`, employment-verify session auth). **Scripts kept:** dev/build/start/lint/test:app/supabase:test/backfill/inspect. **Env:** documented removals in `CHANGES.md` + `VERCEL_ENV_CHECKLIST.md` (manual Vercel purge). `rg "ethers|viem|hardhat" src/` → 0. `npm run build` green. **Next:** Phase 2 attestation service. |
 | 2026-06-05 | D3.4 — drop `walletAddress` store field; session-only identity | Composer | 76c560d | **auth-store:** removed `walletAddress`/`setWalletAddress`/`useWalletAddress`; `SessionUser` + `useSessionUserId`; persist only `userRole`. **sync:** `use-supabase-auth-sync` no longer writes `auth:<uuid>` placeholder to store. **~167 files:** props/params `walletAddress` → `sessionUserId`; API routes use `getStormUserIdFromRequest` / `getSessionUserRow`. **Kept:** `users.wallet_address` DB column + `legacyWalletAddress` in admin JSON only. **Left for D5:** vestigial `x-wallet-address` client headers on AI/admin paths; `user-by-wallet.ts` lib. `rg walletAddress src/` → lib helpers only. Employer hub: centered single column (Stormi rail removed). `npm run build` green. |

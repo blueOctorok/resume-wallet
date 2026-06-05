@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.2 — `attestationService` + signed-JWT implementation** (2026-06-05)
+
+Swappable attestation layer for Phase 2 selective disclosure. No UI or API routes yet — P2.3 wires the fact registry; P2.4 adds HTTP routes.
+
+| File | Role |
+|---|---|
+| `src/lib/attestation-service.ts` | `AttestationService` interface, `FactType` union, shared types |
+| `src/lib/signed-jwt-attestation-service.ts` | `createSignedJwtAttestationService` — HS256 JWT sign/verify + DB persist/supersede |
+| `src/lib/attestation-service-registry.ts` | `attestationService` export (backend selector; defaults to signed JWT) |
+| `src/lib/signed-jwt-attestation-service.test.ts` | Round-trip, tamper, expiry vitest cases |
+
+**Behavior:**
+- `proveFact` resolves fact material via injectable `resolveFact` (registry stub throws until **P2.3**).
+- Persists immutable `attestations` rows; supersedes prior unsuperseded row for same candidate + fact + audience via `superseded_by`.
+- `verifyAttestation` validates JWT signature + expiry; bumps `query_count` when row id is present.
+
+**New env vars (Vercel + `.env.local`):**
+
+| Variable | Purpose |
+|---|---|
+| `ATTESTATION_JWT_PRIVATE_KEY` | HS256 signing secret (v1; 32+ chars recommended) |
+| `ATTESTATION_ISSUER` | JWT `iss` claim (default `storm`) |
+| `ATTESTATION_BACKEND` | Optional; `midnight` reserved for Phase 3 (throws if set) |
+
+Alias: `ATTESTATION_JWT_SECRET` accepted if private key unset.
+
+**Next:** P2.3 — fact registry + first 3 third-party `proveImpl`s.
+
+---
+
 ## **Phase 2 · P2.1 — `attestations` table migration** (2026-06-05)
 
 First Phase 2 step: additive schema for selective-disclosure signed facts. No app code yet.

@@ -25,6 +25,9 @@ ACCIO_PASSWORD=
 ACCIO_MODE=                        # TEST or PROD
 ADZUNA_APP_ID=
 ADZUNA_APP_KEY=
+ATTESTATION_JWT_PRIVATE_KEY=        # Phase 2: HS256 secret for signed attestations (32+ chars)
+ATTESTATION_ISSUER=storm           # JWT iss claim (optional; default storm)
+# ATTESTATION_BACKEND=             # Optional; omit for signed JWT (Phase 2). midnight = Phase 3 only.
 # STRIPE_* — add when Stripe Checkout ships (Phase 1 payments track)
 ```
 
