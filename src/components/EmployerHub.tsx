@@ -41,14 +41,12 @@ import {
   Trash2,
   RefreshCw,
   CreditCard,
-  Wallet,
   Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
-import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
@@ -289,9 +287,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
-  const [companyWalletProvisioning, setCompanyWalletProvisioning] = useState(false)
-  const [companyWalletModalOpen, setCompanyWalletModalOpen] = useState(false)
-  const companyEnsureAttemptedId = useRef<string | null>(null)
 
   const employerInstalledBlocks = useEmployerBlocksStore((s) => s.installedBlocks)
   const employerCanManageBlocks = useEmployerBlocksStore((s) => s.canManageEmployerBlocks)
@@ -336,7 +331,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
   // v2 keys: default is now collapsed; old keys are ignored so everyone gets the new default once.
-  const RAIL_WALLET_LS = 'employer-hub-rail-wallet-open-v2'
   const RAIL_STORMI_LS = 'employer-hub-rail-stormi-open-v2'
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -351,25 +345,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   })
 
   /** Desktop xl+ side rails — default collapsed so the hub leads with main work; expand when needed (persisted). */
-  const [walletRailOpen, setWalletRailOpen] = useState(false)
   const [stormiRailOpen, setStormiRailOpen] = useState(false)
   useEffect(() => {
     try {
-      const w = localStorage.getItem(RAIL_WALLET_LS)
-      if (w !== null) setWalletRailOpen(w === '1' || w === 'true')
       const s = localStorage.getItem(RAIL_STORMI_LS)
       if (s !== null) setStormiRailOpen(s === '1' || s === 'true')
     } catch {
       /* keep defaults */
-    }
-  }, [])
-
-  const persistWalletRail = useCallback((open: boolean) => {
-    setWalletRailOpen(open)
-    try {
-      localStorage.setItem(RAIL_WALLET_LS, open ? '1' : '0')
-    } catch {
-      /* ignore */
     }
   }, [])
 
@@ -404,9 +386,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       userRole: data.userRole ?? null,
     }
   }, [data])
-
-  /** Wallet rail rim — neutral glow so it pairs with the main column + Stormi column */
-  const employerRailVaultGlow = useMemo(() => getBlockColor('general-resume').glowColor, [])
 
   /** Employer hiring snapshot for `useEmployerHiringPathStore` / journey helpers (hub no longer shows job-path rail). */
   const hiringPayload = useMemo(() => {
@@ -450,42 +429,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   }, [hiringPayload, setEmployerHiringPath])
 
   useEffect(() => () => setEmployerHiringPath(null), [setEmployerHiringPath])
-
-  // Legacy companies: one ensure-wallet attempt per company per session (avoids 503 loops)
-  useEffect(() => {
-    if (!data?.company?.id || data.company.walletAddress || !walletAddress) return
-    if (data.needsCompanySetup) return
-    if (companyEnsureAttemptedId.current === data.company.id) return
-    companyEnsureAttemptedId.current = data.company.id
-    let cancelled = false
-    setCompanyWalletProvisioning(true)
-    void (async () => {
-      try {
-        const r = await fetch('/api/employer/company/ensure-wallet', {
-          method: 'POST',
-        })
-        const j = await r.json().catch(() => ({}))
-        if (cancelled) return
-        if (r.ok && j.walletAddress) {
-          setData((prev) =>
-            prev?.company
-              ? {
-                  ...prev,
-                  company: { ...prev.company, walletAddress: j.walletAddress },
-                }
-              : prev,
-          )
-        }
-      } catch (e) {
-        console.warn('[EmployerHub] ensure-wallet failed:', e)
-      } finally {
-        if (!cancelled) setCompanyWalletProvisioning(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [data?.company?.id, data?.company?.walletAddress, data?.needsCompanySetup, walletAddress])
 
   // Fetch hub data.
   //
@@ -751,91 +694,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           // rails misaligned vs the center column in production).
           'flex flex-col gap-8 pb-28 max-xl:pb-32 xl:grid xl:items-start xl:gap-x-8 xl:gap-y-8 xl:pb-0',
           stormiRailOpen
-            ? 'xl:grid-cols-[auto_minmax(0,1fr)_26rem]'
-            : 'xl:grid-cols-[auto_minmax(0,1fr)_auto]',
+            ? 'xl:grid-cols-[minmax(0,1fr)_26rem]'
+            : 'xl:grid-cols-[minmax(0,1fr)_auto]',
         )}
       >
-        {data.company &&
-          (walletRailOpen ? (
-            <aside
-              className="hidden w-80 shrink-0 self-start p-0 xl:sticky xl:top-24 xl:col-start-1 xl:row-start-1 xl:block xl:self-start"
-              aria-label="Company wallet"
-            >
-              <VaultCredentialChrome
-                isDark={isDarkTheme(theme)}
-                glowColor={employerRailVaultGlow}
-                hasRoute
-                showSigil={false}
-                className="w-full max-w-full min-w-0"
-                style={{
-                  filter:
-                    isDarkTheme(theme)
-                      ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
-                      : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
-                }}
-              >
-                <div className="relative flex min-h-0 min-w-0 flex-col gap-3 pl-10 pr-3.5 pb-[14px] pt-3.5">
-                  <div className="absolute left-3 top-3 z-20">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        '!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm',
-                        navControlButtonClass(isDarkTheme(theme), theme),
-                      )}
-                      onClick={() => persistWalletRail(false)}
-                      aria-label="Collapse company wallet panel"
-                      title="Collapse company wallet"
-                    >
-                      <ChevronLeft className="w-4 h-4" aria-hidden />
-                    </Button>
-                  </div>
-                  <CompanyWalletContent
-                    layout="rail"
-                    companyName={data.company.name}
-                    companyWalletAddress={data.company.walletAddress ?? null}
-                    walletProvisioning={companyWalletProvisioning}
-                  />
-                </div>
-              </VaultCredentialChrome>
-            </aside>
-          ) : (
-            <aside
-              className={cn(
-                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-1 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
-                'rounded-2xl border shadow-sm backdrop-blur-sm',
-                theme === 'ink'
-                  ? 'border-zinc-600/80 bg-zinc-900/95'
-                  : 'border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90',
-              )}
-              aria-label="Company wallet collapsed"
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => persistWalletRail(true)}
-                className="!p-0 h-auto w-full touch-manipulation"
-                aria-label="Expand company wallet panel"
-                title="Expand company wallet"
-              >
-                <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-6">
-                  <Wallet
-                    className={cn(
-                      'h-4 w-4 shrink-0',
-                      theme === 'ink' ? 'text-zinc-300' : 'text-teal-600 dark:text-teal-400',
-                    )}
-                    aria-hidden
-                  />
-                  <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
-                    Company wallet
-                  </span>
-                </span>
-              </Button>
-            </aside>
-          ))}
-        {/* Priority column (row 1) — DOM order on mobile: wallet → this → Stormi → rest */}
-          <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
+        <div className="w-full min-w-0 space-y-8 xl:col-start-1 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
       {/* ── Blocks & Outreach — unified section ─────────────────────────
            Top: installed employer blocks (what capabilities does this company have?)
            Bottom: candidate outreach (create invites using those capabilities)
@@ -1019,7 +882,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           (stormiRailOpen ? (
             <aside
               id="employer-hub-stormi-panel"
-              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-3 xl:row-start-1 xl:block xl:self-start"
+              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1 xl:block xl:self-start"
               aria-label="Ask Stormi hiring coach"
             >
               <HubSectionPanel
@@ -1075,7 +938,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <aside
               id="employer-hub-stormi-panel"
               className={cn(
-                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-3 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
                 'rounded-2xl border shadow-sm backdrop-blur-sm',
                 theme === 'ink'
                   ? 'border-zinc-600/80 bg-zinc-900/95'
@@ -1297,51 +1160,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
           </div>
       </div>
-
-      {data.company && (
-        <>
-          {companyWalletModalOpen && (
-            <Modal
-              onClose={() => setCompanyWalletModalOpen(false)}
-              maxWidth="max-w-lg"
-              zIndex={95}
-            >
-              <ModalHeader
-                title="Company wallet"
-                subtitle={`${data.company.name} · shared team address`}
-                onClose={() => setCompanyWalletModalOpen(false)}
-              />
-              <div className="p-4 max-h-[min(85vh,720px)] overflow-y-auto overscroll-contain">
-                <CompanyWalletContent
-                  layout="modal"
-                  omitHero
-                  companyName={data.company.name}
-                  companyWalletAddress={data.company.walletAddress ?? null}
-                  walletProvisioning={companyWalletProvisioning}
-                />
-              </div>
-            </Modal>
-          )}
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => setCompanyWalletModalOpen(true)}
-            className={cn(
-              'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
-              'left-[max(0px,env(safe-area-inset-left,0px))]',
-              'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
-              'rounded-none rounded-r-2xl border border-l-0 border-gray-300/40 dark:border-gray-600/50',
-              'shadow-lg !p-0 touch-manipulation active:opacity-90',
-            )}
-            aria-label="Open company wallet"
-          >
-            <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap">
-              <Wallet className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="text-[11px] font-bold tracking-wide">Company wallet</span>
-            </span>
-          </Button>
-        </>
-      )}
 
       {employerStormiContext && (
         <Button

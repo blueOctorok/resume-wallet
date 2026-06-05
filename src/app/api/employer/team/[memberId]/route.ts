@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import {
-  addOwnerToCompanyWallet,
-  removeOwnerFromCompanyWallet,
-} from '@/lib/company-wallet-server'
 
 // Roles that can manage team members
 const TEAM_ADMIN_ROLES = ['owner', 'admin']
@@ -167,34 +163,6 @@ export async function PATCH(
       )
     }
 
-    const wasActive = targetMember.is_active !== false
-    const deactivating = isActive === false && wasActive && targetMember.user_id
-    const reactivating = isActive === true && !wasActive && targetMember.user_id
-
-    if (deactivating) {
-      const { data: co } = await supabase
-        .from('companies')
-        .select('wallet_address')
-        .eq('id', companyId)
-        .maybeSingle()
-      const { data: tu } = await supabase
-        .from('users')
-        .select('wallet_address')
-        .eq('id', targetMember.user_id)
-        .maybeSingle()
-      if (co?.wallet_address && tu?.wallet_address) {
-        try {
-          await removeOwnerFromCompanyWallet({
-            companyId,
-            companyWalletAddress: co.wallet_address,
-            ownerSmartAccountAddress: tu.wallet_address,
-          })
-        } catch (e) {
-          console.error('[TEAM] removeOwnerFromCompanyWallet failed:', e)
-        }
-      }
-    }
-
     if (Object.keys(updateData).length > 0) {
       const { error: updateError } = await supabase
         .from('company_members')
@@ -207,30 +175,6 @@ export async function PATCH(
           { error: 'Failed to update member' },
           { status: 500 }
         )
-      }
-    }
-
-    if (reactivating) {
-      const { data: co } = await supabase
-        .from('companies')
-        .select('wallet_address')
-        .eq('id', companyId)
-        .maybeSingle()
-      const { data: tu } = await supabase
-        .from('users')
-        .select('wallet_address')
-        .eq('id', targetMember.user_id)
-        .maybeSingle()
-      if (co?.wallet_address && tu?.wallet_address) {
-        try {
-          await addOwnerToCompanyWallet({
-            companyId,
-            companyWalletAddress: co.wallet_address,
-            newOwnerSmartAccountAddress: tu.wallet_address,
-          })
-        } catch (e) {
-          console.error('[TEAM] addOwnerToCompanyWallet failed:', e)
-        }
       }
     }
 
@@ -347,31 +291,6 @@ export async function DELETE(
           { error: 'Cannot remove the only owner. Transfer ownership first.' },
           { status: 400 }
         )
-      }
-    }
-
-    const { data: coWallet } = await supabase
-      .from('companies')
-      .select('wallet_address')
-      .eq('id', companyId)
-      .maybeSingle()
-
-    if (targetMember.user_id && coWallet?.wallet_address) {
-      const { data: tu } = await supabase
-        .from('users')
-        .select('wallet_address')
-        .eq('id', targetMember.user_id)
-        .maybeSingle()
-      if (tu?.wallet_address) {
-        try {
-          await removeOwnerFromCompanyWallet({
-            companyId,
-            companyWalletAddress: coWallet.wallet_address,
-            ownerSmartAccountAddress: tu.wallet_address,
-          })
-        } catch (e) {
-          console.error('[TEAM] removeOwnerFromCompanyWallet before delete failed:', e)
-        }
       }
     }
 

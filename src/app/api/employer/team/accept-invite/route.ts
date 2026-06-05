@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { addOwnerToCompanyWallet } from '@/lib/company-wallet-server'
 
 /**
  * POST /api/employer/team/accept-invite
@@ -159,24 +158,6 @@ export async function POST(request: NextRequest) {
       .from('users')
       .update(userUpdate)
       .eq('id', user.id)
-
-    const { data: coRow } = await supabase
-      .from('companies')
-      .select('wallet_address')
-      .eq('id', invite.company_id)
-      .maybeSingle()
-
-    if (coRow?.wallet_address && user.wallet_address) {
-      try {
-        await addOwnerToCompanyWallet({
-          companyId: invite.company_id,
-          companyWalletAddress: coRow.wallet_address,
-          newOwnerSmartAccountAddress: user.wallet_address,
-        })
-      } catch (chainErr) {
-        console.error('[ACCEPT INVITE] addOwnerToCompanyWallet failed:', chainErr)
-      }
-    }
 
     const company = invite.companies as any
 
