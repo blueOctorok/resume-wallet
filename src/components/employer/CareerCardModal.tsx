@@ -22,8 +22,6 @@ import type { ProjectedCareerCard as ProjectedCardData } from '@/types/career-ca
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
-import MvrPaymentButton from '@/components/MvrPaymentButton'
-import PspPaymentButton from '@/components/PspPaymentButton'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -293,7 +291,7 @@ export default function CareerCardModal({
 
   // ── Employer Accio orders (MVR / PSP): payment → API call ─────────────────
 
-  const handleAccioEmployerOrder = async (txHash: string, fields?: MvrOrderFields) => {
+  const handleAccioEmployerOrder = async (fields?: MvrOrderFields) => {
     setAccioOrderLoading(true)
     setAccioOrderError(null)
 
@@ -313,7 +311,6 @@ export default function CareerCardModal({
             candidateUserId,
             type: accioOrderProduct,
             consentBundleId: bundleId,
-            paymentTxHash: txHash,
           }),
         })
         if (!response.ok) {
@@ -338,7 +335,6 @@ export default function CareerCardModal({
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify({
           candidateUserId,
-          paymentTxHash: txHash,
           ...fields,
         }),
       })
@@ -859,7 +855,7 @@ function MvrOrderModal({
   loading: boolean
   error: string | null
   success: boolean
-  onOrder: (txHash: string, fields?: MvrOrderFields) => void
+  onOrder: (fields?: MvrOrderFields) => void
   onClose: () => void
   theme: string
 }) {
@@ -890,9 +886,6 @@ function MvrOrderModal({
   const [state, setState] = useState(fd?.state || '')
   const [zip, setZip] = useState(fd?.zip || '')
 
-  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
-  const isPaymentComplete = !!paymentTxHash
-
   const isFormValid = useStoredConsentOnly
     ? true
     : Boolean(
@@ -901,13 +894,12 @@ function MvrOrderModal({
         address.trim() && city.trim() && state.trim() && zip.trim()
       )
 
-  const handlePaymentSuccess = (txHash: string) => {
-    setPaymentTxHash(txHash)
+  const handleSubmitOrder = () => {
     if (useStoredConsentOnly) {
-      onOrder(txHash)
+      onOrder()
       return
     }
-    onOrder(txHash, {
+    onOrder({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       dob: dob.trim(),
@@ -966,8 +958,8 @@ function MvrOrderModal({
             {useStoredConsentOnly ? (
               <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
                 This candidate&apos;s FCRA disclosure, FMCSA PSP authorization, CDLIS written consent, and full identity
-                are already on file from their screening consent package. Complete USDC payment below — Storm will submit
-                the order to the vendor using the stored package (no re-entry).
+                are already on file from their screening consent package. Submit the order below — Storm will send
+                it to the vendor using the stored package (no re-entry).
               </p>
             ) : (
               <>
@@ -1074,48 +1066,16 @@ function MvrOrderModal({
               </div>
             )}
 
-            {/* Payment */}
             <div className={`rounded-xl border p-4 ${isDarkTheme(theme) ? 'border-gray-800' : 'border-gray-200'}`}>
-              <p className={`text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}`}>
-                Payment
-              </p>
-              {isPaymentComplete ? (
-                <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme(theme) ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
-                  <CheckCircle className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
-                  <span className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'}`}>Payment confirmed</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {!isFormValid && (
-                    <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-                      Fill out all required fields to enable payment
-                    </p>
-                  )}
-                  {orderProduct === 'mvr' ? (
-                    <MvrPaymentButton
-                      userAddress={walletAddress}
-                      payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
-                      companyWalletAddress={employerCompany?.walletAddress ?? undefined}
-                      companyId={employerCompany?.id}
-                      onPaymentSuccess={handlePaymentSuccess}
-                      onPaymentError={(msg) => console.error('[MVR PAYMENT]', msg)}
-                      disabled={!isFormValid || loading}
-                      userType="employer"
-                    />
-                  ) : (
-                    <PspPaymentButton
-                      userAddress={walletAddress}
-                      payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
-                      companyWalletAddress={employerCompany?.walletAddress ?? undefined}
-                      companyId={employerCompany?.id}
-                      onPaymentSuccess={handlePaymentSuccess}
-                      onPaymentError={(msg) => console.error('[PSP PAYMENT]', msg)}
-                      disabled={!isFormValid || loading}
-                      userType="employer"
-                    />
-                  )}
-                </div>
-              )}
+              <Button
+                variant='primary'
+                className='w-full'
+                onClick={handleSubmitOrder}
+                disabled={!isFormValid || loading}
+                isLoading={loading}
+              >
+                Submit {productTitle} order
+              </Button>
             </div>
           </div>
         )}

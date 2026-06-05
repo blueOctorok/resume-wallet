@@ -2,9 +2,8 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import PspPaymentButton from './PspPaymentButton'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
 import EmployerPspMvrBundleAttestationStep, {
@@ -46,10 +45,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   const [success, setSuccess] = useState(false)
   const [orderResult, setOrderResult] = useState<any>(null)
 
-  // Payment state
-  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
-  const [isPaymentComplete, setIsPaymentComplete] = useState(false)
-  /** Self-order: FMCSA PSP Disclosure must be signed before pay; `pspConsentId` is consumed when the order is placed. */
+  /** Self-order: FMCSA PSP Disclosure must be signed before submit; `pspConsentId` is consumed when the order is placed. */
   const [pspConsentId, setPspConsentId] = useState<string | null>(null)
   const [showPspDisclosure, setShowPspDisclosure] = useState(false)
 
@@ -74,7 +70,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
       dlState.trim()
   )
 
-  const canPay = isFormValid && Boolean(pspConsentId)
+  const canSubmit = isFormValid && Boolean(pspConsentId)
 
   const refreshSelfPspConsent = useCallback(async () => {
     if (!userAddress) return
@@ -93,40 +89,13 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
     }
   }, [userAddress])
 
-  // Check for pending payment on mount + restore unconsumed FMCSA self-consent
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pendingPayment = localStorage.getItem('pendingPspPayment')
-      if (pendingPayment) {
-        setPaymentTxHash(pendingPayment)
-        setIsPaymentComplete(true)
-        localStorage.removeItem('pendingPspPayment')
-      }
-    }
-  }, [])
-
+  // Restore unconsumed FMCSA self-consent on mount
   useEffect(() => {
     void refreshSelfPspConsent()
   }, [refreshSelfPspConsent])
 
-  const handlePaymentSuccess = (txHash: string) => {
-    setPaymentTxHash(txHash)
-    setIsPaymentComplete(true)
-    setError(null)
-  }
-
-  const handlePaymentError = (errorMsg: string) => {
-    setError(`Payment failed: ${errorMsg}`)
-    setIsPaymentComplete(false)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!isPaymentComplete || !paymentTxHash) {
-      setError('Please complete payment before submitting order')
-      return
-    }
 
     if (!pspConsentId) {
       setError('Sign the FMCSA PSP Disclosure & Authorization before submitting.')
@@ -144,7 +113,6 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: userAddress,
-          paymentTxHash,
           pspConsentId,
           firstName: firstName.trim(),
           middleName: middleName.trim(),
@@ -698,7 +666,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                     isDarkTheme(theme) ? 'text-green-400' : 'text-green-700'
                   }`}
                 >
-                  FMCSA authorization on file — you can proceed to payment.
+                  FMCSA authorization on file — you can submit your order.
                 </p>
               ) : (
                 <Button type='button' variant='primary' size='md' onClick={() => setShowPspDisclosure(true)}>
@@ -718,70 +686,6 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                 }}
               />
             )}
-
-            {/* Payment Section */}
-            <div className={`${cardClass} p-5`}>
-              <div className={sectionHeaderClass}>
-                <CreditCard
-                  className={`w-4 h-4 ${
-                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                  }`}
-                />
-                Payment
-              </div>
-
-              {!isPaymentComplete ? (
-                <div className='space-y-3'>
-                  <p
-                    className={`text-sm ${
-                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
-                    }`}
-                  >
-                    {!isFormValid
-                      ? 'Fill out all required fields above before paying.'
-                      : !pspConsentId
-                        ? 'Sign the FMCSA PSP Disclosure & Authorization, then pay.'
-                        : 'Complete payment to proceed with your PSP order.'}
-                  </p>
-                  <PspPaymentButton
-                    userAddress={userAddress}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={handlePaymentError}
-                    disabled={isLoading || !canPay}
-                  />
-                </div>
-              ) : (
-                <div
-                  className={`flex items-center gap-3 p-3 rounded-xl ${
-                    isDarkTheme(theme)
-                      ? 'bg-green-500/10 border border-green-500/20'
-                      : 'bg-green-50 border border-green-200'
-                  }`}
-                >
-                  <CheckCircle
-                    className={`w-5 h-5 ${
-                      isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
-                    }`}
-                  />
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${
-                        isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
-                      }`}
-                    >
-                      Payment confirmed
-                    </p>
-                    <p
-                      className={`text-xs font-mono ${
-                        isDarkTheme(theme) ? 'text-green-400/70' : 'text-green-600'
-                      }`}
-                    >
-                      {paymentTxHash?.slice(0, 20)}...
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Error Message */}
             {error && (
@@ -810,9 +714,9 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
             {/* Submit Button */}
             <button
               type='submit'
-              disabled={isLoading || !isPaymentComplete || !pspConsentId}
+              disabled={isLoading || !canSubmit}
               className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                isLoading || !isPaymentComplete || !pspConsentId
+                isLoading || !canSubmit
                   ? isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -825,8 +729,8 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                 ? 'Ordering PSP...'
                 : !pspConsentId
                   ? 'Sign FMCSA disclosure first'
-                  : !isPaymentComplete
-                    ? 'Complete Payment First'
+                  : !isFormValid
+                    ? 'Complete required fields'
                     : 'Submit PSP Order'}
             </button>
           </form>

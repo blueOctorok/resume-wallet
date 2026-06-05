@@ -12,6 +12,7 @@ import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-w
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 
 /**
  * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
@@ -45,12 +46,6 @@ export async function POST(request: NextRequest) {
     if (!dlNumber || !dlState) {
       return NextResponse.json({ error: 'Driver license number and state are required' }, { status: 400 })
     }
-    if (!paymentTxHash) {
-      return NextResponse.json(
-        { error: 'Payment is required. Please complete payment before ordering.' },
-        { status: 400 },
-      )
-    }
     if (!pspConsentId || typeof pspConsentId !== 'string') {
       return NextResponse.json(
         { error: 'FMCSA PSP disclosure must be signed before ordering. Complete the PSP authorization form first.' },
@@ -63,58 +58,52 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
-    let payment = null
-    const { data: exactPayment } = await supabaseService
-      .from('payments')
-      .select('id, status, amount_usdc, user_id, tx_hash, created_at')
-      .eq('tx_hash', paymentTxHash)
-      .eq('type', 'PSP_ORDER')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    let user: { id: string; email?: string | null }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
+      user = { id: u.id, email: u.email }
+    } catch {
+      return NextResponse.json({ error: 'Failed to get or create user account' }, { status: 500 })
+    }
 
-    if (exactPayment) {
-      payment = exactPayment
-    } else if (paymentTxHash.length > 66) {
-      const legacyHash = paymentTxHash.substring(0, 66)
-      const { data: legacyPayment } = await supabaseService
+    const paymentResult = await resolveScreeningPayment(supabaseService, {
+      paymentTxHash,
+      paymentType: 'PSP_ORDER',
+      userId: user.id,
+    })
+    if (!paymentResult.ok) {
+      return NextResponse.json({ error: paymentResult.error }, { status: paymentResult.status })
+    }
+
+    const payment = { id: paymentResult.paymentId }
+    const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
+
+    if (paymentTxHash) {
+      const walletNorm = normalizeWalletAddress(walletAddress)
+      const { data: paymentRow } = await supabaseService
         .from('payments')
-        .select('id, status, amount_usdc, user_id, tx_hash, created_at')
-        .eq('tx_hash', legacyHash)
-        .eq('type', 'PSP_ORDER')
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .select('user_id')
+        .eq('id', payment.id)
         .maybeSingle()
-      payment = legacyPayment
-    }
 
-    if (!payment) {
-      console.error('[PSP ORDER] Payment not found for txHash:', paymentTxHash)
-      return NextResponse.json({ error: 'Payment not found. Please complete payment before ordering.' }, { status: 400 })
-    }
-
-    if (payment.status !== 'COMPLETED') {
-      return NextResponse.json({ error: 'Payment not completed. Please wait for payment confirmation.' }, { status: 400 })
-    }
-
-    const walletNorm = normalizeWalletAddress(walletAddress)
-    const { data: sameWalletRows } = await supabaseService
-      .from('users')
-      .select('id, wallet_address')
-      .ilike('wallet_address', walletNorm)
-
-    const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
-    if (!userIdsForWallet.has(payment.user_id)) {
-      const { data: paymentUserRecord } = await supabaseService
+      const { data: sameWalletRows } = await supabaseService
         .from('users')
         .select('id, wallet_address')
-        .eq('id', payment.user_id)
-        .maybeSingle()
-      const payWalletNorm = paymentUserRecord?.wallet_address
-        ? normalizeWalletAddress(paymentUserRecord.wallet_address)
-        : ''
-      if (!(payWalletNorm && payWalletNorm === walletNorm)) {
-        return NextResponse.json({ error: 'Payment does not belong to this wallet address.' }, { status: 403 })
+        .ilike('wallet_address', walletNorm)
+
+      const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
+      if (paymentRow?.user_id && !userIdsForWallet.has(paymentRow.user_id)) {
+        const { data: paymentUserRecord } = await supabaseService
+          .from('users')
+          .select('wallet_address')
+          .eq('id', paymentRow.user_id)
+          .maybeSingle()
+        const payWalletNorm = paymentUserRecord?.wallet_address
+          ? normalizeWalletAddress(paymentUserRecord.wallet_address)
+          : ''
+        if (!(payWalletNorm && payWalletNorm === walletNorm)) {
+          return NextResponse.json({ error: 'Payment does not belong to this wallet address.' }, { status: 403 })
+        }
       }
     }
 
@@ -124,14 +113,6 @@ export async function POST(request: NextRequest) {
     const accioApiUrl = process.env.ACCIO_API_URL
     if (!accioAccount || !accioUsername || !accioPassword || !accioApiUrl) {
       return NextResponse.json({ error: 'PSP service configuration error' }, { status: 500 })
-    }
-
-    let user: { id: string; email?: string | null }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
-      user = { id: u.id, email: u.email }
-    } catch {
-      return NextResponse.json({ error: 'Failed to get or create user account' }, { status: 500 })
     }
 
     const { data: fmcsaConsent, error: consentErr } = await supabaseService
@@ -293,7 +274,7 @@ export async function POST(request: NextRequest) {
       dlState: n.dlState,
       expiresAtIso: expiresAt,
       paymentId: payment.id,
-      paymentTxHash,
+      paymentTxHash: storedPaymentTxHash,
     })
 
     if ('error' in inserted) {

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
-import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 
 /**
  * API Route: Order MVR from Accio
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const { 
       walletAddress, 
-      paymentTxHash, // Payment transaction hash (required)
+      paymentTxHash, // Optional — omitted when USDC billing removed (D3)
       dlNumber, 
       dlState, 
       mvrSearchType = 'standard',
@@ -62,140 +63,64 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate payment before proceeding
-    if (!paymentTxHash) {
-      return NextResponse.json(
-        { error: 'Payment is required. Please complete payment before ordering.' },
-        { status: 400 }
-      )
-    }
-
-    // Use service role client to bypass RLS for payment lookup and order creation
     const supabaseService = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Verify payment exists and is completed.
-    // New payments store the full tx hash; old ones may be truncated to 66 chars.
-    // Try exact match first, then fall back to the 66-char prefix for legacy rows.
-    let payment = null
-    let paymentError = null
-
-    const { data: exactPayment, error: exactError } = await supabaseService
-      .from('payments')
-      .select('id, status, amount_usdc, user_id, tx_hash, created_at')
-      .eq('tx_hash', paymentTxHash)
-      .eq('type', 'MVR_ORDER')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (exactPayment) {
-      payment = exactPayment
-    } else if (paymentTxHash.length > 66) {
-      const legacyHash = paymentTxHash.substring(0, 66)
-      const { data: legacyPayment, error: legacyError } = await supabaseService
-        .from('payments')
-        .select('id, status, amount_usdc, user_id, tx_hash, created_at')
-        .eq('tx_hash', legacyHash)
-        .eq('type', 'MVR_ORDER')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      payment = legacyPayment
-      paymentError = legacyError
-    } else {
-      paymentError = exactError
-    }
-
-    if (paymentError) {
-      console.error('[MVR ORDER] Payment lookup error:', paymentError)
+    let user: { id: string; email?: string | null }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
+      user = { id: u.id, email: u.email }
+    } catch (err) {
+      console.error('[MVR ORDER] Error get/create user:', err)
       return NextResponse.json(
-        { error: 'Failed to verify payment. Please try again.' },
+        { error: 'Failed to get or create user account' },
         { status: 500 }
       )
     }
 
-    if (!payment) {
-      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash)
-      return NextResponse.json(
-        { error: 'Payment not found. Please complete payment before ordering.' },
-        { status: 400 }
-      )
-    }
-
-    console.log('[MVR ORDER] Found payment:', {
-      paymentId: payment.id,
-      paymentUserId: payment.user_id,
-      txHash: payment.tx_hash,
-      status: payment.status,
-      requestWallet: walletAddress,
+    const paymentResult = await resolveScreeningPayment(supabaseService, {
+      paymentTxHash,
+      paymentType: 'MVR_ORDER',
+      userId: user.id,
     })
-
-    if (payment.status !== 'COMPLETED') {
-      console.error('[MVR ORDER] Payment not completed. Status:', payment.status)
-      return NextResponse.json(
-        { error: 'Payment not completed. Please wait for payment confirmation.' },
-        { status: 400 }
-      )
+    if (!paymentResult.ok) {
+      return NextResponse.json({ error: paymentResult.error }, { status: paymentResult.status })
     }
 
-    // Verify payment belongs to this wallet (same canonical lookup as payment route + duplicate rows)
-    const walletNorm = normalizeWalletAddress(walletAddress)
-    let walletUser: { id: string; wallet_address?: string | null }
-    try {
-      const row = await getUserByWallet(supabaseService, walletAddress)
-      if (!row?.id) {
-        console.error('[MVR ORDER] No user found for wallet address:', walletAddress)
-        return NextResponse.json(
-          { error: 'No user account found for this wallet.' },
-          { status: 404 }
-        )
-      }
-      walletUser = { id: row.id, wallet_address: row.wallet_address as string | undefined }
-    } catch (e) {
-      console.error('[MVR ORDER] Error looking up user by wallet:', e)
-      return NextResponse.json({ error: 'Failed to verify user.' }, { status: 500 })
-    }
+    const payment = { id: paymentResult.paymentId }
+    const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
-    const { data: sameWalletRows, error: sameWalletErr } = await supabaseService
-      .from('users')
-      .select('id, wallet_address')
-      .ilike('wallet_address', walletNorm)
+    if (paymentTxHash) {
+      const walletNorm = normalizeWalletAddress(walletAddress)
+      const { data: paymentRow } = await supabaseService
+        .from('payments')
+        .select('user_id')
+        .eq('id', payment.id)
+        .maybeSingle()
 
-    if (sameWalletErr) {
-      console.error('[MVR ORDER] Error listing users for wallet:', sameWalletErr)
-      return NextResponse.json({ error: 'Failed to verify user.' }, { status: 500 })
-    }
-
-    const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
-    const paymentBelongsToWallet = userIdsForWallet.has(payment.user_id)
-
-    if (!paymentBelongsToWallet) {
-      const { data: paymentUserRecord } = await supabaseService
+      const { data: sameWalletRows } = await supabaseService
         .from('users')
         .select('id, wallet_address')
-        .eq('id', payment.user_id)
-        .maybeSingle()
-      const payWalletNorm = paymentUserRecord?.wallet_address
-        ? normalizeWalletAddress(paymentUserRecord.wallet_address)
-        : ''
-      console.error('[MVR ORDER] Payment user mismatch:', {
-        paymentUserId: payment.user_id,
-        walletUserId: walletUser.id,
-        walletAddress,
-        paymentUserWallet: paymentUserRecord?.wallet_address ?? null,
-        userIdsForWallet: [...userIdsForWallet],
-      })
-      if (payWalletNorm && payWalletNorm === walletNorm) {
-        console.log('[MVR ORDER] Payment row user_id wallet matches request (Set miss); allowing')
-      } else {
-        return NextResponse.json(
-          { error: 'Payment does not belong to this wallet address.' },
-          { status: 403 }
-        )
+        .ilike('wallet_address', walletNorm)
+
+      const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
+      if (paymentRow?.user_id && !userIdsForWallet.has(paymentRow.user_id)) {
+        const { data: paymentUserRecord } = await supabaseService
+          .from('users')
+          .select('wallet_address')
+          .eq('id', paymentRow.user_id)
+          .maybeSingle()
+        const payWalletNorm = paymentUserRecord?.wallet_address
+          ? normalizeWalletAddress(paymentUserRecord.wallet_address)
+          : ''
+        if (!(payWalletNorm && payWalletNorm === walletNorm)) {
+          return NextResponse.json(
+            { error: 'Payment does not belong to this wallet address.' },
+            { status: 403 }
+          )
+        }
       }
     }
 
@@ -213,20 +138,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'with payment:', paymentTxHash)
-
-    // 1. Get or create user (single place — avoids duplicate user rows)
-    let user: { id: string; email?: string | null }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
-      user = { id: u.id, email: u.email }
-    } catch (err) {
-      console.error('[MVR ORDER] Error get/create user:', err)
-      return NextResponse.json(
-        { error: 'Failed to get or create user account' },
-        { status: 500 }
-      )
-    }
+    console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'payment:', storedPaymentTxHash ?? 'waived')
 
     // Resolve name from user_profiles for fallback personal info
     const { data: userProfile } = await supabaseService
@@ -473,8 +385,8 @@ export async function POST(request: NextRequest) {
         driver_user_id: user.id,
         driver_profile_id: null,
         driver_application_id: dotApplication?.id || null,
-        payment_id: payment.id, // Link to the payment
-        payment_tx_hash: paymentTxHash, // Column widened to TEXT in migration 065
+        payment_id: payment.id,
+        payment_tx_hash: storedPaymentTxHash,
         accio_order_number: orderNumber,
         accio_suborder_number: subOrderId,
         accio_remote_order_number: accioOrderId || null, // Accio's internal order number (from orderID in response)

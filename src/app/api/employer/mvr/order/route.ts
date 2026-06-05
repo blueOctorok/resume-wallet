@@ -6,6 +6,7 @@ import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from 
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 
 /**
  * POST /api/employer/mvr/order
@@ -14,7 +15,7 @@ import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/sc
  *   - Valid employer wallet with company membership
  *   - Driver's signed background check consent (hasBgcheckConsent = true)
  *
- * Requires a completed USDC payment (from the company shared wallet via MvrPaymentButton).
+ * Optional USDC payment (removed in D3 — waived/internal orders use synthetic payment rows).
  * Unlike the admin route there is no requireAdmin()
  * middleware — any authenticated employer with company access can order.
  *
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    const missing = ['candidateUserId','paymentTxHash','dlNumber','dlState','firstName','lastName','dob','ssn','address','city','state','zip']
+    const missing = ['candidateUserId','dlNumber','dlState','firstName','lastName','dob','ssn','address','city','state','zip']
       .filter(f => !body[f])
     if (missing.length > 0) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
@@ -136,28 +137,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate the USDC payment was recorded before allowing the order.
-    // The payment is written to the payments table by MvrPaymentButton → /api/mvr/payment.
-    const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, status, user_id, company_id')
-      .eq('tx_hash', truncatedTxHash)
-      .eq('type', 'MVR_ORDER')
-      .maybeSingle()
-
-    if (!payment) {
-      return NextResponse.json({ error: 'Payment not found — complete USDC payment first' }, { status: 402 })
+    // Resolve payment (optional USDC tx hash; waived when omitted — same pattern as screenings/order).
+    const paymentResult = await resolveScreeningPayment(supabase, {
+      paymentTxHash,
+      paymentType: 'MVR_ORDER',
+      userId,
+      companyId,
+      candidateUserId,
+    })
+    if (!paymentResult.ok) {
+      return NextResponse.json({ error: paymentResult.error }, { status: paymentResult.status })
     }
-    if (payment.status !== 'COMPLETED') {
-      return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
-    }
-    if (payment.company_id && payment.company_id !== companyId) {
-      return NextResponse.json(
-        { error: 'This payment is tied to a different company' },
-        { status: 403 }
-      )
-    }
+    const payment = { id: paymentResult.paymentId }
+    const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
     // Verify the candidate exists and has signed the disclosure
     const { data: candidate } = await supabase

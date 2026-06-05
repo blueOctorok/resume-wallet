@@ -2,9 +2,8 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import MvrPaymentButton from './MvrPaymentButton'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
@@ -41,10 +40,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [success, setSuccess] = useState(false)
   const [orderResult, setOrderResult] = useState<any>(null)
 
-  // Payment state
-  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
-  const [isPaymentComplete, setIsPaymentComplete] = useState(false)
-  /** Self-order: CRA disclosure + express consent before pay (Key Background / FCRA transparency) */
+  /** Self-order: CRA disclosure + express consent before submit (Key Background / FCRA transparency) */
   const [vendorProcessingAck, setVendorProcessingAck] = useState(false)
 
   // Employer-requested MVR (FCRA gate): if a pending mvr_order request exists for this candidate,
@@ -68,38 +64,10 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
       dlState.trim()
   )
 
-  const canPay = isFormValid && vendorProcessingAck
-
-  // Check for pending payment on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pendingPayment = localStorage.getItem('pendingMvrPayment')
-      if (pendingPayment) {
-        setPaymentTxHash(pendingPayment)
-        setIsPaymentComplete(true)
-        localStorage.removeItem('pendingMvrPayment')
-      }
-    }
-  }, [])
-
-  const handlePaymentSuccess = (txHash: string) => {
-    setPaymentTxHash(txHash)
-    setIsPaymentComplete(true)
-    setError(null)
-  }
-
-  const handlePaymentError = (errorMsg: string) => {
-    setError(`Payment failed: ${errorMsg}`)
-    setIsPaymentComplete(false)
-  }
+  const canSubmit = isFormValid && vendorProcessingAck
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!isPaymentComplete || !paymentTxHash) {
-      setError('Please complete payment before submitting order')
-      return
-    }
 
     if (!vendorProcessingAck) {
       setError('Please read the disclosure and check the consent box before submitting.')
@@ -117,7 +85,6 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: userAddress,
-          paymentTxHash,
           firstName: firstName.trim(),
           middleName: middleName.trim(),
           lastName: lastName.trim(),
@@ -532,71 +499,6 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </label>
             </div>
 
-            {/* Payment Section */}
-            <div className={`${cardClass} p-5`}>
-              <div className={sectionHeaderClass}>
-                <CreditCard
-                  className={`w-4 h-4 ${
-                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                  }`}
-                />
-                Payment
-              </div>
-
-              {!isPaymentComplete ? (
-                <div className='space-y-3'>
-                  <p
-                    className={`text-sm ${
-                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
-                    }`}
-                  >
-                    {!isFormValid
-                      ? 'Fill out all required fields above before paying.'
-                      : !vendorProcessingAck
-                        ? 'Read the disclosure and check the consent box, then pay.'
-                        : 'Complete payment to proceed with your MVR order.'}
-                  </p>
-                  <MvrPaymentButton
-                    userAddress={userAddress}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentError={handlePaymentError}
-                    disabled={isLoading || !canPay}
-                  />
-                </div>
-              ) : (
-                <div
-                  className={`flex items-center gap-3 p-3 rounded-xl ${
-                    isDarkTheme(theme)
-                      ? 'bg-green-500/10 border border-green-500/20'
-                      : 'bg-green-50 border border-green-200'
-                  }`}
-                >
-                  <CheckCircle
-                    className={`w-5 h-5 ${
-                      isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'
-                    }`}
-                  />
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${
-                        isDarkTheme(theme) ? 'text-green-300' : 'text-green-700'
-                      }`}
-                    >
-                      Payment confirmed
-                    </p>
-                    <p
-                      className={`text-xs font-mono ${
-                        isDarkTheme(theme) ? 'text-green-400/70' : 'text-green-600'
-                      }`}
-                    >
-                      {paymentTxHash?.slice(0, 20)}...
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Error Message */}
             {error && (
               <div
                 className={`flex items-start gap-2 p-4 rounded-xl ${
@@ -610,22 +512,16 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                     isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
                   }`}
                 />
-                <p
-                  className={`text-sm ${
-                    isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'
-                  }`}
-                >
-                  {error}
-                </p>
+                <p className={`text-sm ${isDarkTheme(theme) ? 'text-red-300' : 'text-red-700'}`}>{error}</p>
               </div>
             )}
 
             {/* Submit Button */}
             <button
               type='submit'
-              disabled={isLoading || !isPaymentComplete || !vendorProcessingAck}
+              disabled={isLoading || !canSubmit}
               className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                isLoading || !isPaymentComplete || !vendorProcessingAck
+                isLoading || !canSubmit
                   ? isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -638,8 +534,8 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                 ? 'Ordering MVR...'
                 : !vendorProcessingAck
                   ? 'Confirm consent above'
-                  : !isPaymentComplete
-                    ? 'Complete Payment First'
+                  : !isFormValid
+                    ? 'Complete required fields'
                     : 'Submit MVR Order'}
             </button>
           </form>

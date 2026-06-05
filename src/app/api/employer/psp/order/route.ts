@@ -13,6 +13,7 @@ import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 
 /**
  * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
@@ -47,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     const missing = [
       'candidateUserId',
-      'paymentTxHash',
       'dlNumber',
       'dlState',
       'firstName',
@@ -127,23 +127,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('id, status, user_id, company_id')
-      .eq('tx_hash', truncatedTxHash)
-      .eq('type', 'PSP_ORDER')
-      .maybeSingle()
-
-    if (!payment) {
-      return NextResponse.json({ error: 'Payment not found — complete USDC payment first' }, { status: 402 })
+    const paymentResult = await resolveScreeningPayment(supabase, {
+      paymentTxHash,
+      paymentType: 'PSP_ORDER',
+      userId: employerUserId,
+      companyId,
+      candidateUserId,
+    })
+    if (!paymentResult.ok) {
+      return NextResponse.json({ error: paymentResult.error }, { status: paymentResult.status })
     }
-    if (payment.status !== 'COMPLETED') {
-      return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
-    }
-    if (payment.company_id && payment.company_id !== companyId) {
-      return NextResponse.json({ error: 'This payment is tied to a different company' }, { status: 403 })
-    }
+    const payment = { id: paymentResult.paymentId }
+    const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
     const { data: candidate } = await supabase.from('users').select('id, email').eq('id', candidateUserId).single()
     if (!candidate) {
@@ -256,7 +251,7 @@ export async function POST(request: NextRequest) {
       orderedByUserId: employerUserId,
       orderedByEmployer: true,
       paymentId: payment.id,
-      paymentTxHash,
+      paymentTxHash: storedPaymentTxHash,
     })
 
     if ('error' in inserted) {
