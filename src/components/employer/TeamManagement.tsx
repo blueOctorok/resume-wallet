@@ -29,7 +29,7 @@ interface TeamMember {
   role: string
   name: string | null
   email: string
-  walletAddress: string | null
+  sessionUserId: string | null
   isActive: boolean
   isPending: boolean
   invitedAt: string
@@ -37,7 +37,7 @@ interface TeamMember {
 }
 
 interface TeamManagementProps {
-  walletAddress: string
+  sessionUserId: string
   onBack?: () => void
 }
 
@@ -51,7 +51,7 @@ function getRoleColor(role: string): 'purple' | 'blue' | 'teal' | 'gray' {
   }
 }
 
-export default function TeamManagement({ walletAddress, onBack }: TeamManagementProps) {
+export default function TeamManagement({ sessionUserId, onBack }: TeamManagementProps) {
   const { theme } = useTheme()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,7 +98,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       setLoading(false)
       setRefreshing(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
     fetchTeam()
@@ -319,7 +319,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
                   <UserIdentity
                     name={member.name}
                     email={member.email}
-                    walletAddress={member.walletAddress}
+                    sessionUserId={member.sessionUserId}
                     avatarColor={getRoleColor(member.role)}
                     size='lg'
                     showWallet={true}

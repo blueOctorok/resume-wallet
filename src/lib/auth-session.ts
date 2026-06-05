@@ -55,3 +55,15 @@ export async function getStormUserIdFromRequest(
   const supabaseSession = await createServerSupabase()
   return resolveStormUserId({ supabaseSession })
 }
+
+/** Load the caller's `users` row by Supabase session id. */
+export async function getSessionUserRow(
+  supabase: SupabaseClient,
+  request?: AuthSessionRequest
+): Promise<{ id: string; email?: string | null; wallet_address?: string; role?: string | null } | null> {
+  const userId = await getStormUserIdFromRequest(request)
+  if (!userId) return null
+  const { data, error } = await supabase.from('users').select('id, email, wallet_address, role').eq('id', userId).maybeSingle()
+  if (error || !data) return null
+  return data
+}

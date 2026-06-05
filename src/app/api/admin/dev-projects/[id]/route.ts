@@ -50,7 +50,7 @@ export async function GET(
       success: true,
       project: {
         ...project,
-        walletAddress: user?.wallet_address,
+        legacyWalletAddress: user?.wallet_address,
       },
       profile: profileInfo,
     })

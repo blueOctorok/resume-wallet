@@ -31,7 +31,7 @@ interface CandidateNote {
 interface CandidateNotesPanelProps {
   candidateUserId: string
   applicationId?: string
-  walletAddress: string
+  sessionUserId: string
   candidateName: string
 }
 
@@ -48,7 +48,7 @@ const QUICK_TAGS = [
 export default function CandidateNotesPanel({
   candidateUserId,
   applicationId,
-  walletAddress,
+  sessionUserId,
   candidateName,
 }: CandidateNotesPanelProps) {
   const { theme } = useTheme()
@@ -84,7 +84,7 @@ export default function CandidateNotesPanel({
     } finally {
       setLoading(false)
     }
-  }, [candidateUserId, walletAddress])
+  }, [candidateUserId, sessionUserId])
 
   useEffect(() => {
     fetchNotes()

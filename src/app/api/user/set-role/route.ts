@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { isUserEmployerLinked } from '@/lib/employer-account-guard'
 
 // Admin wallets that bypass company/invite requirement for employer role (for testing)
@@ -11,7 +11,8 @@ const EMPLOYER_WHITELIST_WALLETS = [
 
 export async function POST(request: Request) {
   try {
-    const { role, walletAddress, companyName, dotNumber, referralCode } = await request.json()
+    const { role, companyName, dotNumber, referralCode } = await request.json()
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
     // Validate role - allow null/empty to clear role (for testing)
     if (
@@ -28,20 +29,22 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
     const newRole = role === null || role === '' ? null : role
 
-    // Single place for "get or create user" by wallet (avoids duplicate user rows)
-    const { user: userToUpdate } = await getOrCreateUserByWallet(supabase, walletAddress, {
-      role: newRole,
-    })
+    const { data: userToUpdate, error: userFetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', sessionUserId)
+      .single()
+
+    if (userFetchError || !userToUpdate) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
     const currentRole = userToUpdate.role ?? null
     console.log(
       `[SET ROLE] User ${userToUpdate.id} changing role from "${currentRole}" to "${newRole ?? 'NULL (cleared)'}"`
@@ -220,11 +223,13 @@ export async function POST(request: Request) {
       }
 
       // 5. If nothing found, check whitelist — then REJECT if not whitelisted
-      const isWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
+      const legacyWallet = (userToUpdate.wallet_address as string | undefined)?.toLowerCase()
+      const isWhitelisted =
+        legacyWallet && EMPLOYER_WHITELIST_WALLETS.includes(legacyWallet)
 
       if (!companyAssigned && !isWhitelisted) {
         console.log(
-          `[SET ROLE] Rejected employer access for ${userEmail || walletAddress} - no company/invite found`
+          `[SET ROLE] Rejected employer access for ${userEmail || sessionUserId} - no company/invite found`
         )
         return NextResponse.json(
           {
@@ -238,7 +243,7 @@ export async function POST(request: Request) {
 
       // Whitelisted admins without a company get a dev company auto-created
       if (!companyAssigned && isWhitelisted) {
-        console.log(`[SET ROLE] Whitelisted admin ${walletAddress} - auto-creating dev company`)
+        console.log(`[SET ROLE] Whitelisted admin ${sessionUserId} - auto-creating dev company`)
         const { data: devCompany, error: createErr } = await supabase
           .from('companies')
           .insert({

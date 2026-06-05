@@ -7,7 +7,7 @@ import type { AdminTabProps, AdminJob } from '@/components/admin/admin-types'
 
 export default function JobsTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -19,10 +19,10 @@ export default function JobsTab({
   const [sourceFilter, setSourceFilter] = useState<'all' | 'stormchain' | 'external'>('all')
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const res = await fetch('/api/admin/jobs', {
-        headers: { 'x-wallet-address': walletAddress },
+        headers: { 'x-wallet-address': sessionUserId },
       })
       const data = await res.json()
       if (data.jobs) {
@@ -50,7 +50,7 @@ export default function JobsTab({
     } catch (err) {
       console.error('Failed to fetch jobs:', err)
     }
-  }, [walletAddress, searchQuery, jobsFilter, sourceFilter, setTotalCount])
+  }, [sessionUserId, searchQuery, jobsFilter, sourceFilter, setTotalCount])
 
   const pageOffset = (currentPage - 1) * pageSize
   const pagedJobs = jobs.slice(pageOffset, pageOffset + pageSize)
@@ -173,7 +173,7 @@ export default function JobsTab({
                     method: 'PATCH',
                     headers: {
                       'Content-Type': 'application/json',
-                      'x-wallet-address': walletAddress || '',
+                      'x-wallet-address': sessionUserId || '',
                     },
                     body: JSON.stringify({ isActive: !job.isActive }),
                   })
@@ -192,7 +192,7 @@ export default function JobsTab({
                   if (confirm(`Delete "${job.title}" permanently? This cannot be undone.`)) {
                     const res = await fetch(`/api/admin/jobs/${job.id}`, {
                       method: 'DELETE',
-                      headers: { 'x-wallet-address': walletAddress || '' },
+                      headers: { 'x-wallet-address': sessionUserId || '' },
                     })
                     if (res.ok) {
                       fetchData()

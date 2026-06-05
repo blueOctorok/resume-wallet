@@ -68,8 +68,9 @@ interface NavigationProps {
   userRole?: UserRole
   onStatusClick?: () => void
   onNavigate?: (page: NavPage) => void
+  /** @deprecated Use sessionUserId; kept for backwards compatibility. */
   mvrWalletAddress?: string | null
-  walletAddress?: string | null
+  sessionUserId?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
   /** Callback to switch user role */
@@ -88,12 +89,13 @@ export default function Navigation({
   onStatusClick,
   onNavigate,
   mvrWalletAddress,
-  walletAddress,
+  sessionUserId,
   tHasUnread = false,
   onTClick,
   onSwitchRole,
   onBrowseGuided,
 }: NavigationProps) {
+  const mvrIdentity = sessionUserId ?? mvrWalletAddress ?? null
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
   const hubDropdownRef = useRef<HTMLDivElement>(null)
@@ -209,9 +211,9 @@ export default function Navigation({
                   </button>
                 )}
 
-                {isAuthenticated && walletAddress && (
+                {isAuthenticated && sessionUserId && (
                   <div className='hidden sm:block'>
-                    <NotificationBell walletAddress={walletAddress} />
+                    <NotificationBell sessionUserId={sessionUserId} />
                   </div>
                 )}
 
@@ -348,8 +350,8 @@ export default function Navigation({
                   </button>
 
                   {/* Notifications */}
-                  {walletAddress && (
-                    <NotificationBell walletAddress={walletAddress} />
+                  {sessionUserId && (
+                    <NotificationBell sessionUserId={sessionUserId} />
                   )}
                 </div>
               )}
@@ -385,9 +387,9 @@ export default function Navigation({
               )}
 
               {/* MVR Status Badge - Shows status without being a button */}
-              {isAuthenticated && userRole === 'driver' && mvrWalletAddress && (
+              {isAuthenticated && userRole === 'driver' && mvrIdentity && (
                 <div className='w-full sm:w-auto flex justify-center sm:justify-start'>
-                  <MvrStatusBadge walletAddress={mvrWalletAddress} />
+                  <MvrStatusBadge sessionUserId={mvrIdentity} />
                 </div>
               )}
 
@@ -425,7 +427,7 @@ export default function Navigation({
                     {/* Hub refresh — candidates AND employers. EmployerHub listens for
                         `hubRefreshNonce` (same store as CandidateHub) and refetches its
                         data when this is clicked. */}
-                    {(userRole === 'candidate' || userRole === 'employer') && walletAddress ? (
+                    {(userRole === 'candidate' || userRole === 'employer') && sessionUserId ? (
                       <div className={cn(navHubGradientRingClass(theme), 'shrink-0')}>
                         <button
                           type='button'
@@ -649,7 +651,7 @@ export default function Navigation({
                               onClick={() => {
                                 void (async () => {
                                   // Candidates: tips tied to `users.stormi_walkthrough_dismissed_at` (per wallet).
-                                  if (userRole === 'candidate' && walletAddress) {
+                                  if (userRole === 'candidate' && sessionUserId) {
                                     const nextDismissed = !walkthroughDismissed
                                     const res = await fetch('/api/user/profile', {
                                       method: 'PATCH',

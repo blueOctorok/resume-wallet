@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal'
 
 interface CreateCompanyModalProps {
   theme: 'light' | 'dark'
-  walletAddress: string
+  sessionUserId: string
   open: boolean
   onClose: () => void
   onCreated: () => void
@@ -15,7 +15,7 @@ interface CreateCompanyModalProps {
 
 export default function CreateCompanyModal({
   theme,
-  walletAddress,
+  sessionUserId,
   open,
   onClose,
   onCreated,
@@ -50,7 +50,7 @@ export default function CreateCompanyModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': sessionUserId,
         },
         body: JSON.stringify({
           companyName: form.companyName.trim(),

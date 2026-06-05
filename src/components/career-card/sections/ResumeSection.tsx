@@ -19,7 +19,7 @@ interface ResumeSectionProps {
   mode: CareerCardMode
   isDark: boolean
   onAction?: () => void
-  walletAddress?: string
+  sessionUserId?: string
 }
 
 function formatTeaserMonthYear(s?: string) {
@@ -236,7 +236,7 @@ export default function ResumeSection({
   mode,
   isDark,
   onAction,
-  walletAddress = '',
+  sessionUserId = '',
 }: ResumeSectionProps) {
   const isVerified = String(data.verificationStatus || '').toLowerCase() === 'verified'
   const [showDriverPreview, setShowDriverPreview] = useState(false)
@@ -440,7 +440,7 @@ export default function ResumeSection({
           }}
           onVerify={() => setShowDevPreview(false)}
           onDelete={() => setShowDevPreview(false)}
-          userAddress={walletAddress}
+          userAddress={sessionUserId}
         />
       )}
     </>

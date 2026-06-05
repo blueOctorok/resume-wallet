@@ -21,17 +21,17 @@ export async function POST(request: NextRequest) {
     return unauthorized('Missing or invalid admin key.')
   }
 
-  let payload: { walletAddress?: string } = {}
+  let payload: { sessionUserId?: string } = {}
   try {
     payload = await request.json()
   } catch {
     return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 })
   }
 
-  const walletAddress = payload.walletAddress?.trim()
-  if (!walletAddress) {
+  const sessionUserId = payload.sessionUserId?.trim()
+  if (!sessionUserId) {
     return NextResponse.json(
-      { error: 'walletAddress is required.' },
+      { error: 'sessionUserId is required.' },
       { status: 400 }
     )
   }
@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
 
     // Case-insensitive lookup
-    const user = await getUserByWallet(supabase, walletAddress)
+    const user = await getUserByWallet(supabase, sessionUserId)
     if (!user) {
       return NextResponse.json({
         success: true,
-        walletAddress,
+        sessionUserId,
         message: 'No records found for this wallet. Nothing to delete.',
       })
     }
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      walletAddress,
+      sessionUserId,
       deleted: {
         resumes: true,
         driverApplications: true,

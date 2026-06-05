@@ -68,7 +68,7 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     return (
       <ProfileSetup
         role="developer"
-        walletAddress={userAddress}
+        sessionUserId={userAddress}
         onComplete={goBack}
       />
     )
@@ -127,7 +127,7 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     return (
       <div className='max-w-2xl mx-auto'>
         <MessageInbox
-          walletAddress={userAddress}
+          sessionUserId={userAddress}
           onBack={goBack}
           initialThreadId={initialThreadId}
         />

@@ -35,7 +35,7 @@ interface PspSectionProps {
   mode: CareerCardMode
   isDark: boolean
   onNavigateToOrder?: () => void
-  walletAddress?: string | null
+  sessionUserId?: string | null
 }
 
 export default function PspSection({
@@ -43,7 +43,7 @@ export default function PspSection({
   mode,
   isDark,
   onNavigateToOrder,
-  walletAddress,
+  sessionUserId,
 }: PspSectionProps) {
   const [open, setOpen] = useState(false)
 
@@ -70,7 +70,7 @@ export default function PspSection({
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
     !isFailed &&
-    (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
+    (isComplete ? Boolean(sessionUserId && data.orderId) : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 
@@ -178,11 +178,11 @@ export default function PspSection({
         </p>
       )}
 
-      {open && walletAddress && (
+      {open && sessionUserId && (
         <PspViewModal
           isOpen={open}
           onClose={() => setOpen(false)}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={data.orderId}
         />
       )}

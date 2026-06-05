@@ -21,7 +21,7 @@ import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 
 interface JobPostingFormProps {
-  walletAddress: string
+  sessionUserId: string
   onBack: () => void
   onSuccess?: () => void
 }
@@ -62,7 +62,7 @@ const US_STATES = [
 ]
 
 export default function JobPostingForm({
-  walletAddress,
+  sessionUserId,
   onBack,
   onSuccess,
 }: JobPostingFormProps) {

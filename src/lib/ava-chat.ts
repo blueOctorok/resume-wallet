@@ -184,7 +184,7 @@ export function useHubContext(): HubContext {
 export type SendToStormiPayload =
   | {
       message: string
-      walletAddress?: string | null
+      sessionUserId?: string | null
       audience?: 'candidate'
       hubContext: HubContext
       blockContext?: BlockContext
@@ -202,7 +202,7 @@ export type SendToStormiPayload =
     }
   | {
       message: string
-      walletAddress?: string | null
+      sessionUserId?: string | null
       audience: 'employer'
       employerContext: EmployerHubContext
       conversationHistory?: StormiConversationTurn[]
@@ -210,12 +210,12 @@ export type SendToStormiPayload =
     }
 
 export async function sendToStormi(payload: SendToStormiPayload): Promise<StormiResponse> {
-  const { message, walletAddress } = payload
+  const { message, sessionUserId } = payload
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
-  if (walletAddress) {
-    headers['x-wallet-address'] = walletAddress
+  if (sessionUserId) {
+    headers['x-wallet-address'] = sessionUserId
   }
 
   const autoWelcome =
@@ -277,5 +277,5 @@ export async function sendToStormi(payload: SendToStormiPayload): Promise<Stormi
 
 /** Hook to get the wallet address for Stormi requests */
 export function useStormiWallet(): string | null {
-  return useAuthStore((s) => s.walletAddress)
+  return useAuthStore((s) => s.sessionUserId)
 }

@@ -53,8 +53,8 @@ export async function getUserResumes(userId: string) {
   return resumes
 }
 
-export async function getUserProfile(walletAddress: string) {
-  console.log('👤 Supabase DB: Getting user profile for:', walletAddress)
+export async function getUserProfile(sessionUserId: string) {
+  console.log('👤 Supabase DB: Getting user profile for:', sessionUserId)
 
   // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
   const supabase = await getAdminSupabaseClient()
@@ -99,7 +99,7 @@ export async function getUserProfile(walletAddress: string) {
  * cdl* args are ignored here — use block_driver_cdl / block-data APIs instead.
  */
 export async function upsertUser(data: {
-  walletAddress: string
+  sessionUserId: string
   name?: string
   cdlNumber?: string
   cdlState?: string
@@ -107,13 +107,13 @@ export async function upsertUser(data: {
 }) {
   console.log('👤 Supabase DB: Starting user upsert...')
   console.log('👤 Supabase DB: Input data:', {
-    walletAddress: data.walletAddress,
+    sessionUserId: data.sessionUserId,
     hasName: !!data.name,
   })
 
   try {
     const supabase = await getAdminSupabaseClient()
-    const normalized = normalizeWalletAddress(data.walletAddress)
+    const normalized = normalizeWalletAddress(data.sessionUserId)
 
     let user = await getUserByWallet(supabase, data.walletAddress)
 

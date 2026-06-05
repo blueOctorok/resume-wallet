@@ -53,7 +53,7 @@ export interface JobPosting {
 
 interface JobPostingsSectionProps {
   jobs: JobPosting[]
-  walletAddress: string
+  sessionUserId: string
   theme: string
   onPostJob: () => void
   onRefresh: () => void
@@ -373,13 +373,13 @@ function JobCard({
 
 function EditJobModal({
   job,
-  walletAddress,
+  sessionUserId,
   theme,
   onClose,
   onSaved,
 }: {
   job: JobPosting
-  walletAddress: string
+  sessionUserId: string
   theme: string
   onClose: () => void
   onSaved: () => void
@@ -575,7 +575,7 @@ function EditJobModal({
 
 export default function JobPostingsSection({
   jobs,
-  walletAddress,
+  sessionUserId,
   theme,
   onPostJob,
   onRefresh,
@@ -706,7 +706,7 @@ export default function JobPostingsSection({
       {editingJob && (
         <EditJobModal
           job={editingJob}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           theme={theme}
           onClose={() => setEditingJob(null)}
           onSaved={() => { setEditingJob(null); onRefresh() }}

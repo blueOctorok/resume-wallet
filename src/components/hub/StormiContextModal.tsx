@@ -23,7 +23,7 @@ export default function StormiContextModal() {
   const closeStormiContextModal = useHubBlocksStore((s) => s.closeStormiContextModal)
   const completeOnboarding = useHubBlocksStore((s) => s.completeOnboarding)
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
 
   const [occupation, setOccupation] = useState('')
   const [seekingReason, setSeekingReason] = useState('')
@@ -43,7 +43,7 @@ export default function StormiContextModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!walletAddress || !canSubmit) return
+    if (!sessionUserId || !canSubmit) return
 
     setIsSubmitting(true)
     setError(null)
@@ -52,10 +52,10 @@ export default function StormiContextModal() {
       await completeOnboarding(
         occupation.trim(),
         seekingReason.trim(),
-        walletAddress,
+        sessionUserId,
         extraContext.trim() || null,
       )
-      if (walletAddress) await fetchHubData(walletAddress)
+      if (sessionUserId) await fetchHubData(sessionUserId)
       closeStormiContextModal()
     } catch {
       setError('Something went wrong. Please try again.')

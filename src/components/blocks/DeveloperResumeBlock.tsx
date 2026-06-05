@@ -29,9 +29,9 @@ export default function DeveloperResumeBlock({
   existingResumeId,
   onSave,
 }: DeveloperResumeBlockProps) {
-  const walletAddress = useAuthStore((s) => s.walletAddress)
-  // Match ResumeBuilder: Alchemy `user.address` can lag behind the wallet store
-  const userAddress = (user?.address ?? walletAddress ?? '').trim() || undefined
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
+  // Match ResumeBuilder: Alchemy `sessionUserId` can lag behind the wallet store
+  const userAddress = (sessionUserId ?? sessionUserId ?? '').trim() || undefined
 
   return (
     <div className='max-w-4xl mx-auto space-y-6'>

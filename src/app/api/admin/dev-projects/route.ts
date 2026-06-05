@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       const ownerName = [up?.first_name, up?.last_name].filter(Boolean).join(' ') || githubMap.get(project.user_id) || 'Unknown'
       return {
         ...project,
-        walletAddress: userMap.get(project.user_id) || 'Unknown',
+        sessionUserId: userMap.get(project.user_id) || 'Unknown',
         ownerName,
         techCount: Array.isArray(project.tech_stack) ? project.tech_stack.length : 0,
       }

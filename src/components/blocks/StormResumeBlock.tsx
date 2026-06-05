@@ -57,8 +57,8 @@ export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps
   const isDark = isDarkTheme(theme)
   const resumes = useResumes()
   const blockStatus: BlockStatus = resumes.length > 0 ? 'complete' : 'empty'
-  const walletAddress = useAuthStore((s) => s.walletAddress)
-  const userAddress = (user?.address ?? walletAddress ?? '').trim() || undefined
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
+  const userAddress = (sessionUserId ?? sessionUserId ?? '').trim() || undefined
   const editingResumeId = useUIStore((s) => s.editingResumeId)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
@@ -73,7 +73,7 @@ export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps
   }, [setStormResumeInitialPanel])
 
   const afterHubMutation = useCallback(async () => {
-    const wa = useAuthStore.getState().walletAddress
+    const wa = useAuthStore.getState().sessionUserId
     if (wa) await syncDriverHubFromApi(wa)
   }, [])
 

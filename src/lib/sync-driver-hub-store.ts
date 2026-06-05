@@ -4,7 +4,7 @@ import { useDriverHubStore } from '@/stores/driver-hub-store'
  * Pull /api/driver/hub into driver-hub-store so Stormi journey (and anything else
  * reading this store) sees resume / DOT / MVR truth — not just legacy DriverShell.
  */
-export async function syncDriverHubFromApi(walletAddress: string): Promise<void> {
+export async function syncDriverHubFromApi(sessionUserId: string): Promise<void> {
   try {
     const res = await fetch('/api/driver/hub')
     if (!res.ok) return

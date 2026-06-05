@@ -29,7 +29,7 @@ export interface HubWorkspaceCareerCardProps {
 export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCareerCardProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
@@ -40,7 +40,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
 
   const hubDocs = useHubDocuments(refreshNonce)
 
-  const { card, loading, error, refresh } = useProjectedCareerCard(walletAddress, {
+  const { card, loading, error, refresh } = useProjectedCareerCard(sessionUserId, {
     refreshNonce,
     installedBlockCount: installedBlocks.length,
   })
@@ -53,7 +53,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
     [setCurrentPage],
   )
 
-  if (!walletAddress) {
+  if (!sessionUserId) {
     return null
   }
 
@@ -93,7 +93,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
         data={card}
         mode='construct'
         hubDocuments={hubDocs}
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
         onCardMutation={() => void refresh()}
@@ -146,7 +146,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
       <CareerCardShareModal
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         displayName={card.name?.trim() || undefined}
         onShareUpdated={() => void refresh()}
       />

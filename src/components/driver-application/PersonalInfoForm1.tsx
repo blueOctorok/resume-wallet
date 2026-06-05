@@ -52,7 +52,7 @@ interface PersonalInfoForm1Props {
   onNavigateToForm?: (formNumber: number) => void
   onDataChange?: (data: any) => void
   initialData?: any
-  walletAddress?: string
+  sessionUserId?: string
   /** Centralized save function - saves ALL forms to driver profile */
   onSaveProgress?: () => Promise<boolean | undefined>
 }
@@ -61,7 +61,7 @@ export default function PersonalInfoForm1({
   onNavigateToForm,
   onDataChange,
   initialData,
-  walletAddress,
+  sessionUserId,
   onSaveProgress,
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
@@ -1885,7 +1885,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         <div className='mt-4 flex flex-wrap items-center gap-3'>
           <SaveProgressButton
             onSaveProgress={onSaveProgress}
-            walletAddress={walletAddress}
+            sessionUserId={sessionUserId}
           />
           <button
             type='button'

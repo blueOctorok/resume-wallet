@@ -63,14 +63,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json()
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
     const { data: user, error: userError } = await supabase
-      .from('users').select('id').ilike('wallet_address', walletAddress).single()
+      .from('users').select('id').eq('id', sessionUserId).single()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })

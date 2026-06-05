@@ -33,7 +33,7 @@ const GRADUATE_BLOCK_THRESHOLD = 3
 export default function SimpleModeShell() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const installedCount = useInstalledBlocks().length
   const hasDismissedGraduate = usePreferencesStore((s) => s.hasCompletedJourneyStep(GRADUATE_BANNER_STEP))
   const markJourneyStepComplete = usePreferencesStore((s) => s.markJourneyStepComplete)
@@ -118,10 +118,10 @@ export default function SimpleModeShell() {
         )}
       >
         <section aria-label='Job list' className='min-h-0 min-w-0'>
-          <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
+          <SimpleJobRail userAddress={sessionUserId ?? null} onJobSelected={handleJobSelected} />
         </section>
         <section aria-label='Selected job' className='min-h-0 min-w-0'>
-          <SimpleJobDetailPanel userAddress={walletAddress ?? null} />
+          <SimpleJobDetailPanel userAddress={sessionUserId ?? null} />
         </section>
         <aside aria-label='Career card' className='hidden lg:block min-h-0'>
           <SimpleCardPanel />
@@ -139,12 +139,12 @@ export default function SimpleModeShell() {
       <div className='flex min-h-0 flex-1 flex-col pb-[4.5rem] md:hidden'>
         {mobileTab === 'jobs' && (
           <div className='flex min-h-0 flex-1 flex-col px-2'>
-            <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
+            <SimpleJobRail userAddress={sessionUserId ?? null} onJobSelected={handleJobSelected} />
           </div>
         )}
         {mobileTab === 'job' && (
           <div className='flex min-h-0 flex-1 flex-col px-2'>
-            <SimpleJobDetailPanel userAddress={walletAddress ?? null} />
+            <SimpleJobDetailPanel userAddress={sessionUserId ?? null} />
           </div>
         )}
         {mobileTab === 'card' && (

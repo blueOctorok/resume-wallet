@@ -22,7 +22,7 @@ interface ResumeUploadProps {
 }
 
 export default function ResumeUpload({ user }: ResumeUploadProps) {
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -114,7 +114,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
 
       const savedResume = await response.json()
       console.log('Resume saved to database:', savedResume)
-      const wa = walletAddress || user.address
+      const wa = sessionUserId || sessionUserId
       if (wa) void syncDriverHubFromApi(wa)
       return savedResume
     } catch (error) {
@@ -154,7 +154,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
       }
 
       const uploadData = await response.json()
-      const wa = walletAddress || user?.address
+      const wa = sessionUserId || sessionUserId
       if (wa) void syncDriverHubFromApi(wa)
 
       setUploadStatus('success')

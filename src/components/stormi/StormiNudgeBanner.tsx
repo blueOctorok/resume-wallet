@@ -14,7 +14,7 @@ const STORAGE_PREFIX = 'stormi_nudge_dismissed:'
 
 interface StormiNudgeBannerProps {
   isDark: boolean
-  walletAddress: string
+  sessionUserId: string
 }
 
 type NudgeId = 'verify-resume' | 'cdl-empty' | 'dot-stale' | 'views-grow'
@@ -44,7 +44,7 @@ function persistDismiss(wallet: string, id: NudgeId) {
   }
 }
 
-export default function StormiNudgeBanner({ isDark, walletAddress }: StormiNudgeBannerProps) {
+export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudgeBannerProps) {
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
 
@@ -124,16 +124,16 @@ export default function StormiNudgeBanner({ isDark, walletAddress }: StormiNudge
       })
     }
 
-    return list.filter((n) => !isDismissed(walletAddress, n.id))
-  }, [bump, resumes, profile, installedBlocks, dotApplications, stats, walletAddress, go, openPicker])
+    return list.filter((n) => !isDismissed(sessionUserId, n.id))
+  }, [bump, resumes, profile, installedBlocks, dotApplications, stats, sessionUserId, go, openPicker])
 
   const current = visible[0]
 
   const dismissCurrent = useCallback(() => {
     if (!current) return
-    persistDismiss(walletAddress, current.id)
+    persistDismiss(sessionUserId, current.id)
     setBump((b) => b + 1)
-  }, [current, walletAddress])
+  }, [current, sessionUserId])
 
   if (!current) return null
 

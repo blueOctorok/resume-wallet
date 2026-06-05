@@ -223,7 +223,7 @@ export async function GET(
       success: true,
       employerCompany: {
         id: companyId,
-        walletAddress: companyWalletRow?.wallet_address ?? null,
+        companyWalletAddress: companyWalletRow?.wallet_address ?? null,
       },
       card,
       installedBlockTypes,

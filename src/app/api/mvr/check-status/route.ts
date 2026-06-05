@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * API Route: Check MVR Status by Wallet Address
  * 
- * GET /api/mvr/check-status?walletAddress=0x...
+ * GET /api/mvr/check-status?sessionUserId=0x...
  * 
  * Returns whether the user has any MVR orders/results
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const walletAddress = searchParams.get('walletAddress')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     // Use service role client to bypass RLS and read all payments/orders
@@ -30,14 +26,14 @@ export async function GET(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     // If user doesn't exist yet, that's normal - just return no MVR
     if (userError || !user) {
       // Only log in development or if it's an unexpected error
       if (process.env.NODE_ENV === 'development' && userError?.code !== 'PGRST116') {
-        console.log('[MVR CHECK] User not found for wallet:', walletAddress)
+        console.log('[MVR CHECK] User not found for wallet:', sessionUserId)
       }
       return NextResponse.json({
         hasMvr: false,

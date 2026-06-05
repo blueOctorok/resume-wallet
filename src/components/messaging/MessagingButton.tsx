@@ -13,7 +13,7 @@ interface MessagingButtonProps {
   candidateRequestId?: string
   /** Human-readable subject auto-shown in the thread header */
   subject: string
-  walletAddress: string
+  sessionUserId: string
   /** Called with the resolved threadId once the thread exists */
   onThreadOpen: (threadId: string) => void
   /** Visual variant */
@@ -33,7 +33,7 @@ export default function MessagingButton({
   applicationId,
   candidateRequestId,
   subject,
-  walletAddress,
+  sessionUserId,
   onThreadOpen,
   variant = 'button',
   className = '',

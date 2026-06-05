@@ -28,7 +28,7 @@ export function authOnlyWalletPlaceholder(authUserId: string): string {
 }
 
 export function isAuthOnlyWalletPlaceholder(walletAddress: string): boolean {
-  return walletAddress.startsWith(AUTH_WALLET_PREFIX)
+  return sessionUserId.startsWith(AUTH_WALLET_PREFIX)
 }
 
 /**

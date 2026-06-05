@@ -54,7 +54,8 @@ interface RoleSelectionModalProps {
   onSelectRole: (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => void
   isLoading?: boolean
   userEmail?: string
-  walletAddress?: string
+  sessionUserId?: string
+  legacyWalletAddress?: string | null
   existingRole?: 'driver' | 'developer' | 'employer' | 'candidate' | null
   existingCompanyName?: string | null
 }
@@ -63,7 +64,8 @@ export default function RoleSelectionModal({
   onSelectRole,
   isLoading,
   userEmail,
-  walletAddress,
+  sessionUserId,
+  legacyWalletAddress,
   existingRole,
   existingCompanyName,
 }: RoleSelectionModalProps) {
@@ -99,8 +101,10 @@ export default function RoleSelectionModal({
     reviewNote?: string
   } | null>(null)
 
-  const isAdminWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
-  const needsEmailForEmployer = !userEmail && !walletAddress && !isAdminWhitelisted
+  const whitelistSource = (legacyWalletAddress || sessionUserId || '').toLowerCase()
+  const isAdminWhitelisted =
+    !!whitelistSource && EMPLOYER_WHITELIST_WALLETS.includes(whitelistSource)
+  const needsEmailForEmployer = !userEmail && !sessionUserId && !isAdminWhitelisted
   /** Employer-linked wallets cannot use the candidate hub (same rule as POST /api/user/set-role). */
   const candidateDisabled = existingRole === 'employer'
 
@@ -110,14 +114,14 @@ export default function RoleSelectionModal({
       return
     }
 
-    if (!walletAddress && !userEmail) return
+    if (!sessionUserId && !userEmail) return
 
     setCheckingAccess(true)
     try {
       const res = await fetch('/api/user/check-employer-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, walletAddress }),
+        body: JSON.stringify({ email: userEmail, sessionUserId }),
       })
       const data = await res.json()
       setEmployerAccess(data)
@@ -127,10 +131,10 @@ export default function RoleSelectionModal({
     } finally {
       setCheckingAccess(false)
     }
-  }, [userEmail, walletAddress, isAdminWhitelisted])
+  }, [userEmail, sessionUserId, isAdminWhitelisted])
 
   const checkPendingRequest = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const res = await fetch('/api/employer/access-request')
       const data = await res.json()
@@ -148,7 +152,7 @@ export default function RoleSelectionModal({
     } catch (err) {
       console.error('Error checking pending request:', err)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   const resolvedRoleDescription = (): string => {
     if (!employerAuthTier) return ''
@@ -166,7 +170,7 @@ export default function RoleSelectionModal({
     !!employerAuthTier
 
   const handleSubmitRequest = async () => {
-    if (!walletAddress || !isRequestFormValid) return
+    if (!sessionUserId || !isRequestFormValid) return
 
     setSubmittingRequest(true)
     setRequestError(null)
@@ -245,10 +249,10 @@ export default function RoleSelectionModal({
   }, [selectedRole, checkEmployerAccess])
 
   useEffect(() => {
-    if (selectedRole === 'employer' && walletAddress) {
+    if (selectedRole === 'employer' && sessionUserId) {
       checkPendingRequest()
     }
-  }, [selectedRole, walletAddress, checkPendingRequest])
+  }, [selectedRole, sessionUserId, checkPendingRequest])
 
   const canProceed = selectedRole !== null && (
     selectedRole !== 'employer' ||

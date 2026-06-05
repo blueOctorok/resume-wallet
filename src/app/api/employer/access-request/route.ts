@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .maybeSingle()
 
-    const walletAddress = authUser?.wallet_address
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    if (!authUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+    const legacyWalletAddress = authUser.wallet_address
 
     const existingUser = authUser
 
@@ -87,12 +87,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: existingRequest } = await supabase
-      .from('employer_access_requests')
-      .select('id, status')
-      .ilike('wallet_address', walletAddress)
-      .in('status', ['pending', 'flagged'])
-      .maybeSingle()
+    const { data: existingRequest } = legacyWalletAddress
+      ? await supabase
+          .from('employer_access_requests')
+          .select('id, status')
+          .ilike('wallet_address', legacyWalletAddress)
+          .in('status', ['pending', 'flagged'])
+          .maybeSingle()
+      : { data: null }
 
     if (existingRequest) {
       return NextResponse.json(
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Shared fields for audit trail inserts
     const auditFields = {
-      wallet_address: walletAddress.toLowerCase(),
+      wallet_address: legacyWalletAddress?.toLowerCase() ?? '',
       email: email.toLowerCase(),
       name: fullName,
       first_name: firstName.trim(),
@@ -368,15 +370,19 @@ export async function GET(request: NextRequest) {
       .eq('id', userId)
       .maybeSingle()
 
-    const walletAddress = authUser?.wallet_address
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const legacyWalletAddress = authUser?.wallet_address
+    if (!legacyWalletAddress) {
+      return NextResponse.json({
+        success: true,
+        hasPendingRequest: false,
+        request: null,
+      })
     }
 
     const { data: pendingRequest } = await supabase
       .from('employer_access_requests')
       .select('id, company_name, status, created_at, ai_reason')
-      .ilike('wallet_address', walletAddress)
+      .ilike('wallet_address', legacyWalletAddress)
       .in('status', ['pending', 'flagged'])
       .maybeSingle()
 

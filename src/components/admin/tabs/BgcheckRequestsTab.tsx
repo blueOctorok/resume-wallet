@@ -8,7 +8,7 @@ import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin
 
 export default function BgcheckRequestsTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -21,12 +21,12 @@ export default function BgcheckRequestsTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const offset = (currentPage - 1) * pageSize
     try {
       const res = await fetch(
         `/api/admin/bgcheck-requests?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -36,7 +36,7 @@ export default function BgcheckRequestsTab({
     } catch (err) {
       console.error('Failed to fetch bgcheck requests:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()

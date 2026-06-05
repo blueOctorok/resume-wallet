@@ -41,9 +41,9 @@ export interface UserRow {
  */
 export async function getUserByWallet(
   supabase: SupabaseClient,
-  walletAddress: string
+  sessionUserId: string
 ): Promise<UserRow | null> {
-  const normalized = normalizeWalletAddress(walletAddress)
+  const normalized = normalizeWalletAddress(sessionUserId)
   const { data: rows, error } = await supabase
     .from('users')
     .select('*')
@@ -67,10 +67,10 @@ export async function getUserByWallet(
  */
 export async function getOrCreateUserByWallet(
   supabase: SupabaseClient,
-  walletAddress: string,
+  sessionUserId: string,
   options?: { role?: string | null }
 ): Promise<{ user: UserRow; isNew: boolean }> {
-  const normalized = normalizeWalletAddress(walletAddress)
+  const normalized = normalizeWalletAddress(sessionUserId)
 
   // Supabase-auth placeholder (`auth:<uuid>`): identity is the auth user id, NOT
   // the wallet string. By the T1.3 convention `users.id = auth.users.id`, so we

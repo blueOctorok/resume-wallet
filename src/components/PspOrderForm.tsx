@@ -112,7 +112,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: userAddress,
+          sessionUserId: userAddress,
           pspConsentId,
           firstName: firstName.trim(),
           middleName: middleName.trim(),

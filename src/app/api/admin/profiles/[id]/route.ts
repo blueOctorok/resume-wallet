@@ -76,7 +76,7 @@ export async function GET(
       last_updated_from: null,
       created_at: cdlRow.created_at,
       updated_at: cdlRow.updated_at,
-      walletAddress: user?.wallet_address,
+      legacyWalletAddress: user?.wallet_address,
     }
 
     return NextResponse.json({ success: true, profile })

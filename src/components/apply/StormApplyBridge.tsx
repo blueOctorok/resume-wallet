@@ -231,7 +231,7 @@ export default function StormApplyBridge({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: userAddress,
+          sessionUserId: userAddress,
           jobId: job.id,
           jobTitle: job.title,
           employerName: job.company,
@@ -487,7 +487,7 @@ export default function StormApplyBridge({
 
       {showCreditModal && (
         <StormiCreditModal
-          walletAddress={userAddress}
+          sessionUserId={userAddress}
           onClose={() => setShowCreditModal(false)}
           onSuccess={(_usage: StormiUsageInfo) => {
             setShowCreditModal(false)

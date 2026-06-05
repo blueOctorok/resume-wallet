@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         last_name: up?.last_name ?? null,
         email: up?.email ?? null,
         full_name: fullName || null,
-        walletAddress: userMap.get(profile.user_id) || 'Unknown',
+        sessionUserId: userMap.get(profile.user_id) || 'Unknown',
         projectCount: projectCountMap.get(profile.user_id) || 0,
         skillCount: Array.isArray(skills) ? skills.length : 0,
       }

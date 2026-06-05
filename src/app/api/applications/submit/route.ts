@@ -3,12 +3,12 @@ import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { getCdlData, getDevGithub, getDevPortfolio } from '@/lib/block-data'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      walletAddress,
       jobId,
       jobTitle,
       employerName,
@@ -25,13 +25,17 @@ export async function POST(request: NextRequest) {
     } = body
 
     console.log('[APPLICATION SUBMIT] Starting submission:', {
-      walletAddress,
       jobId,
       jobTitle,
       employerName
     })
 
-    if (!walletAddress || !jobId || !jobTitle || !employerName) {
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    if (!jobId || !jobTitle || !employerName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -40,15 +44,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Get user
+    // Get user by session id
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     if (userError || !user) {
-      console.error('[APPLICATION SUBMIT] User not found:', walletAddress)
+      console.error('[APPLICATION SUBMIT] User not found:', sessionUserId)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }

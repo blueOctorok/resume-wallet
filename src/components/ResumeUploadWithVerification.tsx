@@ -50,7 +50,7 @@ export default function ResumeUploadWithVerification({
   const { theme } = useTheme()
   const { notifyResumeUploadEvent } = useAssistantBridge()
 
-  const sessionAddress = user?.address as string | undefined
+  const sessionAddress = sessionUserId as string | undefined
 
   const [file, setFile] = useState<File | null>(null)
   const [steps, setSteps] = useState<UploadStep[]>([
@@ -460,7 +460,7 @@ export default function ResumeUploadWithVerification({
   }
 
   // Authentication guard
-  if (!user?.address) {
+  if (!sessionUserId) {
     return (
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${

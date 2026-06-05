@@ -77,16 +77,16 @@ interface HubBlocksState {
 
 interface HubBlocksActions {
   // Data fetching
-  fetchHubData: (walletAddress: string) => Promise<void>
+  fetchHubData: (sessionUserId: string) => Promise<void>
 
   // Block management
-  addBlock: (blockType: string, walletAddress: string) => Promise<void>
-  removeBlock: (blockId: string, walletAddress: string) => Promise<void>
+  addBlock: (blockType: string, sessionUserId: string) => Promise<void>
+  removeBlock: (blockId: string, sessionUserId: string) => Promise<void>
   /**
    * Reorder blocks after a drag-and-drop. Accepts the new ordered list of
    * installed blocks. Optimistically updates local state, then syncs to API.
    */
-  reorderBlocks: (reordered: InstalledBlock[], walletAddress: string) => Promise<void>
+  reorderBlocks: (reordered: InstalledBlock[], sessionUserId: string) => Promise<void>
   /**
    * Merge keys into `hub_blocks.config` for one block (e.g. `cardPage`).
    * Optimistically merges into local `installedBlocks` then PATCHes API.
@@ -94,14 +94,14 @@ interface HubBlocksActions {
   patchBlockConfig: (
     blockId: string,
     configPatch: Record<string, unknown>,
-    walletAddress: string,
+    sessionUserId: string,
   ) => Promise<void>
 
   // Onboarding
   completeOnboarding: (
     occupation: string,
     seekingReason: string,
-    walletAddress: string,
+    sessionUserId: string,
     extraContext?: string | null
   ) => Promise<void>
   /** Open the Stormi context modal — edit hub onboarding answers anytime (wired in StormiChatPanel + profile flows) */
@@ -141,7 +141,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   isStormiContextModalOpen: false,
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
-  fetchHubData: async (walletAddress) => {
+  fetchHubData: async (sessionUserId) => {
     set({ isLoading: true, fetchError: null })
     try {
       const res = await fetch('/api/hub/blocks')
@@ -183,23 +183,23 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       useUIModeStore.getState().hydrateFromServer(data.uiModePreference ?? null)
 
       // Stormi journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub
-      await syncDriverHubFromApi(walletAddress)
+      await syncDriverHubFromApi(sessionUserId)
 
       // Career Card Lenses: fetched alongside hub data so the chip + manage
       // modal have data on first paint. Non-blocking — failures leave the
       // default lens server-side; the card still renders.
-      void useCareerCardLensesStore.getState().fetchLenses(walletAddress)
+      void useCareerCardLensesStore.getState().fetchLenses(sessionUserId)
 
       // Mandatory STORM Resume — every hub has this block first (not pickable).
       const hasStormResume = get().installedBlocks.some((b) => b.blockType === 'storm-resume')
       if (!hasStormResume) {
-        await get().addBlock('storm-resume', walletAddress)
+        await get().addBlock('storm-resume', sessionUserId)
         const after = get().installedBlocks
         const stormIdx = after.findIndex((b) => b.blockType === 'storm-resume')
         if (stormIdx > 0) {
           const storm = after[stormIdx]
           const rest = after.filter((_, i) => i !== stormIdx)
-          await get().reorderBlocks([storm, ...rest], walletAddress)
+          await get().reorderBlocks([storm, ...rest], sessionUserId)
         }
       }
     } catch (err) {
@@ -211,7 +211,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Add block ───────────────────────────────────────────────────────────────
-  addBlock: async (blockType, walletAddress) => {
+  addBlock: async (blockType, sessionUserId) => {
     // Guard: don't add unknown block types or duplicates
     const definition = getBlockDefinition(blockType)
     if (!definition) return
@@ -259,7 +259,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Remove block ────────────────────────────────────────────────────────────
-  removeBlock: async (blockId, walletAddress) => {
+  removeBlock: async (blockId, sessionUserId) => {
     const target = get().installedBlocks.find((b) => b.id === blockId)
     if (target && isCoreBlock(target.blockType)) {
       console.warn('[HubBlocksStore] Refused removeBlock for core block:', target.blockType)
@@ -286,7 +286,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Reorder blocks ──────────────────────────────────────────────────────────
-  reorderBlocks: async (reordered, walletAddress) => {
+  reorderBlocks: async (reordered, sessionUserId) => {
     // Reassign positions based on new order
     const updated = reordered.map((block, index) => ({ ...block, position: index }))
 
@@ -307,11 +307,11 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       console.error('[HubBlocksStore] reorderBlocks failed:', err)
       // No rollback here — a stale order is recoverable on next fetch.
       // Silently re-fetch to get consistent server state.
-      await get().fetchHubData(walletAddress)
+      await get().fetchHubData(sessionUserId)
     }
   },
 
-  patchBlockConfig: async (blockId, configPatch, walletAddress) => {
+  patchBlockConfig: async (blockId, configPatch, sessionUserId) => {
     const prev = get().installedBlocks
     const target = prev.find((b) => b.id === blockId)
     if (!target) return
@@ -347,7 +347,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Onboarding ──────────────────────────────────────────────────────────────
-  completeOnboarding: async (occupation, seekingReason, walletAddress, extraContext) => {
+  completeOnboarding: async (occupation, seekingReason, sessionUserId, extraContext) => {
     try {
       const res = await fetch('/api/hub/onboarding', {
         method: 'POST',

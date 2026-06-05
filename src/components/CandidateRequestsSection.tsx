@@ -664,7 +664,7 @@ export default function CandidateRequestsSection({
                       otherUserId={selectedRequest.company.ownerUserId}
                       candidateRequestId={selectedRequest.id}
                       subject={`Re: ${getRequestVisualConfig(selectedRequest).label} from ${selectedRequest.company?.name ?? 'employer'}`}
-                      walletAddress={userAddress}
+                      sessionUserId={userAddress}
                       onThreadOpen={(threadId) => {
                         setSelectedRequest(null)
                         navigateToMessages(threadId)

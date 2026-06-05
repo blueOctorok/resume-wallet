@@ -8,7 +8,7 @@ import type { ProjectedCareerCard as CardData } from '@/types/career-card'
  * Used by Workspace hub card and can be shared by other surfaces.
  */
 export function useProjectedCareerCard(
-  walletAddress: string | null,
+  sessionUserId: string | null,
   options?: { lensId?: string | null; refreshNonce?: number; installedBlockCount?: number }
 ) {
   const lensId = options?.lensId ?? null
@@ -20,7 +20,7 @@ export function useProjectedCareerCard(
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setLoading(true)
     setError(null)
     try {
@@ -34,17 +34,17 @@ export function useProjectedCareerCard(
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, lensId])
+  }, [sessionUserId, lensId])
 
   useEffect(() => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setCard(null)
       setError(null)
       setLoading(false)
       return
     }
     void refresh()
-  }, [walletAddress, refresh, refreshNonce, installedBlockCount])
+  }, [sessionUserId, refresh, refreshNonce, installedBlockCount])
 
   return { card, loading, error, refresh }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { ParsedMvrResult } from '@/lib/accio-xml-parser'
 import { mapMvrToForm1Data, getMvrExtractionSummary } from '@/lib/mvr-to-dot-mapper'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * API Route: Prefill DOT Application from MVR Results
@@ -12,7 +13,7 @@ import { mapMvrToForm1Data, getMvrExtractionSummary } from '@/lib/mvr-to-dot-map
  * Only returns data - does not update the application. The client should merge this
  * with existing application data and update the form.
  * 
- * Request Body: { walletAddress: string }
+ * Request Body: { sessionUserId: string }
  * 
  * Response: {
  *   success: boolean
@@ -23,16 +24,12 @@ import { mapMvrToForm1Data, getMvrExtractionSummary } from '@/lib/mvr-to-dot-map
  */
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json()
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[MVR PREFILL] Starting prefill for wallet:', walletAddress)
+    console.log('[MVR PREFILL] Starting prefill for user:', sessionUserId)
 
     const supabase = await createClient()
 
@@ -40,11 +37,11 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     if (userError || !user) {
-      console.error('[MVR PREFILL] User not found:', walletAddress)
+      console.error('[MVR PREFILL] User not found:', sessionUserId)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }

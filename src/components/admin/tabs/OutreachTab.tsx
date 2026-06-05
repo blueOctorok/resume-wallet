@@ -8,7 +8,7 @@ import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin
 
 export default function OutreachTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -22,12 +22,12 @@ export default function OutreachTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const offset = (currentPage - 1) * pageSize
     try {
       const res = await fetch(
         `/api/admin/outreach?status=${outreachFilter === 'all' ? '' : outreachFilter}&search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -37,7 +37,7 @@ export default function OutreachTab({
     } catch (err) {
       console.error('Failed to fetch outreach:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, outreachFilter, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, outreachFilter, setTotalCount])
 
   useEffect(() => {
     fetchData()

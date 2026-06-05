@@ -99,7 +99,7 @@ export async function GET(
         id: order.id,
         driverUserId: order.driver_user_id,
         driverProfileId: order.driver_profile_id,
-        walletAddress: user?.wallet_address ?? null,
+        legacyWalletAddress: user?.wallet_address ?? null,
         driverName: userProfile?.first_name && userProfile?.last_name
           ? `${userProfile.first_name} ${userProfile.last_name}`
           : null,

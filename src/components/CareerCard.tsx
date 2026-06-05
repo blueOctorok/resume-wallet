@@ -202,7 +202,7 @@ export interface CareerCardData {
 interface CareerCardProps {
   data: CareerCardData
   // Needed to authenticate the DOT app preview fetch
-  walletAddress?: string
+  sessionUserId?: string
   // Section-level action slots (e.g. "Request Resume" or "Edit Resume")
   resumeAction?: React.ReactNode
   dotAppAction?: React.ReactNode
@@ -215,7 +215,7 @@ interface CareerCardProps {
 
 export default function CareerCard({
   data,
-  walletAddress,
+  sessionUserId,
   resumeAction,
   dotAppAction,
   mvrAction,
@@ -251,7 +251,7 @@ export default function CareerCard({
     setDotAppError(null)
     try {
       const res = await fetch(`/api/employer/talent/${data.userId}/dot-app`, {
-        headers: walletAddress ? {} : {},
+        headers: sessionUserId ? {} : {},
       })
       if (!res.ok) throw new Error('Failed to load DOT application')
       const json = await res.json()

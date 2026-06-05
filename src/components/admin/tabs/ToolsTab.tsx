@@ -5,9 +5,9 @@ import AdminResetWallet from '@/components/admin/AdminResetWallet'
 
 interface ToolsTabProps {
   theme: 'light' | 'dark'
-  walletAddress: string
+  sessionUserId: string
 }
 
-export default function ToolsTab({ theme, walletAddress }: ToolsTabProps) {
-  return <AdminResetWallet initialWalletAddress={walletAddress} />
+export default function ToolsTab({ theme, sessionUserId }: ToolsTabProps) {
+  return <AdminResetWallet initialWalletAddress={sessionUserId} />
 }

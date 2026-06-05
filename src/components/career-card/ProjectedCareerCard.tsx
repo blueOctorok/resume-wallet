@@ -109,7 +109,7 @@ interface ProjectedCareerCardProps {
   /** Connect action (public mode) */
   onConnect?: () => void
   /** Used by DotAppSection to fetch the full DOT preview (self mode only) */
-  walletAddress?: string
+  sessionUserId?: string
   /** Employer talent modal: recruit / messaging row below sections */
   footerSlot?: ReactNode
   /**
@@ -179,7 +179,7 @@ export default function ProjectedCareerCard({
   onNavigateToBlock,
   onAddBlock,
   onConnect,
-  walletAddress,
+  sessionUserId,
   footerSlot,
   ghostSections,
   onGhostAction,
@@ -292,7 +292,7 @@ export default function ProjectedCareerCard({
             </div>
           ) : null}
           <div className='flex items-start gap-4'>
-            {isCareerCardOwnerMode(mode) && walletAddress && onAvatarUploadSuccess ? (
+            {isCareerCardOwnerMode(mode) && sessionUserId && onAvatarUploadSuccess ? (
               /* AvatarUpload sits OUTSIDE overflow-hidden so the camera badge isn't clipped */
               <div className='relative shrink-0'>
                 <div
@@ -309,7 +309,7 @@ export default function ProjectedCareerCard({
                     color='teal'
                     round
                     uploadEndpoint='/api/user/avatar'
-                    walletAddress={walletAddress}
+                    sessionUserId={sessionUserId}
                     persistentUploadHint
                     onSuccess={onAvatarUploadSuccess}
                     title='Add or change profile photo'
@@ -542,7 +542,7 @@ export default function ProjectedCareerCard({
             sections={data.sections}
             mode={mode}
             isDark={isDark}
-            walletAddress={walletAddress}
+            sessionUserId={sessionUserId}
             onNavigateToBlock={onNavigateToBlock}
             onAddBlock={onAddBlock}
             hubDocuments={hubDocuments}
@@ -555,7 +555,7 @@ export default function ProjectedCareerCard({
                 mode={mode}
                 isDark={isDark}
                 userId={data.userId}
-                walletAddress={walletAddress}
+                sessionUserId={sessionUserId}
                 shareToken={data.shareToken}
                 onAction={
                   allowNav && onNavigateToBlock
@@ -825,7 +825,7 @@ function SectionRenderer({
   isDark,
   onAction,
   userId,
-  walletAddress,
+  sessionUserId,
   shareToken,
 }: {
   section: CareerCardSection
@@ -833,7 +833,7 @@ function SectionRenderer({
   isDark: boolean
   onAction?: () => void
   userId?: string
-  walletAddress?: string
+  sessionUserId?: string
   shareToken?: string | null
 }) {
   switch (section.blockType as SectionBlockType) {
@@ -847,7 +847,7 @@ function SectionRenderer({
           mode={mode}
           isDark={isDark}
           onAction={onAction}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
         />
       )
     case 'driver-dot-application':
@@ -858,7 +858,7 @@ function SectionRenderer({
           isDark={isDark}
           onAction={onAction}
           userId={userId}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
         />
       )
     case 'driver-screening-consent':
@@ -876,7 +876,7 @@ function SectionRenderer({
           data={section.data as MvrData}
           mode={mode}
           isDark={isDark}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
         />
       )
@@ -886,7 +886,7 @@ function SectionRenderer({
           data={section.data as PspData}
           mode={mode}
           isDark={isDark}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
         />
       )
@@ -895,7 +895,7 @@ function SectionRenderer({
     case 'developer-portfolio':
       return <PortfolioSection data={section.data as PortfolioData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'developer-github':
-      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} walletAddress={walletAddress} onAction={onAction} />
+      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} sessionUserId={sessionUserId} onAction={onAction} />
     case 'developer-projects':
       return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} onAction={onAction} />
     default:

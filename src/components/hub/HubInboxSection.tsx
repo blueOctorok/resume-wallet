@@ -16,7 +16,7 @@ import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 type InboxTab = 'alerts' | 'requests' | 'applications'
 
 export interface HubInboxSectionProps {
-  walletAddress: string | null
+  sessionUserId: string | null
   onNavigateToResume: (targetBlockType: string | null) => void
   onNavigateToDotApp: () => void
 }
@@ -56,7 +56,7 @@ function TabButton({
  * Child sections keep their own vault chrome; this wrapper only supplies the tab rail.
  */
 export default function HubInboxSection({
-  walletAddress,
+  sessionUserId,
   onNavigateToResume,
   onNavigateToDotApp,
 }: HubInboxSectionProps) {
@@ -97,14 +97,14 @@ export default function HubInboxSection({
       >
         <div className='min-h-0 min-w-0'>
           {tab === 'alerts' ? <JobAlertsHubSection embedded /> : null}
-          {tab === 'requests' && walletAddress ? (
+          {tab === 'requests' && sessionUserId ? (
             <CandidateRequestsSection
-              userAddress={walletAddress}
+              userAddress={sessionUserId}
               onNavigateToResume={onNavigateToResume}
               onNavigateToDotApp={onNavigateToDotApp}
             />
           ) : null}
-          {tab === 'requests' && !walletAddress ? (
+          {tab === 'requests' && !sessionUserId ? (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>Sign in to see employer requests.</p>
           ) : null}
           {tab === 'applications' ? (

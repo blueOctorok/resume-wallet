@@ -7,36 +7,19 @@ import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadDocument, getSignedDocumentUrl } from '@/lib/document-storage'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(req: NextRequest) {
   try {
     console.log('📝 Resume Upload API: Starting hash-first validation')
 
-    // CASE 2: create-on-write. Session first, then fall back to the legacy
-    // wallet header with getOrCreateUserByWallet so first-time uploaders still
-    // get a user row created.
     const supabaseAdmin = await getAdminSupabaseClient()
     let user: { id: string }
     const sessionUserId = await getStormUserIdFromRequest(req)
     if (sessionUserId) {
       user = { id: sessionUserId }
     } else {
-      const walletAddress = req.headers.get('x-wallet-address')
-      if (!walletAddress) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-      try {
-        const { user: u } = await getOrCreateUserByWallet(supabaseAdmin, walletAddress)
-        user = { id: u.id }
-      } catch (err) {
-        console.error('❌ Resume Upload API: Error get/create user:', err)
-        return NextResponse.json(
-          { error: 'Failed to get or create user' },
-          { status: 500 }
-        )
-      }
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await createClient()

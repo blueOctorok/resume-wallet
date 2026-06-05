@@ -10,7 +10,7 @@ export interface DotAppPreviewModalProps {
   isOpen: boolean
   onClose: () => void
   userId: string | null
-  walletAddress: string | null
+  sessionUserId: string | null
   isDark: boolean
   /** My Files row — load this application row instead of latest */
   applicationId?: string | null
@@ -24,7 +24,7 @@ export default function DotAppPreviewModal({
   isOpen,
   onClose,
   userId,
-  walletAddress,
+  sessionUserId,
   isDark,
   applicationId,
 }: DotAppPreviewModalProps) {
@@ -35,7 +35,7 @@ export default function DotAppPreviewModal({
   const [pdfError, setPdfError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isOpen || !userId || !walletAddress) {
+    if (!isOpen || !userId || !sessionUserId) {
       return
     }
     let cancelled = false
@@ -63,11 +63,11 @@ export default function DotAppPreviewModal({
     return () => {
       cancelled = true
     }
-  }, [isOpen, userId, walletAddress, applicationId])
+  }, [isOpen, userId, sessionUserId, applicationId])
 
   const downloadPdf = async () => {
     const id = previewData?.id
-    if (!id || !walletAddress) return
+    if (!id || !sessionUserId) return
     setPdfLoading(true)
     try {
       const res = await fetch(`/api/driver-applications/${id}/export-pdf`)
@@ -95,7 +95,7 @@ export default function DotAppPreviewModal({
         subtitle='Your completed driver qualification file'
         onClose={onClose}
       />
-      {!loading && !fetchError && previewData?.id && walletAddress && (
+      {!loading && !fetchError && previewData?.id && sessionUserId && (
         <div
           className={cn(
             'flex items-center gap-2 px-4 py-3 border-b',

@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       const profile = profileMap.get(app.user_id)
       return {
         ...app,
-        walletAddress: user?.wallet_address || 'Unknown',
+        legacyWalletAddress: user?.wallet_address || 'Unknown',
         applicantName: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || 'Unknown',
         email: user?.email,
       }
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       ? (enrichedApps ?? []).filter(
           (app) =>
             matchingUserIds?.has(app.user_id) ||
-            anyFieldMatchesSearch(search, app.applicantName, app.email, app.walletAddress),
+            anyFieldMatchesSearch(search, app.applicantName, app.email, app.sessionUserId),
         )
       : enrichedApps ?? []
 

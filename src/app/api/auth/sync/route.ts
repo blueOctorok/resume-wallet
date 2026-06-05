@@ -33,7 +33,7 @@ export async function POST() {
       userId: row.id,
       role: row.role ?? null,
       // Migrated wallet users keep their real address; new auth-only users get auth:<id>.
-      walletAddress: row.wallet_address ?? null,
+      legacyWalletAddress: row.wallet_address ?? null,
     })
   } catch (err) {
     console.error('[AUTH SYNC] ensureUserRow failed:', err)

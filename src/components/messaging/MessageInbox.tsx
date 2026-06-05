@@ -26,7 +26,7 @@ interface ThreadSummary {
 }
 
 interface MessageInboxProps {
-  walletAddress: string
+  sessionUserId: string
   /** Called when user navigates back to their hub */
   onBack: () => void
   /** If set, opens this thread immediately on mount (e.g. from notification click) */
@@ -53,7 +53,7 @@ function timeLabel(dateString: string): string {
  *
  * Refreshes the thread list every 15 seconds (matching notification poll).
  */
-export default function MessageInbox({ walletAddress, onBack, initialThreadId }: MessageInboxProps) {
+export default function MessageInbox({ sessionUserId, onBack, initialThreadId }: MessageInboxProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
 
@@ -77,7 +77,7 @@ export default function MessageInbox({ walletAddress, onBack, initialThreadId }:
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => { fetchThreads() }, [fetchThreads])
 
@@ -97,7 +97,7 @@ export default function MessageInbox({ walletAddress, onBack, initialThreadId }:
       <div className='max-w-2xl mx-auto h-[calc(100vh-160px)]'>
         <MessageThread
           threadId={activeThreadId}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onBack={() => {
             setActiveThreadId(null)
             fetchThreads(true) // refresh unread counts after reading

@@ -104,7 +104,7 @@ export default function CandidateHuntDesk({ onBack, userAddress }: CandidateHunt
         const res = await fetch('/api/applications/list', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress: userAddress }),
+          body: JSON.stringify({ sessionUserId: userAddress }),
         })
         if (!res.ok || cancelled) return
         const data = await res.json()

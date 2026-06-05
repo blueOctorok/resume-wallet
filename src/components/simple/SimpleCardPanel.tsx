@@ -144,10 +144,9 @@ export default function SimpleCardPanel() {
   const isDark = isDarkTheme(theme)
   const user = useAuthStore((s) => s.user)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
   // sessionStorage may hold a stale user snapshot after sign-out. Guard against it:
   // treat as guest if there's no live Supabase session (not wallet — auth users
-  // use auth:<uuid> placeholder in walletAddress).
+  // use auth:<uuid> placeholder in sessionUserId).
   const isGuest = !user || !sessionUserId
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
@@ -165,11 +164,11 @@ export default function SimpleCardPanel() {
   const setReturnToApply = useUIModeStore((s) => s.setReturnToApply)
   const setOpenPickerAfterHub = useUIModeStore((s) => s.setOpenPickerAfterHub)
 
-  const { card, loading, error, refresh } = useProjectedCareerCard(walletAddress, {
+  const { card, loading, error, refresh } = useProjectedCareerCard(sessionUserId, {
     lensId: activeLensId,
     installedBlockCount: installedBlocks.length,
   })
-  const externalReqs = useExtractedRequirements(snap, walletAddress)
+  const externalReqs = useExtractedRequirements(snap, sessionUserId)
 
   const [applyOpen, setApplyOpen] = useState(false)
   const [lensPickerOpen, setLensPickerOpen] = useState(false)
@@ -237,7 +236,7 @@ export default function SimpleCardPanel() {
   }, [setUiMode])
 
   const handleDraftLens = useCallback(async () => {
-    if (!walletAddress || !snap) return
+    if (!sessionUserId || !snap) return
     setIsDraftingLens(true)
     try {
       const res = await fetch('/api/ai/draft-lens', {
@@ -265,11 +264,11 @@ export default function SimpleCardPanel() {
     } finally {
       setIsDraftingLens(false)
     }
-  }, [walletAddress, snap])
+  }, [sessionUserId, snap])
 
   const handleSaveDraft = useCallback(async () => {
-    if (!walletAddress || !draftLens) return
-    const created = await createLens(walletAddress, {
+    if (!sessionUserId || !draftLens) return
+    const created = await createLens(sessionUserId, {
       name: draftLens.name,
       visibleBlockTypes: draftLens.visibleBlockTypes,
       emphasizedBlockTypes: draftLens.emphasizedBlockTypes,
@@ -279,7 +278,7 @@ export default function SimpleCardPanel() {
       setActiveLens(created.id)
       setDraftLens(null)
     }
-  }, [walletAddress, draftLens, createLens, setActiveLens])
+  }, [sessionUserId, draftLens, createLens, setActiveLens])
 
   const installedBlockTypes = useMemo(
     () => installedBlocks.map((b) => b.blockType),
@@ -348,14 +347,14 @@ export default function SimpleCardPanel() {
   }, [card, fit, reorderDismissed])
 
   const handleApplyReorder = useCallback(() => {
-    if (!walletAddress || !reorderSuggestion) return
+    if (!sessionUserId || !reorderSuggestion) return
     const byType = new Map(installedBlocks.map((b) => [b.blockType, b]))
     const ordered = reorderSuggestion.suggestedBlockTypes
       .map((t) => byType.get(t))
       .filter((b): b is (typeof installedBlocks)[number] => Boolean(b))
     if (ordered.length !== installedBlocks.length) return
-    void reorderBlocks(ordered, walletAddress).then(() => refresh())
-  }, [walletAddress, reorderSuggestion, installedBlocks, reorderBlocks, refresh])
+    void reorderBlocks(ordered, sessionUserId).then(() => refresh())
+  }, [sessionUserId, reorderSuggestion, installedBlocks, reorderBlocks, refresh])
 
   const ghostSections: GhostSection[] = useMemo(() => {
     if (!fit) return []
@@ -369,7 +368,7 @@ export default function SimpleCardPanel() {
 
   // Guest variant: same right-column shape (Stormi strip on top, card below) but
   // both are read-only teasers. No fit logic, no lens auto-pick, no API calls —
-  // those are gated above by `walletAddress` checks. The "Connect a wallet" CTA
+  // those are gated above by `sessionUserId` checks. The "Connect a wallet" CTA
   // jumps straight to the sign-in page so the user can come back and start building.
   if (isGuest) {
     return (
@@ -467,7 +466,7 @@ export default function SimpleCardPanel() {
               selfSectionNav='resume-only'
               onNavigateToBlock={handleNavigateToBlock}
               onAddBlock={handleAddBlockFromApply}
-              walletAddress={walletAddress}
+              sessionUserId={sessionUserId}
               onCardMutation={() => void refresh()}
               onAvatarUploadSuccess={(url) => {
                 updateAvatarUrl(url)
@@ -574,7 +573,7 @@ export default function SimpleCardPanel() {
           isOpen={applyOpen}
           onClose={() => setApplyOpen(false)}
           job={toApplyModalJob(snap)}
-          userAddress={walletAddress}
+          userAddress={sessionUserId}
         />
       )}
 
@@ -583,7 +582,7 @@ export default function SimpleCardPanel() {
           isOpen={applyOpen}
           onClose={() => setApplyOpen(false)}
           job={toApplyModalJob(snap)}
-          userAddress={walletAddress}
+          userAddress={sessionUserId}
         />
       )}
     </div>

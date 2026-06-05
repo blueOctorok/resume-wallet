@@ -14,7 +14,7 @@ interface MvrDetail {
 
 export default function MvrTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -30,12 +30,12 @@ export default function MvrTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
         `/api/admin/mvr?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -45,7 +45,7 @@ export default function MvrTab({
     } catch (err) {
       console.error('Failed to fetch MVR orders:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()
@@ -53,13 +53,13 @@ export default function MvrTab({
 
   const fetchMvrDetail = useCallback(
     async (orderId: string) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       setLoadingMvrDetail(true)
       setSelectedMvrDetail(null)
       setMvrDetailShowXml('none')
       try {
         const res = await fetch(`/api/admin/mvr/${orderId}`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         })
         const data = await res.json()
         if (data.success) {
@@ -71,7 +71,7 @@ export default function MvrTab({
         setLoadingMvrDetail(false)
       }
     },
-    [walletAddress]
+    [sessionUserId]
   )
 
   return (
@@ -107,7 +107,7 @@ export default function MvrTab({
                   <div>
                     <div>{mvr.driverName}</div>
                     <code className='text-xs opacity-75'>
-                      {mvr.walletAddress.slice(0, 8)}...{mvr.walletAddress.slice(-4)}
+                      {mvr.sessionUserId.slice(0, 8)}...{mvr.sessionUserId.slice(-4)}
                     </code>
                   </div>
                 </td>
@@ -209,8 +209,8 @@ export default function MvrTab({
                   <div>
                     <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'}`}>Order</h4>
                     <div className={`p-4 rounded-lg text-sm grid grid-cols-2 md:grid-cols-3 gap-2 ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                      <div><span className='opacity-70'>Driver:</span> {String(selectedMvrDetail.order.driverName || selectedMvrDetail.order.walletAddress || '-')}</div>
-                      <div><span className='opacity-70'>Wallet:</span> <code className='text-xs'>{String(selectedMvrDetail.order.walletAddress || '-')}</code></div>
+                      <div><span className='opacity-70'>Driver:</span> {String(selectedMvrDetail.order.driverName || selectedMvrDetail.order.sessionUserId || '-')}</div>
+                      <div><span className='opacity-70'>Wallet:</span> <code className='text-xs'>{String(selectedMvrDetail.order.sessionUserId || '-')}</code></div>
                       <div><span className='opacity-70'>Status:</span> {String(selectedMvrDetail.order.status)}</div>
                       <div><span className='opacity-70'>DL State:</span> {String(selectedMvrDetail.order.dlState)}</div>
                       <div><span className='opacity-70'>Accio #:</span> {String(selectedMvrDetail.order.accioOrderNumber || '-')}</div>

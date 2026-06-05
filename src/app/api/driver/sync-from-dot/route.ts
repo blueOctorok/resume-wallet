@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { form1ToProfile, form2ToProfile, form3ToProfile } from '@/lib/dot-form-mapper'
 import {
   getFullDriverProfile,
@@ -19,16 +20,12 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json()
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[DOT SYNC] Starting sync for wallet:', walletAddress)
+    console.log('[DOT SYNC] Starting sync for user:', sessionUserId)
 
     const supabase = await getAdminSupabaseClient()
 
@@ -36,11 +33,11 @@ export async function POST(request: NextRequest) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     if (userError || !user) {
-      console.error('[DOT SYNC] User not found:', walletAddress)
+      console.error('[DOT SYNC] User not found:', sessionUserId)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }

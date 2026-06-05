@@ -18,13 +18,13 @@ import Avatar from '@/components/ui/Avatar'
 import type { PageType } from '@/stores/types'
 
 interface DriverCareerCardSectionProps {
-  walletAddress: string
+  sessionUserId: string
   onNavigate: (page: PageType) => void
   onBack: () => void
 }
 
 export default function DriverCareerCardSection({
-  walletAddress,
+  sessionUserId,
   onNavigate,
   onBack,
 }: DriverCareerCardSectionProps) {
@@ -59,7 +59,7 @@ export default function DriverCareerCardSection({
     const handleFocus = () => fetchCard(true)
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // ── Self-view action slots ────────────────────────────────────────────────
   // Drivers see navigation buttons instead of employer request buttons.
@@ -191,7 +191,7 @@ export default function DriverCareerCardSection({
 
           <CareerCard
             data={data}
-            walletAddress={walletAddress}
+            sessionUserId={sessionUserId}
             resumeAction={resumeAction}
             dotAppAction={dotAppAction}
             mvrAction={mvrAction}

@@ -180,7 +180,7 @@ export async function GET(
           id: owner.id,
           name: resolveName(owner.id) || owner.email || 'Unknown',
           email: owner.email,
-          walletAddress: owner.wallet_address,
+          legacyWalletAddress: owner.wallet_address,
           joinedAt: owner.created_at,
         } : null,
         approvedBy: company.approved_by,

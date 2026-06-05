@@ -66,9 +66,9 @@ export async function GET(request: NextRequest) {
 
     // STORMI_UNLIMITED_WALLETS is a legacy wallet allowlist with no session
     // equivalent — read the header directly for it. Removed with the wallet cutover.
-    const walletAddress = request.headers.get('x-wallet-address')
-    const isUnlimited = walletAddress
-      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    const sessionUserId = request.headers.get('x-wallet-address')
+    const isUnlimited = sessionUserId
+      ? STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(sessionUserId))
       : false
     let usage = await getOrCreateUsage(supabase, user.id)
 

@@ -48,8 +48,8 @@ const EmploymentVerificationForm = dynamic(
 )
 
 interface DotApplicationFlowProps {
-  walletAddress: string
-  /** Raw user object for form walletAddress prop (may differ from normalized address) */
+  sessionUserId: string
+  /** Raw user object for form sessionUserId prop (may differ from normalized address) */
   userAddress: string | undefined
   onBack: () => void
 }
@@ -72,7 +72,7 @@ interface DotApplicationFlowProps {
  * No external state management props needed.
  */
 export default function DotApplicationFlow({
-  walletAddress,
+  sessionUserId,
   userAddress,
   onBack,
 }: DotApplicationFlowProps) {
@@ -91,7 +91,7 @@ export default function DotApplicationFlow({
   const hubStore = useDriverHubStore()
 
   /** False until we merge server application_data (form3 / employment live in DB, not only localStorage). */
-  const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !walletAddress?.trim())
+  const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !sessionUserId?.trim())
 
   // Track save reference to detect unsaved changes
   const lastSavedDataRef = useRef<{ form1: unknown; form2: unknown; form3: unknown }>({
@@ -100,8 +100,8 @@ export default function DotApplicationFlow({
   // Prevent re-loading profile after first load attempt (reset when wallet changes)
   const profileLoadAttemptedRef = useRef(false)
   const profileWalletRef = useRef<string | null>(null)
-  if (profileWalletRef.current !== (walletAddress ?? null)) {
-    profileWalletRef.current = walletAddress ?? null
+  if (profileWalletRef.current !== (sessionUserId ?? null)) {
+    profileWalletRef.current = sessionUserId ?? null
     profileLoadAttemptedRef.current = false
   }
   // When true, loads from profile even if forms have data (navigating from Resume Builder)
@@ -117,7 +117,7 @@ export default function DotApplicationFlow({
   // Server-first hydrate — DB is source of truth for all three forms (esp. form3 / employers)
   // -------------------------------------------------------
   useEffect(() => {
-    const w = walletAddress?.trim()
+    const w = sessionUserId?.trim()
     if (!w) {
       setDotBootstrapReady(true)
       return
@@ -171,7 +171,7 @@ export default function DotApplicationFlow({
     return () => {
       cancelled = true
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // -------------------------------------------------------
   // Profile prefill — load from unified profile into forms
@@ -181,7 +181,7 @@ export default function DotApplicationFlow({
     const loadFromProfile = async () => {
       if (!dotBootstrapReady) return
       if (profileLoadAttemptedRef.current) return
-      if (!walletAddress) return
+      if (!sessionUserId) return
 
       profileLoadAttemptedRef.current = true
 
@@ -306,7 +306,7 @@ export default function DotApplicationFlow({
 
     loadFromProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletAddress, dotBootstrapReady])
+  }, [sessionUserId, dotBootstrapReady])
 
   // -------------------------------------------------------
   // Dirty state tracking for unsaved-changes warning
@@ -344,7 +344,7 @@ export default function DotApplicationFlow({
   // -------------------------------------------------------
   const saveAllFormsToProfile = useCallback(
     async (showIndicator = true) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       try {
         if (showIndicator) startSync()
         const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
@@ -368,7 +368,7 @@ export default function DotApplicationFlow({
         try {
           await fetch('/api/driver-applications/save-progress', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+            headers: { 'Content-Type': 'application/json', 'x-wallet-address': sessionUserId },
         body: JSON.stringify({
               form1Data: dotApp.form1Data,
               form2Data: dotApp.form2Data,
@@ -394,7 +394,7 @@ export default function DotApplicationFlow({
         return false
       }
     },
-    [walletAddress, dotApp.form1Data, dotApp.form2Data, dotApp.form3Data, dotApp.currentForm, startSync, syncSuccess, syncError]
+    [sessionUserId, dotApp.form1Data, dotApp.form2Data, dotApp.form3Data, dotApp.currentForm, startSync, syncSuccess, syncError]
   )
 
   const handleFormNavigation = useCallback(
@@ -412,7 +412,7 @@ export default function DotApplicationFlow({
       dotApp.setSubmissionError(null)
       dotApp.setIsSubmitting(true)
 
-      if (!walletAddress) {
+      if (!sessionUserId) {
         alert('Please sign in to submit your application.')
         dotApp.setIsSubmitting(false)
         return
@@ -428,7 +428,7 @@ export default function DotApplicationFlow({
       const applicationHash = await hashJson(combinedData)
 
       const { checkDuplicateApplicationHash } = await import('@/lib/supabase-client-db')
-      const dupCheck = await checkDuplicateApplicationHash(walletAddress, applicationHash)
+      const dupCheck = await checkDuplicateApplicationHash(sessionUserId, applicationHash)
       if (dupCheck.exists) {
         dotApp.setSubmissionError(
           'This application has already been submitted. Please modify your data before resubmitting.'
@@ -442,7 +442,7 @@ export default function DotApplicationFlow({
       const ipfsHash = 'placeholder_ipfs_hash_' + Date.now()
       const { completeDriverApplicationClient } = await import('@/lib/supabase-client-db')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dbResult = await completeDriverApplicationClient(walletAddress, combinedData as any, ipfsHash, applicationHash)
+      const dbResult = await completeDriverApplicationClient(sessionUserId, combinedData as any, ipfsHash, applicationHash)
 
       if (!dbResult.success) {
         dotApp.setSubmissionError('Failed to save application to database: ' + dbResult.error)
@@ -456,7 +456,7 @@ export default function DotApplicationFlow({
         const syncResponse = await fetch('/api/driver/sync-from-dot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress }),
+        body: JSON.stringify({ sessionUserId }),
         })
         if (syncResponse.ok) {
           console.log('✅ [DOT] Profile synced from DOT application')
@@ -475,7 +475,7 @@ export default function DotApplicationFlow({
       dotApp.completeApplication()
       setShowEmploymentVerification(false)
       const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
-      void syncDriverHubFromApi(walletAddress)
+      void syncDriverHubFromApi(sessionUserId)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to submit application'
       console.error('❌ [DOT] Submission failed:', err)
@@ -484,7 +484,7 @@ export default function DotApplicationFlow({
       dotApp.setIsSubmitting(false)
     }
   }, [
-    walletAddress,
+    sessionUserId,
     dotApp.form1Data, dotApp.form2Data, dotApp.form3Data,
     dotApp.isSubmitting, dotApp.setIsSubmitting, dotApp.setSubmissionError,
     dotApp.setCurrentForm, dotApp.completeApplication,
@@ -500,7 +500,7 @@ export default function DotApplicationFlow({
       if (prefillData.form3Data) dotApp.setForm3Data(prefillData.form3Data)
 
       // Fire-and-forget profile sync
-      if (walletAddress) {
+      if (sessionUserId) {
         try {
           const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
           const profileData = {
@@ -524,7 +524,7 @@ export default function DotApplicationFlow({
       dotApp.setCurrentForm(1)
       dotApp.incrementFormResetKey()
     },
-    [walletAddress]
+    [sessionUserId]
   )
 
   const handleNavigateBack = useCallback(() => {
@@ -548,7 +548,7 @@ export default function DotApplicationFlow({
   // cancelled when the effect re-runs, preventing duplicate resumes.
   // -------------------------------------------------------
   useEffect(() => {
-    if (!dotApp.isApplicationCompleted || !walletAddress) return
+    if (!dotApp.isApplicationCompleted || !sessionUserId) return
 
     const controller = new AbortController()
     const { signal } = controller
@@ -558,7 +558,7 @@ export default function DotApplicationFlow({
       let hasResumes = false
       try {
         const res = await fetch('/api/resumes', {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
           signal,
         })
         if (res.ok) {
@@ -613,7 +613,7 @@ export default function DotApplicationFlow({
         const createRes = await fetch('/api/resumes/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+            'x-wallet-address': sessionUserId,
           },
         body: JSON.stringify({
             title: title ? `${title} - Resume` : 'My Resume',
@@ -651,7 +651,7 @@ export default function DotApplicationFlow({
 
     // Cancel all in-flight fetches if this effect re-runs (Strict Mode double-invoke)
     return () => controller.abort()
-  }, [dotApp.isApplicationCompleted, walletAddress])
+  }, [dotApp.isApplicationCompleted, sessionUserId])
 
   // -------------------------------------------------------
   // Render helpers
@@ -753,7 +753,7 @@ export default function DotApplicationFlow({
     const formKey = `form-${dotApp.formResetKey}`
     const formProps = {
       onNavigateToForm: handleFormNavigation,
-      walletAddress: userAddress,
+      sessionUserId: userAddress,
       onSaveProgress: saveAllFormsToProfile,
     }
 
@@ -896,7 +896,7 @@ export default function DotApplicationFlow({
       <ProfileConflictModal
         isOpen={dotApp.showProfileConflictModal}
         conflict={dotApp.profileConflict}
-        userAddress={walletAddress ?? null}
+        userAddress={sessionUserId ?? null}
         onKeepExisting={() => {
           dotApp.setShowProfileConflictModal(false)
           dotApp.setProfileConflict(null)

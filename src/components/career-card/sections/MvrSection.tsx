@@ -35,7 +35,7 @@ interface MvrSectionProps {
   mode: CareerCardMode
   isDark: boolean
   onNavigateToOrder?: () => void
-  walletAddress?: string | null
+  sessionUserId?: string | null
 }
 
 export default function MvrSection({
@@ -43,7 +43,7 @@ export default function MvrSection({
   mode,
   isDark,
   onNavigateToOrder,
-  walletAddress,
+  sessionUserId,
 }: MvrSectionProps) {
   const [showMvrViewer, setShowMvrViewer] = useState(false)
 
@@ -74,7 +74,7 @@ export default function MvrSection({
     !data.employerPaidScreening &&
     !isFailed &&
     !hideOrderHeaderForEmployerScreeningPending &&
-    (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
+    (isComplete ? Boolean(sessionUserId && data.orderId) : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 
@@ -199,11 +199,11 @@ export default function MvrSection({
         </div>
       )}
 
-      {showMvrViewer && walletAddress && (
+      {showMvrViewer && sessionUserId && (
         <MvrViewModal
           isOpen={showMvrViewer}
           onClose={() => setShowMvrViewer(false)}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={data.orderId}
         />
       )}

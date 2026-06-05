@@ -2,7 +2,6 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import Image from 'next/image'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
@@ -44,9 +43,7 @@ import {
   Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { navControlButtonClass } from '@/lib/navigation-styles'
 import type { EmployerHubContext } from '@/lib/ava-context'
-import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
@@ -73,8 +70,7 @@ interface HubCompany {
   city: string | null
   state: string | null
   onboardingCompleted: boolean
-  /** MultiOwnerLightAccount for shared employer USDC / STORM */
-  walletAddress?: string | null
+  companyWalletAddress?: string | null
 }
 
 interface HubJobPosting {
@@ -163,7 +159,7 @@ interface HubData {
 }
 
 interface EmployerHubProps {
-  walletAddress: string
+  sessionUserId: string
   onNavigate: (view: string) => void
 }
 
@@ -267,7 +263,7 @@ function EmployerInstalledBlockTile({
 // MAIN COMPONENT
 // ============================================================
 
-export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubProps) {
+export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubProps) {
   const { theme } = useTheme()
   const { navigateToMessages } = useUIStore()
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
@@ -301,7 +297,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // One screenings fetch shared across the Active outreach (per-card files) and
   // the Files vault tab. Anchored to `driver_user_id` at the DB level so files
   // outlive any invite state — even after an invite is cancelled/removed.
-  const screenings = useEmployerScreenings(walletAddress)
+  const screenings = useEmployerScreenings(sessionUserId)
   const refreshScreenings = screenings.refresh
 
   // Company + role live in global nav — keep store in sync whenever hub payload changes.
@@ -330,8 +326,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
-  // v2 keys: default is now collapsed; old keys are ignored so everyone gets the new default once.
-  const RAIL_STORMI_LS = 'employer-hub-rail-stormi-open-v2'
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const defaults = { jobs: true, pipeline: true, outreach: false }
@@ -343,26 +337,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       return defaults
     }
   })
-
-  /** Desktop xl+ side rails — default collapsed so the hub leads with main work; expand when needed (persisted). */
-  const [stormiRailOpen, setStormiRailOpen] = useState(false)
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem(RAIL_STORMI_LS)
-      if (s !== null) setStormiRailOpen(s === '1' || s === 'true')
-    } catch {
-      /* keep defaults */
-    }
-  }, [])
-
-  const persistStormiRail = useCallback((open: boolean) => {
-    setStormiRailOpen(open)
-    try {
-      localStorage.setItem(RAIL_STORMI_LS, open ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const toggleSection = (key: string) => {
     setOpenSections(prev => {
@@ -456,11 +430,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // Section-specific refresh functions - only fetch and update the relevant section
   const refreshPipeline = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setRefreshingPipeline(true)
     try {
       const response = await fetch('/api/employer/hub')
@@ -482,29 +456,29 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     } finally {
       setRefreshingPipeline(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
-    if (walletAddress) {
+    if (sessionUserId) {
       fetchHubData()
     }
-  }, [walletAddress, fetchHubData])
+  }, [sessionUserId, fetchHubData])
 
   useEffect(() => {
-    if (!walletAddress || !data?.company?.id) return
-    void fetchEmployerBlocks(walletAddress)
-  }, [walletAddress, data?.company?.id, fetchEmployerBlocks])
+    if (!sessionUserId || !data?.company?.id) return
+    void fetchEmployerBlocks(sessionUserId)
+  }, [sessionUserId, data?.company?.id, fetchEmployerBlocks])
 
   // Full hub refresh: main hub API + employer blocks store + screenings + invites (nonce).
   const pullLatestEmployerHub = useCallback(async () => {
     await fetchHubData(true)
-    if (walletAddress) {
+    if (sessionUserId) {
       await Promise.all([
-        fetchEmployerBlocks(walletAddress),
+        fetchEmployerBlocks(sessionUserId),
         refreshScreenings(true),
       ])
     }
-  }, [walletAddress, fetchHubData, fetchEmployerBlocks, refreshScreenings])
+  }, [sessionUserId, fetchHubData, fetchEmployerBlocks, refreshScreenings])
 
   // Auto-refresh when tab becomes visible (solves stale data after changes in
   // other tabs). Always silent — we don't want a focus event to wipe the hub
@@ -512,7 +486,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // while it refreshes in the background.
   const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(pullLatestEmployerHub, {
     staleTime: 30000,
-    enabled: !!walletAddress,
+    enabled: !!sessionUserId,
   })
 
   // Nav-bar hub refresh — Navigation calls `requestHubRefresh()` which bumps `hubRefreshNonce`.
@@ -526,10 +500,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
     if (hubRefreshNonce === lastHubRefreshNonce.current) return
     lastHubRefreshNonce.current = hubRefreshNonce
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setEmployerHubRefreshing(true)
     void pullLatestEmployerHub().finally(() => setEmployerHubRefreshing(false))
-  }, [hubRefreshNonce, walletAddress, pullLatestEmployerHub, setEmployerHubRefreshing])
+  }, [hubRefreshNonce, sessionUserId, pullLatestEmployerHub, setEmployerHubRefreshing])
 
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {
@@ -682,23 +656,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">
-      {/* xl+: 3-column grid — wallet, priority (row 1 col 2), Stormi (row 1 col 3), then
-          rest of hub (row 2 col 2). All four are *direct* children of this grid (no
-          `display:contents` wrapper) so row-1 tops share one formatting context. Mobile:
-          same DOM order as flex column → priority → Stormi → rest. */}
-      <div
-        className={cn(
-          // Mobile: flex column (wallet hidden on small screens). Desktop: plain 3-column grid
-          // with NO `display:contents` — wallet, priority, Stormi, and rest are *direct* grid
-          // children so row-1 tops share one layout box (contents flattening was leaving the
-          // rails misaligned vs the center column in production).
-          'flex flex-col gap-8 pb-28 max-xl:pb-32 xl:grid xl:items-start xl:gap-x-8 xl:gap-y-8 xl:pb-0',
-          stormiRailOpen
-            ? 'xl:grid-cols-[minmax(0,1fr)_26rem]'
-            : 'xl:grid-cols-[minmax(0,1fr)_auto]',
-        )}
-      >
-        <div className="w-full min-w-0 space-y-8 xl:col-start-1 xl:row-start-1 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
+      <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 pb-28 max-xl:pb-32 xl:pb-0">
       {/* ── Blocks & Outreach — unified section ─────────────────────────
            Top: installed employer blocks (what capabilities does this company have?)
            Bottom: candidate outreach (create invites using those capabilities)
@@ -786,7 +744,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 tied to the candidate (not the invite), so they stay safe even if the invite is removed.
               </p>
               <CandidateOutreach
-                walletAddress={walletAddress}
+                sessionUserId={sessionUserId}
                 isCollapsed={!openSections.outreach}
                 onToggle={() => toggleSection('outreach')}
                 embedded
@@ -799,7 +757,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 onRefreshScreenings={() => void screenings.refresh(true)}
                 employerContext={employerStormiContext}
                 companyId={data.company.id}
-                companyWalletAddress={data.company.walletAddress ?? null}
+                companyWalletAddress={data.company.companyWalletAddress ?? null}
               />
             </div>
           )}
@@ -876,113 +834,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       {/* Quick actions removed — these page-level destinations now live in the Employer Hub
           dropdown in the global nav (Find Talent, Post Job, Applicants, Company, Team). The
           "New outreach" CTA still lives inside the Blocks & Outreach section above. */}
-          </div>
-
-        {employerStormiContext &&
-          (stormiRailOpen ? (
-            <aside
-              id="employer-hub-stormi-panel"
-              className="min-w-0 max-w-full scroll-mt-24 xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1 xl:block xl:self-start"
-              aria-label="Ask Stormi hiring coach"
-            >
-              <HubSectionPanel
-                isDark={isDarkTheme(theme)}
-                accent="violet"
-                contentClassName="relative pr-10 xl:pr-12"
-              >
-                {/* Collapse handle — desktop only; mirrors wallet rail's collapse-to-edge pattern. */}
-                <div className="hidden xl:block absolute right-3 top-3 z-20">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      '!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm',
-                      navControlButtonClass(isDarkTheme(theme), theme),
-                    )}
-                    onClick={() => persistStormiRail(false)}
-                    aria-label="Collapse Ask Stormi panel"
-                    title="Collapse Ask Stormi"
-                  >
-                    <ChevronRight className="w-4 h-4" aria-hidden />
-                  </Button>
-                </div>
-                <BlockCard
-                  variant="embed"
-                  headerIconSlot={
-                    <Image
-                      src="/ava-robot.png"
-                      alt=""
-                      width={36}
-                      height={36}
-                      className={cn('object-contain', !isDarkTheme(theme) && 'invert')}
-                    />
-                  }
-                  title="Ask Stormi"
-                  description="Hiring coach — outreach, talent search, pipeline, and what to do next."
-                >
-                  <StormiChatPanel
-                    mode="employer"
-                    walletAddress={walletAddress}
-                    employerContext={employerStormiContext}
-                    stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
-                    onStormiAutoWelcomeSynced={() =>
-                      setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
-                    }
-                    hubEmbedSurface
-                  />
-                </BlockCard>
-              </HubSectionPanel>
-            </aside>
-          ) : (
-            <aside
-              id="employer-hub-stormi-panel"
-              className={cn(
-                'hidden w-11 shrink-0 self-start xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1 xl:flex xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
-                'rounded-2xl border shadow-sm backdrop-blur-sm',
-                theme === 'ink'
-                  ? 'border-zinc-600/80 bg-zinc-900/95'
-                  : 'border-violet-200/70 dark:border-violet-700/60 bg-white/90 dark:bg-gray-900/90',
-              )}
-              aria-label="Ask Stormi collapsed"
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => persistStormiRail(true)}
-                className="!p-0 h-auto w-full touch-manipulation"
-                aria-label="Expand Ask Stormi panel"
-                title="Expand Ask Stormi"
-              >
-                {/* Rotated label mirrors collapsed wallet rail. Image inverts on light themes
-                    because the source PNG is white-on-transparent. */}
-                <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-6">
-                  <Image
-                    src="/ava-robot.png"
-                    alt=""
-                    width={16}
-                    height={16}
-                    className={cn(
-                      'h-4 w-4 shrink-0 object-contain',
-                      !isDarkTheme(theme) && 'invert',
-                    )}
-                  />
-                  <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
-                    Stormi
-                  </span>
-                </span>
-              </Button>
-            </aside>
-          ))}
-
-          <div className="w-full min-w-0 space-y-8 xl:col-start-2 xl:row-start-2 xl:max-w-7xl xl:justify-self-center xl:min-w-0">
 
       <EmployerBlockPickerModal
         open={employerPickerOpen}
         onClose={() => closeEmployerBlockPicker()}
         installedTypes={new Set(employerInstalledBlocks.map((b) => b.blockType))}
         canInstall={employerCanManageBlocks}
-        onInstallBlock={async (blockType) => installEmployerBlock(walletAddress, blockType, null)}
+        onInstallBlock={async (blockType) => installEmployerBlock(sessionUserId, blockType, null)}
       />
 
       <BlockRemovalConfirmModal
@@ -991,7 +849,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         blockLabel={employerBlockToRemove?.label ?? ''}
         onConfirm={async (reason) => {
           if (!employerBlockToRemove) return
-          const ok = await removeEmployerBlock(walletAddress, employerBlockToRemove.id, reason)
+          const ok = await removeEmployerBlock(sessionUserId, employerBlockToRemove.id, reason)
           if (!ok) throw new Error('Remove failed')
         }}
       />
@@ -999,7 +857,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
         jobs={data.jobPostings}
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         theme={theme}
         onPostJob={() => onNavigate('post-job')}
         onRefresh={fetchHubData}
@@ -1073,7 +931,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                     hasResume: a.hasResume ?? false,
                     resumeVerified: a.resumeVerified ?? false,
                   }))}
-                  walletAddress={walletAddress}
+                  sessionUserId={sessionUserId}
                   onStatusChange={handleStatusChange}
                   onSelectApplicant={(applicant) => {
                     const fullApplicant = data.applicants.find(
@@ -1122,7 +980,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               otherUserId={selectedApplicant.applicantUserId}
               applicationId={selectedApplicant.applicationId}
               subject={`Re: ${selectedApplicant.jobTitle} – ${selectedApplicant.applicantName}`}
-              walletAddress={walletAddress}
+              sessionUserId={sessionUserId}
               onThreadOpen={(threadId) => {
                 setSelectedApplicant(null)
                 navigateToMessages(threadId)
@@ -1141,7 +999,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               <CandidateNotesPanel
                 candidateUserId={selectedApplicant.applicantUserId}
                 applicationId={selectedApplicant.applicationId}
-                walletAddress={walletAddress}
+                sessionUserId={sessionUserId}
                 candidateName={selectedApplicant.applicantName || ''}
               />
             </div>
@@ -1153,45 +1011,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       {careerCardApplicantId && (
         <CareerCardModal
           candidateUserId={careerCardApplicantId}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onClose={() => setCareerCardApplicantId(null)}
         />
       )}
 
-          </div>
       </div>
-
-      {employerStormiContext && (
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() =>
-            document.getElementById('employer-hub-stormi-panel')?.scrollIntoView({ behavior: 'smooth' })
-          }
-          className={cn(
-            'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
-            'right-[max(0px,env(safe-area-inset-right,0px))]',
-            'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
-            'rounded-none rounded-l-2xl border border-r-0 border-gray-300/40 dark:border-gray-600/50',
-            'shadow-lg !p-0 touch-manipulation active:opacity-90',
-            theme === 'ink'
-              ? '!bg-violet-700 hover:!bg-violet-600 dark:!bg-violet-700 dark:hover:!bg-violet-600 !text-white'
-              : '!bg-violet-600 hover:!bg-violet-500 dark:!bg-violet-600 dark:hover:!bg-violet-500 !text-white',
-          )}
-          aria-label="Scroll to Ask Stormi"
-        >
-          <span className="flex items-center gap-2 rotate-90 whitespace-nowrap">
-            <Image
-              src="/ava-robot.png"
-              alt=""
-              width={16}
-              height={16}
-              className={cn('h-4 w-4 shrink-0 object-contain', !isDarkTheme(theme) && 'invert')}
-            />
-            <span className="text-[11px] font-bold tracking-wide">Stormi</span>
-          </span>
-        </Button>
-      )}
     </div>
   )
 }

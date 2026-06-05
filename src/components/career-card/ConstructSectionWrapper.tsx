@@ -46,7 +46,7 @@ export default function ConstructSectionWrapper({
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const removeBlock = useHubBlocksStore((s) => s.removeBlock)
   const installedBlocks = useInstalledBlocks()
   const [removeModalOpen, setRemoveModalOpen] = useState(false)
@@ -68,10 +68,10 @@ export default function ConstructSectionWrapper({
 
   const handleConfirmRemove = useCallback(
     async (_reason: string | null) => {
-      if (!installed || !walletAddress || core) return
-      await removeBlock(installed.id, walletAddress)
+      if (!installed || !sessionUserId || core) return
+      await removeBlock(installed.id, sessionUserId)
     },
-    [installed, walletAddress, core, removeBlock],
+    [installed, sessionUserId, core, removeBlock],
   )
 
   const openResumeEditor = (d: HubDocument) => {

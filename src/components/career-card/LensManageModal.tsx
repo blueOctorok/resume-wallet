@@ -28,7 +28,7 @@ interface LensManageModalProps {
 export default function LensManageModal({ onClose }: LensManageModalProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const lenses = useLenses()
   const installedBlocks = useInstalledBlocks()
 
@@ -53,14 +53,14 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
 
   // Pull fresh on mount in case another tab mutated.
   useEffect(() => {
-    if (walletAddress) void fetchLenses(walletAddress)
-  }, [walletAddress, fetchLenses])
+    if (sessionUserId) void fetchLenses(sessionUserId)
+  }, [sessionUserId, fetchLenses])
 
   const atSoftCap = lenses.length >= SOFT_LENS_LIMIT
   const atHardCap = lenses.length >= HARD_LENS_LIMIT
 
   const handleCreateBlank = async () => {
-    if (!walletAddress || atHardCap) return
+    if (!sessionUserId || atHardCap) return
     // Pick a unique default name; users rename immediately after.
     const base = 'New lens'
     let candidate = base
@@ -69,7 +69,7 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
     while (existingNames.has(candidate.toLowerCase())) {
       candidate = `${base} ${n++}`
     }
-    await createLens(walletAddress, {
+    await createLens(sessionUserId, {
       name: candidate,
       // Start visible = all installed appears-on-card block types. Gives the
       // user something to trim down rather than a blank canvas they have to
@@ -81,19 +81,19 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
   }
 
   const handleRename = async (id: string) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const next = draftName.trim()
     if (next.length === 0) {
       setRenamingId(null)
       return
     }
-    await renameLens(walletAddress, id, next)
+    await renameLens(sessionUserId, id, next)
     setRenamingId(null)
     setDraftName('')
   }
 
   const handleDelete = async (id: string) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const lens = lenses.find((l) => l.id === id)
     if (!lens || lens.isDefault) return
     // Queue for undo BEFORE the request so a fast click still lets you recover.
@@ -101,7 +101,7 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
       { id, name: lens.name, visibleBlockTypes: lens.visibleBlockTypes },
       ...q,
     ])
-    await deleteLens(walletAddress, id)
+    await deleteLens(sessionUserId, id)
     // If the deleted lens was active, fall back to default server-side.
     if (activeLensId === id) setActiveLens(null)
   }
@@ -109,12 +109,12 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
   const handleUndo = async (
     entry: { id: string; name: string; visibleBlockTypes: string[] | null },
   ) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setUndoQueue((q) => q.filter((e) => e.id !== entry.id))
     // Undo re-creates with the same name + visible set. Not identity-preserving
     // (new UUID, new created_at) but the framing is recovered, which is what
     // the user actually cares about.
-    await createLens(walletAddress, {
+    await createLens(sessionUserId, {
       name: entry.name,
       visibleBlockTypes: entry.visibleBlockTypes,
     })
@@ -130,7 +130,7 @@ export default function LensManageModal({ onClose }: LensManageModalProps) {
   }, [undoQueue])
 
   const handleCopyShareLink = async (lensId: string, isDefault: boolean) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       // Fetch (or mint) the user's share token. Endpoint POSTs to enable if
       // not yet created — same flow CareerCardShareModal uses.

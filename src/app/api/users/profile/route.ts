@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
 
     // Get wallet address from query parameters
     const { searchParams } = new URL(request.url)
-    const walletAddress = searchParams.get('walletAddress')
+    const sessionUserId = searchParams.get('sessionUserId')
 
-    if (!walletAddress) {
+    if (!sessionUserId) {
       console.log('❌ User Profile API: No wallet address provided')
       return NextResponse.json(
         { error: 'Wallet address is required' },
@@ -19,10 +19,10 @@ export async function GET(request: NextRequest) {
 
     console.log(
       '👤 User Profile API: Fetching profile for wallet:',
-      walletAddress
+      sessionUserId
     )
 
-    const user = await getUserProfile(walletAddress)
+    const user = await getUserProfile(sessionUserId)
     console.log('✅ User Profile API: Profile fetched successfully')
 
     return NextResponse.json(user)
@@ -44,11 +44,11 @@ export async function PUT(request: NextRequest) {
     const { name, cdlNumber, cdlState, cdlClass } = body
 
     // TODO: Get actual user ID from wallet authentication
-    const walletAddress = 'temp-wallet-address'
+    const sessionUserId = 'temp-wallet-address'
 
     // Update user profile using Supabase
     const user = await upsertUser({
-      walletAddress,
+      sessionUserId,
       name,
       cdlNumber,
       cdlState,

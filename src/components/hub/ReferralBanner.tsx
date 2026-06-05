@@ -19,7 +19,7 @@ interface ReferralStats {
 export default function ReferralBanner() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
 
   const [referralCode, setReferralCode] = useState<string | null>(null)
   const [stats, setStats] = useState<ReferralStats | null>(null)
@@ -27,7 +27,7 @@ export default function ReferralBanner() {
   const [loading, setLoading] = useState(true)
 
   const fetchReferral = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const res = await fetch('/api/referrals')
       if (res.ok) {
@@ -40,7 +40,7 @@ export default function ReferralBanner() {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
     fetchReferral()

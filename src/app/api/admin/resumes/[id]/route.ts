@@ -40,7 +40,7 @@ export async function GET(
       success: true,
       resume: {
         ...resume,
-        walletAddress: user?.wallet_address,
+        legacyWalletAddress: user?.wallet_address,
         email: user?.email,
         userName: profileName,
       },

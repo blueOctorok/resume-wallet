@@ -6,7 +6,7 @@ import { FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface MvrStatusIndicatorProps {
-  walletAddress: string | null
+  sessionUserId: string | null
   onOpenManagement: () => void
   /**
    * Controls where the indicator is rendered so we can tweak layout without duplicating logic.
@@ -46,7 +46,7 @@ interface MvrStatus {
 }
 
 export default function MvrStatusIndicator({
-  walletAddress,
+  sessionUserId,
   onOpenManagement,
   placement = 'sidebar',
 }: MvrStatusIndicatorProps) {
@@ -56,7 +56,7 @@ export default function MvrStatusIndicator({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setLoading(false)
       return
     }
@@ -65,7 +65,7 @@ export default function MvrStatusIndicator({
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`/api/mvr/check-status?walletAddress=${encodeURIComponent(walletAddress)}`)
+        const response = await fetch(`/api/mvr/check-status?sessionUserId=${encodeURIComponent(sessionUserId)}`)
         
         if (!response.ok) {
           // For any non-OK response, default to "no MVR" state
@@ -98,7 +98,7 @@ export default function MvrStatusIndicator({
     // Refresh every 30 seconds to catch status updates
     const interval = setInterval(fetchMvrStatus, 30000)
     return () => clearInterval(interval)
-  }, [walletAddress])
+  }, [sessionUserId])
 
   const handleClick = () => {
     console.log('[MVR INDICATOR] Opening MVR Management Modal')

@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * GET /api/invite/[token]
@@ -126,8 +127,6 @@ export async function GET(
  * POST /api/invite/[token]
  * Mark invite as in_progress when candidate starts the application
  * 
- * Body:
- *   walletAddress - The candidate's wallet address
  */
 export async function POST(
   request: NextRequest,
@@ -135,8 +134,7 @@ export async function POST(
 ) {
   try {
     const { token } = await params
-    const body = await request.json()
-    const { walletAddress } = body
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 })
@@ -161,17 +159,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invite is no longer valid' }, { status: 400 })
     }
 
-    // Get user ID from wallet address (if logged in)
-    let userId = null
-    if (walletAddress) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .ilike('wallet_address', walletAddress)
-        .single()
-      
-      userId = user?.id || null
-    }
+    const userId = sessionUserId
 
     // Starting onboarding ≠ consent signed. We record who claimed the invite
     // and mark it `viewed` (engaged), but NOT `in_progress` — that status is
@@ -272,7 +260,6 @@ export async function POST(
  * 
  * Body:
  *   driverApplicationId - The completed application ID
- *   walletAddress - The candidate's wallet address
  */
 export async function PATCH(
   request: NextRequest,
@@ -281,7 +268,8 @@ export async function PATCH(
   try {
     const { token } = await params
     const body = await request.json()
-    const { driverApplicationId, walletAddress } = body
+    const { driverApplicationId } = body
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 })
@@ -306,17 +294,7 @@ export async function PATCH(
       return NextResponse.json({ success: true, inviteId: invite.id, alreadyCompleted: true })
     }
 
-    // Get user ID from wallet address
-    let userId: string | null = null
-    if (walletAddress) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .ilike('wallet_address', walletAddress)
-        .single()
-
-      userId = user?.id || null
-    }
+    const userId = sessionUserId
 
     const candidateUserId = userId ?? (invite.used_by_user_id as string | null)
 

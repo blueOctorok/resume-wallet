@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveDriverApplicationClient } from '@/lib/supabase-client-db'
-import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
@@ -53,21 +51,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Dual-mode (T1.6): Supabase session first, else legacy wallet header.
-    // Wallet path preserves create-on-write via getOrCreateUserByWallet so a
-    // brand-new driver mid-application still gets a user row.
-    let userId = await getStormUserIdFromRequest(request)
+    const userId = await getStormUserIdFromRequest(request)
     if (!userId) {
-      const walletAddress = request.headers.get('x-wallet-address')
-      if (!walletAddress) {
-        return NextResponse.json(
-          { error: 'Authentication required' },
-          { status: 401 }
-        )
-      }
-      const supabase = await getAdminSupabaseClient()
-      const { user } = await getOrCreateUserByWallet(supabase, walletAddress)
-      userId = user.id
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
     }
 
     const { form1Data, form2Data, form3Data, currentStep } = await request.json()

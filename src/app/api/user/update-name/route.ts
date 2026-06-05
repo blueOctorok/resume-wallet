@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/user/update-name
  * Updates the user's display name in user_profiles.
  * 
- * Body: { walletAddress: string, name: string }
+ * Body: { sessionUserId: string, name: string }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress, name } = await request.json()
+    const { name } = await request.json()
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!name || !name.trim()) {
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
     const { data: user } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     if (!user) {

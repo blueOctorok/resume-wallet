@@ -108,7 +108,7 @@ const GitHubPage = dynamic(
  * Each block's `pageRoute` in the registry maps to one of the cases below.
  */
 export default function CandidateShell() {
-  const { user, walletAddress } = useAuthStore()
+  const { user, sessionUserId } = useAuthStore()
   const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
     useUIStore()
   const uiMode = useUIModeStore((s) => s.mode)
@@ -120,8 +120,8 @@ export default function CandidateShell() {
   // Simple mode and Construct mode have installed blocks, onboarding state,
   // user profile, and the server-side UI mode preference available.
   useEffect(() => {
-    if (walletAddress) fetchHubData(walletAddress)
-  }, [walletAddress, fetchHubData])
+    if (sessionUserId) fetchHubData(sessionUserId)
+  }, [sessionUserId, fetchHubData])
 
   const unknownCandidatePage =
     currentPage !== null && !CANDIDATE_SHELL_PAGES.includes(currentPage)
@@ -162,7 +162,7 @@ export default function CandidateShell() {
     return (
       <ProfileSetup
         role='candidate'
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         onComplete={goBack}
       />
     )
@@ -171,8 +171,8 @@ export default function CandidateShell() {
   if (currentPage === 'dotapp') {
     return (
       <DotApplicationFlow
-        walletAddress={walletAddress ?? ''}
-        userAddress={user?.address}
+        sessionUserId={sessionUserId ?? ''}
+        userAddress={sessionUserId}
         onBack={goBack}
       />
     )
@@ -224,7 +224,7 @@ export default function CandidateShell() {
   if (currentPage === 'mvr') {
     return (
       <div className='max-w-2xl mx-auto'>
-        <MvrOrderForm userAddress={user?.address ?? ''} onBack={goBack} />
+        <MvrOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
       </div>
     )
   }
@@ -232,7 +232,7 @@ export default function CandidateShell() {
   if (currentPage === 'psp') {
     return (
       <div className='max-w-2xl mx-auto'>
-        <PspOrderForm userAddress={user?.address ?? ''} onBack={goBack} />
+        <PspOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
       </div>
     )
   }
@@ -240,23 +240,23 @@ export default function CandidateShell() {
   if (currentPage === 'screening-consent') {
     return (
       <div className='max-w-2xl mx-auto'>
-        <ScreeningConsentBlock userAddress={user?.address ?? ''} onBack={goBack} />
+        <ScreeningConsentBlock userAddress={sessionUserId ?? ''} onBack={goBack} />
       </div>
     )
   }
 
   if (currentPage === 'portfolio') {
-    return <PortfolioPage userAddress={user?.address ?? ''} onBack={goBack} />
+    return <PortfolioPage userAddress={sessionUserId ?? ''} onBack={goBack} />
   }
 
   if (currentPage === 'github') {
-    return <GitHubPage userAddress={user?.address ?? ''} onBack={goBack} />
+    return <GitHubPage userAddress={sessionUserId ?? ''} onBack={goBack} />
   }
 
   if (currentPage === 'hunt-desk') {
     return (
       <div className='relative z-0'>
-        <CandidateHuntDesk onBack={goBack} userAddress={user?.address ?? null} />
+        <CandidateHuntDesk onBack={goBack} userAddress={sessionUserId ?? null} />
       </div>
     )
   }
@@ -264,7 +264,7 @@ export default function CandidateShell() {
   if (currentPage === 'applications') {
     return (
       <div className='max-w-7xl mx-auto relative z-0'>
-        <MyApplications onBack={goBack} userAddress={user?.address ?? null} />
+        <MyApplications onBack={goBack} userAddress={sessionUserId ?? null} />
       </div>
     )
   }
@@ -277,7 +277,7 @@ export default function CandidateShell() {
     return (
       <div className='max-w-2xl mx-auto'>
         <MessageInbox
-          walletAddress={walletAddress ?? ''}
+          sessionUserId={sessionUserId ?? ''}
           onBack={goBack}
           initialThreadId={initialThreadId}
         />

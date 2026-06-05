@@ -29,7 +29,7 @@ interface DevFields {
 
 interface ProfileSetupProps {
   role: 'driver' | 'developer' | 'candidate'
-  walletAddress: string
+  sessionUserId: string
   onComplete: () => void
 }
 
@@ -82,7 +82,7 @@ const inputClass = (theme: string) =>
 
 export default function ProfileSetup({
   role,
-  walletAddress,
+  sessionUserId,
   onComplete,
 }: ProfileSetupProps) {
   const { theme } = useTheme()
@@ -124,7 +124,7 @@ export default function ProfileSetup({
       } catch { /* non-critical */ }
     }
     checkExistingProfiles()
-  }, [walletAddress, isDriver])
+  }, [sessionUserId, isDriver])
 
   const applyExistingName = () => {
     if (!crossRoleName) return

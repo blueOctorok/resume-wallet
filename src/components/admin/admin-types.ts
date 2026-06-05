@@ -24,7 +24,7 @@ export type ScreeningOrderedBy =
 
 export interface AdminTabProps {
   theme: 'light' | 'dark'
-  walletAddress: string
+  sessionUserId: string
   searchQuery: string
   currentPage: number
   pageSize: number
@@ -82,7 +82,7 @@ export interface DevProfile {
   available_for_work: boolean
   created_at: string
   updated_at: string
-  walletAddress: string
+  sessionUserId: string
   projectCount: number
   skillCount: number
 }
@@ -101,7 +101,7 @@ export interface DevProject {
   role: string | null
   created_at: string
   updated_at: string
-  walletAddress: string
+  sessionUserId: string
   ownerName: string
   techCount: number
 }
@@ -210,14 +210,14 @@ export interface DotApp {
   current_step: number
   verification_status: string
   created_at: string
-  walletAddress: string
+  sessionUserId: string
   applicantName: string
 }
 
 export interface MvrRow {
   id: string
   driverUserId: string
-  walletAddress: string
+  sessionUserId: string
   driverName: string
   status: string
   dlState: string | null
@@ -234,7 +234,7 @@ export interface MvrRow {
 export interface PspRow {
   id: string
   driverUserId: string
-  walletAddress: string
+  sessionUserId: string
   driverName: string
   status: string
   dlState: string | null
@@ -291,7 +291,7 @@ export interface Profile {
   cdl_state: string | null
   last_updated_from: string | null
   updated_at: string
-  walletAddress: string
+  sessionUserId: string
   fullName: string
 }
 
@@ -306,7 +306,7 @@ export interface CompanyMember {
   inviteEmail: string | null
   name: string | null
   email: string | null
-  walletAddress: string | null
+  sessionUserId: string | null
 }
 
 export interface Resume {
@@ -317,7 +317,7 @@ export interface Resume {
   verification_status: string
   resume_type: string
   created_at: string
-  walletAddress: string
+  sessionUserId: string
   ownerName: string
 }
 

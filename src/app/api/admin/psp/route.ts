@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       return {
         id: o.id,
         driverUserId,
-        walletAddress: wallet,
+        sessionUserId: wallet,
         driverName,
         status: o.status,
         dlState: o.dl_state,
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
             anyFieldMatchesSearch(
               search,
               row.driverName,
-              row.walletAddress,
+              row.sessionUserId,
               row.accioOrderNumber as string | null,
               row.orderedBy.type === 'employer' ? row.orderedBy.companyName : null,
               row.dlState as string | null,

@@ -8,11 +8,12 @@ import {
 } from '@/lib/accio-xml-builder'
 import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
-import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
@@ -20,7 +21,6 @@ import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 export async function POST(request: NextRequest) {
   try {
     const {
-      walletAddress,
       paymentTxHash,
       pspConsentId,
       dlNumber,
@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
       jobState,
     } = await request.json()
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
     if (!dlNumber || !dlState) {
       return NextResponse.json({ error: 'Driver license number and state are required' }, { status: 400 })
@@ -58,12 +59,13 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
-    let user: { id: string; email?: string | null }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
-      user = { id: u.id, email: u.email }
-    } catch {
-      return NextResponse.json({ error: 'Failed to get or create user account' }, { status: 500 })
+    const { data: user, error: userError } = await supabaseService
+      .from('users')
+      .select('id, email, wallet_address')
+      .eq('id', sessionUserId)
+      .maybeSingle()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const paymentResult = await resolveScreeningPayment(supabaseService, {
@@ -79,20 +81,14 @@ export async function POST(request: NextRequest) {
     const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
     if (paymentTxHash) {
-      const walletNorm = normalizeWalletAddress(walletAddress)
+      const walletNorm = normalizeWalletAddress(user.wallet_address ?? '')
       const { data: paymentRow } = await supabaseService
         .from('payments')
         .select('user_id')
         .eq('id', payment.id)
         .maybeSingle()
 
-      const { data: sameWalletRows } = await supabaseService
-        .from('users')
-        .select('id, wallet_address')
-        .ilike('wallet_address', walletNorm)
-
-      const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
-      if (paymentRow?.user_id && !userIdsForWallet.has(paymentRow.user_id)) {
+      if (paymentRow?.user_id && paymentRow.user_id !== user.id) {
         const { data: paymentUserRecord } = await supabaseService
           .from('users')
           .select('wallet_address')

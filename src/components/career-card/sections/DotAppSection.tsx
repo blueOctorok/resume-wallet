@@ -14,10 +14,10 @@ interface DotAppSectionProps {
   onAction?: () => void
   /** Required when mode === 'self' to fetch the full DOT app for preview */
   userId?: string
-  walletAddress?: string
+  sessionUserId?: string
 }
 
-export default function DotAppSection({ data, mode, isDark, onAction, userId, walletAddress }: DotAppSectionProps) {
+export default function DotAppSection({ data, mode, isDark, onAction, userId, sessionUserId }: DotAppSectionProps) {
   const isComplete = data.isComplete
   const [showPreview, setShowPreview] = useState(false)
   const hasChainProof = Boolean(data.blockchainTxHash && String(data.blockchainTxHash).length > 8)
@@ -27,7 +27,7 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, wa
   const statusColor = isComplete ? 'text-green-500' : 'text-yellow-500'
 
   const handleAction =
-    isComplete && userId && walletAddress ? () => setShowPreview(true) : onAction
+    isComplete && userId && sessionUserId ? () => setShowPreview(true) : onAction
 
   return (
     <>
@@ -93,7 +93,7 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, wa
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         userId={userId ?? null}
-        walletAddress={walletAddress ?? null}
+        sessionUserId={sessionUserId ?? null}
         isDark={isDark}
       />
     </>

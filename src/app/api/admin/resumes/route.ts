@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...resume,
-        walletAddress: user?.wallet_address || 'Unknown',
+        legacyWalletAddress: user?.wallet_address || 'Unknown',
         ownerName,
         email: user?.email,
       }

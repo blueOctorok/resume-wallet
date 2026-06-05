@@ -9,7 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 interface MvrManagementModalProps {
   isOpen: boolean
   onClose: () => void
-  walletAddress: string | null
+  sessionUserId: string | null
   onOrderNew: () => void
   onCompleteOrder: (paymentTxHash: string) => void
   onViewMvr: (orderId: string) => void
@@ -45,7 +45,7 @@ interface MvrStatusData {
 export default function MvrManagementModal({
   isOpen,
   onClose,
-  walletAddress,
+  sessionUserId,
   onOrderNew,
   onCompleteOrder,
   onViewMvr,
@@ -57,7 +57,7 @@ export default function MvrManagementModal({
   const [activeTab, setActiveTab] = useState<'transactions' | 'orders'>('transactions')
 
   useEffect(() => {
-    if (!isOpen || !walletAddress) {
+    if (!isOpen || !sessionUserId) {
       return
     }
 
@@ -67,7 +67,7 @@ export default function MvrManagementModal({
         setError(null)
 
         // Fetch comprehensive MVR status
-        const response = await fetch(`/api/mvr/check-status?walletAddress=${encodeURIComponent(walletAddress)}`)
+        const response = await fetch(`/api/mvr/check-status?sessionUserId=${encodeURIComponent(sessionUserId)}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch MVR data')
@@ -103,7 +103,7 @@ export default function MvrManagementModal({
     }
 
     fetchData()
-  }, [isOpen, walletAddress])
+  }, [isOpen, sessionUserId])
 
   if (!isOpen) return null
 

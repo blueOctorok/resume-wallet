@@ -98,7 +98,7 @@ export default function ResumeDashboard({
   onVerifyResume,
 }: ResumeDashboardProps) {
   const { theme } = useTheme()
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const [resumes, setResumes] = useState<ResumeRecord[]>([])
   const [selectedResume, setSelectedResume] = useState<ResumeRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -154,15 +154,15 @@ export default function ResumeDashboard({
   }, [onResumesLoaded])
 
   useEffect(() => {
-    if (user?.address) {
-      fetchResumes(user.address)
+    if (sessionUserId) {
+      fetchResumes(sessionUserId)
     } else {
       setResumes([])
       setSelectedResume(null)
       onResumesLoaded?.(0, undefined)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.address])
+  }, [sessionUserId])
 
   // Clear action message after 3 seconds
   useEffect(() => {
@@ -203,7 +203,7 @@ export default function ResumeDashboard({
   }
 
   const handleConfirmDelete = async () => {
-    if (!resumeToDelete || !user?.address) return
+    if (!resumeToDelete || !sessionUserId) return
 
     setIsDeleting(true)
     try {
@@ -221,8 +221,8 @@ export default function ResumeDashboard({
       setResumeToDelete(null)
       
       // Refresh the list
-      fetchResumes(user.address)
-      const wa = walletAddress || user.address
+      fetchResumes(sessionUserId)
+      const wa = sessionUserId || sessionUserId
       if (wa) void syncDriverHubFromApi(wa)
     } catch (err) {
       setActionMessage({ 
@@ -405,7 +405,7 @@ export default function ResumeDashboard({
 
   // One-click verify: built/developer PDF-from-structured, or uploaded PDF already on IPFS
   const handleVerify = async (resume: ResumeRecord) => {
-    if (!user?.address) return
+    if (!sessionUserId) return
 
     const canOneClickVerify =
       (resume.resume_type === 'built' && resume.structured_data) ||
@@ -444,8 +444,8 @@ export default function ResumeDashboard({
             : 'Resume verification updated.',
         })
 
-        fetchResumes(user.address)
-        const wa = walletAddress || user.address
+        fetchResumes(sessionUserId)
+        const wa = sessionUserId || sessionUserId
         if (wa) void syncDriverHubFromApi(wa)
       } catch (err) {
         setActionMessage({
@@ -460,7 +460,7 @@ export default function ResumeDashboard({
     }
   }
 
-  if (!user?.address) {
+  if (!sessionUserId) {
     return (
       <div
         className={`max-w-4xl mx-auto p-6 rounded-2xl border ${
@@ -591,7 +591,7 @@ export default function ResumeDashboard({
               </p>
             </div>
             <button
-              onClick={() => user.address && fetchResumes(user.address)}
+              onClick={() => sessionUserId && fetchResumes(sessionUserId)}
               className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
                 isDarkTheme(theme)
                   ? 'bg-teal-600 text-white hover:bg-teal-500 shadow-lg'

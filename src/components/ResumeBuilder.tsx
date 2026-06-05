@@ -138,7 +138,7 @@ export default function ResumeBuilder({
   hideHubBackButton = false,
 }: ResumeBuilderProps) {
   const { theme } = useTheme()
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const [currentStep, setCurrentStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -401,8 +401,8 @@ export default function ResumeBuilder({
   // Profile prefill only runs when creating a brand new resume.
   useEffect(() => {
     const loadData = async () => {
-      // Alchemy `user.address` is sometimes unset before wallet store is ready — header must match session
-      const wallet = (user?.address || walletAddress || '').trim()
+      // Alchemy `sessionUserId` is sometimes unset before wallet store is ready — header must match session
+      const wallet = (sessionUserId || sessionUserId || '').trim()
       if (!wallet) return
 
       try {
@@ -501,10 +501,10 @@ export default function ResumeBuilder({
     }
 
     loadData()
-  }, [existingResumeId, user?.address, walletAddress])
+  }, [existingResumeId, sessionUserId, sessionUserId])
 
   const handleSave = async () => {
-    if (!user?.address) {
+    if (!sessionUserId) {
       setSaveError('Please connect your wallet first')
       return
     }
@@ -529,7 +529,7 @@ export default function ResumeBuilder({
       const response = await fetch('/api/resumes/create', {
         method: internalResumeId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json',
-          'x-wallet-address': user.address,
+          'x-wallet-address': sessionUserId,
         },
         body: JSON.stringify({
           resumeId: internalResumeId,
@@ -583,7 +583,7 @@ export default function ResumeBuilder({
 
       setSaveSuccess(true)
       onSave?.(result.resumeId)
-      const wa = (walletAddress || user?.address || '').trim()
+      const wa = (sessionUserId || sessionUserId || '').trim()
       if (wa) void syncDriverHubFromApi(wa)
 
       // Mark data as saved (no longer dirty)

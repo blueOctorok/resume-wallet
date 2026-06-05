@@ -54,7 +54,7 @@ interface Job {
 }
 
 interface TalentSearchPageProps {
-  walletAddress: string
+  sessionUserId: string
   onBack: () => void
 }
 
@@ -62,7 +62,7 @@ interface TalentSearchPageProps {
 // COMPONENT
 // ============================================================
 
-export default function TalentSearchPage({ walletAddress, onBack }: TalentSearchPageProps) {
+export default function TalentSearchPage({ sessionUserId, onBack }: TalentSearchPageProps) {
   const { theme } = useTheme()
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
@@ -482,7 +482,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       {selectedCandidateId && (
         <CareerCardModal
           candidateUserId={selectedCandidateId}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onClose={() => setSelectedCandidateId(null)}
         />
       )}

@@ -25,14 +25,14 @@ export async function POST(request: NextRequest) {
 
     const { data: authUser } = await supabase
       .from('users')
-      .select('wallet_address')
+      .select('id, email, wallet_address')
       .eq('id', userId)
       .maybeSingle()
 
-    const walletAddress = authUser?.wallet_address
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    if (!authUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+    const legacyWalletAddress = authUser.wallet_address
 
     const body = await request.json()
     const {
@@ -89,12 +89,12 @@ export async function POST(request: NextRequest) {
       const { data: existingPending } = await supabase
         .from('employer_access_requests')
         .select('id')
-        .ilike('wallet_address', walletAddress)
+        .ilike('wallet_address', legacyWalletAddress ?? '')
         .in('status', ['pending', 'flagged'])
         .maybeSingle()
       if (existingPending) return
       const payload = {
-        wallet_address: walletAddress.toLowerCase(),
+        wallet_address: legacyWalletAddress?.toLowerCase() ?? '',
         email: email.toLowerCase(),
         name: fullName,
         first_name: firstName.trim(),
@@ -134,11 +134,10 @@ export async function POST(request: NextRequest) {
         )
 
         if (domainAllowsJoin) {
-          let userJoin: { id: string; email: string | null } | null = null
           const { data: existingUserJoin, error: userJoinErr } = await supabase
             .from('users')
             .select('id, email')
-            .ilike('wallet_address', walletAddress)
+            .eq('id', userId)
             .maybeSingle()
 
           if (userJoinErr) {
@@ -146,25 +145,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: userJoinErr.message || 'Failed to look up user' }, { status: 500 })
           }
 
-          if (existingUserJoin) {
-            userJoin = existingUserJoin
-            await supabase.from('users').update({ role: 'employer', email: email.toLowerCase() }).eq('id', userJoin.id)
-          } else {
-            const { data: newUserJoin, error: createJoinErr } = await supabase
-              .from('users')
-              .insert({
-                wallet_address: walletAddress.toLowerCase().trim(),
-                email: email.toLowerCase(),
-                role: 'employer',
-              })
-              .select('id, email')
-              .single()
-            if (createJoinErr || !newUserJoin) {
-              console.error('[EMPLOYER COMPANY SETUP] Create user error (join path):', createJoinErr)
-              return NextResponse.json({ error: createJoinErr?.message || 'Failed to create user account' }, { status: 500 })
-            }
-            userJoin = newUserJoin
+          if (!existingUserJoin) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 })
           }
+          const userJoin = existingUserJoin
+          await supabase.from('users').update({ role: 'employer', email: email.toLowerCase() }).eq('id', userJoin.id)
 
           await supabase.from('user_profiles').upsert(
             {
@@ -259,12 +244,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Resolve or create user by wallet address
-    let user: { id: string; email: string | null } | null = null
     const { data: existingUser, error: userError } = await supabase
       .from('users')
       .select('id, email')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', userId)
       .maybeSingle()
 
     if (userError) {
@@ -272,26 +255,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: userError.message || 'Failed to look up user' }, { status: 500 })
     }
 
-    if (existingUser) {
-      user = existingUser
-      await supabase.from('users').update({ email: email || undefined }).eq('id', user.id)
-    } else {
-      const { data: newUser, error: createErr } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress.toLowerCase().trim(),
-          email: email || null,
-          role: 'employer',
-        })
-        .select('id, email')
-        .single()
-
-      if (createErr || !newUser) {
-        console.error('[EMPLOYER COMPANY SETUP] Create user error:', createErr)
-        return NextResponse.json({ error: createErr?.message || 'Failed to create user account' }, { status: 500 })
-      }
-      user = newUser
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+    const user = existingUser
+    await supabase.from('users').update({ email: email || undefined }).eq('id', user.id)
 
     // Write identity to user_profiles
     const nameParts = fullName.split(/\s+/)
@@ -374,13 +342,13 @@ export async function POST(request: NextRequest) {
       const { data: existingPending } = await supabase
         .from('employer_access_requests')
         .select('id')
-        .ilike('wallet_address', walletAddress)
+        .ilike('wallet_address', legacyWalletAddress ?? '')
         .in('status', ['pending', 'flagged'])
         .maybeSingle()
 
       if (!existingPending) {
         const { error: insErr } = await supabase.from('employer_access_requests').insert({
-          wallet_address: walletAddress.toLowerCase(),
+          wallet_address: legacyWalletAddress?.toLowerCase() ?? '',
           email: email.toLowerCase(),
           name: fullName,
           first_name: firstName.trim(),

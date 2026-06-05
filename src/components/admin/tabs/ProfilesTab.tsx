@@ -8,7 +8,7 @@ import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin
 
 export default function ProfilesTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -21,12 +21,12 @@ export default function ProfilesTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
         `/api/admin/profiles?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -36,7 +36,7 @@ export default function ProfilesTab({
     } catch (err) {
       console.error('Failed to fetch profiles:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()
@@ -71,7 +71,7 @@ export default function ProfilesTab({
               <td className={tableCellClass}>
                 {profile.email || (
                   <code className='text-xs'>
-                    {profile.walletAddress.slice(0, 8)}...
+                    {profile.sessionUserId.slice(0, 8)}...
                   </code>
                 )}
               </td>

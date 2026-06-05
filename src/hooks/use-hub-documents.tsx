@@ -46,7 +46,7 @@ export function useHubDocuments(refreshKey: number): {
 } {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
@@ -95,7 +95,7 @@ export function useHubDocuments(refreshKey: number): {
   const hasAnyFileSectionBlock = needsHubData || hasEmploymentVerificationBlock
 
   const fetchDocuments = useCallback(async () => {
-    if (!walletAddress || !hasAnyFileSectionBlock) {
+    if (!sessionUserId || !hasAnyFileSectionBlock) {
       setLoading(false)
       return
     }
@@ -385,7 +385,7 @@ export function useHubDocuments(refreshKey: number): {
         }
       }
 
-      if (hasEmploymentVerificationBlock && walletAddress) {
+      if (hasEmploymentVerificationBlock && sessionUserId) {
         const vr = await fetch('/api/candidate/verification/status?initiatedBy=applicant')
         if (vr.ok) {
           const j = (await vr.json()) as { requests?: Array<{ status: string }> }
@@ -418,7 +418,7 @@ export function useHubDocuments(refreshKey: number): {
       setLoading(false)
     }
   }, [
-    walletAddress,
+    sessionUserId,
     hasResumeBlock,
     hasDotAppBlock,
     hasMvrBlock,
@@ -437,7 +437,7 @@ export function useHubDocuments(refreshKey: number): {
   }, [fetchDocuments, refreshKey])
 
   const handleVerify = async (doc: HubDocument) => {
-    if (!walletAddress || !doc.canVerify) return
+    if (!sessionUserId || !doc.canVerify) return
     setVerifying(doc.id)
     try {
       const endpoint =
@@ -456,7 +456,7 @@ export function useHubDocuments(refreshKey: number): {
           d.id === doc.id ? { ...d, verified: true, canVerify: false, txHash: txHash || d.txHash } : d,
         ),
       )
-      void syncDriverHubFromApi(walletAddress)
+      void syncDriverHubFromApi(sessionUserId)
     } catch (err) {
       console.error('[useHubDocuments] verify:', err)
     } finally {
@@ -465,7 +465,7 @@ export function useHubDocuments(refreshKey: number): {
   }
 
   const handleDelete = async (doc: HubDocument) => {
-    if (!walletAddress || doc.type === 'employment_verifications') return
+    if (!sessionUserId || doc.type === 'employment_verifications') return
     setDeleting(doc.id)
     setConfirmDelete(null)
     try {
@@ -478,7 +478,7 @@ export function useHubDocuments(refreshKey: number): {
         throw new Error(data.error || 'Failed to delete')
       }
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id))
-      void syncDriverHubFromApi(walletAddress)
+      void syncDriverHubFromApi(sessionUserId)
     } catch (err) {
       console.error('[useHubDocuments] delete:', err)
     } finally {
@@ -502,20 +502,20 @@ export function useHubDocuments(refreshKey: number): {
       <MvrViewModal
         isOpen={mvrViewOrderId !== null}
         onClose={() => setMvrViewOrderId(null)}
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         orderId={mvrViewOrderId}
       />
       <PspViewModal
         isOpen={pspViewOrderId !== null}
         onClose={() => setPspViewOrderId(null)}
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         orderId={pspViewOrderId}
       />
       <DotAppPreviewModal
         isOpen={dotAppPreviewApplicationId !== null}
         onClose={() => setDotAppPreviewApplicationId(null)}
         userId={hubUserId}
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         isDark={isDark}
         applicationId={dotAppPreviewApplicationId}
       />
@@ -539,7 +539,7 @@ export function useHubDocuments(refreshKey: number): {
           zIndex={10100}
         />
       )}
-      {devResumePreview && walletAddress && (
+      {devResumePreview && sessionUserId && (
         <DeveloperResumePreviewModal
           viewOnly
           resume={{
@@ -555,7 +555,7 @@ export function useHubDocuments(refreshKey: number): {
           onEdit={() => {}}
           onVerify={() => {}}
           onDelete={() => {}}
-          userAddress={walletAddress}
+          userAddress={sessionUserId}
         />
       )}
     </>

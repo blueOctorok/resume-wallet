@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * API Route: Record MVR Payment
@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
     const {
       txHash,
       amountUsdc,
-      walletAddress,
       userType = 'applicant',
       companyId: companyIdRaw,
       /** When paying from company SCW, record which member initiated (personal smart wallet). */
@@ -37,14 +36,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[MVR PAYMENT] Received request with walletAddress:', walletAddress)
+    console.log('[MVR PAYMENT] Received request with sessionUserId:', sessionUserId)
 
     // Use service role client to bypass RLS for payments
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -63,23 +60,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const payerLookupAddress =
-      typeof paidByWalletAddress === 'string' && paidByWalletAddress.trim()
-        ? paidByWalletAddress.trim()
-        : walletAddress
-
-    // Get or create user for the acting payer (member), not the company SCW
-    let user: { id: string }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabase, payerLookupAddress)
-      user = { id: u.id }
-    } catch (err) {
-      console.error('[MVR PAYMENT] Error get/create user:', err)
-      return NextResponse.json(
-        { error: 'Failed to get or create user record', details: err instanceof Error ? err.message : String(err) },
-        { status: 500 }
-      )
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, wallet_address')
+      .eq('id', sessionUserId)
+      .maybeSingle()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+
+    const payerWalletAddress =
+      typeof paidByWalletAddress === 'string' && paidByWalletAddress.trim()
+        ? paidByWalletAddress.trim().toLowerCase()
+        : user.wallet_address?.toLowerCase() ?? null
 
     let companyId: string | null = null
     if (typeof companyIdRaw === 'string' && companyIdRaw.trim()) {
@@ -90,13 +83,14 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       if (
         co?.wallet_address &&
-        co.wallet_address.toLowerCase() === String(walletAddress).toLowerCase()
+        payerWalletAddress &&
+        co.wallet_address.toLowerCase() === payerWalletAddress
       ) {
         companyId = co.id
       } else {
         console.warn('[MVR PAYMENT] Ignoring companyId: does not match payer wallet', {
           companyIdRaw,
-          walletAddress,
+          sessionUserId,
         })
       }
     }
@@ -119,8 +113,8 @@ export async function POST(request: NextRequest) {
         console.error('[MVR PAYMENT] Duplicate tx_hash already tied to another user — refusing:', {
           existingUserId: existingPayment.user_id,
           requestUserId: user.id,
-          walletAddress,
-          payerLookupAddress,
+          sessionUserId,
+          payerWalletAddress,
           txHash: normalizedTxHash,
         })
         return NextResponse.json(
@@ -170,7 +164,7 @@ export async function POST(request: NextRequest) {
     console.log('[MVR PAYMENT] ✅ Payment successfully recorded:', {
       paymentId: payment.id,
       userId: user.id,
-      walletAddress: walletAddress,
+      sessionUserId: sessionUserId,
       txHash: payment.tx_hash,
       amountUsdc: payment.amount_usdc,
       type: 'MVR_ORDER',

@@ -25,9 +25,9 @@ interface EmployerBlocksState {
 }
 
 interface EmployerBlocksActions {
-  fetchEmployerBlocks: (walletAddress: string) => Promise<void>
-  installBlock: (walletAddress: string, blockType: string, reason?: string | null) => Promise<boolean>
-  removeBlock: (walletAddress: string, rowId: string, reason?: string | null) => Promise<boolean>
+  fetchEmployerBlocks: (sessionUserId: string) => Promise<void>
+  installBlock: (sessionUserId: string, blockType: string, reason?: string | null) => Promise<boolean>
+  removeBlock: (sessionUserId: string, rowId: string, reason?: string | null) => Promise<boolean>
   openPicker: () => void
   closePicker: () => void
 }
@@ -40,7 +40,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
   fetchError: null,
   isPickerOpen: false,
 
-  fetchEmployerBlocks: async (walletAddress) => {
+  fetchEmployerBlocks: async (sessionUserId) => {
     set({ isLoading: true, fetchError: null })
     try {
       const res = await fetch('/api/employer/hub/blocks')
@@ -78,7 +78,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
     }
   },
 
-  installBlock: async (walletAddress, blockType, reason) => {
+  installBlock: async (sessionUserId, blockType, reason) => {
     try {
       const res = await fetch('/api/employer/hub/blocks', {
         method: 'POST',
@@ -90,7 +90,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
         const j = await res.json().catch(() => ({}))
         throw new Error((j as { error?: string }).error ?? 'Install failed')
       }
-      await get().fetchEmployerBlocks(walletAddress)
+      await get().fetchEmployerBlocks(sessionUserId)
       return true
     } catch (e) {
       console.error('[EmployerBlocksStore] installBlock:', e)
@@ -98,7 +98,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
     }
   },
 
-  removeBlock: async (walletAddress, rowId, reason) => {
+  removeBlock: async (sessionUserId, rowId, reason) => {
     try {
       const res = await fetch(`/api/employer/hub/blocks/${rowId}`, {
         method: 'DELETE',
@@ -110,7 +110,7 @@ export const useEmployerBlocksStore = create<EmployerBlocksState & EmployerBlock
         const j = await res.json().catch(() => ({}))
         throw new Error((j as { error?: string }).error ?? 'Remove failed')
       }
-      await get().fetchEmployerBlocks(walletAddress)
+      await get().fetchEmployerBlocks(sessionUserId)
       return true
     } catch (e) {
       console.error('[EmployerBlocksStore] removeBlock:', e)

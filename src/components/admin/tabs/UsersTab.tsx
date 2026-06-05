@@ -13,7 +13,7 @@ import UserDetailModal from '@/components/admin/modals/UserDetailModal'
 
 export default function UsersTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -28,12 +28,12 @@ export default function UsersTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
         `/api/admin/users?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -43,7 +43,7 @@ export default function UsersTab({
     } catch (err) {
       console.error('Failed to fetch users:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()
@@ -51,12 +51,12 @@ export default function UsersTab({
 
   const fetchUserDetail = useCallback(
     async (userId: string) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
 
       setLoadingUserDetail(true)
       try {
         const response = await fetch(`/api/admin/users/${userId}`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         })
         const data = await response.json()
         if (data.success) {
@@ -83,7 +83,7 @@ export default function UsersTab({
         setLoadingUserDetail(false)
       }
     },
-    [walletAddress, users]
+    [sessionUserId, users]
   )
 
   return (

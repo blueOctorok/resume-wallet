@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         last_name: up?.last_name ?? null,
         email: up?.email ?? null,
         phone: up?.phone ?? null,
-        walletAddress: userMap.get(profile.user_id) || 'Unknown',
+        sessionUserId: userMap.get(profile.user_id) || 'Unknown',
         fullName: [up?.first_name, up?.last_name].filter(Boolean).join(' ') || 'Unnamed',
       }
     })

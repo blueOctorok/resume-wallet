@@ -22,7 +22,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
   const { autoSave = true, autoSaveDelayMs = 2000 } = options
   
   // Get wallet address from auth store (already normalized to lowercase)
-  const walletAddress = useAuthStore((state) => state.walletAddress)
+  const sessionUserId = useAuthStore((state) => state.sessionUserId)
   
   // DOT application store state and actions
   const {
@@ -50,16 +50,16 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
 
   // Load application from database
   const loadApplication = useCallback(async () => {
-    if (!walletAddress || isLoadingRef.current) return
+    if (!sessionUserId || isLoadingRef.current) return
     
     isLoadingRef.current = true
-    console.log('[DOT SYNC] Loading application for wallet:', walletAddress)
+    console.log('[DOT SYNC] Loading application for wallet:', sessionUserId)
     
     try {
       const response = await fetch('/api/driver-applications/save-progress', {
         method: 'GET',
         headers: {
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': sessionUserId,
         },
       })
       
@@ -86,11 +86,11 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
     } finally {
       isLoadingRef.current = false
     }
-  }, [walletAddress, setApplicationId])
+  }, [sessionUserId, setApplicationId])
 
   // Save application to database
   const saveApplication = useCallback(async () => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       console.log('[DOT SYNC] No wallet address, skipping save')
       return { success: false, error: 'No wallet address' }
     }
@@ -109,7 +109,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
     }
     
     console.log('[DOT SYNC] Saving application...', {
-      walletAddress,
+      sessionUserId,
       currentForm,
       hasForm1: !!form1Data,
       hasForm2: !!form2Data,
@@ -120,7 +120,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
       const response = await fetch('/api/driver-applications/save-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': sessionUserId,
         },
         body: JSON.stringify({
           form1Data,
@@ -147,7 +147,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
       return { success: false, error: String(error) }
     }
   }, [
-    walletAddress,
+    sessionUserId,
     form1Data,
     form2Data,
     form3Data,
@@ -162,7 +162,7 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
     ipfsHash?: string,
     applicationHash?: string
   ) => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       return { success: false, error: 'No wallet address' }
     }
     
@@ -179,11 +179,11 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
     // This hook focuses on progress saving
     
     return { success: true }
-  }, [walletAddress, saveApplication])
+  }, [sessionUserId, saveApplication])
 
   // Auto-save effect (debounced)
   useEffect(() => {
-    if (!autoSave || !hasUnsavedChanges || !walletAddress) return
+    if (!autoSave || !hasUnsavedChanges || !sessionUserId) return
     
     // Clear any pending save
     if (saveTimeoutRef.current) {
@@ -200,14 +200,14 @@ export function useDotApplicationSync(options: UseDotApplicationSyncOptions = {}
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [autoSave, hasUnsavedChanges, walletAddress, autoSaveDelayMs, saveApplication])
+  }, [autoSave, hasUnsavedChanges, sessionUserId, autoSaveDelayMs, saveApplication])
 
   // Load on mount
   useEffect(() => {
-    if (walletAddress && !applicationId) {
+    if (sessionUserId && !applicationId) {
       loadApplication()
     }
-  }, [walletAddress, applicationId, loadApplication])
+  }, [sessionUserId, applicationId, loadApplication])
 
   return {
     saveApplication,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/psp/payment — record USDC payment before Accio PSP order (candidate or employer wallet).
@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
     const {
       txHash,
       amountUsdc,
-      walletAddress,
       userType = 'applicant',
       companyId: companyIdRaw,
       paidByWalletAddress,
@@ -23,8 +22,9 @@ export async function POST(request: NextRequest) {
     if (!amountUsdc) {
       return NextResponse.json({ error: 'Amount is required' }, { status: 400 })
     }
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -35,22 +35,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const payerLookupAddress =
-      typeof paidByWalletAddress === 'string' && paidByWalletAddress.trim()
-        ? paidByWalletAddress.trim()
-        : walletAddress
-
-    let user: { id: string }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabase, payerLookupAddress)
-      user = { id: u.id }
-    } catch (err) {
-      console.error('[PSP PAYMENT] get/create user:', err)
-      return NextResponse.json(
-        { error: 'Failed to get or create user record', details: err instanceof Error ? err.message : String(err) },
-        { status: 500 },
-      )
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, wallet_address')
+      .eq('id', sessionUserId)
+      .maybeSingle()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+
+    const payerWalletAddress =
+      typeof paidByWalletAddress === 'string' && paidByWalletAddress.trim()
+        ? paidByWalletAddress.trim().toLowerCase()
+        : user.wallet_address?.toLowerCase() ?? null
 
     let companyId: string | null = null
     if (typeof companyIdRaw === 'string' && companyIdRaw.trim()) {
@@ -59,10 +56,10 @@ export async function POST(request: NextRequest) {
         .select('id, wallet_address')
         .eq('id', companyIdRaw.trim())
         .maybeSingle()
-      if (co?.wallet_address && co.wallet_address.toLowerCase() === String(walletAddress).toLowerCase()) {
+      if (co?.wallet_address && payerWalletAddress && co.wallet_address.toLowerCase() === payerWalletAddress) {
         companyId = co.id
       } else {
-        console.warn('[PSP PAYMENT] Ignoring companyId: does not match payer wallet', { companyIdRaw, walletAddress })
+        console.warn('[PSP PAYMENT] Ignoring companyId: does not match payer wallet', { companyIdRaw, sessionUserId })
       }
     }
 

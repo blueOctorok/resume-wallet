@@ -4,11 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Track 2 · D3 — Remove USDC + company wallet + `@account-kit` (partial · D3.1–D3.3)** (2026-06-05)
+## **Employer hub — single centered column (Stormi rail removed)** (2026-06-05)
 
-Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy Account Kit). Absorbs deferred **T1.12d + T1.13 remainder**. DB columns kept for history (`payment_tx_hash`, `companies.*wallet*`, `users.wallet_address`); UI stops writing them. Accio screening (`/api/employer/screenings/order`, reconcile, webhooks) untouched.
+After D3.2 removed the left wallet rail, main content sat left-aligned with a right Stormi tab. **EmployerHub** is now one `max-w-7xl mx-auto` column — no desktop Stormi side rail, no collapsed edge tab, no mobile “scroll to Stormi” FAB. `employerStormiContext` still feeds **CandidateOutreach** for outreach coaching context.
 
-**Commits:** `6d15699` (D3.1) · `377028e` (D3.2) · `ce03071` (D3.3)
+| File | Change |
+|---|---|
+| `src/components/EmployerHub.tsx` | Dropped 2-column grid + `stormiRailOpen` localStorage; removed embedded `StormiChatPanel` |
+
+---
+
+## **Track 2 · D3 — Remove USDC + company wallet + `@account-kit`** (2026-06-05)
+
+Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy Account Kit) and drops client `walletAddress` identity. Absorbs deferred **T1.12d + T1.13 remainder**. DB columns kept for history (`payment_tx_hash`, `companies.*wallet*`, `users.wallet_address`); UI stops writing them. Accio screening (`/api/employer/screenings/order`, reconcile, webhooks) untouched.
+
+**Commits:** `6d15699` (D3.1) · `377028e` (D3.2) · `ce03071` (D3.3) · `{D3.4}` (D3.4)
 
 ### D3.1 — USDC payment buttons
 
@@ -39,11 +49,19 @@ Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy
 
 **Verify:** `rg "@account-kit|@aa-sdk|alchemy-sdk|@coinbase|@base-org|AlchemyProvider" src/` → 0. `npm run build` green.
 
-### Still pending — D3.4 (human audit gate)
+### D3.4 — Drop `walletAddress` store field (session-only identity)
 
-Drop `walletAddress` from `useAuthStore`; repoint ~190 consumers to `sessionUserId`. Confirm no API routes depend on `x-wallet-address`. **Do not start until manual smoke test passes.**
+| Change | Detail |
+|---|---|
+| **auth-store** | Removed `walletAddress`, `setWalletAddress`, `useWalletAddress`; added `SessionUser`, `useSessionUserId`; persist only `userRole` |
+| **use-supabase-auth-sync** | Sets `sessionUserId` + `user.userId` from Supabase session; no `auth:<uuid>` placeholder in client store |
+| **~167 files** | Props/params/stores: `walletAddress` → `sessionUserId`; shells, hub, employer, admin, Stormi |
+| **API routes** | Identity via `getStormUserIdFromRequest` / `getSessionUserRow`; `/api/user/profile` + `/api/user/set-role` session-only |
+| **Preserved** | `users.wallet_address` column; admin JSON `legacyWalletAddress` for display; `user-by-wallet.ts` lib (D5 cleanup) |
 
-**Next after audit:** D3.4 commit `refactor(auth): drop walletAddress store field, use sessionUserId (D3.4)` · then D5 env/dep sweep (`viem`, `ethers`, Alchemy webhook route, env vars).
+**Verify:** `rg walletAddress src/` → `lib/user-by-wallet.ts`, `lib/supabase-db.ts`, `lib/user-bootstrap.ts` only. `npm run build` green.
+
+**Follow-up (D5):** Strip vestigial `x-wallet-address` client headers (values are now UUIDs in a misnamed header); remove `viem`/`ethers`/Alchemy webhook.
 
 ---
 

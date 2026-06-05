@@ -23,9 +23,9 @@ interface CareerCardLensesState {
 }
 
 interface CareerCardLensesActions {
-  fetchLenses: (walletAddress: string) => Promise<void>
+  fetchLenses: (sessionUserId: string) => Promise<void>
   createLens: (
-    walletAddress: string,
+    sessionUserId: string,
     input: {
       name: string
       visibleBlockTypes?: string[] | null
@@ -33,9 +33,9 @@ interface CareerCardLensesActions {
       customSummary?: string | null
     },
   ) => Promise<CareerCardLens | null>
-  renameLens: (walletAddress: string, id: string, name: string) => Promise<boolean>
+  renameLens: (sessionUserId: string, id: string, name: string) => Promise<boolean>
   updateLens: (
-    walletAddress: string,
+    sessionUserId: string,
     id: string,
     patch: {
       name?: string
@@ -44,7 +44,7 @@ interface CareerCardLensesActions {
       customSummary?: string | null
     },
   ) => Promise<boolean>
-  deleteLens: (walletAddress: string, id: string) => Promise<boolean>
+  deleteLens: (sessionUserId: string, id: string) => Promise<boolean>
   reset: () => void
 }
 
@@ -52,7 +52,7 @@ type RequestResult<T> = { ok: true; data: T; error?: never } | { ok: false; erro
 
 async function request<T>(
   url: string,
-  walletAddress: string,
+  sessionUserId: string,
   init: RequestInit = {},
 ): Promise<RequestResult<T>> {
   const res = await fetch(url, {
@@ -77,10 +77,10 @@ export const useCareerCardLensesStore = create<
   isMutating: false,
   error: null,
 
-  fetchLenses: async (walletAddress) => {
+  fetchLenses: async (sessionUserId) => {
     const result = await request<{ lenses: CareerCardLens[] }>(
       '/api/career-card/lenses',
-      walletAddress,
+      sessionUserId,
     )
     if (!result.ok) {
       set({ error: result.error, isLoaded: true })
@@ -96,11 +96,11 @@ export const useCareerCardLensesStore = create<
     })
   },
 
-  createLens: async (walletAddress, input) => {
+  createLens: async (sessionUserId, input) => {
     set({ isMutating: true, error: null })
     const result = await request<{ lens: CareerCardLens }>(
       '/api/career-card/lenses',
-      walletAddress,
+      sessionUserId,
       {
         method: 'POST',
         body: JSON.stringify(input),
@@ -111,18 +111,18 @@ export const useCareerCardLensesStore = create<
       set({ error: result.error })
       return null
     }
-    await get().fetchLenses(walletAddress)
+    await get().fetchLenses(sessionUserId)
     return result.data.lens
   },
 
-  renameLens: async (walletAddress, id, name) =>
-    get().updateLens(walletAddress, id, { name }),
+  renameLens: async (sessionUserId, id, name) =>
+    get().updateLens(sessionUserId, id, { name }),
 
-  updateLens: async (walletAddress, id, patch) => {
+  updateLens: async (sessionUserId, id, patch) => {
     set({ isMutating: true, error: null })
     const result = await request<{ lens: CareerCardLens }>(
       `/api/career-card/lenses/${id}`,
-      walletAddress,
+      sessionUserId,
       {
         method: 'PATCH',
         body: JSON.stringify(patch),
@@ -133,15 +133,15 @@ export const useCareerCardLensesStore = create<
       set({ error: result.error })
       return false
     }
-    await get().fetchLenses(walletAddress)
+    await get().fetchLenses(sessionUserId)
     return true
   },
 
-  deleteLens: async (walletAddress, id) => {
+  deleteLens: async (sessionUserId, id) => {
     set({ isMutating: true, error: null })
     const result = await request<{ success: boolean }>(
       `/api/career-card/lenses/${id}`,
-      walletAddress,
+      sessionUserId,
       { method: 'DELETE' },
     )
     set({ isMutating: false })
@@ -149,7 +149,7 @@ export const useCareerCardLensesStore = create<
       set({ error: result.error })
       return false
     }
-    await get().fetchLenses(walletAddress)
+    await get().fetchLenses(sessionUserId)
     return true
   },
 

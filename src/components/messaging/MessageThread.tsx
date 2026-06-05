@@ -31,7 +31,7 @@ interface ThreadData {
 
 interface MessageThreadProps {
   threadId: string
-  walletAddress: string
+  sessionUserId: string
   onBack: () => void
 }
 
@@ -55,7 +55,7 @@ function timeLabel(dateString: string): string {
  * inbox feels live without Supabase Realtime plumbing.
  * Scroll anchors to the bottom automatically on new messages.
  */
-export default function MessageThread({ threadId, walletAddress, onBack }: MessageThreadProps) {
+export default function MessageThread({ threadId, sessionUserId, onBack }: MessageThreadProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
 
@@ -85,7 +85,7 @@ export default function MessageThread({ threadId, walletAddress, onBack }: Messa
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [threadId, walletAddress])
+  }, [threadId, sessionUserId])
 
   // Initial load
   useEffect(() => { fetchMessages() }, [fetchMessages])

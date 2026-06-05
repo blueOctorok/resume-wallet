@@ -20,7 +20,7 @@ import {
 interface PspViewModalProps {
   isOpen: boolean
   onClose: () => void
-  walletAddress: string | null
+  sessionUserId: string | null
   orderId: string | null
   /** Talent modal: pass with employer wallet so status API authorizes purchaser view. */
   employerCandidateUserId?: string | null
@@ -190,7 +190,7 @@ function SectionHeader({
 export default function PspViewModal({
   isOpen,
   onClose,
-  walletAddress,
+  sessionUserId,
   orderId,
   employerCandidateUserId,
 }: PspViewModalProps) {
@@ -206,13 +206,13 @@ export default function PspViewModal({
   const [showReportText, setShowReportText] = useState(false)
 
   useEffect(() => {
-    if (!isOpen || !orderId || !walletAddress) return
+    if (!isOpen || !orderId || !sessionUserId) return
     let cancelled = false
     setLoading(true)
     setError(null)
     void (async () => {
       try {
-        const q = new URLSearchParams({ walletAddress })
+        const q = new URLSearchParams({ sessionUserId })
         if (employerCandidateUserId) q.set('employerCandidateUserId', employerCandidateUserId)
         const res = await fetch(`/api/psp/status/${orderId}?${q.toString()}`)
         const data = await res.json()
@@ -230,7 +230,7 @@ export default function PspViewModal({
       }
     })()
     return () => { cancelled = true }
-  }, [isOpen, orderId, walletAddress, employerCandidateUserId])
+  }, [isOpen, orderId, sessionUserId, employerCandidateUserId])
 
   const parsed = payload?.result?.parsedData ?? null
   // Support both legacy stub shape and new structured shape
@@ -246,8 +246,8 @@ export default function PspViewModal({
   const reportText = parsed?.reportText ?? null
 
   const handleDownloadPDF = () => {
-    if (!payload || !orderId || !walletAddress) return
-    const params = new URLSearchParams({ walletAddress })
+    if (!payload || !orderId || !sessionUserId) return
+    const params = new URLSearchParams({ sessionUserId })
     if (employerCandidateUserId) params.set('employerCandidateUserId', employerCandidateUserId)
     window.location.href = `/api/psp/${orderId}/pdf?${params.toString()}`
   }

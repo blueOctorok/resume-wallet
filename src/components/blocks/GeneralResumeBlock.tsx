@@ -28,8 +28,8 @@ export default function GeneralResumeBlock({
   existingResumeId,
   onSave,
 }: GeneralResumeBlockProps) {
-  const walletAddress = useAuthStore((s) => s.walletAddress)
-  const userAddress = (user?.address ?? walletAddress ?? '').trim() || undefined
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
+  const userAddress = (sessionUserId ?? sessionUserId ?? '').trim() || undefined
 
   return (
     <div className='max-w-4xl mx-auto space-y-6'>

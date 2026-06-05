@@ -29,13 +29,13 @@ export default function HubOnboardingForm() {
   const [error, setError] = useState<string | null>(null)
 
   const completeOnboarding = useHubBlocksStore((s) => s.completeOnboarding)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
 
   const canSubmit = occupation.trim().length > 0 && seekingReason.trim().length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!walletAddress || !canSubmit) return
+    if (!sessionUserId || !canSubmit) return
 
     setIsSubmitting(true)
     setError(null)
@@ -44,7 +44,7 @@ export default function HubOnboardingForm() {
       await completeOnboarding(
         occupation.trim(),
         seekingReason.trim(),
-        walletAddress,
+        sessionUserId,
         extraContext.trim() || null
       )
     } catch {

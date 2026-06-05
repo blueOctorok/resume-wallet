@@ -30,7 +30,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
   const isDark = isDarkTheme(theme)
   const mode = useUIModeStore((s) => s.mode)
   const setMode = useUIModeStore((s) => s.setMode)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const userRole = useAuthStore((s) => s.userRole)
 
   // Simple mode only makes sense for candidates; gate here so the toggle
@@ -43,7 +43,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
     setMode(next)
     onAfterToggle?.()
 
-    if (walletAddress) {
+    if (sessionUserId) {
       // Fire-and-forget — UI is already flipped; server catches up for cross-device sync.
       void fetch('/api/user/profile', {
         method: 'PATCH',

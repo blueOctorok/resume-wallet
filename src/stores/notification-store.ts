@@ -18,9 +18,9 @@ interface NotificationState {
 }
 
 interface NotificationActions {
-  fetchNotifications: (walletAddress: string) => Promise<void>
-  markRead: (id: string, walletAddress: string) => Promise<void>
-  markAllRead: (walletAddress: string) => Promise<void>
+  fetchNotifications: (sessionUserId: string) => Promise<void>
+  markRead: (id: string, sessionUserId: string) => Promise<void>
+  markAllRead: (sessionUserId: string) => Promise<void>
   /** Optimistically prepend a new notification (for real-time use cases) */
   addNotification: (notification: AppNotification) => void
   reset: () => void
@@ -36,7 +36,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   (set, get) => ({
     ...initialState,
 
-    fetchNotifications: async (walletAddress) => {
+    fetchNotifications: async (sessionUserId) => {
       set({ loading: true })
       try {
         const res = await fetch('/api/notifications')
@@ -50,7 +50,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       }
     },
 
-    markRead: async (id, walletAddress) => {
+    markRead: async (id, sessionUserId) => {
       // Optimistic update
       set((state) => ({
         notifications: state.notifications.map((n) =>
@@ -66,11 +66,11 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       } catch (err) {
         console.error('[NOTIFICATION STORE] Mark-read failed:', err)
         // Revert optimistic update on failure
-        await get().fetchNotifications(walletAddress)
+        await get().fetchNotifications(sessionUserId)
       }
     },
 
-    markAllRead: async (walletAddress) => {
+    markAllRead: async (sessionUserId) => {
       // Optimistic update
       set((state) => ({
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
@@ -83,7 +83,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         })
       } catch (err) {
         console.error('[NOTIFICATION STORE] Mark-all-read failed:', err)
-        await get().fetchNotifications(walletAddress)
+        await get().fetchNotifications(sessionUserId)
       }
     },
 

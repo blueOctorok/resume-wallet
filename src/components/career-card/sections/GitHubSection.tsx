@@ -17,11 +17,11 @@ interface GitHubSectionProps {
   mode: CareerCardMode
   isDark: boolean
   shareToken?: string | null
-  walletAddress?: string
+  sessionUserId?: string
   onAction?: () => void
 }
 
-export default function GitHubSection({ data, mode, isDark, shareToken, walletAddress, onAction }: GitHubSectionProps) {
+export default function GitHubSection({ data, mode, isDark, shareToken, sessionUserId, onAction }: GitHubSectionProps) {
   if (!data.username) {
     if (!isCareerCardOwnerMode(mode)) return null
     return <SectionNeedsSetup icon={Github} label='GitHub Activity' isDark={isDark} onAction={onAction} />
@@ -80,10 +80,10 @@ export default function GitHubSection({ data, mode, isDark, shareToken, walletAd
         </p>
       )}
 
-      {/* Contribution graph — uses shareToken (public view) or walletAddress (self view) */}
-      {(shareToken || walletAddress) && (
+      {/* Contribution graph — uses shareToken (public view) or sessionUserId (self view) */}
+      {(shareToken || sessionUserId) && (
         <div className='mb-4'>
-          <GitHubContributionGraph shareToken={shareToken} walletAddress={walletAddress} />
+          <GitHubContributionGraph shareToken={shareToken} sessionUserId={sessionUserId} />
         </div>
       )}
 

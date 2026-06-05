@@ -14,7 +14,7 @@ interface PspDetail {
 
 export default function PspTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -30,12 +30,12 @@ export default function PspTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const res = await fetch(
         `/api/admin/psp?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } },
+        { headers: { 'x-wallet-address': sessionUserId } },
       )
       const data = await res.json()
       if (data.success) {
@@ -45,7 +45,7 @@ export default function PspTab({
     } catch (err) {
       console.error('Failed to fetch PSP orders:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()
@@ -53,13 +53,13 @@ export default function PspTab({
 
   const fetchDetail = useCallback(
     async (orderId: string) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       setLoadingDetail(true)
       setSelectedDetail(null)
       setShowXml('none')
       try {
         const res = await fetch(`/api/admin/psp/${orderId}`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         })
         const data = await res.json()
         if (data.success) {
@@ -71,7 +71,7 @@ export default function PspTab({
         setLoadingDetail(false)
       }
     },
-    [walletAddress],
+    [sessionUserId],
   )
 
   return (
@@ -100,7 +100,7 @@ export default function PspTab({
                   <div>
                     <div>{psp.driverName}</div>
                     <code className='text-xs opacity-75'>
-                      {psp.walletAddress.slice(0, 8)}...{psp.walletAddress.slice(-4)}
+                      {psp.sessionUserId.slice(0, 8)}...{psp.sessionUserId.slice(-4)}
                     </code>
                   </div>
                 </td>
@@ -208,11 +208,11 @@ export default function PspTab({
                     >
                       <div>
                         <span className='opacity-70'>Driver:</span>{' '}
-                        {String(selectedDetail.order.driverName || selectedDetail.order.walletAddress || '-')}
+                        {String(selectedDetail.order.driverName || selectedDetail.order.sessionUserId || '-')}
                       </div>
                       <div>
                         <span className='opacity-70'>Wallet:</span>{' '}
-                        <code className='text-xs'>{String(selectedDetail.order.walletAddress || '-')}</code>
+                        <code className='text-xs'>{String(selectedDetail.order.sessionUserId || '-')}</code>
                       </div>
                       <div>
                         <span className='opacity-70'>Status:</span> {String(selectedDetail.order.status)}

@@ -8,7 +8,7 @@ interface SaveProgressButtonProps {
   /** Centralized save function from parent - saves ALL forms */
   onSaveProgress?: () => Promise<boolean | undefined>
   /** User's wallet address for API auth */
-  walletAddress?: string
+  sessionUserId?: string
   /** Whether to show as compact button */
   compact?: boolean
 }
@@ -24,7 +24,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
  */
 export default function SaveProgressButton({
   onSaveProgress,
-  walletAddress,
+  sessionUserId,
   compact = false,
 }: SaveProgressButtonProps) {
   const { theme } = useTheme()
@@ -32,7 +32,7 @@ export default function SaveProgressButton({
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   const handleSave = useCallback(async () => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       console.warn('⚠️ [SAVE] No wallet address, cannot save')
       return
     }
@@ -72,7 +72,7 @@ export default function SaveProgressButton({
         setSaveState('idle')
       }, 3000)
     }
-  }, [walletAddress, onSaveProgress])
+  }, [sessionUserId, onSaveProgress])
 
   // Render the appropriate icon based on state
   const renderIcon = () => {
@@ -160,9 +160,9 @@ export default function SaveProgressButton({
       <button
         type="button"
         onClick={handleSave}
-        disabled={saveState === 'saving' || !walletAddress || !onSaveProgress}
+        disabled={saveState === 'saving' || !sessionUserId || !onSaveProgress}
         className={getButtonStyles()}
-        title={!walletAddress ? 'Sign in to save' : !onSaveProgress ? 'Save not available' : 'Save all forms to your profile'}
+        title={!sessionUserId ? 'Sign in to save' : !onSaveProgress ? 'Save not available' : 'Save all forms to your profile'}
       >
         {renderIcon()}
         <span>{getButtonText()}</span>

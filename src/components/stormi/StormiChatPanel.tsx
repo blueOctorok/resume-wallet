@@ -247,7 +247,7 @@ function StormiInterviewPrepBlock(props: {
 export type StormiChatPanelProps =
   | {
       mode: 'candidate'
-      walletAddress: string | null
+      sessionUserId: string | null
       hubContext: HubContext
       candidateEmptyHub: boolean
       /** From GET /api/hub/blocks `avaAutoWelcomeCandidateDone` */
@@ -263,7 +263,7 @@ export type StormiChatPanelProps =
     }
   | {
       mode: 'employer'
-      walletAddress: string | null
+      sessionUserId: string | null
       employerContext: EmployerHubContext
       /** From employer hub API `avaAutoWelcomeEmployerDone` */
       stormiAutoWelcomeEmployerDone: boolean
@@ -285,7 +285,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
         ? Boolean(props.hubEmbedSurface)
         : false
   const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
-  const walletAddress = props.walletAddress
+  const sessionUserId = props.sessionUserId
   const persistenceMode = props.mode
 
   /** Narrow once so effects / deps don't touch discriminated-union props awkwardly. */
@@ -336,29 +336,29 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
 
   // Restore thread after refresh (per wallet + candidate vs employer)
   useEffect(() => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setMessages([])
       setPersistReady(true)
       return
     }
-    setMessages(loadStormiChatMessages(persistenceMode, walletAddress, guidedJobId))
+    setMessages(loadStormiChatMessages(persistenceMode, sessionUserId, guidedJobId))
     setPersistReady(true)
-  }, [walletAddress, persistenceMode, guidedJobId])
+  }, [sessionUserId, persistenceMode, guidedJobId])
 
   useEffect(() => {
-    if (!persistReady || !walletAddress) return
-    saveStormiChatMessages(persistenceMode, walletAddress, messages, guidedJobId)
-  }, [messages, walletAddress, persistenceMode, persistReady, guidedJobId])
+    if (!persistReady || !sessionUserId) return
+    saveStormiChatMessages(persistenceMode, sessionUserId, messages, guidedJobId)
+  }, [messages, sessionUserId, persistenceMode, persistReady, guidedJobId])
 
   // First open on candidate hub: one auto-welcome turn (DB idempotent via `autoWelcome: 'candidate'`).
   useEffect(() => {
     if (props.mode !== 'candidate') return
     if (candidateSimpleModeContext) return
-    if (!walletAddress || !persistReady) return
+    if (!sessionUserId || !persistReady) return
     if (candidateStormiAutoWelcomeDone) return
     if (messages.length > 0) return
 
-    const sessionKey = `stormi_autowelcome_fire_${walletAddress}`
+    const sessionKey = `stormi_autowelcome_fire_${sessionUserId}`
     try {
       if (sessionStorage.getItem(sessionKey) === '1') return
       sessionStorage.setItem(sessionKey, '1')
@@ -377,7 +377,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
         )
         const res = await sendToStormi({
           message: welcomeMessage,
-          walletAddress,
+          sessionUserId,
           hubContext: hubContextRef.current,
           autoWelcome: 'candidate',
         })
@@ -409,7 +409,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hubContext updates often; refs hold latest for the one-shot welcome
   }, [
     props.mode,
-    walletAddress,
+    sessionUserId,
     persistReady,
     candidateStormiAutoWelcomeDone,
     messages.length,
@@ -424,7 +424,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   useEffect(() => {
     if (props.mode !== 'candidate') return
     const sm = candidateSimpleModeContext
-    if (!sm || !walletAddress || !persistReady) return
+    if (!sm || !sessionUserId || !persistReady) return
     if (messages.length > 0) return
     // One attempt per job — reset when guidedJobId changes via the persistence effect
     if (guidedBootstrapAttemptedRef.current === sm.job.id) return
@@ -437,7 +437,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
       try {
         const res = await sendToStormi({
           message: '',
-          walletAddress,
+          sessionUserId,
           hubContext: hubContextRef.current,
           simpleModeContext: sm,
           simpleModeBootstrap: true,
@@ -461,10 +461,10 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [props.mode, candidateSimpleModeContext, walletAddress, persistReady, messages.length])
+  }, [props.mode, candidateSimpleModeContext, sessionUserId, persistReady, messages.length])
 
   useEffect(() => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     fetch('/api/ai/credits')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -478,7 +478,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
         }
       })
       .catch(() => {})
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -513,7 +513,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
           ? await sendToStormi({
               message: trimmed,
               hubContext: props.hubContext,
-              walletAddress,
+              sessionUserId,
               conversationHistory,
               ...(candidateSimpleModeContext ? { simpleModeContext: candidateSimpleModeContext } : {}),
             })
@@ -521,7 +521,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
               message: trimmed,
               audience: 'employer',
               employerContext: props.employerContext,
-              walletAddress,
+              sessionUserId,
               conversationHistory,
             })
       setMessages((prev) => [
@@ -543,7 +543,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, outOfCredits, messages, props, walletAddress])
+  }, [input, isLoading, outOfCredits, messages, props, sessionUserId])
 
   const selectInterviewPrepChoice = useCallback((messageIndex: number, choiceId: string) => {
     setMessages((prev) =>
@@ -552,14 +552,14 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   }, [])
 
   const runInterviewPrepQuiz = useCallback(async () => {
-    if (!walletAddress || isLoading || outOfCredits) return
+    if (!sessionUserId || isLoading || outOfCredits) return
     setIsLoading(true)
     setChatError(null)
     setOutOfCredits(false)
     try {
       const res = await fetch('/api/ai/interview-prep-quiz', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': sessionUserId },
         body: JSON.stringify({}),
       })
       const data = (await res.json()) as {
@@ -608,18 +608,18 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [walletAddress, isLoading, outOfCredits])
+  }, [sessionUserId, isLoading, outOfCredits])
 
   const submitTalkingPoints = useCallback(async () => {
     const title = tpJobTitle.trim()
     const company = tpCompany.trim()
-    if (!walletAddress || !title || !company || tpLoading) return
+    if (!sessionUserId || !title || !company || tpLoading) return
     setTpLoading(true)
     setTpError(null)
     try {
       const res = await fetch('/api/ai/job-talking-points', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': sessionUserId },
         body: JSON.stringify({
           jobTitle: title,
           company,
@@ -664,7 +664,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     } finally {
       setTpLoading(false)
     }
-  }, [walletAddress, tpJobTitle, tpCompany, tpDescription, tpLoading])
+  }, [sessionUserId, tpJobTitle, tpCompany, tpDescription, tpLoading])
 
   const hasMessages = messages.length > 0 || isLoading
 
@@ -980,7 +980,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                           key='interview-prep'
                           type='button'
                           onClick={() => void runInterviewPrepQuiz()}
-                          disabled={!walletAddress || isLoading || outOfCredits}
+                          disabled={!sessionUserId || isLoading || outOfCredits}
                           className={cn(
                             'rounded-full px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1.5',
                             isDark
@@ -1001,7 +1001,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                           setTpError(null)
                           setTalkingPointsModalOpen(true)
                         }}
-                        disabled={!walletAddress || outOfCredits}
+                        disabled={!sessionUserId || outOfCredits}
                         className={cn(
                           'rounded-full px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1.5',
                           isDark
@@ -1213,7 +1213,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
 
       {showCreditModal && (
         <StormiCreditModal
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onClose={() => setShowCreditModal(false)}
           onSuccess={(newUsage) => {
             setUsage(newUsage)
@@ -1228,7 +1228,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
           isOpen={applyJob != null}
           onClose={() => setApplyJob(null)}
           job={applyJob}
-          userAddress={walletAddress}
+          userAddress={sessionUserId}
         />
       )}
     </div>

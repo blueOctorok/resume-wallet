@@ -39,7 +39,7 @@ interface CareerPreview {
 }
 
 interface ShareProfileCardProps {
-  walletAddress?: string
+  sessionUserId?: string
   userAddress?: string
   driverName?: string
   userRole?: 'driver' | 'developer' | 'candidate'
@@ -47,14 +47,14 @@ interface ShareProfileCardProps {
 }
 
 export default function ShareProfileCard({
-  walletAddress,
+  sessionUserId,
   userAddress,
   driverName,
   userRole = 'candidate',
   onViewCareerCard,
 }: ShareProfileCardProps) {
   const { theme } = useTheme()
-  const address = walletAddress ?? userAddress
+  const address = sessionUserId ?? userAddress
   const shareApiUrl = '/api/career-card/share'
   const careerCardApiUrl = '/api/career-card'
 
@@ -329,7 +329,7 @@ export default function ShareProfileCard({
       <CareerCardShareModal
         isOpen={showQrModal}
         onClose={() => setShowQrModal(false)}
-        walletAddress={address ?? null}
+        sessionUserId={address ?? null}
         displayName={preview?.name || driverName}
         onShareUpdated={() => void fetchShareInfo()}
       />

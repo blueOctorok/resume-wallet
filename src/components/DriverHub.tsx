@@ -576,7 +576,7 @@ export default function DriverHub({
       const response = await fetch('/api/applications/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress }),
+        body: JSON.stringify({ sessionUserId: userAddress }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -765,7 +765,7 @@ export default function DriverHub({
               size="xl"
               color="teal"
               uploadEndpoint="/api/driver/avatar"
-              walletAddress={userAddress}
+              sessionUserId={userAddress}
               onSuccess={(url) =>
                 setHubData(prev =>
                   prev?.profile
@@ -994,7 +994,7 @@ export default function DriverHub({
       {/* ============================================================ */}
       <div className='mb-6'>
         <ShareProfileCard
-          walletAddress={userAddress}
+          sessionUserId={userAddress}
           driverName={profileName || (data.displayNameFallback ?? '') || undefined}
           onViewCareerCard={() => onNavigate('career-card')}
         />

@@ -3,95 +3,59 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { UserRole } from './types'
 
 /**
- * Auth Store - Manages user authentication and role state
- * 
- * This store handles:
- * - User session data (from Alchemy)
- * - Wallet address (normalized to lowercase)
- * - User role (driver, developer, employer)
- * - Company name (for employers)
+ * Auth Store — Supabase session identity (Phase 1 / D3.4).
+ *
+ * `sessionUserId` is the Storm `users.id` (same as `auth.users.id`).
+ * Legacy `users.wallet_address` remains in the DB for history only — never
+ * read as client identity after D3.4.
  */
 
-interface AlchemyUser {
-  address: string
+export interface SessionUser {
+  userId: string
   email?: string
-  type?: string
+  method: 'supabase'
+  isConnected: boolean
   [key: string]: unknown
 }
 
 interface AuthState {
-  // User data
-  user: AlchemyUser | null
-  walletAddress: string | null
-
-  // Supabase Auth session user id (T1.10). Populated live from the Supabase
-  // session by use-supabase-auth-sync; null for Alchemy-only sessions. Never
-  // persisted — it rehydrates from the Supabase session cookie on load.
+  user: SessionUser | null
+  /** Supabase Auth user id — primary client identity. Never persisted (rehydrates from cookie). */
   sessionUserId: string | null
-
-  // True once the initial Supabase getUser() has resolved (regardless of result).
-  // The guest → /sign-in redirect must NOT fire before this, or a user with a
-  // valid session gets bounced to /sign-in while the session restores — which
-  // then bounces them back, causing a redirect loop. Never persisted.
+  /** True once initial Supabase getUser() resolved. Never persisted. */
   supabaseSessionChecked: boolean
-  
-  // Role state
   userRole: UserRole
   isRoleLoading: boolean
   showRoleSelection: boolean
   isSettingRole: boolean
   companyName: string | null
-  
-  // Profile setup — shown once for first-time users who have no name set
   showProfileSetup: boolean
-
-  // Referral — captured from ?ref=CODE on first visit, consumed on role selection
   referralCode: string | null
-
-  // Session state
   isCheckingSession: boolean
   isInitialized: boolean
 }
 
 interface AuthActions {
-  // User actions
-  setUser: (user: AlchemyUser | null) => void
-  setWalletAddress: (address: string | null) => void
+  setUser: (user: SessionUser | null) => void
   setSessionUserId: (id: string | null) => void
   setSupabaseSessionChecked: (checked: boolean) => void
-  
-  // Role actions
   setUserRole: (role: UserRole) => void
   setIsRoleLoading: (loading: boolean) => void
   setShowRoleSelection: (show: boolean) => void
   setIsSettingRole: (setting: boolean) => void
   setCompanyName: (name: string | null) => void
-  
-  // Profile setup actions
   setShowProfileSetup: (show: boolean) => void
-  /**
-   * Checks whether the user has a name set in their profile.
-   * Shows the profile setup modal if not. Safe to call multiple times —
-   * uses an internal flag to only run once per session per wallet.
-   */
-  checkAndShowProfileSetup: (walletAddress: string, userRole: UserRole) => Promise<void>
-
-  // Referral actions
+  checkAndShowProfileSetup: (sessionUserId: string, userRole: UserRole) => Promise<void>
   setReferralCode: (code: string | null) => void
-
-  // Session actions
   setIsCheckingSession: (checking: boolean) => void
   setIsInitialized: (initialized: boolean) => void
-  
-  // Compound actions
-  login: (user: AlchemyUser) => void
+  login: (user: SessionUser) => void
   logout: () => void
   setRole: (role: UserRole, companyName?: string) => void
 }
 
 const initialState: AuthState = {
   user: null,
-  walletAddress: null,
   sessionUserId: null,
   supabaseSessionChecked: false,
   userRole: null,
@@ -105,87 +69,71 @@ const initialState: AuthState = {
   isInitialized: false,
 }
 
-// Prevents the profile check from running more than once per session per wallet
-let profileCheckRanForWallet: string | null = null
+let profileCheckRanForUserId: string | null = null
 
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
     (set, get) => ({
       ...initialState,
 
-      // User actions
-      setUser: (user) => set({ 
-        user,
-        // Normalize wallet address to lowercase for consistent DB lookups
-        walletAddress: user?.address?.toLowerCase() ?? null,
-      }),
-      
-      setWalletAddress: (address) => set({ 
-        walletAddress: address?.toLowerCase() ?? null 
-      }),
+      setUser: (user) =>
+        set({
+          user,
+          sessionUserId: user?.userId ?? null,
+        }),
 
       setSessionUserId: (id) => set({ sessionUserId: id }),
 
       setSupabaseSessionChecked: (checked) => set({ supabaseSessionChecked: checked }),
 
-      // Role actions
       setUserRole: (role) => set({ userRole: role }),
       setIsRoleLoading: (loading) => set({ isRoleLoading: loading }),
       setShowRoleSelection: (show) => set({ showRoleSelection: show }),
       setIsSettingRole: (setting) => set({ isSettingRole: setting }),
       setCompanyName: (name) => set({ companyName: name }),
 
-      // Profile setup actions
       setShowProfileSetup: (show) => set({ showProfileSetup: show }),
 
-      checkAndShowProfileSetup: async (walletAddress, userRole) => {
-        if (!walletAddress || !userRole || userRole === 'employer') return
-        if (profileCheckRanForWallet === walletAddress) return
-        profileCheckRanForWallet = walletAddress
+      checkAndShowProfileSetup: async (sessionUserId, userRole) => {
+        if (!sessionUserId || !userRole || userRole === 'employer') return
+        if (profileCheckRanForUserId === sessionUserId) return
+        profileCheckRanForUserId = sessionUserId
 
         try {
-          // Use the hub blocks endpoint which returns user_profiles data
           const res = await fetch('/api/hub/blocks')
-
           if (!res.ok) {
             set({ showProfileSetup: true })
             return
           }
-
           const data = await res.json()
           const hasName = data.profile?.first_name
           if (!hasName) set({ showProfileSetup: true })
         } catch {
-          // Non-blocking — if the check fails, don't interrupt the user's session
+          // Non-blocking
         }
       },
 
-      // Referral actions
       setReferralCode: (code) => set({ referralCode: code }),
 
-      // Session actions
       setIsCheckingSession: (checking) => set({ isCheckingSession: checking }),
       setIsInitialized: (initialized) => set({ isInitialized: initialized }),
 
-      // Compound actions
       login: (user) => {
         set({
           user,
-          walletAddress: user.address?.toLowerCase() ?? null,
+          sessionUserId: user.userId,
           isCheckingSession: false,
           isInitialized: true,
         })
       },
 
       logout: () => {
-        profileCheckRanForWallet = null
+        profileCheckRanForUserId = null
         set({
           ...initialState,
           isCheckingSession: false,
           isInitialized: true,
           isRoleLoading: false,
-          // The session was checked to get here; keep it true so the guest
-          // redirect to /sign-in fires immediately instead of waiting again.
           supabaseSessionChecked: true,
         })
       },
@@ -203,17 +151,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     {
       name: 'auth-store',
       storage: createJSONStorage(() => sessionStorage),
-      // Only persist wallet + role. Do not persist companyName — it is synced from profile on load
-      // so we don't show stale "My Company" when rehydrating from an old session.
       partialize: (state) => ({
-        walletAddress: state.walletAddress,
         userRole: state.userRole,
       }),
     }
   )
 )
 
-// Selector hooks for common patterns
-export const useWalletAddress = () => useAuthStore((state) => state.walletAddress)
+export const useSessionUserId = () => useAuthStore((state) => state.sessionUserId)
 export const useUserRole = () => useAuthStore((state) => state.userRole)
-export const useIsAuthenticated = () => useAuthStore((state) => !!state.user)
+export const useIsAuthenticated = () => useAuthStore((state) => !!state.sessionUserId)

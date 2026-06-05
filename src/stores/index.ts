@@ -5,7 +5,7 @@
  * Import from '@/stores' for convenience.
  * 
  * Architecture:
- * - useAuthStore: User authentication, wallet, role
+ * - useAuthStore: User authentication, session, role
  * - useDotApplicationStore: DOT form data, submission state
  * - useDriverHubStore: Hub dashboard data (resumes, MVR, jobs)
  * - useUIStore: Navigation, modals, UI state
@@ -15,7 +15,7 @@
 // Auth Store
 export { 
   useAuthStore,
-  useWalletAddress,
+  useSessionUserId,
   useUserRole,
   useIsAuthenticated,
 } from './auth-store'

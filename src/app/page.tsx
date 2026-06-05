@@ -61,7 +61,6 @@ const HomeContent = () => {
   const authStore = useAuthStore()
   const {
     user, setUser,
-    walletAddress,
     sessionUserId,
     supabaseSessionChecked,
     userRole, setUserRole,
@@ -145,7 +144,7 @@ const HomeContent = () => {
   // Fetch user role on login
   // -------------------------------------------------------
   useEffect(() => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setUserRole(null)
       setIsRoleLoading(false)
       setShowRoleSelection(false)
@@ -161,7 +160,7 @@ const HomeContent = () => {
         const res = await fetch('/api/user/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
+          body: JSON.stringify({}),
         })
         if (res.ok) {
           const data = await res.json()
@@ -210,7 +209,7 @@ const HomeContent = () => {
     }
 
     fetchRole()
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // -------------------------------------------------------
   // Resume an invite that lost its ?next during the Supabase auth round-trip.
@@ -278,10 +277,10 @@ const HomeContent = () => {
   // Logic lives in useAuthStore.checkAndShowProfileSetup
   // -------------------------------------------------------
   useEffect(() => {
-    if (!isRoleLoading && userRole && walletAddress) {
-      checkAndShowProfileSetup(walletAddress, userRole)
+    if (!isRoleLoading && userRole && sessionUserId) {
+      checkAndShowProfileSetup(sessionUserId, userRole)
     }
-  }, [userRole, isRoleLoading, walletAddress])
+  }, [userRole, isRoleLoading, sessionUserId])
 
   // -------------------------------------------------------
   // Supabase /sign-in is the only front door.
@@ -331,7 +330,7 @@ const HomeContent = () => {
 
   const handleRoleSelection = useCallback(
     async (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       setIsSettingRole(true)
       try {
         const res = await fetch('/api/user/set-role', {
@@ -339,7 +338,6 @@ const HomeContent = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             role,
-            walletAddress,
             ...(role === 'employer' && companyName && { companyName, dotNumber }),
             ...(referralCode && { referralCode }),
           }),
@@ -360,7 +358,7 @@ const HomeContent = () => {
         setIsSettingRole(false)
       }
     },
-    [walletAddress]
+    [sessionUserId]
   )
 
   const openModal = useCallback(() => setIsModalOpen(true), [])
@@ -398,8 +396,8 @@ const HomeContent = () => {
             }
           }}
           onBrowseGuided={enterGuidedMode}
-          mvrWalletAddress={user?.address || null}
-          walletAddress={walletAddress ?? null}
+          mvrWalletAddress={sessionUserId || null}
+          sessionUserId={sessionUserId ?? null}
           onSwitchRole={userRole === 'employer' ? undefined : () => setShowRoleSelection(true)}
         />
 
@@ -410,7 +408,7 @@ const HomeContent = () => {
           onLogout={handleLogout}
           user={{
             email: user?.email as string | undefined,
-            address: walletAddress ?? undefined,
+            userId: sessionUserId ?? undefined,
             chain: user?.chain as string | undefined,
           }}
           userRole={userRole}
@@ -422,7 +420,7 @@ const HomeContent = () => {
             onSelectRole={handleRoleSelection}
             isLoading={isSettingRole}
             userEmail={user?.email}
-            walletAddress={user?.address}
+            sessionUserId={sessionUserId}
             existingRole={userRole}
             existingCompanyName={companyName}
           />
@@ -432,7 +430,7 @@ const HomeContent = () => {
             Gated on !needsOnboarding so this never renders at the same time as HubOnboardingForm —
             two simultaneous portaled Modals corrupt the shared openModalCount scroll-lock counter,
             leaving body overflow:hidden after the first one unmounts. */}
-        {user && walletAddress && !needsOnboarding && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
+        {user && sessionUserId && !needsOnboarding && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
           <ProfileSetupModal
             isOpen={showProfileSetup}
             onClose={() => setShowProfileSetup(false)}
@@ -442,7 +440,7 @@ const HomeContent = () => {
                 updateUserProfile({ firstName, lastName })
               }
             }}
-            walletAddress={walletAddress}
+            sessionUserId={sessionUserId}
             userRole={userRole}
             userEmail={user?.email}
           />
@@ -478,14 +476,14 @@ const HomeContent = () => {
           {/* ── Employer ── */}
           {user && userRole === 'employer' && !isRoleLoading && (
             <ErrorBoundary section='Employer Hub'>
-              <EmployerShell walletAddress={user.address} />
+              <EmployerShell sessionUserId={sessionUserId} />
             </ErrorBoundary>
           )}
 
           {/* ── Developer ── */}
           {user && userRole === 'developer' && !isRoleLoading && (
             <ErrorBoundary section='Developer Hub'>
-              <DeveloperShell userAddress={user.address} />
+              <DeveloperShell userAddress={sessionUserId} />
             </ErrorBoundary>
           )}
 
@@ -499,7 +497,7 @@ const HomeContent = () => {
           {/*
            Guest Guided Mode — rendered BEFORE the DriverShell branch so a
            visitor who hits "Browse jobs" goes straight into SimpleModeShell
-           with no wallet. SimpleCardPanel detects walletAddress=null and
+           with no wallet. SimpleCardPanel detects sessionUserId=null and
            renders the sign-in teaser; the rail and job detail work as-is.
           */}
           {!user && showGuidedMode && !isRoleLoading && (

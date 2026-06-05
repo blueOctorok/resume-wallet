@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useWalletAddress, useAuthStore } from '@/stores/auth-store'
+import { useSessionUserId, useAuthStore } from '@/stores/auth-store'
 import {
   Users,
   FileText,
@@ -56,10 +56,10 @@ function AdminDashboardContent() {
   // cookie, so the admin check works for any login (incl. brand-new email signups
   // that have no real wallet). The `x-wallet-address` header is still sent below
   // but is now ignored by the server; stripping it is the vestigial-header cleanup.
-  const walletAddress = useWalletAddress() ?? undefined
+  const sessionUserId = useSessionUserId() ?? undefined
   // Email is the real admin identity now; show it instead of a raw `auth:<uuid>`.
   const adminEmail = useAuthStore((s) => s.user?.email)
-  const adminIdentity = adminEmail ?? walletAddress
+  const adminIdentity = adminEmail ?? sessionUserId
 
   const [activeTab, setActiveTab] = useState<TabId>('users')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -86,14 +86,14 @@ function AdminDashboardContent() {
 
   // Fetch sidebar badge counts
   const fetchBadgeCounts = useCallback(async () => {
-    if (!walletAddress || !isAdmin) return
+    if (!sessionUserId || !isAdmin) return
     try {
       const [reqRes, compRes] = await Promise.all([
         fetch('/api/admin/employer-requests?status=all', {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         }),
         fetch('/api/admin/companies?status=all', {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         }),
       ])
       const reqData = await reqRes.json()
@@ -107,7 +107,7 @@ function AdminDashboardContent() {
     } catch {
       // Badge counts are non-critical
     }
-  }, [walletAddress, isAdmin])
+  }, [sessionUserId, isAdmin])
 
   useEffect(() => {
     if (isAdmin) fetchBadgeCounts()
@@ -115,20 +115,20 @@ function AdminDashboardContent() {
 
   // Check admin status
   useEffect(() => {
-    if (walletAddress) {
+    if (sessionUserId) {
       fetch('/api/admin/users?limit=1', {
-        headers: { 'x-wallet-address': walletAddress },
+        headers: { 'x-wallet-address': sessionUserId },
       })
         .then((res) => setIsAdmin(res.ok))
         .catch(() => setIsAdmin(false))
     } else {
       setIsAdmin(null)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // Handle delete — supports force-delete for admin wallets (prompts confirmation)
   const handleDelete = async () => {
-    if (!deleteTarget || !walletAddress) return
+    if (!deleteTarget || !sessionUserId) return
 
     setDeleting(true)
     setDeleteError(null)
@@ -150,7 +150,7 @@ function AdminDashboardContent() {
       const endpoint = endpointMap[deleteTarget.type]
       if (!endpoint) return
 
-      const headers: Record<string, string> = { 'x-wallet-address': walletAddress }
+      const headers: Record<string, string> = { 'x-wallet-address': sessionUserId }
 
       const response = await fetch(endpoint, { method: 'DELETE', headers })
 
@@ -244,7 +244,7 @@ function AdminDashboardContent() {
         <div className='text-center'>
           <Loader2 className='w-8 h-8 animate-spin text-indigo-400 mx-auto mb-4' />
           <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
-            {walletAddress ? 'Checking admin access...' : 'Waiting for sign-in...'}
+            {sessionUserId ? 'Checking admin access...' : 'Waiting for sign-in...'}
           </p>
         </div>
       </div>
@@ -255,7 +255,7 @@ function AdminDashboardContent() {
 
   const tabProps = {
     theme: adminUiTheme,
-    walletAddress: walletAddress || '',
+    sessionUserId: sessionUserId || '',
     searchQuery,
     currentPage,
     pageSize,
@@ -300,7 +300,7 @@ function AdminDashboardContent() {
       case 'users':
         return <UsersTab key={refreshKey} {...tabProps} />
       case 'tools':
-        return <ToolsTab theme={adminUiTheme} walletAddress={walletAddress || ''} />
+        return <ToolsTab theme={adminUiTheme} sessionUserId={sessionUserId || ''} />
       default:
         return null
     }
@@ -462,7 +462,7 @@ function AdminDashboardContent() {
 
       <CreateCompanyModal
         theme={adminUiTheme}
-        walletAddress={walletAddress || ''}
+        sessionUserId={sessionUserId || ''}
         open={showCreateCompanyModal}
         onClose={() => setShowCreateCompanyModal(false)}
         onCreated={() => {

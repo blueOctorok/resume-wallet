@@ -27,7 +27,7 @@ interface CompaniesTabProps extends AdminTabProps {
 
 export default function CompaniesTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -65,11 +65,11 @@ export default function CompaniesTab({
   } | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const res = await fetch(
         `/api/admin/companies?status=${companyStatusFilter}&search=${encodeURIComponent(searchQuery)}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -80,7 +80,7 @@ export default function CompaniesTab({
     } catch (err) {
       console.error('Failed to fetch companies:', err)
     }
-  }, [walletAddress, searchQuery, companyStatusFilter, setTotalCount])
+  }, [sessionUserId, searchQuery, companyStatusFilter, setTotalCount])
 
   const pageOffset = (currentPage - 1) * pageSize
   const pagedCompanies = companies.slice(pageOffset, pageOffset + pageSize)
@@ -90,15 +90,15 @@ export default function CompaniesTab({
   }, [fetchData, currentPage])
 
   const fetchCompanyMembers = useCallback(async (companyId: string) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setLoadingMembers(true)
     try {
       const [memRes, hubRes] = await Promise.all([
         fetch(`/api/admin/companies/${companyId}/members`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         }),
         fetch(`/api/admin/companies/${companyId}/blocks`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         }),
       ])
       const memData = await memRes.json()
@@ -130,10 +130,10 @@ export default function CompaniesTab({
     } finally {
       setLoadingMembers(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   const handleRemoveCompanyMember = useCallback(async (companyId: string, memberId: string, memberName: string) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const confirmed = confirm(`Remove "${memberName || 'this member'}" from the company?\n\nThey will lose access to company data.`)
     if (!confirmed) return
     
@@ -141,7 +141,7 @@ export default function CompaniesTab({
     try {
       const res = await fetch(`/api/admin/companies/${companyId}/members/${memberId}`, {
         method: 'DELETE',
-        headers: { 'x-wallet-address': walletAddress },
+        headers: { 'x-wallet-address': sessionUserId },
       })
       const data = await res.json()
       if (data.success) {
@@ -155,7 +155,7 @@ export default function CompaniesTab({
     } finally {
       setRemovingMemberId(null)
     }
-  }, [walletAddress, fetchCompanyMembers, fetchData])
+  }, [sessionUserId, fetchCompanyMembers, fetchData])
 
   return (
     <div className='p-6'>
@@ -327,7 +327,7 @@ export default function CompaniesTab({
                         method: 'PATCH',
                         headers: {
                           'Content-Type': 'application/json',
-                          'x-wallet-address': walletAddress || '',
+                          'x-wallet-address': sessionUserId || '',
                         },
                         body: JSON.stringify({ action: 'approve' }),
                       })
@@ -346,7 +346,7 @@ export default function CompaniesTab({
                         method: 'PATCH',
                         headers: {
                           'Content-Type': 'application/json',
-                          'x-wallet-address': walletAddress || '',
+                          'x-wallet-address': sessionUserId || '',
                         },
                         body: JSON.stringify({ action: 'suspend', reason }),
                       })
@@ -364,7 +364,7 @@ export default function CompaniesTab({
                         method: 'PATCH',
                         headers: {
                           'Content-Type': 'application/json',
-                          'x-wallet-address': walletAddress || '',
+                          'x-wallet-address': sessionUserId || '',
                         },
                         body: JSON.stringify({ action: 'reactivate' }),
                       })
@@ -383,7 +383,7 @@ export default function CompaniesTab({
                         method: 'PATCH',
                         headers: {
                           'Content-Type': 'application/json',
-                          'x-wallet-address': walletAddress || '',
+                          'x-wallet-address': sessionUserId || '',
                         },
                         body: JSON.stringify({ adminNotes: notes }),
                       }).then(() => fetchData())
@@ -406,7 +406,7 @@ export default function CompaniesTab({
                       try {
                         const res = await fetch(`/api/admin/companies/${company.id}`, {
                           method: 'DELETE',
-                          headers: { 'x-wallet-address': walletAddress || '' },
+                          headers: { 'x-wallet-address': sessionUserId || '' },
                         })
                         const data = await res.json()
                         if (data.success) {
@@ -478,9 +478,9 @@ export default function CompaniesTab({
                                 </span>
                               )}
                             </div>
-                            {member.walletAddress && (
+                            {member.sessionUserId && (
                               <p className='text-xs text-gray-500 truncate'>
-                                {member.walletAddress.slice(0, 6)}...{member.walletAddress.slice(-4)}
+                                {member.sessionUserId.slice(0, 6)}...{member.sessionUserId.slice(-4)}
                               </p>
                             )}
                             {member.email && member.email !== member.name && (
@@ -589,7 +589,7 @@ export default function CompaniesTab({
       )}
 
       <EmployerBlockPickerModal
-        open={Boolean(employerPickerCompanyId && walletAddress)}
+        open={Boolean(employerPickerCompanyId && sessionUserId)}
         onClose={() => setEmployerPickerCompanyId(null)}
         installedTypes={
           new Set(
@@ -600,12 +600,12 @@ export default function CompaniesTab({
         }
         canInstall
         onInstallBlock={async (blockType) => {
-          if (!walletAddress || !employerPickerCompanyId) return false
+          if (!sessionUserId || !employerPickerCompanyId) return false
           const res = await fetch(`/api/admin/companies/${employerPickerCompanyId}/blocks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-wallet-address': walletAddress,
+              'x-wallet-address': sessionUserId,
             },
             body: JSON.stringify({ blockType }),
           })
@@ -627,13 +627,13 @@ export default function CompaniesTab({
         minReasonLength={3}
         confirmLabel='Remove block'
         onConfirm={async (reason) => {
-          if (!walletAddress || !adminEmployerRemove) return
+          if (!sessionUserId || !adminEmployerRemove) return
           const { companyId, blockId } = adminEmployerRemove
           const res = await fetch(`/api/admin/companies/${companyId}/blocks/${blockId}`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
-              'x-wallet-address': walletAddress,
+              'x-wallet-address': sessionUserId,
             },
             body: JSON.stringify({ reason: reason ?? '' }),
           })

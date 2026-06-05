@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
 
 interface NotificationBellProps {
-  walletAddress: string
+  sessionUserId: string
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -55,7 +55,7 @@ function timeAgo(dateString: string): string {
   return `${days}d ago`
 }
 
-export default function NotificationBell({ walletAddress }: NotificationBellProps) {
+export default function NotificationBell({ sessionUserId }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
@@ -65,13 +65,13 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
   // Fetch on mount, then poll every 60 seconds.
   // Pauses when the tab is hidden so it doesn't hammer the server in the background.
   useEffect(() => {
-    fetchNotifications(walletAddress)
+    fetchNotifications(sessionUserId)
 
     let interval: ReturnType<typeof setInterval> | null = null
 
     const start = () => {
       if (!interval) {
-        interval = setInterval(() => fetchNotifications(walletAddress), 60_000)
+        interval = setInterval(() => fetchNotifications(sessionUserId), 60_000)
       }
     }
     const stop = () => {
@@ -86,7 +86,7 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
       stop()
       document.removeEventListener('visibilitychange', stop)
     }
-  }, [walletAddress, fetchNotifications])
+  }, [sessionUserId, fetchNotifications])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
   }
 
   const handleNotificationClick = (n: AppNotification) => {
-    if (!n.read) markRead(n.id, walletAddress)
+    if (!n.read) markRead(n.id, sessionUserId)
     setIsOpen(false)
 
     // Message notifications navigate in-app to the specific thread
@@ -164,7 +164,7 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
             <div className='flex items-center gap-2'>
               {unreadCount > 0 && (
                 <button
-                  onClick={() => markAllRead(walletAddress)}
+                  onClick={() => markAllRead(sessionUserId)}
                   className={`flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer ${
                     isDark
                       ? 'text-teal-400 hover:text-teal-300'

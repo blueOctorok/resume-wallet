@@ -27,7 +27,7 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
   const hubCtx = useHubContext()
@@ -127,7 +127,7 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
       <CareerCardShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         displayName={displayName === 'Your name' ? undefined : displayName}
       />
     </div>

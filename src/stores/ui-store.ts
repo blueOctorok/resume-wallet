@@ -282,7 +282,7 @@ export const useUIStore = create<UIState & UIActions>()(
       }
       // Stormi journey reads driver-hub-store — refresh after upload pipeline milestones
       if (event.type === 'upload_complete' || event.type === 'blockchain_complete') {
-        const wa = useAuthStore.getState().walletAddress
+        const wa = useAuthStore.getState().sessionUserId
         if (wa) void syncDriverHubFromApi(wa)
       }
       // Auto-clear event after brief delay (for event-driven consumers)

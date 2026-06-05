@@ -12,7 +12,7 @@ import type { StormiUsageInfo } from '@/lib/ava-chat'
 import Button from '@/components/ui/Button'
 
 interface StormiCreditModalProps {
-  walletAddress: string | null
+  sessionUserId: string | null
   onClose: () => void
   onSuccess: (usage: StormiUsageInfo) => void
 }

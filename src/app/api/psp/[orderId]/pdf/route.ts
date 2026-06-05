@@ -1,5 +1,5 @@
 /**
- * GET /api/psp/[orderId]/pdf?walletAddress=...&employerCandidateUserId=...
+ * GET /api/psp/[orderId]/pdf?sessionUserId=...&employerCandidateUserId=...
  *
  * Streams a Storm-branded FMCSA PSP PDF for the given order. Mirrors the auth
  * & runtime shape of `/api/mvr/[orderId]/pdf`.
@@ -14,6 +14,7 @@ import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { parsePspResult } from '@/lib/accio-psp-parser'
 import { PspReportPdf } from '@/lib/pdf/PspReportPdf'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,11 +36,11 @@ export async function GET(
   try {
     const { orderId } = await params
     const { searchParams } = new URL(request.url)
-    const walletAddress = searchParams.get('walletAddress')
+    const sessionUserId = await getStormUserIdFromRequest(request)
     const employerCandidateUserId = searchParams.get('employerCandidateUserId')
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = createServiceClient(
@@ -51,7 +52,7 @@ export async function GET(
     let candidateName = 'Driver'
 
     if (employerCandidateUserId) {
-      const ctx = await resolveEmployerCompanyForWallet(supabase, walletAddress)
+      const ctx = await resolveEmployerCompanyForWallet(supabase, sessionUserId)
       if (!ctx) {
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
@@ -72,7 +73,7 @@ export async function GET(
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('id')
-        .ilike('wallet_address', walletAddress)
+        .eq('id', sessionUserId)
         .single()
 
       if (userError || !user) {

@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(req: NextRequest) {
@@ -13,17 +12,9 @@ export async function POST(req: NextRequest) {
     // Use admin client to bypass RLS (we validate the caller's identity manually)
     const adminClient = await getAdminSupabaseClient()
 
-    // CASE 2: create-on-write. Session first, then fall back to the legacy
-    // wallet header with getOrCreateUserByWallet so first-time builders still
-    // get a user row created.
-    let userId = await getStormUserIdFromRequest(req)
+    const userId = await getStormUserIdFromRequest(req)
     if (!userId) {
-      const walletAddress = req.headers.get('x-wallet-address')
-      if (!walletAddress) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-      const { user } = await getOrCreateUserByWallet(adminClient, walletAddress)
-      userId = user.id
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const body = await req.json()

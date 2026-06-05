@@ -22,7 +22,7 @@ import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 interface MvrViewModalProps {
   isOpen: boolean
   onClose: () => void
-  walletAddress: string | null
+  sessionUserId: string | null
   /** Load this order directly (My Files → View). Omit to use legacy latest-order check-status flow. */
   orderId?: string | null
   /**
@@ -265,7 +265,7 @@ function SectionHeader({
 export default function MvrViewModal({
   isOpen,
   onClose,
-  walletAddress,
+  sessionUserId,
   orderId: orderIdProp,
   employerCandidateUserId,
 }: MvrViewModalProps) {
@@ -284,13 +284,13 @@ export default function MvrViewModal({
   // which produced an unsaveable browser print sheet, not a real artifact.
   const handleDownloadPDF = () => {
     if (!mvrOrder) return
-    const params = new URLSearchParams({ walletAddress })
+    const params = new URLSearchParams({ sessionUserId })
     if (employerCandidateUserId) params.set('employerCandidateUserId', employerCandidateUserId)
     window.location.href = `/api/mvr/${mvrOrder.id}/pdf?${params.toString()}`
   }
 
   useEffect(() => {
-    if (!isOpen || !walletAddress) {
+    if (!isOpen || !sessionUserId) {
       return
     }
 
@@ -304,7 +304,7 @@ export default function MvrViewModal({
 
         // Explicit order: My Files "View" on a completed MVR (avoids sending users to the order form)
         if (orderIdProp) {
-          const q = new URLSearchParams({ walletAddress })
+          const q = new URLSearchParams({ sessionUserId })
           if (employerCandidateUserId) {
             q.set('employerCandidateUserId', employerCandidateUserId)
           }
@@ -331,7 +331,7 @@ export default function MvrViewModal({
           return
         }
 
-        const response = await fetch(`/api/mvr/check-status?walletAddress=${encodeURIComponent(walletAddress)}`)
+        const response = await fetch(`/api/mvr/check-status?sessionUserId=${encodeURIComponent(sessionUserId)}`)
 
         if (!response.ok) {
           throw new Error('Failed to fetch MVR data')
@@ -348,7 +348,7 @@ export default function MvrViewModal({
 
           if (data.result?.id) {
             const oid = data.order.id
-            const statusResponse = await fetch(`/api/mvr/status/${oid}?walletAddress=${encodeURIComponent(walletAddress)}`)
+            const statusResponse = await fetch(`/api/mvr/status/${oid}?sessionUserId=${encodeURIComponent(sessionUserId)}`)
 
             if (statusResponse.ok) {
               const statusData = await statusResponse.json()
@@ -369,7 +369,7 @@ export default function MvrViewModal({
     }
 
     fetchMvrData()
-  }, [isOpen, walletAddress, orderIdProp, employerCandidateUserId])
+  }, [isOpen, sessionUserId, orderIdProp, employerCandidateUserId])
 
   if (!isOpen) return null
 

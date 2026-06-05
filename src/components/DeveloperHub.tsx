@@ -252,7 +252,7 @@ export default function DeveloperHub({
       const response = await fetch('/api/applications/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress }),
+        body: JSON.stringify({ sessionUserId: userAddress }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -519,7 +519,7 @@ export default function DeveloperHub({
             size="xl"
             color="indigo"
             uploadEndpoint="/api/developer/avatar"
-            walletAddress={userAddress || ''}
+            sessionUserId={userAddress || ''}
             onSuccess={(url) =>
               setProfile(prev => prev ? { ...prev, avatarUrl: url } : prev)
             }

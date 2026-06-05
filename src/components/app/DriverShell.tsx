@@ -93,7 +93,7 @@ export default function DriverShell({
 }: DriverShellProps) {
   const { theme } = useTheme()
 
-  const { user, walletAddress } = useAuthStore()
+  const { user, sessionUserId } = useAuthStore()
   const dotApp = useDotApplicationStore()
   const hubStore = useDriverHubStore()
   const {
@@ -126,9 +126,9 @@ export default function DriverShell({
   // Journey state updates (for Stormi Journey Guide via UIStore)
   // -------------------------------------------------------
   useEffect(() => {
-    if (walletAddress) updateJourneyStep('wallet', 'complete')
+    if (sessionUserId) updateJourneyStep('wallet', 'complete')
     else resetDriverJourneyState()
-  }, [walletAddress])
+  }, [sessionUserId])
   
   // First login journey modal - show welcome message for new drivers
   useEffect(() => {
@@ -165,7 +165,7 @@ export default function DriverShell({
   // -------------------------------------------------------
   useEffect(() => {
     const autoCreateMissingResume = async () => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       if (hubStore.isLoading) return // wait for hub data
       if (autoResumeAttemptedRef.current) return // only once per session
       if (hubStore.resumes.length > 0) return // already has at least one resume
@@ -193,7 +193,7 @@ export default function DriverShell({
         const createRes = await fetch('/api/resumes/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json',
-            'x-wallet-address': walletAddress,
+            'x-wallet-address': sessionUserId,
           },
         body: JSON.stringify({
             title: nameTitle ? `${nameTitle} - Resume` : 'My Resume',
@@ -230,7 +230,7 @@ export default function DriverShell({
     }
 
     autoCreateMissingResume()
-  }, [walletAddress, hubStore.isLoading, hubStore.resumes.length, hubStore.dotApplications])
+  }, [sessionUserId, hubStore.isLoading, hubStore.resumes.length, hubStore.dotApplications])
 
   // -------------------------------------------------------
   // Handlers
@@ -244,7 +244,7 @@ export default function DriverShell({
   }, [dotApp])
 
   const handleDeleteInProgressDotApp = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const res = await fetch('/api/driver/profile/clear-dot-progress', {
       method: 'POST',
     })
@@ -253,7 +253,7 @@ export default function DriverShell({
       throw new Error(data.error || 'Failed to clear in-progress application')
     }
     resetApplicationProgress()
-  }, [walletAddress, resetApplicationProgress])
+  }, [sessionUserId, resetApplicationProgress])
 
   const handleNavigateToHub = useCallback(() => setCurrentPage(null), [setCurrentPage])
 
@@ -264,7 +264,7 @@ export default function DriverShell({
     return (
       <ProfileSetup
         role="driver"
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         onComplete={handleNavigateToHub}
       />
     )
@@ -276,7 +276,7 @@ export default function DriverShell({
   if (currentPage === 'career-card') {
     return (
       <DriverCareerCardSection
-        walletAddress={walletAddress ?? ''}
+        sessionUserId={sessionUserId ?? ''}
         onNavigate={setCurrentPage}
         onBack={handleNavigateToHub}
       />
@@ -289,8 +289,8 @@ export default function DriverShell({
   if (currentPage === 'dotapp') {
     return (
       <DotApplicationFlow
-        walletAddress={walletAddress ?? ''}
-        userAddress={user?.address}
+        sessionUserId={sessionUserId ?? ''}
+        userAddress={sessionUserId}
         onBack={handleNavigateToHub}
       />
     )
@@ -377,7 +377,7 @@ export default function DriverShell({
   if (currentPage === 'applications') {
     return (
       <div className='max-w-7xl mx-auto relative z-0'>
-        <MyApplications onBack={handleNavigateToHub} userAddress={user?.address || null} />
+        <MyApplications onBack={handleNavigateToHub} userAddress={sessionUserId || null} />
       </div>
     )
   }
@@ -385,7 +385,7 @@ export default function DriverShell({
   if (currentPage === 'mvr') {
     return (
       <div className='max-w-2xl mx-auto'>
-        <MvrOrderForm userAddress={user?.address || ''} onBack={handleNavigateToHub} />
+        <MvrOrderForm userAddress={sessionUserId || ''} onBack={handleNavigateToHub} />
       </div>
     )
   }
@@ -394,7 +394,7 @@ export default function DriverShell({
     return (
       <div className='max-w-2xl mx-auto'>
         <MessageInbox
-          walletAddress={walletAddress ?? ''}
+          sessionUserId={sessionUserId ?? ''}
           onBack={handleNavigateToHub}
           initialThreadId={initialThreadId}
         />
@@ -410,7 +410,7 @@ export default function DriverShell({
       return (
         <>
           <DriverHub
-            userAddress={user.address}
+            userAddress={sessionUserId}
             onNavigate={(page) => {
               if (
                 page === 'resume' || page === 'dotapp' || page === 'jobs' ||
@@ -445,7 +445,7 @@ export default function DriverShell({
           <MvrManagementModal
             isOpen={isMvrManagementOpen}
             onClose={() => setIsMvrManagementOpen(false)}
-            walletAddress={user.address}
+            sessionUserId={sessionUserId}
             onOrderNew={() => setCurrentPage('mvr')}
             onCompleteOrder={(paymentTxHash) => {
               if (typeof window !== 'undefined') {
@@ -464,7 +464,7 @@ export default function DriverShell({
               setIsMvrModalOpen(false)
               setSelectedMvrOrderId(null)
             }}
-            walletAddress={user.address}
+            sessionUserId={sessionUserId}
           />
         </>
       )

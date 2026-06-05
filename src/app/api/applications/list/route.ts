@@ -1,32 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json()
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
 
     // Get all applications for this user with job details
     // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
@@ -49,7 +32,7 @@ export async function POST(request: NextRequest) {
           )
         )
       `)
-      .eq('applicant_user_id', user.id)
+      .eq('applicant_user_id', sessionUserId)
       .order('applied_at', { ascending: false })
 
     if (appsError) {

@@ -28,7 +28,7 @@ interface CareerCardViewProps {
 export default function CareerCardView({ onBack }: CareerCardViewProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
 
@@ -38,7 +38,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchCard = useCallback(async (silent = false) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     // `silent` keeps existing data visible while re-fetching (used by manual refresh)
     if (silent) setIsRefreshing(true)
     else setLoading(true)
@@ -54,7 +54,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
       setLoading(false)
       setIsRefreshing(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
     fetchCard()
@@ -148,7 +148,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
         mode='self'
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
-        walletAddress={walletAddress ?? undefined}
+        sessionUserId={sessionUserId ?? undefined}
         onAvatarUploadSuccess={() => void fetchCard(true)}
       />
     </div>

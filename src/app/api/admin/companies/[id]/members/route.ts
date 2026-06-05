@@ -81,7 +81,7 @@ export async function GET(
         inviteEmail: member.invite_email,
         name: profileName,
         email: user?.email || member.invite_email,
-        walletAddress: user?.wallet_address || null,
+        legacyWalletAddress: user?.wallet_address || null,
       }
     })
 

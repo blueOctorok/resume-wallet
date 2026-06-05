@@ -79,7 +79,7 @@ interface Job {
 type OutreachTab = 'active' | 'vault' | 'archive'
 
 interface CandidateOutreachProps {
-  walletAddress: string
+  sessionUserId: string
   isCollapsed?: boolean
   onToggle?: () => void
   /** When true, skips the outer HubSectionPanel/BlockCard wrapper (parent provides the chrome) */
@@ -256,7 +256,7 @@ const EMPTY_CONSENT_BUNDLE_BY_USER_ID = new Map<string, ConsentBundleSummary>()
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CandidateOutreach({
-  walletAddress,
+  sessionUserId,
   isCollapsed = false,
   onToggle,
   embedded = false,
@@ -433,7 +433,7 @@ export default function CandidateOutreach({
     } finally {
       setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -445,14 +445,14 @@ export default function CandidateOutreach({
     } catch (err) {
       console.error('[CandidateOutreach] fetchJobs error:', err)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
-    if (walletAddress) {
+    if (sessionUserId) {
       fetchInvites()
       fetchJobs()
     }
-  }, [walletAddress, hubRefreshNonce, fetchInvites, fetchJobs])
+  }, [sessionUserId, hubRefreshNonce, fetchInvites, fetchJobs])
 
   // ── Profile search autocomplete ────────────────────────────────────────────
 
@@ -498,7 +498,7 @@ export default function CandidateOutreach({
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current)
     }
-  }, [profileQuery, walletAddress])
+  }, [profileQuery, sessionUserId])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -726,7 +726,7 @@ export default function CandidateOutreach({
         setSavingNotesId(null)
       }
     },
-    [walletAddress],
+    [sessionUserId],
   )
 
   /**
@@ -774,7 +774,7 @@ export default function CandidateOutreach({
     // require hoisting it above this block. The lint warning is OK here:
     // resend is a manual action, not a useEffect dep cycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [walletAddress],
+    [sessionUserId],
   )
 
   /** Force `application_invites.status` from the kanban detail modal (Pace ops / stuck sync). */
@@ -809,7 +809,7 @@ export default function CandidateOutreach({
         setStatusOverrideSavingId(null)
       }
     },
-    [walletAddress],
+    [sessionUserId],
   )
 
   // ── Stormi mini modal state ──────────────────────────────────────────────
@@ -1757,7 +1757,7 @@ export default function CandidateOutreach({
           jobs={jobs}
           blocksByCategory={allBlocksByCategory}
           installedEmployerBlockTypes={installedEmployerBlockTypes}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           companyId={companyId}
           companyWalletAddress={companyWalletAddress}
           consentBundle={editingInvite.usedByUserId ? (consentBundleByUserId?.get(editingInvite.usedByUserId) ?? null) : null}
@@ -1783,7 +1783,7 @@ export default function CandidateOutreach({
           files={stormiTarget.files}
           consentBundle={stormiTarget.consentBundle}
           employerContext={employerContext}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           theme={theme}
           onClose={() => setStormiTarget(null)}
         />
@@ -1800,7 +1800,7 @@ export default function CandidateOutreach({
             setActiveFileCandidateId(null)
             void handleRefreshScreeningsAndInvites()
           }}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={mvrViewOrderId}
           employerCandidateUserId={activeFileCandidateId}
         />
@@ -1813,7 +1813,7 @@ export default function CandidateOutreach({
             setActiveFileCandidateId(null)
             void handleRefreshScreeningsAndInvites()
           }}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={pspViewOrderId}
           employerCandidateUserId={activeFileCandidateId}
         />
@@ -2162,7 +2162,7 @@ function EditInviteModal({
   jobs,
   blocksByCategory,
   installedEmployerBlockTypes,
-  walletAddress,
+  sessionUserId,
   companyId,
   companyWalletAddress,
   consentBundle,
@@ -2176,7 +2176,7 @@ function EditInviteModal({
   jobs: Job[]
   blocksByCategory: { category: { id: string; label: string }; blocks: typeof BLOCK_DEFINITIONS }[]
   installedEmployerBlockTypes: string[]
-  walletAddress: string
+  sessionUserId: string
   companyId?: string | null
   companyWalletAddress?: string | null
   consentBundle?: ConsentBundleSummary | null
@@ -2679,7 +2679,7 @@ function StormiCandidateModal({
   files,
   consentBundle,
   employerContext,
-  walletAddress,
+  sessionUserId,
   theme,
   onClose,
 }: {
@@ -2687,7 +2687,7 @@ function StormiCandidateModal({
   files: ScreeningRow[]
   consentBundle: ConsentBundleSummary | null
   employerContext: EmployerHubContext
-  walletAddress: string
+  sessionUserId: string
   theme: string
   onClose: () => void
 }) {
@@ -2764,7 +2764,7 @@ function StormiCandidateModal({
           message: text,
           audience: 'employer',
           employerContext,
-          walletAddress,
+          sessionUserId,
           conversationHistory,
         })
         setMessages((prev) => [...prev, { role: 'assistant', text: res.reply }])
@@ -2779,7 +2779,7 @@ function StormiCandidateModal({
         setLoading(false)
       }
     },
-    [loading, employerContext, walletAddress, scrollToBottom],
+    [loading, employerContext, sessionUserId, scrollToBottom],
   )
 
   // Auto-fire the context message — hidden from the chat UI, Stormi just responds

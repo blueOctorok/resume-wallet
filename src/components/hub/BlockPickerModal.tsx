@@ -31,7 +31,7 @@ export default function BlockPickerModal() {
   const onboarding = useHubOnboarding()
   const closePicker = useHubBlocksStore((s) => s.closePicker)
   const addBlock = useHubBlocksStore((s) => s.addBlock)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
 
   const [addingBlockType, setAddingBlockType] = useState<string | null>(null)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -55,15 +55,15 @@ export default function BlockPickerModal() {
 
   const handleAddBlock = useCallback(
     async (blockType: string) => {
-      if (!walletAddress || addingBlockType) return
+      if (!sessionUserId || addingBlockType) return
       setAddingBlockType(blockType)
       try {
-        await addBlock(blockType, walletAddress)
+        await addBlock(blockType, sessionUserId)
       } finally {
         setAddingBlockType(null)
       }
     },
-    [walletAddress, addBlock, addingBlockType],
+    [sessionUserId, addBlock, addingBlockType],
   )
 
   if (!isOpen) return null

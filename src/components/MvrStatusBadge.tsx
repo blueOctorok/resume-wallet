@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface MvrStatusBadgeProps {
-  walletAddress: string | null
+  sessionUserId: string | null
 }
 
 type MvrDisplayStatus = 'loading' | 'none' | 'processing' | 'available'
@@ -15,19 +15,19 @@ type MvrDisplayStatus = 'loading' | 'none' | 'processing' | 'available'
  * Shows: "No MVR" | "Processing" | "Available"
  * Non-clickable - just informational. Use Hub for MVR actions.
  */
-export default function MvrStatusBadge({ walletAddress }: MvrStatusBadgeProps) {
+export default function MvrStatusBadge({ sessionUserId }: MvrStatusBadgeProps) {
   const { theme } = useTheme()
   const [status, setStatus] = useState<MvrDisplayStatus>('loading')
 
   useEffect(() => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setStatus('none')
       return
     }
 
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`/api/mvr/check-status?walletAddress=${encodeURIComponent(walletAddress)}`)
+        const response = await fetch('/api/mvr/check-status')
         
         if (!response.ok) {
           setStatus('none')
@@ -52,7 +52,7 @@ export default function MvrStatusBadge({ walletAddress }: MvrStatusBadgeProps) {
     // Refresh every 30 seconds to catch status updates
     const interval = setInterval(fetchStatus, 30000)
     return () => clearInterval(interval)
-  }, [walletAddress])
+  }, [sessionUserId])
 
   // Badge styling based on status
   const getBadgeStyles = () => {

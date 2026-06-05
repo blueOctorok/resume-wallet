@@ -60,11 +60,11 @@ interface Job {
 }
 
 interface ApplicantsPageProps {
-  walletAddress: string
+  sessionUserId: string
   onBack: () => void
 }
 
-export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPageProps) {
+export default function ApplicantsPage({ sessionUserId, onBack }: ApplicantsPageProps) {
   const { theme } = useTheme()
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
@@ -88,7 +88,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
 
   useEffect(() => {
     fetchApplicants()
-  }, [walletAddress, selectedJob, selectedStatus])
+  }, [sessionUserId, selectedJob, selectedStatus])
 
   const fetchApplicants = async () => {
     try {
@@ -322,7 +322,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
       {selectedApplicant && (
         <ApplicantDetailModal
           applicant={selectedApplicant}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onClose={() => setSelectedApplicant(null)}
           onStatusChange={(status) => {
             updateStatus(selectedApplicant.applicationId, status)
@@ -447,13 +447,13 @@ function StatusBadge({ status, theme }: { status: string; theme: string }) {
 
 function ApplicantDetailModal({
   applicant,
-  walletAddress,
+  sessionUserId,
   onClose,
   onStatusChange,
   theme,
 }: {
   applicant: Applicant
-  walletAddress: string
+  sessionUserId: string
   onClose: () => void
   onStatusChange: (status: string) => void
   theme: string
@@ -658,7 +658,7 @@ function ApplicantDetailModal({
     {showCareerCard && (
       <CareerCardModal
         candidateUserId={applicant.applicantUserId}
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         onClose={() => setShowCareerCard(false)}
       />
     )}

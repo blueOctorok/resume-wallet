@@ -41,7 +41,7 @@ export interface KanbanApplicant {
 
 interface ApplicantKanbanProps {
   applicants: KanbanApplicant[]
-  walletAddress: string
+  sessionUserId: string
   onStatusChange: (applicationId: string, newStatus: string) => Promise<void>
   onSelectApplicant: (applicant: KanbanApplicant) => void
   /** Remove candidate from pipeline (deletes application); confirm in parent */
@@ -89,7 +89,7 @@ const COL_STYLES: Record<string, {
 
 export default function ApplicantKanban({
   applicants,
-  walletAddress,
+  sessionUserId,
   onStatusChange,
   onSelectApplicant,
   onRemoveFromPipeline,
@@ -142,7 +142,7 @@ export default function ApplicantKanban({
     } catch {
       setRequestState(key, null)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   const columns = PIPELINE_COLUMNS.map(col => ({
     ...col,

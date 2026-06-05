@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
-import { getOrCreateUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
@@ -13,7 +13,7 @@ import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
  * POST /api/mvr/order
  * 
  * Body: {
- *   walletAddress: string
+ *   sessionUserId: string
  *   dlNumber: string
  *   dlState: string
  *   mvrSearchType?: 'standard' | 'comprehensive'
@@ -26,7 +26,6 @@ import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 export async function POST(request: NextRequest) {
   try {
     const { 
-      walletAddress, 
       paymentTxHash, // Optional — omitted when USDC billing removed (D3)
       dlNumber, 
       dlState, 
@@ -48,12 +47,9 @@ export async function POST(request: NextRequest) {
       zip: providedZip,
     } = await request.json()
 
-    // Validate input
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     if (!dlNumber || !dlState) {
@@ -68,17 +64,18 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    let user: { id: string; email?: string | null }
-    try {
-      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
-      user = { id: u.id, email: u.email }
-    } catch (err) {
-      console.error('[MVR ORDER] Error get/create user:', err)
-      return NextResponse.json(
-        { error: 'Failed to get or create user account' },
-        { status: 500 }
-      )
+    const { data: userRow, error: userRowError } = await supabaseService
+      .from('users')
+      .select('id, email')
+      .eq('id', sessionUserId)
+      .single()
+
+    if (userRowError || !userRow) {
+      console.error('[MVR ORDER] User not found:', userRowError)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+
+    const user = { id: userRow.id, email: userRow.email }
 
     const paymentResult = await resolveScreeningPayment(supabaseService, {
       paymentTxHash,
@@ -93,7 +90,7 @@ export async function POST(request: NextRequest) {
     const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
     if (paymentTxHash) {
-      const walletNorm = normalizeWalletAddress(walletAddress)
+      const walletNorm = normalizeWalletAddress(sessionUserId)
       const { data: paymentRow } = await supabaseService
         .from('payments')
         .select('user_id')
@@ -138,7 +135,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'payment:', storedPaymentTxHash ?? 'waived')
+    console.log('[MVR ORDER] Starting MVR order for wallet:', sessionUserId, 'payment:', storedPaymentTxHash ?? 'waived')
 
     // Resolve name from user_profiles for fallback personal info
     const { data: userProfile } = await supabaseService

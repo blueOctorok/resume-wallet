@@ -35,7 +35,7 @@ const FILTER_OPTIONS: { value: BlockFilterValue; label: string }[] = [
 
 export default function CandidatesTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -51,7 +51,7 @@ export default function CandidatesTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const params = new URLSearchParams({
@@ -62,7 +62,7 @@ export default function CandidatesTab({
       if (blockFilter) params.set('blockFilter', blockFilter)
 
       const res = await fetch(`/api/admin/users?${params}`, {
-        headers: { 'x-wallet-address': walletAddress },
+        headers: { 'x-wallet-address': sessionUserId },
       })
       const data = await res.json()
       if (data.success) {
@@ -74,7 +74,7 @@ export default function CandidatesTab({
     } catch (err) {
       console.error('Failed to fetch candidates:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount, blockFilter])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount, blockFilter])
 
   useEffect(() => {
     fetchData()
@@ -82,11 +82,11 @@ export default function CandidatesTab({
 
   const fetchUserDetail = useCallback(
     async (userId: string) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       setLoadingUserDetail(true)
       try {
         const response = await fetch(`/api/admin/users/${userId}`, {
-          headers: { 'x-wallet-address': walletAddress },
+          headers: { 'x-wallet-address': sessionUserId },
         })
         const data = await response.json()
         if (data.success) {
@@ -115,7 +115,7 @@ export default function CandidatesTab({
         setLoadingUserDetail(false)
       }
     },
-    [walletAddress, users]
+    [sessionUserId, users]
   )
 
   return (

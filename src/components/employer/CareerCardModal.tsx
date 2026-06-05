@@ -55,7 +55,7 @@ interface EmployerTalentExtras {
 
 interface CareerCardModalProps {
   candidateUserId: string
-  walletAddress: string
+  sessionUserId: string
   onClose: () => void
 }
 
@@ -67,7 +67,7 @@ interface JobPosting {
 
 export default function CareerCardModal({
   candidateUserId,
-  walletAddress,
+  sessionUserId,
   onClose,
 }: CareerCardModalProps) {
   const { theme } = useTheme()
@@ -102,7 +102,7 @@ export default function CareerCardModal({
 
   const [employerCompany, setEmployerCompany] = useState<{
     id: string
-    walletAddress: string | null
+    sessionUserId: string | null
   } | null>(null)
 
 
@@ -507,7 +507,7 @@ export default function CareerCardModal({
           otherUserId={candidateUserId}
           {...messagingContext}
           subject={`Re: ${card.name}`}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onThreadOpen={(threadId) => {
             onClose()
             navigateToMessages(threadId)
@@ -644,7 +644,7 @@ export default function CareerCardModal({
             <ProjectedCareerCard
               data={card}
               mode="employer"
-              walletAddress={walletAddress}
+              sessionUserId={sessionUserId}
               footerSlot={footerActions}
               onEmployerViewCompanyMvr={
                 card.employerCompanyMvr?.orderId &&
@@ -762,7 +762,7 @@ export default function CareerCardModal({
     <MvrOrderModal
       key={accioOrderProduct}
       orderProduct={accioOrderProduct}
-      walletAddress={walletAddress}
+      sessionUserId={sessionUserId}
       employerCompany={employerCompany}
       candidateName={card?.name}
       bgcheckConsentFormData={employerExtras?.bgcheckConsentFormData ?? null}
@@ -790,7 +790,7 @@ export default function CareerCardModal({
         <MvrViewModal
           isOpen
           onClose={() => setEmployerMvrViewOrderId(null)}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={employerMvrViewOrderId}
           employerCandidateUserId={candidateUserId}
         />
@@ -799,7 +799,7 @@ export default function CareerCardModal({
         <PspViewModal
           isOpen
           onClose={() => setEmployerPspViewOrderId(null)}
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           orderId={employerPspViewOrderId}
           employerCandidateUserId={candidateUserId}
         />
@@ -831,7 +831,7 @@ interface MvrOrderFields {
 
 function MvrOrderModal({
   orderProduct = 'mvr',
-  walletAddress,
+  sessionUserId,
   employerCompany,
   candidateName,
   bgcheckConsentFormData,
@@ -845,8 +845,8 @@ function MvrOrderModal({
   theme,
 }: {
   orderProduct?: 'mvr' | 'psp'
-  walletAddress: string
-  employerCompany: { id: string; walletAddress: string | null } | null
+  sessionUserId: string
+  employerCompany: { id: string; sessionUserId: string | null } | null
   candidateName?: string
   bgcheckConsentFormData: Record<string, unknown> | null
   pspFmcsaConsentFormData: Record<string, unknown> | null

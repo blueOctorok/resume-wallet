@@ -63,7 +63,7 @@ export default function MyApplications({
       const response = await fetch('/api/applications/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress }),
+        body: JSON.stringify({ sessionUserId: userAddress }),
       })
 
       if (response.ok) {

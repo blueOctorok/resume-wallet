@@ -10,7 +10,7 @@ import CandidateEmploymentVerificationSection from '@/components/verification/Ca
  * Work history is merged from driver/DOT employment, developer profile, and general resume.
  */
 export default function EmploymentVerificationBlock() {
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const navigateToHub = useUIStore((s) => s.navigateToHub)
 
   return (
@@ -19,7 +19,7 @@ export default function EmploymentVerificationBlock() {
         <BackToHubButton onClick={() => navigateToHub()} />
       </div>
       <ErrorBoundary section='Employment verification'>
-        <CandidateEmploymentVerificationSection userAddress={walletAddress} />
+        <CandidateEmploymentVerificationSection userAddress={sessionUserId} />
       </ErrorBoundary>
     </div>
   )

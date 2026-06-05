@@ -8,7 +8,7 @@ import Avatar, { type AvatarColor } from './Avatar'
 
 interface UserIdentityProps {
   name?: string | null
-  walletAddress?: string | null
+  sessionUserId?: string | null
   email?: string | null
   avatarUrl?: string | null
   avatarColor?: AvatarColor
@@ -41,7 +41,7 @@ export function truncateAddress(address: string, startChars = 6, endChars = 4): 
 
 export default function UserIdentity({
   name,
-  walletAddress,
+  sessionUserId,
   email,
   avatarUrl,
   avatarColor = 'teal',
@@ -61,7 +61,7 @@ export default function UserIdentity({
 
   const sizes = sizeConfig[size]
   const displayName = name || 'No name set'
-  const avatarName = name || email || walletAddress || '?'
+  const avatarName = name || email || sessionUserId || '?'
 
   const startEdit = () => {
     setEditValue(name || '')
@@ -91,8 +91,8 @@ export default function UserIdentity({
   }
 
   const copyWallet = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress)
+    if (sessionUserId) {
+      navigator.clipboard.writeText(sessionUserId)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
@@ -176,20 +176,20 @@ export default function UserIdentity({
         )}
 
         {/* Wallet row */}
-        {showWallet && walletAddress && (
+        {showWallet && sessionUserId && (
           <div
             className={`flex items-center gap-1.5 ${sizes.meta} ${
               isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
             } ${copyWalletOnClick ? 'cursor-pointer hover:text-gray-400' : ''}`}
             onClick={copyWalletOnClick ? copyWallet : undefined}
-            title={copyWalletOnClick ? (copied ? 'Copied!' : 'Click to copy') : walletAddress}
+            title={copyWalletOnClick ? (copied ? 'Copied!' : 'Click to copy') : sessionUserId}
           >
             {copied ? (
               <Check className={sizes.icon} />
             ) : (
               copyWalletOnClick ? <Copy className={sizes.icon} /> : <Wallet className={sizes.icon} />
             )}
-            <code className='font-mono'>{truncateAddress(walletAddress)}</code>
+            <code className='font-mono'>{truncateAddress(sessionUserId)}</code>
           </div>
         )}
       </div>

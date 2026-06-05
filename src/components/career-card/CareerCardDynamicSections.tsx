@@ -43,7 +43,7 @@ export interface CareerCardDynamicSectionsProps {
   sections: CareerCardSection[]
   mode: CareerCardMode
   isDark: boolean
-  walletAddress?: string
+  sessionUserId?: string
   onNavigateToBlock?: (blockType: string) => void
   onAddBlock?: () => void
   hubDocuments?: HubDocumentsHandle
@@ -57,7 +57,7 @@ export default function CareerCardDynamicSections({
   sections,
   mode,
   isDark,
-  walletAddress,
+  sessionUserId,
   onNavigateToBlock,
   onAddBlock,
   hubDocuments,
@@ -116,7 +116,7 @@ export default function CareerCardDynamicSections({
 
   const moveSectionOrder = useCallback(
     (section: CareerCardSection, direction: 'up' | 'down') => {
-      if (!walletAddress || mode !== 'construct' || isCoreBlock(section.blockType)) return
+      if (!sessionUserId || mode !== 'construct' || isCoreBlock(section.blockType)) return
       const idx = sectionGlobalIndex(section)
       if (idx < 0) return
       const newIdx = direction === 'up' ? idx - 1 : idx + 1
@@ -136,21 +136,21 @@ export default function CareerCardDynamicSections({
       const rest = reordered.filter((b) => b.blockType !== 'storm-resume')
       const finalOrder = storm ? [storm, ...rest] : reordered
 
-      void reorderBlocks(finalOrder, walletAddress).then(() => onCardMutation?.())
+      void reorderBlocks(finalOrder, sessionUserId).then(() => onCardMutation?.())
     },
-    [walletAddress, mode, sections, installedBlocks, reorderBlocks, onCardMutation, sectionGlobalIndex],
+    [sessionUserId, mode, sections, installedBlocks, reorderBlocks, onCardMutation, sectionGlobalIndex],
   )
 
   const moveBlockToCardPage = useCallback(
     async (section: CareerCardSection, delta: 1 | -1) => {
-      if (!walletAddress || !section.hubBlockId || isCoreBlock(section.blockType)) return
+      if (!sessionUserId || !section.hubBlockId || isCoreBlock(section.blockType)) return
       const current = pageOf(section)
       const next = Math.min(CARD_PAGE_MAX, Math.max(1, current + delta))
       if (next === current) return
-      await patchBlockConfig(section.hubBlockId, { cardPage: next }, walletAddress)
+      await patchBlockConfig(section.hubBlockId, { cardPage: next }, sessionUserId)
       onCardMutation?.()
     },
-    [walletAddress, patchBlockConfig, onCardMutation],
+    [sessionUserId, patchBlockConfig, onCardMutation],
   )
 
   const renderInnerForSection = (section: CareerCardSection): ReactNode => {
@@ -162,7 +162,7 @@ export default function CareerCardDynamicSections({
   }
 
   const renderOrderArrows = (section: CareerCardSection): ReactNode => {
-    if (mode !== 'construct' || !walletAddress || isCoreBlock(section.blockType)) return null
+    if (mode !== 'construct' || !sessionUserId || isCoreBlock(section.blockType)) return null
     const idx = sectionGlobalIndex(section)
     if (idx < 0) return null
     const stormLocked = sections[0]?.blockType === 'storm-resume'

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 const PSP_ORDER_SELECT = `
         *,
@@ -52,7 +53,7 @@ function jsonFromPspOrder(order: Record<string, unknown>) {
 }
 
 /**
- * GET /api/psp/status/[orderId]?walletAddress=...
+ * GET /api/psp/status/[orderId]?sessionUserId=...
  *
  * Optional **`employerCandidateUserId`**: employer wallet loads a company-paid order for that candidate.
  */
@@ -63,11 +64,11 @@ export async function GET(
   try {
     const { orderId } = await params
     const { searchParams } = new URL(request.url)
-    const walletAddress = searchParams.get('walletAddress')
+    const sessionUserId = await getStormUserIdFromRequest(request)
     const employerCandidateUserId = searchParams.get('employerCandidateUserId')
 
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const supabase = createServiceClient(
@@ -76,7 +77,7 @@ export async function GET(
     )
 
     if (employerCandidateUserId) {
-      const ctx = await resolveEmployerCompanyForWallet(supabase, walletAddress)
+      const ctx = await resolveEmployerCompanyForWallet(supabase, sessionUserId)
       if (!ctx) {
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
@@ -99,7 +100,7 @@ export async function GET(
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .ilike('wallet_address', walletAddress)
+      .eq('id', sessionUserId)
       .single()
 
     if (userError || !user) {

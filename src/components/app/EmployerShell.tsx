@@ -48,7 +48,7 @@ const TeamManagement = dynamic(
 )
 
 interface EmployerShellProps {
-  walletAddress: string
+  sessionUserId: string
 }
 
 // Pages that EmployerShell knows how to render
@@ -66,7 +66,7 @@ const KNOWN_PAGES = new Set([
  * EmployerShell - Contains all employer-role pages and routing.
  * Reads currentPage from UIStore; no page state props needed.
  */
-export default function EmployerShell({ walletAddress }: EmployerShellProps) {
+export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
   const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()
 
   const goBack = () => setCurrentPage(null)
@@ -89,17 +89,17 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
   }
 
   if (currentPage === 'applicants') {
-    return <ApplicantsPage walletAddress={walletAddress} onBack={goBack} />
+    return <ApplicantsPage sessionUserId={sessionUserId} onBack={goBack} />
   }
 
   if (currentPage === 'talent-search') {
-    return <TalentSearchPage walletAddress={walletAddress} onBack={goBack} />
+    return <TalentSearchPage sessionUserId={sessionUserId} onBack={goBack} />
   }
 
   if (currentPage === 'post-job') {
     return (
       <JobPostingForm
-        walletAddress={walletAddress}
+        sessionUserId={sessionUserId}
         onBack={goBack}
         onSuccess={() => {
           triggerJourneyStep('employer.jobPosted')
@@ -110,7 +110,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
   }
 
   if (currentPage === 'team') {
-    return <TeamManagement walletAddress={walletAddress} onBack={goBack} />
+    return <TeamManagement sessionUserId={sessionUserId} onBack={goBack} />
   }
 
   if (currentPage === 'company-profile') {
@@ -126,7 +126,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
     return (
       <div className='max-w-2xl mx-auto'>
         <MessageInbox
-          walletAddress={walletAddress}
+          sessionUserId={sessionUserId}
           onBack={goBack}
           initialThreadId={initialThreadId}
         />
@@ -139,7 +139,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
   // above will bounce unknown routes back to the hub.
   return (
     <EmployerHub
-      walletAddress={walletAddress}
+      sessionUserId={sessionUserId}
       onNavigate={(page) => {
         if (KNOWN_PAGES.has(page)) {
           setCurrentPage(page)

@@ -10,14 +10,14 @@ import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
 
 export function useExtractedRequirements(
   snap: SelectedJobSnapshot | null,
-  walletAddress: string | null,
+  sessionUserId: string | null,
 ): ExternalRequirement[] | null {
   const [reqs, setReqs] = useState<ExternalRequirement[] | null>(null)
   // Track which job id we last fetched for to avoid stale state
   const lastFetchedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!snap || snap.isStormChain || !walletAddress) {
+    if (!snap || snap.isStormChain || !sessionUserId) {
       setReqs(null)
       lastFetchedRef.current = null
       return
@@ -52,7 +52,7 @@ export function useExtractedRequirements(
     return () => {
       cancelled = true
     }
-  }, [snap, walletAddress])
+  }, [snap, sessionUserId])
 
   return reqs
 }

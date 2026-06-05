@@ -70,7 +70,7 @@ export async function GET(
       certifications: devRow.certifications,
       created_at: devRow.created_at,
       updated_at: devRow.updated_at,
-      walletAddress: user?.wallet_address,
+      legacyWalletAddress: user?.wallet_address,
     }
 
     return NextResponse.json({

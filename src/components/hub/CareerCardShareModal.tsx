@@ -79,7 +79,7 @@ function originBase(): string {
 export interface CareerCardShareModalProps {
   isOpen: boolean
   onClose: () => void
-  walletAddress: string | null
+  sessionUserId: string | null
   /** Shown under QR (e.g. candidate name) */
   displayName?: string
   /** After token create/regenerate — refresh parent share stats if needed */
@@ -89,7 +89,7 @@ export interface CareerCardShareModalProps {
 export default function CareerCardShareModal({
   isOpen,
   onClose,
-  walletAddress,
+  sessionUserId,
   displayName,
   onShareUpdated,
 }: CareerCardShareModalProps) {
@@ -122,7 +122,7 @@ export default function CareerCardShareModal({
   }
 
   const loadToken = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setLoading(true)
     try {
       const res = await fetch(SHARE_API)
@@ -135,10 +135,10 @@ export default function CareerCardShareModal({
     } finally {
       setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
-    if (!isOpen || !walletAddress) return
+    if (!isOpen || !sessionUserId) return
     setCopied(false)
     setCopiedField(null)
     setPanel('share')
@@ -147,7 +147,7 @@ export default function CareerCardShareModal({
     setStormiPosts(null)
     setPostIndex(0)
     void loadToken()
-  }, [isOpen, walletAddress, loadToken])
+  }, [isOpen, sessionUserId, loadToken])
 
   /** Escape closes QR overlay first so the whole modal does not dismiss mid-scan. */
   useEffect(() => {
@@ -194,7 +194,7 @@ export default function CareerCardShareModal({
   }, [fullUrl, isDark])
 
   const generateToken = async (regenerate: boolean) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setGenerating(true)
     try {
       const res = await fetch(SHARE_API, {
@@ -278,7 +278,7 @@ export default function CareerCardShareModal({
 
   // Ask Stormi to write personalized posts once we have a card URL
   useEffect(() => {
-    if (!fullUrl || !walletAddress || stormiPosts) return
+    if (!fullUrl || !sessionUserId || stormiPosts) return
     let cancelled = false
     setStormiPostsLoading(true)
     void (async () => {
@@ -303,7 +303,7 @@ export default function CareerCardShareModal({
       }
     })()
     return () => { cancelled = true }
-  }, [fullUrl, walletAddress, stormiPosts])
+  }, [fullUrl, sessionUserId, stormiPosts])
 
   const socialPosts = stormiPosts ?? fallbackPosts
   const currentPost = socialPosts[postIndex] ?? ''
@@ -320,7 +320,7 @@ export default function CareerCardShareModal({
       : ''
 
   const downloadPdf = async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     setPdfLoading(true)
     try {
       const res = await fetch('/api/career-card/pdf')
@@ -384,7 +384,7 @@ export default function CareerCardShareModal({
       />
 
       <div className='space-y-4 px-2 py-3 sm:px-4 sm:py-4'>
-        {!walletAddress ? (
+        {!sessionUserId ? (
           <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
             Connect your wallet to create a share link.
           </p>

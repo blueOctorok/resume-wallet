@@ -13,9 +13,9 @@ export interface EmployerCompanyAccess {
  */
 export async function getEmployerCompanyAccess(
   supabase: SupabaseClient,
-  walletAddress: string,
+  sessionUserId: string,
 ): Promise<EmployerCompanyAccess | null> {
-  const normalized = walletAddress.toLowerCase().trim()
+  const normalized = sessionUserId.toLowerCase().trim()
 
   const { data: user, error: userErr } = await supabase
     .from('users')

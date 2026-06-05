@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         role: member.role,
         name: (member.user_id ? profileNameMap.get(member.user_id) : null) ?? null,
         email: memberUser?.email || member.invite_email,
-        walletAddress: memberUser?.wallet_address || null,
+        legacyWalletAddress: memberUser?.wallet_address || null,
         isActive: member.is_active,
         isPending: !member.accepted_at,
         invitedAt: member.invited_at,

@@ -11,7 +11,7 @@ interface ContributionDay {
 
 interface GitHubContributionGraphProps {
   shareToken?: string | null
-  walletAddress?: string | null
+  sessionUserId?: string | null
   className?: string
 }
 
@@ -42,7 +42,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function GitHubContributionGraph({
   shareToken,
-  walletAddress,
+  sessionUserId,
   className = '',
 }: GitHubContributionGraphProps) {
   const currentYear = new Date().getFullYear()
@@ -95,9 +95,9 @@ export default function GitHubContributionGraph({
       }
     }
 
-    if (!shareToken && !walletAddress) return
+    if (!shareToken && !sessionUserId) return
     fetchContributions()
-  }, [shareToken, walletAddress, selectedYear])
+  }, [shareToken, sessionUserId, selectedYear])
 
   // Organize contributions into weeks (columns) for the grid
   const weeks = useMemo(() => {

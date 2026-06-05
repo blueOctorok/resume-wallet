@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation } from '@/lib/block-data'
 import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * Normalizes resume structured_data from different formats (old uploaded vs new builder)
@@ -420,8 +421,8 @@ export async function POST(
     }
 
     // At least email or phone required for anonymous employers
-    const walletAddress = request.headers.get('x-wallet-address')
-    if (!walletAddress && !employerEmail && !employerPhone) {
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId && !employerEmail && !employerPhone) {
       return NextResponse.json(
         { error: 'Contact information required (email or phone)' },
         { status: 400 }
@@ -459,11 +460,11 @@ export async function POST(
     let employerUserId = null
     let companyId = null
 
-    if (walletAddress) {
+    if (sessionUserId) {
       const { data: employerUser } = await supabase
         .from('users')
         .select('id')
-        .ilike('wallet_address', walletAddress)
+        .eq('id', sessionUserId)
         .single()
 
       if (employerUser) {

@@ -175,7 +175,7 @@ export default function ApplyWithStormChainModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: userAddress,
+          sessionUserId: userAddress,
           jobId: job.id,
           jobTitle: job.title,
           employerName: job.company,
@@ -456,7 +456,7 @@ export default function ApplyWithStormChainModal({
 
       {showCreditModal && (
         <StormiCreditModal
-          walletAddress={userAddress}
+          sessionUserId={userAddress}
           onClose={() => setShowCreditModal(false)}
           onSuccess={(_usage: StormiUsageInfo) => {
             setShowCreditModal(false)

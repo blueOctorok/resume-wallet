@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * Check if a user has employer access via wallet address or email.
@@ -7,9 +8,10 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function POST(request: Request) {
   try {
-    const { email, walletAddress } = await request.json()
+    const { email } = await request.json()
+    const sessionUserId = await getStormUserIdFromRequest(request)
 
-    if (!email && !walletAddress) {
+    if (!email && !sessionUserId) {
       return NextResponse.json(
         { error: 'Email or wallet address is required' },
         { status: 400 }
@@ -19,11 +21,11 @@ export async function POST(request: Request) {
     const supabase = await getAdminSupabaseClient()
 
     // PRIORITY 1: Check by wallet address (most authoritative)
-    if (walletAddress) {
+    if (sessionUserId) {
       const { data: walletUser } = await supabase
         .from('users')
         .select('id')
-        .ilike('wallet_address', walletAddress)
+        .eq('id', sessionUserId)
         .maybeSingle()
 
       if (walletUser) {

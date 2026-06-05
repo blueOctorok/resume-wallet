@@ -8,7 +8,7 @@ import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin
 
 export default function ApplicationsTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -24,12 +24,12 @@ export default function ApplicationsTab({
   const tableCellClass = getTableCellClass(theme)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const offset = (currentPage - 1) * pageSize
     try {
       const res = await fetch(
         `/api/admin/applications?status=${applicationsFilter === 'all' ? '' : applicationsFilter}&search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
-        { headers: { 'x-wallet-address': walletAddress } }
+        { headers: { 'x-wallet-address': sessionUserId } }
       )
       const data = await res.json()
       if (data.success) {
@@ -39,7 +39,7 @@ export default function ApplicationsTab({
     } catch (err) {
       console.error('Failed to fetch applications:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, applicationsFilter, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, applicationsFilter, setTotalCount])
 
   useEffect(() => {
     fetchData()

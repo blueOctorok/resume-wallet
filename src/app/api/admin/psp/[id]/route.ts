@@ -87,7 +87,7 @@ export async function GET(
       order: {
         id: order.id,
         driverUserId: order.driver_user_id,
-        walletAddress: user?.wallet_address ?? null,
+        legacyWalletAddress: user?.wallet_address ?? null,
         driverName: profile?.first_name && profile?.last_name
           ? `${profile.first_name} ${profile.last_name}`
           : null,

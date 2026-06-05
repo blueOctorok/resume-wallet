@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { authOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
 import { getBlockDefinition } from '@/lib/block-registry'
 import LoadingScreen from '@/components/LoadingScreen'
 import { AlertCircle, Loader2 } from 'lucide-react'
@@ -100,29 +99,12 @@ export default function OnboardPage() {
         window.localStorage.removeItem('stormchain_invite_token')
       }
 
-      // Resolve the client wallet exactly like useSupabaseAuthSync: prefer the
-      // migrated DB wallet, else the auth:<uuid> placeholder. Setup routes still
-      // key off walletAddress; the same-origin session cookie is what actually
-      // authorizes them.
-      let walletAddress = authOnlyWalletPlaceholder(sessionUser.id)
-      try {
-        const syncRes = await fetch('/api/auth/sync', { method: 'POST' })
-        if (syncRes.ok) {
-          const data = (await syncRes.json()) as { walletAddress?: string | null }
-          if (data.walletAddress) walletAddress = data.walletAddress
-        }
-      } catch {
-        // Non-fatal: the placeholder still resolves to the right user row.
-      }
-
       const targetBlockType = inviteData!.invite.targetBlockType
 
       try {
         // 1. Create/fetch user profile
         await fetch('/api/user/profile', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress }),
         })
 
         if (targetBlockType) {
@@ -131,7 +113,7 @@ export default function OnboardPage() {
           await fetch('/api/user/set-role', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'candidate', walletAddress }),
+            body: JSON.stringify({ role: 'candidate' }),
           })
 
           // Install the target block on the new user's hub
@@ -154,8 +136,6 @@ export default function OnboardPage() {
           // Mark invite as in_progress
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress }),
           }).catch(() => {})
 
           // Redirect to the block's page via the onboard query param. We ALSO stash
@@ -178,8 +158,6 @@ export default function OnboardPage() {
           // Mark invite as in_progress
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress }),
           }).catch(() => {})
 
           // Land on role selection → empty hub → onboarding form (existing flow)

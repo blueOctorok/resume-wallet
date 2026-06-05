@@ -10,7 +10,7 @@ interface ProfileSetupModalProps {
   isOpen: boolean
   onClose: () => void
   onComplete: (firstName?: string, lastName?: string) => void
-  walletAddress: string
+  sessionUserId: string
   userRole: 'driver' | 'developer' | 'candidate'
   userEmail?: string | null
 }
@@ -37,7 +37,7 @@ export default function ProfileSetupModal({
   isOpen,
   onClose,
   onComplete,
-  walletAddress,
+  sessionUserId,
   userRole,
   userEmail,
 }: ProfileSetupModalProps) {
@@ -83,7 +83,7 @@ export default function ProfileSetupModal({
       const profileSetupRes = await fetch('/api/user/profile-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': sessionUserId,
         },
         body: JSON.stringify({
           firstName: form.firstName.trim(),

@@ -35,7 +35,7 @@ export interface JobAlertsHubSectionProps {
 export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSectionProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
   const [preferences, setPreferences] = useState<JobAlertPreferenceRow[]>([])
@@ -58,7 +58,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setPreferences([])
       setLoading(false)
       return
@@ -79,7 +79,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
     } finally {
       setLoading(false)
     }
-  }, [walletAddress])
+  }, [sessionUserId])
 
   useEffect(() => {
     void load()
@@ -108,7 +108,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   }
 
   const submitForm = async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     const kw = keywords.trim()
     if (!kw) {
       setFormError('Add keywords (job title, skills, or role).')
@@ -166,7 +166,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   }
 
   const toggleActive = async (p: JobAlertPreferenceRow) => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const res = await fetch(`/api/job-alerts/${p.id}`, {
         method: 'PATCH',
@@ -181,7 +181,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   }
 
   const confirmDelete = async () => {
-    if (!walletAddress || !deleteTarget) return
+    if (!sessionUserId || !deleteTarget) return
     setDeleting(true)
     try {
       const res = await fetch(`/api/job-alerts/${deleteTarget.id}`, {
@@ -196,7 +196,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
     }
   }
 
-  if (!walletAddress) return null
+  if (!sessionUserId) return null
 
   const activeCount = preferences.filter((p) => p.is_active).length
   const atCap = preferences.length >= maxAlerts

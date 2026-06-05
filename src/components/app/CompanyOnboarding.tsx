@@ -53,7 +53,7 @@ const US_STATES = [
  */
 export default function CompanyOnboarding({ onComplete, showBackButton = false }: CompanyOnboardingProps) {
   const { theme } = useTheme()
-  const { walletAddress } = useAuthStore()
+  const { sessionUserId } = useAuthStore()
 
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -84,7 +84,7 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
       return
     }
 
-    if (!walletAddress?.trim()) {
+    if (!sessionUserId?.trim()) {
       setError('Wallet not connected. Please connect your wallet and try again.')
       return
     }

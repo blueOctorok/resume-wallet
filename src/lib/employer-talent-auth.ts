@@ -6,12 +6,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  */
 export async function resolveEmployerCompanyForWallet(
   supabase: SupabaseClient,
-  walletAddress: string,
+  sessionUserId: string,
 ): Promise<{ employerUserId: string; companyId: string } | null> {
   const { data: employer } = await supabase
     .from('users')
     .select('id')
-    .ilike('wallet_address', walletAddress)
+    .eq('id', sessionUserId)
     .single()
 
   if (!employer?.id) return null

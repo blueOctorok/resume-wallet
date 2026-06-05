@@ -41,12 +41,12 @@ function isPendingForKind(_kind: Kind, r: RawRequest): boolean {
 /**
  * Fetches the most recent pending screening request for this candidate.
  */
-export function usePendingScreeningRequest(kind: Kind, walletAddress: string | null) {
+export function usePendingScreeningRequest(kind: Kind, sessionUserId: string | null) {
   const [request, setRequest] = useState<PendingScreeningRequest | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchPending = useCallback(async () => {
-    if (!walletAddress) {
+    if (!sessionUserId) {
       setRequest(null)
       setIsLoading(false)
       return
@@ -78,7 +78,7 @@ export function usePendingScreeningRequest(kind: Kind, walletAddress: string | n
     } finally {
       setIsLoading(false)
     }
-  }, [kind, walletAddress])
+  }, [kind, sessionUserId])
 
   useEffect(() => {
     fetchPending()

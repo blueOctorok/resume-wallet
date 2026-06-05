@@ -57,7 +57,7 @@ export function fallbackStormiWelcomeStep(firstName: string, occupation: string)
  * `walkthroughWelcome: true` skips job-search tools so the model returns compact JSON.
  */
 export async function fetchStormiWelcomeStep(
-  walletAddress: string,
+  sessionUserId: string,
   hubContext: HubContext,
   firstName: string,
 ): Promise<WalkthroughStep> {
@@ -68,7 +68,7 @@ export async function fetchStormiWelcomeStep(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-wallet-address': walletAddress,
+        'x-wallet-address': sessionUserId,
       },
       body: JSON.stringify({
         message: `${WALKTHROUGH_JSON_PROMPT}\n\nTheir first name (for the title): ${firstName.trim() || 'friend'}.`,

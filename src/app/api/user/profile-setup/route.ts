@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
@@ -10,7 +9,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
  * Called by ProfileSetupModal for ALL roles — user_profiles is the hub's
  * single source of truth for name display and the checkAndShowProfileSetup check.
  *
- * Auth: Supabase session cookie (falls back to x-wallet-address until T1.12).
+ * Auth: Supabase session cookie.
  * Body: { firstName, lastName, email?, phone?, city?, state? }
  */
 export async function POST(request: NextRequest) {
@@ -24,14 +23,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    let userId = await getStormUserIdFromRequest(request)
+    const userId = await getStormUserIdFromRequest(request)
     if (!userId) {
-      const walletAddress = request.headers.get('x-wallet-address')
-      if (!walletAddress) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-      const { user } = await getOrCreateUserByWallet(supabase, walletAddress)
-      userId = user.id
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`

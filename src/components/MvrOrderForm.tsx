@@ -84,7 +84,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: userAddress,
+          sessionUserId: userAddress,
           firstName: firstName.trim(),
           middleName: middleName.trim(),
           lastName: lastName.trim(),

@@ -61,7 +61,6 @@ function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
 export default function CandidateHub() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const walletAddress = useAuthStore((s) => s.walletAddress)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
@@ -89,8 +88,8 @@ export default function CandidateHub() {
   // syncDriverHubFromApi is already called inside fetchHubData, but we keep
   // this for in-Construct refreshes (e.g. after block edits).
   useEffect(() => {
-    if (walletAddress) void syncDriverHubFromApi(walletAddress)
-  }, [walletAddress])
+    if (sessionUserId) void syncDriverHubFromApi(sessionUserId)
+  }, [sessionUserId])
 
   /** One-shot from Apply mode: open the block picker once Construct is visible. */
   useEffect(() => {
@@ -100,9 +99,9 @@ export default function CandidateHub() {
   }, [openPickerAfterHub, openPicker, setOpenPickerAfterHub])
 
   const refreshHub = useCallback(() => {
-    if (walletAddress) fetchHubData(walletAddress)
+    if (sessionUserId) fetchHubData(sessionUserId)
     setRefreshKey((k) => k + 1)
-  }, [walletAddress, fetchHubData])
+  }, [sessionUserId, fetchHubData])
 
   useEffect(() => {
     if (lastHubRefreshNonce.current === null) {
@@ -111,9 +110,9 @@ export default function CandidateHub() {
     }
     if (hubRefreshNonce === lastHubRefreshNonce.current) return
     lastHubRefreshNonce.current = hubRefreshNonce
-    if (!walletAddress) return
+    if (!sessionUserId) return
     refreshHub()
-  }, [hubRefreshNonce, walletAddress, refreshHub])
+  }, [hubRefreshNonce, sessionUserId, refreshHub])
 
   if (isLoading) {
     return (
@@ -134,7 +133,7 @@ export default function CandidateHub() {
         <AlertCircle className='mx-auto mb-3 h-8 w-8 text-red-500' />
         <p className={cn('mb-1 text-sm font-medium', isDark ? 'text-white' : 'text-slate-800')}>Failed to load your hub</p>
         <p className={cn('mb-4 text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>{fetchError}</p>
-        <Button variant='secondary' size='sm' onClick={() => walletAddress && fetchHubData(walletAddress)}>
+        <Button variant='secondary' size='sm' onClick={() => sessionUserId && fetchHubData(sessionUserId)}>
           Try Again
         </Button>
       </div>
@@ -149,8 +148,8 @@ export default function CandidateHub() {
       <div className='w-full'>
         <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start lg:gap-x-8'>
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1'>
-            {walletAddress ? (
-              <StormiNudgeBanner isDark={isDark} walletAddress={walletAddress} />
+            {sessionUserId ? (
+              <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} />
             ) : null}
 
             <ReturnToApplyBanner isDark={isDark} />
@@ -158,7 +157,7 @@ export default function CandidateHub() {
             <HubWorkspaceCareerCard refreshNonce={refreshKey} />
 
             <HubInboxSection
-              walletAddress={walletAddress}
+              sessionUserId={sessionUserId}
               onNavigateToResume={(targetBlockType) => {
                 const route = targetBlockType ? getBlockDefinition(targetBlockType)?.pageRoute : null
                 if (route) setCurrentPage(route as PageType)
@@ -189,13 +188,13 @@ export default function CandidateHub() {
                 >
                   <StormiChatPanel
                     mode='candidate'
-                    walletAddress={walletAddress}
+                    sessionUserId={sessionUserId}
                     hubContext={hubContext}
                     candidateEmptyHub={candidateEmptyHub}
                     stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
                     onStormiAutoWelcomeSynced={() => {
                       setStormiAutoWelcomeCandidateDone(true)
-                      if (walletAddress) void fetchHubData(walletAddress)
+                      if (sessionUserId) void fetchHubData(sessionUserId)
                     }}
                     hubEmbedSurface
                   />

@@ -48,7 +48,7 @@ interface UseEmployerScreeningsResult {
  * on `Invite.usedByUserId` — that's how cards link to their files.
  */
 export function useEmployerScreenings(
-  walletAddress: string | null | undefined,
+  sessionUserId: string | null | undefined,
 ): UseEmployerScreeningsResult {
   const requestHubRefresh = useUIStore((s) => s.requestHubRefresh)
   const [rows, setRows] = useState<ScreeningRow[]>([])
@@ -59,7 +59,7 @@ export function useEmployerScreenings(
 
   const refresh = useCallback(
     async (silent = false) => {
-      if (!walletAddress) return
+      if (!sessionUserId) return
       try {
         if (silent) setRefreshing(true)
         else setLoading(true)
@@ -131,7 +131,7 @@ export function useEmployerScreenings(
         setRefreshing(false)
       }
     },
-    [walletAddress, requestHubRefresh],
+    [sessionUserId, requestHubRefresh],
   )
 
   useEffect(() => {

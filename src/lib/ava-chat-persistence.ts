@@ -17,10 +17,10 @@ export type StormiChatPersistenceMode = 'candidate' | 'employer'
  */
 export function stormiChatStorageKey(
   mode: StormiChatPersistenceMode,
-  walletAddress: string,
+  sessionUserId: string,
   guidedJobId?: string | null,
 ): string {
-  const w = walletAddress.trim().toLowerCase()
+  const w = sessionUserId.trim().toLowerCase()
   const g =
     guidedJobId && guidedJobId.trim()
       ? `.gj.${encodeURIComponent(guidedJobId.trim()).slice(0, 120)}`
@@ -56,12 +56,12 @@ function isChatMessage(x: unknown): x is ChatMessage {
 
 export function loadStormiChatMessages(
   mode: StormiChatPersistenceMode,
-  walletAddress: string,
+  sessionUserId: string,
   guidedJobId?: string | null,
 ): ChatMessage[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = localStorage.getItem(stormiChatStorageKey(mode, walletAddress, guidedJobId))
+    const raw = localStorage.getItem(stormiChatStorageKey(mode, sessionUserId, guidedJobId))
     if (!raw) return []
     const parsed = JSON.parse(raw) as { messages?: unknown }
     const arr = parsed?.messages
@@ -78,13 +78,13 @@ export function loadStormiChatMessages(
 
 export function saveStormiChatMessages(
   mode: StormiChatPersistenceMode,
-  walletAddress: string,
+  sessionUserId: string,
   messages: ChatMessage[],
   guidedJobId?: string | null,
 ): void {
   if (typeof window === 'undefined') return
   try {
-    const key = stormiChatStorageKey(mode, walletAddress, guidedJobId)
+    const key = stormiChatStorageKey(mode, sessionUserId, guidedJobId)
     if (messages.length === 0) {
       localStorage.removeItem(key)
       return

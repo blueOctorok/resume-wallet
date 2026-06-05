@@ -16,7 +16,7 @@ import type { AdminTabProps, AccessRequest, AccessRequestsStats } from '@/compon
 
 export default function AccessRequestsTab({
   theme,
-  walletAddress,
+  sessionUserId,
   searchQuery,
   currentPage,
   pageSize,
@@ -36,7 +36,7 @@ export default function AccessRequestsTab({
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!walletAddress) return
+    if (!sessionUserId) return
     try {
       const offset = (currentPage - 1) * pageSize
       const params = new URLSearchParams({
@@ -46,7 +46,7 @@ export default function AccessRequestsTab({
         offset: String(offset),
       })
       const res = await fetch(`/api/admin/employer-requests?${params}`, {
-        headers: { 'x-wallet-address': walletAddress },
+        headers: { 'x-wallet-address': sessionUserId },
       })
       const data = await res.json()
       if (data.success) {
@@ -57,7 +57,7 @@ export default function AccessRequestsTab({
     } catch (err) {
       console.error('Failed to fetch access requests:', err)
     }
-  }, [walletAddress, searchQuery, currentPage, pageSize, setTotalCount])
+  }, [sessionUserId, searchQuery, currentPage, pageSize, setTotalCount])
 
   useEffect(() => {
     fetchData()
@@ -247,7 +247,7 @@ export default function AccessRequestsTab({
                               method: 'PATCH',
                               headers: {
                                 'Content-Type': 'application/json',
-                                'x-wallet-address': walletAddress || '',
+                                'x-wallet-address': sessionUserId || '',
                               },
                               body: JSON.stringify({ action: 'approve' }),
                             })
@@ -279,7 +279,7 @@ export default function AccessRequestsTab({
                               method: 'PATCH',
                               headers: {
                                 'Content-Type': 'application/json',
-                                'x-wallet-address': walletAddress || '',
+                                'x-wallet-address': sessionUserId || '',
                               },
                               body: JSON.stringify({ action: 'reject' }),
                             })
@@ -311,7 +311,7 @@ export default function AccessRequestsTab({
                       try {
                         const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
                           method: 'DELETE',
-                          headers: { 'x-wallet-address': walletAddress || '' },
+                          headers: { 'x-wallet-address': sessionUserId || '' },
                         })
                         if (res.ok) {
                           fetchData()
