@@ -1,47 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { ethers } from 'ethers'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
-// Check if driver application is a duplicate at BOTH database and blockchain levels
+/**
+ * Check if a driver application hash already exists for this user (DB only).
+ * On-chain duplicate checks were removed in D2/D5 — registries are archived.
+ */
 export async function POST(request: NextRequest) {
   try {
     console.log(
       '🔍 Driver App Global Duplicate Check API: Starting POST request'
     )
 
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const body = await request.json()
-    const { userAddress, applicationHash } = body
+    const { applicationHash } = body
 
     console.log('📋 Driver App Global Duplicate Check API: Request body:', {
-      userAddress,
+      sessionUserId,
       applicationHash,
     })
 
-    // Validate required fields
-    if (!userAddress || !applicationHash) {
+    if (!applicationHash) {
       console.log(
         '❌ Driver App Global Duplicate Check API: Missing required fields'
       )
       return NextResponse.json(
-        {
-          error: 'Missing required fields: userAddress, applicationHash',
-        },
+        { error: 'Missing required field: applicationHash' },
         { status: 400 }
       )
     }
 
-    // Step 1: Check database for user-specific duplicates
     const supabase = await createClient()
     console.log(
       '🗄️ Driver App Global Duplicate Check API: Connected to Supabase database'
     )
 
-    // First get user_id from wallet address (case-insensitive)
-    const userData = await getUserByWallet(supabase, userAddress)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', sessionUserId)
+      .maybeSingle()
 
     let userDuplicateExists = false
-    let existingApp = null
+    let existingApp: { id: string; created_at: string; application_hash: string } | null = null
 
     if (userData) {
       const { data, error: queryError } = await supabase
@@ -52,135 +58,41 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (queryError && queryError.code !== 'PGRST116') {
-        // PGRST116 means no rows returned, which is fine
         console.error(
           '❌ Driver App Global Duplicate Check API: Database query error:',
           queryError
         )
-        // Don't fail the whole request, just log and continue
         console.log('⚠️ Continuing without database check')
+      } else {
+        userDuplicateExists = !!data
+        existingApp = data
       }
-
-      userDuplicateExists = !!data
-      existingApp = data
     }
 
     console.log(
       `🗄️ Database duplicate check: ${userDuplicateExists ? 'Found' : 'Not found'}`
     )
 
-    // Step 2: Check blockchain for global duplicates
-    let blockchainDuplicateExists = false
-    let blockchainError = null
-
-    try {
-      console.log(
-        '⛓️ Driver App Global Duplicate Check API: Checking blockchain for global duplicates...'
-      )
-
-      // Create provider to check the blockchain
-      const provider = new ethers.JsonRpcProvider(
-        process.env.ALCHEMY_BASE_SEPOLIA_URL ||
-          'https://base-sepolia.g.alchemy.com/v2/1EacVcYetgk_QIWCKp4hI'
-      )
-
-      // Contract ABI for checking if application hash exists
-      const driverRegistryABI = [
-        'function isHashUsed(string memory _hash) external view returns (bool)',
-      ]
-
-      const contractAddress =
-        process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS
-
-      if (!contractAddress) {
-        throw new Error('Driver application contract address not configured')
-      }
-
-      try {
-        const contract = new ethers.Contract(
-          contractAddress,
-          driverRegistryABI,
-          provider
-        )
-        const result = await contract.isHashUsed(applicationHash)
-
-        blockchainDuplicateExists = result === true
-
-        if (blockchainDuplicateExists) {
-          console.log(
-            '⛓️ Driver App Global Duplicate Check API: Found blockchain duplicate for hash:',
-            applicationHash
-          )
-        } else {
-          console.log(
-            '⛓️ Driver App Global Duplicate Check API: No blockchain duplicate found'
-          )
-        }
-      } catch (readError: any) {
-        console.log(
-          '⛓️ Driver App Global Duplicate Check API: Contract read result:',
-          readError.message
-        )
-
-        // If it's a revert error, assume no duplicate
-        if (
-          readError.message?.includes('revert') ||
-          readError.message?.includes('execution reverted')
-        ) {
-          blockchainDuplicateExists = false
-          console.log(
-            '⛓️ Driver App Global Duplicate Check API: Contract revert - no duplicate found'
-          )
-        } else {
-          // For other errors, we'll assume there might be a duplicate to be safe
-          blockchainError = readError.message
-          console.log(
-            '⛓️ Driver App Global Duplicate Check API: Contract read error:',
-            blockchainError
-          )
-        }
-      }
-    } catch (error: any) {
-      blockchainError = error.message
-      console.error(
-        '❌ Driver App Global Duplicate Check API: Blockchain check error:',
-        error
-      )
-    }
-
-    // Determine overall duplicate status
-    const hasAnyDuplicate = userDuplicateExists || blockchainDuplicateExists
-    const duplicateType = userDuplicateExists
-      ? 'user'
-      : blockchainDuplicateExists
-        ? 'global'
-        : 'none'
-
     const checkResult = {
-      exists: hasAnyDuplicate,
-      duplicateType,
+      exists: userDuplicateExists,
+      duplicateType: userDuplicateExists ? 'user' : 'none',
       userDuplicate: {
         exists: userDuplicateExists,
-        applicationId:
-          userDuplicateExists && existingApp ? existingApp.id : null,
-        uploadedAt:
-          userDuplicateExists && existingApp ? existingApp.created_at : null,
+        applicationId: userDuplicateExists && existingApp ? existingApp.id : null,
+        uploadedAt: userDuplicateExists && existingApp ? existingApp.created_at : null,
       },
+      // Kept for client backward compat — always false after D5
       blockchainDuplicate: {
-        exists: blockchainDuplicateExists,
-        error: blockchainError,
+        exists: false,
+        error: null,
       },
       source: 'GLOBAL_CHECK',
     }
 
-    if (hasAnyDuplicate) {
-      console.log(
-        `🔍 Driver App Global Duplicate Check API: Found ${duplicateType} duplicate`
-      )
+    if (userDuplicateExists) {
+      console.log('🔍 Driver App Global Duplicate Check API: Found user duplicate')
     } else {
-      console.log(
-        '🔍 Driver App Global Duplicate Check API: No duplicates found'
-      )
+      console.log('🔍 Driver App Global Duplicate Check API: No duplicates found')
     }
 
     console.log(

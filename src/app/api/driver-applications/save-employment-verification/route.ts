@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
+import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * API route to save employment verification data to Supabase
@@ -9,28 +9,34 @@ import { getUserByWallet } from '@/lib/user-by-wallet'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userAddress, employmentVerificationData, applicationHash, transactionHash, applicationId } = body
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    if (!sessionUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
 
-    if (!userAddress || !employmentVerificationData) {
+    const body = await request.json()
+    const { employmentVerificationData, applicationHash, transactionHash, applicationId } = body
+
+    if (!employmentVerificationData) {
       return NextResponse.json(
-        { error: 'Missing required fields: userAddress and employmentVerificationData are required' },
+        { error: 'Missing required field: employmentVerificationData' },
         { status: 400 }
       )
     }
 
-    console.log('💾 Saving employment verification to Supabase for user:', userAddress)
+    console.log('💾 Saving employment verification to Supabase for user:', sessionUserId)
 
     const supabase = await createClient()
 
-    // Get user_id from wallet address (case-insensitive)
-    const userData = await getUserByWallet(supabase, userAddress)
-    if (!userData) {
-      console.error('❌ User not found for wallet address:', userAddress)
-      return NextResponse.json(
-        { error: 'User not found for wallet address' },
-        { status: 404 }
-      )
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', sessionUserId)
+      .maybeSingle()
+
+    if (userError || !userData) {
+      console.error('❌ User not found for session:', sessionUserId)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check for duplicate application hash BEFORE saving to DB (prevents duplicate blockchain submissions)

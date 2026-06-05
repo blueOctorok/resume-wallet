@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getUserByWallet } from '@/lib/user-by-wallet'
-
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY
 
 function unauthorized(message: string) {
@@ -39,8 +37,11 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Case-insensitive lookup
-    const user = await getUserByWallet(supabase, sessionUserId)
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', sessionUserId)
+      .maybeSingle()
     if (!user) {
       return NextResponse.json({
         success: true,

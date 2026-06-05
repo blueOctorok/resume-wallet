@@ -67,7 +67,7 @@ export async function getUserProfile(sessionUserId: string) {
       resumes (*)
     `
     )
-    .eq('wallet_address', walletAddress)
+    .eq('id', sessionUserId)
     .single()
 
   if (error) {
@@ -75,7 +75,7 @@ export async function getUserProfile(sessionUserId: string) {
     if (error.code === 'PGRST116') {
       console.log('👤 Supabase DB: User not found, returning empty profile')
       return {
-        wallet_address: walletAddress,
+        id: sessionUserId,
         resumes: [],
         created_at: null,
         updated_at: null,
@@ -113,11 +113,11 @@ export async function upsertUser(data: {
 
   try {
     const supabase = await getAdminSupabaseClient()
-    const normalized = normalizeWalletAddress(data.sessionUserId)
 
-    let user = await getUserByWallet(supabase, data.walletAddress)
+    let user = await getUserByWallet(supabase, data.sessionUserId)
 
     if (!user) {
+      const normalized = normalizeWalletAddress(data.sessionUserId)
       const { data: inserted, error: insertError } = await supabase
         .from('users')
         .insert({
@@ -129,7 +129,7 @@ export async function upsertUser(data: {
 
       if (insertError) {
         if (insertError.code === '23505') {
-          user = await getUserByWallet(supabase, data.walletAddress)
+          user = await getUserByWallet(supabase, data.sessionUserId)
         } else {
           console.error('❌ Supabase DB: User insert error:', insertError)
           throw new Error(`Failed to insert user: ${insertError.message}`)

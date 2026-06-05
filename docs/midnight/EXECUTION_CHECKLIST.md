@@ -13,14 +13,14 @@ The hard part is done. Re-read this snapshot at the start of every session.
 | | Track | Status |
 |---|---|---|
 | ✅ | **Track 1 — Auth (Alchemy → Supabase)** | **DONE & live.** Supabase is the only login. Pace works. |
-| 🔨 | **Track 2 — Web3 demolition** | **← we are here.** Delete STORM, Base registries, USDC + company wallet + `@account-kit`, IPFS. |
-| 🎯 | **Phase 2 — Selective disclosure** | **The actual moat.** Attestation service + carrier fact panels. Start as soon as demolition clears. |
+| ✅ | **Track 2 — Web3 demolition** | **COMPLETE (D1–D5).** STORM, Base registries, USDC/company wallet/`@account-kit`, IPFS, crypto deps/env removed. |
+| 🎯 | **Phase 2 — Selective disclosure** | **← we are here.** Attestation service + carrier fact panels. Start now. |
 | ⏸ | **Phase 3 — Midnight ZK** | Deferred swap behind the same `attestationService` interface. Trigger-gated. |
 | ⏸ | **Payments (Stripe)** | Deferred **greenfield** add — *not* a USDC conversion (see below). Build when a paying customer exists. |
 
 ```
-DONE ──► Track 2 Demolition ──► Phase 2 Attestation ──► Phase 3 Midnight (later)
-                                       (the moat)         Payments (Stripe) — whenever
+DONE ──► Track 2 Demolition ✅ ──► Phase 2 Attestation ──► Phase 3 Midnight (later)
+              (complete)              (the moat)              Payments (Stripe) — whenever
 ```
 
 **Why this order:** the chain was never the moat — *selective disclosure of verified facts* is. Demolition removes the Web3 cruft that's pure liability now (it does nothing for real users), then Phase 2 builds the thing competitors can't copy. Midnight and Stripe are both "swap in later" — neither blocks the moat.
@@ -368,7 +368,7 @@ COMMIT: feat(storage): move documents from IPFS to Supabase Storage (D4)
 ### D5 — Env + dependency sweep
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · pending commit · 2026-06-05 |
 | Pre-conditions | D1–D4 |
 | Pace risk | None |
 

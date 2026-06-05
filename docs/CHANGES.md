@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Track 2 · D5 — Env + dependency sweep (Web3 demolition COMPLETE)** (2026-06-05)
+
+Final Track 2 step: removed dead crypto packages, scripts, API routes, and documented env vars to drop from Vercel / `.env.local`.
+
+**Uninstalled:** `viem`, `ethers`, `hardhat`, `@nomicfoundation/hardhat-ethers`, `@nomicfoundation/hardhat-toolbox`, `@nomicfoundation/hardhat-verify`, `@openzeppelin/contracts` (~469 transitive packages). `@account-kit/*`, `alchemy-sdk`, `@coinbase/*`, `@base-org/*`, `pinata-web3` were already gone after D3/D4.
+
+**Deleted `src/`:** `lib/alchemy.ts`, `lib/base-auth-middleware.ts`, `/api/auth/verify`, `/api/webhooks/alchemy`, archived `wallet-transactions.ts.backup`.
+
+**Refactored:** `/api/driver-applications/check-duplicate-global` → DB-only duplicate check (on-chain registry branch removed).
+
+**Deleted toolchain:** `hardhat.config.js` + 17 `scripts/*.js` deploy/payment/webhook helpers.
+
+**`package.json` scripts removed:** `compile`, `test` (hardhat), all `deploy:*`, `transfer-ownership`, all `payment:*`. Kept: `dev`, `build`, `start`, `lint`, `test:app`, `supabase:test`, `backfill:auth-users`, `inspect:collisions`.
+
+**Remove from Vercel + `.env.local` (manual):**
+
+| Remove | Keep |
+|---|---|
+| `NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS`, `NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS` | `NEXT_PUBLIC_SUPABASE_*`, `NEXT_PUBLIC_APP_URL` |
+| `ALCHEMY_*`, `NEXT_PUBLIC_ALCHEMY_*` | `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAILS`, `ADMIN_API_KEY` |
+| `PRIVATE_KEY`, `X402_PAYMENT_PRIVATE_KEY` | `ACCIO_*`, `RESEND_*`, `ADZUNA_*`, `CRON_SECRET` |
+| `NEXT_PUBLIC_PINATA_*`, `PINATA_*` | `STRIPE_*` (future), `AVA_BRAIN`, Accio keys |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_*` | |
+
+**Verify:** `rg "from 'ethers'|from 'viem'|hardhat" src/` → 0. `npm run build` green. **Track 2 (D1–D5) complete** → Phase 2 attestation is next.
+
+**depcheck (informational, not auto-removed):** flagged several UI deps as unused (false positives on Next.js projects); reported missing `tsparticles-engine` — pre-existing, not touched.
+
+---
+
 ## **Employer hub — single centered column (Stormi rail removed)** (2026-06-05)
 
 After D3.2 removed the left wallet rail, main content sat left-aligned with a right Stormi tab. **EmployerHub** is now one `max-w-7xl mx-auto` column — no desktop Stormi side rail, no collapsed edge tab, no mobile “scroll to Stormi” FAB. `employerStormiContext` still feeds **CandidateOutreach** for outreach coaching context.
@@ -62,6 +92,23 @@ Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy
 **Verify:** `rg walletAddress src/` → `lib/user-by-wallet.ts`, `lib/supabase-db.ts`, `lib/user-bootstrap.ts` only. `npm run build` green.
 
 **Follow-up (D5):** Strip vestigial `x-wallet-address` client headers (values are now UUIDs in a misnamed header); remove `viem`/`ethers`/Alchemy webhook.
+
+### D3.4 audit (2026-06-05) — codemod regressions repaired
+
+Human audit of `76c560d` found **runtime bugs** in `lib/` that `npm run build` did not catch (undefined identifiers only throw at call time).
+
+| Severity | Issue | Fix |
+|---|---|---|
+| **P0** | `user-bootstrap.ts` `isAuthOnlyWalletPlaceholder` referenced undefined `sessionUserId` | Restored `walletAddress` param |
+| **P0** | `user-by-wallet.ts` `getOrCreateUserByWallet` referenced undefined `walletAddress` (×2) | Renamed to `trimmed`; UUID → id-keyed create path |
+| **P0** | `supabase-db.ts` `getUserProfile` / `upsertUser` referenced undefined `walletAddress` / `data.walletAddress` | Lookup by `users.id` / `data.sessionUserId` |
+| **P1** | `getUserByWallet` only matched `wallet_address` — UUID callers (employment verify, admin reset) missed | UUID branch queries `.eq('id', …)` |
+| **P1** | Employment-verify + duplicate-check routes trusted body `userAddress` | Session via `getStormUserIdFromRequest` |
+| **P1** | `admin/reset-wallet` passed UUID to wallet ilike lookup | Direct `.eq('id', sessionUserId)` |
+
+**Audit pass (unchanged / acceptable):** No `walletAddress` in `src/components/` or `src/app/api/`; no `useWalletAddress`/`setWalletAddress`; auth store + sync hook session-only; Pace-critical employer screening routes untouched; ~50 files still send `x-wallet-address` (UUID in misnamed header) — deferred to **D5**; legacy `paymentTxHash` wallet-match branch in MVR order low risk (USDC UI removed).
+
+**Verify after fixes:** `rg walletAddress src/` → `user-bootstrap.ts` param name only. `npm run build` green.
 
 ---
 

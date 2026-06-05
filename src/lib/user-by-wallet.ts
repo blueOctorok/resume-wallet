@@ -14,10 +14,12 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isAuthOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
+import { authOnlyWalletPlaceholder, isAuthOnlyWalletPlaceholder } from '@/lib/user-bootstrap'
 
 const WALLET_ADDRESS_KEY = 'wallet_address' as const
 const AUTH_WALLET_PREFIX = 'auth:' as const
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /** Normalize wallet for storage and lookup (lowercase) */
 export function normalizeWalletAddress(wallet: string): string {
@@ -43,7 +45,22 @@ export async function getUserByWallet(
   supabase: SupabaseClient,
   sessionUserId: string
 ): Promise<UserRow | null> {
-  const normalized = normalizeWalletAddress(sessionUserId)
+  const trimmed = sessionUserId.trim()
+
+  // Post-D3.4 callers pass Supabase auth id (users.id), not a chain address.
+  if (UUID_RE.test(trimmed)) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', trimmed)
+      .maybeSingle()
+    if (error) {
+      throw new Error(`Failed to fetch user by id: ${error.message}`)
+    }
+    return data ?? null
+  }
+
+  const normalized = normalizeWalletAddress(trimmed)
   const { data: rows, error } = await supabase
     .from('users')
     .select('*')
@@ -70,7 +87,8 @@ export async function getOrCreateUserByWallet(
   sessionUserId: string,
   options?: { role?: string | null }
 ): Promise<{ user: UserRow; isNew: boolean }> {
-  const normalized = normalizeWalletAddress(sessionUserId)
+  const trimmed = sessionUserId.trim()
+  const normalized = normalizeWalletAddress(trimmed)
 
   // Supabase-auth placeholder (`auth:<uuid>`): identity is the auth user id, NOT
   // the wallet string. By the T1.3 convention `users.id = auth.users.id`, so we
@@ -82,13 +100,23 @@ export async function getOrCreateUserByWallet(
     return getOrCreateAuthUserById(supabase, normalized.slice(AUTH_WALLET_PREFIX.length), normalized, options)
   }
 
+  // Post-D3.4: raw UUID is the session user id — same id-keyed path as auth placeholder.
+  if (UUID_RE.test(trimmed)) {
+    return getOrCreateAuthUserById(
+      supabase,
+      trimmed,
+      authOnlyWalletPlaceholder(trimmed),
+      options
+    )
+  }
+
   // 1. Look up existing (handle duplicates by taking most recent)
-  const existing = await getUserByWallet(supabase, walletAddress)
+  const existing = await getUserByWallet(supabase, trimmed)
   if (existing) {
     return { user: existing as UserRow, isNew: false }
   }
 
-  // 2. Insert one row (normalized wallet)
+  // 2. Insert one row (normalized wallet) — legacy wallet-first sign-in only
   const { data: newUser, error: insertError } = await supabase
     .from('users')
     .insert({
@@ -102,7 +130,7 @@ export async function getOrCreateUserByWallet(
   if (insertError) {
     // Duplicate key or race: another request created the user; fetch again
     if (insertError.code === '23505' || insertError.message?.toLowerCase().includes('duplicate')) {
-      const again = await getUserByWallet(supabase, walletAddress)
+      const again = await getUserByWallet(supabase, trimmed)
       if (again) return { user: again as UserRow, isNew: false }
     }
     throw new Error(`Failed to create user: ${insertError.message}`)
