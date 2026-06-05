@@ -14,7 +14,7 @@ The hard part is done. Re-read this snapshot at the start of every session.
 |---|---|---|
 | ✅ | **Track 1 — Auth (Alchemy → Supabase)** | **DONE & live.** Supabase is the only login. Pace works. |
 | ✅ | **Track 2 — Web3 demolition** | **COMPLETE (D1–D5).** STORM, Base registries, USDC/company wallet/`@account-kit`, IPFS, crypto deps/env removed. |
-| 🎯 | **Phase 2 — Selective disclosure** | **← we are here.** Attestation service + carrier fact panels. Start now. |
+| 🎯 | **Phase 2 — Selective disclosure** | **← we are here.** Atomic steps **P2.1–P2.7** are now spec'd below (schema → service → facts → API → carrier panel → toggles → language). Start at P2.1. |
 | ⏸ | **Phase 3 — Midnight ZK** | Deferred swap behind the same `attestationService` interface. Trigger-gated. |
 | ⏸ | **Payments (Stripe)** | Deferred **greenfield** add — *not* a USDC conversion (see below). Build when a paying customer exists. |
 
@@ -413,22 +413,365 @@ COMMIT: chore(deps): remove crypto deps + env after demolition (D5)
 
 ---
 
-## Phase 2 — Selective disclosure (THE MOAT — next after demolition)
+## Phase 2 — Selective disclosure (THE MOAT — ← active)
 
-This is the point of the whole reset. Atomic steps get written when demolition clears; high-level tracks:
+This is the point of the whole reset. **Demolition (D1–D5) is complete and prod is stable**, so the pre-condition for P2.1 is met. Build order is dependency-first: schema → service → facts → API → UI → toggles → polish.
 
-| Track | Goal | Effort |
-| ----- | ---- | ------ |
-| **T7**  | `attestationService` interface + `attestations` table + signed-JWT implementation | 1 week |
-| **T8**  | Fact registry (`FactType` enum + `FactDefinition` map per `[attestation-architecture.mdc](../../.cursor/rules/attestation-architecture.mdc)`) | 1 week |
-| **T9**  | Carrier-facing fact panels (replace PDF-first verification UI on the career-card modal) | 1 week |
-| **T10** | Candidate disclosure toggles (per-audience disclosure preferences) | 1 week |
+> **Read before any P2 step:** `[attestation-architecture.mdc](../../.cursor/rules/attestation-architecture.mdc)` (the interface + fact-registry + selective-disclosure rules), `[midnight-data-boundary.mdc](../../.cursor/rules/midnight-data-boundary.mdc)` (the provenance gate), `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Phase 2" (what ships / what does NOT).
 
-**Pre-condition for T7:** demolition shipped + production stable.
+### Non-negotiable Phase 2 invariants (every step)
 
-**T7 schema hygiene (forward-compat for the Phase 4 cached-attestation marketplace, DEC-2026-05-013):** the `attestations` table must include `issued_at`, `valid_until` (e.g. MVR + 30 days), `source_cra` (e.g. `'accio'`), `source_pull_id` (Accio order ID), and a query-count column. Don't build the marketplace; just don't make it impossible.
+- **Storm is not a CRA.** Every attestation cites its originating CRA (`source_cra`, e.g. `'accio'`) + pull id; every share is **candidate-initiated**. DEC-2026-05-011.
+- **Provenance gate (DEC-2026-05-014).** Only `source: 'third_party'` facts (MVR, PSP, employment verification, CDL-from-issuer) may produce a `ProofArtifact` or render a "verified" badge. **Self-reported data is display-only** — never routed through `proveFact()`.
+- **Phase-2 = signed JWT, not ZK.** Never write "ZK proof" / "on-chain" in P2 code or copy. The implementation hides behind the `attestationService` interface so Phase 3 is a one-line registry swap.
+- **Attestations are immutable.** Never UPDATE — insert a new row and set `superseded_by` on the prior.
+- **Don't read `block_*` in verification UI.** Verified surfaces go through `attestationService` only.
+- **No new infra.** Vercel + Supabase only. No Docker, no Compact, no chain.
 
-> **Storm is not a CRA** — every attestation must cite its originating CRA, every share is candidate-initiated. See `strategic-direction.mdc` + DEC-2026-05-011.
+### Step index
+
+| Step | Track | Goal | Effort | Pace risk |
+|---|---|---|---|---|
+| **P2.1** | T7 | `attestations` table migration (+ Phase-4 forward-compat columns) | S | None (additive) |
+| **P2.2** | T7 | `attestationService` interface + registry + signed-JWT impl | M | None (additive lib) |
+| **P2.3** | T8 | Fact registry (`FactType` + `FactDefinition` + first 3 third-party `proveImpl`s) | M | Low (reads Accio data, read-only) |
+| **P2.4** | T7/T8 | API routes: `/api/attestation/prove` (candidate) + `/api/attestation/verify` (carrier) | M | Low |
+| **P2.5** | T9 | Carrier-facing `CredentialFactsPanel` in `CareerCardModal` (facts-first, PDF demoted) | L | **Medium — touches I-8 `CareerCardModal`** |
+| **P2.6** | T10 | Candidate per-audience disclosure toggles | M | Low |
+| **P2.7** | T9/T10 | "Verified by Storm" language + Stormi/journey wiring | S | None |
+
+**Pre-condition for the whole phase:** demolition shipped ✅ + production stable ✅. Brief Pace on what verified fact panels will look like **before P2.5 ships** (per Pace check-in cadence).
+
+---
+
+### P2.1 — `attestations` table migration
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | D1–D5 ✅ |
+| Pace risk | None — additive migration, no existing table touched |
+
+**Goal:** Create the immutable `attestations` table per `attestation-architecture.mdc` "Persistence", **plus** the Phase-4 forward-compat columns from DEC-2026-05-013 (`valid_until`, `source_cra`, `source_pull_id`, `query_count`). Don't build the marketplace — just don't make it impossible later.
+
+**Files:**
+- `supabase/migrations/098_attestations.sql` (next number after 097):
+  - Columns: `id`, `candidate_user_id → users(id)`, `fact_type text`, `fact_summary text`, `disclosed_fields jsonb`, `issued_at timestamptz default now()`, `expires_at timestamptz`, `valid_until timestamptz`, `source_cra text`, `source_pull_id text`, `audience_id → companies(id)`, `proof_artifact jsonb`, `superseded_by → attestations(id)`, `query_count int default 0`, `created_at`.
+  - Indexes: `(candidate_user_id, fact_type)`; partial `(audience_id) where audience_id is not null`.
+  - **RLS:** candidate sees own rows (`candidate_user_id = auth.uid()`); audience-scoped rows visible to that company's members; service-role bypass for the issuer.
+- Apply via Supabase dashboard (document in CHANGES like 097).
+
+**Verification:** Migration applies clean; `select` as candidate returns only own rows; insert requires service role. Build green (no code yet).
+
+**Commit:** `feat(attestation): add attestations table + RLS (P2.1)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.1)</strong></summary>
+
+```text
+TASK: Execute step P2.1 — "attestations table migration" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2).
+
+FIRST read: docs/midnight/EXECUTION_CHECKLIST.md (Phase 2 invariants + P2.1), .cursor/rules/attestation-architecture.mdc ("Persistence" section), .cursor/rules/midnight-data-boundary.mdc. Confirm in context.
+
+PRE-CONDITIONS: D1–D5 done (demolition complete). This is purely additive — no existing table is touched.
+
+GROUND RULES:
+- Additive migration only. Never DROP/ALTER existing tables.
+- Next migration number after the highest in supabase/migrations/ (097 is the last known — verify).
+- RLS ON. Candidate reads own rows via auth.uid() = candidate_user_id; company members read rows where audience_id = their company; issuance is service-role only.
+
+BUILD migration supabase/migrations/0NN_attestations.sql with columns + indexes exactly as P2.1 lists (include Phase-4 forward-compat columns: valid_until, source_cra, source_pull_id, query_count). Attestations are immutable: no UPDATE policy; supersede via superseded_by.
+
+VERIFY: migration SQL parses; describe the RLS policies in the PR notes. No app code yet → build stays green.
+
+DOCS: docs/CHANGES.md dated P2.1 entry (table + columns + RLS + "apply via dashboard"). Set P2.1 Status "✅ Done · {commit} · {date}" + handoff-log row. Note the migration must be applied manually on remote.
+
+COMMIT: feat(attestation): add attestations table + RLS (P2.1)
+```
+
+</details>
+
+---
+
+### P2.2 — `attestationService` interface + registry + signed-JWT implementation
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.1 |
+| Pace risk | None — new lib, nothing imports it yet |
+
+**Goal:** Land the swappable service exactly as specced in `attestation-architecture.mdc` "The interface" + "Phase 3 — when it ships". Phase 2 ships the **signed-JWT** impl; the registry indirection is what makes Phase 3 a one-line change.
+
+**Files:**
+- `src/lib/attestation-service.ts` — the `AttestationService` interface, `AttestationInput`, `Attestation`, `ProofArtifact` (`signed_jwt` | `midnight_zk`), `VerificationResult` types. **Interface only.**
+- `src/lib/signed-jwt-attestation-service.ts` — implements `proveFact` (signs a JWT over `{factType, factSummary, disclosedFields, candidateUserId, audienceId, issuedAt, expiresAt, sourceCra, sourcePullId}` with `jose`, persists an `attestations` row, returns `{kind:'signed_jwt', jwt, issuer}`) + `verifyAttestation` (verifies signature + expiry, returns `disclosedFields`). Reuse existing `jose`/`jsonwebtoken` dep.
+- `src/lib/attestation-service-registry.ts` — exports `attestationService` chosen by `ATTESTATION_BACKEND` env (defaults to signed-jwt).
+- Env: `ATTESTATION_JWT_PRIVATE_KEY` / public key (or HS256 secret for v1) + `ATTESTATION_ISSUER` (e.g. `storm`). Document in CHANGES + VERCEL_ENV_CHECKLIST.
+- Unit test `src/lib/__tests__/signed-jwt-attestation-service.test.ts` (prove → verify round-trip; tampered JWT fails; expired fails).
+
+**Verification:** `npm run test:app` green; round-trip test passes. `rg "signedJwtAttestationService" src/components` → 0 (components import the registry, never the impl). Build green.
+
+**Commit:** `feat(attestation): attestationService interface + signed-JWT impl (P2.2)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.2)</strong></summary>
+
+```text
+TASK: Execute step P2.2 — "attestationService interface + signed-JWT impl" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2).
+
+FIRST read: .cursor/rules/attestation-architecture.mdc ("The interface", "Persistence", "Phase 3 — when it ships", "Don'ts"). Match the type shapes EXACTLY as written there. Confirm in context.
+
+PRE-CONDITIONS: P2.1 attestations table exists.
+
+GROUND RULES:
+- Phase 2 = signed JWT ONLY. Do not write any ZK / Midnight / on-chain code or comments. The midnight_zk ProofArtifact variant is a type stub for Phase 3 — leave it unused.
+- Components must NEVER import the impl directly — only the registry. Enforce by keeping the impl un-exported from any index.
+- Use the already-installed jose (preferred) or jsonwebtoken. Do not add a crypto dep.
+- The service persists every issued attestation to the attestations table (immutable; supersede prior unsuperseded row for the same candidate+fact via superseded_by).
+
+BUILD: src/lib/attestation-service.ts (interface + types), src/lib/signed-jwt-attestation-service.ts (proveFact + verifyAttestation), src/lib/attestation-service-registry.ts (env-selected export). Add a vitest round-trip + tamper + expiry test.
+
+VERIFY: npm run test:app green; npm run build green; rg "signed-jwt-attestation-service" src/components src/app → 0.
+
+DOCS: docs/CHANGES.md P2.2 entry (files + new env vars). Add ATTESTATION_* to VERCEL_ENV_CHECKLIST.md "Private Variables". Set P2.2 Status + handoff row.
+
+COMMIT: feat(attestation): attestationService interface + signed-JWT impl (P2.2)
+```
+
+</details>
+
+---
+
+### P2.3 — Fact registry (first three third-party facts)
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.2 |
+| Pace risk | Low — `proveImpl`s READ Accio/MVR data via `block-data.ts`; no writes, no Pace path touched |
+
+**Goal:** Build `src/lib/fact-registry.ts` per `attestation-architecture.mdc` "The fact registry". Ship **three third-party facts only** (the ones with real issuer provenance today): `mvr_clean_36_months`, `cdl_class_a`, `previous_employer_verified`. Each `proveImpl` reads through `block-data.ts` / MVR results, computes the boolean, and returns a **minimal** `disclosedFields` (no underlying PII / record bytes).
+
+**Files:**
+- `src/lib/fact-registry.ts` — `FactType` union, `FactDefinition` map, `proveImpl` per fact. Set `source: 'third_party'` + `category` honestly.
+- Wire `signed-jwt-attestation-service.proveFact` to look up the `FactDefinition`, run `proveImpl`, and **reject** any `source: 'self_reported'` fact (provenance gate — hard error, not a badge).
+- Reuse existing reads (`getMvrData`, `getCdlData`, employment verification rows) from `src/lib/block-data.ts` — do NOT query `block_*` directly.
+- Unit tests: each fact true/false case + a `self_reported` fact is rejected by the gate.
+
+**Verification:** `npm run test:app` green. `prove({factType:'mvr_clean_36_months'})` returns a JWT whose `disclosedFields` contains only the verification window (no violation rows). A `self_reported` fact request throws. Build green.
+
+**Commit:** `feat(attestation): fact registry + first 3 third-party facts (P2.3)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.3)</strong></summary>
+
+```text
+TASK: Execute step P2.3 — "fact registry + first 3 third-party facts" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2).
+
+FIRST read: .cursor/rules/attestation-architecture.mdc ("The fact registry", "Selective disclosure rules"), .cursor/rules/midnight-data-boundary.mdc (provenance gate). Confirm in context.
+
+PRE-CONDITIONS: P2.2 service + registry exist.
+
+GROUND RULES:
+- Ship exactly THREE facts, all source:'third_party': mvr_clean_36_months, cdl_class_a, previous_employer_verified. No self-reported facts.
+- disclosedFields is the carrier-visible surface. Include ONLY the direct evidence (e.g. mvr → {verificationWindowStart, verificationWindowEnd}; cdl → {class:'A'}). NEVER include license numbers, DOB, SSN, full MVR/PSP bytes, or other unrequested facts.
+- proveImpl READS via src/lib/block-data.ts helpers (getMvrData, getCdlData, employment verification). NEVER query block_* tables directly.
+- Enforce the provenance gate IN proveFact: a self_reported FactDefinition must throw, not return a proof.
+- Each attestation must carry source_cra + source_pull_id from the underlying Accio order.
+
+BUILD: src/lib/fact-registry.ts (FactType union + FactDefinition map + 3 proveImpls); wire the gate into proveFact. Add vitest cases (true/false per fact + self_reported rejection).
+
+VERIFY: npm run test:app green; npm run build green. Confirm disclosedFields contains no PII for each fact.
+
+DOCS: docs/CHANGES.md P2.3 entry (3 facts + disclosedFields shape + gate). Set P2.3 Status + handoff row.
+
+COMMIT: feat(attestation): fact registry + first 3 third-party facts (P2.3)
+```
+
+</details>
+
+---
+
+### P2.4 — Attestation API routes (prove + verify)
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.3 |
+| Pace risk | Low — new routes; existing employer/screening routes untouched |
+
+**Goal:** Expose the service over HTTP. `/api/attestation/prove` is **candidate-initiated** (session-gated via `getStormUserIdFromRequest`); `/api/attestation/verify` lets a carrier (or public verify page) independently check an attestation.
+
+**Files:**
+- `src/app/api/attestation/prove/route.ts` — POST `{factType, audienceId?}`; identity from session; calls `attestationService.proveFact`; returns the `Attestation`. Candidate can only prove facts about **themselves**.
+- `src/app/api/attestation/verify/route.ts` — POST `{attestation}` (or `{id}`); calls `verifyAttestation`; returns `VerificationResult`. Increment `query_count` (Phase-4 forward-compat).
+- Standard route shape: `try/catch`, `{ error }` JSON, bracketed logs (`[ATTESTATION]`).
+- Confirm both excluded from nothing special — they read cookies, so they stay inside the Supabase middleware matcher.
+
+**Verification:** `curl` prove (authed) → attestation; verify → `{valid:true}`. Verify a tampered JWT → `{valid:false}`. A candidate proving another user's fact → 403. Build + lint green.
+
+**Commit:** `feat(attestation): prove + verify API routes (P2.4)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.4)</strong></summary>
+
+```text
+TASK: Execute step P2.4 — "attestation API routes" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2).
+
+FIRST read: .cursor/rules/architecture.mdc (API Route Standards — auth + error shape), .cursor/rules/attestation-architecture.mdc ("Audience scoping"). Confirm in context.
+
+PRE-CONDITIONS: P2.3 fact registry wired.
+
+GROUND RULES:
+- Auth via getStormUserIdFromRequest (session). No x-wallet-address.
+- prove is candidate-initiated and self-only: the session user can only prove facts about their own user id. Reject cross-user.
+- Error responses are { error: string } with status codes; logs prefixed [ATTESTATION].
+- verify increments query_count on the attestation row (Phase-4 forward-compat) but never mutates the proof.
+- Do NOT touch any /api/employer/** route (Pace I-2/I-4/I-8).
+
+BUILD: src/app/api/attestation/prove/route.ts (POST, session-gated) + src/app/api/attestation/verify/route.ts (POST). 
+
+VERIFY: manual curl prove→verify happy path; tampered→invalid; cross-user prove→403. npm run build + lint green.
+
+DOCS: docs/CHANGES.md P2.4 entry (2 routes + auth model). Set P2.4 Status + handoff row.
+
+COMMIT: feat(attestation): prove + verify API routes (P2.4)
+```
+
+</details>
+
+---
+
+### P2.5 — Carrier-facing `CredentialFactsPanel` (facts-first in CareerCardModal)
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.4 |
+| Pace risk | **Medium — touches `CareerCardModal.tsx` (Pace invariant I-8).** Coordinate + verify talent-view still loads. |
+
+**Goal:** Replace the PDF-first "verified" surface with a **facts-first** panel. The carrier sees "✓ Clean MVR — Verified by Storm on [date], derived from Accio pull" with an optional technical-details expand; the raw PDF becomes a secondary, candidate-controlled fallback. This is the moment the moat becomes visible to carriers.
+
+**Files:**
+- `src/components/employer/CredentialFactsPanel.tsx` (new) — renders attestations via `attestationService.verifyAttestation`, badge + issued date + CRA citation, expandable details. Uses `HubSectionPanel` + `BlockCard` chrome (amber/teal accent per `ui-components.mdc`).
+- `src/components/employer/CareerCardModal.tsx` — mount the panel; **demote** the PDF view to a fallback link. Keep all existing talent/request behavior intact (I-8).
+- Map `FactType` → panel rows (the "Add a UI mapping" step from the fact-registry rules).
+- Dark-mode + empty-state ("No verified facts yet — request a screening") handled.
+
+**Verification:** Pace employer opens a candidate card → sees fact panel, not a PDF dump; talent search + request buttons still work; verified badge only on third-party facts. Incognito + Pace-account smoke. Build + lint green.
+
+**Commit:** `feat(attestation): carrier credential facts panel (P2.5)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.5)</strong></summary>
+
+```text
+TASK: Execute step P2.5 — "carrier CredentialFactsPanel" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2). PACE-CRITICAL (I-8).
+
+FIRST read: .cursor/rules/attestation-architecture.mdc ("Don'ts" — facts before PDFs), .cursor/rules/ui-components.mdc (HubSectionPanel + BlockCard chrome), and the Pace invariants table in EXECUTION_CHECKLIST.md (I-8 CareerCardModal). Confirm in context.
+
+PRE-CONDITIONS: P2.4 verify route live. Pace has been briefed on fact panels (check-in cadence).
+
+GROUND RULES:
+- This touches CareerCardModal.tsx — a Pace-critical file (I-8). Preserve ALL existing talent-view + request-button behavior. The panel is ADDITIVE; the PDF is demoted to a fallback, not deleted.
+- Verified badges ONLY for third_party facts (provenance gate). Self-reported sections stay "submitted/on file" with no badge.
+- Render via attestationService (registry import) — NEVER read block_* tables in this component.
+- Use HubSectionPanel + BlockCard chrome; full dark-mode + empty state.
+- After the change, manually verify a Pace employer can still: open a candidate card, run talent search, and use request buttons.
+
+BUILD: src/components/employer/CredentialFactsPanel.tsx; wire into CareerCardModal.tsx; FactType→row UI map.
+
+VERIFY: Pace-account + incognito smoke (card opens, facts render, requests work, PDF still reachable as fallback). npm run build + lint green.
+
+DOCS: docs/CHANGES.md P2.5 entry (panel + PDF demotion + I-8 preserved). Set P2.5 Status + handoff row noting Pace verification done.
+
+COMMIT: feat(attestation): carrier credential facts panel (P2.5)
+```
+
+</details>
+
+---
+
+### P2.6 — Candidate per-audience disclosure toggles
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.5 |
+| Pace risk | Low — candidate-side UI + scoped reads |
+
+**Goal:** Let the candidate control **which carrier sees which facts** — the selective-disclosure surface from the candidate's side. Drives the `audienceId` narrowing in `proveFact`.
+
+**Files:**
+- Migration `0NN_disclosure_preferences.sql` — `disclosure_preferences (candidate_user_id, audience_id, fact_type, allowed bool)` + RLS (candidate owns own rows).
+- Candidate UI (new block surface or career-card setting) — per-audience fact toggles using `HubSectionPanel`/`BlockCard`; state in a Zustand store (per `state-standards.mdc` — no `useState` for shared data).
+- `proveFact` honors the preference: refuse / narrow `disclosedFields` when a fact is toggled off for that audience.
+
+**Verification:** Toggle a fact off for a carrier → that carrier's `verify` no longer sees it; candidate's own view unaffected. Build + lint + test green.
+
+**Commit:** `feat(attestation): candidate per-audience disclosure toggles (P2.6)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.6)</strong></summary>
+
+```text
+TASK: Execute step P2.6 — "candidate per-audience disclosure toggles" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2).
+
+FIRST read: .cursor/rules/attestation-architecture.mdc ("Audience scoping"), .cursor/rules/state-standards.mdc, .cursor/rules/ui-components.mdc. Confirm in context.
+
+PRE-CONDITIONS: P2.5 carrier panel live.
+
+GROUND RULES:
+- Selective disclosure is candidate-controlled. Default posture: a fact is shareable unless toggled off; every share remains candidate-initiated.
+- State in a Zustand store, not useState (shared/persisted). 
+- proveFact must honor the toggle: when allowed=false for (candidate, audience, fact), refuse or omit from disclosedFields.
+- Additive migration + RLS (candidate owns rows).
+
+BUILD: migration 0NN_disclosure_preferences.sql; candidate toggle UI (HubSectionPanel/BlockCard); store; proveFact enforcement.
+
+VERIFY: toggling off hides the fact from that audience's verify result only; build + lint + test:app green.
+
+DOCS: docs/CHANGES.md P2.6 entry. Set P2.6 Status + handoff row. Note manual migration apply.
+
+COMMIT: feat(attestation): candidate per-audience disclosure toggles (P2.6)
+```
+
+</details>
+
+---
+
+### P2.7 — "Verified by Storm" language + Stormi/journey wiring
+| | |
+|---|---|
+| Status | ⬜ Not started |
+| Pre-conditions | P2.6 |
+| Pace risk | None — copy + Stormi context |
+
+**Goal:** Land the honest Phase-2 verification language and teach Stormi about attestations. Per the language rules: present-tense "Verified by Storm on [date]" + CRA citation; **never** "verified on-chain" / "ZK" until Phase 3.
+
+**Files:**
+- Verification copy + the `formatAttestationProvenance()` helper (DEC-2026-05-011 citation rule) so provenance strings aren't scattered.
+- `src/lib/ava-context.ts` — Stormi knows what an attestation is and can nudge candidates to verify third-party facts ("Employers in your area request CDL verification 73% of the time").
+- Journey: add an attestation completion signal to `journey-progress.ts` if a "first verified fact" milestone fits.
+- Sweep stale "blockchain-verified" copy on self-reported surfaces (the `PROJECT_ROADMAP.md` Phase-1 language-cleanup item lives here).
+
+**Verification:** `rg -i "verified on-chain|zk proof|blockchain.verified" src/` → 0 on self-reported surfaces. Stormi references verification correctly. Build green.
+
+**Commit:** `feat(attestation): verified-by-storm language + Stormi wiring (P2.7)`
+
+<details><summary><strong>📋 Auto prompt — copy-paste (P2.7)</strong></summary>
+
+```text
+TASK: Execute step P2.7 — "Verified by Storm language + Stormi wiring" — from docs/midnight/EXECUTION_CHECKLIST.md (Phase 2). Closes Phase 2.
+
+FIRST read: .cursor/rules/strategic-direction.mdc ("Language rules"), .cursor/rules/product-philosophy.mdc (verification = the moat), DECISION_LOG DEC-2026-05-011 (CRA citation) + DEC-2026-05-016 (narrative vs interaction). Confirm in context.
+
+PRE-CONDITIONS: P2.6 done.
+
+GROUND RULES:
+- Phase-2 copy is "Verified by Storm on [date]" + CRA citation. NEVER "verified on-chain" / "ZK" / "Midnight-proven" on a per-fact basis (Phase 3 honesty constraint).
+- Only third_party facts get "verified" language; self-reported stays "submitted / on file".
+- Centralize provenance strings in formatAttestationProvenance() — don't scatter ad-hoc copy.
+
+BUILD: formatAttestationProvenance() helper; verification UI copy; Stormi context in ava-context.ts; optional journey milestone in journey-progress.ts; sweep stale "blockchain-verified" copy on self-reported surfaces.
+
+VERIFY: rg -i "verified on-chain|zk proof|blockchain.verified" src/ → 0 on self-reported surfaces; Stormi references verification correctly; build green.
+
+DOCS: docs/CHANGES.md P2.7 entry. Set P2.7 Status + handoff row. If P2.1–P2.7 all done, add "Phase 2 — Selective disclosure COMPLETE" to the Where-we-are snapshot and flip the active marker to Phase 3 (trigger-gated).
+
+COMMIT: feat(attestation): verified-by-storm language + Stormi wiring (P2.7)
+```
+
+</details>
 
 ---
 
@@ -540,4 +883,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-04
+**Last updated:** 2026-06-05
