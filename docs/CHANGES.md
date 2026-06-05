@@ -28,6 +28,8 @@ Final Track 2 step: removed dead crypto packages, scripts, API routes, and docum
 | `NEXT_PUBLIC_PINATA_*`, `PINATA_*` | `STRIPE_*` (future), `AVA_BRAIN`, Accio keys |
 | `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_*` | |
 
+**Commit:** `1e5ddb0`
+
 **Verify:** `rg "from 'ethers'|from 'viem'|hardhat" src/` → 0. `npm run build` green. **Track 2 (D1–D5) complete** → Phase 2 attestation is next.
 
 **depcheck (informational, not auto-removed):** flagged several UI deps as unused (false positives on Next.js projects); reported missing `tsparticles-engine` — pre-existing, not touched.
