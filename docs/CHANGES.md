@@ -18,7 +18,7 @@ After D3.2 removed the left wallet rail, main content sat left-aligned with a ri
 
 Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy Account Kit) and drops client `walletAddress` identity. Absorbs deferred **T1.12d + T1.13 remainder**. DB columns kept for history (`payment_tx_hash`, `companies.*wallet*`, `users.wallet_address`); UI stops writing them. Accio screening (`/api/employer/screenings/order`, reconcile, webhooks) untouched.
 
-**Commits:** `6d15699` (D3.1) · `377028e` (D3.2) · `ce03071` (D3.3) · `{D3.4}` (D3.4)
+**Commits:** `6d15699` (D3.1) · `377028e` (D3.2) · `ce03071` (D3.3) · `76c560d` (D3.4)
 
 ### D3.1 — USDC payment buttons
 
