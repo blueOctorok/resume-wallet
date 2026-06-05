@@ -4,6 +4,49 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Track 2 · D3 — Remove USDC + company wallet + `@account-kit` (partial · D3.1–D3.3)** (2026-06-05)
+
+Tears out crypto **interaction** layer (USDC pay, company smart wallets, Alchemy Account Kit). Absorbs deferred **T1.12d + T1.13 remainder**. DB columns kept for history (`payment_tx_hash`, `companies.*wallet*`, `users.wallet_address`); UI stops writing them. Accio screening (`/api/employer/screenings/order`, reconcile, webhooks) untouched.
+
+**Commits:** `6d15699` (D3.1) · `377028e` (D3.2) · `ce03071` (D3.3)
+
+### D3.1 — USDC payment buttons
+
+| Change | Detail |
+|---|---|
+| **Deleted** | `MvrPaymentButton.tsx`, `PspPaymentButton.tsx` |
+| **New** | `src/lib/resolve-waived-screening-payment.ts` — optional `paymentTxHash`; synthetic `payments` row when omitted |
+| **Edited** | `StormiCreditModal` (Stripe placeholder); `MvrOrderForm`/`PspOrderForm`; `/api/mvr/order`, `/api/psp/order`; minimal employer legacy paths in `CareerCardModal` + `/api/employer/mvr|psp/order` |
+
+**Verify:** `rg "MvrPaymentButton|PspPaymentButton|onramp|USDC|SendUSDC" src/` → 0 (DB column names OK).
+
+### D3.2 — Company wallet stack
+
+| Change | Detail |
+|---|---|
+| **Deleted** | `CompanyWallet`, `WalletInfo`, `TransactionHistory`; `/api/wallet/mvr-config`, `/api/wallet/psp-config`, `/api/employer/company/ensure-wallet`; `persist-company-wallet`, `company-wallet-*`, `alchemy-token-api`, `alchemy-transfers-api`, `company-wallet-salt` |
+| **Edited** | `EmployerHub` (wallet rail/modal removed); team `accept-invite` + `[memberId]` (no on-chain owner ops); `/api/employer/company` returns `companyWalletAddress: null` |
+
+**Verify:** `rg "CompanyWallet|ensure-wallet|company-wallet|alchemy-token-api|alchemy-transfers" src/` → 0.
+
+### D3.3 — Alchemy provider + SDK
+
+| Change | Detail |
+|---|---|
+| **Deleted** | `AlchemyProvider.tsx`, `alchemy-account-config.ts`, `BasePayButton.tsx`, `PaymentStatusTracker.tsx`, `base-pay.ts`, `base-account-sdk.ts` |
+| **Edited** | `layout.tsx` — `SupabaseAuthSync` directly under `ThemeProvider`; `ResumeUploadWithVerification` — no `@account-kit`; `tailwind.config.ts` — plain config (no `withAccountKitUi`) |
+| **Uninstalled** | `@account-kit/core`, `@account-kit/react`, `@account-kit/smart-contracts`, `@aa-sdk/core`, `alchemy-sdk`, `@coinbase/cdp-sdk`, `@coinbase/onchainkit`, `@base-org/account`, `@base-org/account-ui` |
+
+**Verify:** `rg "@account-kit|@aa-sdk|alchemy-sdk|@coinbase|@base-org|AlchemyProvider" src/` → 0. `npm run build` green.
+
+### Still pending — D3.4 (human audit gate)
+
+Drop `walletAddress` from `useAuthStore`; repoint ~190 consumers to `sessionUserId`. Confirm no API routes depend on `x-wallet-address`. **Do not start until manual smoke test passes.**
+
+**Next after audit:** D3.4 commit `refactor(auth): drop walletAddress store field, use sessionUserId (D3.4)` · then D5 env/dep sweep (`viem`, `ethers`, Alchemy webhook route, env vars).
+
+---
+
 ## **Track 2 · D4 — IPFS → Supabase Storage** (2026-06-04)
 
 Documents moved off Pinata/IPFS to **private Supabase Storage** with **server-issued signed URLs**. Only ~7 test docs existed on IPFS — not migrated. Accio screening untouched.
