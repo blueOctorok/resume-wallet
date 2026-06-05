@@ -28,7 +28,7 @@ First Phase 2 step: additive schema for selective-disclosure signed facts. No ap
 
 **Apply manually:** run `098_attestations.sql` in Supabase dashboard (same as 097).
 
-**Commit:** `8edd340`
+**Commit:** `465f83b`
 
 **Next:** P2.2 — `attestationService` interface + signed-JWT implementation.
 
