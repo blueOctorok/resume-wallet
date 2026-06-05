@@ -30,6 +30,8 @@ Swappable attestation layer for Phase 2 selective disclosure. No UI or API route
 
 Alias: `ATTESTATION_JWT_SECRET` accepted if private key unset.
 
+**Commit:** `0b7a92b`
+
 **Next:** P2.3 — fact registry + first 3 third-party `proveImpl`s.
 
 ---
