@@ -26,15 +26,7 @@
     "payment:credits": "node scripts/check-credits.js"
   },
   "dependencies": {
-    "@aa-sdk/core": "^4.86.1",
-    "@account-kit/core": "^4.64.0",
-    "@account-kit/react": "^4.64.0",
-    "@account-kit/smart-contracts": "^4.86.1",
     "@anthropic-ai/sdk": "^0.78.0",
-    "@base-org/account": "^2.2.0",
-    "@base-org/account-ui": "^1.0.1",
-    "@coinbase/cdp-sdk": "^1.45.0",
-    "@coinbase/onchainkit": "^1.1.2",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -46,7 +38,6 @@
     "@tanstack/react-query": "^5.85.5",
     "@types/qrcode": "^1.5.6",
     "@vercel/og": "^0.11.1",
-    "alchemy-sdk": "^3.6.3",
     "atropos": "^2.0.2",
     "axios": "^1.12.2",
     "clsx": "^2.1.1",

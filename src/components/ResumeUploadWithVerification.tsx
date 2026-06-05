@@ -2,8 +2,6 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useCallback } from 'react'
-import { useAccount, useSmartAccountClient } from '@account-kit/react'
-import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
@@ -52,38 +50,8 @@ export default function ResumeUploadWithVerification({
   const { theme } = useTheme()
   const { notifyResumeUploadEvent } = useAssistantBridge()
 
-  // Add error boundary for Alchemy hooks
-  let account: any = null
-  let hookError = false
+  const sessionAddress = user?.address as string | undefined
 
-  try {
-    account = useAccount({ type: 'LightAccount' })
-  } catch (error) {
-    console.error('❌ Alchemy hook error:', error)
-    hookError = true
-  }
-
-  // Get smart account client
-  const { client: smartAccountClient } = useSmartAccountClient({
-    type: 'LightAccount',
-  })
-
-  // If hooks fail, show error message
-  if (hookError) {
-    return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-        <h3 className='text-xl sm:text-2xl font-medium text-gray-900 mb-4'>
-          📄 Resume Upload
-        </h3>
-        <div className='bg-red-50 p-4 rounded-lg border border-red-200'>
-          <p className='text-red-800'>
-            ❌ Alchemy Smart Wallet not available. Please make sure you're
-            connected to your wallet.
-          </p>
-        </div>
-      </div>
-    )
-  }
   const [file, setFile] = useState<File | null>(null)
   const [steps, setSteps] = useState<UploadStep[]>([
     {
@@ -158,7 +126,7 @@ export default function ResumeUploadWithVerification({
   )
 
   const applyExtraction = useCallback(async () => {
-    if (!parsedExtraction || !pendingResumeId || !account?.address) return
+    if (!parsedExtraction || !pendingResumeId || !sessionAddress) return
     setApplyLoading(true)
     setParseError(null)
     try {
@@ -190,14 +158,14 @@ export default function ResumeUploadWithVerification({
         data: { resumeId: pendingResumeId, summary },
         message: `Nice — I pulled ${summary} from your resume into your blocks. Your Career Card just got stronger.`,
       })
-      void syncDriverHubFromApi(account.address)
+      void syncDriverHubFromApi(sessionAddress)
       setParseModalOpen(false)
     } catch {
       setParseError('Could not apply extraction.')
     } finally {
       setApplyLoading(false)
     }
-  }, [parsedExtraction, pendingResumeId, account?.address, notifyResumeUploadEvent])
+  }, [parsedExtraction, pendingResumeId, sessionAddress, notifyResumeUploadEvent])
 
   const updateStep = (
     stepId: string,
@@ -232,8 +200,8 @@ export default function ResumeUploadWithVerification({
   }
 
   const uploadResume = async () => {
-    if (!file || !account?.address) {
-      alert('Please select a file and connect your wallet')
+    if (!file || !sessionAddress) {
+      alert('Please select a file and sign in')
       return
     }
 
@@ -292,7 +260,7 @@ export default function ResumeUploadWithVerification({
       const uploadResponse = await fetch('/api/resumes/upload', {
         method: 'POST',
         headers: {
-          'x-wallet-address': account.address,
+          'x-wallet-address': sessionAddress,
         },
         body: formData,
       })
@@ -437,8 +405,8 @@ export default function ResumeUploadWithVerification({
       })
 
       setPendingResumeId(uploadData.resume.id)
-      if (uploadData.resume.ipfsHash && account.address) {
-        void runSmartImport(uploadData.resume.id, account.address)
+      if (uploadData.resume.ipfsHash && sessionAddress) {
+        void runSmartImport(uploadData.resume.id, sessionAddress)
       }
 
       console.log('🎉 Upload completed successfully!')
@@ -680,7 +648,7 @@ export default function ResumeUploadWithVerification({
         variant='primary'
         className='w-full mb-6'
         onClick={() => void uploadResume()}
-        disabled={!file || !account?.address || uploading}
+        disabled={!file || !sessionAddress || uploading}
         isLoading={uploading}
       >
         Upload Resume (hash-first)
@@ -850,13 +818,13 @@ export default function ResumeUploadWithVerification({
           isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
         }`}
       >
-        {account?.address ? (
+        {sessionAddress ? (
           <p>
-            ✅ Wallet connected: {account.address.slice(0, 6)}...
-            {account.address.slice(-4)}
+            ✅ Signed in: {sessionAddress.slice(0, 6)}...
+            {sessionAddress.slice(-4)}
           </p>
         ) : (
-          <p>❌ Please connect your Alchemy Smart Wallet first</p>
+          <p>❌ Please sign in first</p>
         )}
         </div>
       </div>

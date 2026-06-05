@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Montserrat, Orbitron } from 'next/font/google'
 import './globals.css'
-import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import MobileConsole from '@/components/MobileConsole'
 import ScrollToTop from '@/components/ScrollToTop'
@@ -149,12 +148,10 @@ export default function RootLayout({
       </head>
       <body className={`${montserrat.variable} ${stormWordmark.variable} antialiased`}>
         <ThemeProvider>
-          <AlchemyProvider>
-            <SupabaseAuthSync />
-            {children}
-            {process.env.NODE_ENV === 'development' && <MobileConsole />}
-            <ScrollToTop />
-          </AlchemyProvider>
+          <SupabaseAuthSync />
+          {children}
+          {process.env.NODE_ENV === 'development' && <MobileConsole />}
+          <ScrollToTop />
         </ThemeProvider>
       </body>
     </html>
