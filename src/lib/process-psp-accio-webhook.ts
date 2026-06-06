@@ -113,12 +113,6 @@ export async function processPspAccioWebhookCompletion(
 
   const previousOrderStatus = pspOrder.status
 
-  const { data: existingResult } = await supabase
-    .from('psp_results')
-    .select('id')
-    .eq('psp_order_id', pspOrder.id)
-    .maybeSingle()
-
   // Run the structured PSP parser. If parsing throws (malformed XML) we still
   // persist the raw XML — losing the report would be worse than losing the
   // structured fields, and admin can re-derive later from raw_xml.
@@ -140,26 +134,14 @@ export async function processPspAccioWebhookCompletion(
     received_at: new Date().toISOString(),
   }
 
-  let pspResult: { id: string }
-  if (existingResult) {
-    const { data: updated, error } = await supabase
-      .from('psp_results')
-      .update(resultPayload)
-      .eq('id', existingResult.id)
-      .select('id')
-      .single()
-    if (error || !updated) {
-      console.error('[PSP WEBHOOK] result update:', error)
-      return { status: 500, body: { error: 'Failed to update result' } }
-    }
-    pspResult = updated
-  } else {
-    const { data: inserted, error } = await supabase.from('psp_results').insert(resultPayload).select('id').single()
-    if (error || !inserted) {
-      console.error('[PSP WEBHOOK] result insert:', error)
-      return { status: 500, body: { error: 'Failed to store result' } }
-    }
-    pspResult = inserted
+  const { data: pspResult, error: upsertError } = await supabase
+    .from('psp_results')
+    .upsert(resultPayload, { onConflict: 'psp_order_id' })
+    .select('id')
+    .single()
+  if (upsertError || !pspResult) {
+    console.error('[PSP WEBHOOK] result upsert:', upsertError)
+    return { status: 500, body: { error: 'Failed to store result' } }
   }
 
   // Centralized Accio mapping — see src/lib/accio-result-status.ts.

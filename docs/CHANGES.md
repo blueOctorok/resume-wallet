@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Ops · Supabase Phase A + screening result idempotency** (2026-06-05)
+
+Live audit (~30 MB DB): **46 duplicate `mvr_results` + 21 duplicate `psp_results`** from webhook race + `maybeSingle()` failing when dupes exist.
+
+| Deliverable | Purpose |
+|---|---|
+| `docs/SUPABASE_CLEANUP_PHASE_A.md` | Pace-safe manual runbook; **Step 0 walked 2026-06-05 — all gates PASS** |
+| `supabase/migrations/099_screening_results_unique_per_order.sql` | Dedupe + `UNIQUE(mvr_order_id)` / `UNIQUE(psp_order_id)` |
+| `process-mvr-accio-webhook.ts` / `process-psp-accio-webhook.ts` | `upsert(..., onConflict)` instead of insert/update branch |
+
+**Deploy order:** apply **099** on dashboard → deploy app → Phase A steps 3–5 (orphan auth, profile backfill, dead functions). Pace orders/XML/consents untouched.
+
+**Root cause:** concurrent Accio webhooks both saw “no row” and inserted; once dupes existed, `maybeSingle()` errored and the insert path ran again.
+
+---
+
 ## **Phase 2 · P2.3 — fact registry + first 3 third-party facts** (2026-06-05)
 
 Wires `resolveAttestationFact` into the attestation registry. Three DMV/CRA-sourced facts only — provenance gate rejects self-reported types before `proveImpl` runs.

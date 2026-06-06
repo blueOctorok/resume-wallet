@@ -121,12 +121,6 @@ export async function processMvrAccioWebhookCompletion(
   const mvrOrder = matched.row
   const previousOrderStatus = mvrOrder.status
 
-  const { data: existingResult } = await supabase
-    .from('mvr_results')
-    .select('id')
-    .eq('mvr_order_id', mvrOrder.id)
-    .maybeSingle()
-
   const parsedData = mvrResultToJsonb(parsedResult)
   const primaryLicense =
     parsedResult.licenses && parsedResult.licenses.length > 0
@@ -168,24 +162,14 @@ export async function processMvrAccioWebhookCompletion(
     parsed_at: new Date().toISOString(),
   }
 
-  let mvrResult
-  if (existingResult) {
-    const { data: updated, error: updateError } = await supabase
-      .from('mvr_results')
-      .update(resultData)
-      .eq('id', existingResult.id)
-      .select()
-      .single()
-    if (updateError) throw updateError
-    mvrResult = updated
-  } else {
-    const { data: inserted, error: insertError } = await supabase
-      .from('mvr_results')
-      .insert(resultData)
-      .select()
-      .single()
-    if (insertError) throw insertError
-    mvrResult = inserted
+  // Upsert on mvr_order_id (099 unique index) — safe under concurrent webhooks / reconcile.
+  const { data: mvrResult, error: upsertError } = await supabase
+    .from('mvr_results')
+    .upsert(resultData, { onConflict: 'mvr_order_id' })
+    .select()
+    .single()
+  if (upsertError || !mvrResult) {
+    throw upsertError ?? new Error('MVR result upsert returned no row')
   }
 
   const { status: nextStatus, outcome: nextOutcome } = deriveScreeningStatus({
