@@ -108,7 +108,16 @@ WHERE result_id IN (SELECT id FROM to_delete);
 | Unique indexes | `mvr_results_mvr_order_id_unique`, `psp_results_psp_order_id_unique` |
 | App deploy | `53584e9` pushed — **deploy Vercel** so webhooks use `upsert` |
 
-**Steps 1–2:** skip (done by 099). **Steps 3–5:** run below in SQL editor.
+**Steps 1–2:** skip (done by 099).
+
+### Phase A complete (2026-06-05)
+
+| Step | Result |
+|---|---|
+| 3 — orphan `auth.users` | `remaining_auth_orphans = 0` |
+| 4 — `user_profiles` backfill | `users_still_missing_profile = 0` |
+| 5 — dead functions/trigger | dropped |
+| Post-flight `auth_orphans` | **0** |
 
 ---
 
