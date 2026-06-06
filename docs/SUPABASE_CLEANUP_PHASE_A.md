@@ -98,6 +98,18 @@ WHERE result_id IN (SELECT id FROM to_delete);
 
 **Step 0 complete — safe to proceed** with dedupe (Steps 1–2) or migration `099`.
 
+### Post-099 verification (2026-06-05, applied on remote)
+
+| Check | Result |
+|---|---|
+| `mvr_results` | **201** (= distinct orders) |
+| `psp_results` | **123** (= distinct orders) |
+| `mvr_orders` / `psp_orders` | **204** / **123** (unchanged) |
+| Unique indexes | `mvr_results_mvr_order_id_unique`, `psp_results_psp_order_id_unique` |
+| App deploy | `53584e9` pushed — **deploy Vercel** so webhooks use `upsert` |
+
+**Steps 1–2:** skip (done by 099). **Steps 3–5:** run below in SQL editor.
+
 ---
 
 ## Migration 099 — dedupe + unique indexes (preferred over Steps 1–2)

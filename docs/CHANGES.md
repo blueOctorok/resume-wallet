@@ -16,6 +16,8 @@ Live audit (~30 MB DB): **46 duplicate `mvr_results` + 21 duplicate `psp_results
 
 **Deploy order:** apply **099** on dashboard → deploy app → Phase A steps 3–5 (orphan auth, profile backfill, dead functions). Pace orders/XML/consents untouched.
 
+**Status (2026-06-05):** 099 applied on remote ✅ (`mvr_results` 201, `psp_results` 123). Code pushed `53584e9`. Steps 3–5 pending manual SQL in dashboard.
+
 **Root cause:** concurrent Accio webhooks both saw “no row” and inserted; once dupes existed, `maybeSingle()` errored and the insert path ran again.
 
 ---
