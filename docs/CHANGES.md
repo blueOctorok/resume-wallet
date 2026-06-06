@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix · Employer outreach lost MVR/PSP/consent (D3.4 call-site miss)** (2026-06-05)
+
+Regression from the D3.4 auth cutover, not the Supabase cleanup. `resolveEmployerCompanyForWallet` was refactored to resolve by **session user id** (`users.id = sessionUserId`), and the 4 mvr/psp status+pdf routes were updated to pass `sessionUserId` — but **three `employer/screenings*` routes were missed** and still fetched `users.wallet_address` and passed that `0x…` string in. Against the `uuid` `id` column it matched nothing → `null` → `403`. The `useEmployerScreenings` hook caught the 403 and set rows/consent to `[]`, so candidate cards still rendered (from invites) while **MVR, PSP, and consent all silently disappeared** at once.
+
+| File | Fix |
+|---|---|
+| `src/app/api/employer/screenings/route.ts` | Pass session `userId` to `resolveEmployerCompanyForWallet`; drop dead wallet bridge |
+| `src/app/api/employer/screenings/reconcile/route.ts` | Same |
+| `src/app/api/employer/screenings/consent/[bundleId]/route.ts` | Same |
+
+**Verified:** all historical `mvr_orders`/`psp_orders`/`*_consents`/`screening_consent_bundles` rows still match `users.id` (0 orphans) — no data was lost; purely an auth call-site bug. `getEmployerCompanyAccess` (used by `screenings/order` + hub-blocks routes) still queries by `wallet_address` and its callers pass wallet, so it is internally consistent and was left untouched.
+
+**Follow-up (not done):** `resolveEmployerCompanyForWallet` / `getEmployerCompanyAccess` are now misnomers (one resolves by id, the other still by wallet). Worth renaming + unifying once the wallet column is fully retired (T1.12).
+
+---
+
 ## **Ops · Supabase Phase A + screening result idempotency** (2026-06-05)
 
 Live audit (~30 MB DB): **46 duplicate `mvr_results` + 21 duplicate `psp_results`** from webhook race + `maybeSingle()` failing when dupes exist.

@@ -23,15 +23,10 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: authUser } = await supabase
-      .from('users')
-      .select('wallet_address')
-      .eq('id', userId)
-      .maybeSingle()
-    if (!authUser?.wallet_address) {
-      return NextResponse.json({ error: 'No company access' }, { status: 403 })
-    }
-    const ctx = await resolveEmployerCompanyForWallet(supabase, authUser.wallet_address)
+    // resolveEmployerCompanyForWallet resolves by session user id since the D3.4 auth
+    // cutover — NOT a wallet address. Passing wallet_address here matched no users.id
+    // (uuid) and silently 403'd the entire outreach screenings/consent surface.
+    const ctx = await resolveEmployerCompanyForWallet(supabase, userId)
     if (!ctx) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
