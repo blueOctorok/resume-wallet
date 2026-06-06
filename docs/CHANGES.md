@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.4 — attestation prove + verify API routes** (2026-06-05)
+
+HTTP surface for Phase 2 selective disclosure. Routes import `attestationService` from the registry only — never the signed-JWT impl.
+
+| Route | Auth | Body | Behavior |
+|---|---|---|---|
+| `POST /api/attestation/prove` | Session required (`getStormUserIdFromRequest`) | `{ factType, audienceId?, parameters? }` | Self-only: session user is `candidateUserId`; rejects `candidateUserId` in body if ≠ session (403) |
+| `POST /api/attestation/verify` | Optional — required for audience-scoped rows | `{ attestation }` or `{ id }` | JWT verify via registry; `query_count` bump in service; audience rows gated to candidate or company members |
+
+**Files:** `src/app/api/attestation/prove/route.ts`, `src/app/api/attestation/verify/route.ts`, `src/lib/attestation-route-helpers.ts`, `src/lib/attestation-route-helpers.test.ts`.
+
+**Verify:** `npm run test:app` (42) + `npm run build` green. No `/api/employer/**` touched.
+
+---
+
 ## **Fix · Employer outreach lost MVR/PSP/consent (D3.4 call-site miss)** (2026-06-05)
 
 Regression from the D3.4 auth cutover, not the Supabase cleanup. `resolveEmployerCompanyForWallet` was refactored to resolve by **session user id** (`users.id = sessionUserId`), and the 4 mvr/psp status+pdf routes were updated to pass `sessionUserId` — but **three `employer/screenings*` routes were missed** and still fetched `users.wallet_address` and passed that `0x…` string in. Against the `uuid` `id` column it matched nothing → `null` → `403`. The `useEmployerScreenings` hook caught the 403 and set rows/consent to `[]`, so candidate cards still rendered (from invites) while **MVR, PSP, and consent all silently disappeared** at once.
