@@ -210,6 +210,83 @@ export async function getMvrData(supabase: SupabaseClient, userId: string): Prom
   return data as MvrRow | null
 }
 
+/** Accio MVR order + parsed result — third-party provenance for attestation facts (P2.3). */
+export interface MvrAttestationContext {
+  mvr: MvrRow
+  orderId: string
+  accioOrderNumber: string
+  orderStatus: string
+  completedAt: string | null
+  licenseClass: string | null
+}
+
+export async function getMvrAttestationContext(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<MvrAttestationContext | null> {
+  const mvr = await getMvrData(supabase, userId)
+  if (!mvr?.order_id) return null
+
+  const { data: order } = await supabase
+    .from('mvr_orders')
+    .select('id, status, accio_order_number, completed_at')
+    .eq('id', mvr.order_id)
+    .eq('driver_user_id', userId)
+    .maybeSingle()
+
+  if (!order?.accio_order_number) return null
+
+  const { data: result } = await supabase
+    .from('mvr_results')
+    .select('license_class')
+    .eq('mvr_order_id', order.id)
+    .maybeSingle()
+
+  return {
+    mvr,
+    orderId: order.id,
+    accioOrderNumber: order.accio_order_number,
+    orderStatus: order.status,
+    completedAt: order.completed_at,
+    licenseClass: result?.license_class ?? null,
+  }
+}
+
+/** Prior-employer verification row — minimal fields for attestation (no FMCSA answer substance). */
+export interface EmploymentVerificationAttestationRow {
+  id: string
+  employment_id: string
+  previous_employer_name: string
+  claimed_position: string
+  claimed_start_date: string
+  claimed_end_date: string | null
+  verified_at: string | null
+  status: string
+}
+
+export async function getEmploymentVerificationForAttestation(
+  supabase: SupabaseClient,
+  userId: string,
+  parameters?: { employmentId?: string; verificationRequestId?: string },
+): Promise<EmploymentVerificationAttestationRow | null> {
+  let query = supabase
+    .from('employment_verification_requests')
+    .select(
+      'id, employment_id, previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, status',
+    )
+    .eq('driver_id', userId)
+    .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+
+  if (parameters?.verificationRequestId) {
+    query = query.eq('id', parameters.verificationRequestId)
+  } else if (parameters?.employmentId) {
+    query = query.eq('employment_id', parameters.employmentId)
+  }
+
+  const { data } = await query.order('verified_at', { ascending: false }).limit(1).maybeSingle()
+  return data as EmploymentVerificationAttestationRow | null
+}
+
 export async function getPspData(supabase: SupabaseClient, userId: string): Promise<PspRow | null> {
   const { data } = await supabase
     .from('block_driver_psp')

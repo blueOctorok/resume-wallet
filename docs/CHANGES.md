@@ -4,6 +4,33 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.3 — fact registry + first 3 third-party facts** (2026-06-05)
+
+Wires `resolveAttestationFact` into the attestation registry. Three DMV/CRA-sourced facts only — provenance gate rejects self-reported types before `proveImpl` runs.
+
+| File | Role |
+|---|---|
+| `src/lib/fact-registry.ts` | `FactDefinition` map, `enforceProvenanceGate`, `resolveAttestationFact`, three `proveImpl`s |
+| `src/lib/block-data.ts` | `getMvrAttestationContext`, `getEmploymentVerificationForAttestation` (attestation read helpers) |
+| `src/lib/attestation-service-registry.ts` | `resolveFact` → `resolveAttestationFact` (replaces P2.2 stub) |
+| `src/lib/fact-registry.test.ts` | True/false per fact + provenance gate + no-PII assertions on `disclosedFields` |
+
+**Shipped facts (all `source: 'third_party'`):**
+
+| `FactType` | Provenance | `disclosedFields` shape |
+|---|---|---|
+| `mvr_clean_36_months` | Accio MVR (`source_cra: accio`, `source_pull_id: accio_order_number`) | `{ verificationWindowStart, verificationWindowEnd }` — no violation rows |
+| `cdl_class_a` | DMV via Accio MVR `license_class` | `{ class: 'A' }` — no license number/state |
+| `previous_employer_verified` | Prior-employer portal response (`source_cra: prior_employer`, `source_pull_id: evr.id`) | `{ employerName, dateRange, responseDate }` — no FMCSA answer substance |
+
+**Provenance gate:** `enforceProvenanceGate` throws `AttestationError` for any `source: 'self_reported'` definition before signing.
+
+**Parameters:** `previous_employer_verified` requires `parameters.employmentId` or `parameters.verificationRequestId`.
+
+**Next:** P2.4 — `/api/attestation/prove` + `/api/attestation/verify` routes.
+
+---
+
 ## **Phase 2 · P2.2 — `attestationService` + signed-JWT implementation** (2026-06-05)
 
 Swappable attestation layer for Phase 2 selective disclosure. No UI or API routes yet — P2.3 wires the fact registry; P2.4 adds HTTP routes.

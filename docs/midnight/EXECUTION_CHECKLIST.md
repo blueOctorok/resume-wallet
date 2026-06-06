@@ -542,7 +542,7 @@ COMMIT: feat(attestation): attestationService interface + signed-JWT impl (P2.2)
 ### P2.3 — Fact registry (first three third-party facts)
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · pending commit · 2026-06-05 |
 | Pre-conditions | P2.2 |
 | Pace risk | Low — `proveImpl`s READ Accio/MVR data via `block-data.ts`; no writes, no Pace path touched |
 

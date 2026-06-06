@@ -1,12 +1,7 @@
 import type { AttestationService } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
+import { resolveAttestationFact } from '@/lib/fact-registry'
 import { createSignedJwtAttestationService } from '@/lib/signed-jwt-attestation-service'
-
-async function factRegistryPending(): Promise<never> {
-  throw new AttestationError(
-    'Fact registry not wired yet — complete P2.3 before calling proveFact in production'
-  )
-}
 
 let cachedService: AttestationService | null = null
 
@@ -19,7 +14,7 @@ function resolveImplementation(): AttestationService {
 
   if (!cachedService) {
     cachedService = createSignedJwtAttestationService({
-      resolveFact: factRegistryPending,
+      resolveFact: resolveAttestationFact,
     })
   }
 
