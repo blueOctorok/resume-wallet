@@ -27,6 +27,8 @@ Wires `resolveAttestationFact` into the attestation registry. Three DMV/CRA-sour
 
 **Parameters:** `previous_employer_verified` requires `parameters.employmentId` or `parameters.verificationRequestId`.
 
+**Commit:** `a2c1242`
+
 **Next:** P2.4 — `/api/attestation/prove` + `/api/attestation/verify` routes.
 
 ---
