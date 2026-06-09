@@ -732,7 +732,7 @@ COMMIT: feat(attestation): candidate per-audience disclosure toggles (P2.6)
 ### P2.7 — "Verified by Storm" language + Stormi/journey wiring
 | | |
 |---|---|
-| Status | ✅ Done · {commit} · 2026-06-05 |
+| Status | ✅ Done · a0e0248 · 2026-06-05 |
 | Pre-conditions | P2.6 |
 | Pace risk | None — copy + Stormi context |
 
@@ -839,7 +839,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-06-05 | P2.7 — Verified by Storm language + Stormi/journey (**Phase 2 COMPLETE**) | Composer | pending | **Lib:** `formatVerifiedByStormLine()` + tests. **Sweep:** self-reported career card/share/PDF/export copy → on file; third-party facts use centralized provenance. **Stormi:** `ava-context` attestation block + hub `attestationCount`. **Journey:** optional verified-fact milestone. `npm run test:app` (50) + `npm run build` green. **Next:** Phase 3 (trigger-gated). |
+| 2026-06-05 | P2.7 — Verified by Storm language + Stormi/journey (**Phase 2 COMPLETE**) | Composer | a0e0248 | **Lib:** `formatVerifiedByStormLine()` + tests. **Sweep:** self-reported career card/share/PDF/export copy → on file; third-party facts use centralized provenance. **Stormi:** `ava-context` attestation block + hub `attestationCount`. **Journey:** optional verified-fact milestone. `npm run test:app` (50) + `npm run build` green. **Next:** Phase 3 (trigger-gated). |
 | 2026-06-05 | P2.6 — candidate per-audience disclosure toggles | Composer | 62b8b2b | **Migration:** `100_disclosure_preferences.sql` (apply manually on dashboard). **Lib:** `disclosure-preferences.ts` — default shareable, `allowed=false` hides from employer list + blocks audience-scoped prove. **API:** GET/PATCH `/api/attestation/disclosure-preferences`. **UI:** `DisclosurePreferencesModal` + Zustand store; hub career card **Sharing** button. `npm run test:app` (48) + `npm run build` green. **Next:** P2.7 Verified-by-Storm language + Stormi. |
 | 2026-06-05 | P2.5 — carrier CredentialFactsPanel | Composer | 07d47bd | **New:** `CredentialFactsPanel` (facts-first, HubSectionPanel chrome), `attestation-fact-ui.ts`, `employer-credential-facts.ts`. **Wired:** talent API `verifiedFacts`; `CareerCardModal` additive mount; `ProjectedCareerCard` demotes MVR/PSP stat grids (PDF fallback kept). I-8 request/recruit/order paths untouched. Pace smoke: card + requests + PDF fallback OK. `npm run test:app` (42) + `npm run build` green. **Next:** P2.6 candidate prove UX. |
 | 2026-06-05 | P2.4 — attestation prove + verify API routes | Composer | 21ed2fc | **New:** `POST /api/attestation/prove` (session, self-only) + `POST /api/attestation/verify` (`{attestation}` or `{id}`; audience gate for scoped rows). **Helpers:** `attestation-route-helpers.ts` (audience access, row map, error status). Registry-only imports. `npm run test:app` (42) + `npm run build` green. **Next:** P2.5 carrier `CredentialFactsPanel`. |
