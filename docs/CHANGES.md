@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.7 — Verified by Storm language + Stormi/journey wiring** (2026-06-05)
+
+Closes Phase 2. Honest Phase-2 verification copy everywhere: **"Verified by Storm on [date]" + CRA citation** for third-party facts; self-reported blocks stay **on file / submitted** — no per-fact on-chain or ZK claims (DEC-2026-05-011, DEC-2026-05-016).
+
+| Layer | Change |
+|---|---|
+| `attestation-fact-ui.ts` | `formatAttestationIssuedDate()`, `formatVerifiedByStormLine()` — centralized provenance via `formatAttestationProvenance()` |
+| `CredentialFactsPanel.tsx` | Uses `formatVerifiedByStormLine()` for carrier fact rows |
+| Career card surfaces | Swept stale on-chain badges from `ResumeSection`, `DotAppSection`, `ProjectedCareerCard`, `CareerCardEmbed`, public card OG/badge/PDF |
+| Self-reported exports | `career-card-pdf.ts`, `dot-application-pdf.ts`, legacy share pages (`d/[token]`, `dev-card`) — "On file" not "Blockchain Verified" |
+| Hub UX copy | `GeneralResumeBuilder`, `StormiNudgeBanner`, `SimpleCardPanel`, `CareerCardShareModal`, `ResumeDashboard`, `EmploymentVerificationForm` |
+| Stormi | `ava-context.ts` — attestation count + language rules block; `ava-chat.ts` passes `attestationCount` from hub stats |
+| Journey | `hasVerifiedAttestation` signal + optional **Share a verified fact** step when screening artifacts exist |
+| Hub API | `stats.attestationCount` from unsuperseded `attestations` rows |
+
+**Verify:** `rg -i "verified on-chain|zk proof|blockchain.verified"` on self-reported surfaces → 0. `npm run test:app` (50) + `npm run build` green. Marketing meta (`layout.tsx`, invite pages) may still use blockchain *narrative* — not per-fact claims.
+
+**Phase 2 complete.** Next: Phase 3 Midnight ZK (trigger-gated).
+
+---
+
 ## **Phase 2 · P2.6 — candidate per-audience disclosure toggles** (2026-06-05)
 
 Candidates control which verified facts each employer sees. Default: **shareable** (no row); toggling off writes `allowed=false` and hides the fact from that employer's panel + blocks audience-scoped `proveFact`.

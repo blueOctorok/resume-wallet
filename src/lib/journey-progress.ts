@@ -81,6 +81,8 @@ export interface BlockProgressData {
   hasConnectedGithub: boolean
   /** Full screening consent package on file (any employer) — drives driver-screening-consent journey */
   hasScreeningConsentBundle?: boolean
+  /** Candidate has at least one Verified by Storm attestation issued */
+  hasVerifiedAttestation?: boolean
 }
 
 // ===== BLOCK → JOURNEY STEP MAP =====
@@ -361,6 +363,18 @@ export function calculateBlockJourney(
     action: data.profileCompleteness < 80 ? { label: 'View Profile', target: null } : undefined,
   }
 
+  const verifiedFactsStep: JourneyStep | null =
+    data.mvrComplete || data.pspComplete || data.hasScreeningConsentBundle
+      ? {
+          id: 'verified-attestation',
+          label: 'Share a verified fact',
+          description:
+            'Issue a Verified by Storm credential from your screening data and choose which employers see it',
+          status: data.hasVerifiedAttestation ? 'complete' : 'pending',
+          isOptional: true,
+        }
+      : null
+
   // "Find Jobs" is a permanent hub feature — always the last journey step.
   const jobStep: JourneyStep = {
     id: 'find-jobs',
@@ -381,7 +395,14 @@ export function calculateBlockJourney(
       }
     : null
 
-  const steps = [walletStep, ...blockSteps, profileStep, jobStep, ...(referralStep ? [referralStep] : [])]
+  const steps = [
+    walletStep,
+    ...blockSteps,
+    profileStep,
+    ...(verifiedFactsStep ? [verifiedFactsStep] : []),
+    jobStep,
+    ...(referralStep ? [referralStep] : []),
+  ]
 
   // 4. Calculate progress
   const requiredSteps = steps.filter((s) => !s.isOptional)

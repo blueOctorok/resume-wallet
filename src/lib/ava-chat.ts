@@ -177,6 +177,7 @@ export function useHubContext(): HubContext {
     daysSinceLastVisit,
     incompleteBlocks,
     verifiedBlockCount,
+    attestationCount: stats?.attestationCount ?? 0,
     totalInstalledBlockCount: installedBlocks.length,
   }
 }

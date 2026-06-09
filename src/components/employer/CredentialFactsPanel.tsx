@@ -8,26 +8,14 @@ import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import {
   FACT_TYPE_UI,
-  formatAttestationProvenance,
   formatFactDisclosedFields,
+  formatVerifiedByStormLine,
 } from '@/lib/attestation-fact-ui'
 import type { EmployerCredentialFact } from '@/lib/employer-credential-facts'
 
 interface CredentialFactsPanelProps {
   facts: EmployerCredentialFact[]
   theme: string
-}
-
-function formatIssuedDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  } catch {
-    return iso
-  }
 }
 
 function FactRow({
@@ -78,8 +66,7 @@ function FactRow({
             {fact.factSummary}
           </p>
           <p className={cn('mt-1 text-[11px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
-            Verified on {formatIssuedDate(fact.issuedAt)} ·{' '}
-            {formatAttestationProvenance(fact.sourceCra, fact.sourcePullId)}
+            {formatVerifiedByStormLine(fact.issuedAt, fact.sourceCra, fact.sourcePullId)}
           </p>
           {detailLines.length > 0 && (
             <button

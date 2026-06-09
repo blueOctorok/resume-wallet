@@ -149,6 +149,8 @@ export interface DriverHubStats {
   careerCardViewsTotal?: number
   /** At least one complete screening_consent_bundles row (any company) */
   hasScreeningConsentBundle?: boolean
+  /** Unsuperseded attestations rows (Verified by Storm credentials) */
+  attestationCount?: number
 }
 
 // Profile conflict resolution

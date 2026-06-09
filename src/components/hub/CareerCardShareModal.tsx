@@ -270,9 +270,9 @@ export default function CareerCardShareModal({
     if (!shareToken || !fullUrl) return []
     const name = displayName ?? 'my'
     return [
-      `I just got my career verified on the blockchain.\n\nNo fluff, no embellishments — ${name === 'my' ? 'my' : `${name}'s`} credentials, work history, and trust score are on-chain for any employer to check.\n\n${fullUrl}\n\nCreate your own free Career Card at https://stormchain.ai\n\n#CareerCard #Blockchain #VerifiedCredentials`,
-      `Resumes lie. Career Cards don't.\n\nMine is blockchain-verified — employers can confirm every credential without a background check.\n\n${fullUrl}\n\nGet yours free at https://stormchain.ai`,
-      `Just built something cool — a verified Career Card that lives on the blockchain.\n\nThink of it like a resume that can't be faked. Employers see the real you, instantly.\n\n${fullUrl}\n\nWant one? https://stormchain.ai #OpenToWork #Storm`,
+      `I built my Storm Career Card — verified credentials and selective disclosure, not a PDF resume.\n\n${fullUrl}\n\nCreate yours free at https://stormchain.ai\n\n#CareerCard #VerifiedCredentials #Storm`,
+      `Resumes lie. Career Cards don't.\n\nMine shows verified third-party facts employers can trust — MVR, CDL, employment checks when I choose to share them.\n\n${fullUrl}\n\nGet yours free at https://stormchain.ai`,
+      `Just shipped my verified Career Card on Storm.\n\nEmployers see the facts I choose to share — derived from real screening data, not self-reported fluff.\n\n${fullUrl}\n\nWant one? https://stormchain.ai #OpenToWork #Storm`,
     ]
   })()
 

@@ -1450,12 +1450,13 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
         <div
           className={`mb-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
         >
-          <h3 className='text-xl font-semibold'>Submit to Blockchain</h3>
+          <h3 className='text-xl font-semibold'>Submit employment verification</h3>
           <p
             className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}
           >
-            We store a SHA-256 hash of this form on Base Sepolia for
-            tamper-proof verification. No personal details are stored on-chain.
+            Your responses are stored securely with Storm. Only employers you authorize
+            can view them. Third-party screening facts (MVR, PSP) can become Verified by
+            Storm credentials separately.
           </p>
         </div>
 
@@ -1470,7 +1471,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 : 'bg-teal-700 text-white hover:bg-teal-700/90'
             }`}
           >
-            {submitting ? 'Submitting…' : 'Submit Verification Hash'}
+            {submitting ? 'Submitting…' : 'Submit verification'}
           </button>
 
           {txHash && (

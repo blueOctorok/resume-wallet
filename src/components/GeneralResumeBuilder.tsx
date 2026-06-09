@@ -957,8 +957,7 @@ export default function GeneralResumeBuilder({
               {professionalCertifications.length} · <strong>References:</strong> {references.length}
             </p>
             <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>
-              Save, then use <strong>Verify on-chain</strong> from My Files when you are ready — same flow as other
-              built resumes.
+              Save, then finish your resume in My Files — employers see it on your Career Card as submitted on file.
             </p>
           </div>
         )}

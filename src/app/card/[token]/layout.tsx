@@ -26,14 +26,14 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
   if (!card) {
     return {
       title: 'Career Card',
-      description: 'Storm blockchain-verified career card.',
+      description: 'Storm Career Card — verified credentials and selective disclosure.',
       robots: { index: false, follow: false },
     }
   }
 
-  const n = card.onChainCredentialCount
+  const n = card.employerConfirmedEmploymentCount
   const title = `${card.name} — Storm Career Card`
-  const description = `Blockchain-verified professional identity. ${n} verified credential${n === 1 ? '' : 's'}.${card.occupation ? ` ${card.occupation}` : ''}`
+  const description = `Verified by Storm career card.${n > 0 ? ` ${n} employer confirmation${n === 1 ? '' : 's'}.` : ''}${card.occupation ? ` ${card.occupation}` : ''}`
 
   const h = await headers()
   const host =

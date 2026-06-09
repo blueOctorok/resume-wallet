@@ -73,8 +73,8 @@ export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudge
     if (resumes.length > 0 && hasResumeNotOnChain) {
       list.push({
         id: 'verify-resume',
-        title: 'Verify your resume on-chain',
-        body: 'Verified resumes signal trust to employers reviewing your Career Card.',
+        title: 'Finish your resume block',
+        body: 'A complete resume on your Career Card helps employers scan your background quickly.',
         cta: 'Go to resume',
         icon: Shield,
         onCta: () => go('storm-resume'),

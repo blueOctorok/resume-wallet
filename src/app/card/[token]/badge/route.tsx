@@ -17,8 +17,8 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
   if (!card) {
     return new Response('Not found', { status: 404 })
   }
-  const n = card.onChainCredentialCount
-  const label = `${n} verified`
+  const n = card.employerConfirmedEmploymentCount
+  const label = n > 0 ? `${n} confirmed` : `Score ${card.careerCardScore}`
   const right = 'Storm'
   const w = 200
   const h = 28

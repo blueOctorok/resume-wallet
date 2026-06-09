@@ -35,7 +35,7 @@ export async function buildCareerCardPdfBuffer(
   pdf.text(headline.slice(0, 90), margin, 30)
   pdf.setFontSize(8)
   pdf.setTextColor(...TEAL)
-  pdf.text('Blockchain-verified professional identity', margin, 37)
+  pdf.text('Verified by Storm — selective disclosure career platform', margin, 37)
 
   y = 52
   pdf.setTextColor(...SLATE)
@@ -47,8 +47,6 @@ export async function buildCareerCardPdfBuffer(
   pdf.setFontSize(10)
   pdf.setTextColor(...MUTED)
   pdf.text(`Career card score: ${card.careerCardScore} / 100`, margin, y)
-  y += 6
-  pdf.text(`On-chain verified credentials: ${card.onChainCredentialCount}`, margin, y)
   y += 6
   pdf.text(`Employer confirmations: ${card.employerConfirmedEmploymentCount}`, margin, y)
   y += 10
@@ -98,7 +96,6 @@ export async function buildCareerCardPdfBuffer(
     'SECTIONS:',
     ...card.sections.map((s) => `- ${s.label}`),
     '',
-    `ON_CHAIN_VERIFIED_CREDENTIALS: ${card.onChainCredentialCount}`,
     `EMPLOYER_CONFIRMATIONS: ${card.employerConfirmedEmploymentCount}`,
     `CAREER_CARD_SCORE: ${card.careerCardScore}`,
     '',

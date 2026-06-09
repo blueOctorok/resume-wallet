@@ -410,7 +410,7 @@ export default function SimpleCardPanel() {
               >
                 {[
                   'Build with composable blocks',
-                  'Verify credentials on-chain',
+                  'Share verified credentials with employers',
                   'Apply with a tailored lens',
                 ].map((line) => (
                   <li key={line} className='flex gap-2'>

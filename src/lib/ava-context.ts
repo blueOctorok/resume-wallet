@@ -46,10 +46,11 @@ export interface HubContext {
   /** Installed blocks that are not yet complete — use hints to be specific in nudges */
   incompleteBlocks?: Array<{ blockType: string; label: string; hint: string }>
   /**
-   * Rough count of “verified” artifacts (verified resume, verified DOT, completed MVR order).
-   * Not the same as installed block count.
+   * Rough count of completion signals (MVR/PSP done, etc.) — not the same as Phase-2 attestations.
    */
   verifiedBlockCount?: number
+  /** Unsuperseded rows in attestations — Verified by Storm credentials issued. */
+  attestationCount?: number
   totalInstalledBlockCount?: number
 }
 
@@ -181,7 +182,8 @@ export function buildStormiSystemPrompt(
     hubContext?.profileCompleteness !== undefined ||
     hubContext?.daysSinceLastVisit !== undefined ||
     (hubContext?.incompleteBlocks && hubContext.incompleteBlocks.length > 0) ||
-    hubContext?.verifiedBlockCount !== undefined
+    hubContext?.verifiedBlockCount !== undefined ||
+    hubContext?.attestationCount !== undefined
 
   if (hasEngagementSignals) {
     parts.push('\n## Engagement & profile signals (use to motivate — do not fabricate numbers)')
@@ -201,7 +203,12 @@ export function buildStormiSystemPrompt(
     }
     if (hubContext?.verifiedBlockCount !== undefined && hubContext?.totalInstalledBlockCount !== undefined) {
       parts.push(
-        `- **Verified artifacts vs installed blocks:** ${hubContext.verifiedBlockCount} verified signals vs ${hubContext.totalInstalledBlockCount} installed blocks`,
+        `- **Block completion signals:** ${hubContext.verifiedBlockCount} strong artifacts (e.g. completed MVR) vs ${hubContext.totalInstalledBlockCount} installed blocks — not the same as Verified by Storm attestations.`,
+      )
+    }
+    if (hubContext?.attestationCount !== undefined) {
+      parts.push(
+        `- **Verified by Storm credentials issued:** ${hubContext.attestationCount} (third-party facts only — MVR, CDL class, employer verification).`,
       )
     }
     if (hubContext?.incompleteBlocks && hubContext.incompleteBlocks.length > 0) {
@@ -238,6 +245,15 @@ When the user asks about finding work, applying to jobs, or job searching:
 - Stormi sends an automatic follow-up notification 7 days after applying to external jobs. If they report the status here in chat, the notification won't repeat.`)
 
   // Referral program (tracking-only — token payouts removed in D1)
+  parts.push(`\n## Verified credentials (Phase 2 attestations)
+Storm issues **Verified by Storm** credentials for **third-party facts only** — MVR via Accio, CDL class from MVR, prior-employer verification responses. Self-reported blocks (resume, DOT application, skills) are **on file** or **submitted** — never call those "verified by Storm."
+
+Language rules for verification:
+- Say **"Verified by Storm on [date]"** plus CRA citation (e.g. derived from Accio pull) for third-party facts.
+- Never say **verified on-chain**, **ZK**, or **Midnight-proven** for an individual fact (Phase 3 only).
+- After MVR or screening completes, nudge candidates to **share verified facts** per employer via the **Sharing** button on their career card (selective disclosure toggles).
+- Frame outcomes: employers in trucking often request MVR and CDL verification — verified facts on the card save them a background check.`)
+
   parts.push(`\n## Referral Program
 Storm has a referral system. Every candidate has a unique referral link on their hub.
 - When someone signs up via a referral link, Storm tracks the referral on both accounts.

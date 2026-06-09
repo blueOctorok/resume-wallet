@@ -173,6 +173,7 @@ export function useJourneyProgress(): JourneyProgress {
     portfolioProjectCount: 0,
     hasConnectedGithub: Boolean(hubStore.github?.username?.trim()),
     hasScreeningConsentBundle: hubStore.stats?.hasScreeningConsentBundle === true,
+    hasVerifiedAttestation: (hubStore.stats?.attestationCount ?? 0) > 0,
   }
 
   const blockTypes = installedBlocks.map((b) => b.blockType)

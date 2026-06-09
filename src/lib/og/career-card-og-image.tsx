@@ -243,11 +243,11 @@ export function buildCareerCardOgElement(
   opts: { avatarDataUrl?: string | null },
 ) {
   const sectionLabels = card.sections.map((s) => s.label)
-  const verified = card.onChainCredentialCount
+  const employerConfirmed = card.employerConfirmedEmploymentCount
   const headline =
     card.occupation ||
     card.professionalSummary?.slice(0, 120) ||
-    'Blockchain-verified career identity'
+    'Verified by Storm career card'
 
   if (variant === 'signature') {
     return (
@@ -397,7 +397,9 @@ export function buildCareerCardOgElement(
                   border: `1px solid ${teal}55`,
                 }}
               >
-                {verified} verified on-chain
+                {employerConfirmed > 0
+                  ? `${employerConfirmed} employer confirmation${employerConfirmed === 1 ? '' : 's'}`
+                  : `${card.sections.length} block${card.sections.length === 1 ? '' : 's'} on card`}
               </span>
               {card.employerConfirmedEmploymentCount > 0 ? (
                 <span
@@ -452,7 +454,7 @@ export function buildCareerCardOgElement(
         }}
       >
         <span style={{ fontSize: 14, color: muted, fontWeight: 600 }}>
-          stormchain.ai · Blockchain-verified Career Card
+          stormchain.ai · Verified by Storm Career Card
         </span>
         <span style={{ fontSize: 20, fontWeight: 800, color: teal, letterSpacing: 4 }}>STORM</span>
       </div>

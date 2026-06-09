@@ -419,8 +419,8 @@ export default function ResumeDashboard({
         type: 'success',
         text:
           resume.resume_type === 'uploaded'
-            ? 'Recording your resume on-chain...'
-            : 'Generating PDF and uploading to blockchain...',
+            ? 'Saving your resume...'
+            : 'Generating PDF and saving...',
       })
 
       try {

@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLink, FileWarning } from 'lucide-react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, FileWarning } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
@@ -48,7 +48,6 @@ export interface GhostSection {
   reason?: string
 }
 
-const BASE_SEPOLIA_TX = 'https://sepolia.basescan.org/tx'
 const MAX_TRUST_STRIP_ITEMS = 3
 
 function formatTrustDate(iso: string): string {
@@ -206,8 +205,6 @@ export default function ProjectedCareerCard({
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const onChainList = data.onChainCredentials ?? []
-  const onChainCount = data.onChainCredentialCount ?? onChainList.length
   const employerList = data.employerConfirmations ?? []
   const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
 
@@ -216,13 +213,8 @@ export default function ProjectedCareerCard({
     return v === 'completed' || v === 'needs_review'
   }
 
-  const [showAllOnChain, setShowAllOnChain] = useState(false)
   const [showAllEmployer, setShowAllEmployer] = useState(false)
 
-  const visibleOnChain =
-    showAllOnChain || onChainList.length <= MAX_TRUST_STRIP_ITEMS
-      ? onChainList
-      : onChainList.slice(0, MAX_TRUST_STRIP_ITEMS)
   const visibleEmployer =
     showAllEmployer || employerList.length <= MAX_TRUST_STRIP_ITEMS
       ? employerList
@@ -387,70 +379,6 @@ export default function ProjectedCareerCard({
               </span>
             )}
           </div>
-
-          {onChainCount > 0 && (
-            <div
-              className={cn(
-                'mt-4 rounded-xl border px-4 py-3',
-                isDark ? 'border-teal-500/30 bg-teal-500/[0.07]' : 'border-teal-200 bg-teal-50/90',
-              )}
-            >
-              <div className='flex items-start gap-2 min-w-0'>
-                <ShieldCheck
-                  className={cn('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-teal-400' : 'text-teal-700')}
-                  aria-hidden
-                />
-                <div className='min-w-0 flex-1'>
-                  <p className={cn('text-sm font-semibold', isDark ? 'text-teal-100' : 'text-teal-900')}>
-                    {onChainCount} credential{onChainCount === 1 ? '' : 's'} verified on-chain
-                  </p>
-                  <p className={cn('text-[11px] mt-1', isDark ? 'text-teal-200/70' : 'text-teal-800/80')}>
-                    Base Sepolia — each row links to the transaction.
-                  </p>
-                  <ul className='mt-2 space-y-2'>
-                    {visibleOnChain.map((c) => (
-                      <li
-                        key={`${c.blockType}-${c.txHash}`}
-                        className='flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs'
-                      >
-                        <span className={cn('min-w-0', isDark ? 'text-teal-100/95' : 'text-teal-900')}>
-                          <span className='font-medium'>{c.label}</span>
-                          <span className={cn('ml-1.5', isDark ? 'text-teal-200/75' : 'text-teal-800/85')}>
-                            — {formatTrustDate(c.verifiedAt)}
-                          </span>
-                        </span>
-                        <a
-                          href={`${BASE_SEPOLIA_TX}/${c.txHash}`}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className={cn(
-                            'inline-flex items-center gap-1 font-semibold shrink-0',
-                            isDark ? 'text-teal-300 hover:text-teal-200' : 'text-teal-700 hover:text-teal-800',
-                          )}
-                        >
-                          View tx <ExternalLink className='w-3 h-3' />
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                  {!showAllOnChain && onChainList.length > MAX_TRUST_STRIP_ITEMS ? (
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='sm'
-                      className={cn(
-                        'mt-2 -ml-2 h-8',
-                        isDark ? 'text-teal-300 hover:bg-teal-500/15' : 'text-teal-700 hover:bg-teal-100/80',
-                      )}
-                      onClick={() => setShowAllOnChain(true)}
-                    >
-                      Show all ({onChainList.length})
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Contact info (visible based on settings) */}
           {data.contact && (data.contact.email || data.contact.phone) && (

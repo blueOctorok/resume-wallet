@@ -22,7 +22,7 @@ export default function CareerCardEmbed({
 }) {
   const fullHref = `/card/${token}`
   const score = card.careerCardScore
-  const verified = card.onChainCredentialCount
+  const employerConfirmed = card.employerConfirmedEmploymentCount
 
   return (
     <div
@@ -69,16 +69,19 @@ export default function CareerCardEmbed({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-full">
-              Verified on-chain
-            </span>
-            <span className="inline-flex items-center rounded-md bg-teal-500/15 dark:bg-teal-400/10 text-teal-800 dark:text-teal-200 px-2 py-0.5 text-xs font-semibold border border-teal-500/25 dark:border-teal-400/20">
-              {verified} credential{verified === 1 ? '' : 's'}
-            </span>
-            {card.employerConfirmedEmploymentCount > 0 ? (
-              <span className="inline-flex items-center rounded-md bg-indigo-500/10 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 text-xs font-semibold border border-indigo-500/20">
-                {card.employerConfirmedEmploymentCount} employer confirmation
-                {card.employerConfirmedEmploymentCount === 1 ? '' : 's'}
+            {employerConfirmed > 0 ? (
+              <>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-full">
+                  Verified by Storm
+                </span>
+                <span className="inline-flex items-center rounded-md bg-teal-500/15 dark:bg-teal-400/10 text-teal-800 dark:text-teal-200 px-2 py-0.5 text-xs font-semibold border border-teal-500/25 dark:border-teal-400/20">
+                  {employerConfirmed} employer confirmation{employerConfirmed === 1 ? '' : 's'}
+                </span>
+              </>
+            ) : null}
+            {card.sections.length > 0 ? (
+              <span className="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 text-xs font-medium border border-gray-200 dark:border-gray-600">
+                {card.sections.length} block{card.sections.length === 1 ? '' : 's'} on card
               </span>
             ) : null}
           </div>
@@ -111,7 +114,7 @@ export default function CareerCardEmbed({
               View full Career Card on Storm
             </Link>
             <p className="text-center text-[10px] text-gray-500 dark:text-gray-400">
-              Blockchain-verified identity · stormchain.ai
+              Verified credentials · stormchain.ai
             </p>
           </div>
         </div>

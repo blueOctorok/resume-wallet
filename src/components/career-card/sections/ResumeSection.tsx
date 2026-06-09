@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, CheckCircle, Maximize2, Briefcase, ExternalLink, Shield } from 'lucide-react'
+import { FileText, Maximize2, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -307,11 +307,6 @@ export default function ResumeSection({
           <div className='flex items-center gap-2 min-w-0'>
             <FileText className={cn('w-4 h-4 flex-shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} />
             <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Resume</h3>
-            {isVerified && (
-              <span className='flex items-center gap-1 text-xs text-green-500 dark:text-green-400 flex-shrink-0'>
-                <CheckCircle className='w-3 h-3' /> Verified
-              </span>
-            )}
             {isAiExtracted && (
               <span
                 className={cn(
@@ -320,11 +315,6 @@ export default function ResumeSection({
                 )}
               >
                 Parsed from resume
-              </span>
-            )}
-            {isVerified && data.blockchainTxHash && (
-              <span className='flex items-center gap-1 text-[10px] font-medium text-green-600 dark:text-green-400 flex-shrink-0'>
-                <Shield className='w-3 h-3' /> On-chain
               </span>
             )}
           </div>
@@ -361,24 +351,8 @@ export default function ResumeSection({
             </p>
             <p className={cn('text-xs flex flex-wrap items-center gap-x-1 gap-y-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
               <span>
-                {isVerified ? 'Blockchain verified' : 'On file'} · {new Date(data.createdAt).toLocaleDateString()}
+                On file · {new Date(data.createdAt).toLocaleDateString()}
               </span>
-              {isVerified && data.blockchainTxHash ? (
-                <>
-                  <span aria-hidden>·</span>
-                  <a
-                    href={`https://sepolia.basescan.org/tx/${data.blockchainTxHash}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className={cn(
-                      'inline-flex items-center gap-0.5 font-medium',
-                      isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800',
-                    )}
-                  >
-                    View on Base <ExternalLink className='w-3 h-3' />
-                  </a>
-                </>
-              ) : null}
             </p>
           </div>
         </div>

@@ -570,7 +570,7 @@ export default function PublicDriverProfile() {
                   {resume.blockchainVerified && (
                     <span className='flex items-center gap-1 text-xs text-green-400'>
                       <CheckCircle className='w-3 h-3' />
-                      Blockchain Verified
+                      On file
                     </span>
                   )}
                   {resume.documentUrl && !resume.ipfsHash?.startsWith('built_') && (

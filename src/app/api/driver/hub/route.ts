@@ -501,6 +501,12 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats
     const inProgressApps = dotApplications.filter(a => a.isInProgress)
+    const { count: attestationCount } = await supabase
+      .from('attestations')
+      .select('id', { count: 'exact', head: true })
+      .eq('candidate_user_id', userId)
+      .is('superseded_by', null)
+
     const stats = {
       profileCompleteness,
       totalResumes: resumes.length,
@@ -521,6 +527,7 @@ export async function GET(request: NextRequest) {
       careerCardViewsThisWeek: cardViewsWeek ?? 0,
       careerCardViewsTotal: cardViewsTotal ?? 0,
       hasScreeningConsentBundle,
+      attestationCount: attestationCount ?? 0,
     }
 
     const portfolio = portfolioRow

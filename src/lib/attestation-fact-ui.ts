@@ -43,6 +43,31 @@ export function formatAttestationProvenance(
   return `Derived from ${label}`
 }
 
+/** Human-readable issued date for carrier + candidate verification UI. */
+export function formatAttestationIssuedDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch {
+    return iso
+  }
+}
+
+/**
+ * Standard Phase-2 verification line — "Verified by Storm on [date]" + CRA citation.
+ * Use for third-party attestation facts only (never self-reported blocks).
+ */
+export function formatVerifiedByStormLine(
+  issuedAt: string,
+  sourceCra?: string | null,
+  sourcePullId?: string | null,
+): string {
+  return `Verified by Storm on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
+}
+
 export function formatFactDisclosedFields(fields: Record<string, unknown>): string[] {
   return Object.entries(fields).map(([key, value]) => {
     if (value === null || value === undefined) return `${key}: —`
