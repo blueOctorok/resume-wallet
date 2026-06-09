@@ -24,9 +24,9 @@ The new direction:
 
 1. **Web2 stack for everything user-facing.** Email/Google/magic-link sign-in via **Supabase Auth** (already paid for on Supabase Pro), Stripe payments, Supabase Storage for documents. Drop Alchemy, Base, USDC payments, IPFS/Pinata for primary storage.
 2. **Selective-disclosure UX as the moat.** Carriers see verified facts (✓ clean MVR, ✓ Class A CDL with hazmat) instead of PDFs. Candidate-controlled disclosure toggles per audience.
-3. **Cryptographic backbone deferred.** Phase 2 backs the UX with **signed attestations** (JWT-style platform signatures). Phase 3 swaps the implementation for **Midnight ZK proofs** — only when a customer, regulator, or investor specifically requires cryptographic non-repudiation.
+3. **Cryptographic backbone on Midnight — active track.** Phase 2 backs the UX with **signed attestations** (JWT-style platform signatures); that shipped. Phase 3 swaps the implementation for **Midnight ZK proofs** behind the same interface. The driver is **go-to-market** — being an early *real* regulated-industry use case on Midnight while that's still novel — not waiting for a customer to demand non-repudiation (DEC-2026-06-001). Build it for real; the quality bar is absolute.
 
-**The chain becomes invisible backend infrastructure** when (or if) Phase 3 ships. End users will never see Midnight. They will never install a wallet. They will never write down a seed phrase. The selective-disclosure UI looks identical whether the backend is signed JWTs or ZK proofs.
+**The chain becomes invisible backend infrastructure** when Phase 3 ships. End users never *interact with* Midnight — no wallet, no seed phrase, no gas, no signing — though Storm celebrates it as the public trust story (DEC-2026-05-016). The selective-disclosure UI looks identical whether the backend is signed JWTs or ZK proofs.
 
 ---
 
@@ -74,9 +74,9 @@ What does NOT ship in Phase 2:
 
 End-user experience after Phase 2: the moat is visible to carriers. Candidates and carriers see a different product than they did pre-Phase-2 — verified facts, not documents. Mechanism is invisible.
 
-### Phase 3 — Cryptographic backbone on Midnight (deferred, customer-driven)
+### Phase 3 — Cryptographic backbone on Midnight (active track, GTM-driven)
 
-Status: **deferred**. Phase 3 only happens when a customer, regulator, or investor specifically requires cryptographic non-repudiation. **Do not start Phase 3 work until that trigger is concrete.**
+Status: **active**. The trigger is **go-to-market + ecosystem** — being one of the first *real, regulated-industry* use cases on Midnight while that's still novel — not waiting for a customer to demand non-repudiation (DEC-2026-06-001). Build it end-to-end and genuine: a demo-grade or fake integration earns nothing and burns credibility. Market the vision now in "built on Midnight" framing; flip a per-fact "proven on-chain" claim only when that specific proof genuinely runs (DEC-2026-05-004 honesty guardrail retained).
 
 What would ship:
 
@@ -257,22 +257,22 @@ Files / dependencies to delete or replace during Phase 1:
 ### Phase 2 (selective-disclosure UX)
 - Same as Phase 1. Phase 2 adds the `attestationService` and the carrier-facing UI but ships entirely on the existing stack. Signed attestations are issued from Next.js API routes using Node's `crypto` module.
 
-### Phase 3 (Midnight, deferred)
-- Adds **one managed Docker container** for the Midnight proof server (Cloud Run / Render / Fly — pick one when Phase 3 ships).
+### Phase 3 (Midnight — active track)
+- Adds **one managed Docker container** for the Midnight proof server (Cloud Run / Render / Fly — pick one when the slice goes up).
 - Public Midnight RPC endpoint for transaction submission (no self-hosted node initially).
 - One server-managed Midnight wallet seed in env vars (similar to how `PRIVATE_KEY` works today for the registry contracts).
 - **Still no Linux server to maintain.** Cloud Run handles OS, runtime, restarts, scaling. Operationally identical to how we use Vercel.
 
 ### Developer environment
 - **Phases 1 + 2:** native Windows works fine. Pure TypeScript / Next.js work.
-- **Phase 3 (deferred):** Compact compiler is Linux/Mac only. On Windows, use **WSL2 + Ubuntu** (~30 min setup) when contract work begins. Day-to-day Next.js work remains native Windows.
-- **A Mac is NOT required.** WSL2 closes most of the gap. Don't buy hardware for a phase that may never happen.
+- **Phase 3 (active track):** Compact compiler is Linux/Mac only. On Windows, use **WSL2 + Ubuntu** (~30 min setup) when contract work begins. Day-to-day Next.js work remains native Windows.
+- **A Mac is NOT required.** WSL2 closes most of the gap. No hardware purchase needed to start.
 
 ---
 
-## Why Midnight (when Phase 3 happens)
+## Why Midnight (Phase 3 target — active track)
 
-Locked-in choice for Phase 3, conditional on Midnight being past federated phase by then.
+Locked-in choice for Phase 3, conditional on Midnight network maturity supporting the proof shapes we need (confirm during the toolchain de-risk step).
 
 Selection rationale and alternatives considered live in [`DECISION_LOG.md`](./DECISION_LOG.md). Summary:
 
@@ -285,9 +285,11 @@ The choice is reversible: the `attestationService` interface means Phase 3 can t
 
 ---
 
-## Future considerations (Phase 3b / Phase 4) — captured, NOT scheduled
+## Phase 3 arc (sequenced) + Phase 4 (gated)
 
-These are real ideas worth preserving so future-you doesn't reinvent them. **None of this is scheduled work.** Each item has explicit trigger conditions that must be met before design begins.
+**Updated 2026-06-09 (DEC-2026-06-002).** Phase 3a (core ZK proofs), Phase 3b (soulbound credential cards in the career card), and the Midnight-native STORM utility token are now **committed direction**, sequenced — not "captured, maybe someday." Phase 4 (cached-attestation marketplace) stays **gated on a formal FCRA opinion**. Sequencing discipline still holds: each slice has to stabilize before the next is designed, and the SBT/token layers come **after** the real one-fact Midnight slice verifies (don't mint SBTs on top of a proof backbone that isn't live yet).
+
+The guardrails below are **not** softened by promotion to committed: soulbound stays non-transferable, the token stays pure-utility, and the rejected-ideas list (transferable credential NFTs, tradeable tokens, driver-as-vendor) stays rejected (`MOAT_THESIS.md`). Soulbound ≠ tradeable; utility ≠ security.
 
 ### Phase 3b — Soulbound credential SBTs (career card becomes the vault)
 
@@ -317,7 +319,7 @@ After Phase 3a (core ZK proofs) ships, the natural extension is to make each ver
 
 **Why this is structurally elegant:** the career card already exists, already feels owned by the candidate, already shows up to carriers as the primary identity surface. We're not building a new credential vault — we're upgrading what already has the right shape.
 
-**Trigger condition to start design:** Phase 3a is in production with at least one carrier consuming attestations.
+**Sequencing (committed, DEC-2026-06-002):** begin design once Phase 3a is in production with at least one carrier consuming attestations. This is the *next* layer, not a maybe.
 **Estimated effort:** 1–2 weeks of UI work on top of Phase 3a output (lower than originally estimated because career card UI surface already exists).
 
 ### Phase 3b — STORM as Midnight-native shielded utility token
@@ -331,7 +333,7 @@ Reissue option preserved in DEC-2026-05-005 Option B. The shape if/when it ships
 - **No profit-sharing, no governance over Storm corp** — pure utility, designed to stay outside the Howey test.
 - **UX label: "Storm Points."** The on-chain token is the implementation; the surface is points. Candidates and carriers never need a wallet.
 
-**Trigger condition to start design:** Phase 3a + 3b SBT layer in production. Storm Points are running off-chain in Phase 1 (per DEC-005 Option B); reissuing on Midnight is a substrate change to a working system, not a new product.
+**Sequencing (committed, DEC-2026-06-002):** Phase 3a + 3b SBT layer in production. Storm Points run off-chain today (DEC-005 Option B); reissuing on Midnight is a substrate change to a working system, not a new product. Stays pure-utility (no profit-share, no governance) to remain outside the Howey test.
 
 ### Phase 4 — Cached-attestation marketplace (driver economic compounding)
 
@@ -370,10 +372,10 @@ The following ideas have been deliberately rejected. They are captured in [`MOAT
 To prevent confusion in future sessions:
 
 - **NOT a multi-chain product.** No bridges, no cross-chain anything. One chain is involved (Midnight, Phase 3+). Users never see it.
-- **NOT a "Web3 hiring app" anymore.** The marketing positioning shifts to "verified credentials platform" — the cryptography is implementation detail, not branding.
+- **NOT a "Web3 hiring app"** in the dated, crypto-bro sense — no feed, no speculation, no wallet UX. But the cryptography is **not** hidden either: Storm celebrates Midnight / zero-knowledge / selective disclosure as its public credibility narrative (`stormchain.ai`, DEC-2026-05-016), and the chain is **load-bearing** for network-independent portable trust (DEC-2026-06-002). The positioning is "verified, driver-owned credentials, built on Midnight" — honest about the tech, never faking a per-fact proof before it runs.
 - **NOT abandoning Pace.** Pace is the anchor customer. Phase 1 ships them a *better* product (Stripe payments, faster onboarding). Phase 2 makes the moat visible to them. Phase 3 deepens it cryptographically when Pace's customers (large carriers) demand it.
 - **NOT putting driver data on chain.** Ever. The chain only ever stores proofs *about* data. Data stays in Supabase.
-- **NOT a token-first project.** STORM ERC-20 is dropped on Base in Phase 1; user-facing rewards run as off-chain Storm Points. A Midnight-native STORM (likely shielded) is on the table for Phase 3 if a token use case justifies it (see [`DECISION_LOG.md`](./DECISION_LOG.md) DEC-2026-05-005), but the platform is not built around the token. The token serves the moat, not the other way around.
+- **NOT a token-first project.** STORM ERC-20 is dropped on Base in Phase 1; user-facing rewards run as off-chain Storm Points today. A Midnight-native shielded **utility** STORM is committed roadmap (DEC-2026-06-002, sequenced after the SBT layer) — but the platform is built around verified driver-owned credentials, and the token serves that, not the other way around. Pure utility only (no profit-share, no governance); the moat leads, the token follows.
 - **NOT a "candidate owns their data" maximalist platform.** The product is "candidate controls disclosure." Data custody stays with Storm — same as today, same as Stripe holds payment data, same as Supabase Auth holds session credentials.
 
 ---

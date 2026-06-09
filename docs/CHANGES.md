@@ -4,6 +4,46 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Docs · Positioning + funding + token/SBT captured (DEC-2026-06-002)** (2026-06-09)
+
+Sharpened *what Storm is* and *how the chain earns its keep*, so future sessions stop treating blockchain as optional decoration and stop fearing the Tenstreet comparison. Three locks, plus promotion of the token/SBT roadmap.
+
+| What | Decision |
+|---|---|
+| **Positioning** | Storm is the **driver-owned, portable DQ vault** — the driver-side counterpart to carrier networks, **NOT** a Tenstreet/Xchange competitor. Don't build an ATS/network or chase data volume. Two sides of the same transaction. |
+| **Funding** | Candidate-**controlled**, agency-**funded** — Pace funds the pull, the driver owns the portable fact. Start with own-records-sponsored (low FCRA risk); funded-pull-becomes-portable is **gated on an FCRA opinion**. |
+| **Blockchain** | Midnight is **load-bearing**, not implementation detail: for a late entrant with no network, ZK proofs deliver *network-independent portable trust* (trust the math, not Storm). That's how a driver-owned fact beats a 20-year network. |
+| **Token + SBT** | Soulbound credential cards in the career card + shielded **utility** STORM promoted "captured" → **committed roadmap**, sequenced after the real Midnight slice. Guardrails intact (soulbound ≠ tradeable; utility ≠ security). |
+
+| Doc | Change |
+|---|---|
+| `DECISION_LOG.md` | **New DEC-2026-06-002** (authoritative record of all four locks) |
+| `midnight/MOAT_THESIS.md` | Retired "chain is implementation detail / don't position as blockchain / Phase 3 only if asked" lines; new "Is the chain the moat?" reconciliation + driver-side-counterpart-vs-Tenstreet + agency-funded sections |
+| `midnight/ARCHITECTURE.md` | "Future considerations, NOT scheduled" → "Phase 3 arc (sequenced)"; SBT/token promoted to committed; fixed stale "cryptography is implementation detail / not a token project" lines |
+| `midnight/EXECUTION_CHECKLIST.md` | Phase 3 fleshed out: why-Midnight-is-load-bearing + funding model + 3a slice → 3b SBT-in-career-card → token → P4 (FCRA-gated) + guardrails; handoff row |
+| `midnight/TOKEN_BRIEF.md` | "not building now" → committed roadmap; When-table reframed sequence-not-hesitation |
+| `midnight/PARTNERS.md` | Phase 3 "deferred" → active; added "Who pays" agency-as-sponsor funding model |
+
+**No code changes.** Retained unchanged: honesty guardrail (DEC-2026-05-004), interaction gate (DEC-2026-05-001), provenance gate (DEC-2026-05-014), not-a-CRA posture (DEC-2026-05-011), rejected-ideas list.
+
+---
+
+## **Docs · Phase 3 reframed deferred → active (Midnight, GTM-driven)** (2026-06-09)
+
+Removed the "defensive / trigger-gated / do not start Phase 3" tone from every doc the AI reads, so sessions stop relitigating a settled direction. Phase 3 (Midnight ZK) is now an **active, go-to-market-driven track** — the driver is being an early *real* regulated-industry use case on Midnight while novel, not waiting for a customer to demand non-repudiation. **The quality bar is now the gate, not the trigger:** ship nothing fake; per-fact "proven on Midnight" claims only when the proof actually runs.
+
+| Doc | Change |
+|---|---|
+| `DECISION_LOG.md` | **New DEC-2026-06-001** — authoritative record of the pivot; supersedes DEC-2026-05-004 *timing*, retains its honesty guardrail + interaction/provenance gates |
+| `.cursor/rules/strategic-direction.mdc` | Phase status → P1/P2 shipped, P3 active; new "**Phase 3 is an active track**" section (why-now + non-negotiable quality bar); "Verified on-chain (conditional)" → "Verified on Midnight (in progress)"; killed "assume pre-Phase-1 state" |
+| `midnight/ARCHITECTURE.md` | Phase 3 "deferred, customer-driven / do not start" → "active track, GTM-driven" |
+| `midnight/EXECUTION_CHECKLIST.md` | Where-we-are marker + Phase 3 section → active; added suggested sequencing (WSL2+Compact → proof server → thin one-fact testnet slice) |
+| `docs/PROJECT_ROADMAP.md` | Phase 3 row + trigger-criteria block reframed; P1/demolition/P2 marked done |
+
+**No code changes.** Retained unchanged: honesty constraint (DEC-2026-05-004), interaction gate (DEC-2026-05-001), provenance gate (DEC-2026-05-014), one-line `attestationService` swap.
+
+---
+
 ## **Phase 2 · P2.7 — Verified by Storm language + Stormi/journey wiring** (2026-06-05)
 
 Closes Phase 2. Honest Phase-2 verification copy everywhere: **"Verified by Storm on [date]" + CRA citation** for third-party facts; self-reported blocks stay **on file / submitted** — no per-fact on-chain or ZK claims (DEC-2026-05-011, DEC-2026-05-016).

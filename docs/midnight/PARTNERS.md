@@ -33,9 +33,11 @@ Every time Pace places a driver at a new carrier, the carrier reruns insurance v
 **Storm's answer:** the driver's verified facts live as **attestations** in their portable DQ file. Pace's initial pre-screen produces attestations once. Every subsequent carrier accepts the same attestations.
 
 - Phase 2: signed JWT attestations Pace has cryptographically authored
-- Phase 3 (deferred): ZK proofs that work even without trusting Pace as issuer
+- Phase 3 (active track): Midnight ZK proofs that any carrier can verify **without trusting Pace as issuer** — the receiving carrier doesn't need to be on Pace's network, or any network, to trust the fact (DEC-2026-06-002)
 
 For Pace's economics this is the headline change: per-placement screening cost trends toward **zero on repeat drivers**. Their margin per placement goes up; their throughput goes up; the driver doesn't sit through a second screening.
+
+**Who pays (the funding model, DEC-2026-06-002):** drivers won't pay to screen themselves — so **Pace funds the pull, and the driver owns the resulting portable fact.** This isn't charity; it's leverage: a Pace-funded pull becomes a portable pre-qualification the driver carries to the next carrier, and Pace is the issuer of record. Start with the lower-FCRA-risk path — **Pace sponsors the driver pulling their *own* records** (FMCSA PSP ~$10, state MVR) — which produces a portable speed/pre-qual signal without anyone acting as a CRA. The richer "funded-pull-becomes-portable" structure (a Pace pull the driver can re-disclose) is the bigger prize but **needs a formal FCRA opinion first** (DEC-2026-05-013). Either way, candidate-*owned* (controls disclosure) and agency-*funded* (Pace pays) are not in tension — the payer and the owner are simply different parties.
 
 ### Pain 2 — Multi-week placement loop
 

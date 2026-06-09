@@ -6,7 +6,7 @@
 
 ---
 
-## Where we are (2026-06-05)
+## Where we are (2026-06-09)
 
 The hard part is done. Re-read this snapshot at the start of every session.
 
@@ -15,15 +15,15 @@ The hard part is done. Re-read this snapshot at the start of every session.
 | ✅ | **Track 1 — Auth (Alchemy → Supabase)** | **DONE & live.** Supabase is the only login. Pace works. |
 | ✅ | **Track 2 — Web3 demolition** | **COMPLETE (D1–D5).** STORM, Base registries, USDC/company wallet/`@account-kit`, IPFS, crypto deps/env removed. |
 | ✅ | **Phase 2 — Selective disclosure** | **COMPLETE (P2.1–P2.7).** Attestations table → signed-JWT service → fact registry → API → carrier panel → disclosure toggles → Verified-by-Storm language + Stormi. |
-| 🎯 | **Phase 3 — Midnight ZK** | **← active marker (trigger-gated).** Deferred swap behind the same `attestationService` interface — only when a customer requires non-repudiation. |
+| 🎯 | **Phase 3 — Midnight ZK** | **← active track (GTM-driven).** Swap the JWT backend for Midnight ZK behind the same `attestationService` interface. Build it for real — time-to-credible, not time-to-demo. DEC-2026-06-001. |
 | ⏸ | **Payments (Stripe)** | Deferred **greenfield** add — *not* a USDC conversion (see below). Build when a paying customer exists. |
 
 ```
-DONE ──► Track 2 Demolition ✅ ──► Phase 2 Attestation ✅ ──► Phase 3 Midnight (trigger-gated)
+DONE ──► Track 2 Demolition ✅ ──► Phase 2 Attestation ✅ ──► Phase 3 Midnight (active track)
               (complete)              (the moat — shipped)              Payments (Stripe) — whenever
 ```
 
-**Why this order:** the chain was never the moat — *selective disclosure of verified facts* is. Demolition removes the Web3 cruft that's pure liability now (it does nothing for real users), then Phase 2 builds the thing competitors can't copy. Midnight and Stripe are both "swap in later" — neither blocks the moat.
+**Why this order:** Phase 2 proves the moat — *selective disclosure of verified facts* — with a JWT first, so the UX exists before the crypto. But Midnight is **not** just optional polish: for a late entrant with no network, ZK proofs are the load-bearing way to make a driver-owned fact verifiable *cold* (trust the math, not Storm or a network) — that's how you beat a 20-year carrier network (DEC-2026-06-002). So Phase 3 is the active track, not a "swap in someday." (Stripe genuinely is "whenever a paying customer shows up.") The demolition first removed the dead Web3 cruft (USDC/Base/IPFS) that was pure liability — clearing the deck for the *real* Midnight work.
 
 ---
 
@@ -775,16 +775,44 @@ COMMIT: feat(attestation): verified-by-storm language + Stormi wiring (P2.7)
 
 ---
 
-## Phase 3 — Midnight ZK (deferred swap)
+## Phase 3 — Midnight ZK (active track, GTM-driven)
 
-Phase 3 swaps the signed-JWT attestation implementation for **Midnight ZK proofs behind the same `attestationService` interface** — the carrier-facing UX doesn't change, only the proof backend. Atomic steps get written when the trigger fires (a customer explicitly requires non-repudiation). **Do not start Phase 3 until the trigger is concrete.** Trigger criteria: `[ARCHITECTURE.md](./ARCHITECTURE.md)`.
+Phase 3 swaps the signed-JWT attestation implementation for **Midnight ZK proofs behind the same `attestationService` interface** — the carrier-facing UX doesn't change, only the proof backend. **This is an active track** (DEC-2026-06-001): the driver is go-to-market — being an early *real* regulated-industry use case on Midnight — not waiting for a customer to demand non-repudiation. Build it end-to-end and genuine; ship nothing fake (the quality bar is in `strategic-direction.mdc` → "Phase 3 is an active track").
 
-### Phase 3b / Phase 4 future considerations (captured, NOT scheduled)
-- **Phase 3b SBT credentials** — soulbound representation of Phase 3a attestations (DEC-2026-05-012)
-- **Phase 3b STORM-on-Midnight reissue** — shielded utility token (DEC-2026-05-005 Option B + DEC-2026-05-012)
-- **Phase 4 cached-attestation marketplace** — driver economic compounding via Storm-mediated cached re-queries (DEC-2026-05-013)
+### Why Midnight is load-bearing here (read before building — DEC-2026-06-002)
+Storm is a **late entrant with no network**. A signed JWT requires the verifier to *trust Storm* (Storm holds the key). A **Midnight ZK proof lets any carrier trust the math** — verifiable cold, no Storm account, no network membership. That **network-independent portable trust** is the mechanism by which a driver-owned fact beats a 20-year carrier network (Tenstreet/Xchange). The chain isn't decoration; it's the answer to "how do we win without their network." Positioning + funding context lives in `MOAT_THESIS.md` (driver-side-counterpart + agency-funded sections).
 
-Each has explicit trigger conditions in its decision-log entry. **Do not add atomic steps until triggers fire.** Engineering view: `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Future considerations". Boss-facing: `[TOKEN_BRIEF.md](./TOKEN_BRIEF.md)`.
+### Funding model (DEC-2026-06-002) — affects which facts to prove first
+Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themselves; Pace/the carrier funds the pull, the driver owns the portable fact. Two paths, in risk order:
+- **(a) Driver's-own-records, agency-sponsored — START HERE.** Driver obtains own records by right (FMCSA PSP ~$10, state MVR), Pace sponsors the fee. Lower FCRA risk (consumer presenting own data ≠ CRA report). Value = portable pre-qual/speed signal.
+- **(b) Funded-pull-becomes-portable — GATED.** Structure consent at the moment of pull so derived facts become portable. Bigger prize; **requires a formal FCRA opinion** before build/market (DEC-2026-05-013).
+
+### Phase 3a — core ZK slice (build first)
+1. De-risk the toolchain: WSL2 + Ubuntu + Compact compiler; confirm current Midnight network maturity / proof-shape support before any public timeline.
+2. Stand up a proof server spike (managed Docker — Cloud Run / Render / Fly) + a server-managed Midnight wallet.
+3. Ship a **thin one-fact testnet slice** (e.g. `mvr_clean_36_months`) end-to-end via `midnight-attestation-service.ts` behind the existing interface.
+4. Broaden to more facts (fed by the ongoing fact-registry expansion) once the slice verifies.
+5. **Honesty gate:** only flip a per-fact "proven on Midnight" claim once that specific proof genuinely runs and verifies (DEC-2026-05-004). Narrative ("built on Midnight") can lead; per-fact claims cannot.
+
+### Phase 3b — soulbound credential cards in the career card (committed, after 3a)
+Promoted from "captured, NOT scheduled" → **committed direction** (DEC-2026-06-002). Begin design once 3a is in production with ≥1 carrier consuming attestations.
+- Each verified attestation rendered as a **non-transferable SBT inside the existing career card** (the vault). Career card UX/URL (`/card/{token}`) unchanged; cryptographic verification added underneath.
+- **Invariants (do not break):** soulbound to `users.id` not a wallet; candidate never sees a wallet/seed/gas; Storm-issuable + Storm-revocable on lapse/fraud; selective disclosure stays at the credential-card level via existing lenses; career card mints empty at signup (never gated on completion).
+- Full spec: `ARCHITECTURE.md` → "Phase 3b — Soulbound credential SBTs".
+
+### Phase 3b — STORM as Midnight-native shielded utility token (committed, after SBT layer)
+- Shielded balances on Midnight; **surfaced as "Storm Points"**; earned for verifying/completing/referring; spent on platform discounts.
+- **Pure utility only** — no profit-share, no governance over Storm corp (stays outside Howey). No driver wallet UX, ever.
+- Reissue of the off-chain Storm Points ledger onto Midnight = substrate change to a working system, not a new product (DEC-2026-05-005 Option B).
+
+### Phase 4 — cached-attestation marketplace (GATED on FCRA opinion)
+- Driver economic compounding via Storm-mediated cached re-queries (DEC-2026-05-013). Carrier picks fresh pull (~$35) or recent-attestation query (~$15, 30-day cliff, consent-gated); driver pockets ~$5, Storm ~$10. Storm mediates every transaction (no driver-as-vendor, no Lace wallet).
+- **Do not build until:** Phase 2 in production at scale + Pace engaged as co-designer + **FCRA legal review complete** (the path-(b) legal question above).
+
+### Guardrails that keep the token/SBT legitimate (NEVER loosen)
+The promotions above do **not** touch the rejected-ideas list. These stay permanently rejected (`MOAT_THESIS.md` appendix): transferable credential NFTs, tradeable/fungible credential tokens, driver-as-vendor-with-wallet, income-share / "driver pool" tokens, Storm-as-CRA. **Soulbound ≠ tradeable; utility ≠ security.** If a token feature drifts toward transferability or profit-sharing, it's rejected, not roadmap.
+
+Engineering view: `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Phase 3 arc". Boss-facing: `[TOKEN_BRIEF.md](./TOKEN_BRIEF.md)`. Strategy: `[MOAT_THESIS.md](./MOAT_THESIS.md)`.
 
 ---
 
@@ -839,6 +867,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-09 | Docs — positioning + funding + token/SBT capture (DEC-2026-06-002) | Opus 4.8 | pending user commit | **Docs only.** Added **DEC-2026-06-002**: (1) driver-side-counterpart positioning (NOT a Tenstreet/Xchange competitor — don't chase network/data volume), (2) candidate-controlled/agency-funded model (Pace funds pull, driver owns fact; path (a) own-records-sponsored first, path (b) funded-pull-portable GATED on FCRA opinion), (3) Midnight reframed as **load-bearing** (network-independent portable trust for a late entrant), (4) SBT-in-career-card + shielded-utility STORM promoted "captured" → **committed roadmap** with guardrails intact. Edited `MOAT_THESIS` (retired "chain is implementation detail" lines + new positioning/funding sections), `ARCHITECTURE` (Phase 3 arc sequenced), this checklist (Phase 3 fleshed out: 3a slice → 3b SBT → token → P4 gated), `TOKEN_BRIEF`, `PARTNERS`, `CHANGES`. **Next:** Phase 3a step 1 (toolchain de-risk) when ready. |
 | 2026-06-05 | P2.7 — Verified by Storm language + Stormi/journey (**Phase 2 COMPLETE**) | Composer | a0e0248 | **Lib:** `formatVerifiedByStormLine()` + tests. **Sweep:** self-reported career card/share/PDF/export copy → on file; third-party facts use centralized provenance. **Stormi:** `ava-context` attestation block + hub `attestationCount`. **Journey:** optional verified-fact milestone. `npm run test:app` (50) + `npm run build` green. **Next:** Phase 3 (trigger-gated). |
 | 2026-06-05 | P2.6 — candidate per-audience disclosure toggles | Composer | 62b8b2b | **Migration:** `100_disclosure_preferences.sql` (apply manually on dashboard). **Lib:** `disclosure-preferences.ts` — default shareable, `allowed=false` hides from employer list + blocks audience-scoped prove. **API:** GET/PATCH `/api/attestation/disclosure-preferences`. **UI:** `DisclosurePreferencesModal` + Zustand store; hub career card **Sharing** button. `npm run test:app` (48) + `npm run build` green. **Next:** P2.7 Verified-by-Storm language + Stormi. |
 | 2026-06-05 | P2.5 — carrier CredentialFactsPanel | Composer | 07d47bd | **New:** `CredentialFactsPanel` (facts-first, HubSectionPanel chrome), `attestation-fact-ui.ts`, `employer-credential-facts.ts`. **Wired:** talent API `verifiedFacts`; `CareerCardModal` additive mount; `ProjectedCareerCard` demotes MVR/PSP stat grids (PDF fallback kept). I-8 request/recruit/order paths untouched. Pace smoke: card + requests + PDF fallback OK. `npm run test:app` (42) + `npm run build` green. **Next:** P2.6 candidate prove UX. |
@@ -890,4 +919,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-09

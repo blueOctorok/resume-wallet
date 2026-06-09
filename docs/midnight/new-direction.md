@@ -77,7 +77,7 @@ The window is open right now because the technology to do this only matured in 2
 | Carriers pay for screenings in USDC        | Stripe (credit card / ACH) — what they actually want                     |
 | Documents stored on IPFS via Pinata        | Stored in our database (Supabase)                                        |
 | Hash-stamping on Base testnet (decorative) | Real cryptographic proofs on Midnight (load-bearing) — added when needed |
-| Token rewards (STORM)                      | Deferred — replaced with platform credits if we re-introduce them        |
+| Token rewards (STORM)                      | Off-chain "Storm Points" now; Midnight-native shielded **utility** STORM is committed roadmap after the Phase 3 slice (DEC-2026-06-002) |
 
 **Net effect for Pace and any other carrier:** simpler onboarding for drivers, payment with normal credit cards, faster product iteration, and over time, verifiable credentials that no competitor can match.
 
@@ -91,10 +91,10 @@ Move to the standard SaaS stack (Stripe, Clerk, Supabase). Drop crypto wallet on
 **Phase 2 — Selective-disclosure UX (3–4 weeks)**
 Build the carrier-facing experience that makes the moat _visible_: structured verified facts instead of PDFs. Driver-controlled toggles for what's shared with which carrier. Backed initially by signed digital attestations from us as the platform issuer.
 
-**Phase 3 — Cryptographic backbone (deferred, customer-driven)**
-When a carrier, regulator, or investor specifically asks "but how do we know your platform's signature is unforgeable?", we upgrade the underlying mechanism to Midnight zero-knowledge proofs. Same UI, stronger trust layer. We don't build this until we have a customer driver — we build it _prepared_ to swap in.
+**Phase 3 — Cryptographic backbone (active track, go-to-market driven — DEC-2026-06-001)**
+Upgrade the underlying mechanism from signed attestations to Midnight zero-knowledge proofs. Same UI, stronger trust layer. The driver is being an early *real* regulated-industry use case on Midnight while that's novel — built for real, behind the same swappable `attestationService` interface. (Originally framed as deferred-until-customer-asks; that framing was retired — see DEC-2026-06-001.)
 
-**Total: ~10 weeks of focused work for Phases 1 + 2. Phase 3 is optional and conditional.**
+**Total: ~10 weeks of focused work for Phases 1 + 2 (both shipped). Phase 3 is the active track.**
 
 ---
 

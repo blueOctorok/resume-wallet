@@ -2,18 +2,18 @@
 
 ## Foundation Reset (May 2026 — top priority)
 
-> **Read this first.** A late-May 2026 strategy review concluded that Storm's user-facing infrastructure (Alchemy smart wallets, USDC payments, IPFS, on-chain registries, STORM ERC-20) is decorative — it adds operational complexity without delivering a real moat. The new direction puts a Web2 stack underneath the product and treats cryptographic verification as a deferred upgrade behind a stable interface. **Full strategic + architectural context lives in [`docs/midnight/ARCHITECTURE.md`](midnight/ARCHITECTURE.md). The moat thesis is in [`docs/midnight/MOAT_THESIS.md`](midnight/MOAT_THESIS.md). Decision rationale is in [`docs/midnight/DECISION_LOG.md`](midnight/DECISION_LOG.md).**
+> **Read this first.** A late-May 2026 strategy review concluded that Storm's user-facing infrastructure (Alchemy smart wallets, USDC payments, IPFS, on-chain registries, STORM ERC-20) is decorative — it adds operational complexity without delivering a real moat. The new direction puts a Web2 stack underneath the product and delivers cryptographic verification as a real, swappable backend behind a stable interface — signed JWTs first (Phase 2, shipped), Midnight ZK next (Phase 3, active track per DEC-2026-06-001). **Full strategic + architectural context lives in [`docs/midnight/ARCHITECTURE.md`](midnight/ARCHITECTURE.md). The moat thesis is in [`docs/midnight/MOAT_THESIS.md`](midnight/MOAT_THESIS.md). Decision rationale is in [`docs/midnight/DECISION_LOG.md`](midnight/DECISION_LOG.md).**
 
-The Foundation Reset is **the highest-priority work track** until the selective-disclosure moat (Phase 2) ships. DQ File Completion (below) continues in parallel where it doesn't depend on the legacy stack.
+The Foundation Reset's first arc is **complete**: Phase 1 (Web2 cleanup), Web3 demolition, and the selective-disclosure moat (Phase 2) have all shipped. The highest-priority track is now **Phase 3 — building the Midnight ZK backbone for real** (go-to-market driven, DEC-2026-06-001). DQ File Completion (below) continues in parallel.
 
-**Where we are (2026-05-30):** the auth swap is **done and live** — Supabase is the only login, Pace works on it. The active work is **demolishing the leftover Web3 cruft**, then building the attestation moat. Midnight and Stripe are both deferred "swap in later" tracks that don't block the moat.
+**Where we are (2026-06-09):** the auth swap is **done and live** (Supabase is the only login, Pace works on it), **Web3 demolition is complete** (D1–D5), and the **selective-disclosure moat (Phase 2) has shipped** (P2.1–P2.7). The active work is **Phase 3 — building the Midnight ZK backbone for real** — now a go-to-market-driven track, plus ongoing third-party fact-registry breadth. Stripe stays a deferred swap-in-later track.
 
 | Track | Goal | Status |
 |---|---|---|
 | **Auth swap (Alchemy → Supabase)** | Email/Google passwordless login; ~115 API routes off `x-wallet-address`; admin gated by `ADMIN_EMAILS`. | ✅ **DONE & live** |
-| **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | 🔨 **Active** |
-| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | 🎯 **Next** |
-| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never see Midnight. | ⏸ **Deferred — customer-driven trigger only** |
+| **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | ✅ **DONE (D1–D5)** |
+| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | ✅ **SHIPPED (P2.1–P2.7)** |
+| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active track — go-to-market driven (DEC-2026-06-001)** |
 | **Payments (Stripe)** | Greenfield Checkout (one-time) + Subscriptions, added **when a paying non-Pace customer exists**. *Not* a USDC→Stripe conversion — USDC is being deleted in demolition, so there's nothing to migrate. | ⏸ **Deferred** |
 
 ### Pre-flight decisions (resolved 2026-05-22)
@@ -24,14 +24,13 @@ The Foundation Reset is **the highest-priority work track** until the selective-
 
 Atomic per-step execution: [`docs/midnight/EXECUTION_CHECKLIST.md`](midnight/EXECUTION_CHECKLIST.md) (auth track collapsed to a DONE table; active work is the demolition `D1–D5` steps). Strategic-level breakdown: [`docs/midnight/PHASE_1_PLAN.md`](midnight/PHASE_1_PLAN.md).
 
-### Phase 3 trigger criteria (defer until at least one is true)
+### Phase 3 is active — go-to-market driven (DEC-2026-06-001)
 
-- A carrier requires proof Storm cannot forge its own attestations
-- A regulator demands cryptographic guarantees about disclosure correctness
-- An investor due-diligence process requires the chain story to be live, not theoretical
-- A customer offers a contract conditional on ZK availability
+Phase 3 was previously gated behind a *defensive* trigger (a customer/regulator/investor demanding non-repudiation). That framing is retired. The real, time-sensitive driver is **go-to-market + ecosystem**: being one of the first *real, regulated-industry* use cases on Midnight while that's still novel — a narrative + partnership asset (grants, co-marketing, foundation amplification) that only exists in a finite window.
 
-If none of these happen, Phase 3 stays deferred indefinitely. **That's a good outcome** — the moat is selective disclosure (Phase 2), with Phase 3 as a defensive cryptographic upgrade only when adversarial pressure justifies it.
+The old defensive triggers are still *bonus* accelerants if they happen (a carrier wanting unforgeable proof, a regulator, an investor, a ZK-conditional contract) — but none of them is required to justify the work anymore.
+
+**The quality bar is the gate now, not the trigger.** Storm is not a crypto scam project: time-to-market means time-to-*credible*, never time-to-garbage. Ship nothing fake — if a fact says "proven on Midnight," the proof must actually run. Narrate the vision now ("built on Midnight"); attach a per-fact live-proof claim only when that proof genuinely runs (DEC-2026-05-004 honesty guardrail retained). Users still never *interact with* the chain (DEC-2026-05-001), and only third-party facts are ever proven (DEC-2026-05-014). Full quality bar: `.cursor/rules/strategic-direction.mdc` → "Phase 3 is an active track."
 
 ### What survives every phase
 

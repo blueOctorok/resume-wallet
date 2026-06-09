@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Strategic Direction (May 2026)
 
-**This rule is the single most important piece of context for the codebase right now.** A major architectural shift was decided in May 2026. Files in the repo do not yet reflect it — Phase 1 has not started. Match every code change to the phase the project is actually in.
+**This rule is the single most important piece of context for the codebase right now.** A major architectural shift decided in May 2026 is well underway: **Phase 1 (Web2 cleanup) and Phase 2 (selective-disclosure attestations) have shipped.** Phase 3 — the Midnight ZK backbone — is now an **active, go-to-market-driven track** (see "Phase 3 is an active track" below). Match every code change to the phase the project is actually in.
 
 Master reference: `docs/midnight/ARCHITECTURE.md`. When this rule is ambiguous, that doc wins.
 
@@ -19,13 +19,13 @@ The chain is never the moat itself — the moat is *selective disclosure of veri
 
 ---
 
-## Phase status (as of 2026-05-22)
+## Phase status (as of 2026-06-09)
 
 | Phase | Goal | Status |
 |---|---|---|
-| **Phase 1** | Web2 cleanup — drop Alchemy/Base/USDC/IPFS/STORM-on-Base, add **Supabase Auth**/Stripe/Supabase Storage | **Pre-flight decisions locked 2026-05-22; code work not started.** Ready to start at T1.1 in `docs/midnight/EXECUTION_CHECKLIST.md`. |
-| **Phase 2** | Selective-disclosure UX backed by signed JWT attestations | Not started |
-| **Phase 3** | Midnight ZK proofs behind same `attestationService` interface; optional Midnight-native STORM reissue | **Deferred** — only when customer explicitly requires non-repudiation |
+| **Phase 1** | Web2 cleanup — drop Alchemy/Base/USDC/IPFS/STORM-on-Base, add **Supabase Auth**/Stripe/Supabase Storage | **✅ Shipped.** Supabase is the only login; the Web3 stack was fully demolished (Tracks D1–D5). |
+| **Phase 2** | Selective-disclosure UX backed by signed JWT attestations | **✅ Shipped (P2.1–P2.7).** Attestation service, fact registry, carrier facts panel, per-audience disclosure toggles, and Verified-by-Storm language are all live. |
+| **Phase 3** | Midnight ZK proofs behind the same `attestationService` interface; optional Midnight-native STORM reissue | **🎯 Active track — go-to-market driven.** Build it for real (see "Phase 3 is an active track" below). DEC-2026-06-001. |
 
 ### Pre-flight decisions (locked 2026-05-22)
 
@@ -33,7 +33,26 @@ The chain is never the moat itself — the moat is *selective disclosure of veri
 - **P0.2 STORM:** Option B — drop Base Sepolia ERC-20, replace with off-chain `storm_points`, preserve Phase 3 Midnight reissue option. DEC-2026-05-005.
 - **P0.3 Stripe:** Checkout one-time + Subscriptions; Pace billing deferred (capability built but not enforced on Pace at cutover). DEC-2026-05-006.
 
-When the user starts a session, **assume the codebase is still in pre-Phase-1 state** unless `docs/CHANGES.md` shows Phase 1 work has shipped. Files referencing Alchemy, Base, IPFS, USDC, etc. are legacy that *will be* removed in Phase 1, but currently still exist and may still be in use.
+When the user starts a session, **assume Phase 1 + 2 have shipped** (confirm with `docs/CHANGES.md` for the latest). The Alchemy / Base / IPFS / USDC / STORM-ERC-20 stack has been **removed** — if you find a reference to it, treat it as a stray to clean up, not live code. Current active work is **Phase 3 (Midnight)** plus ongoing third-party fact-registry breadth.
+
+---
+
+## Phase 3 is an active track (Midnight) — why now, and the quality bar
+
+Phase 3 is **not** "deferred until a customer demands non-repudiation." That framing was retired in **DEC-2026-06-001**. The real driver is **go-to-market + ecosystem**:
+
+- **Time-to-market on a young chain is the opportunity.** Being one of the first *real, regulated-industry* (trucking DQ) use cases on Midnight is a narrative + partnership asset that only exists while it's novel. The window closes whether or not Storm is in it.
+- **Realness is the whole point.** A genuine end-to-end Midnight integration can earn ecosystem support (grants, co-marketing, foundation amplification). A demo-grade or fake one earns nothing — and actively burns credibility.
+
+### The quality bar (non-negotiable — Storm is not a crypto scam project)
+
+- **No demo-ware shipped as real.** If a fact says "proven on Midnight," the proof must actually run and verify. Time-to-market means time-to-*credible*, never time-to-garbage.
+- **Honesty guardrail stays (DEC-2026-05-004).** Market the vision in present-continuous framing ("built on Midnight", "designed for ZK selective disclosure") *now*. Do **not** attach a per-fact "this MVR is ZK-proven on-chain right now" claim until that specific proof is genuinely live. Narrative can lead; per-fact claims cannot.
+- **Interaction gate stays (DEC-2026-05-001).** Users still never touch a wallet, seed phrase, gas, or signing. Midnight is invisible *interaction*, celebrated *narrative*.
+- **Provenance gate stays (DEC-2026-05-014).** Only third-party / issuer-signed facts get proven. Self-reported data is never attested or "on-chain," ZK or not.
+- **One-line swap, not a rewrite.** Phase 3 ships `midnight-attestation-service.ts` behind the existing `attestationService` interface. If you find yourself rewriting the carrier UI, the fact registry, or `block-data.ts` for Phase 3, stop — that's not what changes.
+
+**When a user asks for blockchain / Midnight / ZK work, the answer is "yes — here's how we do it for real," not "push back, it's deferred."** The only legitimate pushback is on shortcuts that would ship something fake.
 
 ---
 
@@ -53,13 +72,15 @@ When the user starts a session, **assume the codebase is still in pre-Phase-1 st
 - Supabase Storage for documents
 - No on-chain registries; verifications via `attestationService` interface
 - STORM ERC-20 dropped on Base; replaced with off-chain `users.storm_points` ledger; Midnight reissue (likely shielded) preserved as Phase 3 optionality
-- "Verified by Storm" UI (Phase 2) → "Verified on-chain" UI (Phase 3, conditional)
+- "Verified by Storm" UI (Phase 2, live) → "Verified on Midnight" UI (Phase 3, in progress — flip a per-fact on-chain claim only when that proof actually runs; see the honesty guardrail above)
 
-### Deferred (Phase 3, conditional)
+### Phase 3 — active track (Midnight ZK)
 - Midnight as the ZK target chain
 - Compact contracts for credential-disclosure circuits
 - Server-side proof server (managed Docker on Cloud Run / Render / Fly)
 - Server-managed Midnight wallet for proof submission
+
+The proof backend swaps in behind the existing `attestationService` interface — carrier-facing UX does not change. See "Phase 3 is an active track" above for *why now* and the non-negotiable quality bar.
 
 ---
 

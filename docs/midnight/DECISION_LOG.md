@@ -6,6 +6,102 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-06-002 — Positioning lock: driver-owned / agency-funded vault; Midnight is load-bearing; token + soulbound credentials are committed roadmap
+
+**Date:** 2026-06-09
+**Status:** Accepted (positioning + funding model + blockchain role; extends DEC-2026-06-001, DEC-2026-05-011, DEC-2026-05-012, DEC-2026-05-013)
+**Decided by:** Owner + engineer
+
+### Context
+
+Two pressures forced a sharper positioning statement than the docs had:
+
+1. **Incumbent dread.** A Pace coworker demoed Tenstreet **Xchange** ("can't we just do this?"). Xchange is a 20-year **carrier-contributed employment-verification network** — the data is carrier-owned and network-bound, and the driver is inventory. Trying to out-Tenstreet Tenstreet on data volume / network density is unwinnable for a late entrant.
+2. **Candidate-funding reality.** Drivers will **not** pay $35–70 to pull their own MVR/PSP/background speculatively. A "candidate runs and pays for their own screening" model is economically naive in trucking, where the carrier/agency always pays.
+
+Separately, the owner — hired specifically as a blockchain dev — wants blockchain to be **load-bearing**, not decoration, and wants the **utility token + soulbound credential cards in the career card** treated as committed roadmap, not "captured, not scheduled."
+
+### Decision
+
+**1. Positioning: Storm is the driver-side counterpart, NOT a Tenstreet/Indeed competitor.**
+Storm is the **driver-owned, portable Driver Qualification (DQ) vault** — build your verified DQ file once, selectively disclose facts forever, carry it across placements and carriers. We do **not** build an ATS, a verification network, or compete on data volume. Tenstreet owns the carrier side (network-bound, carrier-owned); Storm owns the driver side (portable, candidate-controlled). Two sides of the same transaction, not the same product.
+
+**2. Funding model: candidate-*controlled*, agency-*funded*.**
+The payer and the owner are different parties. The candidate **owns disclosure + portability**; **Pace or the carrier funds the underlying pull** (exactly how trucking works today). Two implementation paths, in risk order:
+   - **(a) Driver's-own-records, agency-sponsored (lower FCRA risk, start here):** the driver obtains their *own* records by right (e.g. FMCSA PSP ~$10, state MVR), Pace **sponsors the fee**. A consumer presenting their own data is not a CRA furnishing a consumer report. Value = a portable **pre-qualification / speed** signal, not necessarily the carrier's system-of-record for an adverse action.
+   - **(b) Funded-pull-becomes-portable (bigger prize, needs legal opinion):** structured *at the moment of the pull* so the driver authorizes Storm (as their agent) to retain + selectively re-disclose derived facts, with Pace funding. This is the DEC-2026-05-013 cached-attestation model and **requires a formal FCRA opinion** before build/market.
+   - **Honest caveat:** a driver-furnished fact is likely a pre-qual that speeds placement and avoids wasted pulls — not a wholesale replacement for the carrier's compliance pull. Don't oversell "replaces the background check."
+
+**3. Blockchain (Midnight) is load-bearing — for Storm's specific competitive situation.**
+The abstract *defensibility* moat vs. incumbents is still selective disclosure + candidate ownership (a JWT delivers ~80% of that UX). But Storm is a **late entrant with no network**, and that's exactly where the chain earns its keep: a signed JWT requires the verifier to **trust Storm**; a Midnight ZK proof lets any carrier **trust the math** — no network membership, no reputation, no account required to verify. **Network-independent portable trust is a cryptographic property, not a UX one** — and it's the mechanism by which a late entrant overcomes a 20-year network advantage. So Midnight is not "implementation detail"; it is the load-bearing answer to "how do we win without Tenstreet's network?" Build it for real (DEC-2026-06-001 quality bar); never fake it.
+
+**4. Utility token + soulbound credential cards: committed roadmap (with guardrails intact).**
+Promoted from "captured, NOT scheduled" to **committed direction** (sequencing still gated on the real Midnight slice landing first):
+   - **Soulbound credential cards in the career card** — each verified attestation rendered as a **non-transferable** SBT inside the existing career card (the vault). Soulbound to `users.id`, Storm-held anchor, candidate never sees a wallet.
+   - **STORM as a Midnight-native shielded *utility* token** — surfaced as "Storm Points," pure utility (no profit-share, no governance — stays outside Howey), no driver wallet UX.
+   - **Guardrails are not loosened (this is the line that keeps us out of the rejected pile):** transferable/tradeable credential NFTs, fungible tradeable credential tokens, driver-as-vendor-with-wallet, and income-share/"driver pool" tokens **remain permanently rejected** (MOAT_THESIS rejected-ideas appendix). Soulbound ≠ tradeable; utility ≠ security. If a token feature drifts toward transferability or profit-sharing, it's rejected, not roadmap.
+
+### Consequences
+
+- `MOAT_THESIS.md`: retire the "chain is implementation detail / we don't position as blockchain-based / Phase 3 only if a customer asks" lines; add the network-independent-trust = load-bearing framing, the Tenstreet "don't compete on network, compete on portability" section, and the agency-funded model. Not-a-CRA posture unchanged.
+- `ARCHITECTURE.md` + `EXECUTION_CHECKLIST.md`: SBT + token move from "future considerations, not scheduled" to a sequenced part of the active Phase 3 arc (after the one-fact Midnight slice).
+- `TOKEN_BRIEF.md`: "we're not building it now" → committed roadmap with quality bar + guardrails.
+- `PARTNERS.md`: add agency-as-sponsor funding (Pace funds the pull; driver owns the portable fact).
+- **Open legal question (must resolve before path (b) or any marketplace):** FCRA opinion on funded-pull-becomes-portable vs. driver's-own-records-sponsored. Start with (a).
+
+### Related
+
+- DEC-2026-06-001 (Phase 3 active, GTM-driven, quality bar)
+- DEC-2026-05-011 (candidate-as-agent / not a CRA — unchanged, load-bearing here)
+- DEC-2026-05-012 (deferred SBT + STORM — now promoted to committed by this entry)
+- DEC-2026-05-013 (cached-attestation marketplace — the path (b) economic model; still needs FCRA review)
+- DEC-2026-05-014 (provenance gate), DEC-2026-05-016 (celebrate the chain as narrative)
+- `MOAT_THESIS.md` rejected-ideas appendix (the guardrails that keep token/SBT legitimate)
+
+---
+
+## DEC-2026-06-001 — Phase 3 (Midnight ZK) reframed from deferred to an active, go-to-market-driven track
+
+**Date:** 2026-06-09
+**Status:** Accepted (supersedes the *deferral timing* of DEC-2026-05-004; the honesty guardrail from that decision is retained intact)
+**Decided by:** Owner
+
+### Context
+
+Phase 2 (selective-disclosure attestations) shipped (P2.1–P2.7). The docs gated Phase 3 on a *defensive/technical* trigger — "only when a customer, regulator, or investor requires cryptographic non-repudiation" (DEC-2026-05-004, `ARCHITECTURE.md`, `PROJECT_ROADMAP.md`). Because `strategic-direction.mdc` is an always-applied rule, every AI session read that gate and pushed back on any Midnight work, repeatedly relitigating a settled direction.
+
+The owner's call: the stronger, time-sensitive trigger is **go-to-market + ecosystem**, not non-repudiation.
+
+- Midnight is a new chain; being one of the first *real, regulated-industry* (trucking DQ-file) use cases is a narrative + partnership asset that only exists while it's novel. The window is finite.
+- A genuine end-to-end integration can earn Midnight ecosystem support (grants, co-marketing, foundation amplification). The brand already commits to the chain story (`stormchain.ai`, DEC-2026-05-016).
+- Time-to-market is a real success factor and was being treated as a cost rather than the opportunity.
+
+### Decision
+
+1. **Phase 3 is an active track**, driven by go-to-market/ecosystem timing — not deferred behind a non-repudiation trigger. The "do not start Phase 3" language is retired from `strategic-direction.mdc`, `ARCHITECTURE.md`, `EXECUTION_CHECKLIST.md`, and `PROJECT_ROADMAP.md`.
+2. **The quality bar is absolute (Storm is not a crypto scam project).** Time-to-market means time-to-*credible*, never time-to-garbage. No demo-ware shipped as real; if a fact says "proven on Midnight," the proof must actually run and verify.
+3. **These guardrails are explicitly retained, unchanged:**
+   - **Honesty constraint (DEC-2026-05-004):** narrate the vision now ("built on Midnight"); claim a *per-fact* live ZK proof only when that proof genuinely runs.
+   - **Interaction gate (DEC-2026-05-001):** users never touch a wallet, seed phrase, gas, or signing.
+   - **Provenance gate (DEC-2026-05-014):** only third-party / issuer-signed facts are proven; self-reported data is never attested.
+   - **One-line swap:** Phase 3 ships `midnight-attestation-service.ts` behind the existing `attestationService` interface; no rewrite of the carrier UI, fact registry, or `block-data.ts`.
+4. **Sequencing:** keep expanding the third-party fact registry (breadth feeds future circuits) and stand up Midnight as a parallel track, starting with a thin one-fact testnet slice to de-risk the toolchain (WSL2 + Compact, proof server) before committing any public timeline.
+
+### Consequences
+
+- AI sessions should treat Midnight requests as "yes — here's how we do it for real." The only legitimate pushback is on shortcuts that would ship something fake.
+- External dependency to verify before a public timeline: Midnight network maturity / proof-shape support.
+- Stripe payments remain a separate deferred greenfield track (unchanged).
+
+### Related
+
+- DEC-2026-05-004 (Phase 3 deferral — superseded on timing; honesty constraint retained)
+- DEC-2026-05-016 (celebrate the chain as narrative)
+- DEC-2026-05-001 (interaction gate), DEC-2026-05-014 (provenance gate), DEC-2026-05-011 (candidate-agent / not-a-CRA)
+- `docs/midnight/EXECUTION_CHECKLIST.md` Phase 3 section
+
+---
+
 ## DEC-2026-05-016 — Public positioning: celebrate the chain (narrative), keep gating chain interaction (UX)
 
 **Date:** 2026-05-30
@@ -116,7 +212,7 @@ While reasoning about route sprawl and what Storm actually is, the core question
 ## DEC-2026-05-013 — Driver credential monetization: Storm-mediated cached-attestation marketplace, deferred to Phase 4
 
 **Date:** 2026-05-27
-**Status:** Accepted (deferred — design begins only when trigger conditions met)
+**Status:** Accepted (Phase 4 — still gated, but the gate is now explicit per [DEC-2026-06-002](#dec-2026-06-002): a **formal FCRA opinion** on funded-pull-becomes-portable + Pace co-design. The "candidate-controlled / agency-funded" framing in DEC-2026-06-002 is the funding model this marketplace rides on.)
 **Decided by:** Sole engineer
 
 ### Context
@@ -169,10 +265,10 @@ All three required:
 
 ---
 
-## DEC-2026-05-012 — Future Phase 3b token strategy: SBT credentials + Midnight-shielded STORM, deferred
+## DEC-2026-05-012 — Phase 3b token strategy: SBT credentials + Midnight-shielded STORM
 
 **Date:** 2026-05-27
-**Status:** Accepted (deferred — design begins only when trigger conditions met)
+**Status:** ✅ **Promoted to committed roadmap by [DEC-2026-06-002](#dec-2026-06-002)** (2026-06-09). No longer "deferred until a trigger" — it's the sequenced layer after the real Phase 3a Midnight slice. Guardrails below (soulbound = non-transferable, STORM = pure utility) are unchanged and non-negotiable. The "trigger conditions" framing below is historical.
 **Decided by:** Sole engineer
 
 ### Context
@@ -457,7 +553,7 @@ Phase 2 ships `signed-jwt-attestation-service.ts`. Phase 3 ships `midnight-attes
 ## DEC-2026-05-004 — Defer Phase 3 (Midnight) until customer-driven
 
 **Date:** 2026-05-22
-**Status:** Accepted
+**Status:** ⚠️ **SUPERSEDED on timing by [DEC-2026-06-001](#dec-2026-06-001--phase-3-midnight-zk-reframed-from-deferred-to-an-active-go-to-market-driven-track)** (2026-06-09). Phase 3 is now an active, go-to-market-driven track — *not* gated behind a non-repudiation trigger. **The honesty guardrail from this decision (no per-fact live-proof claim until the proof actually runs) is retained.** The deferral framing below is historical.
 **Decided by:** Boss + sole engineer
 
 ### Context

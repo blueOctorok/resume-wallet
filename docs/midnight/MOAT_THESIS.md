@@ -64,9 +64,36 @@ A startup could in principle build the same thing. Storm's defenses against that
 
 - **First-mover access to Pace.** Pace is a strategic anchor customer. They are not just paying — they're shaping the product. Once Pace is using Storm-issued attestations as their default DQ delivery format, switching to a competitor means re-onboarding every driver in their pool. Pace's customers (the carriers Pace places drivers with) become accustomed to receiving Storm verifications. Replacing that is operationally costly.
 - **Verified-credentials network effect.** Each driver added to Storm produces verified facts that carriers trust. The product gets better as more drivers verify. A late-arriving competitor would launch with zero verified drivers and ask carriers to trust them — Storm has months / years of accumulated trust by then.
-- **Cryptographic agility.** Phase 3 ships when customer demand justifies it; not before. We don't burn capital building Compact contracts that don't have customers. Competitors who jump to Midnight (or Aztec) before customer demand burn capital and gain little. Competitors who don't can't catch up when we do.
+- **Cryptographic agility + first-real-use-case timing.** Storm builds the real Midnight backbone now (Phase 3 active, DEC-2026-06-001) — not as speculative capital burn, but because being an early *genuine* regulated-industry use case on a young chain is itself a moat (ecosystem support, narrative, partnership). A late competitor would have to match both the verified-driver network *and* a credible on-chain integration. The `attestationService` interface keeps us swap-able (Midnight → Aztec → RISC Zero) without rewriting product code.
 
 ---
+
+## Positioning: the driver-side counterpart, not a Tenstreet competitor (DEC-2026-06-002)
+
+The instinctive fear is "Tenstreet has 20 years and vast data — how do we compete?" The answer is **we don't compete on their axis.** Tenstreet's **Xchange** is a carrier-contributed **employment-verification network** ([their framing](https://www.tenstreet.com/blog/driver-recruiting/introduction-to-xchange)): carriers feed each other verification responses, accumulated since 2006. That network is their moat — and it is **carrier-owned, network-bound, and treats the driver as inventory.** You cannot replicate it, and you shouldn't try.
+
+| | Tenstreet (Xchange) | Storm |
+|---|---|---|
+| Customer | The carrier | The driver (sold *through* agencies like Pace) |
+| Data ownership | Carrier-contributed, locked to the network | Driver-owned, portable |
+| Trust source | Network membership | Cryptographic proof + cited CRA |
+| Driver's role | Inventory (can dispute, not own) | Owner + discloser |
+
+These are not the same company competing — they are **two sides of the same transaction.** Storm builds the thing Tenstreet structurally *can't* without inverting its business: the driver's own verified, portable credential vault. Concrete rules this implies:
+
+- **Don't build an ATS or a verification network.** Don't chase data volume.
+- **Storm's strong facts are CRA-sourced** (MVR, CDL class, PSP) — where the issuer is a third party (DMV/FMCSA via Accio), so Tenstreet has no special advantage. **Don't fight on `previous_employer_verified` via cold-emailing employers** — that's the exact problem Xchange's network already solved.
+- **Midnight is the equalizer:** a proven, driver-owned fact works for *any* carrier (on Tenstreet or not), because the trust is in the proof, not the network. That's how a late entrant routes around 20 years of network density.
+- **Interop, not dependency:** the long-game is Storm-verified facts flowing *into* a carrier's ATS (Tenstreet included) as the driver-side feeder — never building *on* Tenstreet's API as a data source (that makes Storm a feature, not a company).
+
+## Funding model: candidate-controlled, agency-funded (DEC-2026-06-002)
+
+The honest economic constraint: **drivers will not pay to screen themselves speculatively.** In trucking the carrier/agency always pays. This does **not** break candidate-ownership — because **the payer and the owner are different parties.** "Candidate-owned" means the driver controls *disclosure and portability*, not that they swiped the card.
+
+- **Pace (or a carrier) funds the pull; the driver owns the resulting portable fact.**
+- **Start with the lower-risk path:** the driver obtains their *own* records by right (FMCSA PSP ~$10, state MVR), Pace **sponsors the fee**. A consumer presenting their own data is not a CRA furnishing a consumer report. Value = a portable **pre-qualification / speed** signal — get qualified drivers to the front of the line, stop wasting pulls on drivers who won't pass.
+- **The bigger prize (funded-pull-becomes-portable via consent at the moment of pull) needs a formal FCRA opinion** before build/market (DEC-2026-05-013).
+- **Honest caveat:** a driver-furnished fact is likely a pre-qual that speeds placement, not a wholesale replacement for the carrier's compliance pull. Don't oversell "replaces the background check."
 
 ## Why this couldn't have been built before 2026
 
@@ -152,20 +179,19 @@ Until then: **stay non-CRA, keep Accio as the regulated CRA layer, position ever
 
 ---
 
-## What about the chain itself? Is it the moat?
+## Is the chain the moat? Two true statements that aren't contradictory
 
-**No.** The chain is implementation detail.
+This was previously answered "no, the chain is implementation detail." That undersold it. The honest, more precise answer (DEC-2026-06-002):
 
-The moat is the *user-facing experience* — carriers seeing facts, drivers controlling disclosure. That UX is what wins customers and creates lock-in. The chain (Midnight, eventually) is what makes that UX cryptographically robust enough to be defensible against a determined adversary.
+**Statement 1 — The *defensibility* moat vs. incumbents is selective disclosure + candidate ownership.** A signed JWT already delivers ~80% of that *UX*. Tenstreet/HireRight can't copy it without burning their CRA model — that's the structural lock, and it doesn't strictly require a blockchain.
 
-The order matters:
+**Statement 2 — Midnight is *load-bearing* for Storm's specific competitive situation: a late entrant with no network.** This is where "the chain is just implementation detail" breaks down. A JWT requires the verifier to **trust Storm** (Storm holds the signing key; Storm could forge it). A late entrant hasn't *earned* that trust and has no 20-year network to lend it. A **Midnight ZK proof lets any carrier trust the math instead** — verifiable cold, with no Storm account, no network membership, no reputation required. **Network-independent portable trust is a cryptographic property, not a UX one** — and it is precisely the mechanism by which a late entrant overcomes a two-decade network advantage like Xchange's.
 
-1. **The UX has to come first** (Phase 2: signed attestations behind the same interface).
-2. **The crypto comes when customers need it** (Phase 3: Midnight ZK proofs, only when triggered).
+So: the chain is not the *abstract* moat, but it **is the load-bearing answer to "how does Storm win without Tenstreet's network?"** That makes it core product, not decoration. Build it for real (DEC-2026-06-001 quality bar); a fake or demo-grade integration earns nothing and burns credibility.
 
-This means we can build the moat with a team of one engineer, on a Vercel + Supabase stack, before we touch any blockchain infrastructure. **If a customer never asks for cryptographic non-repudiation, we never ship Phase 3 — and we still have the moat.** The crypto is a defensive upgrade, not a prerequisite.
+The order still matters — UX first (Phase 2 signed attestations, shipped), then the real Midnight backbone (Phase 3, active track) — but Phase 3 is no longer "only if a customer asks." The driver is go-to-market + ecosystem: being an early *real* regulated-industry use case on Midnight while that window is open (DEC-2026-06-001).
 
-This is also why we don't position Storm as "blockchain-based" anymore. The marketing line is "verified credentials platform." The blockchain only enters the conversation when a sophisticated buyer asks how the verification works under the hood.
+**Positioning, accordingly:** Storm leans into the blockchain story publicly (`stormchain.ai`, DEC-2026-05-016) — it celebrates Midnight / zero-knowledge / selective disclosure as the credibility narrative. The guardrail is honesty, not silence: narrate "built on Midnight" now; attach a per-fact "proven on-chain" claim only when that proof genuinely runs. Users still never *interact with* the chain (no wallet, no gas).
 
 ---
 
@@ -207,14 +233,14 @@ Every product decision should be evaluated against the moat:
 - **Does this make selective disclosure more visible to carriers?** → Higher priority.
 - **Does this make signed attestations swappable for ZK proofs later?** → Don't take shortcuts; respect the `attestationService` interface.
 - **Does this generalize to other regulated industries?** → Consider; don't over-invest in trucking-only abstractions if a small additional effort generalizes them.
-- **Does this look like "blockchain product" to a non-technical buyer?** → Cut. The moat is selective disclosure, not blockchain. Blockchain is implementation detail.
+- **Does this lean on the blockchain story?** → Keep, and tell it honestly. Midnight is load-bearing for network-independent portable trust (DEC-2026-06-002) and a public credibility narrative (DEC-2026-05-016). The guardrail is honesty (no per-fact "proven on-chain" claim before the proof runs) and interaction-invisibility (no wallet/gas for users) — not silence.
 - **Does this make Pace's life easier this week?** → High priority regardless. Pace pays the bills, and Pace's success makes the moat real.
 
 ---
 
 ## One-paragraph version (for emails / pitch decks)
 
-Storm's moat is selective disclosure of verified DQ-file facts. Carriers see "✓ clean MVR, ✓ Class A with hazmat" instead of full-disclosure PDFs containing PII the carrier doesn't need. Drivers control which facts are shared with which carrier. Existing trucking-compliance vendors (Tenstreet, HireRight, DriverFacts) cannot copy this without rebuilding their entire CRA business model — their contracts, their data formats, and their carrier relationships are all structured around delivering full reports. Storm builds this with off-the-shelf SaaS infrastructure (Vercel, Supabase, Stripe) plus, when customer demand justifies, a swap-in zero-knowledge cryptography layer on Midnight. The window is open now because the underlying cryptography only matured in 2026. The first vertical-focused team to ship this UX in trucking owns the category.
+Storm is the **driver-owned, portable DQ vault**: drivers build verified credentials once and selectively disclose facts ("✓ clean MVR, ✓ Class A with hazmat") to any carrier — instead of handing over full-disclosure PDFs full of PII the carrier doesn't need. Drivers control disclosure; agencies like Pace fund the pulls. Existing trucking-compliance vendors (Tenstreet/Xchange, HireRight, DriverFacts) own the *carrier* side — network-bound, carrier-owned, driver-as-inventory — and can't copy the driver-owned side without inverting their CRA business model. Storm builds the UX on off-the-shelf SaaS (Vercel, Supabase, Stripe) and the **real cryptographic backbone on Midnight** (active track) — because for a late entrant with no network, ZK proofs are the load-bearing way to make a driver-owned fact verifiable *cold*, by trusting the math instead of a network. The window is open now because the cryptography only matured in 2026. The first vertical-focused team to ship driver-owned, network-independent verified credentials in trucking owns the category.
 
 ---
 
@@ -263,5 +289,5 @@ This section exists so future-you, future collaborators, and future AI sessions 
 
 ---
 
-**Last updated:** 2026-05-27 (added "Storm is not a CRA" section + "Rejected feature ideas" appendix — see also `DECISION_LOG.md` DEC-2026-05-011, DEC-2026-05-012, DEC-2026-05-013)
+**Last updated:** 2026-06-09 (DEC-2026-06-002: chain is load-bearing for network-independent trust; driver-side-counterpart positioning vs. Tenstreet/Xchange; candidate-controlled/agency-funded model. Earlier: 2026-05-27 "Storm is not a CRA" + "Rejected feature ideas" appendix — see `DECISION_LOG.md` DEC-2026-05-011/012/013, DEC-2026-06-001/002)
 **Source conversations:** see `docs/midnight/new-direction.md` for the original boss memo

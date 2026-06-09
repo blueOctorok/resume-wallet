@@ -2,7 +2,7 @@
 
 **For:** boss conversation
 **Read time:** 3 minutes
-**Status:** Captured for the future. Not being built right now.
+**Status:** **Committed roadmap (DEC-2026-06-002), sequenced after the real Midnight slice lands.** Not "someday" — it's the layer after Phase 3a. Guardrails (soulbound = non-transferable, token = pure utility) are non-negotiable.
 
 ---
 
@@ -69,12 +69,13 @@ The 30-day cliff matters — beyond 30 days, MVRs are too old to use anyway, so 
 
 | What | When |
 |---|---|
-| Storm Points (off-chain) | Part of Phase 1 cleanup, ~6 weeks out |
-| Career card upgraded to soulbound vault + credential cards inside | After the zero-knowledge work ships (Phase 3) |
-| Storm Points on Midnight (private balances) | Same window — only if usage is real |
-| Cached-credential payback marketplace | Phase 4 — needs Phase 2 in production + Pace at the table |
+| Storm Points (off-chain) | Running today (off-chain ledger) |
+| Real one-fact Midnight ZK slice | Phase 3a — active track, next up |
+| Career card upgraded to soulbound vault + credential cards inside | Phase 3b — committed, right after 3a verifies |
+| Storm Points reissued on Midnight (private balances) | Phase 3b — committed, after the SBT layer; pure utility (outside Howey) |
+| Cached-credential payback marketplace | Phase 4 — **gated on a formal FCRA opinion** + Pace co-design |
 
-The discipline is intentional: each phase has to stabilize before the next one is designed. Skipping ahead breaks Pace's live app.
+The discipline is sequencing, not hesitation: each layer stabilizes before the next is designed (don't mint SBTs on a proof backbone that isn't live). Skipping ahead breaks Pace's live app. The only hard *gate* (not just sequence) is Phase 4 — it needs the FCRA opinion first.
 
 ---
 
@@ -82,7 +83,7 @@ The discipline is intentional: each phase has to stabilize before the next one i
 
 Drivers get a wallet of soulbound credentials they actually own. They earn money when those credentials get re-queried. Carriers save money on amortized lookups. Storm captures middle margin on a transaction nobody else in trucking offers. Pace's revenue is co-designed in, not bulldozed.
 
-We're not building it now. We're shipping the foundation so the option exists when the timing is right.
+This is committed roadmap, sequenced behind the real Midnight slice (DEC-2026-06-002) — we build the proof backbone for real first, then the soulbound cards and token ride on top. Built genuine, never demo-ware.
 
 ---
 
