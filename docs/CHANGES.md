@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.5 — carrier CredentialFactsPanel (facts-first in CareerCardModal)** (2026-06-05)
+
+Employer talent view now leads with cryptographically verified **facts** (Phase 2 moat surface); MVR/PSP PDF stat grids are demoted to document fallback. **I-8 preserved:** request buttons, recruit, order MVR/PSP, and `MvrViewModal`/`PspViewModal` unchanged — panel is additive only.
+
+| Layer | Change |
+|---|---|
+| `CredentialFactsPanel.tsx` | `HubSectionPanel` + `BlockCard` (teal); empty state; expandable fact rows; "Verified by Storm" + CRA provenance line |
+| `attestation-fact-ui.ts` | `FactType` → label/icon map; provenance + disclosed-field formatters |
+| `employer-credential-facts.ts` | Server helper: loads `attestations` rows, verifies via registry `attestationService.verifyAttestation` (never block_* for badges) |
+| `GET /api/employer/talent/[userId]` | Returns `verifiedFacts[]` (non-fatal warn on load failure) |
+| `CareerCardModal.tsx` | Mounts panel above `ProjectedCareerCard`; passes `demoteEmployerScreeningDetails` |
+| `ProjectedCareerCard.tsx` | When demoted: retitled MVR/PSP blocks, stats hidden, ghost "View full report" kept |
+
+**Provenance gate:** panel only renders third-party facts from the P2.3 registry; self-reported career card sections stay "on file" with no verified badge.
+
+**Verify:** `npm run test:app` (42) + `npm run build` green. Pace smoke: card opens, requests work, PDF still reachable via fallback button. Empty panel expected until candidates have `attestations` rows (prove API is live; candidate UI not yet).
+
+---
+
 ## **Phase 2 · P2.4 — attestation prove + verify API routes** (2026-06-05)
 
 HTTP surface for Phase 2 selective disclosure. Routes import `attestationService` from the registry only — never the signed-JWT impl.

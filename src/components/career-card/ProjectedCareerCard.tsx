@@ -164,6 +164,11 @@ interface ProjectedCareerCardProps {
   onEmployerViewCompanyMvr?: () => void
   /** Employer talent modal: open full PSP the company purchased for this candidate */
   onEmployerViewCompanyPsp?: () => void
+  /**
+   * When true (employer modal with CredentialFactsPanel), MVR/PSP company panels
+   * collapse to document fallbacks — facts panel carries the trust signal.
+   */
+  demoteEmployerScreeningDetails?: boolean
 }
 
 /**
@@ -197,6 +202,7 @@ export default function ProjectedCareerCard({
   onCardMutation,
   onEmployerViewCompanyMvr,
   onEmployerViewCompanyPsp,
+  demoteEmployerScreeningDetails = false,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
@@ -659,43 +665,57 @@ export default function ProjectedCareerCard({
             <div className='mb-3 flex flex-wrap items-start justify-between gap-2'>
               <div className='flex items-center gap-2'>
                 <Lock className={cn('w-4 h-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
-                <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
-                  MVR — private to your company
-                </h3>
+                <div>
+                  <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                    {demoteEmployerScreeningDetails ? 'MVR report (document fallback)' : 'MVR — private to your company'}
+                  </h3>
+                  {demoteEmployerScreeningDetails && (
+                    <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
+                      Full Accio report — use when you need the underlying document.
+                    </p>
+                  )}
+                </div>
               </div>
               {employerScreeningReady(data.employerCompanyMvr.orderStatus) && onEmployerViewCompanyMvr && (
-                <Button type='button' variant='secondary' size='sm' onClick={onEmployerViewCompanyMvr}>
+                <Button
+                  type='button'
+                  variant={demoteEmployerScreeningDetails ? 'ghost' : 'secondary'}
+                  size='sm'
+                  onClick={onEmployerViewCompanyMvr}
+                >
                   <Eye className='mr-1 h-4 w-4' aria-hidden />
                   View full report
                 </Button>
               )}
             </div>
-            <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Status</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyMvr.results?.licenseStatus || 'Pending'}
-                </p>
+            {!demoteEmployerScreeningDetails && (
+              <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Status</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyMvr.results?.licenseStatus || 'Pending'}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Class</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyMvr.results?.licenseClass || '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Points</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyMvr.results?.totalPoints ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Violations</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyMvr.results?.violationCount ?? '—'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Class</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyMvr.results?.licenseClass || '—'}
-                </p>
-              </div>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Points</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyMvr.results?.totalPoints ?? '—'}
-                </p>
-              </div>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Violations</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyMvr.results?.violationCount ?? '—'}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -709,37 +729,51 @@ export default function ProjectedCareerCard({
             <div className='mb-3 flex flex-wrap items-start justify-between gap-2'>
               <div className='flex items-center gap-2'>
                 <FileWarning className={cn('h-4 w-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
-                <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
-                  PSP — private to your company
-                </h3>
+                <div>
+                  <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                    {demoteEmployerScreeningDetails ? 'PSP report (document fallback)' : 'PSP — private to your company'}
+                  </h3>
+                  {demoteEmployerScreeningDetails && (
+                    <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
+                      Full FMCSA PSP document — secondary to verified facts above.
+                    </p>
+                  )}
+                </div>
               </div>
               {employerScreeningReady(data.employerCompanyPsp.orderStatus) && onEmployerViewCompanyPsp && (
-                <Button type='button' variant='secondary' size='sm' onClick={onEmployerViewCompanyPsp}>
+                <Button
+                  type='button'
+                  variant={demoteEmployerScreeningDetails ? 'ghost' : 'secondary'}
+                  size='sm'
+                  onClick={onEmployerViewCompanyPsp}
+                >
                   <Eye className='mr-1 h-4 w-4' aria-hidden />
                   View full report
                 </Button>
               )}
             </div>
-            <div className='grid grid-cols-2 gap-3 text-sm sm:grid-cols-3'>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Order status</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyPsp.orderStatus}
-                </p>
+            {!demoteEmployerScreeningDetails && (
+              <div className='grid grid-cols-2 gap-3 text-sm sm:grid-cols-3'>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Order status</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyPsp.orderStatus}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>DL state</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyPsp.licenseState}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Vendor</p>
+                  <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                    {data.employerCompanyPsp.resultSummary?.resultStatus ?? 'Pending'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>DL state</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyPsp.licenseState}
-                </p>
-              </div>
-              <div>
-                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Vendor</p>
-                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                  {data.employerCompanyPsp.resultSummary?.resultStatus ?? 'Pending'}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 

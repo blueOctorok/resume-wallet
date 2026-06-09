@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import CredentialFactsPanel from '@/components/employer/CredentialFactsPanel'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import type { ProjectedCareerCard as ProjectedCardData } from '@/types/career-card'
@@ -25,6 +26,7 @@ import MessagingButton from '@/components/messaging/MessagingButton'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import type { EmployerCredentialFact } from '@/lib/employer-credential-facts'
 
 interface PendingCandidateRequest {
   id: string
@@ -104,6 +106,7 @@ export default function CareerCardModal({
     id: string
     sessionUserId: string | null
   } | null>(null)
+  const [verifiedFacts, setVerifiedFacts] = useState<EmployerCredentialFact[]>([])
 
 
   // Fetch on mount
@@ -133,6 +136,7 @@ export default function CareerCardModal({
 
       const data = await response.json()
       setCard(data.card ?? null)
+      setVerifiedFacts((data.verifiedFacts ?? []) as EmployerCredentialFact[])
       setEmployerCompany(data.employerCompany ?? null)
       setEmployerExtras({
         installedBlockTypes: data.installedBlockTypes ?? [],
@@ -641,11 +645,15 @@ export default function CareerCardModal({
                 <div className="flex flex-wrap items-center gap-2">{requestActionNodes}</div>
               </div>
             )}
+            <div className="mb-4">
+              <CredentialFactsPanel facts={verifiedFacts} theme={theme} />
+            </div>
             <ProjectedCareerCard
               data={card}
               mode="employer"
               sessionUserId={sessionUserId}
               footerSlot={footerActions}
+              demoteEmployerScreeningDetails
               onEmployerViewCompanyMvr={
                 card.employerCompanyMvr?.orderId &&
                 ['completed', 'needs_review'].includes(card.employerCompanyMvr.orderStatus)

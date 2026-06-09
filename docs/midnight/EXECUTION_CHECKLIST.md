@@ -638,7 +638,7 @@ COMMIT: feat(attestation): prove + verify API routes (P2.4)
 ### P2.5 — Carrier-facing `CredentialFactsPanel` (facts-first in CareerCardModal)
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · 71e017e · 2026-06-05 |
 | Pre-conditions | P2.4 |
 | Pace risk | **Medium — touches `CareerCardModal.tsx` (Pace invariant I-8).** Coordinate + verify talent-view still loads. |
 
@@ -839,6 +839,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-05 | P2.5 — carrier CredentialFactsPanel | Composer | 71e017e | **New:** `CredentialFactsPanel` (facts-first, HubSectionPanel chrome), `attestation-fact-ui.ts`, `employer-credential-facts.ts`. **Wired:** talent API `verifiedFacts`; `CareerCardModal` additive mount; `ProjectedCareerCard` demotes MVR/PSP stat grids (PDF fallback kept). I-8 request/recruit/order paths untouched. Pace smoke: card + requests + PDF fallback OK. `npm run test:app` (42) + `npm run build` green. **Next:** P2.6 candidate prove UX. |
 | 2026-06-05 | P2.4 — attestation prove + verify API routes | Composer | 21ed2fc | **New:** `POST /api/attestation/prove` (session, self-only) + `POST /api/attestation/verify` (`{attestation}` or `{id}`; audience gate for scoped rows). **Helpers:** `attestation-route-helpers.ts` (audience access, row map, error status). Registry-only imports. `npm run test:app` (42) + `npm run build` green. **Next:** P2.5 carrier `CredentialFactsPanel`. |
 | 2026-06-05 | P2.3 — fact registry + 3 third-party facts | Composer | a2c1242 | **New:** `fact-registry.ts` (3 `proveImpl`s + provenance gate), `block-data.ts` helpers (`getMvrAttestationContext`, `getEmploymentVerificationForAttestation`). **Wired:** registry `resolveFact` → `resolveAttestationFact`. **Tests:** 8 vitest cases (true/false per fact, gate, no PII in `disclosedFields`). MVR facts cite `source_cra: accio` + `accio_order_number`; employment cites `prior_employer` + evr id. `npm run test:app` (38) + `npm run build` green. **Next:** P2.4 prove/verify API routes. |
 | 2026-06-05 | P2.2 — attestationService + signed-JWT impl | Composer | 0b7a92b | **New:** `attestation-service.ts` (interface/types), `signed-jwt-attestation-service.ts` (factory + prove/verify + DB supersede), `attestation-service-registry.ts` (export only). **Tests:** round-trip, tamper, expiry (vitest). **Env:** `ATTESTATION_JWT_PRIVATE_KEY`, `ATTESTATION_ISSUER`, optional `ATTESTATION_BACKEND`. Registry `proveFact` throws until P2.3 fact registry wired. `npm run test:app` + `npm run build` green. **Next:** P2.3 fact registry. |

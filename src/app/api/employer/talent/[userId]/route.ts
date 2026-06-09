@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { buildProjectedCareerCard, toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
+import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import type { MvrData, PspData } from '@/types/career-card'
 
 /**
@@ -219,6 +220,13 @@ export async function GET(
       hasScreeningConsentBundle: Boolean(latestScreeningBundle),
     }
 
+    let verifiedFacts: Awaited<ReturnType<typeof listVerifiedCredentialFactsForEmployer>> = []
+    try {
+      verifiedFacts = await listVerifiedCredentialFactsForEmployer(supabase, userId, companyId)
+    } catch (e) {
+      console.warn('[EMPLOYER TALENT] verifiedFacts load:', e)
+    }
+
     return NextResponse.json({
       success: true,
       employerCompany: {
@@ -238,6 +246,7 @@ export async function GET(
       pspFmcsaConsentFormData: pspFmcsaConsent?.form_data || null,
       screeningConsentBundleId: latestScreeningBundle?.id ?? null,
       completionFlags,
+      verifiedFacts,
       completenessScore: careerRow.completeness_score ?? 0,
       verifiedJobsCount: careerRow.verified_jobs_count ?? 0,
       workHistoryCount: careerRow.work_history_count ?? 0,
