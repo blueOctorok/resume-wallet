@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 · P2.6 — candidate per-audience disclosure toggles** (2026-06-05)
+
+Candidates control which verified facts each employer sees. Default: **shareable** (no row); toggling off writes `allowed=false` and hides the fact from that employer's panel + blocks audience-scoped `proveFact`.
+
+| Layer | Change |
+|---|---|
+| `100_disclosure_preferences.sql` | `(candidate_user_id, audience_id, fact_type, allowed)` + RLS (candidate owns rows). **Apply manually** on Supabase dashboard. |
+| `disclosure-preferences.ts` | Audience discovery, preference CRUD, `assertDisclosureAllowsProve`, employer denylist loader |
+| `signed-jwt-attestation-service.ts` | `proveFact` refuses when toggled off for `audienceId` |
+| `employer-credential-facts.ts` | Filters denied facts from carrier `verifiedFacts` list |
+| `GET/PATCH /api/attestation/disclosure-preferences` | Candidate session auth; PATCH validates audience is one the candidate has interacted with |
+| `disclosure-preferences-store.ts` + `DisclosurePreferencesModal.tsx` | Zustand store + hub career card **Sharing** button (Shield icon) |
+
+**Verify:** `npm run test:app` (48) + `npm run build` green. Toggle off → employer `verifiedFacts` omits fact; audience-scoped prove returns error.
+
+---
+
 ## **Phase 2 · P2.5 — carrier CredentialFactsPanel (facts-first in CareerCardModal)** (2026-06-05)
 
 Employer talent view now leads with cryptographically verified **facts** (Phase 2 moat surface); MVR/PSP PDF stat grids are demoted to document fallback. **I-8 preserved:** request buttons, recruit, order MVR/PSP, and `MvrViewModal`/`PspViewModal` unchanged — panel is additive only.

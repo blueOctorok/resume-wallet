@@ -686,7 +686,7 @@ COMMIT: feat(attestation): carrier credential facts panel (P2.5)
 ### P2.6 — Candidate per-audience disclosure toggles
 | | |
 |---|---|
-| Status | ⬜ Not started |
+| Status | ✅ Done · TBD · 2026-06-05 |
 | Pre-conditions | P2.5 |
 | Pace risk | Low — candidate-side UI + scoped reads |
 
@@ -839,6 +839,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-05 | P2.6 — candidate per-audience disclosure toggles | Composer | TBD | **Migration:** `100_disclosure_preferences.sql` (apply manually on dashboard). **Lib:** `disclosure-preferences.ts` — default shareable, `allowed=false` hides from employer list + blocks audience-scoped prove. **API:** GET/PATCH `/api/attestation/disclosure-preferences`. **UI:** `DisclosurePreferencesModal` + Zustand store; hub career card **Sharing** button. `npm run test:app` (48) + `npm run build` green. **Next:** P2.7 Verified-by-Storm language + Stormi. |
 | 2026-06-05 | P2.5 — carrier CredentialFactsPanel | Composer | 07d47bd | **New:** `CredentialFactsPanel` (facts-first, HubSectionPanel chrome), `attestation-fact-ui.ts`, `employer-credential-facts.ts`. **Wired:** talent API `verifiedFacts`; `CareerCardModal` additive mount; `ProjectedCareerCard` demotes MVR/PSP stat grids (PDF fallback kept). I-8 request/recruit/order paths untouched. Pace smoke: card + requests + PDF fallback OK. `npm run test:app` (42) + `npm run build` green. **Next:** P2.6 candidate prove UX. |
 | 2026-06-05 | P2.4 — attestation prove + verify API routes | Composer | 21ed2fc | **New:** `POST /api/attestation/prove` (session, self-only) + `POST /api/attestation/verify` (`{attestation}` or `{id}`; audience gate for scoped rows). **Helpers:** `attestation-route-helpers.ts` (audience access, row map, error status). Registry-only imports. `npm run test:app` (42) + `npm run build` green. **Next:** P2.5 carrier `CredentialFactsPanel`. |
 | 2026-06-05 | P2.3 — fact registry + 3 third-party facts | Composer | a2c1242 | **New:** `fact-registry.ts` (3 `proveImpl`s + provenance gate), `block-data.ts` helpers (`getMvrAttestationContext`, `getEmploymentVerificationForAttestation`). **Wired:** registry `resolveFact` → `resolveAttestationFact`. **Tests:** 8 vitest cases (true/false per fact, gate, no PII in `disclosedFields`). MVR facts cite `source_cra: accio` + `accio_order_number`; employment cites `prior_employer` + evr id. `npm run test:app` (38) + `npm run build` green. **Next:** P2.4 prove/verify API routes. |

@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useState } from 'react'
-import { Loader2, AlertCircle, Pencil, Share2, Sparkles } from 'lucide-react'
+import { Loader2, AlertCircle, Pencil, Share2, Sparkles, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
@@ -13,6 +13,7 @@ import type { PageType } from '@/stores/types'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import Button from '@/components/ui/Button'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
+import DisclosurePreferencesModal from '@/components/hub/DisclosurePreferencesModal'
 import { useProjectedCareerCard } from '@/hooks/use-projected-career-card'
 import { useHubDocuments } from '@/hooks/use-hub-documents'
 
@@ -37,6 +38,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
   const setUIMode = useUIModeStore((s) => s.setMode)
   const installedBlocks = useInstalledBlocks()
   const [shareOpen, setShareOpen] = useState(false)
+  const [disclosureOpen, setDisclosureOpen] = useState(false)
 
   const hubDocs = useHubDocuments(refreshNonce)
 
@@ -108,6 +110,18 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
               variant='ghost'
               size='sm'
               className={cn('gap-1 px-2', ghostBtn)}
+              title='Manage verified fact sharing'
+              aria-label='Manage verified fact sharing'
+              onClick={() => setDisclosureOpen(true)}
+            >
+              <Shield className='h-3.5 w-3.5' />
+              <span className='hidden text-xs font-medium sm:inline'>Sharing</span>
+            </Button>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className={cn('gap-1 px-2', ghostBtn)}
               title='Share career card'
               aria-label='Share career card'
               onClick={() => setShareOpen(true)}
@@ -149,6 +163,10 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
         sessionUserId={sessionUserId}
         displayName={card.name?.trim() || undefined}
         onShareUpdated={() => void refresh()}
+      />
+      <DisclosurePreferencesModal
+        isOpen={disclosureOpen}
+        onClose={() => setDisclosureOpen(false)}
       />
     </div>
   )

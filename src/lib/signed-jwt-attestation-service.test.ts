@@ -36,6 +36,14 @@ function makeSupabaseMock() {
   }
 
   const from = vi.fn((table: string) => {
+    if (table === 'disclosure_preferences') {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        })),
+      }
+    }
     if (table !== 'attestations') {
       throw new Error(`Unexpected table: ${table}`)
     }
@@ -187,5 +195,31 @@ describe('createSignedJwtAttestationService', () => {
 
     expect(result.valid).toBe(false)
     expect(result.reason).toMatch(/exp/i)
+  })
+
+  it('rejects prove when disclosure toggled off for audience', async () => {
+    const from = vi.fn((table: string) => {
+      if (table === 'disclosure_preferences') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { allowed: false }, error: null }),
+          })),
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const service = createSignedJwtAttestationService({
+      jwtSecret: TEST_SECRET,
+      issuer: TEST_ISSUER,
+      getSupabase: async () => ({ from }) as unknown as SupabaseClient,
+      resolveFact: async () => ({
+        factSummary: 'unused',
+        disclosedFields: {},
+      }),
+    })
+
+    await expect(service.proveFact(sampleInput)).rejects.toThrow(/not shared/)
   })
 })

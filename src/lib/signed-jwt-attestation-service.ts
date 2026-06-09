@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { assertDisclosureAllowsProve } from '@/lib/disclosure-preferences'
 import type {
   Attestation,
   AttestationInput,
@@ -118,8 +119,10 @@ export function createSignedJwtAttestationService(
 
   return {
     async proveFact(input: AttestationInput): Promise<Attestation> {
-      const material = await config.resolveFact(input)
       const supabase = await getSupabase()
+      await assertDisclosureAllowsProve(supabase, input)
+
+      const material = await config.resolveFact(input)
       const attestationId = crypto.randomUUID()
       const issuedAt = new Date().toISOString()
       const expiresAt = material.expiresAt ?? defaultExpiresAt()

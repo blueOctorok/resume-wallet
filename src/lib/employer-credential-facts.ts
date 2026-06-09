@@ -3,6 +3,7 @@ import type { FactType } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
 import { attestationService } from '@/lib/attestation-service-registry'
 import { attestationFromRow } from '@/lib/attestation-route-helpers'
+import { loadDisclosureDenylistForAudience } from '@/lib/disclosure-preferences'
 import { getFactDefinition, type ShippedFactType } from '@/lib/fact-registry'
 
 export interface EmployerCredentialFact {
@@ -40,12 +41,19 @@ export async function listVerifiedCredentialFactsForEmployer(
     throw new AttestationError(`Failed to load attestations: ${error.message}`)
   }
 
+  const deniedFacts = await loadDisclosureDenylistForAudience(
+    supabase,
+    candidateUserId,
+    companyId,
+  )
+
   const seenTypes = new Set<string>()
   const facts: EmployerCredentialFact[] = []
 
   for (const row of rows ?? []) {
     const factType = row.fact_type as string
     if (seenTypes.has(factType)) continue
+    if (deniedFacts.has(factType)) continue
     if (!getFactDefinition(factType as FactType)) continue
 
     const attestation = attestationFromRow(row)
