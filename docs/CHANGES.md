@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR parser overhaul — Storm now matches Key/raw Accio data** (2026-06-10)
+
+A Storm-vs-Key side-by-side on the same NC driver (Johnny F.) exposed six MVR parsing/display bugs. Confirmed against the stored raw XML: **Storm and Key receive identical Accio data** — Key prints the raw `<text>` block verbatim; Storm parses the structured tags, and the parsing had bugs. All fixed + regression-tested (`src/lib/accio-xml-parser.test.ts`, 11 tests) and verified against the real stored order XML.
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Raw XML leaking into PDF/name/city fields | Tag regex `<name_last[^>]*>` matched `<name_lastmaiden/>` (prefix collision) AND self-closing `<dlexpiration/>` matched as an opening tag, capturing until the real closing tag. Accio randomizes tag order per delivery → intermittent. | `openingTag()` helper: tag name must be followed by whitespace or `>`; self-closing tags return undefined. Applied to value/block/attribute/list extractors in `accio-xml-parser.ts`, `accio-psp-parser.ts`, and the mini-extractor in `/api/mvr/status/[orderId]`. |
+| `&gt;` shown literally ("COMBINE VEH &gt; 26K") | `extractXmlValue` never decoded XML entities | `decodeXmlEntities()` on every extracted value (`&amp;` decoded last) |
+| "Class COMBINE VEH..." + "C" icon instead of Class A | NC splits the format: letter in `<license_code>`, description in `<license_class>`. Parser only knew the combined "B - DESC" format. | When parsed class isn't a single letter and `license_code` is, use code as letter, class field as description |
+| Dates off by one day (Jan 26 → Jan 25) | `new Date("YYYY-MM-DD")` parses midnight **UTC**; `toLocaleDateString` renders in local EDT → previous day | `MvrViewModal.formatDate` builds dates from explicit local components; calendar strings never round-trip through UTC |
+| Personal characteristics garbage (Weight "DOB", Height "Iss Date: ...") | Blank NC fields: regex ate the 2+-space column separator and captured the next column | At most one space after the label colon + neighbor-label deny list |
+| CDL medical cert + examiner missing for NC | Extractor only matched "MEDICAL CERTIFICATE INFORMATION" header; NC uses "CDL Medical Information" with a tabular self-cert row and inline examiner | Header alternative + column-position table parser + `extractNcMedicalExaminerFromText()` |
+
+**Points provenance (boss question "why does Storm show points Key doesn't"):** Storm sums per-violation `<state_points>` from Accio's structured layer — data Key never surfaces because most states don't print a points line in the text. Now the parser **prefers the state's own printed total** ("TOTAL STATE POINTS = 0") when present and records `totalPointsSource: 'state' | 'computed'` in `parsed_data.violations` so the UI can label computed sums (which may include aged-out points).
+
+**Reparse endpoint upgraded:** `/api/admin/reparse-screening-results` now also refreshes the flat `mvr_results` columns (`license_class`, `license_status`, points, medical, endorsements...) — previously it only rewrote `parsed_data`, which would have left stale values visible in the modal.
+
+**Human step (post-deploy):** run the reparse to backfill existing rows:
+`curl -X POST https://<app>/api/admin/reparse-screening-results -H "Authorization: Bearer $ADMIN_API_TOKEN" -H "Content-Type: application/json" -d '{"type":"all"}'` (use `{"dryRun":true}` first).
+
+New util: `scripts/verify-mvr-parse.ts` — read-only; parses a stored order's raw XML with the local parser for spot-checking.
+
+---
+
 ## **Dev env · Midnight MCP WSL fix (local install)** (2026-06-09)
 
 Midnight MCP failed in Cursor (green/yellow flicker → red error). Root causes, in order:

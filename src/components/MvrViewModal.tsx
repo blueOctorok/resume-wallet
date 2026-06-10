@@ -167,29 +167,39 @@ function formatDriverName(subject: MvrSubject | undefined | null): string {
 }
 
 /**
- * Format YYYYMMDD date to readable string
+ * Format YYYYMMDD / YYYY-MM-DD calendar dates to a readable string.
+ *
+ * IMPORTANT: never round-trip a calendar date through `new Date("YYYY-MM-DD")` —
+ * JS parses that as midnight UTC, and toLocaleDateString then renders it in the
+ * viewer's timezone, shifting US-east viewers back a day (Jan 26 → Jan 25).
+ * We build the Date from explicit local components instead, which has no
+ * timezone conversion.
  */
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return 'N/A'
-  
-  // Handle YYYYMMDD format
-  if (dateStr.length === 8 && !dateStr.includes('-')) {
-    const year = dateStr.substring(0, 4)
-    const month = dateStr.substring(4, 6)
-    const day = dateStr.substring(6, 8)
-    return new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', {
+
+  const ymd = dateStr.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
+  if (ymd) {
+    const [, year, month, day] = ymd
+    return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     })
   }
-  
-  // Handle ISO format
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+
+  // Full timestamps (e.g. orderedAt ISO strings) represent real instants, so
+  // timezone conversion is correct for them — format via Date as before.
+  if (dateStr.includes('T') || dateStr.includes(':')) {
+    const d = new Date(dateStr)
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    }
+  }
+
+  // Anything else (already-formatted MM/DD/YYYY etc.) — display verbatim
+  // rather than risking a timezone shift.
+  return dateStr
 }
 
 /**

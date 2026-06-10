@@ -113,7 +113,9 @@ function attr(tagBlock: string, name: string): string | undefined {
 
 function tagValue(xml: string, tagName: string): string | undefined {
   // CDATA-aware: strip wrapping <![CDATA[ ... ]]> if present.
-  const re = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i')
+  // `(?:\s[^>]*)?` boundary prevents prefix collisions (e.g. a tag matching a
+  // longer sibling like <name_lastmaiden/>) — see accio-xml-parser openingTag.
+  const re = new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)</${tagName}\\s*>`, 'i')
   const m = xml.match(re)
   if (!m) return undefined
   const raw = m[1].trim()

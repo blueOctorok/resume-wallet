@@ -37,6 +37,13 @@ export async function POST(request: NextRequest) {
   const mvrStats = { processed: 0, updated: 0, errors: 0 }
   const pspStats = { processed: 0, updated: 0, errors: 0 }
 
+  // YYYYMMDD → YYYY-MM-DD (string-only, no Date round-trip). Mirrors the
+  // webhook's formatDateForDb so reparsed rows match webhook-written rows.
+  const formatDateForDb = (dateStr: string | undefined): string | null => {
+    if (!dateStr || dateStr.length !== 8) return null
+    return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
+  }
+
   // ── MVR ───────────────────────────────────────────────────────────────────
 
   if (runType === 'mvr' || runType === 'all') {
@@ -58,10 +65,37 @@ export async function POST(request: NextRequest) {
         const jsonb = mvrResultToJsonb(parsed)
 
         if (!dryRun) {
-          // Update mvr_results.parsed_data
+          // Refresh parsed_data AND the flat columns the UI reads directly
+          // (license_class/status/etc.) — updating only the JSONB would leave
+          // stale pre-fix values visible in the modal and career card.
+          const primaryLicense = parsed.licenses?.[0] ?? null
+          const safe = (v: string | undefined | null, max = 1000): string | null =>
+            v ? v.slice(0, max) : null
+
           const { error: updateErr } = await supabase
             .from('mvr_results')
-            .update({ parsed_data: jsonb, parsed_at: new Date().toISOString() })
+            .update({
+              parsed_data: jsonb,
+              parsed_at: new Date().toISOString(),
+              license_number: safe(parsed.licenseNumber, 50),
+              license_state: safe(parsed.licenseState, 2),
+              license_class: safe(primaryLicense?.class),
+              license_status: safe(primaryLicense?.status),
+              license_expiration_date:
+                formatDateForDb(primaryLicense?.expirationDate) ??
+                formatDateForDb(parsed.licenseExpirationDate),
+              total_points: parsed.totalPoints ?? 0,
+              violation_count: parsed.violationCount ?? 0,
+              violations: parsed.violations ?? [],
+              accident_count: parsed.accidentCount ?? 0,
+              accidents: parsed.accidents ?? [],
+              suspension_count: parsed.suspensionCount ?? 0,
+              suspensions: parsed.suspensions ?? [],
+              medical_cert_expiration: parsed.medicalCertExpiration ?? null,
+              medical_cert_status: parsed.medicalCertStatus ?? null,
+              cdl_endorsements: primaryLicense?.endorsements ? [primaryLicense.endorsements] : [],
+              cdl_restrictions: primaryLicense?.restrictions ? [primaryLicense.restrictions] : [],
+            })
             .eq('mvr_order_id', order.id)
 
           if (updateErr) {

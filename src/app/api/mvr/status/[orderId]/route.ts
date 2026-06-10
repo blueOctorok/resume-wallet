@@ -4,10 +4,12 @@ import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
- * Extract a single XML tag value from raw XML string
+ * Extract a single XML tag value from raw XML string.
+ * `(?:\s[^>]*)?` after the tag name prevents prefix collisions — without it,
+ * extracting `name_last` can match `<name_lastmaiden/>` and leak raw XML.
  */
 function extractXmlValue(xml: string, tagName: string): string | undefined {
-  const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i')
+  const regex = new RegExp(`<${tagName}(?:\\s[^>]*)?>([^<]*)</${tagName}\\s*>`, 'i')
   const match = xml.match(regex)
   return match?.[1]?.trim() || undefined
 }

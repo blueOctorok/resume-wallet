@@ -78,6 +78,14 @@ export interface ParsedMvrResult {
   
   // Violations & Points (from mvr_violation blocks)
   totalPoints?: number
+  /**
+   * Where `totalPoints` came from. 'state' = the DMV's own "TOTAL STATE
+   * POINTS = N" line in the report text (authoritative current balance).
+   * 'computed' = sum of per-violation points from Accio's structured tags —
+   * can overstate the official balance because states age points out while
+   * violations stay on the record.
+   */
+  totalPointsSource?: 'state' | 'computed'
   violationCount?: number
   violations?: Violation[]
   
@@ -326,9 +334,11 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     result.violations = extractMvrViolations(xml)
     result.violationCount = result.violations?.length || 0
     
-    // Calculate total points from violations
+    // Calculate total points from violations. May be overridden below by the
+    // state's own "TOTAL STATE POINTS = N" line when the report prints one.
     if (result.violations && result.violations.length > 0) {
       result.totalPoints = result.violations.reduce((sum, v) => sum + (v.points || 0), 0)
+      result.totalPointsSource = 'computed'
     }
 
     // Extract mvr_accident blocks
@@ -433,6 +443,14 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         const asOf = extractAsOfDateFromText(mvrTextBlock)
         if (asOf) result.dmvAsOfDate = asOf
 
+        // The DMV's own printed point total is authoritative — prefer it over
+        // our per-violation sum (which can include aged-out points).
+        const statePoints = extractTotalStatePointsFromText(mvrTextBlock)
+        if (statePoints !== undefined) {
+          result.totalPoints = statePoints
+          result.totalPointsSource = 'state'
+        }
+
         // Promote text-block "CDL Status" onto the primary license when the
         // structured `<cdl_status>` tag is absent (most states leave it blank).
         const cdlStatus = extractCdlStatusFromText(mvrTextBlock)
@@ -472,13 +490,47 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
 }
 
 /**
- * Extract value from XML tag
+ * Decode the five predefined XML entities. Accio escapes report text (e.g.
+ * "COMBINE VEH &gt; 26K"), so every extracted value must be decoded before
+ * storage/display. `&amp;` is decoded LAST so "&amp;gt;" doesn't double-decode.
+ */
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+}
+
+/**
+ * Build the opening-tag part of a tag regex.
+ *
+ * Two collision bugs this guards against (both seen in production payloads):
+ *  1. Prefix collision — `<name_last[^>]*>` also matched `<name_lastmaiden/>`,
+ *     capturing everything between it and the REAL `</name_last>` (a wall of
+ *     raw XML leaked into names/cities). The `(?:\\s[^>]*)?` requires the tag
+ *     name to be followed by whitespace (attributes) or `>` — never more letters.
+ *  2. Self-closing collision — `<dlexpiration/>` matched as an *opening* tag,
+ *     capturing until a later real `<dlexpiration>...</dlexpiration>`. Requiring
+ *     whitespace-or-`>` after the name still allows `<tag attr="x">` but a bare
+ *     `<tag/>` can only match via the explicit self-closing alternative below,
+ *     which callers treat as "no value".
+ */
+function openingTag(tagName: string): string {
+  return `<${tagName}(?:\\s[^>]*[^/>])?>`
+}
+
+/**
+ * Extract value from XML tag. Self-closing tags (`<tag/>`) and absent tags
+ * both return undefined. Values are entity-decoded.
  */
 function extractXmlValue(xml: string, tagName: string): string | undefined {
-  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i')
+  const regex = new RegExp(`${openingTag(tagName)}([\\s\\S]*?)</${tagName}\\s*>`, 'i')
   const match = xml.match(regex)
   if (match && match[1]) {
-    return match[1].trim()
+    const value = decodeXmlEntities(match[1].trim())
+    return value || undefined
   }
   return undefined
 }
@@ -498,12 +550,12 @@ function findMvrSubOrder(xml: string): {
   heldForReleaseForm?: boolean
   content?: string // The subOrder XML content for extracting dlnum/dlstate
 } | null {
-  // Match all subOrder tags
-  const subOrderRegex = /<subOrder([^>]*)>([\s\S]*?)<\/subOrder>/gi
+  // Match all subOrder tags (`(\s...)?` boundary prevents prefix collisions)
+  const subOrderRegex = /<subOrder(\s[^>]*)?>([\s\S]*?)<\/subOrder>/gi
   let match
   
   while ((match = subOrderRegex.exec(xml)) !== null) {
-    const attributes = match[1]
+    const attributes = match[1] ?? ''
     const content = match[2]
     
     // Check if this is an MVR subOrder by type attribute
@@ -559,19 +611,21 @@ function findMvrSubOrder(xml: string): {
  * Extract attribute value from XML tag
  */
 function extractXmlAttribute(xml: string, tagName: string, attributeName: string): string | undefined {
-  // Use word boundary or space/quote before attribute name to prevent partial matches
-  // e.g., "order" should not match "subOrder"
-  const regex = new RegExp(`<${tagName}[^>]*[\\s"']${attributeName}=["']([^"']*)["']`, 'i')
+  // Tag name must be followed by whitespace (same prefix guard as openingTag),
+  // and the attribute name must be preceded by space/quote so "order" never
+  // matches "subOrder" or partial attribute names.
+  const regex = new RegExp(`<${tagName}\\s(?:[^>]*[\\s"'])?${attributeName}=["']([^"']*)["']`, 'i')
   const match = xml.match(regex)
-  return match ? match[1].trim() : undefined
+  return match ? decodeXmlEntities(match[1].trim()) : undefined
 }
 
 /**
- * Extract XML block (content between opening and closing tags)
+ * Extract XML block (content between opening and closing tags).
+ * Content is returned raw (NOT entity-decoded) — callers run extractXmlValue
+ * on it, and decoding here would corrupt nested tag boundaries.
  */
 function extractXmlBlock(xml: string, tagName: string): string | undefined {
-  // Match opening tag, then capture everything until closing tag
-  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i')
+  const regex = new RegExp(`${openingTag(tagName)}([\\s\\S]*?)</${tagName}\\s*>`, 'i')
   const match = xml.match(regex)
   return match ? match[1] : undefined
 }
@@ -594,7 +648,7 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
   const licenses: MvrLicense[] = []
   
   // Match all <mvr_license> blocks
-  const licenseRegex = /<mvr_license[^>]*>([\s\S]*?)<\/mvr_license>/gi
+  const licenseRegex = /<mvr_license(?:\s[^>]*)?>([\s\S]*?)<\/mvr_license>/gi
   let match
   
   while ((match = licenseRegex.exec(xml)) !== null) {
@@ -602,15 +656,26 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
     
     // Get the full class string (e.g., "B - CDL SINGLE VEH GVWR 26,001 OR MORE,UNDER 10K TOW")
     const fullClass = extractXmlValue(licenseXml, 'license_class')
-    
-    // Parse class letter and description from combined field
-    // Format: "B - CDL SINGLE VEH..." or just "D - OPERATOR"
+    const licenseCode = extractXmlValue(licenseXml, 'license_code')
+
+    // Parse class letter and description. Two state formats exist:
+    //   Combined  (OH-style): <license_class>B - CDL SINGLE VEH...</license_class>
+    //   Split     (NC-style): <license_class>COMBINE VEH > 26K...</license_class>
+    //                         <license_code>A</license_code>
+    // For split format the letter lives in license_code and license_class is
+    // pure description — without this branch the UI showed "Class COMBINE VEH..."
+    // with a "C" icon instead of "Class A".
     let classLetter = ''
     let classDescription = ''
     if (fullClass) {
       const classParts = fullClass.split(' - ')
       classLetter = classParts[0]?.trim() || fullClass
       classDescription = classParts.slice(1).join(' - ').trim() || ''
+    }
+    const isSingleLetter = (v: string | undefined): v is string => !!v && /^[A-Z]$/i.test(v.trim())
+    if (!isSingleLetter(classLetter) && isSingleLetter(licenseCode)) {
+      classDescription = classDescription || classLetter
+      classLetter = licenseCode.trim().toUpperCase()
     }
     
     // Get original issue date - Accio uses "license_orig_issue" in MM/DD/YYYY format
@@ -654,11 +719,12 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
 function extractMvrViolations(xml: string): Violation[] {
   const violations: Violation[] = []
   
-  // Try multiple tag patterns that Accio might use
+  // Try multiple tag patterns that Accio might use. The `(?:\s[^>]*)?` boundary
+  // stops `<violation...>` from matching `<violation_date>` (prefix collision).
   const tagPatterns = [
-    /<mvr_violation[^>]*>([\s\S]*?)<\/mvr_violation>/gi,
-    /<violation[^>]*>([\s\S]*?)<\/violation>/gi,
-    /<VIOLATION[^>]*>([\s\S]*?)<\/VIOLATION>/gi
+    /<mvr_violation(?:\s[^>]*)?>([\s\S]*?)<\/mvr_violation>/gi,
+    /<violation(?:\s[^>]*)?>([\s\S]*?)<\/violation>/gi,
+    /<VIOLATION(?:\s[^>]*)?>([\s\S]*?)<\/VIOLATION>/gi
   ]
   
   for (const regex of tagPatterns) {
@@ -726,9 +792,9 @@ function extractMvrAccidents(xml: string): Accident[] {
   
   // Try multiple tag patterns that Accio might use
   const tagPatterns = [
-    /<mvr_accident[^>]*>([\s\S]*?)<\/mvr_accident>/gi,
-    /<accident[^>]*>([\s\S]*?)<\/accident>/gi,
-    /<ACCIDENT[^>]*>([\s\S]*?)<\/ACCIDENT>/gi
+    /<mvr_accident(?:\s[^>]*)?>([\s\S]*?)<\/mvr_accident>/gi,
+    /<accident(?:\s[^>]*)?>([\s\S]*?)<\/accident>/gi,
+    /<ACCIDENT(?:\s[^>]*)?>([\s\S]*?)<\/ACCIDENT>/gi
   ]
   
   for (const regex of tagPatterns) {
@@ -770,10 +836,10 @@ function extractMvrSuspensions(xml: string): Suspension[] {
   
   // Try multiple tag patterns that Accio might use
   const tagPatterns = [
-    /<mvr_suspension[^>]*>([\s\S]*?)<\/mvr_suspension>/gi,
-    /<suspension[^>]*>([\s\S]*?)<\/suspension>/gi,
-    /<SUSPENSION[^>]*>([\s\S]*?)<\/SUSPENSION>/gi,
-    /<license_suspension[^>]*>([\s\S]*?)<\/license_suspension>/gi
+    /<mvr_suspension(?:\s[^>]*)?>([\s\S]*?)<\/mvr_suspension>/gi,
+    /<suspension(?:\s[^>]*)?>([\s\S]*?)<\/suspension>/gi,
+    /<SUSPENSION(?:\s[^>]*)?>([\s\S]*?)<\/SUSPENSION>/gi,
+    /<license_suspension(?:\s[^>]*)?>([\s\S]*?)<\/license_suspension>/gi
   ]
   
   for (const regex of tagPatterns) {
@@ -898,10 +964,11 @@ function extractMedicalInfoFromText(text: string): {
   } = {}
 
   // 1. Find the medical block. Header line is "MEDICAL CERTIFICATE INFORMATION"
-  //    sandwiched between underscore rules. We grab everything up to the next
-  //    rule of >=20 underscores (real reports use 100 but we're tolerant).
+  //    (most states) or "CDL Medical Information" (NC), sandwiched between
+  //    underscore rules. We grab everything up to the next rule of >=20
+  //    underscores (real reports use 100 but we're tolerant).
   const blockMatch = text.match(
-    /MEDICAL CERTIFICATE INFORMATION[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
+    /(?:MEDICAL CERTIFICATE INFORMATION|CDL MEDICAL INFORMATION)[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
   )
   if (!blockMatch) return result
   const block = blockMatch[1]
@@ -913,6 +980,53 @@ function extractMedicalInfoFromText(text: string): {
   // 3. Expiration: MM/DD/YYYY  (scoped — won't pick up "Expires: ..." from license)
   const expirationMatch = block.match(/Expiration:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
   if (expirationMatch) result.expiration = expirationMatch[1]
+
+  // 3b. NC tabular fallback — no "Issue:"/"Expiration:" labels, instead a
+  //     column header row followed by a data row:
+  //       Self Certificate Type     Issued      Effective   Expiration  Downgraded
+  //       NON-EXCEPTED INTERSTATE   10/06/2025              10/06/2027
+  //     Columns can be blank (Effective above), so we map each date in the data
+  //     row to whichever header label its column position is closest to.
+  if (!result.issueDate && !result.expiration) {
+    const tableMatch = block.match(
+      /^(Self Certificate Type[^\n]*)\n([^\n]*\d{1,2}\/\d{1,2}\/\d{4}[^\n]*)$/im,
+    )
+    if (tableMatch) {
+      const headerLine = tableMatch[1]
+      const dataLine = tableMatch[2]
+      const columns: Array<[keyof typeof result | 'effective', number]> = [
+        ['issueDate', headerLine.search(/\bIssued\b/i)],
+        ['effective', headerLine.search(/\bEffective\b/i)],
+        ['expiration', headerLine.search(/\bExpiration\b/i)],
+      ]
+      const dateRe = /\d{1,2}\/\d{1,2}\/\d{4}/g
+      let dm: RegExpExecArray | null
+      let firstDateIdx = -1
+      while ((dm = dateRe.exec(dataLine)) !== null) {
+        if (firstDateIdx < 0) firstDateIdx = dm.index
+        // Nearest header column wins. Fixed-width-ish layout means the date's
+        // start index sits at (or near) its column's header index.
+        let best: typeof columns[number] | null = null
+        let bestDist = Infinity
+        for (const col of columns) {
+          if (col[1] < 0) continue
+          const dist = Math.abs(dm.index - col[1])
+          if (dist < bestDist) {
+            bestDist = dist
+            best = col
+          }
+        }
+        if (best && best[0] !== 'effective') {
+          result[best[0]] = dm[0]
+        }
+      }
+      // Self-cert type = data-row text left of the first date column.
+      if (firstDateIdx > 0 && !result.selfCertification) {
+        const v = dataLine.slice(0, firstDateIdx).trim()
+        if (v) result.selfCertification = v
+      }
+    }
+  }
 
   // 4. Status: ...  Capture multi-word values like "NOT CERTIFIED" by reading
   //    until either 2+ spaces (Accio's column separator) or end of line. Then
@@ -966,30 +1080,37 @@ function extractPersonalCharacteristicsFromText(text: string): {
     donor?: string
   } = {}
 
-  // Each capture stops at 2+ spaces (Accio's column separator) or end of line.
-  // CRITICAL: use `[ \t]*` (not `\s*`) after `:` so the regex never crosses
-  // newlines. The earlier `\s*` version caused Donor (which is the last
-  // column on its line, often blank) to silently capture the underscore
-  // separator line that follows. Each rule is anchored to its own line.
-  // Donor is allowed to be blank → caller should test truthy before rendering.
+  // Column layout contract: "Label: VALUE" with ONE space between label and
+  // value, and 2+ spaces between columns. Two critical regex choices:
+  //   - `[ \t]?` (at most one space) after the colon. A blank field (NC leaves
+  //     Sex/Weight/Height/etc. empty) is followed by the column-separator run
+  //     of spaces; with `[ \t]*` the regex ate that run and lazily captured the
+  //     NEXT column's content ("Weight: DOB", "Height: Iss Date: 10/19/2022").
+  //     With `[ \t]?` the lookahead sees the 2+ space separator immediately and
+  //     the capture stays empty → field correctly skipped.
+  //   - `[ \t]` only, never `\s`, so the regex can't cross newlines and grab
+  //     the underscore separator row (the old Donor bug).
   const rules: Array<[keyof typeof result, RegExp]> = [
-    ['sex', /\bSex[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
-    ['weight', /\bWeight[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['sex', /\bSex[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['weight', /\bWeight[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
     // Height includes a quote ("5' 08\"") so we deliberately allow inner quotes.
-    ['height', /\bHeight[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
-    ['eyes', /\bEyes[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
-    ['hair', /\bHair[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
-    ['donor', /\bDonor[ \t]*:[ \t]*([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['height', /\bHeight[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['eyes', /\bEyes[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['hair', /\bHair[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
+    ['donor', /\bDonor[ \t]*:[ \t]?([^\n]*?)(?=[ \t]{2,}\S|[ \t]*$)/im],
   ]
+  // Defense in depth: even if a capture slips through, never accept a value
+  // that is (or starts with) one of the OTHER columns' labels on these lines.
+  const neighborLabels = /^(?:Sex|Weight|Height|Eyes|Hair|Donor|DOB|AGE|Iss Date|Exp Date)\b/i
   for (const [key, regex] of rules) {
     const m = text.match(regex)
     if (m) {
       const v = m[1].trim()
-      // Reject underscore separators and values that look like the next column's
-      // label (e.g. "Weight:", "Exp Date:"). This happens when a field is blank —
-      // the `[ \t]*` after the colon eats all whitespace and positions the lazy
-      // capture at the neighboring label instead of an empty string.
-      if (v && !/^_+$/.test(v) && !/^[\w][\w\s]*:$/.test(v)) result[key] = v
+      // Reject underscore separators and label-shaped values ("Weight:") that
+      // indicate the capture landed on a neighboring column.
+      if (v && !/^_+$/.test(v) && !/^[\w][\w\s]*:$/.test(v) && !neighborLabels.test(v)) {
+        result[key] = v
+      }
     }
   }
   return result
@@ -1011,6 +1132,15 @@ function extractAsOfDateFromText(text: string): string | undefined {
   const v = m[1].trim()
   if (!v || /^_+$/.test(v) || !/\d/.test(v)) return undefined
   return v
+}
+
+/**
+ * Extract the state's printed point total, e.g. NC's "TOTAL STATE POINTS = 0".
+ * Returns undefined when the state doesn't print one (most don't).
+ */
+function extractTotalStatePointsFromText(text: string): number | undefined {
+  const m = text.match(/TOTAL\s+(?:STATE\s+)?POINTS\s*[=:]\s*(\d+)/i)
+  return m ? parseInt(m[1], 10) : undefined
 }
 
 /**
@@ -1129,7 +1259,9 @@ function extractMedicalExaminerFromText(text: string): ParsedMvrResult['medicalE
   const blockMatch = text.match(
     /MEDICAL EXAMINER INFORMATION[^\n]*\n_{20,}\s*([\s\S]*?)(?:\n_{20,}|$)/i,
   )
-  if (!blockMatch) return undefined
+  // NC embeds the examiner inside "CDL Medical Information" (no dedicated
+  // section) with a different shape — handle that separately.
+  if (!blockMatch) return extractNcMedicalExaminerFromText(text)
 
   const block = blockMatch[1]
 
@@ -1157,6 +1289,36 @@ function extractMedicalExaminerFromText(text: string): ParsedMvrResult['medicalE
   if (phoneMatch?.[1]) result.phone = phoneMatch[1].trim()
 
   return Object.keys(result).length > 0 ? result : undefined
+}
+
+/**
+ * NC-format medical examiner fallback. NC has no MEDICAL EXAMINER INFORMATION
+ * section — examiner details sit inside "CDL Medical Information":
+ *
+ *   Medical Examiner Name: REBECCA G FISCHER
+ *   Phone          License        State
+ *   828-652-1400   0010-02229     NC
+ *   Speciality: PHYSICIAN ASSISTANT            Registry Number: 7783787122
+ */
+function extractNcMedicalExaminerFromText(text: string): ParsedMvrResult['medicalExaminer'] {
+  const nameMatch = text.match(/Medical Examiner Name:\s*([^\n]+?)\s*$/im)
+  if (!nameMatch) return undefined
+
+  const result: ParsedMvrResult['medicalExaminer'] = { name: nameMatch[1].trim() }
+
+  // Phone/License/State are a header row followed by a data row.
+  const phoneTable = text.match(/^Phone\s+License\s+State\s*\n([^\n]+)$/im)
+  if (phoneTable) {
+    const [phone, licenseNumber, state] = phoneTable[1].trim().split(/\s{2,}/)
+    if (phone) result.phone = phone
+    if (licenseNumber) result.licenseNumber = licenseNumber
+    if (state) result.licenseJurisdiction = state
+  }
+
+  const regNoMatch = text.match(/Registry Number:\s*(\d+)/i)
+  if (regNoMatch) result.nationalRegistryNumber = regNoMatch[1]
+
+  return result
 }
 
 /**
@@ -1229,6 +1391,7 @@ export function mvrResultToJsonb(result: ParsedMvrResult): Record<string, unknow
     licenses: result.licenses || [], // All license blocks
     violations: {
       totalPoints: result.totalPoints || 0,
+      totalPointsSource: result.totalPointsSource,
       count: result.violationCount || 0,
       details: result.violations || []
     },
