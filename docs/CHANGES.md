@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **P3.1 — WSL2 + Compact toolchain smoke test ✅** (2026-06-09)
+
+Phase 3a step 1 complete on dev machine (Sam / ThinkPad, Win11, 64GB).
+
+| Check | Result |
+|---|---|
+| WSL | Ubuntu-24.04, 32GB cap in `.wslconfig` |
+| Repo | `/home/octorok/dev/resume-wallet` (native ext4, not `/mnt/c/`) |
+| Compact devtools | `compact 0.5.1` |
+| Compact compiler | `0.31.0` default (`compact compile --version`) |
+| Gotcha logged | `compact update` needs `unzip` — added to checklist P3.1 |
+
+**Next:** Open repo in Cursor via WSL; P3.2 proof server + Docker.
+
+---
+
+## **Docs · P3.1 WSL2 + Cursor workflow steps (Phase 3a kickoff)** (2026-06-09)
+
+Added atomic **P3.1** to `EXECUTION_CHECKLIST.md`: WSL2 install, `%USERPROFILE%\.wslconfig` (32GB WSL cap on 64GB host), clone under `~/dev/` (not `/mnt/c/`), Compact install, Cursor **WSL: Connect to WSL** smoke test. Goal: evaluate WSL vs Mac within ~2 hours. Created `C:\Users\blaha\.wslconfig` on dev machine.
+
+**No app code.** WSL not yet installed on dev machine at doc time — human admin step `wsl --install -d Ubuntu` required next.
+
+---
+
 ## **Docs · Positioning + funding + token/SBT captured (DEC-2026-06-002)** (2026-06-09)
 
 Sharpened *what Storm is* and *how the chain earns its keep*, so future sessions stop treating blockchain as optional decoration and stop fearing the Tenstreet comparison. Three locks, plus promotion of the token/SBT roadmap.

@@ -788,11 +788,80 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 - **(b) Funded-pull-becomes-portable — GATED.** Structure consent at the moment of pull so derived facts become portable. Bigger prize; **requires a formal FCRA opinion** before build/market (DEC-2026-05-013).
 
 ### Phase 3a — core ZK slice (build first)
-1. De-risk the toolchain: WSL2 + Ubuntu + Compact compiler; confirm current Midnight network maturity / proof-shape support before any public timeline.
-2. Stand up a proof server spike (managed Docker — Cloud Run / Render / Fly) + a server-managed Midnight wallet.
-3. Ship a **thin one-fact testnet slice** (e.g. `mvr_clean_36_months`) end-to-end via `midnight-attestation-service.ts` behind the existing interface.
-4. Broaden to more facts (fed by the ongoing fact-registry expansion) once the slice verifies.
-5. **Honesty gate:** only flip a per-fact "proven on Midnight" claim once that specific proof genuinely runs and verifies (DEC-2026-05-004). Narrative ("built on Midnight") can lead; per-fact claims cannot.
+
+| Step | What | Status |
+|---|---|---|
+| **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
+| **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ⬜ |
+| **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` | ⬜ |
+| **P3.4** | Broaden fact registry + circuits once slice verifies | ⬜ |
+| **P3.5** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
+
+#### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
+
+**Goal:** Know within ~2 hours whether WSL2 + Cursor is tolerable on your box — or you need a Mac. **Pass = `compact --version` in WSL + Cursor opened on the WSL repo path.**
+
+**Pre-condition:** Windows 11, 64GB RAM (`.wslconfig` at `%USERPROFILE%\.wslconfig` with `memory=32GB` — updated 2026-06-09).
+
+**Do in order (human steps marked 👤 — require admin/reboot/UI):**
+
+1. 👤 **Install WSL2 + Ubuntu** (PowerShell **as Administrator**):
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+   Reboot if prompted. First launch: create Linux username/password.
+
+2. 👤 **Apply `.wslconfig`** (already at `C:\Users\blaha\.wslconfig`):
+   ```powershell
+   wsl --shutdown
+   ```
+   Then reopen Ubuntu from Start menu.
+
+3. **Inside Ubuntu** — base packages + git:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y build-essential curl git ca-certificates
+   ```
+
+4. **Clone repo in WSL filesystem** (NOT `/mnt/c/` — keep I/O fast, keep AI in one loop):
+   ```bash
+   mkdir -p ~/dev && cd ~/dev
+   git clone <your-remote-url> resume-wallet
+   cd ~/dev/resume-wallet
+   ```
+   Use the same GitHub remote as `C:\Users\blaha\Desktop\resume-wallet`. Work from this clone for Phase 3; the Windows copy can stay as backup until you commit to WSL.
+
+5. **Install Compact compiler** ([Midnight Windows guide](https://docs.midnight.network/guides/windows-compact-setup)):
+   ```bash
+   curl --proto '=https' --tlsv1.2 -LsSf \
+     https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+   source ~/.bashrc
+   compact --version
+   compact update
+   ```
+
+6. 👤 **Open project in Cursor via WSL:**
+   - Cursor → Command Palette → **"WSL: Connect to WSL"** (or **"WSL: Open Folder in WSL"**)
+   - Open `~/dev/resume-wallet`
+   - Integrated terminal should show Linux (`uname -a` → Ubuntu). Agent + terminal now share one environment.
+
+7. **Verification (pass/fail for "do I hate WSL?"):**
+   ```bash
+   uname -a                    # Linux
+   pwd                         # /home/<you>/dev/resume-wallet
+   compact --version           # devtools, e.g. 0.5.1
+   compact compile --version   # compiler, e.g. 0.31.0 — NOT "No default compiler set"
+   ```
+   **Gotcha:** `compact update` unpacks with **`unzip`** — install `sudo apt install -y unzip` if update fails at "Failed to spawn artifact extraction command".
+   Optional stretch: `create-mn-app` Hello World per Midnight docs — not required for P3.1 pass.
+
+**If P3.1 fails:** proof server OOM → raise `.wslconfig` `memory=` (64GB host: default is `32GB`; can try `40GB`), `wsl --shutdown`, retry. Sluggish I/O → confirm repo is under `~/`, not `/mnt/c/`. Cursor blind to WSL → you opened `C:\` path instead of WSL folder — reconnect via step 6.
+
+**P3.2–P3.5 (unchanged intent):**
+- P3.2: Docker Desktop (WSL2 backend) + proof server container + Midnight wallet env vars
+- P3.3: `midnight-attestation-service.ts` + one fact end-to-end on testnet
+- P3.4: More facts / circuits
+- P3.5: Honesty gate on UI copy
 
 ### Phase 3b — soulbound credential cards in the career card (committed, after 3a)
 Promoted from "captured, NOT scheduled" → **committed direction** (DEC-2026-06-002). Begin design once 3a is in production with ≥1 carrier consuming attestations.
@@ -867,6 +936,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-09 | **P3.1** — WSL2 + Compact toolchain smoke test ✅ | Opus 4.8 | pending user commit | Ubuntu-24.04 on Win11 64GB; `.wslconfig` 32GB; repo copied to `/home/octorok/dev/resume-wallet`; `compact 0.5.1` + compiler **0.31.0** after `apt install unzip`. **Next:** Cursor WSL folder + P3.2 Docker/proof server. Midnight MCP available for Compact/contracts. |
 | 2026-06-09 | Docs — positioning + funding + token/SBT capture (DEC-2026-06-002) | Opus 4.8 | pending user commit | **Docs only.** Added **DEC-2026-06-002**: (1) driver-side-counterpart positioning (NOT a Tenstreet/Xchange competitor — don't chase network/data volume), (2) candidate-controlled/agency-funded model (Pace funds pull, driver owns fact; path (a) own-records-sponsored first, path (b) funded-pull-portable GATED on FCRA opinion), (3) Midnight reframed as **load-bearing** (network-independent portable trust for a late entrant), (4) SBT-in-career-card + shielded-utility STORM promoted "captured" → **committed roadmap** with guardrails intact. Edited `MOAT_THESIS` (retired "chain is implementation detail" lines + new positioning/funding sections), `ARCHITECTURE` (Phase 3 arc sequenced), this checklist (Phase 3 fleshed out: 3a slice → 3b SBT → token → P4 gated), `TOKEN_BRIEF`, `PARTNERS`, `CHANGES`. **Next:** Phase 3a step 1 (toolchain de-risk) when ready. |
 | 2026-06-05 | P2.7 — Verified by Storm language + Stormi/journey (**Phase 2 COMPLETE**) | Composer | a0e0248 | **Lib:** `formatVerifiedByStormLine()` + tests. **Sweep:** self-reported career card/share/PDF/export copy → on file; third-party facts use centralized provenance. **Stormi:** `ava-context` attestation block + hub `attestationCount`. **Journey:** optional verified-fact milestone. `npm run test:app` (50) + `npm run build` green. **Next:** Phase 3 (trigger-gated). |
 | 2026-06-05 | P2.6 — candidate per-audience disclosure toggles | Composer | 62b8b2b | **Migration:** `100_disclosure_preferences.sql` (apply manually on dashboard). **Lib:** `disclosure-preferences.ts` — default shareable, `allowed=false` hides from employer list + blocks audience-scoped prove. **API:** GET/PATCH `/api/attestation/disclosure-preferences`. **UI:** `DisclosurePreferencesModal` + Zustand store; hub career card **Sharing** button. `npm run test:app` (48) + `npm run build` green. **Next:** P2.7 Verified-by-Storm language + Stormi. |
@@ -919,4 +989,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-09 (P3.1 WSL2 + Cursor workflow steps added)
