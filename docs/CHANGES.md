@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PDF branding — navbar STORM wordmark on MVR/PSP reports** (2026-06-10)
+
+Replaced the placeholder PDF header (teal square with “S” + Helvetica “Storm”) with the same **STORM** wordmark used in the navbar: Orbitron **ST** + violet-framed **O** tile with cloud-lightning + **RM**, plus muted “Verified Career Identity” tagline. Applies to all reports via shared `StormPdfChrome` (MVR + PSP). Orbitron registered from `public/fonts/Orbitron-SemiBold.ttf`. Footer URL corrected to `stormchain.ai`.
+
+| File | Change |
+|---|---|
+| `src/lib/pdf/StormPdfWordmark.tsx` | **New** — PDF-native wordmark (Svg lightning + Orbitron) |
+| `src/lib/pdf/storm-pdf-fonts.ts` | **New** — `Font.register` for Orbitron 600 |
+| `public/fonts/Orbitron-SemiBold.ttf` | **New** — Google Fonts variable font (weight 600) |
+| `src/lib/pdf/StormPdfChrome.tsx` | Header uses `StormPdfWordmark`; footer `stormchain.ai` |
+
+---
+
 ## **MVR parser overhaul — Storm now matches Key/raw Accio data** (2026-06-10)
 
 A Storm-vs-Key side-by-side on the same NC driver (Johnny F.) exposed six MVR parsing/display bugs. Confirmed against the stored raw XML: **Storm and Key receive identical Accio data** — Key prints the raw `<text>` block verbatim; Storm parses the structured tags, and the parsing had bugs. All fixed + regression-tested (`src/lib/accio-xml-parser.test.ts`, 11 tests) and verified against the real stored order XML.

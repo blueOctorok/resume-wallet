@@ -8,6 +8,7 @@
  * lives in one place.
  */
 
+import '@/lib/pdf/storm-pdf-fonts'
 import React from 'react'
 import {
   Document,
@@ -17,6 +18,7 @@ import {
   View,
 } from '@react-pdf/renderer'
 import { outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
+import { StormPdfWordmark } from '@/lib/pdf/StormPdfWordmark'
 
 // ── Storm brand tokens (mirror tailwind.config.ts) ──────────────────────────
 export const STORM_COLORS = {
@@ -66,24 +68,7 @@ export const stormPdfStyles = StyleSheet.create({
     paddingBottom: 10,
     marginBottom: 14,
   },
-  brandWrap: { flexDirection: 'row', alignItems: 'center' },
-  brandMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: STORM_COLORS.teal,
-    color: '#ffffff',
-    textAlign: 'center',
-    fontSize: 14,
-    fontFamily: 'Helvetica-Bold',
-    paddingTop: 6,
-    marginRight: 8,
-  },
-  brandTitle: {
-    fontSize: 14,
-    fontFamily: 'Helvetica-Bold',
-    color: STORM_COLORS.ink,
-  },
+  brandWrap: { flexDirection: 'column', alignItems: 'flex-start' },
   brandSub: { fontSize: 8, color: STORM_COLORS.muted, marginTop: 1 },
   reportLabelWrap: { alignItems: 'flex-end' },
   reportLabel: {
@@ -254,11 +239,7 @@ export function StormPdfHeader({
   return (
     <View style={stormPdfStyles.headerRow} fixed>
       <View style={stormPdfStyles.brandWrap}>
-        <Text style={stormPdfStyles.brandMark}>S</Text>
-        <View>
-          <Text style={stormPdfStyles.brandTitle}>Storm</Text>
-          <Text style={stormPdfStyles.brandSub}>Verified Career Identity</Text>
-        </View>
+        <StormPdfWordmark tagline="Verified Career Identity" />
       </View>
       <View style={stormPdfStyles.reportLabelWrap}>
         <Text style={stormPdfStyles.reportLabel}>{reportLabel}</Text>
@@ -313,7 +294,7 @@ export function StormPdfFooter({
             `Page ${pageNumber} of ${totalPages}`
           }
         />
-        <Text style={stormPdfStyles.footerLine}>storm.app</Text>
+        <Text style={stormPdfStyles.footerLine}>stormchain.ai</Text>
       </View>
     </View>
   )
