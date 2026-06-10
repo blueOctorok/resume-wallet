@@ -4,6 +4,43 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Dev env · Midnight MCP WSL fix (local install)** (2026-06-09)
+
+Midnight MCP failed in Cursor (green/yellow flicker → red error). Root causes, in order:
+
+1. WSL had no native Node — Windows `npx` broke on UNC paths.
+2. `/bin/sh` + `source` nvm wrapper failed (dash has no `source`).
+3. **Corrupted `~/.npm/_npx` cache** — Cursor log: `SyntaxError: Unexpected end of input` in truncated `web-streams-polyfill/dist/ponyfill.mjs`.
+
+| Change | Purpose |
+|---|---|
+| WSL `nvm install 20` | Native Node v20.20.2 |
+| `midnight-mcp@0.2.20` devDependency | Local install — no `npx` on MCP start |
+| `scripts/run-midnight-mcp.sh` | Bash launcher → `node node_modules/midnight-mcp/dist/bin.js` |
+| `.cursor/mcp.json` | `bash` + launcher script (not bare `npx`) |
+| `rm -rf ~/.npm/_npx` | Drop corrupted npx cache |
+
+**Human step:** Reload MCP in Cursor. Expect ~29 `midnight-*` tools.
+
+---
+
+## **P3.2 — Proof server Docker spike (in progress)** (2026-06-09)
+
+Phase 3a step 2: local Midnight proof server + server-wallet env contract.
+
+| Artifact | Purpose |
+|---|---|
+| `midnight/docker-compose.yml` | `midnightntwrk/proof-server:8.0.3` on port 6300, 8GB mem cap for WSL |
+| `scripts/midnight-proof-server-health.sh` | `curl /health` smoke test |
+| `package.json` | `midnight:proof-server:up|down|logs|health` npm scripts |
+| `docs/midnight/MIDNIGHT_ENV.md` | `MIDNIGHT_WALLET_MNEMONIC`, Preprod RPC/indexer URLs, proof server URL |
+
+**Verification pending:** Docker Desktop not installed on dev box yet (`docker` not in WSL PATH). Human step: install Docker Desktop with WSL2 integration → `npm run midnight:proof-server:up` → health HTTP 200 → fund Preprod wallet via faucet.
+
+**Next:** Complete P3.2 verification, then P3.3 (`midnight-attestation-service.ts` + `mvr_clean_36_months`).
+
+---
+
 ## **P3.1 — WSL2 + Compact toolchain smoke test ✅** (2026-06-09)
 
 Phase 3a step 1 complete on dev machine (Sam / ThinkPad, Win11, 64GB).

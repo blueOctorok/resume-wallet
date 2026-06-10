@@ -10,7 +10,11 @@
     "supabase:test": "node scripts/test-supabase.js",
     "backfill:auth-users": "npx tsx scripts/backfill-supabase-auth-users.ts",
     "inspect:collisions": "npx tsx scripts/inspect-auth-collisions.ts",
-    "test:app": "vitest run"
+    "test:app": "vitest run",
+    "midnight:proof-server:up": "docker compose -f midnight/docker-compose.yml up -d",
+    "midnight:proof-server:down": "docker compose -f midnight/docker-compose.yml down",
+    "midnight:proof-server:logs": "docker compose -f midnight/docker-compose.yml logs -f proof-server",
+    "midnight:proof-server:health": "bash scripts/midnight-proof-server-health.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -69,6 +73,7 @@
     "eslint-config-next": "15.5.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^26.1.0",
+    "midnight-mcp": "^0.2.20",
     "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "typescript": "^5",

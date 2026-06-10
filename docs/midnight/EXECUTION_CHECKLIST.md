@@ -792,7 +792,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | Step | What | Status |
 |---|---|---|
 | **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
-| **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ⬜ |
+| **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | 🟡 |
 | **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` | ⬜ |
 | **P3.4** | Broaden fact registry + circuits once slice verifies | ⬜ |
 | **P3.5** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
@@ -857,8 +857,70 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 **If P3.1 fails:** proof server OOM → raise `.wslconfig` `memory=` (64GB host: default is `32GB`; can try `40GB`), `wsl --shutdown`, retry. Sluggish I/O → confirm repo is under `~/`, not `/mnt/c/`. Cursor blind to WSL → you opened `C:\` path instead of WSL folder — reconnect via step 6.
 
-**P3.2–P3.5 (unchanged intent):**
-- P3.2: Docker Desktop (WSL2 backend) + proof server container + Midnight wallet env vars
+#### P3.2 — Proof server spike (Docker) + server-managed wallet
+
+| | |
+|---|---|
+| Status | 🟡 In progress · infra landed · **Docker Desktop not yet installed on dev box** |
+| Pre-conditions | P3.1 ✅ |
+| Pace risk | None — no app routes touched |
+
+**Goal:** Run Midnight's proof server locally via Docker and document the server-managed wallet env vars Storm will use in P3.3. Pass = `curl http://localhost:6300/health` returns 200 + wallet mnemonic funded on Preprod faucet.
+
+**Repo artifacts (shipped this session):**
+- `midnight/docker-compose.yml` — `midnightntwrk/proof-server:8.0.3`, port 6300, 8GB mem cap
+- `scripts/midnight-proof-server-health.sh` + npm scripts `midnight:proof-server:*`
+- `docs/midnight/MIDNIGHT_ENV.md` — `MIDNIGHT_WALLET_MNEMONIC`, RPC/indexer URLs, proof server URL
+
+**Do in order (human steps marked 👤):**
+
+1. 👤 **Install Docker Desktop for Windows** — https://www.docker.com/products/docker-desktop/
+   - Check **Use WSL 2 instead of Hyper-V** during install.
+   - Docker Desktop → Settings → Resources → WSL Integration → enable **Ubuntu-24.04**.
+   - Restart WSL after install: `wsl --shutdown` (PowerShell), reopen Ubuntu.
+
+2. **Verify Docker from WSL:**
+   ```bash
+   docker --version
+   docker compose version
+   ```
+
+3. **Start proof server:**
+   ```bash
+   cd ~/dev/resume-wallet
+   npm run midnight:proof-server:up
+   npm run midnight:proof-server:health   # expect HTTP 200
+   ```
+
+4. **Server-managed wallet (dev Preprod):**
+   - Create a **dedicated** dev wallet (Lace extension or fresh mnemonic) — not a personal wallet.
+   - Add to `.env.local` per `docs/midnight/MIDNIGHT_ENV.md`:
+     ```
+     MIDNIGHT_NETWORK=preprod
+     MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6300
+     MIDNIGHT_NODE_RPC_URL=https://rpc.preprod.midnight.network
+     MIDNIGHT_INDEXER_URL=https://indexer.preprod.midnight.network/api/v3/graphql
+     MIDNIGHT_WALLET_MNEMONIC=<24 words — never commit>
+     ```
+   - Fund via https://faucet.preprod.midnight.network/
+
+5. **Verification (pass/fail for P3.2):**
+   ```bash
+   npm run midnight:proof-server:health    # HTTP 200
+   docker ps --filter name=storm-midnight-proof-server  # running
+   ```
+   Wallet funded on faucet (manual check in Lace or P3.3 wallet script).
+
+**Gotchas:**
+- Proof server OOM under WSL → raise `.wslconfig` `memory=` or `mem_limit` in compose; `wsl --shutdown`, retry.
+- Port 6300 taken → change host mapping in `midnight/docker-compose.yml` (e.g. `6301:6300`) and set `MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6301`.
+- `docker: command not found` in WSL → Docker Desktop not installed or WSL integration disabled.
+
+**Commit:** `feat(midnight): proof server docker compose + env docs (P3.2)`
+
+**Next (P3.3):** `midnight-attestation-service.ts` + `mvr_clean_36_months` one-fact Preprod slice.
+
+#### P3.3–P3.5 (unchanged intent)
 - P3.3: `midnight-attestation-service.ts` + one fact end-to-end on testnet
 - P3.4: More facts / circuits
 - P3.5: Honesty gate on UI copy
@@ -936,6 +998,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-09 | **P3.2** — proof server Docker spike (🟡) | Composer | pending user commit | **Shipped:** `midnight/docker-compose.yml` (proof-server 8.0.3:6300), `scripts/midnight-proof-server-health.sh`, npm `midnight:proof-server:*`, `docs/midnight/MIDNIGHT_ENV.md`. **Blocked on human:** Docker Desktop + WSL integration — `docker` not in PATH yet. **Next:** install Docker Desktop → `npm run midnight:proof-server:up` → health 200 → fund Preprod wallet → mark P3.2 ✅ → P3.3. |
 | 2026-06-09 | **P3.1** — WSL2 + Compact toolchain smoke test ✅ | Opus 4.8 | pending user commit | Ubuntu-24.04 on Win11 64GB; `.wslconfig` 32GB; repo copied to `/home/octorok/dev/resume-wallet`; `compact 0.5.1` + compiler **0.31.0** after `apt install unzip`. **Next:** Cursor WSL folder + P3.2 Docker/proof server. Midnight MCP available for Compact/contracts. |
 | 2026-06-09 | Docs — positioning + funding + token/SBT capture (DEC-2026-06-002) | Opus 4.8 | pending user commit | **Docs only.** Added **DEC-2026-06-002**: (1) driver-side-counterpart positioning (NOT a Tenstreet/Xchange competitor — don't chase network/data volume), (2) candidate-controlled/agency-funded model (Pace funds pull, driver owns fact; path (a) own-records-sponsored first, path (b) funded-pull-portable GATED on FCRA opinion), (3) Midnight reframed as **load-bearing** (network-independent portable trust for a late entrant), (4) SBT-in-career-card + shielded-utility STORM promoted "captured" → **committed roadmap** with guardrails intact. Edited `MOAT_THESIS` (retired "chain is implementation detail" lines + new positioning/funding sections), `ARCHITECTURE` (Phase 3 arc sequenced), this checklist (Phase 3 fleshed out: 3a slice → 3b SBT → token → P4 gated), `TOKEN_BRIEF`, `PARTNERS`, `CHANGES`. **Next:** Phase 3a step 1 (toolchain de-risk) when ready. |
 | 2026-06-05 | P2.7 — Verified by Storm language + Stormi/journey (**Phase 2 COMPLETE**) | Composer | a0e0248 | **Lib:** `formatVerifiedByStormLine()` + tests. **Sweep:** self-reported career card/share/PDF/export copy → on file; third-party facts use centralized provenance. **Stormi:** `ava-context` attestation block + hub `attestationCount`. **Journey:** optional verified-fact milestone. `npm run test:app` (50) + `npm run build` green. **Next:** Phase 3 (trigger-gated). |
@@ -989,4 +1052,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-09 (P3.1 WSL2 + Cursor workflow steps added)
+**Last updated:** 2026-06-09 (P3.2 proof server Docker spike — infra landed, Docker Desktop install pending)

@@ -5,8 +5,8 @@
       "url": "https://mcp.supabase.com/mcp?project_ref=qlxvcjxjrkphobcgvcmb&read_only=true"
     },
     "midnight": {
-      "command": "npx",
-      "args": ["-y", "midnight-mcp@latest"]
+      "command": "bash",
+      "args": ["/home/octorok/dev/resume-wallet/scripts/run-midnight-mcp.sh"]
     }
   }
 }

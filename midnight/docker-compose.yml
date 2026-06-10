@@ -1,0 +1,19 @@
+# Midnight proof server — local dev (P3.2)
+# Requires Docker Desktop with WSL2 integration enabled.
+# Docs: https://docs.midnight.network/guides/run-proof-server
+#
+# Start:  npm run midnight:proof-server:up
+# Health: npm run midnight:proof-server:health
+# Logs:   npm run midnight:proof-server:logs
+# Stop:   npm run midnight:proof-server:down
+
+services:
+  proof-server:
+    image: midnightntwrk/proof-server:8.0.3
+    container_name: storm-midnight-proof-server
+    ports:
+      - '6300:6300'
+    command: ['midnight-proof-server', '-v']
+    restart: unless-stopped
+    # Proof generation is memory-heavy; raise if OOM under WSL (see EXECUTION_CHECKLIST P3.2).
+    mem_limit: 8g
