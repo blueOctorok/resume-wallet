@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR View modal — 1:1 PDF preview** (2026-06-10)
+
+Replaced the custom React MVR “View” layout (~1,300 lines) with an **iframe preview of the same server-rendered PDF** used by Download. View and download are now guaranteed identical — one source (`MvrReportPdf` via `/api/mvr/[orderId]/pdf`).
+
+| File | Change |
+|---|---|
+| `src/components/MvrViewModal.tsx` | Slim modal: resolve order → embed PDF iframe (`disposition=inline`) |
+| `src/app/api/mvr/[orderId]/pdf/route.ts` | `?disposition=inline` for iframe preview; default `attachment` for download |
+
+---
+
 ## **PDF branding — navbar STORM wordmark on MVR/PSP reports** (2026-06-10)
 
 Replaced the placeholder PDF header (teal square with “S” + Helvetica “Storm”) with the same **STORM** wordmark used in the navbar: Orbitron **ST** + violet-framed **O** tile with cloud-lightning + **RM**, plus muted “Verified Career Identity” tagline. Applies to all reports via shared `StormPdfChrome` (MVR + PSP). Orbitron registered from `public/fonts/Orbitron-SemiBold.ttf`. Footer URL corrected to `stormchain.ai`.

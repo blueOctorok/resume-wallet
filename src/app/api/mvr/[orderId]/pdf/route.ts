@@ -46,6 +46,9 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const sessionUserId = await getStormUserIdFromRequest(request)
     const employerCandidateUserId = searchParams.get('employerCandidateUserId')
+    // `inline` for modal iframe preview; default `attachment` for Download button.
+    const disposition =
+      searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment'
 
     if (!sessionUserId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -143,7 +146,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `${disposition}; filename="${filename}"`,
         'Cache-Control': 'private, no-store',
       },
     })
