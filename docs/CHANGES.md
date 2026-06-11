@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP view + PDF — full report text, iframe preview** (2026-06-10)
+
+PSP modal duplicated structured crash/inspection UI that didn’t match what employers expect (Key prints Accio’s `<text>` block verbatim). View now embeds the same PDF as Download (like MVR). PDF is cover summary + paginated vendor report text; structured tables removed from the artifact (parser still extracts counts for search/filter).
+
+| File | Change |
+|---|---|
+| `src/components/PspViewModal.tsx` | Slim iframe preview modal; resolves order via status API then loads `/api/psp/[id]/pdf?disposition=inline` |
+| `src/lib/pdf/PspReportPdf.tsx` | Cover page (outcome + identity) + multi-page FMCSA report text |
+| `src/lib/pdf/StormPdfChrome.tsx` | `StormPdfPage` accepts optional `wrap` for long text pagination |
+| `src/app/api/psp/[orderId]/pdf/route.ts` | `disposition=inline` for modal preview |
+
+---
+
 ## **MVR PDF — hide order placeholders, not DMV data** (2026-06-10)
 
 Many MVR PDFs showed **555-555-5555**, gender **U**, and a Personal Characteristics section full of dashes. Root cause: those fields come from Storm’s **Accio order submission** (`accio-xml-builder` defaulted missing phone to 555; gender defaults to Unknown), which Accio echoes in `<subject>` — not from the DMV text block. Key Background omits them; Storm was rendering them as if they were verified facts.

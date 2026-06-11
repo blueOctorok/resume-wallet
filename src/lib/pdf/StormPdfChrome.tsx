@@ -315,11 +315,13 @@ export function StormPdfDocument({ title, children }: StormPdfDocumentProps) {
 
 export interface StormPdfPageProps {
   children: React.ReactNode
+  /** When true, long content flows onto additional LETTER pages. */
+  wrap?: boolean
 }
 
-export function StormPdfPage({ children }: StormPdfPageProps) {
+export function StormPdfPage({ children, wrap }: StormPdfPageProps) {
   return (
-    <Page size="LETTER" style={stormPdfStyles.page}>
+    <Page size="LETTER" style={stormPdfStyles.page} wrap={wrap}>
       {children}
     </Page>
   )
