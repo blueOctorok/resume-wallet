@@ -57,7 +57,7 @@ When something breaks → [Rollback playbook](#rollback-playbook).
 
 ---
 
-## Pace invariants — DO NOT BREAK
+## Pace invariants — DO NOT BREAK!!!
 
 These flows must work continuously. If a step risks breaking any, it ships dual-mode (old + new both work) with cutover as a separate explicit step.
 
