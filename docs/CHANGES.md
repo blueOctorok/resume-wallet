@@ -6,12 +6,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **PSP view + PDF — full report text, iframe preview** (2026-06-10)
 
-PSP modal duplicated structured crash/inspection UI that didn’t match what employers expect (Key prints Accio’s `<text>` block verbatim). View now embeds the same PDF as Download (like MVR). PDF is cover summary + paginated vendor report text; structured tables removed from the artifact (parser still extracts counts for search/filter).
+PSP modal duplicated structured crash/inspection UI that didn’t match what employers expect (Key prints Accio’s `<text>` block verbatim). View now embeds the same PDF as Download (like MVR). PDF is **vendor report text only** (no cover summary — it duplicates the `<text>` block) plus Storm footer; paginates with `wrap`. Structured tables removed from the artifact (parser still extracts counts for search/filter).
 
 | File | Change |
 |---|---|
 | `src/components/PspViewModal.tsx` | Slim iframe preview modal; resolves order via status API then loads `/api/psp/[id]/pdf?disposition=inline` |
-| `src/lib/pdf/PspReportPdf.tsx` | Cover page (outcome + identity) + multi-page FMCSA report text |
+| `src/lib/pdf/PspReportPdf.tsx` | Vendor `<text>` only + footer (no cover page) |
 | `src/lib/pdf/StormPdfChrome.tsx` | `StormPdfPage` accepts optional `wrap` for long text pagination |
 | `src/app/api/psp/[orderId]/pdf/route.ts` | `disposition=inline` for modal preview |
 
