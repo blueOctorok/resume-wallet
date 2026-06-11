@@ -1,0 +1,86 @@
+/**
+ * Strip Accio order-submission placeholders from MVR display.
+ *
+ * When Storm places an MVR without a phone on file, accio-xml-builder used to
+ * send `<phone_number>555-555-5555</phone_number>`. Accio echoes that in the
+ * result `<subject>` block — it is NOT DMV data. Same for gender `U` (Unknown)
+ * when we never collected sex from the candidate.
+ */
+
+const PLACEHOLDER_PHONE_RE =
+  /^(?:\+?1[-.\s]*)?(?:\(?555\)?[-.\s]*){2}5555$|^5555555555$/
+
+export function isPlaceholderPhone(phone: string | null | undefined): boolean {
+  if (!phone?.trim()) return false
+  const normalized = phone.trim()
+  if (PLACEHOLDER_PHONE_RE.test(normalized.replace(/\s/g, ''))) return true
+  const digits = normalized.replace(/\D/g, '')
+  return digits === '5555555555'
+}
+
+export function sanitizeSubjectPhone(
+  phone: string | null | undefined,
+): string | undefined {
+  if (!phone?.trim()) return undefined
+  if (isPlaceholderPhone(phone)) return undefined
+  return phone.trim()
+}
+
+export function isUnknownGender(gender: string | null | undefined): boolean {
+  if (!gender?.trim()) return true
+  const g = gender.trim().toUpperCase()
+  return g === 'U' || g === 'UNKNOWN' || g === 'UNSPECIFIED' || g === 'X'
+}
+
+export function sanitizeSubjectGender(
+  gender: string | null | undefined,
+): string | undefined {
+  if (isUnknownGender(gender)) return undefined
+  return gender!.trim()
+}
+
+/** Prefer real subject phone; fall back to user_profiles when subject is a placeholder. */
+export function resolveDisplayPhone(
+  subjectPhone: string | null | undefined,
+  profilePhone?: string | null,
+): string | undefined {
+  const fromSubject = sanitizeSubjectPhone(subjectPhone)
+  if (fromSubject) return fromSubject
+  return sanitizeSubjectPhone(profilePhone)
+}
+
+export function formatDisplayGender(
+  gender: string | null | undefined,
+): string | undefined {
+  const cleaned = sanitizeSubjectGender(gender)
+  if (!cleaned) return undefined
+  const g = cleaned.toUpperCase()
+  if (g === 'M') return 'Male'
+  if (g === 'F') return 'Female'
+  return cleaned
+}
+
+export interface MvrPersonalCharacteristics {
+  sex?: string
+  weight?: string
+  height?: string
+  eyes?: string
+  hair?: string
+  donor?: string
+  age?: number
+}
+
+/** True when the DMV text block returned at least one physical descriptor (not age alone). */
+export function hasDmvPersonalCharacteristics(
+  pc: MvrPersonalCharacteristics | null | undefined,
+): boolean {
+  if (!pc) return false
+  return Boolean(
+    pc.sex?.trim() ||
+      pc.weight?.trim() ||
+      pc.height?.trim() ||
+      pc.eyes?.trim() ||
+      pc.hair?.trim() ||
+      pc.donor?.trim(),
+  )
+}

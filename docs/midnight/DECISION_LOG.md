@@ -6,6 +6,53 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-06-003 — Multi-CRA proof rail ("Proof Requests"): candidate-mediated only; carrier-side headless proofs API rejected
+
+**Date:** 2026-06-10
+**Status:** Accepted (extends DEC-2026-06-002 positioning + funding; reinforces DEC-2026-05-011 candidate-agent posture)
+**Decided by:** Owner
+
+### Context
+
+Pace is live, but asking the next carrier ("company X") to abandon their existing screening supplier — Checkr, DISA, Accio, anyone — to adopt Storm is a tall order, and the owner explicitly rejects the zero-sum framing. The analogy raised: in crypto, interoperability wins chains; the same applies here. The question: can Storm be a **proof rail above whichever CRA a carrier already uses**, so any company gets Midnight ZK selective-disclosure proofs without switching suppliers?
+
+The architecture already leans this way by design: the provenance gate is issuer-agnostic (`midnight-data-boundary.mdc` — "Provenance is the gate, NOT role"), and `attestations.source_cra` is open text, not hardcoded to Accio. The ZK layer doesn't care who the issuer is — a Midnight proof attests a predicate over issuer-signed data; swap the issuer, same circuit shape. Each new CRA costs an **ingestion adapter** (their format → a `proveImpl`), not an architecture change.
+
+### Decision
+
+**1. The multi-CRA proof rail is committed direction — as "Proof Requests" (Phase 3c).**
+Carrier-initiated, candidate-consented, CRA-agnostic:
+- Carrier submits a lightweight request (driver contact + facts needed from the fact catalog). No Storm tenancy, no SDK, no CRA switch required.
+- Storm contacts the driver via existing outreach machinery; driver signs the FCRA authorization + disclosure election (extends `screening_consent_bundles` + `disclosure_preferences`).
+- Storm sources the record, derives the fact, proves on Midnight, cites `source_cra`.
+- Carrier receives a **public verify link** backed by the on-chain proof — verifiable cold, no Storm account. Midnight's network-independent trust (DEC-2026-06-002 §3) is what makes the "headless" delivery real; a JWT-only version would still require trusting Storm's key.
+- Byproduct flywheel: every fulfilled request mints a new Storm candidate with a career card + portable fact. Carriers become the candidate-acquisition channel.
+
+**2. The candidate is the hub in every flow — "Version B" is rejected.**
+A carrier-side headless API where company X batches *their* CRA reports through Storm for proofs **without the driver in the loop** is permanently rejected. It would make Storm a processor of consumer reports on behalf of the FCRA "user" (reseller/CRA territory — the posture MOAT_THESIS says collapses the moat), and it dissolves the driver-owned portable DQ file into commoditized middleware. Joins the rejected-ideas list alongside Storm-as-CRA.
+
+**3. Ingestion sources, in risk order (mirrors DEC-2026-06-002 funding paths):**
+   - **(a) Driver's-own-records, carrier-sponsored — launch path.** Driver pulls own MVR/PSP by right; requesting carrier sponsors the fee. Works under existing consent posture, any carrier, today.
+   - **(b) Existing-CRA-pull ingestion (Checkr / DISA / etc.) — GATED.** Even with the driver's signature, ingesting another party's funded CRA pull is the same legal question as funded-pull-becomes-portable. **Requires the formal FCRA opinion** (DEC-2026-05-013 / DEC-2026-06-002) before build/market. One opinion covers both.
+
+**4. Sequencing: after the Phase 3a slice verifies.** The rail is a product surface on top of a real proof backbone — do not design it on the JWT-only backend. Exception: the **public verify page** is valuable in Phase 2 form already ("Verified by Storm" + CRA citation) and upgrades in place when the backend swaps.
+
+### Consequences
+
+- `EXECUTION_CHECKLIST.md`: new **Phase 3c — Proof Request rail** section, sequenced after 3a with component breakdown + gates.
+- `MOAT_THESIS.md` (follow-up): add carrier-side proofs API to the rejected-ideas appendix; add the interop framing ("don't ask carriers to ditch their CRA — cite it").
+- Engineering invariant from day one of P3.3: `source_cra` flows through every layer (fact registry → attestation → proof artifact → verify surface). Never assume Accio.
+- No special-casing any CRA or carrier in code — adapters are registry entries, same pattern as blocks.
+
+### Related
+
+- DEC-2026-06-002 (funding paths a/b; Midnight load-bearing = network-independent trust)
+- DEC-2026-05-011 (candidate-as-agent / not a CRA — the line that separates Version A from Version B)
+- DEC-2026-05-013 (cached-attestation marketplace — shares the FCRA gate)
+- DEC-2026-05-014 (provenance gate — issuer-agnostic by design, which is what makes this rail cheap)
+
+---
+
 ## DEC-2026-06-002 — Positioning lock: driver-owned / agency-funded vault; Midnight is load-bearing; token + soulbound credentials are committed roadmap
 
 **Date:** 2026-06-09

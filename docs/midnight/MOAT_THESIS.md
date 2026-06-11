@@ -283,11 +283,17 @@ This section exists so future-you, future collaborators, and future AI sessions 
 **Proposal:** Storm becomes a CRA so we can pull MVR / PSP / employment-verification directly without Accio.
 **Rejected because:** Adopting a CRA's operational shape (full-disclosure reports, per-pull pricing, state-DMV contracts, FCRA dispute infrastructure) converges Storm with Tenstreet / HireRight / DriverFacts — the incumbents we are structurally moated against. Becoming a CRA collapses the moat. See full reasoning in DEC-2026-05-011.
 
+### Carrier-side headless proofs API (driver not in the loop)
+
+**Proposal:** A carrier batches *their* existing CRA reports (Checkr / DISA / Accio output) through Storm's Midnight layer and gets ZK proofs back — no driver contact, no consent flow, pure B2B infrastructure.
+**Rejected because:** (1) Storm would be processing consumer reports on behalf of the FCRA "user" (the carrier) — reseller/CRA territory, the same posture collapse as Storm-as-CRA. (2) Without the driver as hub, there is no driver-owned portable DQ file — Storm becomes commoditized middleware that any vendor can replicate. (3) It arms incumbent CRAs with our differentiator if extended to them.
+**The legitimate version of this insight is the candidate-mediated Proof Request rail (DEC-2026-06-003, Phase 3c):** any carrier, any CRA, but the driver signs the authorization and owns the resulting portable fact. Interop over displacement — carriers keep their supplier; Storm cites it in `source_cra`.
+
 ### One-line takeaway
 
 > **Generate ideas freely. Then run the category check and the moat-direction check before designing. Most "killer features" survive both. The ones that don't are captured here so we don't repeat the instinct.**
 
 ---
 
-**Last updated:** 2026-06-09 (DEC-2026-06-002: chain is load-bearing for network-independent trust; driver-side-counterpart positioning vs. Tenstreet/Xchange; candidate-controlled/agency-funded model. Earlier: 2026-05-27 "Storm is not a CRA" + "Rejected feature ideas" appendix — see `DECISION_LOG.md` DEC-2026-05-011/012/013, DEC-2026-06-001/002)
+**Last updated:** 2026-06-10 (DEC-2026-06-003: rejected-ideas appendix gains "carrier-side headless proofs API"; the legitimate version is the candidate-mediated Proof Request rail, Phase 3c. Earlier: 2026-06-09 DEC-2026-06-002 chain-is-load-bearing + positioning; 2026-05-27 "Storm is not a CRA" + appendix — see `DECISION_LOG.md` DEC-2026-05-011/012/013, DEC-2026-06-001/002/003)
 **Source conversations:** see `docs/midnight/new-direction.md` for the original boss memo

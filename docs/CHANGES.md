@@ -4,14 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **MVR View modal — 1:1 PDF preview** (2026-06-10)
+## **MVR PDF — hide order placeholders, not DMV data** (2026-06-10)
 
-Replaced the custom React MVR “View” layout (~1,300 lines) with an **iframe preview of the same server-rendered PDF** used by Download. View and download are now guaranteed identical — one source (`MvrReportPdf` via `/api/mvr/[orderId]/pdf`).
+Many MVR PDFs showed **555-555-5555**, gender **U**, and a Personal Characteristics section full of dashes. Root cause: those fields come from Storm’s **Accio order submission** (`accio-xml-builder` defaulted missing phone to 555; gender defaults to Unknown), which Accio echoes in `<subject>` — not from the DMV text block. Key Background omits them; Storm was rendering them as if they were verified facts.
 
-| File | Change |
+| Fix | Detail |
 |---|---|
-| `src/components/MvrViewModal.tsx` | Slim modal: resolve order → embed PDF iframe (`disposition=inline`) |
-| `src/app/api/mvr/[orderId]/pdf/route.ts` | `?disposition=inline` for iframe preview; default `attachment` for download |
+| `src/lib/mvr-display-sanitize.ts` | Detect placeholder phones + unknown gender; resolve real phone from `user_profiles` when subject is a placeholder |
+| `src/lib/accio-xml-parser.ts` | Strip placeholders at parse time (`sanitizeSubjectPhone` / `sanitizeSubjectGender`) |
+| `src/lib/pdf/MvrReportPdf.tsx` | Omit Gender/Phone rows when empty; Personal Characteristics only when DMV returned sex/height/weight/eyes/hair/donor (not age-only) |
+| `src/app/api/mvr/[orderId]/pdf/route.ts` | Pass `profilePhone` into PDF meta |
+| `src/lib/accio-xml-builder.ts` | New orders send `<phone_number/>` instead of fake 555 |
+
+Re-run admin reparse after deploy so stored `parsed_data` drops placeholder subject fields.
 
 ---
 
@@ -69,6 +74,33 @@ Midnight MCP failed in Cursor (green/yellow flicker → red error). Root causes,
 | `rm -rf ~/.npm/_npx` | Drop corrupted npx cache |
 
 **Human step:** Reload MCP in Cursor. Expect ~29 `midnight-*` tools.
+
+---
+
+## **Docs · North star — three audiences (candidates / Pace / headless carriers)** (2026-06-10)
+
+Locked the simple GTM framing in `EXECUTION_CHECKLIST.md` Phase 3 intro: (1) candidates own the product, (2) companies like Pace use the full platform, (3) companies that won't leave their stack still get ZK proofs via Proof Requests without joining Storm. Row 3 = scale beyond Pace; Midnight = cold verify without trusting Storm's DB.
+
+---
+
+## **Docs · DEC-2026-06-003 — Multi-CRA Proof Request rail (Phase 3c committed)** (2026-06-10)
+
+GTM direction beyond Pace: Storm becomes the **proof rail above whichever CRA a carrier already uses** — no supplier switch required (interop over displacement, owner's explicit non-zero-sum framing).
+
+| What | Decision |
+|---|---|
+| **Product** | "Proof Requests" — carrier submits driver contact + facts needed; Storm runs outreach → driver signs FCRA authorization + disclosure election → Storm derives + proves on Midnight → carrier gets a **cold-verifiable public link** (no Storm account). Flywheel: every request mints a new Storm candidate. |
+| **The line** | Candidate is the hub in EVERY flow. Carrier-side headless proofs API (batching CRA reports, no driver in loop) **permanently rejected** — reseller/CRA posture + dissolves the driver-owned vault. Added to `MOAT_THESIS.md` rejected-ideas appendix. |
+| **Ingestion** | Path (a) driver's-own-records, carrier-sponsored = launch path (works today). Path (b) existing-CRA-pull ingestion (Checkr/DISA) = **gated on the FCRA opinion** (same opinion as Phase 4 / DEC-2026-05-013). |
+| **Invariant** | `source_cra` flows through every Phase 3 layer (fact registry → attestation → proof → verify surface). Never assume Accio; CRA adapters are registry entries. |
+
+| Doc | Change |
+|---|---|
+| `midnight/DECISION_LOG.md` | New **DEC-2026-06-003** (authoritative record) |
+| `midnight/EXECUTION_CHECKLIST.md` | New **Phase 3c — Proof Request rail** section (C1–C4 components + gates); `source_cra` invariant in Phase 3 intro; guardrails line updated; handoff row |
+| `midnight/MOAT_THESIS.md` | Rejected-ideas appendix: added "Carrier-side headless proofs API (driver not in the loop)" |
+
+**No app code.** Sequencing unchanged: P3.2 (Docker) → P3.3 (one-fact slice) first; Phase 3c designs after 3a verifies (exception: C1 public verify page is phase-honest in JWT form).
 
 ---
 

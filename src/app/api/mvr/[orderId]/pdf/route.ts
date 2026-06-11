@@ -116,7 +116,7 @@ export async function GET(
     // file metadata even if parsing returns no subject block).
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('first_name, last_name')
+      .select('first_name, last_name, phone')
       .eq('user_id', mvrOrder.driver_user_id)
       .maybeSingle()
     if (profile) {
@@ -137,6 +137,7 @@ export async function GET(
         candidateName,
         generatedAtIso: new Date().toISOString(),
         outcome: (mvrOrder.result_outcome as ScreeningOutcome) ?? null,
+        profilePhone: profile?.phone ?? null,
       },
     }) as unknown as React.ReactElement<DocumentProps>
     const buffer = await renderToBuffer(element)

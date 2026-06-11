@@ -777,10 +777,24 @@ COMMIT: feat(attestation): verified-by-storm language + Stormi wiring (P2.7)
 
 ## Phase 3 — Midnight ZK (active track, GTM-driven)
 
+### North star — three audiences, one product (DEC-2026-06-003)
+
+Storm is built for **three audiences at once** — not a single "join our platform" pitch:
+
+| Audience | What they get | Must they "join" Storm? |
+|---|---|---|
+| **Candidates** | Own their DQ file, career card, selective disclosure, Stormi | No — they sign up; the product is theirs |
+| **Companies like Pace** | Full employer hub: pipeline, screening, talent, blocks | Yes — tenant on the platform (design partner wedge) |
+| **Companies that won't leave their stack** | ZK proofs via Proof Requests — keep Checkr/DISA/Accio, get a verify link | **No** — no tenancy, no CRA switch, no SDK; carrier submits a request, driver signs, Storm delivers a cold-verifiable proof |
+
+The third row is the scale path beyond Pace. Interop over displacement: we don't ask anyone to ditch their supplier; we prove facts *about* what their supplier already pulled (once consent + ingestion path allow). Midnight makes row 3 real — a verify link that works without trusting Storm's database or account.
+
 Phase 3 swaps the signed-JWT attestation implementation for **Midnight ZK proofs behind the same `attestationService` interface** — the carrier-facing UX doesn't change, only the proof backend. **This is an active track** (DEC-2026-06-001): the driver is go-to-market — being an early *real* regulated-industry use case on Midnight — not waiting for a customer to demand non-repudiation. Build it end-to-end and genuine; ship nothing fake (the quality bar is in `strategic-direction.mdc` → "Phase 3 is an active track").
 
 ### Why Midnight is load-bearing here (read before building — DEC-2026-06-002)
-Storm is a **late entrant with no network**. A signed JWT requires the verifier to *trust Storm* (Storm holds the key). A **Midnight ZK proof lets any carrier trust the math** — verifiable cold, no Storm account, no network membership. That **network-independent portable trust** is the mechanism by which a driver-owned fact beats a 20-year carrier network (Tenstreet/Xchange). The chain isn't decoration; it's the answer to "how do we win without their network." Positioning + funding context lives in `MOAT_THESIS.md` (driver-side-counterpart + agency-funded sections).
+Storm is a **late entrant with no network**. A signed JWT requires the verifier to *trust Storm* (Storm holds the key). A **Midnight ZK proof lets any carrier trust the math** — verifiable cold, no Storm account, no network membership. That **network-independent portable trust** is the mechanism by which a driver-owned fact beats a 20-year carrier network (Tenstreet/Xchange). The chain isn't decoration; it's the answer to "how do we win without their network." Positioning + funding context lives in `MOAT_THESIS.md` (driver-side-counterpart + agency-funded sections). It's also what makes the **Phase 3c Proof Request rail** (any carrier, any CRA — DEC-2026-06-003) deliverable as a bare verify link instead of an integration.
+
+> **Engineering invariant for ALL Phase 3 code (DEC-2026-06-003):** `source_cra` flows through every layer — fact registry → attestation → proof artifact → verify surface. **Never assume Accio.** Today's only adapter is Accio; the rail is CRA-agnostic by design and new CRAs (Checkr, DISA) are registry-entry adapters, not architecture changes.
 
 ### Funding model (DEC-2026-06-002) — affects which facts to prove first
 Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themselves; Pace/the carrier funds the pull, the driver owns the portable fact. Two paths, in risk order:
@@ -936,12 +950,42 @@ Promoted from "captured, NOT scheduled" → **committed direction** (DEC-2026-06
 - **Pure utility only** — no profit-share, no governance over Storm corp (stays outside Howey). No driver wallet UX, ever.
 - Reissue of the off-chain Storm Points ledger onto Midnight = substrate change to a working system, not a new product (DEC-2026-05-005 Option B).
 
+### Phase 3c — Proof Request rail: any carrier, any CRA, candidate-mediated (committed — DEC-2026-06-003)
+
+**The GTM unlock beyond Pace.** Asking carriers to ditch their screening supplier (Checkr / DISA / Accio) for Storm is a zero-sum ask we reject. Instead Storm is the **proof rail above whichever CRA the carrier already uses** — interoperability over displacement. The carrier's entire integration is *a form and a link*.
+
+**Product shape — "Proof Requests" (DocuSign for driver facts):**
+
+1. **Carrier X submits a request** — driver contact + facts needed (from the fact catalog) + optionally which CRA holds the data. No Storm tenancy, no SDK, no CRA switch.
+2. **Storm contacts the driver** — reuses existing outreach machinery (invites, notifications, deep-links).
+3. **Driver signs once** — FCRA authorization + per-audience disclosure election (extends `screening_consent_bundles` + `disclosure_preferences`).
+4. **Storm sources → derives → proves on Midnight** — attestation cites `source_cra`.
+5. **Carrier receives a public verify link** — backed by the on-chain proof, verifiable **cold** (no Storm account). This delivery model only works because of Midnight; a JWT verify link still requires trusting Storm's key.
+6. **Flywheel:** every fulfilled request mints a new Storm candidate with a career card + portable fact. Carriers become the candidate-acquisition channel.
+
+**Components (rough build order, design after 3a verifies):**
+
+| | Component | Notes |
+|---|---|---|
+| C1 | Public verify page (`/verify/[attestationId]`) | Can ship in Phase-2 form now ("Verified by Storm" + CRA citation); upgrades in place when the Midnight backend swaps. Honesty gate applies (P3.5). |
+| C2 | Lightweight carrier request intake | Non-tenant company record + request form. Generalizes the existing employer-request pipeline; never special-case a carrier. |
+| C3 | Consent package extension | Per-request FCRA authorization + disclosure election; candidate-initiated share remains the invariant. |
+| C4 | CRA ingestion adapters | Per-CRA `proveImpl` + format mapping, registered like blocks. Launch = Accio + driver's-own-records; Checkr/DISA when path (b) clears. |
+
+**Ingestion sources, in risk order (mirrors the funding paths above):**
+- **(a) Driver's-own-records, carrier-sponsored — LAUNCH PATH.** Works under existing consent posture, any carrier, today.
+- **(b) Existing-CRA-pull ingestion (Checkr / DISA / …) — GATED on the FCRA opinion.** Even with the driver's signature, ingesting another party's funded pull is the same legal question as funded-pull-becomes-portable (DEC-2026-05-013). One opinion covers both.
+
+**Rejected — never build (DEC-2026-06-003 §2):** a carrier-side headless proofs API where company X batches *their* CRA reports through Storm **without the driver in the loop**. That makes Storm a consumer-report processor for the FCRA "user" (reseller/CRA territory) and dissolves the driver-owned vault into commoditized middleware. The candidate is the hub in every flow — that's the legal posture AND the moat.
+
+**Pre-conditions:** P3.3 one-fact slice verified on Preprod (don't design the rail on the JWT-only backend — except C1, which is phase-honest in JWT form).
+
 ### Phase 4 — cached-attestation marketplace (GATED on FCRA opinion)
 - Driver economic compounding via Storm-mediated cached re-queries (DEC-2026-05-013). Carrier picks fresh pull (~$35) or recent-attestation query (~$15, 30-day cliff, consent-gated); driver pockets ~$5, Storm ~$10. Storm mediates every transaction (no driver-as-vendor, no Lace wallet).
-- **Do not build until:** Phase 2 in production at scale + Pace engaged as co-designer + **FCRA legal review complete** (the path-(b) legal question above).
+- **Do not build until:** Phase 2 in production at scale + Pace engaged as co-designer + **FCRA legal review complete** (the path-(b) legal question above — same opinion gates Phase 3c ingestion path (b)).
 
 ### Guardrails that keep the token/SBT legitimate (NEVER loosen)
-The promotions above do **not** touch the rejected-ideas list. These stay permanently rejected (`MOAT_THESIS.md` appendix): transferable credential NFTs, tradeable/fungible credential tokens, driver-as-vendor-with-wallet, income-share / "driver pool" tokens, Storm-as-CRA. **Soulbound ≠ tradeable; utility ≠ security.** If a token feature drifts toward transferability or profit-sharing, it's rejected, not roadmap.
+The promotions above do **not** touch the rejected-ideas list. These stay permanently rejected (`MOAT_THESIS.md` appendix): transferable credential NFTs, tradeable/fungible credential tokens, driver-as-vendor-with-wallet, income-share / "driver pool" tokens, Storm-as-CRA, **carrier-side headless proofs API with no driver in the loop** (DEC-2026-06-003). **Soulbound ≠ tradeable; utility ≠ security; candidate-mediated ≠ optional.** If a token feature drifts toward transferability or profit-sharing — or a rail feature drifts toward bypassing the driver — it's rejected, not roadmap.
 
 Engineering view: `[ARCHITECTURE.md](./ARCHITECTURE.md)` "Phase 3 arc". Boss-facing: `[TOKEN_BRIEF.md](./TOKEN_BRIEF.md)`. Strategy: `[MOAT_THESIS.md](./MOAT_THESIS.md)`.
 
@@ -998,6 +1042,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | Docs — **DEC-2026-06-003** multi-CRA Proof Request rail (Phase 3c committed) | Fable 5 | pending user commit | **Docs only.** Captured the "any carrier, any CRA" direction: Storm as proof rail above the carrier's existing screening supplier (interop over displacement). **New DEC-2026-06-003**: candidate-mediated Proof Requests committed (carrier submits request → driver signs → Storm proves on Midnight → carrier gets cold-verifiable link); carrier-side headless proofs API (no driver in loop) **permanently rejected** → added to MOAT_THESIS rejected-ideas appendix. New **Phase 3c** section in this checklist (C1 verify page → C2 carrier intake → C3 consent extension → C4 CRA adapters; ingestion path (b) FCRA-gated, same opinion as Phase 4). New engineering invariant: `source_cra` flows through every Phase 3 layer — never assume Accio. **Next:** P3.2 verification (Docker Desktop install), then P3.3. |
 | 2026-06-09 | **P3.2** — proof server Docker spike (🟡) | Composer | pending user commit | **Shipped:** `midnight/docker-compose.yml` (proof-server 8.0.3:6300), `scripts/midnight-proof-server-health.sh`, npm `midnight:proof-server:*`, `docs/midnight/MIDNIGHT_ENV.md`. **Blocked on human:** Docker Desktop + WSL integration — `docker` not in PATH yet. **Next:** install Docker Desktop → `npm run midnight:proof-server:up` → health 200 → fund Preprod wallet → mark P3.2 ✅ → P3.3. |
 | 2026-06-09 | **P3.1** — WSL2 + Compact toolchain smoke test ✅ | Opus 4.8 | pending user commit | Ubuntu-24.04 on Win11 64GB; `.wslconfig` 32GB; repo copied to `/home/octorok/dev/resume-wallet`; `compact 0.5.1` + compiler **0.31.0** after `apt install unzip`. **Next:** Cursor WSL folder + P3.2 Docker/proof server. Midnight MCP available for Compact/contracts. |
 | 2026-06-09 | Docs — positioning + funding + token/SBT capture (DEC-2026-06-002) | Opus 4.8 | pending user commit | **Docs only.** Added **DEC-2026-06-002**: (1) driver-side-counterpart positioning (NOT a Tenstreet/Xchange competitor — don't chase network/data volume), (2) candidate-controlled/agency-funded model (Pace funds pull, driver owns fact; path (a) own-records-sponsored first, path (b) funded-pull-portable GATED on FCRA opinion), (3) Midnight reframed as **load-bearing** (network-independent portable trust for a late entrant), (4) SBT-in-career-card + shielded-utility STORM promoted "captured" → **committed roadmap** with guardrails intact. Edited `MOAT_THESIS` (retired "chain is implementation detail" lines + new positioning/funding sections), `ARCHITECTURE` (Phase 3 arc sequenced), this checklist (Phase 3 fleshed out: 3a slice → 3b SBT → token → P4 gated), `TOKEN_BRIEF`, `PARTNERS`, `CHANGES`. **Next:** Phase 3a step 1 (toolchain de-risk) when ready. |
@@ -1052,4 +1097,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-09 (P3.2 proof server Docker spike — infra landed, Docker Desktop install pending)
+**Last updated:** 2026-06-10 (DEC-2026-06-003: Phase 3c Proof Request rail committed — any carrier, any CRA, candidate-mediated. P3.2 still pending Docker Desktop install.)

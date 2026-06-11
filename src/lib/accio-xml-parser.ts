@@ -3,6 +3,11 @@
  * Parses XML results from Accio webhooks into structured data
  */
 
+import {
+  sanitizeSubjectGender,
+  sanitizeSubjectPhone,
+} from '@/lib/mvr-display-sanitize'
+
 export interface ParsedMvrResult {
   // Order Information
   orderNumber: string
@@ -300,7 +305,7 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         ssn: extractXmlValue(subjectXml, 'ssn'),
         dateOfBirth: extractXmlValue(subjectXml, 'dob'), // YYYYMMDD format
         email: extractXmlValue(subjectXml, 'email'),
-        phone: extractXmlValue(subjectXml, 'phone_number'),
+        phone: sanitizeSubjectPhone(extractXmlValue(subjectXml, 'phone_number')),
         address: extractXmlValue(subjectXml, 'address'),
         city: extractXmlValue(subjectXml, 'city'),
         // Reject suspiciously long values — state names/codes are ≤20 chars.
@@ -309,7 +314,7 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         state: rawState && rawState.length <= 20 ? rawState : undefined,
         zip: extractXmlValue(subjectXml, 'zip'),
         country: extractXmlValue(subjectXml, 'country'),
-        gender: extractXmlValue(subjectXml, 'gender')
+        gender: sanitizeSubjectGender(extractXmlValue(subjectXml, 'gender'))
       }
     }
 

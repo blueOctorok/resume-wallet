@@ -32,6 +32,11 @@ import {
   type ScreeningOutcome,
 } from '@/lib/accio-result-status'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
+import {
+  formatDisplayGender,
+  hasDmvPersonalCharacteristics,
+  resolveDisplayPhone,
+} from '@/lib/mvr-display-sanitize'
 
 export interface MvrReportPdfMeta {
   /** Storm internal order id (uuid) — printed in footer + cover. */
@@ -45,6 +50,8 @@ export interface MvrReportPdfMeta {
   /** On-chain verification (when the report was anchored to chain). */
   verifiedTxHash?: string | null
   verifiedExplorerUrl?: string | null
+  /** Optional profile phone when Accio subject block has a placeholder. */
+  profilePhone?: string | null
 }
 
 // Accio dates come back as YYYYMMDD strings. Helper for human formatting.
@@ -97,6 +104,12 @@ function Cell({ value, width }: { value?: string | number | null; width: string 
   )
 }
 
+/** Omit row entirely when value is empty — avoids a wall of dashes on sparse reports. */
+function OptionalKeyValue({ label, value }: { label: string; value?: string | null }) {
+  if (value === null || value === undefined || value === '') return null
+  return <KeyValue label={label} value={value} />
+}
+
 export interface MvrReportPdfProps {
   parsed: ParsedMvrResult
   meta: MvrReportPdfMeta
@@ -120,6 +133,11 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
   const accidents = parsed.accidents ?? []
   const suspensions = parsed.suspensions ?? []
   const licenses = parsed.licenses ?? []
+
+  const displayPhone = resolveDisplayPhone(parsed.subject?.phone, meta.profilePhone)
+  const displayGender = formatDisplayGender(parsed.subject?.gender)
+  const pc = parsed.personalCharacteristics
+  const showPersonalCharacteristics = hasDmvPersonalCharacteristics(pc)
 
   return (
     <StormPdfDocument title={`Storm MVR — ${meta.candidateName}`}>
@@ -152,7 +170,7 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
         <Section heading="Personal Information">
           <View style={stormPdfStyles.kvGrid}>
             <KeyValue label="Name" value={subjectName} />
-            <KeyValue label="Gender" value={parsed.subject?.gender} />
+            <OptionalKeyValue label="Gender" value={displayGender} />
             <KeyValue label="Address" value={parsed.subject?.address} />
             <KeyValue
               label="City / State"
@@ -163,36 +181,21 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
               }
             />
             <KeyValue label="ZIP" value={parsed.subject?.zip} />
-            <KeyValue label="Phone" value={parsed.subject?.phone} />
+            <OptionalKeyValue label="Phone" value={displayPhone} />
           </View>
         </Section>
 
-        {/* DMV-reported physical description. Only render the section when at
-            least one field is present (not all states publish all fields). */}
-        {parsed.personalCharacteristics &&
-        (parsed.personalCharacteristics.sex ||
-          parsed.personalCharacteristics.weight ||
-          parsed.personalCharacteristics.height ||
-          parsed.personalCharacteristics.eyes ||
-          parsed.personalCharacteristics.hair ||
-          parsed.personalCharacteristics.donor ||
-          parsed.personalCharacteristics.age !== undefined) ? (
+        {/* DMV-reported physical description — omit when the state only returned age
+            (age is redundant with DOB on the cover summary). */}
+        {showPersonalCharacteristics && pc ? (
           <Section heading="Personal Characteristics">
             <View style={stormPdfStyles.kvGrid}>
-              <KeyValue label="Sex" value={parsed.personalCharacteristics.sex} />
-              <KeyValue
-                label="Age"
-                value={
-                  parsed.personalCharacteristics.age !== undefined
-                    ? String(parsed.personalCharacteristics.age)
-                    : undefined
-                }
-              />
-              <KeyValue label="Height" value={parsed.personalCharacteristics.height} />
-              <KeyValue label="Weight" value={parsed.personalCharacteristics.weight} />
-              <KeyValue label="Eyes" value={parsed.personalCharacteristics.eyes} />
-              <KeyValue label="Hair" value={parsed.personalCharacteristics.hair} />
-              <KeyValue label="Organ Donor" value={parsed.personalCharacteristics.donor} />
+              <OptionalKeyValue label="Sex" value={pc.sex} />
+              <OptionalKeyValue label="Height" value={pc.height} />
+              <OptionalKeyValue label="Weight" value={pc.weight} />
+              <OptionalKeyValue label="Eyes" value={pc.eyes} />
+              <OptionalKeyValue label="Hair" value={pc.hair} />
+              <OptionalKeyValue label="Organ Donor" value={pc.donor} />
             </View>
           </Section>
         ) : null}

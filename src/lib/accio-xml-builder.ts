@@ -134,7 +134,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <dob>${dobFormatted}</dob>
             <gender>${gender}</gender>
             <race>${race}</race>
-            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number>555-555-5555</phone_number>'}
+            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number/>'}
             <address>${escapeXml(address)}</address>
             <city>${escapeXml(city)}</city>
             <state>${escapeXml(state)}</state>
@@ -294,7 +294,7 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
             <dob>${dobFormatted}</dob>
             <gender>${gender}</gender>
             <race>${race}</race>
-            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number>555-555-5555</phone_number>'}
+            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number/>'}
             <address>${escapeXml(address)}</address>
             <city>${escapeXml(city)}</city>
             <state>${escapeXml(state)}</state>
