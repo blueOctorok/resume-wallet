@@ -87,3 +87,55 @@ export async function insertPspMvrBundleOrders(
 
   return { mvrOrderId: mvrOrder.id as string, pspOrderId: pspOrder.id as string }
 }
+
+export interface PlacePspOrderOnlyDbParams {
+  driverUserId: string
+  orderNumber: string
+  orderXml: string
+  accioOrderId: string | null
+  fmcsaSuborderId: string | null
+  applicantPortalUrl: string | null
+  dlNumber: string
+  dlState: string
+  expiresAtIso: string
+  orderedByCompanyId?: string | null
+  orderedByUserId?: string | null
+  orderedByEmployer?: boolean | null
+  paymentId?: string | null
+  paymentTxHash?: string | null
+}
+
+/** FMCSA-only Accio order — single `psp_orders` row (no bundled MVR). */
+export async function insertPspOrderOnly(
+  supabase: SupabaseClient,
+  p: PlacePspOrderOnlyDbParams,
+): Promise<{ pspOrderId: string } | { error: string }> {
+  const dl = p.dlNumber.trim()
+  const st = p.dlState.trim().toUpperCase()
+
+  const pspRow: Record<string, unknown> = {
+    driver_user_id: p.driverUserId,
+    payment_id: p.paymentId ?? null,
+    payment_tx_hash: p.paymentTxHash ?? null,
+    accio_order_number: p.orderNumber,
+    accio_suborder_number: p.fmcsaSuborderId,
+    accio_remote_order_number: p.accioOrderId,
+    accio_remote_suborder_number: p.fmcsaSuborderId,
+    dl_number: dl,
+    dl_state: st,
+    status: 'pending',
+    order_xml: p.orderXml,
+    expires_at: p.expiresAtIso,
+    ordered_by_company_id: p.orderedByCompanyId ?? null,
+    ordered_by_user_id: p.orderedByUserId ?? null,
+    ordered_by_employer: p.orderedByEmployer ?? Boolean(p.orderedByCompanyId),
+  }
+
+  const { data: pspOrder, error: pspErr } = await supabase.from('psp_orders').insert(pspRow).select('id').single()
+  if (pspErr || !pspOrder) {
+    console.error('[PSP ORDER] psp_orders insert:', pspErr)
+    return { error: pspErr?.message || 'Failed to store PSP order' }
+  }
+
+  return { pspOrderId: pspOrder.id as string }
+}

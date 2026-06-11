@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **PSP orders decoupled from MVR bundle** (2026-06-10)
+
+After migration 086 split employer blocks (`employer-psp-orders` vs `employer-mvr-orders`), the outreach UI showed separate MVR and PSP checkboxes — but selecting PSP still placed **both** Accio suborders via `buildAccioPspWithMvrBundleOrderXml`. PSP now uses `buildAccioPspOrderXml` + `insertPspOrderOnly`; MVR unchanged. Applies to `/api/employer/screenings/order`, legacy employer/candidate PSP routes, and `placeScreeningOrder`.
+
+| File | Change |
+|---|---|
+| `src/lib/place-screening-order.ts` | PSP → FMCSA-only Accio XML + single `psp_orders` row |
+| `src/lib/place-psp-mvr-bundle-db.ts` | Added `insertPspOrderOnly` |
+| `src/lib/ensure-hub-blocks-psp-mvr-bundle.ts` | Added `ensureHubBlockInstalled` (PSP-only installs `driver-psp`) |
+| `src/app/api/employer/psp/order/route.ts` | Standalone PSP |
+| `src/app/api/psp/order/route.ts` | Candidate self-order standalone PSP |
+
+---
+
 ## **PSP view + PDF — full report text, iframe preview** (2026-06-10)
 
 PSP modal duplicated structured crash/inspection UI that didn’t match what employers expect (Key prints Accio’s `<text>` block verbatim). View now embeds the same PDF as Download (like MVR). PDF is **vendor report text only** (no cover summary — it duplicates the `<text>` block) plus Storm footer; paginates with `wrap`. Structured tables removed from the artifact (parser still extracts counts for search/filter).

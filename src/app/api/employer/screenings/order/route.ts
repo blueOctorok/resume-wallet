@@ -218,7 +218,6 @@ export async function POST(request: NextRequest) {
         success: true,
         order: {
           id: placed.result.pspOrderId,
-          mvrOrderId: placed.result.mvrOrderId,
           pspOrderId: placed.result.pspOrderId,
           orderNumber: placed.result.orderNumber,
           type: 'psp',

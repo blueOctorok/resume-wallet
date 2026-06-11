@@ -12,7 +12,7 @@ import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
  *
  * Body:
  *   requestId    string   — candidate_requests.id being fulfilled
- *   type         'mvr' | 'psp'  — `psp` places **MVR + FMCSA PSP** in one Accio order (product bundle).
+ *   type         'mvr' | 'psp'  — each places a single Accio suborder (no forced bundle).
  *   formData: {
  *     firstName, lastName, middleName?, dob, ssn (full 9-digit, not persisted),
  *     dlNumber, dlState, address, city, state, zip, email?, phone?
@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
         success: true,
         order: {
           id: placed.result.pspOrderId,
-          mvrOrderId: placed.result.mvrOrderId,
           pspOrderId: placed.result.pspOrderId,
           orderNumber: placed.result.orderNumber,
           status: 'pending',

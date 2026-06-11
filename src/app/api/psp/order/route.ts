@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import {
-  buildAccioPspWithMvrBundleOrderXml,
+  buildAccioPspOrderXml,
   generateOrderNumber,
   generateWebhookGuid,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
-import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
-import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { insertPspOrderOnly } from '@/lib/place-psp-mvr-bundle-db'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -16,7 +16,7 @@ import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
- * POST /api/psp/order — candidate self-order **PSP + MVR** (one Accio placeOrder, two suborders).
+ * POST /api/psp/order — candidate self-order FMCSA PSP (single Accio suborder).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
     // Send full SSN (see comment in mvr/order/route.ts). Use normalized
     // values from validation (uppercase state/DL, YYYYMMDD DOB).
     const n = validation.normalized
-    const orderXml = buildAccioPspWithMvrBundleOrderXml({
+    const orderXml = buildAccioPspOrderXml({
       firstName: n.firstName,
       middleName,
       lastName: n.lastName,
@@ -255,17 +255,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit PSP order to Accio', details: msg }, { status: 500 })
     }
 
-    const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
+    const ids = parseAccioPlaceOrderBundleIds(accioResponse)
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    const inserted = await insertPspMvrBundleOrders(supabaseService, {
+    const inserted = await insertPspOrderOnly(supabaseService, {
       driverUserId: user.id,
       orderNumber,
       orderXml,
-      accioOrderId: bundle.accioOrderId,
-      mvrSuborderId: bundle.mvrSuborderId,
-      fmcsaSuborderId: bundle.fmcsaSuborderId,
-      applicantPortalUrl: bundle.applicantPortalUrl,
+      accioOrderId: ids.accioOrderId,
+      fmcsaSuborderId: ids.fmcsaSuborderId,
+      applicantPortalUrl: ids.applicantPortalUrl,
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       expiresAtIso: expiresAt,
@@ -278,7 +277,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
     }
 
-    await ensureHubBlocksForPspMvrBundle(supabaseService, user.id)
+    await ensureHubBlockInstalled(supabaseService, user.id, 'driver-psp')
 
     const { data: pspOrder } = await supabaseService
       .from('psp_orders')
@@ -303,7 +302,6 @@ export async function POST(request: NextRequest) {
       success: true,
       order: {
         id: pspOrder.id,
-        mvrOrderId: inserted.mvrOrderId,
         orderNumber: pspOrder.accio_order_number,
         subOrderNumber: pspOrder.accio_suborder_number,
         status: pspOrder.status,

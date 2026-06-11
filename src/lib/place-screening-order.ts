@@ -2,20 +2,20 @@ import type { NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   buildAccioMvrOrderXml,
-  buildAccioPspWithMvrBundleOrderXml,
+  buildAccioPspOrderXml,
   generateOrderNumber,
   generateWebhookGuid,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
-import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
-import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { insertPspOrderOnly } from '@/lib/place-psp-mvr-bundle-db'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 
 export type PlaceScreeningOrderSuccess =
   | { type: 'mvr'; orderId: string; orderNumber: string }
-  | { type: 'psp'; pspOrderId: string; mvrOrderId: string; orderNumber: string }
+  | { type: 'psp'; pspOrderId: string; orderNumber: string }
 
 export type PlaceScreeningOrderResult =
   | { ok: true; result: PlaceScreeningOrderSuccess }
@@ -180,7 +180,7 @@ export async function placeScreeningOrder(
       webhookGuid,
     })
   } else {
-    orderXml = buildAccioPspWithMvrBundleOrderXml({
+    orderXml = buildAccioPspOrderXml({
       firstName: n.firstName,
       middleName,
       lastName: n.lastName,
@@ -267,15 +267,14 @@ export async function placeScreeningOrder(
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
   if (type === 'psp') {
-    const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
-    const inserted = await insertPspMvrBundleOrders(supabase, {
+    const ids = parseAccioPlaceOrderBundleIds(accioResponse)
+    const inserted = await insertPspOrderOnly(supabase, {
       driverUserId,
       orderNumber,
       orderXml,
-      accioOrderId: bundle.accioOrderId,
-      mvrSuborderId: bundle.mvrSuborderId,
-      fmcsaSuborderId: bundle.fmcsaSuborderId,
-      applicantPortalUrl: bundle.applicantPortalUrl,
+      accioOrderId: ids.accioOrderId,
+      fmcsaSuborderId: ids.fmcsaSuborderId,
+      applicantPortalUrl: ids.applicantPortalUrl,
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       expiresAtIso: expiresAt,
@@ -286,9 +285,9 @@ export async function placeScreeningOrder(
       paymentTxHash: input.paymentTxHash ?? null,
     })
     if ('error' in inserted) {
-      return { ok: false, status: 500, error: 'Failed to store orders', details: inserted.error }
+      return { ok: false, status: 500, error: 'Failed to store order', details: inserted.error }
     }
-    await ensureHubBlocksForPspMvrBundle(supabase, driverUserId)
+    await ensureHubBlockInstalled(supabase, driverUserId, 'driver-psp')
     if (input.candidateRequestIdToComplete) {
       await supabase
         .from('candidate_requests')
@@ -301,7 +300,6 @@ export async function placeScreeningOrder(
       result: {
         type: 'psp',
         pspOrderId: inserted.pspOrderId,
-        mvrOrderId: inserted.mvrOrderId,
         orderNumber,
       },
     }
@@ -346,6 +344,8 @@ export async function placeScreeningOrder(
     console.error(`[PLACE SCREENING ORDER] DB insert error (mvr_orders):`, orderError)
     return { ok: false, status: 500, error: 'Failed to store order', details: orderError?.message }
   }
+
+  await ensureHubBlockInstalled(supabase, driverUserId, 'driver-mvr')
 
   if (input.candidateRequestIdToComplete) {
     await supabase

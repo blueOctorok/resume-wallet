@@ -3,20 +3,20 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { companyCanOrderPsp, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
 import {
-  buildAccioPspWithMvrBundleOrderXml,
+  buildAccioPspOrderXml,
   generateOrderNumber,
   generateWebhookGuid,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
-import { insertPspMvrBundleOrders } from '@/lib/place-psp-mvr-bundle-db'
-import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { insertPspOrderOnly } from '@/lib/place-psp-mvr-bundle-db'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 
 /**
- * POST /api/employer/psp/order — employer-paid **PSP + MVR** bundle for a candidate (company-scoped, FCRA).
+ * POST /api/employer/psp/order — employer-paid FMCSA PSP for a candidate (company-scoped, FCRA).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const normalizedSsn = normalizeSsnDigits(String(ssn))
     if (!isValidSsn(normalizedSsn)) {
       return NextResponse.json(
-        { error: 'A full 9-digit SSN is required for the PSP + MVR bundle (last-4 forces FMCSA into the slow applicant-portal path).' },
+        { error: 'A full 9-digit SSN is required for FMCSA PSP (last-4 forces the slow applicant-portal path).' },
         { status: 400 },
       )
     }
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
     // Send full SSN — see comment in src/app/api/mvr/order/route.ts.
     // Use normalized values (uppercase state/DL, YYYYMMDD DOB) from validation.
     const n = validation.normalized
-    const orderXml = buildAccioPspWithMvrBundleOrderXml({
+    const orderXml = buildAccioPspOrderXml({
       firstName: n.firstName,
       middleName,
       lastName: n.lastName,
@@ -233,17 +233,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit PSP order', details: msg }, { status: 500 })
     }
 
-    const bundle = parseAccioPlaceOrderBundleIds(accioResponse)
+    const ids = parseAccioPlaceOrderBundleIds(accioResponse)
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    const inserted = await insertPspMvrBundleOrders(supabase, {
+    const inserted = await insertPspOrderOnly(supabase, {
       driverUserId: candidateUserId,
       orderNumber,
       orderXml,
-      accioOrderId: bundle.accioOrderId,
-      mvrSuborderId: bundle.mvrSuborderId,
-      fmcsaSuborderId: bundle.fmcsaSuborderId,
-      applicantPortalUrl: bundle.applicantPortalUrl,
+      accioOrderId: ids.accioOrderId,
+      fmcsaSuborderId: ids.fmcsaSuborderId,
+      applicantPortalUrl: ids.applicantPortalUrl,
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       expiresAtIso: expiresAt,
@@ -259,7 +258,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
     }
 
-    await ensureHubBlocksForPspMvrBundle(supabase, candidateUserId)
+    await ensureHubBlockInstalled(supabase, candidateUserId, 'driver-psp')
 
     const { data: pspOrder } = await supabase
       .from('psp_orders')
@@ -275,7 +274,6 @@ export async function POST(request: NextRequest) {
       success: true,
       order: {
         id: pspOrder.id,
-        mvrOrderId: inserted.mvrOrderId,
         orderNumber: pspOrder.accio_order_number,
         status: pspOrder.status,
       },

@@ -203,8 +203,8 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
 }
 
 /**
- * FMCSA-only Accio order (single subOrder). Storm’s PSP **product** uses
- * `buildAccioPspWithMvrBundleOrderXml` (MVR + FMCSA in one placeOrder) instead.
+ * FMCSA-only Accio order (single `fmcsa_crash_inspection` subOrder).
+ * Used for standalone PSP placement after screening consent is on file.
  */
 export interface AccioPspOrderData {
   firstName: string
@@ -336,8 +336,8 @@ export function buildAccioPspOrderXml(data: AccioPspOrderData): string {
 }
 
 /**
- * Storm PSP product = **one** Accio `placeOrder` with **MVR + FMCSA PSP** subOrders.
- * Postback URL must be `/api/mvr/webhook` — FMCSA completion posts are routed to PSP storage from there.
+ * Legacy: MVR + FMCSA in one Accio `placeOrder`. Retained for reference only —
+ * new orders use `buildAccioMvrOrderXml` / `buildAccioPspOrderXml` separately.
  *
  * IMPORTANT — do NOT re-enable `portalFromApplicant`:
  * The previous version set portalFromApplicant=true while ALSO suppressing the
