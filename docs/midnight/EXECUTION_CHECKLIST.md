@@ -806,7 +806,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | Step | What | Status |
 |---|---|---|
 | **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
-| **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | 🟡 |
+| **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ✅ Done · 2026-06-10 · preflight all green |
 | **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` | ⬜ |
 | **P3.4** | Broaden fact registry + circuits once slice verifies | ⬜ |
 | **P3.5** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
@@ -875,7 +875,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 | | |
 |---|---|
-| Status | 🟡 In progress · infra landed · **Docker Desktop not yet installed on dev box** |
+| Status | ✅ **Done 2026-06-10** — proof server HTTP 200, Preprod wallet funded, `npm run midnight:preflight` all ✓ |
 | Pre-conditions | P3.1 ✅ |
 | Pace risk | None — no app routes touched |
 
@@ -914,21 +914,25 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
      MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6300
      MIDNIGHT_NODE_RPC_URL=https://rpc.preprod.midnight.network
      MIDNIGHT_INDEXER_URL=https://indexer.preprod.midnight.network/api/v3/graphql
-     MIDNIGHT_WALLET_MNEMONIC=<24 words — never commit>
+     MIDNIGHT_WALLET_MNEMONIC="word1 word2 word3 ... word24"
      ```
+     Spaces between words, no commas. **Quotes required** in `.env.local` — without them dotenv only loads the first word.
    - Fund via https://faucet.preprod.midnight.network/
 
 5. **Verification (pass/fail for P3.2):**
    ```bash
+   npm run midnight:preflight              # all ✓ (proof server + env + mnemonic)
    npm run midnight:proof-server:health    # HTTP 200
    docker ps --filter name=storm-midnight-proof-server  # running
    ```
-   Wallet funded on faucet (manual check in Lace or P3.3 wallet script).
+   Wallet funded on Preprod faucet (manual check in Lace). Preflight treats **port 6300 in use + HTTP 200** as healthy (not a failure).
 
 **Gotchas:**
 - Proof server OOM under WSL → raise `.wslconfig` `memory=` or `mem_limit` in compose; `wsl --shutdown`, retry.
-- Port 6300 taken → change host mapping in `midnight/docker-compose.yml` (e.g. `6301:6300`) and set `MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6301`.
+- Port 6300 taken by proof server → **expected** when container is up; `npm run midnight:preflight` checks `/health` instead of treating occupied port as failure.
 - `docker: command not found` in WSL → Docker Desktop not installed or WSL integration disabled.
+- `protocol not available` on `docker info` → wrong context: `docker context use default` (not `desktop-linux` in WSL bash).
+- `permission denied` on `docker.sock` → `sudo usermod -aG docker $USER`, then `newgrp docker` or new terminal.
 
 **Commit:** `feat(midnight): proof server docker compose + env docs (P3.2)`
 
@@ -1042,6 +1046,9 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-10 | **P3.2** ✅ complete | Composer | pending user commit | Preflight all green: Docker + Compact, proof server HTTP 200, env + 24-word mnemonic. Fixed preflight: port-6300 health check; mnemonic allows `.env` quotes (required for dotenv multi-word values), rejects commas. **Next: P3.3** — `midnight-attestation-service.ts` + `mvr_clean_36_months` on Preprod. |
+| 2026-06-10 | **P3.2** — preflight fix (🟡 mnemonic pending) | Composer | pending user commit | User preflight: port 6300 "in use" was false failure — proof server already healthy HTTP 200. Fixed `midnight-p3.2-preflight.sh` to curl `/health`; mnemonic now hard gate. Env template + `MIDNIGHT_ENV.md` indexer v4. **Last P3.2 step (👤):** add `MIDNIGHT_WALLET_MNEMONIC=<24 words>` to `.env.local` (same Lace dev wallet, funded). Then `npm run midnight:preflight` all green → P3.2 ✅ → P3.3. |
+| 2026-06-12 | **P3.2** — proof server verified (🟡 wallet pending) | Composer | pending user commit | Docker Desktop + WSL: fixed `docker` group + `docker context use default` (not `desktop-linux`). `proof-server:up` pulled `midnightntwrk/proof-server:8.0.3`; health `{"status":"ok"}` HTTP 200. **Remaining P3.2:** copy `env.local.midnight.template` → `.env.local`, Lace dev wallet + Preprod faucet. Then P3.2 ✅ → P3.3. |
 | 2026-06-10 | Docs — **DEC-2026-06-003** multi-CRA Proof Request rail (Phase 3c committed) | Fable 5 | pending user commit | **Docs only.** Captured the "any carrier, any CRA" direction: Storm as proof rail above the carrier's existing screening supplier (interop over displacement). **New DEC-2026-06-003**: candidate-mediated Proof Requests committed (carrier submits request → driver signs → Storm proves on Midnight → carrier gets cold-verifiable link); carrier-side headless proofs API (no driver in loop) **permanently rejected** → added to MOAT_THESIS rejected-ideas appendix. New **Phase 3c** section in this checklist (C1 verify page → C2 carrier intake → C3 consent extension → C4 CRA adapters; ingestion path (b) FCRA-gated, same opinion as Phase 4). New engineering invariant: `source_cra` flows through every Phase 3 layer — never assume Accio. **Next:** P3.2 verification (Docker Desktop install), then P3.3. |
 | 2026-06-09 | **P3.2** — proof server Docker spike (🟡) | Composer | pending user commit | **Shipped:** `midnight/docker-compose.yml` (proof-server 8.0.3:6300), `scripts/midnight-proof-server-health.sh`, npm `midnight:proof-server:*`, `docs/midnight/MIDNIGHT_ENV.md`. **Blocked on human:** Docker Desktop + WSL integration — `docker` not in PATH yet. **Next:** install Docker Desktop → `npm run midnight:proof-server:up` → health 200 → fund Preprod wallet → mark P3.2 ✅ → P3.3. |
 | 2026-06-09 | **P3.1** — WSL2 + Compact toolchain smoke test ✅ | Opus 4.8 | pending user commit | Ubuntu-24.04 on Win11 64GB; `.wslconfig` 32GB; repo copied to `/home/octorok/dev/resume-wallet`; `compact 0.5.1` + compiler **0.31.0** after `apt install unzip`. **Next:** Cursor WSL folder + P3.2 Docker/proof server. Midnight MCP available for Compact/contracts. |
@@ -1097,4 +1104,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-10 (DEC-2026-06-003: Phase 3c Proof Request rail committed — any carrier, any CRA, candidate-mediated. P3.2 still pending Docker Desktop install.)
+**Last updated:** 2026-06-10 (P3.2 ✅ — preflight green; next P3.3 one-fact Preprod slice)

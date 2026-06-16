@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **P3.2 complete — proof server + Preprod wallet env** (2026-06-10)
+
+P3.2 closed: `npm run midnight:preflight` all green (Compact, Docker, proof server HTTP 200, Midnight env + 24-word mnemonic). Preflight mnemonic rules finalized: commas rejected; double quotes allowed/required for multi-word `.env.local` values.
+
+| File | Change |
+|---|---|
+| `scripts/midnight-p3.2-preflight.sh` | Health-aware port check; mnemonic format validation |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.2 marked ✅ |
+
+**Next:** P3.3 — `midnight-attestation-service.ts` + first `mvr_clean_36_months` proof on Preprod.
+
+---
+
+## **P3.2 preflight — proof-server health vs port check** (2026-06-10)
+
+`npm run midnight:preflight` falsely failed when port 6300 was already bound by the running proof-server container. Preflight now curls `/health` and passes when HTTP 200. Mnemonic validation: rejects commas, requires 24 words, **allows quotes** (required for dotenv to read multi-word `.env.local` values). Env template indexer bumped to v4.
+
+| File | Change |
+|---|---|
+| `scripts/midnight-p3.2-preflight.sh` | Health-aware proof-server check; mnemonic required for pass; rejects comma/quote Lace display format |
+| `docs/midnight/env.local.midnight.template` | Indexer v4 URLs |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.2 verification + gotcha updated |
+
+---
+
 ## **PSP orders decoupled from MVR bundle** (2026-06-10)
 
 After migration 086 split employer blocks (`employer-psp-orders` vs `employer-mvr-orders`), the outreach UI showed separate MVR and PSP checkboxes — but selecting PSP still placed **both** Accio suborders via `buildAccioPspWithMvrBundleOrderXml`. PSP now uses `buildAccioPspOrderXml` + `insertPspOrderOnly`; MVR unchanged. Applies to `/api/employer/screenings/order`, legacy employer/candidate PSP routes, and `placeScreeningOrder`.
@@ -128,6 +153,28 @@ GTM direction beyond Pace: Storm becomes the **proof rail above whichever CRA a 
 | `midnight/MOAT_THESIS.md` | Rejected-ideas appendix: added "Carrier-side headless proofs API (driver not in the loop)" |
 
 **No app code.** Sequencing unchanged: P3.2 (Docker) → P3.3 (one-fact slice) first; Phase 3c designs after 3a verifies (exception: C1 public verify page is phase-honest in JWT form).
+
+---
+
+## **P3.2 — Proof server healthy (wallet env pending)** (2026-06-12)
+
+Verified on dev box (WSL + Docker Desktop):
+
+| Check | Result |
+|---|---|
+| Docker | `context default`, daemon reachable after `usermod -aG docker` + `docker context use default` |
+| Container | `storm-midnight-proof-server` · `midnightntwrk/proof-server:8.0.3` · `:6300` |
+| Health | `GET /health` → HTTP 200 · `{"status":"ok"}` |
+
+**Remaining for P3.2 ✅:** `.env.local` from `docs/midnight/env.local.midnight.template` + dedicated Lace dev wallet + Preprod faucet.
+
+**Next:** P3.3 `midnight-attestation-service.ts` + `mvr_clean_36_months` on Preprod.
+
+---
+
+## **P3.2 — Proof server preflight tooling** (2026-06-10)
+
+Still blocked on Docker install (human step). Added `npm run midnight:preflight`, `scripts/midnight-p3.2-preflight.sh`, `docs/midnight/env.local.midnight.template`, `midnight/README.md`. Run preflight → install Docker Desktop → `proof-server:up` → health 200 → fund wallet → P3.2 ✅.
 
 ---
 

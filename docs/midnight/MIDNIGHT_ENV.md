@@ -4,16 +4,16 @@ Server-side only. **Never** expose wallet secrets to the browser or commit them 
 
 ## Local development (P3.2+)
 
-Add these to `.env.local` (gitignored). Storm's Next.js app reads them only from API routes / server libs — not `NEXT_PUBLIC_*`.
+Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midnight.template`. Storm's Next.js app reads them only from API routes / server libs — not `NEXT_PUBLIC_*`.
 
 | Variable | Required | Example (Preprod) | Notes |
 |---|---|---|---|
 | `MIDNIGHT_NETWORK` | yes (P3.3+) | `preprod` | `preprod` for testnet work; mainnet later |
 | `MIDNIGHT_PROOF_SERVER_URL` | yes | `http://127.0.0.1:6300` | Local Docker proof server (`npm run midnight:proof-server:up`) |
 | `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.preprod.midnight.network` | Public Preprod node RPC |
-| `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v3/graphql` | GraphQL indexer (v3 per `create-mn-app` preprod) |
-| `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v3/graphql/ws` | Real-time indexer events |
-| `MIDNIGHT_WALLET_MNEMONIC` | yes (P3.3+) | `word1 word2 … word24` | **Server-managed** BIP-39 seed — Storm signs/submits txs; users never see a wallet |
+| `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v4/graphql` | GraphQL indexer — **v4** matches Lace Preprod; v3 still works for some CLI tooling |
+| `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | Real-time indexer events |
+| `MIDNIGHT_WALLET_MNEMONIC` | yes (P3.3+) | `"word1 word2 … word24"` | **Server-managed** BIP-39 seed — spaces between words, **no commas**; **double quotes required** in `.env.local` so dotenv reads all 24 words |
 | `ATTESTATION_BACKEND` | no | `signed-jwt` (default) | Set to `midnight` only when `midnight-attestation-service.ts` ships (P3.3) |
 
 ### Server-managed wallet (P3.2 setup)
@@ -22,9 +22,11 @@ Storm holds one Midnight HD wallet server-side (same pattern as the old `PRIVATE
 
 1. **Generate a new Preprod wallet** (dev only — use a fresh mnemonic, not a personal Lace wallet):
    - Option A: [Midnight Lace](https://docs.midnight.network/) extension → create wallet → copy 24-word seed into `.env.local` as `MIDNIGHT_WALLET_MNEMONIC`.
+   - **Format:** `MIDNIGHT_WALLET_MNEMONIC="word1 word2 … word24"` — spaces between words, **no commas**. Quotes are **required** in `.env.local` (unquoted values truncate at the first space).
    - Option B (P3.3): `scripts/generate-midnight-wallet.ts` using `@midnight-ntwrk/wallet-sdk-hd` (not required for P3.2 pass).
-2. **Fund with test tNIGHT** via [Preprod faucet](https://faucet.preprod.midnight.network/).
-3. **Store only in secrets** — `.env.local` locally; Vercel/Cloud Run secret manager in production.
+2. **Fund with test tNIGHT** via [Preprod faucet](https://faucet.preprod.midnight.network/) — paste Lace **Unshielded** receive address (not Shielded; faucet rejects shielded).
+3. **Generate tDUST** in Lace (Tokens → Generate tDUST) so you have fee fuel for Preprod transactions.
+4. **Store only in secrets** — `.env.local` locally; Vercel/Cloud Run secret manager in production.
 
 **Interaction gate (DEC-2026-05-001):** candidates and carriers never touch this wallet. Only Storm's proof server + attestation service use it.
 
