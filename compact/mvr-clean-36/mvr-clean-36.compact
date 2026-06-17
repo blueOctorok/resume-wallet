@@ -1,0 +1,10 @@
+// Storm P3.3 — on-chain anchor for mvr_clean_36_months attestations.
+// Public commitment only; MVR source data stays off-chain (selective disclosure).
+
+pragma language_version >= 0.16 && <= 0.31;
+
+export ledger factCommitment: Opaque<"string">;
+
+export circuit registerCleanMvr(commitment: Opaque<"string">): [] {
+  factCommitment = disclose(commitment);
+}

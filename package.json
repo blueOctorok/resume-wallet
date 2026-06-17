@@ -15,7 +15,13 @@
     "midnight:proof-server:up": "docker compose -f midnight/docker-compose.yml up -d",
     "midnight:proof-server:down": "docker compose -f midnight/docker-compose.yml down",
     "midnight:proof-server:logs": "docker compose -f midnight/docker-compose.yml logs -f proof-server",
-    "midnight:proof-server:health": "bash scripts/midnight-proof-server-health.sh"
+    "midnight:proof-server:health": "bash scripts/midnight-proof-server-health.sh",
+    "midnight:compile": "compact compile compact/mvr-clean-36/mvr-clean-36.compact midnight/runtime/managed/mvr-clean-36",
+    "midnight:wallet:status": "NODE_OPTIONS='--max-old-space-size=16384' npm run wallet:status --prefix midnight/runtime",
+    "midnight:wallet:address": "npm run wallet:address --prefix midnight/runtime",
+    "midnight:register-dust": "NODE_OPTIONS='--max-old-space-size=16384' npm run register-dust --prefix midnight/runtime",
+    "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime",
+    "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -68,6 +74,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "cross-env": "^10.1.0",
     "dotenv": "^16.6.1",
     "eslint": "^8",
@@ -78,6 +85,7 @@
     "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "ws": "^8.21.0"
   }
 }

@@ -807,7 +807,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 |---|---|---|
 | **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
 | **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ✅ Done · 2026-06-10 · preflight all green |
-| **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` | ⬜ |
+| **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` | ✅ Done · 2026-06-17 · contract `6c3f0ea8…fea49cf` deployed to Preprod; first ZK attestation proven (tx `0024edbc…0e265a`, attestation `6bc932c7…7d4ad4`) |
 | **P3.4** | Broaden fact registry + circuits once slice verifies | ⬜ |
 | **P3.5** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
 
@@ -938,10 +938,142 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 **Next (P3.3):** `midnight-attestation-service.ts` + `mvr_clean_36_months` one-fact Preprod slice.
 
-#### P3.3–P3.5 (unchanged intent)
-- P3.3: `midnight-attestation-service.ts` + one fact end-to-end on testnet
-- P3.4: More facts / circuits
-- P3.5: Honesty gate on UI copy
+> **Why P3.3–P3.5 were stubs until now:** Phase 3a steps were written **just-in-time** — P3.1 de-risked WSL/Compact, P3.2 de-risked Docker/proof-server/wallet env. Writing Compact circuit + wallet SDK steps before those passed would have been guesswork (wrong compiler flags, wrong proof-server URL, wrong indexer version). **P3.2 ✅ → expand the runbook below.** Phase 3b/3c/4 stay strategic until P3.3 verifies — their circuit and ops costs depend on the one-fact slice.
+
+#### P3.3 — One-fact Preprod slice (`mvr_clean_36_months`)
+
+| | |
+|---|---|
+| Status | ✅ **Done 2026-06-17** — contract `6c3f0ea8…fea49cf` deployed to Preprod; first ZK attestation proven (tx `0024edbc…0e265a`, attestation row `6bc932c7…7d4ad4`) |
+| Pre-conditions | P3.2 ✅ · Phase 2 attestation stack ✅ (`signed-jwt-attestation-service.ts`, `fact-registry.ts`, `attestations` table, `attestation-service-registry.ts`) |
+| Pace risk | **Low** if limited to new libs + scripts + env-gated registry swap — **do not touch** Accio/screening pipeline |
+| DO NOT TOUCH | `src/lib/place-screening-order.ts`, `src/lib/accio-*`, `src/lib/reconcile-pending-screenings.ts`, `src/app/api/employer/screenings/**`, MVR/PSP webhook routes |
+
+**Goal:** First **real** Midnight proof for one third-party fact on Preprod. Pass = with `ATTESTATION_BACKEND=midnight`, `proveFact({ factType: 'mvr_clean_36_months' })` returns `{ kind: 'midnight_zk', txHash, proofId }` and `verifyAttestation()` succeeds independently of Storm DB trust.
+
+**Read first:**
+- `.cursor/rules/attestation-architecture.mdc` — interface + registry swap
+- `src/lib/fact-registry.ts` → `proveMvrClean36Months` (data source for circuit inputs)
+- `docs/midnight/MIDNIGHT_ENV.md` — env + DUST
+- Midnight MCP (`midnight-compile-contract`, `midnight-search-docs`) when stuck on Compact syntax
+
+**Do in order:**
+
+1. **Compact circuit (`compact/mvr-clean-36/`):**
+   - Minimal circuit: private inputs derived from resolved MVR material; public output = boolean clean / not clean for 36-month window
+   - `compact compile` in WSL; commit Compact source; gitignore heavy artifact dirs if needed
+   - **Invariant:** `source_cra` + `sourcePullId` live in attestation metadata (`ResolvedAttestationFact`) — not hardcoded to Accio in midnight libs
+
+2. **Midnight provider lib (`src/lib/midnight/`):**
+   - `midnight-config.ts` — reads `MIDNIGHT_*` server-side only
+   - `midnight-wallet.ts` — HD wallet from mnemonic; connects to Preprod RPC, indexer v4, local proof server
+   - npm script `midnight:wallet:status` — log tNIGHT balance + tDUST tank (dev visibility, no secrets in output)
+
+3. **Programmatic DUST registration (one-time per server wallet):**
+   - `scripts/midnight-register-dust.ts` — server equivalent of Lace "Generate tDUST"
+   - Idempotent where SDK allows; document in `MIDNIGHT_ENV.md`
+   - **Pass:** script reports DUST registration + non-zero capacity
+
+4. **`src/lib/midnight-attestation-service.ts`:**
+   - Same `AttestationService` interface as signed-JWT impl
+   - `proveFact`: `resolveAttestationFact()` → circuit witness → proof server → submit tx → insert `attestations` row with `{ kind: 'midnight_zk', txHash, proofId }`
+   - `verifyAttestation`: validate via proof server / chain — not "trust the DB row"
+   - Reuse persistence patterns from `signed-jwt-attestation-service.ts` (immutable rows, supersede, audience scoping)
+
+5. **Registry swap (`attestation-service-registry.ts`):**
+   - Wire `createMidnightAttestationService()` when `ATTESTATION_BACKEND=midnight`
+   - **Default stays `signed-jwt`** — local flip only until hosted proof server exists
+
+6. **Dev prove CLI:**
+   - `scripts/midnight-prove-fact.ts --fact mvr_clean_36_months --user <uuid>`
+   - Requires test user with completed Accio MVR in DB (existing `proveMvrClean36Months` path)
+   - Log **txHash, proofId, DUST cost** — first ops benchmark
+
+7. **Tests:**
+   - Unit: registry backend selection, proof artifact shape, config validation
+   - Optional integration (`MIDNIGHT_INTEGRATION=1`): full prove path — skip in CI until Preprod secrets exist
+
+8. **Verification (pass/fail for P3.3):** ✅ **PASSED 2026-06-17**
+   ```bash
+   npm run midnight:preflight
+   npm run midnight:proof-server:health
+   npm run midnight:register-dust                    # once per wallet
+   npm run midnight:deploy                            # contract → 6c3f0ea8…fea49cf
+   npm run midnight:prove-fact -- --user 0897bf34-7d86-48f0-a35a-5315a770c2c8
+   ```
+   Result: tx `0024edbc…0e265a` on Preprod; `attestations` row `6bc932c7…7d4ad4` persisted with `proof_artifact.kind='midnight_zk'`, `disclosed_fields` = verification window only (no violations/PII), `source_cra='accio'` + `source_pull_id` cited. **Proof latency ~10 min on a cold sync** (Docker-restart cleared warm state); the new disk wallet-state cache (`.wallet-cache/<network>.json`) makes subsequent runs incremental.
+
+**Gotchas:**
+- Proof server is **local Docker** for dev — `MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6300` won't work on Vercel until Cloud Run/Render host is up
+- Provenance gate still applies — self-reported facts never enter Midnight path
+- NIGHT stays as DUST backing; fees spend **tDUST**, not tNIGHT
+- Lauren Lee / ecosystem milestone = **this step verified on Preprod**, not P3.2
+- **Indexer v4** — use v4 URLs per compatibility matrix (no v3 downgrade)
+- **Preprod DUST sync errors** — `Could not deserialize Ledger Event` / `midnight:event[v9]` is usually **WASM OOM**, not wrong ledger version ([servicedesk#42](https://github.com/midnightntwrk/servicedesk/issues/42)). Runtime sets `batchUpdates: { size: 5000 }` on wallet-sdk 4.x
+- **Lace mnemonic → full BIP39 seed** — `HDWallet.fromSeed(mnemonicToSeedSync(phrase))` (64 bytes); **must** match Lace → Receive → **Unshielded** (`npm run midnight:wallet:address`). Do not use `.subarray(0, 32)` — that was a wrong read of lace#2133 for Chrome extension
+- **Iterator Helpers polyfill** — the SDK calls `.entries().filter()/.map()/.find()/.toArray()` directly on `Map`/`Set` iterators (e.g. `tx.imbalances(0).entries().filter(...)`), native only on Node 22+. On Node 20 deploy throws `tx.imbalances(...).entries(...).filter is not a function`. Fixed once via `midnight/runtime/src/iterator-helpers.ts` (polyfills `%IteratorPrototype%`), imported first in `config.ts`. Replaces the old per-file `Array.from` postinstall patch (fragile, missed call sites, lost on reinstall)
+- **Single WASM instance is load-bearing** — the compiled contract imports `@midnight-ntwrk/compact-runtime`; it MUST resolve to the **same** `node_modules` (same `onchain-runtime-v3` WASM) as `compact-js`, or deploy throws `expected instance of ContractMaintenanceAuthority`. A symlinked artifact dir resolves to a 2nd WASM copy under tsx and fails. **Fix:** compile the artifact INTO `midnight/runtime/managed/mvr-clean-36/` (inside the runtime package — `ZK_CONFIG_PATH`), source `.compact` stays in `compact/mvr-clean-36/`. No symlink.
+- **Toolchain versions** — pin `compact-js@2.5.1` + `compact-runtime@0.16.0` to match the compiler `runtime-version` (`contract-info.json`); deploy uses `{ compiledContract, args: [] }` like the hello-world example
+- **First wallet sync is RAM-heavy** — npm scripts set `NODE_OPTIONS=--max-old-space-size=16384`; raise WSL `.wslconfig` memory if OOM persists
+- **`MIDNIGHT_PRIVATE_STATE_PASSWORD`** — required for deploy/prove (encrypts LevelDB private state); not needed for `midnight:wallet:address`
+
+**Commit:** `feat(midnight): one-fact attestation service on Preprod (P3.3)`
+
+**Next (P3.4):** generalize pattern to remaining shipped facts in `fact-registry.ts`.
+
+#### P3.4 — Broaden fact registry + circuits
+
+| | |
+|---|---|
+| Status | ⬜ |
+| Pre-conditions | P3.3 ✅ |
+| Pace risk | Low — additive circuits + prove scripts |
+
+**Goal:** Every `ShippedFactType` in `fact-registry.ts` can produce a valid `midnight_zk` artifact on Preprod (same wallet/proof-server plumbing, per-fact circuits).
+
+**Do in order:**
+
+1. **`cdl_class_a`** — Compact circuit + witness builder (follow existing `proveCdlClassA` / MVR-sourced CDL class)
+2. **`previous_employer_verified`** — circuit + witness builder (follow `provePreviousEmployerVerified`)
+3. **Shared module** — extract common proof-server submit + tx persist from P3.3; one `*-circuit.ts` per fact
+4. Extend `midnight-prove-fact.ts` to accept any shipped `FactType`
+5. Document per-fact DUST cost table in `MIDNIGHT_ENV.md` (from P3.3/P3.4 benchmarks)
+
+**Verification:**
+```bash
+ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact cdl_class_a --user <id>
+ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_employer_verified --user <id>
+```
+
+**Commit:** `feat(midnight): expand Preprod fact circuits (P3.4)`
+
+#### P3.5 — Honesty gate (per-fact "proven on Midnight")
+
+| | |
+|---|---|
+| Status | ⬜ |
+| Pre-conditions | P3.3 ✅ (P3.4 recommended) |
+| Pace risk | **Copy/UI only** — no screening pipeline changes |
+
+**Goal:** Carrier-facing UI may claim "proven on Midnight" **only** when `attestation.proof.kind === 'midnight_zk'` **and** `verifyAttestation()` passes. JWT-backed facts stay **"Verified by Storm"** + CRA citation (DEC-2026-05-004).
+
+**Do in order:**
+
+1. **`formatVerifiedByStormLine()` / `attestation-fact-ui.ts`** — branch on `proof.kind`; no "Midnight" / "on-chain" strings for `signed_jwt`
+2. **Employer `CredentialFactsPanel` + career card modal** — same gate
+3. **`/verify/[attestationId]`** (Phase 3c C1 skeleton) — JWT form now; show tx link + proof id when `midnight_zk`
+4. **Stormi `ava-context`** — attestations block distinguishes JWT vs ZK honestly
+5. **Tests** — copy helpers for both proof kinds
+
+**Verification:** `rg -i "midnight|on-chain|zk.proven" src/components/employer src/components/career-card` — every hit must be behind `proof.kind === 'midnight_zk'` guard (or phase-honest vision copy on marketing only, not per-fact)
+
+**Commit:** `feat(midnight): per-fact honesty gate for Midnight copy (P3.5)`
+
+**Phase 3a complete when:** P3.3–P3.5 ✅ → flip active marker to Phase 3b design.
+
+---
+
+> **Phase 3b / 3c / 4 — why not full runbooks yet:** SBT minting, shielded STORM, and the Proof Request rail depend on **real DUST costs, circuit latency, and verify UX** from P3.3. Writing atomic steps now would duplicate ARCHITECTURE.md without reducing risk. **When P3.3 closes**, add P3b.1 / P3c.1 substeps here (same just-in-time pattern as P3.1→P3.2→P3.3).
 
 ### Phase 3b — soulbound credential cards in the career card (committed, after 3a)
 Promoted from "captured, NOT scheduled" → **committed direction** (DEC-2026-06-002). Begin design once 3a is in production with ≥1 carrier consuming attestations.
@@ -1046,6 +1178,9 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-17 | **P3.3** ✅ verified on Preprod | Claude Opus 4.8 | uncommitted | **Contract deployed** (`6c3f0ea8…fea49cf`) + **first ZK attestation proven** (tx `0024edbc…0e265a`, row `6bc932c7…7d4ad4`). Fixed the last Node-20 gaps: `tx.imbalances().entries().filter` → `%IteratorPrototype%` polyfill; `tx.imbalances(...).entries().filter is not a function` recurrence; Supabase admin client env read made lazy (ESM hoisting vs `dotenv`); `globalThis.WebSocket=ws` for `@supabase/supabase-js` realtime on Node 20. Added **disk wallet-state cache** (`serializeState`/`restore`) for incremental sync + **stderr progress streaming** through the prove bridge. **Next: P3.4** — generalize to remaining `fact-registry.ts` facts. |
+| 2026-06-17 | **P3.3** 🟡 address fix | Composer | uncommitted | Reverted seed to full BIP39 — CLI address now matches Lace Unshielded (`1vr5lrw…`). **Next:** `midnight:wallet:status` (expect tNIGHT > 0) → register-dust → deploy → prove-fact. |
+| 2026-06-17 | **P3.3** 🟡 implementation | Composer | uncommitted | Shipped Compact circuit, `midnight/runtime` subpackage, iterator-helper postinstall patch, `midnight-attestation-service.ts` + prove bridge + unit tests. Fixed: relay wss URL, indexer v4, wallet-sdk 4.x + batchUpdates. **Blocked:** first wallet sync OOM at 8GB; user needs `MIDNIGHT_PRIVATE_STATE_PASSWORD`. **Next:** register-dust → deploy → prove-fact on Preprod. |
 | 2026-06-10 | **P3.2** ✅ complete | Composer | pending user commit | Preflight all green: Docker + Compact, proof server HTTP 200, env + 24-word mnemonic. Fixed preflight: port-6300 health check; mnemonic allows `.env` quotes (required for dotenv multi-word values), rejects commas. **Next: P3.3** — `midnight-attestation-service.ts` + `mvr_clean_36_months` on Preprod. |
 | 2026-06-10 | **P3.2** — preflight fix (🟡 mnemonic pending) | Composer | pending user commit | User preflight: port 6300 "in use" was false failure — proof server already healthy HTTP 200. Fixed `midnight-p3.2-preflight.sh` to curl `/health`; mnemonic now hard gate. Env template + `MIDNIGHT_ENV.md` indexer v4. **Last P3.2 step (👤):** add `MIDNIGHT_WALLET_MNEMONIC=<24 words>` to `.env.local` (same Lace dev wallet, funded). Then `npm run midnight:preflight` all green → P3.2 ✅ → P3.3. |
 | 2026-06-12 | **P3.2** — proof server verified (🟡 wallet pending) | Composer | pending user commit | Docker Desktop + WSL: fixed `docker` group + `docker context use default` (not `desktop-linux`). `proof-server:up` pulled `midnightntwrk/proof-server:8.0.3`; health `{"status":"ok"}` HTTP 200. **Remaining P3.2:** copy `env.local.midnight.template` → `.env.local`, Lace dev wallet + Preprod faucet. Then P3.2 ✅ → P3.3. |
@@ -1104,4 +1239,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-10 (P3.2 ✅ — preflight green; next P3.3 one-fact Preprod slice)
+**Last updated:** 2026-06-17 (P3.3 ✅ — first ZK attestation proven on Preprod; next: P3.4)

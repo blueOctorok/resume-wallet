@@ -4,6 +4,73 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Cursor Compact IDE setup — VSIX + build task** (2026-06-17)
+
+Documented and wired local Compact editing: official `midnightnetwork.compact` VSIX (manual install), `.vscode/tasks.json` for fast `--skip-zk` compile with Problems-tab errors, and MCP setup notes in `MIDNIGHT_ENV.md`.
+
+| File | Change |
+|---|---|
+| `.vscode/extensions.json` | Recommends `midnightnetwork.compact` |
+| `.vscode/tasks.json` | Build task: `compact compile --vscode --skip-zk` |
+| `docs/midnight/MIDNIGHT_ENV.md` | Cursor IDE section (VSIX + Midnight MCP) |
+
+---
+
+## **P3.3 ✅ — First real ZK attestation proven on Midnight Preprod** (2026-06-17)
+
+**Phase 3 is live.** Contract `mvr-clean-36` deployed to Preprod (`6c3f0ea861d84eeda8fe69306a03317e3315e850758218d85ee5e6cb6fea49cf`) and the first genuine ZK attestation was proven on-chain and persisted:
+- **Tx:** `0024edbc10039ea3c20f21c12443b7f6fb739e30694b44701763231571790e265a`
+- **Attestation row:** `6bc932c7-e505-4be9-a59b-82b81e7d4ad4` — `proof_artifact.kind='midnight_zk'`, `disclosed_fields` = verification window only (no violations, no PII), `source_cra='accio'` + `source_pull_id` cited. Provenance + selective-disclosure gates honored.
+
+This clears the bar in `strategic-direction.mdc`: a fact marked "proven on Midnight" now has a proof that actually runs and verifies — no demo-ware.
+
+| File | Change |
+|---|---|
+| `src/utils/supabase/admin.ts` | Read Supabase env **lazily** inside `getAdminSupabaseClient()` (was module-load). ESM hoists CLI imports above `dotenv.config()`, so a module-load read saw `undefined`. Fixes every tsx CLI that imports the admin client |
+| `scripts/midnight-prove-fact.ts` | Polyfill `globalThis.WebSocket = ws` — `@supabase/supabase-js` v2 builds a `RealtimeClient` in `createClient()` that throws on Node < 22 without a WebSocket |
+| `package.json` | Added `ws` + `@types/ws` (devDeps) for the WebSocket polyfill |
+| `midnight/runtime/src/wallet.ts` | **Wallet state disk cache** — serialize `shielded/unshielded/dust` state to `.wallet-cache/<network>.json` and `restore()` on next run → incremental sync instead of full chain re-scan. Falls back to cold sync if the cache is incompatible (SDK upgrade / Preprod reset) |
+| `midnight/runtime/src/prove-on-chain.ts` | Progress logging to **stderr** (`Syncing → Wallet synced → Loading contract → Locating → Generating proof → submitted`); real sync progress via `state.shielded.progress` (the old `state.syncProgress` never existed); persists cache after sync |
+| `src/lib/midnight-prove-bridge.ts` | Stream subprocess **stderr → parent stderr** so the user sees live progress instead of a silent multi-minute hang (stdout stays pure JSON for parsing) |
+| `.gitignore` | Ignore `/midnight/runtime/.wallet-cache/` (contains wallet financial state) |
+
+**Node 20 theme:** the Midnight + Supabase SDKs target Node 22+. Three gaps were polyfilled rather than fought — Iterator Helpers (`%IteratorPrototype%`), native WebSocket (`ws`), and lazy env reads to survive ESM import hoisting. Running the CLIs on Node 22 would make the first two unnecessary.
+
+**Wallet sync speed:** each CLI run was a fresh process doing a full cold sync (`startWithSecretKeys` + in-memory storage, no checkpoint). The SDK exposes `serializeState()`/`restore()` per sub-wallet, with the serialized blob including block height — so persisting it to disk makes subsequent runs resume incrementally. First run after this change still cold-syncs (creates the cache); later runs are fast.
+
+---
+
+## **P3.3 in progress — Midnight attestation service + runtime bridge** (2026-06-17)
+
+First real Midnight integration behind `ATTESTATION_BACKEND=midnight`: Compact circuit, isolated `midnight/runtime` subpackage (avoids bundling SDK in Next.js), subprocess prove bridge, and `midnight-attestation-service.ts` for `mvr_clean_36_months` only. Unit tests pass; **on-chain Preprod verify still pending** (wallet first-sync OOM at 8GB heap; needs `MIDNIGHT_PRIVATE_STATE_PASSWORD` + user confirms Lace address match).
+
+| File | Change |
+|---|---|
+| `compact/mvr-clean-36/` | Minimal `registerCleanMvr(commitment)` circuit |
+| `midnight/runtime/` | Wallet, providers, prove-on-chain, deploy/register-dust CLIs |
+| `midnight/runtime/src/iterator-helpers.ts` | Iterator Helpers polyfill (`%IteratorPrototype%`) for Node 20; first import in `config.ts`. Replaces the old per-file `patch-wallet-sdk-iterators.mjs` postinstall hack |
+| `src/lib/midnight-attestation-service.ts` | `AttestationService` impl (P3.3 slice) |
+| `src/lib/midnight-prove-bridge.ts` | Spawns runtime prove CLI from Next/API |
+| `src/lib/attestation-service-registry.ts` | Wires midnight backend when env set |
+| `scripts/midnight-prove-fact.ts` | Dev prove CLI |
+| `docs/midnight/MIDNIGHT_ENV.md` | v3 indexer for wallet sync; `MIDNIGHT_PRIVATE_STATE_PASSWORD` |
+
+**Gotchas fixed this session:** relay URL `https→wss`; **full BIP39 seed**; Preprod DUST WASM OOM → `batchUpdates` + wallet-sdk 4.x; **single WASM instance** — compiled artifact must live INSIDE `midnight/runtime/managed/mvr-clean-36/` (not a symlinked dir under `compact/`) so the contract's `compact-runtime` import shares one `onchain-runtime-v3` WASM with `compact-js`; otherwise deploy throws `expected instance of ContractMaintenanceAuthority`. Pinned `compact-js@2.5.1` + `compact-runtime@0.16.0` (match compiler `runtime-version`); deploy uses `args: []`. **Iterator Helpers** — the SDK calls `.entries().filter().map()` / `.find()` / `.toArray()` directly on `Map`/`Set` iterators (e.g. `tx.imbalances(0).entries().filter(...)` during balancing), which only exist on Node 22+. Deploy threw `tx.imbalances(...).entries(...).filter is not a function`. Replaced the brittle per-file `Array.from` postinstall patch (missed call sites, lost on reinstall) with a one-time **`%IteratorPrototype%` polyfill** (`iterator-helpers.ts`, first import in `config.ts`) that fixes every call site at once.
+
+**👤 To close P3.3:** add `MIDNIGHT_PRIVATE_STATE_PASSWORD="…"` to `.env.local`; run `npm run midnight:wallet:address` and confirm address matches Lace Unshielded; run `midnight:register-dust` → `midnight:deploy` → `midnight:prove-fact`.
+
+---
+
+## **P3.3–P3.5 runbooks added to EXECUTION_CHECKLIST** (2026-06-10)
+
+Expanded Phase 3a from one-line stubs into atomic steps (Compact circuit → wallet/DUST → `midnight-attestation-service.ts` → registry swap → prove CLI → honesty gate). Phase 3b/3c stay strategic until P3.3 verifies — documented why.
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | Full P3.3, P3.4, P3.5 sections with verification commands + DO NOT TOUCH list |
+
+---
+
 ## **P3.2 complete — proof server + Preprod wallet env** (2026-06-10)
 
 P3.2 closed: `npm run midnight:preflight` all green (Compact, Docker, proof server HTTP 200, Midnight env + 24-word mnemonic). Preflight mnemonic rules finalized: commas rejected; double quotes allowed/required for multi-word `.env.local` values.

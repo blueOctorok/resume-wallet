@@ -38,5 +38,18 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Midnight P3.3 — compiled ZK artifacts + local deployment secrets
+# Compiled artifact lives inside the runtime package so it shares one node_modules
+# (and one WASM instance) with compact-js. Source .compact stays version-controlled.
+/midnight/runtime/managed/
+/midnight/deployment.json
+/midnight/runtime/node_modules/
+# Cached wallet sync state (block height + local state) for incremental re-sync.
+# Contains wallet financial state — never commit.
+/midnight/runtime/.wallet-cache/
+# Local Midnight private-state LevelDB (encrypted contract private state).
+# Regenerable per machine — never commit. Matches root + runtime cwd variants.
+midnight-level-db/
 next-env.d.ts
 nul

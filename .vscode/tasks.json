@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Compact: compile current file (skip ZK)",
+      "type": "shell",
+      "command": "compact compile --vscode --skip-zk \"${file}\" \"${fileDirname}/managed\"",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "never",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "revealProblems": "onProblem"
+      },
+      "problemMatcher": [
+        "$compactException",
+        "$compactInternal",
+        "$compactCommandNotFound"
+      ]
+    }
+  ]
+}

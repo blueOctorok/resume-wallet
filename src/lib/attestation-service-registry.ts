@@ -1,24 +1,25 @@
 import type { AttestationService } from '@/lib/attestation-service'
-import { AttestationError } from '@/lib/attestation-service'
 import { resolveAttestationFact } from '@/lib/fact-registry'
 import { createSignedJwtAttestationService } from '@/lib/signed-jwt-attestation-service'
+import { createMidnightAttestationService } from '@/lib/midnight-attestation-service'
 
-let cachedService: AttestationService | null = null
+let cachedJwt: AttestationService | null = null
+let cachedMidnight: AttestationService | null = null
 
 function resolveImplementation(): AttestationService {
   if (process.env.ATTESTATION_BACKEND === 'midnight') {
-    throw new AttestationError(
-      'ATTESTATION_BACKEND=midnight is not available until Phase 3'
-    )
+    if (!cachedMidnight) {
+      cachedMidnight = createMidnightAttestationService()
+    }
+    return cachedMidnight
   }
 
-  if (!cachedService) {
-    cachedService = createSignedJwtAttestationService({
+  if (!cachedJwt) {
+    cachedJwt = createSignedJwtAttestationService({
       resolveFact: resolveAttestationFact,
     })
   }
-
-  return cachedService
+  return cachedJwt
 }
 
 /** Swappable attestation backend — import this, never the signed-JWT impl directly. */
