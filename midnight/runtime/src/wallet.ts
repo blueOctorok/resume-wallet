@@ -6,6 +6,7 @@ import { Buffer } from 'buffer'
 
 import type { Contract as CompactContract } from '@midnight-ntwrk/compact-js'
 import { CompiledContract } from '@midnight-ntwrk/compact-js'
+import { createMvrCleanCircuitWitness, type MvrCleanCircuitWitness, type MvrCleanViolationSlot } from './mvr-clean-witness.js'
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id'
 import * as ledger from '@midnight-ntwrk/ledger-v8'
 import { WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade'
@@ -88,43 +89,60 @@ function clearWalletState(): void {
   }
 }
 
-let compiledContractPromise: Promise<ReturnType<typeof buildCompiledContract>> | null =
-  null
-
-function buildCompiledContract(module: {
-  Contract: new (witnesses: Record<string, never>) => CompactContract
-}) {
+function buildCompiledContract(
+  module: {
+    Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
+  },
+  witnesses: MvrCleanCircuitWitness,
+) {
   const ContractCtor = module.Contract as unknown as new (
-    witnesses: Record<string, never>,
+    witnesses: MvrCleanCircuitWitness,
   ) => CompactContract
 
   return CompiledContract.make(CONTRACT_NAME, ContractCtor).pipe(
-    CompiledContract.withVacantWitnesses,
+    CompiledContract.withWitnesses(witnesses),
     CompiledContract.withCompiledFileAssets(ZK_CONFIG_PATH),
   )
 }
 
-export async function loadCompiledContract() {
-  if (!compiledContractPromise) {
-    compiledContractPromise = (async () => {
+let contractModulePromise: Promise<{
+  Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
+  ledger: (state: unknown) => { factCommitment: string }
+}> | null = null
+
+async function loadContractModule() {
+  if (!contractModulePromise) {
+    contractModulePromise = (async () => {
       const contractPath = path.join(ZK_CONFIG_PATH, 'contract', 'index.js')
       if (!fs.existsSync(contractPath)) {
         throw new Error(
           'Compact contract not compiled — run: npm run midnight:compile',
         )
       }
-
-      const module = (await import(pathToFileURL(contractPath).href)) as {
-        Contract: new (witnesses: Record<string, never>) => CompactContract
+      return (await import(pathToFileURL(contractPath).href)) as {
+        Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
         ledger: (state: unknown) => { factCommitment: string }
-      }
-      return {
-        module,
-        compiledContract: buildCompiledContract(module),
       }
     })()
   }
-  return compiledContractPromise
+  return contractModulePromise
+}
+
+export async function loadCompiledContract(witnesses: MvrCleanCircuitWitness) {
+  const module = await loadContractModule()
+  return {
+    module,
+    compiledContract: buildCompiledContract(module, witnesses),
+  }
+}
+
+/** Inactive slots — sufficient for deploy / ledger reads (no predicate data). */
+export function createEmptyMvrCleanWitness() {
+  const slots: MvrCleanViolationSlot[] = Array.from({ length: 32 }, () => ({
+    dateYmd: 0,
+    active: false,
+  }))
+  return createMvrCleanCircuitWitness(slots)
 }
 
 export function deriveKeysFromSeed(seed: Buffer) {

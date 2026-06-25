@@ -2,8 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { assertDisclosureAllowsProve } from '@/lib/disclosure-preferences'
 import { resolveAttestationFact } from '@/lib/fact-registry'
+import { getMvrAttestationContext } from '@/lib/block-data'
+import {
+  assertMvrCleanPredicatePasses,
+  buildMvrCleanWitnessPayload,
+} from '@/lib/mvr-clean-predicate'
 import {
   proveFactOnMidnight,
+  type MidnightOnChainProveInput,
   type MidnightOnChainProveResult,
 } from '@/lib/midnight-prove-bridge'
 import type {
@@ -15,19 +21,12 @@ import type {
   FactType,
 } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
-
-const DEFAULT_TTL_MS = 365 * 24 * 60 * 60 * 1000
+import { supersedePriorAttestations } from '@/lib/attestation-supersede'
 
 export interface MidnightAttestationServiceConfig {
   getSupabase?: () => Promise<SupabaseClient>
   /** Override for tests — skips tsx subprocess. */
-  proveOnChain?: (input: {
-    candidateUserId: string
-    factType: string
-    sourceCra: string
-    sourcePullId: string
-    disclosedFields: Record<string, unknown>
-  }) => Promise<MidnightOnChainProveResult>
+  proveOnChain?: (input: MidnightOnChainProveInput) => Promise<MidnightOnChainProveResult>
 }
 
 function rowToAttestation(row: {
@@ -50,40 +49,7 @@ function rowToAttestation(row: {
   }
 }
 
-async function supersedePriorRows(
-  supabase: SupabaseClient,
-  input: AttestationInput,
-  newId: string,
-): Promise<void> {
-  let query = supabase
-    .from('attestations')
-    .select('id')
-    .eq('candidate_user_id', input.candidateUserId)
-    .eq('fact_type', input.factType)
-    .is('superseded_by', null)
-
-  if (input.audienceId) {
-    query = query.eq('audience_id', input.audienceId)
-  } else {
-    query = query.is('audience_id', null)
-  }
-
-  const { data: priorRows, error } = await query
-  if (error) {
-    throw new AttestationError(`Failed to load prior attestations: ${error.message}`)
-  }
-
-  for (const row of priorRows ?? []) {
-    const { error: updateError } = await supabase
-      .from('attestations')
-      .update({ superseded_by: newId })
-      .eq('id', row.id)
-
-    if (updateError) {
-      throw new AttestationError(`Failed to supersede attestation ${row.id}: ${updateError.message}`)
-    }
-  }
-}
+const DEFAULT_TTL_MS = 365 * 24 * 60 * 60 * 1000
 
 function defaultExpiresAt(): string {
   return new Date(Date.now() + DEFAULT_TTL_MS).toISOString()
@@ -111,12 +77,32 @@ export function createMidnightAttestationService(
         throw new AttestationError('Missing source_cra or source_pull_id for Midnight attestation')
       }
 
+      const mvrCtx = await getMvrAttestationContext(supabase, input.candidateUserId)
+      if (!mvrCtx) {
+        throw new AttestationError('No completed MVR on file — cannot build predicate witness')
+      }
+
+      const anchor = mvrCtx.completedAt
+        ? new Date(mvrCtx.completedAt)
+        : mvrCtx.mvr.last_ordered_at
+          ? new Date(mvrCtx.mvr.last_ordered_at)
+          : new Date()
+
+      const witnessPayload = buildMvrCleanWitnessPayload({
+        anchor,
+        violations: mvrCtx.mvr.violations ?? [],
+      })
+      assertMvrCleanPredicatePasses(witnessPayload)
+
       const onChain = await proveOnChain({
         candidateUserId: input.candidateUserId,
         factType: input.factType,
         sourceCra: material.sourceCra,
         sourcePullId: material.sourcePullId,
         disclosedFields: material.disclosedFields,
+        windowStartYmd: witnessPayload.window.windowStartYmd,
+        windowEndYmd: witnessPayload.window.windowEndYmd,
+        violationSlots: witnessPayload.slots,
       })
 
       const attestationId = crypto.randomUUID()
@@ -128,8 +114,6 @@ export function createMidnightAttestationService(
         txHash: onChain.txHash,
         proofId: onChain.proofId,
       }
-
-      await supersedePriorRows(supabase, input, attestationId)
 
       const { data: inserted, error: insertError } = await supabase
         .from('attestations')
@@ -155,6 +139,8 @@ export function createMidnightAttestationService(
           `Failed to persist attestation: ${insertError?.message ?? 'no data'}`,
         )
       }
+
+      await supersedePriorAttestations(supabase, input, attestationId)
 
       return rowToAttestation(inserted)
     },

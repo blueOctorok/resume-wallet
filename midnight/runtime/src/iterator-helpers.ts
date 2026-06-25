@@ -139,3 +139,21 @@ define('reduce', function <T, A>(
 define('toArray', function <T>(this: Iterable<T>): T[] {
   return Array.from(this)
 })
+
+// Set.prototype.difference (ES2025 / Node 22+) — wallet SDK restore uses it on
+// coin nonce sets during incremental sync. Without this, cache restore throws
+// "coinNonces.difference is not a function" and every prove run cold-syncs.
+if (typeof Set.prototype.difference !== 'function') {
+  Object.defineProperty(Set.prototype, 'difference', {
+    value<T>(this: Set<T>, other: ReadonlySet<T>): Set<T> {
+      const out = new Set<T>()
+      for (const value of this) {
+        if (!other.has(value)) out.add(value)
+      }
+      return out
+    },
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  })
+}

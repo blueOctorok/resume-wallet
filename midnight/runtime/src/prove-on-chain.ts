@@ -7,10 +7,19 @@ import {
 } from '@midnight-ntwrk/midnight-js-contracts'
 
 import { buildFactCommitment } from './fact-commitment.js'
-import { loadCompiledContract, createMidnightWallet, saveWalletState } from './wallet.js'
+import {
+  loadCompiledContract,
+  createMidnightWallet,
+  saveWalletState,
+  createEmptyMvrCleanWitness,
+} from './wallet.js'
 import { createMidnightProviders } from './providers.js'
 import { mnemonicToSeedBuffer } from './mnemonic-seed.js'
 import { MIDNIGHT_CONFIG, resolveContractAddress } from './config.js'
+import {
+  createMvrCleanCircuitWitness,
+  type MvrCleanViolationSlot,
+} from './mvr-clean-witness.js'
 
 export interface OnChainProveInput {
   candidateUserId: string
@@ -18,6 +27,11 @@ export interface OnChainProveInput {
   sourceCra: string
   sourcePullId: string
   disclosedFields: Record<string, unknown>
+  /** P3.4-A — public window bounds (YYYYMMDD ints). */
+  windowStartYmd: number
+  windowEndYmd: number
+  /** Fixed 32-slot violation witness for the predicate circuit. */
+  violationSlots: MvrCleanViolationSlot[]
   mnemonic: string
 }
 
@@ -26,6 +40,7 @@ export interface OnChainProveResult {
   proofId: string
   commitment: string
   contractAddress: string
+  predicateVersion: string
 }
 
 /**
@@ -111,7 +126,7 @@ export async function deployMvrCleanContract(mnemonic: string): Promise<{
   try {
     await registerDustIfNeeded(walletCtx)
 
-    const { compiledContract } = await loadCompiledContract()
+    const { compiledContract } = await loadCompiledContract(createEmptyMvrCleanWitness())
     const providers = await createMidnightProviders(walletCtx)
 
     const deployed = await deployContract(providers, {
@@ -133,6 +148,10 @@ export async function proveCleanMvrOnChain(
   const seed = mnemonicToSeedBuffer(input.mnemonic)
   const contractAddress = resolveContractAddress()
 
+  const witnesses = createMvrCleanCircuitWitness(input.violationSlots)
+  const windowStart = BigInt(input.windowStartYmd)
+  const windowEnd = BigInt(input.windowEndYmd)
+
   logProgress('Initializing wallet...')
   const walletCtx = await createMidnightWallet(seed)
 
@@ -140,7 +159,7 @@ export async function proveCleanMvrOnChain(
     await registerDustIfNeeded(walletCtx)
 
     logProgress('Loading compiled contract + providers...')
-    const { compiledContract } = await loadCompiledContract()
+    const { compiledContract } = await loadCompiledContract(witnesses)
     const providers = await createMidnightProviders(walletCtx)
 
     logProgress(`Locating deployed contract ${contractAddress.slice(0, 12)}...`)
@@ -149,8 +168,19 @@ export async function proveCleanMvrOnChain(
       compiledContract,
     })
 
-    logProgress('Generating ZK proof + submitting transaction (this is the slow step)...')
-    const tx = await contract.callTx.registerCleanMvr(commitment)
+    logProgress('Generating ZK predicate proof + submitting transaction (slow step)...')
+    let tx
+    try {
+      tx = await contract.callTx.proveCleanMvr(windowStart, windowEnd, commitment)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const cause =
+        err instanceof Error && err.cause instanceof Error ? err.cause.message : ''
+      throw new Error(
+        cause ? `proveCleanMvr failed: ${msg} — ${cause}` : `proveCleanMvr failed: ${msg}`,
+        { cause: err instanceof Error ? err : undefined },
+      )
+    }
     const txHash = tx.public.txId
     const proofId = txHash
     logProgress(`Transaction submitted: ${txHash}`)
@@ -160,6 +190,7 @@ export async function proveCleanMvrOnChain(
       proofId,
       commitment,
       contractAddress,
+      predicateVersion: 'v1-any-violation-in-window',
     }
   } finally {
     await walletCtx.wallet.stop()
@@ -170,7 +201,7 @@ export async function readOnChainCommitment(
   contractAddress: string,
   mnemonic: string,
 ): Promise<string | null> {
-  const { module } = await loadCompiledContract()
+  const { module } = await loadCompiledContract(createEmptyMvrCleanWitness())
   const walletCtx = await createMidnightWallet(mnemonicToSeedBuffer(mnemonic))
 
   try {

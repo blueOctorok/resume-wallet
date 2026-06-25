@@ -12,6 +12,7 @@ import type {
   FactType,
 } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
+import { supersedePriorAttestations } from '@/lib/attestation-supersede'
 
 const DEFAULT_ISSUER = 'storm'
 const DEFAULT_TTL_MS = 365 * 24 * 60 * 60 * 1000
@@ -75,41 +76,6 @@ function rowToAttestation(row: {
   }
 }
 
-async function supersedePriorRows(
-  supabase: SupabaseClient,
-  input: AttestationInput,
-  newId: string
-): Promise<void> {
-  let query = supabase
-    .from('attestations')
-    .select('id')
-    .eq('candidate_user_id', input.candidateUserId)
-    .eq('fact_type', input.factType)
-    .is('superseded_by', null)
-
-  if (input.audienceId) {
-    query = query.eq('audience_id', input.audienceId)
-  } else {
-    query = query.is('audience_id', null)
-  }
-
-  const { data: priorRows, error } = await query
-  if (error) {
-    throw new AttestationError(`Failed to load prior attestations: ${error.message}`)
-  }
-
-  for (const row of priorRows ?? []) {
-    const { error: updateError } = await supabase
-      .from('attestations')
-      .update({ superseded_by: newId })
-      .eq('id', row.id)
-
-    if (updateError) {
-      throw new AttestationError(`Failed to supersede attestation ${row.id}: ${updateError.message}`)
-    }
-  }
-}
-
 export function createSignedJwtAttestationService(
   config: SignedJwtAttestationServiceConfig
 ): AttestationService {
@@ -148,8 +114,6 @@ export function createSignedJwtAttestationService(
 
       const proof: ProofArtifact = { kind: 'signed_jwt', jwt, issuer }
 
-      await supersedePriorRows(supabase, input, attestationId)
-
       const { data: inserted, error: insertError } = await supabase
         .from('attestations')
         .insert({
@@ -174,6 +138,8 @@ export function createSignedJwtAttestationService(
           `Failed to persist attestation: ${insertError?.message ?? 'no data'}`
         )
       }
+
+      await supersedePriorAttestations(supabase, input, attestationId)
 
       return rowToAttestation(inserted)
     },

@@ -1,10 +1,32 @@
-// Storm P3.3 — on-chain anchor for mvr_clean_36_months attestations.
-// Public commitment only; MVR source data stays off-chain (selective disclosure).
+// Storm P3.4-A — real predicate proof for mvr_clean_36_months.
+// Witness: fixed violation slots (private). Public: window bounds + commitment.
+// Provenance signature (P3.4-B) ships when Key/Accio delivers signing.
 
 pragma language_version >= 0.16 && <= 0.31;
 
+import CompactStandardLibrary;
+
+struct ViolationEntry {
+  dateYmd: Uint<32>;
+  active: Boolean;
+}
+
+witness violationAt(index: Uint<8>): ViolationEntry;
+
 export ledger factCommitment: Opaque<"string">;
 
-export circuit registerCleanMvr(commitment: Opaque<"string">): [] {
+export circuit proveCleanMvr(
+  windowStart: Uint<32>,
+  windowEnd: Uint<32>,
+  commitment: Opaque<"string">
+): Boolean {
+  for (const i of 0..32) {
+    const v = violationAt(i);
+    assert(
+      !v.active || v.dateYmd < windowStart || v.dateYmd > windowEnd,
+      "violation in verification window"
+    );
+  }
   factCommitment = disclose(commitment);
+  return disclose(true);
 }

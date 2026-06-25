@@ -101,6 +101,13 @@ export interface ParsedMvrResult {
   // Suspensions
   suspensionCount?: number
   suspensions?: Suspension[]
+
+  /**
+   * DMV admin notices (temp licenses, etc.) Accio nests in `<mvr_violation>` with
+   * `violation_type=DRIVER OTHER INFORMATION`. Key Background shows these under
+   * "Additional Driver Info" — not violations.
+   */
+  additionalDriverInfo?: AdditionalDriverInfo[]
   
   // Medical Certificate
   medicalCertExpiration?: string
@@ -165,6 +172,16 @@ export interface Suspension {
   endDate?: string
   state?: string
 }
+
+export interface AdditionalDriverInfo {
+  date?: string
+  description?: string
+  type?: string
+  acdCode?: string
+  endDate?: string
+}
+
+type MvrEventCategory = 'violation' | 'suspension' | 'additional'
 
 /**
  * Parse Accio XML result into structured data
@@ -335,13 +352,16 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     // Extract mvr_license blocks (can be multiple)
     result.licenses = extractMvrLicenses(xml)
 
-    // Extract mvr_violation blocks
-    result.violations = extractMvrViolations(xml)
-    result.violationCount = result.violations?.length || 0
-    
-    // Calculate total points from violations. May be overridden below by the
-    // state's own "TOTAL STATE POINTS = N" line when the report prints one.
-    if (result.violations && result.violations.length > 0) {
+    // Accio puts violations, suspensions, and admin notices in `<mvr_violation>`
+    // blocks — route by violation_type so employers only see true violations.
+    const classified = extractClassifiedMvrEvents(xml)
+    result.violations = classified.violations
+    result.violationCount = classified.violations.length
+    result.additionalDriverInfo = classified.additionalDriverInfo
+
+    // Calculate total points from true violations only. May be overridden below
+    // by the state's own "TOTAL STATE POINTS = N" line when the report prints one.
+    if (result.violations.length > 0) {
       result.totalPoints = result.violations.reduce((sum, v) => sum + (v.points || 0), 0)
       result.totalPointsSource = 'computed'
     }
@@ -350,9 +370,13 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     result.accidents = extractMvrAccidents(xml)
     result.accidentCount = result.accidents?.length || 0
 
-    // Extract mvr_suspension blocks
-    result.suspensions = extractMvrSuspensions(xml)
-    result.suspensionCount = result.suspensions?.length || 0
+    // Standalone `<mvr_suspension>` tags plus suspensions reclassified from
+    // `<mvr_violation>` (common on IL fills).
+    result.suspensions = dedupeSuspensions([
+      ...extractMvrSuspensions(xml),
+      ...classified.suspensionsFromBlocks,
+    ])
+    result.suspensionCount = result.suspensions.length
 
     // Extract fees (from fees block within subOrder)
     const feesXml = extractXmlBlock(xml, 'fees')
@@ -718,74 +742,153 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
 }
 
 /**
- * Extract all mvr_violation blocks from XML
- * Based on real MVR report structure - includes conviction dates, ACD codes, etc.
+ * Route Accio `<mvr_violation>` blocks to the category Key Background uses on
+ * employer reports. Only `DRIVER VIOLATION` / `VIOL` are true violations —
+ * suspensions and temp-license admin notices must not inflate violation counts.
  */
-function extractMvrViolations(xml: string): Violation[] {
+function classifyMvrViolationCategory(
+  violationType?: string,
+  acdCode?: string,
+  description?: string,
+): MvrEventCategory {
+  const t = (violationType ?? '').trim().toUpperCase()
+  const acd = (acdCode ?? '').trim().toUpperCase()
+  const desc = (description ?? '').trim().toUpperCase()
+
+  if (t === 'DRIVER VIOLATION' || t === 'VIOL') return 'violation'
+
+  if (
+    t === 'DRIVER SUSPENSION' ||
+    t.includes('FR FUTURE PROOF') ||
+    t.includes('FR INSURANCE') ||
+    t.includes('FINANCIAL RESPONSIBILITY') ||
+    (t.includes('SUSPENSION') && !t.includes('VIOLATION'))
+  ) {
+    return 'suspension'
+  }
+
+  if (t.includes('OTHER INFORMATION') || t === 'INFO') return 'additional'
+
+  if (acd === 'ACCA') return 'suspension'
+  if (acd === 'INFO') {
+    // IL puts FR future-proof filings under Suspensions even when ACD is INFO.
+    if (
+      desc.includes('F.R.') ||
+      desc.includes('FR ') ||
+      desc.includes('FINANCIAL RESPONSIBILITY') ||
+      t.includes('FR ')
+    ) {
+      return 'suspension'
+    }
+    return 'additional'
+  }
+
+  // Legacy payloads without violation_type — infer from ACD when possible.
+  if (!t && acd && /^S\d/.test(acd)) return 'violation'
+  if (!t && acd) return 'violation'
+
+  if (t.includes('VIOLATION')) return 'violation'
+  if (t.includes('OTHER') || t.includes('INFORMATION') || t.includes('ADMIN')) {
+    return 'additional'
+  }
+
+  // Unknown types: do not inflate the employer-facing violation count.
+  return 'additional'
+}
+
+function parseMvrViolationPoints(violationXml: string): number | undefined {
+  const vendorPoints = extractXmlValue(violationXml, 'vendor_points')
+  const statePoints = extractXmlValue(violationXml, 'state_points')
+  const pointsStr = extractXmlValue(violationXml, 'points')
+  const raw = vendorPoints || statePoints || pointsStr
+  if (!raw) return undefined
+  const points = parseInt(raw, 10)
+  return Number.isNaN(points) ? undefined : points
+}
+
+function extractClassifiedMvrEvents(xml: string): {
+  violations: Violation[]
+  suspensionsFromBlocks: Suspension[]
+  additionalDriverInfo: AdditionalDriverInfo[]
+} {
   const violations: Violation[] = []
-  
-  // Try multiple tag patterns that Accio might use. The `(?:\s[^>]*)?` boundary
-  // stops `<violation...>` from matching `<violation_date>` (prefix collision).
-  const tagPatterns = [
-    /<mvr_violation(?:\s[^>]*)?>([\s\S]*?)<\/mvr_violation>/gi,
-    /<violation(?:\s[^>]*)?>([\s\S]*?)<\/violation>/gi,
-    /<VIOLATION(?:\s[^>]*)?>([\s\S]*?)<\/VIOLATION>/gi
-  ]
-  
-  for (const regex of tagPatterns) {
-    let match
-    while ((match = regex.exec(xml)) !== null) {
-      const violationXml = match[1]
-      
-      // Parse violation date (YYYYMMDD format or various formats)
-      const violationDate = extractXmlValue(violationXml, 'violation_date')
-        || extractXmlValue(violationXml, 'issue_date')
-        || extractXmlValue(violationXml, 'date')
-      
-      // Conviction date is often different from issue date
-      const convictionDate = extractXmlValue(violationXml, 'conviction_date')
-        || extractXmlValue(violationXml, 'disposed_date')
-      
-      // Parse points (vendor_points or state_points)
-      const vendorPoints = extractXmlValue(violationXml, 'vendor_points')
-      const statePoints = extractXmlValue(violationXml, 'state_points')
-      const pointsStr = extractXmlValue(violationXml, 'points')
-      const points = vendorPoints 
-        ? parseInt(vendorPoints, 10) 
-        : (statePoints ? parseInt(statePoints, 10) : (pointsStr ? parseInt(pointsStr, 10) : undefined))
-      
-      // ACD code (AAMVA Code Dictionary) - standardized violation codes
-      const acdCode = extractXmlValue(violationXml, 'acd_code')
-        || extractXmlValue(violationXml, 'ACD')
-        || extractXmlValue(violationXml, 'aamva_code')
-      
-      const stateCode = extractXmlValue(violationXml, 'state_code')
-        || extractXmlValue(violationXml, 'local_code')
-      
-      const violation: Violation = {
-        date: violationDate,
-        convictionDate,
-        type: extractXmlValue(violationXml, 'violation_type')
-          || extractXmlValue(violationXml, 'type'),
-        description: extractXmlValue(violationXml, 'description') 
-          || extractXmlValue(violationXml, 'state_description')
-          || extractXmlValue(violationXml, 'violation_description'),
-        points: isNaN(points as number) ? undefined : points,
-        state: extractXmlValue(violationXml, 'state')
-          || extractXmlValue(violationXml, 'state_of_violation')
-          || extractXmlValue(violationXml, 'jurisdiction'),
-        acdCode,
-        stateCode
-      }
-      
-      // Only add if we have at least some data
-      if (violation.date || violation.description || violation.type) {
-        violations.push(violation)
-      }
+  const suspensionsFromBlocks: Suspension[] = []
+  const additionalDriverInfo: AdditionalDriverInfo[] = []
+
+  const regex = /<mvr_violation(?:\s[^>]*)?>([\s\S]*?)<\/mvr_violation>/gi
+  let match
+  while ((match = regex.exec(xml)) !== null) {
+    const violationXml = match[1]
+
+    const violationDate = extractXmlValue(violationXml, 'violation_date')
+      || extractXmlValue(violationXml, 'issue_date')
+      || extractXmlValue(violationXml, 'date')
+    const convictionDate = extractXmlValue(violationXml, 'conviction_date')
+      || extractXmlValue(violationXml, 'disposed_date')
+    const reinstatementDate = extractXmlValue(violationXml, 'reinstatement_date')
+      || extractXmlValue(violationXml, 'end_date')
+    const violationType = extractXmlValue(violationXml, 'violation_type')
+      || extractXmlValue(violationXml, 'type')
+    const description = extractXmlValue(violationXml, 'description')
+      || extractXmlValue(violationXml, 'state_description')
+      || extractXmlValue(violationXml, 'violation_description')
+    const acdCode = extractXmlValue(violationXml, 'acd_code')
+      || extractXmlValue(violationXml, 'ACD')
+      || extractXmlValue(violationXml, 'aamva_code')
+    const stateCode = extractXmlValue(violationXml, 'state_code')
+      || extractXmlValue(violationXml, 'local_code')
+    const state = extractXmlValue(violationXml, 'state')
+      || extractXmlValue(violationXml, 'state_of_violation')
+      || extractXmlValue(violationXml, 'jurisdiction')
+
+    if (!violationDate && !description && !violationType) continue
+
+    const category = classifyMvrViolationCategory(violationType, acdCode, description)
+
+    switch (category) {
+      case 'violation':
+        violations.push({
+          date: violationDate,
+          convictionDate,
+          type: violationType,
+          description,
+          points: parseMvrViolationPoints(violationXml),
+          state,
+          acdCode,
+          stateCode,
+        })
+        break
+      case 'suspension':
+        suspensionsFromBlocks.push({
+          date: violationDate,
+          reason: description,
+          endDate: reinstatementDate,
+          state,
+        })
+        break
+      case 'additional':
+        additionalDriverInfo.push({
+          date: violationDate,
+          description,
+          type: violationType,
+          acdCode,
+          endDate: reinstatementDate,
+        })
+        break
     }
   }
-  
-  return violations
+
+  return { violations, suspensionsFromBlocks, additionalDriverInfo }
+}
+
+function dedupeSuspensions(items: Suspension[]): Suspension[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = `${item.date ?? ''}|${item.reason ?? ''}|${item.endDate ?? ''}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /**
@@ -1408,6 +1511,7 @@ export function mvrResultToJsonb(result: ParsedMvrResult): Record<string, unknow
       count: result.suspensionCount || 0,
       details: result.suspensions || []
     },
+    additionalDriverInfo: result.additionalDriverInfo || [],
     medical: {
       certExpiration: result.medicalCertExpiration,
       certIssueDate: result.medicalCertIssueDate,

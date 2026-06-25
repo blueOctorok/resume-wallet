@@ -6,6 +6,120 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-06-005 — Data ownership is decided by "who clicks order"; driver-initiated + agency-funded is the recommended model; Pace-as-signal-reseller is a CRA trap; full review pending counsel
+
+**Date:** 2026-06-22
+**Status:** Working direction — **pending formal legal review** (meeting with counsel being scheduled). Extends DEC-2026-06-002 (driver-owned/agency-funded vault), DEC-2026-06-003 (funded-pull ingestion gated on FCRA opinion), DEC-2026-05-011 (candidate-agent; never a CRA).
+**Decided by:** Owner + engineer (to be confirmed with lawyers)
+
+### Context
+Spitballing how to make verified facts portable surfaced a foundational question: who owns the MVR/PSP data, and can Pace hand it (or a zk-proof of it) to the driver or to outside carriers? Confirmed in code + live data that **all current screening data is company-private (Pace employer-pulls)**, and that the zk-proof builder currently ignores the ownership lane (it proved both test facts off Pace pulls — an FCRA-isolation leak, tracked as P3.4-A step 7).
+
+### Decision (working)
+1. **The deciding rule is "who clicks order" (the consumer of record), not who pays or stores.** Driver-initiated = driver-owned/portable. Pace-initiated = company-private. **Money does not change ownership** — Pace can sponsor a driver-initiated pull and the driver still owns it.
+2. **Cryptography does not launder provenance.** A zk-proof of "clean MVR" derived from a company-private pull is still consumer-report information; the ZK wrapper does not make it shareable. Soundness and provenance are independent axes.
+3. **Three models, one recommendation:**
+   - **A — Driver-initiated (driver-owned), Pace-funded ✅ recommended/platform.** Low CRA risk, portable, matches the moat.
+   - **B — Pace-central / driver leasing ✅ legitimate but smaller/locked-in.** Clean only as true leasing (carrier buys driver capacity from Pace, not a direct-hire decision on the driver).
+   - **C — Pace resells screening-derived signals into other companies' *direct* hires ❌ CRA trap.** Makes Pace a CRA; off the table.
+4. **Hybrid sweet spot:** Pace stays the operational hub (originates, funds, runs ops + relationships) while the **driver initiates/authorizes**, so the legal basis is candidate consent (Model A), not report resale (Model C). Pace stays powerful; the credential stays the driver's.
+5. **The single engineering change to enable the recommended model: make the driver click "order"** (and gate proofs to driver-owned pulls, `ordered_by_company_id IS NULL`). Everything else (Pace paying, Accio pulling, ops) is unchanged.
+
+### Consequences
+- New shareable artifact: **`docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md`** (boss + lawyer facing — models, the deciding rule, the confirmed leak, and the counsel agenda). To be shared with the owner and brought to the legal meeting.
+- **Gated on counsel** (same FCRA opinion as DEC-2026-06-003 / DEC-2026-05-013): driver-owned-after-agency-funding, consent design, zk-fact-vs-report distinction, DPPA redisclosure, vendor-contract permissions, the leasing line, and pre-screen positioning. Question list lives in the memo §6.
+- P3.4-A step 7 (FCRA isolation gate in the attestation path) must close before P3.5; backfill of the two Pace-derived test attestations to be decided.
+- No code changed yet — direction is pending legal sign-off.
+
+### Related
+- DEC-2026-06-002, DEC-2026-06-003, DEC-2026-06-004, DEC-2026-05-011, DEC-2026-05-013
+- `docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md`
+
+---
+
+## DEC-2026-06-004 — zkTLS as the platform provenance bet for the composed DQ file; issuer signature is a per-fact optimization; ZK facts are the cheap pre-screen tier above the full file
+
+**Date:** 2026-06-22
+**Status:** Accepted — strategic direction + zkTLS spike go/no-go framing (extends DEC-2026-06-002 Midnight-load-bearing, DEC-2026-06-003 CRA-agnostic rail, DEC-2026-05-014 provenance gate, DEC-2026-05-004 honesty gate)
+**Decided by:** Owner + engineer
+
+### Context
+
+P3.4-A landed a **real predicate proof** for `mvr_clean_36_months` on Preprod (positive + negative smokes pass; `CIRCUITS.md` 🟡). The predicate is genuine ZK; the remaining gap is **provenance** — proving the MVR bytes fed to the circuit are real, not Storm-authored. Two paths were weighed:
+
+1. **Issuer signature (P3.4-B, Key/Accio).** Pending vendor review (P3.4.0). Cleanest trust model — issuer's key, no middleman, small circuit. But out of our control and timeline-risky.
+2. **zkTLS / web proof.** Prove "these bytes came from `host` over TLS at time T." Works with **no issuer cooperation** because Storm already receives the report over HTTPS (`reportURL` exists).
+
+The owner's framing, accepted here: **time-to-market + control beat perfection.** Getting third parties to sign is slow and uncertain; a mathematically-real provenance proof we can ship unilaterally is a win even if its trust basis is "TLS+notary" rather than "issuer-signed." This is state-of-the-art for trucking DQ regardless of which path lands — the bar is **real, not perfect** (DEC-2026-06-001 quality bar).
+
+### Decision
+
+**1. zkTLS is the platform provenance bet; issuer signature is a per-fact optimization.**
+The north-star deliverable is a **composed DQ file** of verifiable facts. Its verifiable spine is mostly third-party data delivered over HTTPS — MVR, PSP, **FMCSA Drug & Alcohol Clearinghouse**, **med cert via National Registry lookup**, employment verification. An issuer-signature deal covers only the rows where the CRA agrees to sign (MVR/PSP). **zkTLS covers all of them with no permission needed** — including the Clearinghouse and National Registry, which no CRA signature would ever reach. Therefore zkTLS is the load-bearing capability; Key signing is a "nice to have" for the two rows where the cleaner trust model is reachable. Per `attestations.source_cra` already being open text (DEC-2026-06-003), this is open-endedness/control, **not** a commitment to actually run multiple CRAs.
+
+**2. Correction to "switch to any CRA for free" — provenance generalizes, parsing does not.**
+zkTLS proves *transport* generically (one capability, all sources). It does **not** understand the payload. Each source has a different response shape (Accio XML, Clearinghouse JSON, DMV HTML), so each new source still needs its own parser/predicate (the equivalent of `mvr-clean-predicate.ts`). Adding a source = "no permission + write an adapter," not zero work. Still far cheaper than per-vendor signing deals.
+
+**3. Honesty correction — name the trust basis on the artifact (DEC-2026-05-004 / -014).**
+A zkTLS-backed fact is real, but its trust model is **"TLS cert + notary," not "the issuer vouched."** The per-fact claim must describe what was actually proven ("proof that this record was served by `host` over TLS on `date`, derived predicate checked in ZK") and must **not** imply the issuer cryptographically attested it. The **provenance method is recorded on the proof artifact** (invariant from the P3.4-B options work) so the verify surface renders the correct claim. Issuer-signed (🟢) and zkTLS-backed are *different* honesty tiers, both real, neither pure marketing.
+
+**4. Unilateral vs. cooperative — manage the relationship, not just the tech.**
+Issuer signing is cooperative (clean). zkTLS is unilateral (we attest a vendor's channel without them). Defensible because Storm is the **candidate's agent** proving provenance of data the candidate **authorized us to pull** (DEC-2026-05-011) — we already legitimately receive it. But "we can prove provenance with or without you" is **leverage in the Key conversation**, whereas a surprise is a relationship cost. Don't blindside Accio. Per-target technical feasibility (TLS 1.3 session-key handling, etc.) is **not** guaranteed by "it's HTTPS" — the spike must verify each target.
+
+**5. Product shape — ZK facts are the cheap pre-screen tier above the full DQ file (the "middle ground").**
+This is the funnel, and it's already the architecture, not a new feature:
+   - **ZK facts** = instant, cheap, candidate-controlled, verified yes/no answers ("clean MVR? Class A? clean PSP?") a carrier can check when *simply interested* — the "dating profile" (product-philosophy). Selective disclosure of verified facts.
+   - **Full DQ file** = the consented, regulated, paid artifact pulled when the carrier is *serious about hiring* — the "background check after the match."
+   - The ZK layer **increases conversion and avoids wasted pulls**; it does not replace the file.
+
+**Compliance guardrail (do not oversell):** the ZK pre-screen **does not legally replace** the FMCSA-required DQ file. A hired driver still needs the actual records on file (49 CFR 391.51), and "clean MVR" is a point-in-time fact — **freshness pushes a fresh consented pull at hire time anyway**, which makes the ZK layer and the paid pull **complementary, not cannibalistic**. Storm stays the candidate's agent; the regulated pull still flows through the CRA (Accio) — **never disintermediate it** (DEC-2026-05-011). Position as "know before you spend," never "you don't need the background check."
+
+### Consequences
+
+- **zkTLS go/no-go spike is the real critical path while Key reviews** — not idle waiting. Spike must answer: (a) scheme (MPC-notary e.g. TLSNotary vs. TEE) + the notary trust assumption we'd adopt; (b) can we bind a session to *this driver's* report + prevent replay; (c) proof size/latency tolerable; (d) per-target TLS feasibility for the DQ spine (MVR, PSP, Clearinghouse, National Registry). Output: go/no-go note here. **Do not wire into the attestation pipeline until the spike clears.**
+- `EXECUTION_CHECKLIST.md` P3.4-B: zkTLS framed as parallel platform track (already promoted); add the DQ-spine target list + provenance-vs-parsing split.
+- Engineering invariant reaffirmed: provenance method on every proof artifact; verify surface renders the honesty tier from it.
+- Key conversation: keep zkTLS as stated leverage; don't surprise Accio.
+
+### Related
+
+- DEC-2026-06-003 (CRA-agnostic Proof Request rail — `source_cra` open text; this extends *why* that openness matters)
+- DEC-2026-06-002 (Midnight load-bearing = network-independent trust; DQ-vault positioning; "pre-qual not replacement" caveat)
+- DEC-2026-06-001 (Phase 3 GTM-driven; quality bar = real, not demo-ware)
+- DEC-2026-05-014 (provenance gate — issuer-agnostic by design)
+- DEC-2026-05-011 (candidate-as-agent; never disintermediate the CRA / never become one)
+- DEC-2026-05-004 (honesty gate — per-fact claims describe what's actually proven)
+
+### Update 2026-06-22 — zkTLS current-state findings (spike seed) + maturity caveat
+
+Web-search review of the zkTLS field (TLSNotary, zkPass, Reclaim, Opacity, vlayer, Primus; arXiv TLSNotary review). **zkTLS is real, funded ($40M+ VC 2025–26), and shipping** — confirmed independent of Midnight (we integrate it; Midnight does not provide it). Three architectures with different trust trades:
+
+| Approach | Trust | Speed | Projects |
+|---|---|---|---|
+| MPC-TLS | Notary set not to collude with prover | Slow (~23MB/1KB req) | TLSNotary, zkPass, Opacity |
+| Proxy | Inline attestor node | ~10× faster | Reclaim, vlayer |
+| TEE | SGX vendor + operator | Fast | Primus |
+
+**Honest maturity caveat — tempers this decision's "zkTLS is the platform bet" confidence for *our* use case:**
+1. **Public re-verifiability vs. speed conflict.** Our pitch needs cold, publicly re-verifiable proofs. The fast MPC variant (QuickSilver/VOLE) is **designated-verifier only** — not publicly re-verifiable. Public verifiability forces the heavier/slower path.
+2. **TLS 1.3 paused in TLSNotary** (1.0 targeted H2 2026). Accio + gov portals almost certainly run TLS 1.3 → leading OSS MPC option may not handle our transport today.
+3. **Notary-collusion is the field's unsolved problem.** Mitigations (multi-notary, TEE+slashing, restaking) are deployed-but-degrading / theoretical / design-stage. Confirms the honesty tier: "TLS + notary," **not** "issuer vouched."
+4. **Authenticated sessions + detection + ToS.** Clearinghouse / National Registry sit behind logins (harder); servers can detect/block MPC handshakes; unilateral attestation of a vendor channel is a ToS/relationship question.
+
+**Revised stance (does not reverse the decision, right-sizes it):**
+- **Issuer signature (Key/Accio) is the *faster real path* for MVR/PSP** — no notary assumption, no TLS-1.3 blocker, publicly verifiable, cooperative. "Time to market" now favors Key, not zkTLS, for the two facts we can get signed.
+- **zkTLS stays the strategic generalization** for sources no one will sign — but it's at the **hard end** of the maturity curve for our needs, not a quick win. Parallel R&D, de-risk via spike.
+
+**Sharpened spike go/no-go questions (supersede the generic ones):**
+1. Can we get a **publicly re-verifiable** proof (rules out designated-verifier fast paths)?
+2. Does any production lib handle **TLS 1.3** for our actual targets today?
+3. What **notary trust model** would we actually adopt, and is the resulting claim honest to call "verified"?
+4. One **authenticated-session** target end-to-end, or is it public-URL-only in practice?
+
+Output remains: go/no-go note here; do not wire into the attestation pipeline until the spike clears.
+
+---
+
 ## DEC-2026-06-003 — Multi-CRA proof rail ("Proof Requests"): candidate-mediated only; carrier-side headless proofs API rejected
 
 **Date:** 2026-06-10

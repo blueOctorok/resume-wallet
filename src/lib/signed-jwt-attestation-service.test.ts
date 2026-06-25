@@ -17,6 +17,7 @@ function makeSupabaseMock() {
     const chain = {
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockImplementation(async () => {
         return { data: { query_count: queryCounts.get('row') ?? 0 }, error: null }
       }),

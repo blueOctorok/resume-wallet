@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import type { MvrCleanViolationSlot } from '@/lib/mvr-clean-predicate'
 
 export interface MidnightOnChainProveInput {
   candidateUserId: string
@@ -7,6 +8,11 @@ export interface MidnightOnChainProveInput {
   sourceCra: string
   sourcePullId: string
   disclosedFields: Record<string, unknown>
+  /** P3.4-A — public window bounds (YYYYMMDD ints). */
+  windowStartYmd: number
+  windowEndYmd: number
+  /** Fixed 32-slot violation witness for the predicate circuit. */
+  violationSlots: MvrCleanViolationSlot[]
 }
 
 export interface MidnightOnChainProveResult {
@@ -14,6 +20,7 @@ export interface MidnightOnChainProveResult {
   proofId: string
   commitment: string
   contractAddress: string
+  predicateVersion?: string
 }
 
 const REPO_ROOT = path.resolve(process.cwd())

@@ -4,6 +4,207 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — MVR violation over-count: route Accio `violation_type` to violations vs suspensions vs admin info** (2026-06-25)
+
+**Root cause:** Accio nests true violations, suspensions, FR filings, and temp-license admin notices in the same `<mvr_violation>` tag with different `violation_type` values. Storm dumped every block into `violations[]`, so Shane Edwards IL showed **9 violations / 0 suspensions** while Key Background showed **4 violations / 2 suspensions / 3 additional driver info**.
+
+**Fix:** Classify each `<mvr_violation>` by `violation_type` (and ACD fallback): `DRIVER VIOLATION` → violations; `DRIVER SUSPENSION` / FR filings → suspensions; `DRIVER OTHER INFORMATION` → `additionalDriverInfo` (excluded from violation count). Point totals sum violations only.
+
+| File | Change |
+|---|---|
+| `src/lib/accio-xml-parser.ts` | `classifyMvrViolationCategory`, `extractClassifiedMvrEvents`, `dedupeSuspensions`; `AdditionalDriverInfo` type |
+| `src/lib/accio-xml-parser.test.ts` | IL Edwards regression fixture (4 / 2 / 3 split) |
+
+**Post-deploy:** Run admin reparse so stored `parsed_data` / `violation_count` refresh: `POST /api/admin/reparse-screening-results` with `{ "type": "mvr" }`.
+
+---
+
+## **P3.4-B 🟢 — Key (KBS) responded positive/conditional on report certification** (2026-06-25)
+
+Lana Iklodi (President, Key Background Screening) replied to the issuer-signature ask: **concept has merit, worth exploring** — a soft yes. No build commitment yet; they want the **business case, workflow, and long-term vision** before scoping dev (the predicted roadmap/priority gate, not a capability gate). Key's certification model — cert tied to the **screening event + completion timestamp**, copies don't refresh it, new cert only on a new order — **matches our freshness/replay model exactly** (P3.4-A step 4, DEC-2026-06-004 §5). Key proactively proposed **monitoring** (90/180/365-day re-pulls), which aligns their order-volume incentive with our continuous-DQ vision (DEC-2026-05-013).
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4-B status callout (Key soft-yes) + handoff-log row + "Last updated" |
+
+**Action (ball in our court):** answer Lana's 7 questions in the **driver-owned / agency-funded** frame (DEC-2026-06-005), keeping the "how the cert is used" / "who orders monitoring" answers consistent with driver-initiated ownership and not committing Key to anything pending the FCRA counsel review. Skeleton answers drafted. **If Key proceeds → P3.4-B opt 1** (in-circuit issuer signature, flip `mvr-clean-36` 🟡→🟢).
+
+---
+
+## **Docs — DEC-2026-06-005: Data ownership = "who clicks order"; driver-initiated + agency-funded recommended; ownership/FCRA memo for counsel** (2026-06-22)
+
+Captured the data-ownership strategy ahead of a legal review. The deciding rule: **ownership follows who initiates the pull (the consumer of record), not who pays or stores** — so a driver-initiated, Pace-funded pull is driver-owned and portable, while a Pace employer-pull is company-private. **Cryptography does not launder provenance** (a zk-proof off a company-private pull is still consumer-report info). Three models documented: **A** driver-initiated (recommended/platform), **B** Pace-central leasing (legitimate but locked-in), **C** Pace reselling signals into others' direct hires (CRA trap, off the table). Hybrid sweet spot: Pace stays the operational hub while the driver initiates/authorizes.
+
+| File | Change |
+|---|---|
+| `docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md` | **New** — boss + lawyer-facing memo: models, the "who clicks order" rule, the confirmed leak, soundness-vs-provenance, and the counsel question agenda |
+| `docs/midnight/DECISION_LOG.md` | New **DEC-2026-06-005** (working direction, pending counsel) |
+
+**Status:** Working direction, **pending formal legal review** (meeting being scheduled). No code changed — the single enabling change (driver clicks "order" + gate proofs to driver-owned pulls) waits on legal sign-off.
+
+---
+
+## **🔴 Finding — Attestation path leaks FCRA-isolated (company-private) MVR pulls** (2026-06-22)
+
+Confirmed (code + live data) that the Midnight attestation path bypasses the FCRA isolation that `031_fcra_mvr_isolation.sql` enforces on the career-card view.
+
+- **Code:** `getMvrAttestationContext` (`src/lib/block-data.ts`) joins `block_driver_mvr → mvr_orders` on `driver_user_id` only — **no `ordered_by_company_id IS NULL` filter**. It will build a shareable ZK fact off a company-private pull.
+- **Data (Supabase MCP):** both P3.4-A smoke attestations were proven off **Pace Drivers**-ordered MVRs (`ordered_by_employer=true`): candidate `0897bf34…` (pull `17816985245894063`) and `ab0114b1…` (pull `17817230408843553`). The canonical rule (`ordered_by_company_id = X → private to company X only`) was violated through the attestation side door.
+- **Ownership question (boss owns Pace → can we hand pulls to drivers?):** the blocker is **FCRA permissible-purpose + DPPA redisclosure limits + the Accio/Key end-user contract**, **not FMCSA**. Pace can't relabel an employer-pull as a driver-owned, freely-shareable asset — that needs a new permissible purpose and risks making Storm a CRA (DEC-2026-05-011). The clean path is **driver-initiated self-ordered pulls** (`ordered_by_company_id IS NULL`) with the agency sponsoring the fee (DEC-2026-06-002).
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | Added P3.4-A **step 7** (🔴 FCRA isolation gate — close before P3.5) + handoff-log row |
+
+**Fix (not yet applied):** require `ordered_by_company_id IS NULL` in the attestation context (or carry explicit driver authorization), and decide backfill for the 2 existing Pace-derived attestations. No code changed yet — flagged for alignment first.
+
+---
+
+## **Docs — DEC-2026-06-004: zkTLS as platform provenance bet + ZK pre-screen tier** (2026-06-22)
+
+Captured the strategic decision that **zkTLS is the load-bearing provenance capability** for the composed DQ file, with issuer signature (Key/Accio, P3.4-B) as a per-fact optimization where reachable. zkTLS reaches the whole verifiable DQ spine (MVR, PSP, Clearinghouse, med cert via National Registry, employment verification) with no vendor cooperation; an issuer-signature deal reaches only MVR/PSP.
+
+Two corrections folded in: (1) provenance generalizes but **parsing does not** — each source still needs its own adapter; (2) a zkTLS fact's honesty tier is **"TLS + notary," not "issuer vouched"** — the per-fact claim must describe what was actually proven. Plus the compliance guardrail: **ZK facts are a pre-screen tier, not a replacement** for the FMCSA-required DQ file (complementary via freshness; never disintermediate the CRA).
+
+| File | Change |
+|---|---|
+| `docs/midnight/DECISION_LOG.md` | New **DEC-2026-06-004** (zkTLS platform bet; ZK pre-screen funnel; honesty + compliance guardrails) |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4-B zkTLS section reframed as platform track + DQ-spine targets + provenance-vs-parsing + pre-screen tier |
+
+**Next (provenance):** zkTLS go/no-go spike is the critical path while Key reviews — not idle waiting.
+
+**Update (2026-06-22):** Web-search review of zkTLS current state appended to DEC-2026-06-004. Real + funded + shipping, but honest maturity caveats for *our* case: public re-verifiability conflicts with the fast MPC variant, TLS 1.3 paused in TLSNotary, notary-collusion unsolved, authenticated sources harder. **Revised stance:** time-to-market now favors **Key issuer signature** for MVR/PSP; zkTLS stays the strategic generalization (parallel R&D) for sources no one will sign. Sharpened spike questions recorded.
+
+---
+
+## **P3.4-A ✅ — First real predicate proof verified on Preprod** (2026-06-22)
+
+End-to-end smoke passed after redeploy + three bugfixes (witness tuple ABI, Set.difference polyfill, attestation supersede FK order).
+
+| | |
+|---|---|
+| **Contract** | `2b7032a622c339a1494265812064df28a9e708da330be3e0a4e50856eea54cdb` |
+| **Tx** | `009847a58f3be2957801edf90def5877e62e54a79ce1ffbe5ea80e77d7683ea2cc` |
+| **Attestation** | `167040f7-dfd5-4d3d-b15c-53b6c09b83bc` |
+| **Candidate** | `0897bf34-7d86-48f0-a35a-5315a770c2c8` (clean MVR, zero violations) |
+| **Circuit** | `proveCleanMvr` — 32-slot violation witness, in-circuit 36-month window check |
+
+Still **🟡 honesty** — predicate is real ZK; provenance is metadata until P3.4-B (Key/Accio issuer signature). Per-fact "proven on Midnight" claims stay gated (DEC-2026-05-004).
+
+**Negative smoke:** ✅ `061d7eeb-…` rejected off-chain (violation 2025-02-20 inside window) — no DUST, no tx.
+
+**Next:** replay/freshness (P3.4-A step 4), P3.4-B when Key responds.
+
+---
+
+## **P3.4-A — mvr-clean-36 predicate circuit wired** (2026-06-22)
+
+Replaced the P3.3 anchor-only circuit with a **real predicate**: 32-slot violation witness, in-circuit window check, wired through the full prove pipeline. Still **🟡 honesty** — no in-circuit issuer signature until P3.4-B (Key/Accio pending).
+
+| File | Change |
+|---|---|
+| `src/lib/mvr-clean-predicate.ts` | Shared witness builder + v1 taxonomy (any dated violation in 36-month window) |
+| `src/lib/mvr-clean-predicate.test.ts` | Unit tests (6 cases) |
+| `compact/mvr-clean-36/mvr-clean-36.compact` | `proveCleanMvr(windowStart, windowEnd, commitment)` + violation loop |
+| `midnight/runtime/src/mvr-clean-witness.ts` | Compact witness callback adapter |
+| `midnight/runtime/src/prove-on-chain.ts` | Calls `proveCleanMvr` with witness payload |
+| `midnight/runtime/src/wallet.ts` | `withWitnesses` binding; `createEmptyMvrCleanWitness()` for deploy |
+| `src/lib/midnight-prove-bridge.ts` | Extended stdin JSON (`windowStartYmd`, `windowEndYmd`, `violationSlots`) |
+| `src/lib/midnight-attestation-service.ts` | Builds witness from MVR block data before prove |
+| `midnight/runtime/managed/mvr-clean-36/` | Recompiled artifacts (`npm run midnight:compile`) |
+| `docs/midnight/CIRCUITS.md` | P3.4-A predicate documented; P3.3 anchor marked historical |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4-A checklist steps marked ✅/⬜; redeploy + smoke noted |
+
+**User action to close smoke test:** `npm run midnight:deploy` → update `MIDNIGHT_CONTRACT_ADDRESS` → `npm run midnight:prove-fact -- --user <uuid>`.
+
+**Still open:** P3.4-A step 4 (replay/freshness nullifier); P3.4-B in-circuit `verifySignature` when Key delivers.
+
+---
+
+## **Fix — P3.4-A proveCleanMvr witness tuple + Set.difference polyfill** (2026-06-22)
+
+First predicate smoke on Preprod failed with `ContractRuntimeError: Error executing circuit 'proveCleanMvr'`. Root cause: Compact witnesses must return `[privateState, value]` and accept `(WitnessContext, index)` — our callback returned only the violation entry. Also added `Set.prototype.difference` polyfill (Node 20) so wallet cache restore stops throwing `coinNonces.difference is not a function`.
+
+| File | Change |
+|---|---|
+| `midnight/runtime/src/mvr-clean-witness.ts` | Correct witness ABI: `(context, index) => [context.privateState, entry]` |
+| `midnight/runtime/src/iterator-helpers.ts` | `Set.prototype.difference` polyfill for Node 20 |
+| `midnight/runtime/src/prove-on-chain.ts` | Clearer error when `proveCleanMvr` fails |
+
+**Retry:** `npm run midnight:prove-fact -- --user 0897bf34-7d86-48f0-a35a-5315a770c2c8` (same contract address — no redeploy needed for this fix).
+
+---
+
+## **Fix — attestation supersede FK order** (2026-06-22)
+
+P3.4-A prove submitted tx `0099d271…` on Preprod but DB persist failed: `attestations_superseded_by_fkey`. We updated old rows' `superseded_by` **before** inserting the new row — FK requires the successor id to exist first. Fixed: insert → then supersede; shared helper excludes `newId` from the supersede query.
+
+| File | Change |
+|---|---|
+| `src/lib/attestation-supersede.ts` | Shared insert-after supersede helper |
+| `src/lib/midnight-attestation-service.ts` | Insert before supersede |
+| `src/lib/signed-jwt-attestation-service.ts` | Same fix (latent bug in Phase 2 path) |
+
+**Note:** The successful on-chain tx is valid; re-run prove to persist (will submit a second tx unless we add idempotency later).
+
+---
+
+## **Docs — P3.4-B provenance options + zkTLS fallback** (2026-06-22)
+
+Added a ranked **provenance portfolio** to `EXECUTION_CHECKLIST.md` so Key/Accio signing is not a single point of failure. Goal restated: prove **as much as mathematically possible** and make Midnight **as load-bearing as possible**.
+
+Options, ranked by trust strength × independence:
+1. **Issuer signature (Key/Accio)** — first choice, in flight; if they sign, zkTLS isn't needed for MVR/PSP.
+2. **zkTLS / web proof** — provenance with **no Key cooperation** (Storm already fetches reports over TLS; `reportURL` exists). **Promoted to parallel R&D** — it's the only provenance path fully in our control and a foundation-worthy narrative. Spike → go/no-go in `DECISION_LOG.md` before wiring.
+3. **Source-issuer pull (DMV / FMCSA PSP)** — driver-obtained records; cold-verifiable where the issuer signs.
+4. **Storm-attested** — interim 🟡 (= Phase 2 signed-JWT); real predicate ZK, provenance trusts Storm; never carries a per-fact "proven on Midnight" claim.
+5. **Alternate CRA adapter** — `source_cra` is CRA-agnostic; a signing CRA is a registry entry, not a rewrite.
+
+New hard invariant: the **provenance method is recorded on the proof artifact** so the verify surface + P3.6 honesty gate render the correct per-fact trust claim. Includes a decision flow for Key's eventual yes / data-agreement-no / roadmap-no / silence.
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | New **P3.4-B provenance options** subsection (ranked table + zkTLS spike + decision flow + invariant); footer + handoff log |
+
+**Why:** the moat degrades gracefully instead of collapsing if Key says no — predicate ZK ships regardless, and cold-trustless provenance has four fallbacks behind the preferred issuer-signature path.
+
+---
+
+## **Docs — P3.4.0 findings + Key/Accio vendor status** (2026-06-18)
+
+Updated `EXECUTION_CHECKLIST.md` with P3.4.0 completion and vendor outreach status.
+
+**Local research (done):** Scanned **339** stored `mvr_orders.result_xml` payloads — **0** contain cryptographic signatures (XMLDSig, X509, etc.). `signatureText`/`signatureDate` are applicant-consent placeholders, not report signing.
+
+**Vendor:** Sam called Lana (Key); email sent CC Ryan (Accio) requesting one digital signature per report (MVR/PSP priority; platform-level signing ideal). Key replied — reviewing internally with Accio; will circle back.
+
+**Planning change:** P3.4 split into **A (predicate circuit — unblocked, start now)** and **B (in-circuit issuer signature — pending Key)**. Not fully stuck: build predicate + plumbing while waiting; 🟢 cold-trustless provenance and per-fact "proven on Midnight" claims stay gated until P3.4-B.
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4 🟡; P3.4.0 findings table; Key email/response; A/B tracks; blocked-vs-not matrix; updated P3.5/P3.6 pre-conditions; handoff log |
+
+---
+
+## **Docs — `CIRCUITS.md` + Phase 3a re-sequenced depth-first** (2026-06-17)
+
+Added `docs/midnight/CIRCUITS.md`: a plain-English ZK/Compact primer (witness/assert/disclose, constraints-are-the-statement, the proof "shapes" library, what makes a circuit good) plus a per-circuit log. First entry annotates the shipped `mvr-clean-36` honestly as **🟡 anchor only** (no witness, no constraints — commitment stored on-chain, predicate still computed off-chain in `fact-registry.ts`), and sketches the **⬜ target** circuit that moves provenance (CRA signature check) + the no-disqualifying-violation predicate in-circuit. Captures the open design questions (issuer signing, record encoding, violation taxonomy, replay/freshness, verifier UX).
+
+Then **re-sequenced Phase 3a depth-first** in `EXECUTION_CHECKLIST.md`. P3.3 shipped an anchor, which doesn't deliver the moat (a verifier still trusts Storm's DB, not the math — DEC-2026-06-002). So the **real predicate proof is now a mandatory step**, ordered *before* broadening:
+
+- **New P3.4** — real predicate proof for `mvr-clean-36` (🟡→🟢), gated on **P3.4.0** (research: does Accio return a verifiable issuer signature?).
+- **P3.5** (was P3.4) — broaden the registry, now replicating the *real* predicate pattern, not the anchor.
+- **P3.6** (was P3.5) — per-fact honesty gate.
+
+| File | Change |
+|---|---|
+| `docs/midnight/CIRCUITS.md` | New — ZK/Compact primer, circuit log (status legend 🟢/🟡/⬜), add-a-circuit checklist |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | Inserted mandatory **P3.4 real predicate proof** (+ P3.4.0 issuer-signing gate); renumbered broaden→P3.5, honesty gate→P3.6; updated Phase 3a table, completion criterion, footer, handoff log |
+
+**Why:** breadth of anchors won't earn a foundation conversation or unlock a per-fact "proven on Midnight" claim — one genuine end-to-end predicate proof will. Per-fact claims only unlock when a circuit reaches 🟢 (DEC-2026-05-004).
+
+---
+
 ## **Cursor Compact IDE setup — VSIX + build task** (2026-06-17)
 
 Documented and wired local Compact editing: official `midnightnetwork.compact` VSIX (manual install), `.vscode/tasks.json` for fast `--skip-zk` compile with Problems-tab errors, and MCP setup notes in `MIDNIGHT_ENV.md`.

@@ -195,3 +195,116 @@ describe('parseAccioMvrResult — combined-format licenses still work', () => {
     expect(parsed.violations?.[0].points).toBe(2)
   })
 })
+
+/**
+ * IL fixture modeled on Shane Edwards (Key order 61667 / Storm 0934a4be).
+ * Accio nests violations, suspensions, and admin notices in `<mvr_violation>`
+ * with different violation_type values — only DRIVER VIOLATION is a true violation.
+ */
+describe('parseAccioMvrResult — IL violation_type routing (Edwards)', () => {
+  const IL_EDWARDS_XML = `<ScreeningResults>
+  <completeOrder number="17816985245894063" remote_number="61667">
+    <subOrder type="MVR" filledStatus="filled" filledCode="discrepancy">
+      <dlnum>E36379678160</dlnum>
+      <dlstate>IL</dlstate>
+      <mvr_violation>
+        <violation_type>DRIVER VIOLATION</violation_type>
+        <description>SPEEDING 15-25 MPH ABOVE LIMIT</description>
+        <violation_date>20200207</violation_date>
+        <conviction_date>20200305</conviction_date>
+        <acd_code>S15</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER VIOLATION</violation_type>
+        <description>SPEEDING 15-25 MPH ABOVE LIMIT</description>
+        <violation_date>20200814</violation_date>
+        <conviction_date>20210315</conviction_date>
+        <acd_code>S15</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER VIOLATION</violation_type>
+        <description>SPEEDING 15-25 MPH ABOVE LIMIT</description>
+        <violation_date>20210708</violation_date>
+        <conviction_date>20210809</conviction_date>
+        <acd_code>S15</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER VIOLATION</violation_type>
+        <description>SPEEDING 15-25 MPH ABOVE LIMIT</description>
+        <violation_date>20211027</violation_date>
+        <conviction_date>20220110</conviction_date>
+        <acd_code>S15</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER SUSPENSION</violation_type>
+        <description>DOCUMENT TO CLEAR, FR FILED</description>
+        <violation_date>20220909</violation_date>
+        <reinstatement_date>20230518</reinstatement_date>
+        <acd_code>ACCA</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER OTHER INFORMATION</violation_type>
+        <description>TEMPORARY DRIVER'S LICENSE</description>
+        <violation_date>20200617</violation_date>
+        <reinstatement_date>20200915</reinstatement_date>
+        <acd_code>INFO</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER OTHER INFORMATION</violation_type>
+        <description>TEMPORARY DRIVER'S LICENSE</description>
+        <violation_date>20230720</violation_date>
+        <reinstatement_date>20231018</reinstatement_date>
+        <acd_code>INFO</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER OTHER INFORMATION</violation_type>
+        <description>TEMPORARY DRIVER'S LICENSE</description>
+        <violation_date>20240424</violation_date>
+        <reinstatement_date>20240723</reinstatement_date>
+        <acd_code>INFO</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER FR FUTURE PROOF REQUIRED</violation_type>
+        <description>F.R. FUTURE PROOF FILINGS COMPLETED</description>
+        <violation_date>20260511</violation_date>
+        <acd_code>INFO</acd_code>
+      </mvr_violation>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  const parsed = parseAccioMvrResult(IL_EDWARDS_XML)
+
+  it('counts only DRIVER VIOLATION blocks as violations (Key: 4)', () => {
+    expect(parsed.violationCount).toBe(4)
+    expect(parsed.violations).toHaveLength(4)
+    expect(parsed.violations?.every((v) => v.type === 'DRIVER VIOLATION')).toBe(true)
+  })
+
+  it('routes suspensions and FR filings out of violations (Key: 2)', () => {
+    expect(parsed.suspensionCount).toBe(2)
+    expect(parsed.suspensions?.map((s) => s.reason)).toEqual([
+      'DOCUMENT TO CLEAR, FR FILED',
+      'F.R. FUTURE PROOF FILINGS COMPLETED',
+    ])
+    expect(parsed.suspensions?.[0].endDate).toBe('20230518')
+  })
+
+  it('keeps temp-license admin notices in additionalDriverInfo, not violations', () => {
+    expect(parsed.additionalDriverInfo).toHaveLength(3)
+    expect(parsed.additionalDriverInfo?.every((i) => i.type === 'DRIVER OTHER INFORMATION')).toBe(
+      true,
+    )
+  })
+
+  it('serializes the corrected counts into JSONB', () => {
+    const jsonb = mvrResultToJsonb(parsed) as {
+      violations: { count: number }
+      suspensions: { count: number }
+      additionalDriverInfo: unknown[]
+    }
+    expect(jsonb.violations.count).toBe(4)
+    expect(jsonb.suspensions.count).toBe(2)
+    expect(jsonb.additionalDriverInfo).toHaveLength(3)
+  })
+})
