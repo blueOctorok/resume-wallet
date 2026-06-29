@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — P3.4-C consent saved before order validation (Jason Peterson prod test)** (2026-06-29)
+
+First submit could save screening consent then fail on DOB validation (e.g. typo `1070-01-05`), leaving the employer request completed with no MVR/PSP orders and blocking retry.
+
+| File | Change |
+|---|---|
+| `src/lib/screening-validation.ts` | Export `validateDateOfBirth` for disclosure steps + step 3 |
+| `src/components/BackgroundCheckDisclosure.tsx` / `PspDisclosureForm.tsx` | Reject invalid DOB before advancing wizard |
+| `src/components/employer/EmployerPspMvrBundleAttestationStep.tsx` | Full pre-flight validation before submit; `dob` \|\| `dateOfBirth` merge |
+| `src/app/api/candidate/screening-consent/route.ts` | Validate DOB on save; defer request completion when `skipEmployerNotify` (driver-owned) |
+| `src/app/api/candidate/fulfill-screening/route.ts` | Complete employer request only after PSP leg |
+| `src/lib/place-driver-owned-orders-from-bundle.ts` | **New** — retry orders from saved consent bundle |
+| `src/app/api/candidate/screening-order-retry/route.ts` | **New** — GET retry status + POST place orders |
+| `src/components/blocks/ScreeningConsentBlock.tsx` | "Finish your MVR & PSP orders" retry UI when consent exists without orders |
+
+| `src/app/api/employer/screenings/route.ts` | Include driver-owned MVR/PSP when consent bundle exists |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | "Awaiting candidate orders" when consent saved but no MVR/PSP |
+| `src/lib/sync-outreach-invite-status.ts` | Kanban completion considers driver-owned terminal orders |
+
+---
+
 ## **Build — P3.4-C driver-initiated MVR/PSP ordering flow** (2026-06-29)
 
 Drivers now **click to order** their own portable MVR + PSP after completing the three-step consent package (DEC-2026-06-005). Ownership follows who submits — `ordered_by_company_id IS NULL` on both orders.

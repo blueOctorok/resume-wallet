@@ -7,6 +7,7 @@ import { isEmployerScreeningConsentRequest } from '@/lib/pending-employer-screen
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
+import { validateDateOfBirth } from '@/lib/screening-validation'
 
 interface DeferredConsent {
   signedName: string
@@ -57,6 +58,12 @@ export async function POST(request: NextRequest) {
     }
     if (!hasCdlisWrittenConsent(mergedPspForm)) {
       return NextResponse.json({ error: 'CDLIS written consent is incomplete' }, { status: 400 })
+    }
+
+    const dobRaw = String(formData.dob ?? formData.dateOfBirth ?? '').trim()
+    const dobCheck = validateDateOfBirth(dobRaw)
+    if (!dobCheck.ok) {
+      return NextResponse.json({ error: dobCheck.error }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -176,10 +183,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save screening consent bundle' }, { status: 500 })
     }
 
-    await supabase
-      .from('candidate_requests')
-      .update({ status: 'completed', completed_at: new Date().toISOString() })
-      .eq('id', requestId)
+    // Driver-owned flow (P3.4-C) defers request completion until Accio orders land.
+    if (!skipEmployerNotify) {
+      await supabase
+        .from('candidate_requests')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', requestId)
+    }
 
     await ensureHubBlocksForPspMvrBundle(supabase, userId)
 

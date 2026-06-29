@@ -15,7 +15,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
-import { checkDlNumberIsNotName } from '@/lib/screening-validation'
+import { checkDlNumberIsNotName, validateDateOfBirth } from '@/lib/screening-validation'
 
 export type PspConsentSignedResult = {
   consentId: string
@@ -342,6 +342,16 @@ export default function PspDisclosureForm({
     }
     if ((fulfillOrder || deferSubmit) && !isValidSsn(ssn)) {
       setError('Your full 9-digit Social Security Number is required.')
+      return
+    }
+    if (profile.dateOfBirth.trim()) {
+      const dobCheck = validateDateOfBirth(profile.dateOfBirth)
+      if (!dobCheck.ok) {
+        setError(dobCheck.error)
+        return
+      }
+    } else {
+      setError('Date of birth is required.')
       return
     }
 

@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
       employerUserId,
       type: type as 'mvr' | 'psp',
       formData,
-      candidateRequestIdToComplete: requestId,
+      // Driver-owned bundle completes the employer request only after PSP lands.
+      candidateRequestIdToComplete: type === 'psp' ? requestId : null,
       ownership: 'driver',
       paymentId: paymentResult.paymentId,
       paymentTxHash: paymentResult.resolvedTxHash,

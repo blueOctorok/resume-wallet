@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import DriverScreeningOwnershipAcknowledgment from '@/components/screening/DriverScreeningOwnershipAcknowledgment'
 import { saveConsentAndPlaceDriverOwnedOrders } from '@/lib/place-driver-owned-screening-orders-client'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
+import { validateScreeningOrderInput, validateDateOfBirth } from '@/lib/screening-validation'
 import {
   CDLIS_DRIVER_SECTION_HEADING,
   CDLIS_FORM_SUBTITLE,
@@ -144,7 +145,7 @@ export default function EmployerPspMvrBundleAttestationStep({
 
     const firstName = merged.firstName?.trim()
     const lastName = merged.lastName?.trim()
-    const dob = merged.dateOfBirth?.trim()
+    const dob = (merged.dateOfBirth ?? merged.dob)?.trim()
     const dlNumber = merged.dlNumber?.trim()
     const dlState = merged.dlState?.trim()
     const address = merged.address?.trim()
@@ -157,6 +158,25 @@ export default function EmployerPspMvrBundleAttestationStep({
       setError(
         'Some required fields from the previous steps are missing. Go back and complete both disclosure forms.',
       )
+      return
+    }
+
+    const dobCheck = validateDateOfBirth(dob)
+    if (!dobCheck.ok) {
+      setError(dobCheck.error)
+      return
+    }
+
+    const orderValidation = validateScreeningOrderInput({
+      firstName,
+      lastName,
+      dob,
+      dlState,
+      dlNumber,
+      ssn: normalizeSsnDigits(ssn),
+    })
+    if (!orderValidation.ok) {
+      setError(orderValidation.error)
       return
     }
 

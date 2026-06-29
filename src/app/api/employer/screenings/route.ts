@@ -6,9 +6,12 @@ import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 /**
  * GET /api/employer/screenings
  *
- * Lists every MVR + PSP order this company paid for (`ordered_by_company_id = ctx.companyId`),
- * each joined to the candidate's identity via **`user_profiles`** (not the role-specific block tables).
- * Drives the "Purchased screenings" panel in the employer hub.
+ * Lists MVR + PSP orders visible to this company:
+ *   - Company-paid (`ordered_by_company_id = companyId`)
+ *   - Driver-owned (`ordered_by_company_id IS NULL`) when a complete
+ *     screening_consent_bundles row exists for that candidate (P3.4-C)
+ *
+ * Joins candidate identity via user_profiles.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -33,7 +36,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('mvr_orders')
         .select(
-          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -41,7 +44,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('psp_orders')
         .select(
-          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount',
+          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
         )
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
@@ -56,10 +59,48 @@ export async function GET(request: NextRequest) {
         .limit(500),
     ])
 
+    const consentDriverIds = Array.from(
+      new Set(
+        (consentBundles ?? [])
+          .filter((b) => b.status === 'complete' && b.driver_user_id)
+          .map((b) => b.driver_user_id as string),
+      ),
+    )
+
+    let driverOwnedMvr: typeof mvrOrders = []
+    let driverOwnedPsp: typeof pspOrders = []
+    if (consentDriverIds.length > 0) {
+      const [{ data: domvr }, { data: dosp }] = await Promise.all([
+        supabase
+          .from('mvr_orders')
+          .select(
+            'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
+          )
+          .is('ordered_by_company_id', null)
+          .in('driver_user_id', consentDriverIds)
+          .order('created_at', { ascending: false })
+          .limit(500),
+        supabase
+          .from('psp_orders')
+          .select(
+            'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
+          )
+          .is('ordered_by_company_id', null)
+          .in('driver_user_id', consentDriverIds)
+          .order('created_at', { ascending: false })
+          .limit(500),
+      ])
+      driverOwnedMvr = domvr ?? []
+      driverOwnedPsp = dosp ?? []
+    }
+
+    const mergedMvr = [...(mvrOrders ?? []), ...driverOwnedMvr]
+    const mergedPsp = [...(pspOrders ?? []), ...driverOwnedPsp]
+
     const candidateIds = Array.from(
       new Set([
-        ...((mvrOrders ?? []).map((o) => o.driver_user_id).filter(Boolean) as string[]),
-        ...((pspOrders ?? []).map((o) => o.driver_user_id).filter(Boolean) as string[]),
+        ...(mergedMvr.map((o) => o.driver_user_id).filter(Boolean) as string[]),
+        ...(mergedPsp.map((o) => o.driver_user_id).filter(Boolean) as string[]),
         ...((consentBundles ?? []).map((b) => b.driver_user_id).filter(Boolean) as string[]),
       ]),
     )
@@ -86,10 +127,11 @@ export async function GET(request: NextRequest) {
     }
 
     const shape = (kind: 'mvr' | 'psp') =>
-      (kind === 'mvr' ? mvrOrders ?? [] : pspOrders ?? []).map((o) => {
+      (kind === 'mvr' ? mergedMvr : mergedPsp).map((o) => {
         const id = o.driver_user_id as string | null
         const c = id ? candidateById.get(id) : null
         const candidateName = [c?.firstName, c?.lastName].filter(Boolean).join(' ').trim() || null
+        const driverOwned = o.ordered_by_company_id == null
         return {
           id: o.id as string,
           kind,
@@ -107,6 +149,7 @@ export async function GET(request: NextRequest) {
           processedAt: (o.processed_at as string | null) ?? null,
           completedAt: o.completed_at as string | null,
           feeAmount: o.fee_amount as number | string | null,
+          driverOwned,
         }
       })
 

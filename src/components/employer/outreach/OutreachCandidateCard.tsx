@@ -244,6 +244,20 @@ export default function OutreachCandidateCard({
 
   const hasNotesPreview = Boolean((invite.recruiterNotes ?? '').trim())
 
+  const hasMvrFile = files.some((f) => f.kind === 'mvr')
+  const hasPspFile = files.some((f) => f.kind === 'psp')
+  const consentComplete = consentBundle?.status === 'complete'
+  const awaitingDriverOrders =
+    consentComplete &&
+    invite.targetBlockType === 'driver-screening-consent' &&
+    (!hasMvrFile || !hasPspFile)
+  const awaitingOrdersLabel =
+    !hasMvrFile && !hasPspFile
+      ? 'MVR + PSP not submitted yet'
+      : !hasMvrFile
+        ? 'MVR not submitted yet'
+        : 'PSP not submitted yet'
+
   const handleNotesBlur = () => {
     if (!onRecruiterNotesSave) return
     const next = notesDraft.trim()
@@ -479,7 +493,7 @@ export default function OutreachCandidateCard({
                 isDark ? 'text-gray-500' : 'text-gray-500',
               )}
             >
-              Files ({files.length + (consentBundle ? 1 : 0)})
+              Files ({files.length + (consentBundle ? 1 : 0) + (awaitingDriverOrders ? 1 : 0)})
             </p>
             {/* Show refresh when any screening is still processing */}
             {onRefreshScreenings && files.some((f) => hubDocStatusFromScreeningOrder(f.status) === 'processing') && (
@@ -557,6 +571,30 @@ export default function OutreachCandidateCard({
                   </span>
                 </li>
               )
+            )}
+            {awaitingDriverOrders && (
+              <li
+                className={cn(
+                  'flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 text-xs',
+                  isDark
+                    ? 'border-amber-500/30 bg-amber-950/20 text-amber-100'
+                    : 'border-amber-200 bg-amber-50/90 text-amber-900',
+                )}
+              >
+                <Clock className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                <span className="font-semibold">Awaiting candidate orders</span>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                    isDark ? 'bg-amber-500/20 text-amber-200' : 'bg-amber-100 text-amber-900',
+                  )}
+                >
+                  Pending
+                </span>
+                <span className={cn('ml-auto text-[10px]', isDark ? 'text-amber-300/80' : 'text-amber-800/80')}>
+                  {awaitingOrdersLabel}
+                </span>
+              </li>
             )}
             {files.map((file) => (
               <FilePill key={`${file.kind}-${file.id}`} file={file} isDark={isDark} onView={() => onViewFile(file)} />
@@ -846,6 +884,7 @@ function FilePill({
       />
       <span className={cn('font-medium shrink-0', isDark ? 'text-gray-200' : 'text-gray-800')}>
         {file.kind === 'mvr' ? 'MVR' : 'PSP'}
+        {file.driverOwned ? ' · candidate-owned' : ''}
       </span>
       {file.dlState && (
         <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-500')}>{file.dlState}</span>

@@ -84,6 +84,8 @@ export interface ScreeningRow {
   processedAt?: string | null
   completedAt: string | null
   feeAmount: number | string | null
+  /** Driver-initiated portable pull shared via consent (P3.4-C). */
+  driverOwned?: boolean
 }
 
 /** Files associated with a candidate, indexed by their Storm user id. */

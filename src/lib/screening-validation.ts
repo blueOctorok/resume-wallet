@@ -105,6 +105,18 @@ function trimSafe(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+/** User-safe DOB check for disclosure steps (before consent is persisted). */
+export function validateDateOfBirth(input: string): { ok: true } | { ok: false; error: string } {
+  const dob = normalizeDob(trimSafe(input))
+  if (!dob) {
+    return {
+      ok: false,
+      error: 'Date of birth is missing or invalid. Use YYYY-MM-DD format and confirm the year is correct.',
+    }
+  }
+  return { ok: true }
+}
+
 /** YYYY-MM-DD or YYYYMMDD → YYYYMMDD. Returns null if not parseable. */
 function normalizeDob(input: string): string | null {
   const stripped = input.replace(/[^\d]/g, '')

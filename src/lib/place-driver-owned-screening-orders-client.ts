@@ -3,6 +3,8 @@
  * Called after screening consent is saved — places two driver-owned Accio orders.
  */
 
+import { validateScreeningOrderInput } from '@/lib/screening-validation'
+
 export interface ScreeningConsentPayload {
   requestId: string
   companyName: string
@@ -72,6 +74,18 @@ export async function saveConsentAndPlaceDriverOwnedOrders(
   consentPayload: ScreeningConsentPayload,
   orderFormData: DriverOwnedOrderFormData,
 ): Promise<void> {
+  const validation = validateScreeningOrderInput({
+    firstName: orderFormData.firstName,
+    lastName: orderFormData.lastName,
+    dob: orderFormData.dob,
+    dlState: orderFormData.dlState,
+    dlNumber: orderFormData.dlNumber,
+    ssn: orderFormData.ssn,
+  })
+  if (!validation.ok) {
+    throw new Error(validation.error)
+  }
+
   await saveScreeningConsentBundle({ ...consentPayload, skipEmployerNotify: true })
   await placeDriverOwnedScreeningOrder(consentPayload.requestId, 'mvr', orderFormData)
   await placeDriverOwnedScreeningOrder(consentPayload.requestId, 'psp', orderFormData)

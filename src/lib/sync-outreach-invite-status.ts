@@ -62,6 +62,27 @@ export async function syncOutreachInviteForDriver(
     getDriverPrimaryEmail(supabase, driverUserId),
   ])
 
+  // Driver-owned portable pulls (P3.4-C) — consenting company sees results but
+  // ordered_by_company_id is NULL on the order row.
+  let driverOwnedMvr: { id: string; status: string }[] = []
+  let driverOwnedPsp: { id: string; status: string }[] = []
+  if (consentBundle) {
+    const [{ data: domvr }, { data: dosp }] = await Promise.all([
+      supabase
+        .from('mvr_orders')
+        .select('id, status')
+        .eq('driver_user_id', driverUserId)
+        .is('ordered_by_company_id', null),
+      supabase
+        .from('psp_orders')
+        .select('id, status')
+        .eq('driver_user_id', driverUserId)
+        .is('ordered_by_company_id', null),
+    ])
+    driverOwnedMvr = (domvr ?? []) as { id: string; status: string }[]
+    driverOwnedPsp = (dosp ?? []) as { id: string; status: string }[]
+  }
+
   const inviteIds: string[] = []
   const now = new Date().toISOString()
   let orphansLinked = 0
@@ -116,8 +137,12 @@ export async function syncOutreachInviteForDriver(
   // As soon as ANY ordered MVR/PSP comes back terminal, the screening invite
   // is "done" for kanban purposes. Per-block invites complete on their own
   // order; the consent invite completes on any screening returning.
-  const mvrTerminal = (mvrOrders ?? []).some((o) => isTerminalScreeningOrderStatus(o.status as string))
-  const pspTerminal = (pspOrders ?? []).some((o) => isTerminalScreeningOrderStatus(o.status as string))
+  const mvrTerminal = [...(mvrOrders ?? []), ...driverOwnedMvr].some((o) =>
+    isTerminalScreeningOrderStatus(o.status as string),
+  )
+  const pspTerminal = [...(pspOrders ?? []), ...driverOwnedPsp].some((o) =>
+    isTerminalScreeningOrderStatus(o.status as string),
+  )
 
   if (mvrTerminal || pspTerminal) {
     const { data: invites } = await supabase

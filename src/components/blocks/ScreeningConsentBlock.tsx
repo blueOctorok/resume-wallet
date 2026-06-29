@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import PspDisclosureForm from '@/components/PspDisclosureForm'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
@@ -14,10 +14,17 @@ import BackToHubButton from '@/components/ui/BackToHubButton'
 import Button from '@/components/ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { CDLIS_PAGE_BREADCRUMB } from '@/lib/employer-psp-mvr-page3-copy'
+import { validateDateOfBirth } from '@/lib/screening-validation'
 
 interface ScreeningConsentBlockProps {
   userAddress: string
   onBack: () => void
+}
+
+interface OrderRetryState {
+  requestId: string
+  companyName: string
+  storedDob: string | null
 }
 
 /**
@@ -35,12 +42,42 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const [deferredPspConsent, setDeferredPspConsent] = useState<DeferredPspConsentData | null>(null)
   const [complete, setComplete] = useState(false)
   const [capturedRequest, setCapturedRequest] = useState(pendingEmployerRequest)
+  const [orderRetry, setOrderRetry] = useState<OrderRetryState | null>(null)
+  const [retryLoading, setRetryLoading] = useState(true)
+  const [retryDob, setRetryDob] = useState('')
+  const [retrySubmitting, setRetrySubmitting] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
 
   useEffect(() => {
     if (pendingEmployerRequest && !capturedRequest) {
       setCapturedRequest(pendingEmployerRequest)
     }
   }, [pendingEmployerRequest, capturedRequest])
+
+  useEffect(() => {
+    if (pendingEmployerRequest || complete) {
+      setRetryLoading(false)
+      return
+    }
+    let cancelled = false
+    void fetch('/api/candidate/screening-order-retry')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.retryable) return
+        setOrderRetry({
+          requestId: data.requestId as string,
+          companyName: data.companyName as string,
+          storedDob: (data.storedDob as string | null) ?? null,
+        })
+        setRetryDob((data.storedDob as string | null) ?? '')
+      })
+      .finally(() => {
+        if (!cancelled) setRetryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [pendingEmployerRequest, complete])
 
   const activeEmployerRequest = capturedRequest || pendingEmployerRequest
 
@@ -50,7 +87,94 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
     isDarkTheme(theme) ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
   }`
 
+  const inputClass = isDarkTheme(theme)
+    ? 'w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500'
+    : 'w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500'
+
+  const handleOrderRetry = async () => {
+    if (!orderRetry) return
+    setRetryError(null)
+    const dobCheck = validateDateOfBirth(retryDob)
+    if (!dobCheck.ok) {
+      setRetryError(dobCheck.error)
+      return
+    }
+    setRetrySubmitting(true)
+    try {
+      const res = await fetch('/api/candidate/screening-order-retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: orderRetry.requestId,
+          formDataPatch: { dob: retryDob.trim(), dateOfBirth: retryDob.trim() },
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(typeof data.error === 'string' ? data.error : 'Failed to submit orders')
+      }
+      setComplete(true)
+      setOrderRetry(null)
+      void refreshPendingRequest()
+      const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+      void syncDriverHubFromApi(userAddress)
+    } catch (e) {
+      setRetryError(e instanceof Error ? e.message : 'Failed to submit orders')
+    } finally {
+      setRetrySubmitting(false)
+    }
+  }
+
   if (!activeEmployerRequest && !complete) {
+    if (retryLoading) {
+      return (
+        <div className="w-full p-8 flex justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+        </div>
+      )
+    }
+
+    if (orderRetry) {
+      return (
+        <div className="w-full p-4 sm:p-6 lg:p-8">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-4">
+              <BackToHubButton onClick={onBack} />
+            </div>
+            <div className={`${cardClass} p-8`}>
+              <h3 className={`text-lg font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
+                Finish your MVR & PSP orders
+              </h3>
+              <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+                Your screening consent for {orderRetry.companyName} is saved, but the MVR and PSP orders did not
+                submit. Confirm your date of birth and try again — no need to re-sign the disclosure forms.
+              </p>
+              <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                Date of birth
+              </label>
+              <input
+                type="date"
+                value={retryDob}
+                onChange={(e) => setRetryDob(e.target.value)}
+                className={inputClass}
+              />
+              {retryError && (
+                <p className="mt-3 text-sm text-red-600 dark:text-red-400">{retryError}</p>
+              )}
+              <div className="mt-6 flex gap-3">
+                <Button variant="primary" onClick={handleOrderRetry} isLoading={retrySubmitting}>
+                  Submit MVR & PSP orders
+                </Button>
+                <Button variant="secondary" onClick={onBack}>
+                  Back to Hub
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="w-full p-4 sm:p-6 lg:p-8">
         <div className="max-w-2xl mx-auto">
