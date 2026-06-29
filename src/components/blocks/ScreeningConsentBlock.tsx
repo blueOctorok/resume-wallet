@@ -22,7 +22,7 @@ interface ScreeningConsentBlockProps {
 
 /**
  * Employer-requested bundled consent (FCRA + FMCSA + CDLIS + encrypted identity).
- * Persists via POST /api/candidate/screening-consent — no Accio order from this flow.
+ * Driver-owned flow: consent saved, then driver-initiated MVR + PSP orders (P3.4-C).
  */
 export default function ScreeningConsentBlock({ userAddress, onBack }: ScreeningConsentBlockProps) {
   const { theme } = useTheme()
@@ -85,11 +85,12 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
               <CheckCircle className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
             </div>
             <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
-              Screening consent complete
+              MVR & PSP orders submitted
             </h3>
             <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-              Your employer has your signed package on file. They will place MVR or PSP orders from their side when
-              ready.
+              Your consent is on file and your MVR and PSP orders are processing. These reports belong to you —
+              track progress in My Files on your hub. Your employer can view results while evaluating your
+              application.
             </p>
             <Button variant="primary" onClick={onBack}>
               Back to Hub
@@ -201,7 +202,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
             pspProfile={pspProfileSnapshot}
             deferredBgConsent={deferredBgConsent}
             deferredPspConsent={deferredPspConsent}
-            submitBehavior="consent-bundle-only"
+            submitBehavior="consent-then-driver-orders"
             onPrevious={() => setStep('psp-disclosure')}
             onOrderComplete={async () => {
               setComplete(true)

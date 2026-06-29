@@ -1093,7 +1093,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 4. ⬜ **Replay / freshness** — bind proof to pull date / nullifier so stale clean MVR can't be reused after new violation.
 5. ✅ Wire witness through `midnight-prove-bridge` → `prove-on-chain.ts` → `midnight-attestation-service.ts` (+ unit tests).
 6. ✅ **Provenance (interim)** — cite `source_cra='accio'` + `source_pull_id` in attestation metadata; **no** in-circuit signature yet.
-7. ⬜ **🔴 FCRA isolation gate (NEW — confirmed gap 2026-06-22)** — `getMvrAttestationContext` (`block-data.ts`) joins `block_driver_mvr → mvr_orders` on `driver_user_id` only, with **no `ordered_by_company_id IS NULL` filter**. Both P3.4-A smoke attestations (`0897bf34…`, `ab0114b1…`) were proven off **Pace-ordered, company-private** MVR pulls — the exact redisclosure migration `031_fcra_mvr_isolation.sql` walls off in the career-card *view*, leaked through the *attestation* path. **Fix:** attestation context must require `ordered_by_company_id IS NULL` (driver-owned/self-ordered pulls only), OR carry explicit driver authorization to derive a shareable fact from a third-party pull. Must close **before P3.5 broadens** to more facts. Backfill: re-evaluate the two existing Pace-derived attestations.
+7. ✅ **FCRA isolation gate (2026-06-25)** — `getMvrAttestationContext` requires **driver-owned** completed MVR (`ordered_by_company_id IS NULL`); loads violations from `mvr_results` when block cache points at a company pull. `process-mvr-accio-webhook` only syncs `block_driver_mvr` for driver-owned orders (matches existing PSP webhook). Candidate `fulfill-screening` passes `ownership: 'driver'` → portable pull even when employer requested + may fund. Shared helper: `src/lib/screening-order-ownership.ts`. **Build assumption pending counsel** (DEC-2026-06-005). **Still open:** backfill/supersede the two existing Pace-derived test attestations.
 
 **Redeploy:** ✅ Done — contract `2b7032a622c339a1494265812064df28a9e708da330be3e0a4e50856eea54cdb` (replaces P3.3 anchor `6c3f0ea8…`).
 
@@ -1102,7 +1102,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 - **Attestation:** `167040f7-dfd5-4d3d-b15c-53b6c09b83bc` — `proof_artifact.kind='midnight_zk'`; P3.3 row `6bc932c7…` superseded
 - **Circuit:** `proveCleanMvr` with 32-slot violation witness (empty violations = clean record)
 
-**Still open on P3.4-A:** step 4 (replay/freshness) + step 7 (🔴 FCRA isolation gate — attestation path proves off company-private pulls).
+**Still open on P3.4-A:** step 4 (replay/freshness) + backfill of Pace-derived test attestations (step 7 gate ✅ wired).
 
 **Negative smoke:** ✅ **2026-06-22** — `061d7eeb-…` (violation 2025-02-20 inside window) rejected **before** on-chain prove: `Moving violations found within the 36-month verification window — cannot attest clean MVR`. No tx submitted.
 
@@ -1173,12 +1173,47 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 - `feat(midnight): mvr-clean-36 issuer signature in-circuit (P3.4-B opt1)`
 - `spike(midnight): zkTLS web-proof provenance feasibility (P3.4-B opt2)`
 
+#### P3.4-C — Driver-initiated ordering + consent (driver-owned model)
+
+| | |
+|---|---|
+| Status | 🟢 Prod-test ready — funding decouple + employer report access shipped; backfill + counsel copy pending |
+| Pre-conditions | P3.4-A step 7 ✅ (attestation gate); DEC-2026-06-005 (accepted for build, **wording pending counsel**) |
+| Pace risk | **Medium** — touches `place-screening-order`, candidate consent forms, employer order surfaces. Employer-initiated screening (`/api/employer/screenings/order`) defaults to `ownership: 'employer'` and must stay unchanged. |
+
+**Why:** The driver must be the consumer of record so the report is portable and attestable (DEC-2026-06-005). The plumbing exists (`ownership` param, `screening-order-ownership.ts`); this section is the **driver-facing flow** + the **consent redesign** that makes "driver clicks order" real. Full rationale + consent constraints: `docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md` (§6a).
+
+**Buildable now (no counsel dependency on the *mechanics* — only the *wording* is gated):**
+
+1. **Driver-ownership acknowledgment step** — new component: plain-language statement + **mandatory checkbox** that gates form submission + "Learn more" modal (deep-dive). Standalone step — **never interleaved into the FMCSA PSP doc**. Core sentence + checkbox must be clear-and-conspicuous (visible, not hidden behind the modal). Wire the checkbox to place the order with `ownership: 'driver'`.
+2. **Suppress the duplicate employer order at the application/pre-screen stage** when a driver-owned pull exists or is in-flight (avoid double-pull / double-charge). **Keep** the employer's hire-time order path — Pace still needs its own employer-purpose pull for the FMCSA DQ file (49 CFR 391.23; pre-screen ≠ DQ file, DEC-2026-06-004 §5).
+3. **Decouple funding from ownership** in the payment path — allow Pace to *sponsor the fee* on a `ownership: 'driver'` (NULL-company) order. Today funding and company-ownership are coupled; split "who pays" from "who owns."
+4. **Gate broad career-card exposure** behind driver disclosure prefs — a driver-owned pull auto-surfaces to the public/all-employer projection today (`projected-career-card.ts` `contactMode` NULL filter). "Auto-share with Pace (they applied)" should not mean "auto-publish to every employer." Default the broad switch off or driver-controlled.
+5. **Backfill** — supersede/void the two existing **Pace-derived** test attestations (`167040f7-…` + the `ab0114b1-…` one) now that the gate only accepts driver-owned pulls. Re-smoke with a driver-owned pull.
+
+**Counsel-gated (wording only — do NOT ship copy until blessed):**
+
+6. **Reword the MVR/background authorization** — today it reads *"I authorize {company} to order my background report"* (`BackgroundCheckDisclosure.tsx`). Must reflect driver-as-consumer. This form IS editable.
+7. **FMCSA PSP form stays verbatim** — federal NOTICE forbids edits / requires standalone (`PspDisclosureForm.tsx`). Ownership framing lives in the step-1 acknowledgment, not in this doc. **Do not touch the FMCSA language.**
+8. **Open counsel questions** (memo §6): can the authorization be inline with the checkbox or must it be standalone; is mandatory-as-condition acceptable; exact wording that makes the driver the consumer of record.
+
+**Verification:**
+- Driver completes acknowledgment + signs → order row has `ordered_by_company_id IS NULL`, `ordered_by_employer = false`.
+- Employer screening route still writes company-private rows (unchanged).
+- After webhook completes, `block_driver_mvr` is populated (driver-owned) and `getMvrAttestationContext` returns it; prove-fact succeeds.
+- Employer "Order MVR" CTA is hidden/disabled at application stage when a driver-owned pull exists; still available at hire.
+
+**Commit:**
+- `feat(screening): driver-ownership acknowledgment + checkbox-orders flow (P3.4-C)`
+- `feat(screening): suppress duplicate employer pre-screen order when driver-owned exists`
+- `chore(attestation): supersede Pace-derived test attestations`
+
 #### P3.5 — Broaden fact registry + circuits
 
 | | |
 |---|---|
 | Status | ⬜ |
-| Pre-conditions | P3.4-A ✅ (predicate pattern established); P3.4-B (🟢 provenance) recommended but not required to start shared plumbing |
+| Pre-conditions | P3.4-A ✅ (predicate pattern established); P3.4-B (🟢 provenance) recommended but not required to start shared plumbing; **P3.4-C driver-owned gate** (so broadened facts attest off driver-owned pulls, not company-private) |
 | Pace risk | Low — additive circuits + prove scripts |
 
 **Goal:** Every `ShippedFactType` in `fact-registry.ts` can produce a valid **real-predicate** `midnight_zk` artifact on Preprod — replicating P3.4's witness + provenance + predicate pattern, not the P3.3 anchor. Each fact needs its own predicate + issuer-signature design.
@@ -1331,6 +1366,10 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-29 | **P3.4-C** prod-test ready | Composer | uncommitted | **Funding decouple:** fulfill-screening attaches waived `payments.company_id` sponsor on driver-owned orders. **Employer access:** `employer-screening-order-access.ts` — consenting company can view driver-owned MVR/PSP PDF/status. **Notify:** single employer bell after PSP leg. **Bugfix:** screening-consent accepts mvr_order/psp_order; duplicate `cdlisPayload` build fix. See `docs/TEST_DRIVER_OWNED_SCREENING.md`. |
+| 2026-06-29 | **P3.4-C** driver-owned order flow shipped | Composer | uncommitted | **UI:** `DriverScreeningOwnershipAcknowledgment` + `consent-then-driver-orders` on ScreeningConsentBlock/PspOrderForm. **Backend:** talent API exposes driver-owned flags + consenting-company view; employer screenings/order blocks pre-screen duplicate (`purpose=hire` escape); projected career card no longer auto-publishes driver-owned to all employers. **Still open:** funding decouple, backfill 2 Pace attestations, counsel copy. |
+| 2026-06-25 | **P3.4-C** driver-ownership flow scoped | Claude Opus 4.8 | uncommitted | Added build-ready **P3.4-C** section: driver-ownership acknowledgment step (statement + mandatory checkbox + Learn more modal, standalone from FMCSA doc), suppress duplicate employer pre-screen order (keep hire-time pull for DQ file), decouple funding from ownership, gate broad career-card exposure, backfill 2 Pace-derived attestations. Counsel-gated = **wording only** (MVR auth reword + standalone/mandatory questions); FMCSA PSP form stays verbatim. Mechanics buildable now. Consent constraints in FCRA memo §6a. |
+| 2026-06-25 | **P3.4-A step 7** ✅ driver-owned gate wired | Claude Opus 4.8 | uncommitted | **Code:** `screening-order-ownership.ts`; attestation context requires driver-owned MVR; MVR webhook block sync gated; `fulfill-screening` stamps `ownership: 'driver'`. DEC-2026-06-005 **accepted for build** (counsel pending). Employer routes unchanged (default `employer`). **Next:** backfill 2 Pace test attestations; replay/freshness (step 4). |
 | 2026-06-25 | **P3.4-B** 🟢 Key positive/conditional response | Claude Opus 4.8 | uncommitted | **Key (Lana Iklodi, President KBS) replied — soft yes:** concept has merit, worth exploring; wants **business case + workflow + vision** before scoping dev (gate = roadmap/priority, not capability, as predicted). **Key's cert model = our freshness model:** cert tied to screening event + completion timestamp; copies don't refresh; new cert only on new order. **Key proposed monitoring** (90/180/365-day re-pulls) → recurring certified history + recurring KBS orders (incentive-aligned; maps to DEC-2026-05-013). **Action:** draft reply to Lana's 7 Qs in driver-owned/agency-funded frame (DEC-2026-06-005); don't commit Key pending FCRA counsel. Skeleton answers drafted in chat. **Next:** finalize email; if Key proceeds → P3.4-B opt 1 (in-circuit issuer signature, flip 🟡→🟢). |
 | 2026-06-22 | **P3.4-A** 🔴 FCRA isolation gap confirmed | Claude Opus 4.8 | uncommitted | **Finding (data-confirmed via Supabase MCP):** `getMvrAttestationContext` has no `ordered_by_company_id` filter; both smoke attestations (`0897bf34…`, `ab0114b1…`) were proven off **Pace Drivers**-ordered (`ordered_by_employer=true`) company-private MVRs — redisclosure that migration 031 walls off in the career-card view but not the attestation path. Logged as P3.4-A step 7 (🔴, must close before P3.5). **Ownership Q&A:** blocker is **FCRA + DPPA + CRA vendor contract**, not FMCSA — Pace can't relabel an employer-pull as driver-owned; the clean path is driver-initiated self-ordered pulls (`ordered_by_company_id IS NULL`) with agency sponsoring the fee (DEC-2026-06-002). **Next:** add isolation filter + decide backfill of 2 existing Pace-derived attestations. |
 | 2026-06-22 | **P3.4-A** ✅ first predicate proof on Preprod | Sam (local) | uncommitted | **Verified E2E:** contract `2b7032a6…54cdb`; tx `009847a5…3ea2cc`; attestation `167040f7…83bc` for candidate `0897bf34…`. Real `proveCleanMvr` predicate (32-slot witness, in-circuit window check). Fixes along the way: witness tuple ABI, Set.difference polyfill, supersede FK insert order. P3.3 anchor row superseded. Still 🟡 honesty (no in-circuit issuer sig). **Next:** negative prove test, replay/freshness, P3.4-B. |
@@ -1399,4 +1438,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-25 (**P3.4-B 🟢 Key soft-yes** — wants business case/vision before dev; cert model = our freshness model; monitoring proposed. P3.4-A ✅ predicate + 🔴 FCRA isolation gap open — step 7)
+**Last updated:** 2026-06-29 (P3.4-C prod-test ready — sponsored payment + employer PDF access for driver-owned pulls)

@@ -79,7 +79,7 @@ export function createMidnightAttestationService(
 
       const mvrCtx = await getMvrAttestationContext(supabase, input.candidateUserId)
       if (!mvrCtx) {
-        throw new AttestationError('No completed MVR on file — cannot build predicate witness')
+        throw new AttestationError('No driver-owned completed MVR on file — cannot build predicate witness')
       }
 
       const anchor = mvrCtx.completedAt

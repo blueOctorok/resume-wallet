@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { buildProjectedCareerCard, toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
+import {
+  fetchLatestDriverOwnedMvrData,
+  fetchLatestDriverOwnedPspData,
+  getDriverOwnedScreeningFlags,
+} from '@/lib/driver-owned-screening'
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import type { MvrData, PspData } from '@/types/career-card'
 
@@ -227,6 +232,34 @@ export async function GET(
       console.warn('[EMPLOYER TALENT] verifiedFacts load:', e)
     }
 
+    const driverOwnedFlags = await getDriverOwnedScreeningFlags(supabase, userId)
+
+    // Consenting company may view driver-owned pre-screen on the card (not broad-published).
+    if (latestScreeningBundle) {
+      const [driverOwnedMvr, driverOwnedPsp] = await Promise.all([
+        !companyMvrData ? fetchLatestDriverOwnedMvrData(supabase, userId) : Promise.resolve(null),
+        !companyPspData ? fetchLatestDriverOwnedPspData(supabase, userId) : Promise.resolve(null),
+      ])
+      if (driverOwnedMvr) {
+        if (!companyMvrData) {
+          card.employerCompanyMvr = { ...driverOwnedMvr, employerPaidScreening: false }
+        }
+        const idx = card.sections.findIndex((s) => s.blockType === 'driver-mvr')
+        if (idx >= 0) {
+          card.sections[idx] = { ...card.sections[idx], data: driverOwnedMvr, needsSetup: false }
+        }
+      }
+      if (driverOwnedPsp) {
+        if (!companyPspData) {
+          card.employerCompanyPsp = { ...driverOwnedPsp, employerPaidScreening: false }
+        }
+        const idx = card.sections.findIndex((s) => s.blockType === 'driver-psp')
+        if (idx >= 0) {
+          card.sections[idx] = { ...card.sections[idx], data: driverOwnedPsp, needsSetup: false }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       employerCompany: {
@@ -245,6 +278,10 @@ export async function GET(
       pspFmcsaConsentSignedAt: pspFmcsaConsent?.signed_at || null,
       pspFmcsaConsentFormData: pspFmcsaConsent?.form_data || null,
       screeningConsentBundleId: latestScreeningBundle?.id ?? null,
+      hasActiveDriverOwnedMvr: driverOwnedFlags.hasActiveDriverOwnedMvr,
+      hasActiveDriverOwnedPsp: driverOwnedFlags.hasActiveDriverOwnedPsp,
+      driverOwnedMvrStatus: driverOwnedFlags.driverOwnedMvrStatus,
+      driverOwnedPspStatus: driverOwnedFlags.driverOwnedPspStatus,
       completionFlags,
       verifiedFacts,
       completenessScore: careerRow.completeness_score ?? 0,

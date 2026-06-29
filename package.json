@@ -10,6 +10,7 @@
     "supabase:test": "node scripts/test-supabase.js",
     "backfill:auth-users": "npx tsx scripts/backfill-supabase-auth-users.ts",
     "inspect:collisions": "npx tsx scripts/inspect-auth-collisions.ts",
+    "seed:screening-request": "npx tsx scripts/seed-screening-consent-request.ts",
     "test:app": "vitest run",
     "midnight:preflight": "bash scripts/midnight-p3.2-preflight.sh",
     "midnight:proof-server:up": "docker compose -f midnight/docker-compose.yml up -d",

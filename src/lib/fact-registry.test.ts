@@ -80,6 +80,7 @@ function completedMvrCtx(overrides?: Partial<MvrAttestationContext>): MvrAttesta
     orderStatus: 'completed',
     completedAt: '2026-06-01T12:00:00.000Z',
     licenseClass: 'A - CDL COMBINATION',
+    isDriverOwned: true,
     ...overrides,
   }
 }

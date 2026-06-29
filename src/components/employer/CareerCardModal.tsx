@@ -53,6 +53,11 @@ interface EmployerTalentExtras {
   hasPspFmcsaConsent: boolean
   pspFmcsaConsentSignedAt: string | null
   pspFmcsaConsentFormData: Record<string, unknown> | null
+  /** Driver-owned portable screening — suppresses duplicate employer pre-screen order */
+  hasActiveDriverOwnedMvr?: boolean
+  hasActiveDriverOwnedPsp?: boolean
+  driverOwnedMvrStatus?: string | null
+  driverOwnedPspStatus?: string | null
 }
 
 interface CareerCardModalProps {
@@ -151,6 +156,10 @@ export default function CareerCardModal({
         hasPspFmcsaConsent: Boolean(data.hasPspFmcsaConsent),
         pspFmcsaConsentSignedAt: data.pspFmcsaConsentSignedAt ?? null,
         pspFmcsaConsentFormData: (data.pspFmcsaConsentFormData ?? null) as Record<string, unknown> | null,
+        hasActiveDriverOwnedMvr: Boolean(data.hasActiveDriverOwnedMvr),
+        hasActiveDriverOwnedPsp: Boolean(data.hasActiveDriverOwnedPsp),
+        driverOwnedMvrStatus: data.driverOwnedMvrStatus ?? null,
+        driverOwnedPspStatus: data.driverOwnedPspStatus ?? null,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
@@ -385,6 +394,11 @@ export default function CareerCardModal({
 
     const pending = getPendingRequestForBlock(blockId)
 
+    const isHireStage = employerExtras?.existingApplication?.status === 'hired'
+    const driverOwnedBlocksPreScreen =
+      (blockId === 'driver-mvr' && employerExtras?.hasActiveDriverOwnedMvr && !isHireStage) ||
+      (blockId === 'driver-psp' && employerExtras?.hasActiveDriverOwnedPsp && !isHireStage)
+
     const actionButton = (
       <ActionButton
         label={`Request ${def.requestLabel}`}
@@ -409,9 +423,20 @@ export default function CareerCardModal({
       const waitTitle = screeningBundleFlow
         ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
         : 'Waiting for candidate to sign disclosure'
+      const driverOwnedTitle = 'Candidate ordered their own portable MVR — results appear when processing completes'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
+          {driverOwnedBlocksPreScreen ? (
+            <span
+              title={driverOwnedTitle}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                isDarkTheme(theme) ? 'bg-teal-500/10 text-teal-300' : 'bg-teal-50 text-teal-800'
+              }`}
+            >
+              <CheckCircle className="w-3 h-3" /> Driver-ordered MVR
+            </span>
+          ) : (
           <button
             onClick={() => { setAccioOrderProduct('mvr'); setShowAccioOrderModal(true) }}
             disabled={!consentReady || mvrEmployerOrderDone}
@@ -434,6 +459,7 @@ export default function CareerCardModal({
               <><CreditCard className="w-3 h-3" /> Order MVR</>
             )}
           </button>
+          )}
         </div>
       )
     }
@@ -448,9 +474,20 @@ export default function CareerCardModal({
       const waitTitle = screeningBundleFlow
         ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
         : 'Waiting for candidate to sign FMCSA PSP disclosure'
+      const driverOwnedTitle = 'Candidate ordered their own portable PSP — results appear when processing completes'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
+          {driverOwnedBlocksPreScreen ? (
+            <span
+              title={driverOwnedTitle}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                isDarkTheme(theme) ? 'bg-amber-500/10 text-amber-300' : 'bg-amber-50 text-amber-900'
+              }`}
+            >
+              <CheckCircle className="w-3 h-3" /> Driver-ordered PSP
+            </span>
+          ) : (
           <button
             onClick={() => { setAccioOrderProduct('psp'); setShowAccioOrderModal(true) }}
             disabled={!consentReady || pspEmployerOrderDone}
@@ -473,6 +510,7 @@ export default function CareerCardModal({
               <><CreditCard className="w-3 h-3" /> Order PSP</>
             )}
           </button>
+          )}
         </div>
       )
     }

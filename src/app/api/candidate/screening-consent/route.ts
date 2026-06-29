@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { encryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { hasCdlisWrittenConsent } from '@/lib/screening-consent-bundle'
+import { isEmployerScreeningConsentRequest } from '@/lib/pending-employer-screening'
 import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
@@ -16,7 +17,8 @@ interface DeferredConsent {
  * POST /api/candidate/screening-consent
  *
  * Saves FCRA + FMCSA + CDLIS instruments and a screening_consent_bundles row in one shot.
- * Does not call Accio. Request must be block_request targeting driver-screening-consent.
+ * Does not call Accio. Request must be an employer screening-consent pipeline row
+ * (mvr_order, psp_order, or block_request → driver-screening-consent / driver-mvr / driver-psp).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -32,9 +34,11 @@ export async function POST(request: NextRequest) {
       deferredPspConsent?: DeferredConsent
       cdlisWrittenConsent?: Record<string, unknown>
       formData?: Record<string, string>
+      /** When true, caller notifies employer after driver-owned orders (P3.4-C bundle). */
+      skipEmployerNotify?: boolean
     }
 
-    const { requestId, companyName, deferredBgConsent, deferredPspConsent, cdlisWrittenConsent, formData } = body
+    const { requestId, companyName, deferredBgConsent, deferredPspConsent, cdlisWrittenConsent, formData, skipEmployerNotify } = body
 
     if (!requestId || !deferredBgConsent || !deferredPspConsent || !formData) {
       return NextResponse.json(
@@ -68,9 +72,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    const isScreeningConsent =
-      candidateRequest.request_type === 'block_request' &&
-      candidateRequest.target_block_type === 'driver-screening-consent'
+    const isScreeningConsent = isEmployerScreeningConsentRequest({
+      request_type: candidateRequest.request_type as string | null,
+      target_block_type: candidateRequest.target_block_type as string | null,
+    })
 
     if (!isScreeningConsent) {
       return NextResponse.json({ error: 'This endpoint only completes screening consent bundle requests' }, {
@@ -191,14 +196,18 @@ export async function POST(request: NextRequest) {
       console.error('[SCREENING CONSENT] outreach sync failed:', err)
     })
 
-    void notifyEmployerCandidateActionComplete(supabase, {
-      kind: 'screening_consent',
-      employerUserId: candidateRequest.requested_by_user_id as string | null,
-      companyId: candidateRequest.company_id as string,
-      companyName: resolvedCompanyName,
-      candidateUserId: userId,
-      notificationData: { requestId, bundleId: bundleRow.id, kind: 'screening_consent_bundle' },
-    })
+    if (!skipEmployerNotify) {
+      void notifyEmployerCandidateActionComplete(supabase, {
+        kind: 'screening_consent',
+        employerUserId: candidateRequest.requested_by_user_id as string | null,
+        companyId: candidateRequest.company_id as string,
+        companyName: resolvedCompanyName,
+        candidateUserId: userId,
+        notificationData: { requestId, bundleId: bundleRow.id, kind: 'screening_consent_bundle' },
+      }).catch((err) => {
+        console.error('[SCREENING CONSENT] employer notify failed:', err)
+      })
+    }
 
     return NextResponse.json({
       success: true,

@@ -163,7 +163,7 @@ export default function PspSection({
           {isEmployerPendingNoOrder ? (
             <>
               <span className='font-medium'>{pending?.companyName}</span> requested your PSP + MVR screening. Continue
-              to complete the consent forms — the employer is paying for this bundle.
+              to complete the consent forms — then you order your own portable MVR and PSP when you submit.
             </>
           ) : (
             <>

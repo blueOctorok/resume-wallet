@@ -151,7 +151,7 @@ function defaultNotificationCopy(
     case 'screening_consent':
       return {
         title: 'Screening consent complete',
-        body: `${candidateName} completed the full screening consent package for ${companyName}. You can order MVR and PSP reports in Outreach.`,
+        body: `${candidateName} completed the screening consent package for ${companyName}.`,
       }
     case 'bgcheck_consent':
       return {

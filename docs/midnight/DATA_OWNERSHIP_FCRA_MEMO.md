@@ -102,6 +102,28 @@ Two **independent** axes — a proof can be perfect on one and fail the other:
 
 ---
 
+## 6a. Consent design — how the driver "owns" it in the UI (what changes, what's locked)
+
+The deciding action is **the driver clicks "order" and signs an authorization that names the driver — not the company — as the consumer of record.** In product terms this is a checkbox the driver must check (which places the order) before the consent forms can be submitted. But the checkbox is only a *signal*; the **wording** is what makes it legally driver-owned. Three concrete constraints came out of reviewing the live forms:
+
+**1. Today's forms authorize the *employer* to pull.** The MVR/background form literally reads *"I authorize {company} to order my background report,"* and the PSP form reads *"I authorize {employer} to access the FMCSA PSP system."* A checkbox saying "this is yours" next to body text that says "the company is pulling this" is contradictory. So the **MVR/background authorization wording must be reworked** to reflect driver-as-consumer (this form is editable).
+
+**2. The PSP form is FMCSA-locked and CANNOT be edited.** Federal NOTICE on the form: the language *"must be used in whole, exactly as provided… must exist as one stand-alone document… may NOT be included with other consent forms or any other language."* So we **cannot** add ownership text or a checkbox inside the PSP form. The driver-ownership framing must live in a **separate** step that wraps around it.
+
+**3. The fix is to ADD a form, not break the locked one.** Net design:
+
+| Piece | Action | Editable? |
+|---|---|---|
+| New **driver-ownership acknowledgment** (plain-language statement + mandatory checkbox + "Learn more" modal) | **Add** as its own step | Yes — it's ours |
+| MVR / background disclosure authorization wording | **Edit** to driver-as-consumer | Yes |
+| FMCSA PSP form | **Leave verbatim**, wrap around it | No — federal mandate |
+
+**UI rules:** the core consent sentence + checkbox must be **clear and conspicuous** (visible on the page, not hidden behind the modal — the modal is the optional deep-dive). The acknowledgment is a standalone step, never interleaved into the FMCSA document. Wired to the existing `ownership: 'driver'` order param.
+
+**Counsel owns the exact wording** of (a) the new acknowledgment and (b) the reworked MVR authorization — that wording is the load-bearing element that makes the driver the consumer of record. Engineering (new step + checkbox gate) is not blocked.
+
+---
+
 ## 7. Recommendation
 
 Pursue **Model A (driver-initiated, agency-funded), with Pace as the operational hub** (the §4 hybrid). It is the only model that is simultaneously portable (the moat), low CRA-risk, and aligned with our documented strategy. Model B (leasing) is a legitimate fallback business but smaller and locked-in. Model C is off the table.

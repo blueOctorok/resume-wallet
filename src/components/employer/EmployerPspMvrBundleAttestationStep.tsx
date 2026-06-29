@@ -5,6 +5,8 @@ import { FileText } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { isDarkTheme } from '@/lib/theme-storage'
 import Button from '@/components/ui/Button'
+import DriverScreeningOwnershipAcknowledgment from '@/components/screening/DriverScreeningOwnershipAcknowledgment'
+import { saveConsentAndPlaceDriverOwnedOrders } from '@/lib/place-driver-owned-screening-orders-client'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import {
   CDLIS_DRIVER_SECTION_HEADING,
@@ -55,8 +57,9 @@ export interface EmployerPspMvrBundleAttestationStepProps {
   /**
    * `accio-bundle` (default): legacy POST bg + psp + PATCH CDLIS + fulfill-screening.
    * `consent-bundle-only`: one POST to /api/candidate/screening-consent — no vendor order.
+   * `consent-then-driver-orders`: save consent bundle, then driver-owned MVR + PSP (P3.4-C).
    */
-  submitBehavior?: 'accio-bundle' | 'consent-bundle-only'
+  submitBehavior?: 'accio-bundle' | 'consent-bundle-only' | 'consent-then-driver-orders'
 }
 
 /**
@@ -90,6 +93,9 @@ export default function EmployerPspMvrBundleAttestationStep({
   const [ssn, setSsn] = useState(() => normalizeSsnDigits(merged.ssn ?? ''))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [driverOwnershipAcknowledged, setDriverOwnershipAcknowledged] = useState(false)
+
+  const usesDriverOwnedFlow = submitBehavior === 'consent-then-driver-orders'
 
   const cardClass = isDark
     ? 'rounded-2xl border border-gray-700 bg-gray-900/80 shadow-lg'
@@ -120,11 +126,18 @@ export default function EmployerPspMvrBundleAttestationStep({
       setError('Print first name and print last name are required.')
       return
     }
+    if (usesDriverOwnedFlow && !driverOwnershipAcknowledged) {
+      setError('Check the box confirming you understand you are ordering these reports for your Storm file.')
+      return
+    }
+
     if (!isValidSsn(normalizeSsnDigits(ssn))) {
       setError(
         submitBehavior === 'consent-bundle-only'
           ? 'Enter your full 9-digit Social Security Number so your identity can be verified when your employer places a screening order.'
-          : 'Enter your full 9-digit Social Security Number so the vendor can run the PSP + MVR bundle.',
+          : usesDriverOwnedFlow
+            ? 'Enter your full 9-digit Social Security Number so the vendor can run your MVR and PSP orders.'
+            : 'Enter your full 9-digit Social Security Number so the vendor can run the PSP + MVR bundle.',
       )
       return
     }
@@ -149,47 +162,70 @@ export default function EmployerPspMvrBundleAttestationStep({
 
     setSubmitting(true)
     try {
-      if (submitBehavior === 'consent-bundle-only') {
-        const cdlisPayload = {
-          disclosureRecipientName: companyName.trim(),
-          consentDateIso: consentDateIso.trim(),
-          typedSignature: typedSignature.trim(),
-          printFirstName: printFirstName.trim(),
-          printLastName: printLastName.trim(),
-          submittedAtUtc: new Date().toISOString(),
+      const cdlisPayload = {
+        disclosureRecipientName: companyName.trim(),
+        consentDateIso: consentDateIso.trim(),
+        typedSignature: typedSignature.trim(),
+        printFirstName: printFirstName.trim(),
+        printLastName: printLastName.trim(),
+        submittedAtUtc: new Date().toISOString(),
+      }
+      const fullDigits = normalizeSsnDigits(ssn)
+      const consentFormData = {
+        firstName: firstName ?? '',
+        lastName: lastName ?? '',
+        middleName: merged.middleName?.trim() || '',
+        dob: dob ?? '',
+        dateOfBirth: dob ?? '',
+        ssn: fullDigits,
+        dlNumber: dlNumber ?? '',
+        dlState: dlState ?? '',
+        address: address ?? '',
+        city: city ?? '',
+        state: state ?? '',
+        zip: zip ?? '',
+        email: email ?? '',
+        phone: merged.phone?.trim() || '',
+      }
+      const orderFormData = {
+        firstName: firstName ?? '',
+        lastName: lastName ?? '',
+        middleName: merged.middleName?.trim() || '',
+        dob: dob ?? '',
+        ssn: fullDigits,
+        dlNumber: dlNumber ?? '',
+        dlState: dlState ?? '',
+        address: address ?? '',
+        city: city ?? '',
+        state: state ?? '',
+        zip: zip ?? '',
+        email: email || undefined,
+        phone: merged.phone?.trim() || '',
+      }
+
+      if (submitBehavior === 'consent-bundle-only' || usesDriverOwnedFlow) {
+        const consentPayload = {
+          requestId,
+          companyName: companyName.trim(),
+          deferredBgConsent,
+          deferredPspConsent,
+          cdlisWrittenConsent: cdlisPayload,
+          formData: consentFormData,
+          skipEmployerNotify: usesDriverOwnedFlow,
         }
-        const fullDigits = normalizeSsnDigits(ssn)
-        const formData = {
-          firstName: firstName ?? '',
-          lastName: lastName ?? '',
-          middleName: merged.middleName?.trim() || '',
-          dob: dob ?? '',
-          dateOfBirth: dob ?? '',
-          ssn: fullDigits,
-          dlNumber: dlNumber ?? '',
-          dlState: dlState ?? '',
-          address: address ?? '',
-          city: city ?? '',
-          state: state ?? '',
-          zip: zip ?? '',
-          email: email ?? '',
-          phone: merged.phone?.trim() || '',
-        }
-        const res = await fetch('/api/candidate/screening-consent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            requestId,
-            companyName: companyName.trim(),
-            deferredBgConsent,
-            deferredPspConsent,
-            cdlisWrittenConsent: cdlisPayload,
-            formData,
-          }),
-        })
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}))
-          throw new Error(typeof d.error === 'string' ? d.error : 'Failed to save screening consent')
+
+        if (usesDriverOwnedFlow) {
+          await saveConsentAndPlaceDriverOwnedOrders(consentPayload, orderFormData)
+        } else {
+          const res = await fetch('/api/candidate/screening-consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(consentPayload),
+          })
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}))
+            throw new Error(typeof d.error === 'string' ? d.error : 'Failed to save screening consent')
+          }
         }
         await onOrderComplete()
         return
@@ -230,14 +266,6 @@ export default function EmployerPspMvrBundleAttestationStep({
       const pspConsentId = pspData.consentId as string
 
       // ── 3. PATCH CDLIS written consent onto psp_consents row ───────────
-      const cdlisPayload = {
-        disclosureRecipientName: companyName.trim(),
-        consentDateIso: consentDateIso.trim(),
-        typedSignature: typedSignature.trim(),
-        printFirstName: printFirstName.trim(),
-        printLastName: printLastName.trim(),
-        submittedAtUtc: new Date().toISOString(),
-      }
       const patchRes = await fetch(`/api/psp/consent/${pspConsentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json'},
@@ -369,12 +397,23 @@ export default function EmployerPspMvrBundleAttestationStep({
       </div>
 
       <div className={`border-t pt-6 space-y-5 ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        {usesDriverOwnedFlow && (
+          <DriverScreeningOwnershipAcknowledgment
+            companyName={companyName}
+            checked={driverOwnershipAcknowledged}
+            onCheckedChange={setDriverOwnershipAcknowledged}
+            disabled={submitting}
+          />
+        )}
+
         <p className={`text-sm ${textSecondary}`}>
           The CDLIS instrument above does not ask for your SSN. The line below is for{' '}
           <strong className={textPrimary}>Key Background Screening / Accio</strong> only —{' '}
           {submitBehavior === 'consent-bundle-only'
             ? 'so your employer can run MVR or PSP later without asking you again. It is encrypted in Storm’s database.'
-            : 'so the vendor can match your identity when ordering PSP + MVR.'}
+            : usesDriverOwnedFlow
+              ? 'so the vendor can match your identity when you order your MVR and PSP. It is encrypted in Storm’s database.'
+              : 'so the vendor can match your identity when ordering PSP + MVR.'}
         </p>
 
         <div>
@@ -401,8 +440,18 @@ export default function EmployerPspMvrBundleAttestationStep({
           <Button type="button" variant="secondary" onClick={onPrevious} disabled={submitting}>
             Previous
           </Button>
-          <Button type="button" variant="primary" onClick={() => void handleSubmit()} disabled={submitting} isLoading={submitting}>
-            {submitBehavior === 'consent-bundle-only' ? 'Save screening consent' : 'Submit PSP + MVR order'}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => void handleSubmit()}
+            disabled={submitting || (usesDriverOwnedFlow && !driverOwnershipAcknowledged)}
+            isLoading={submitting}
+          >
+            {submitBehavior === 'consent-bundle-only'
+              ? 'Save screening consent'
+              : usesDriverOwnedFlow
+                ? 'Submit consent & order MVR + PSP'
+                : 'Submit PSP + MVR order'}
           </Button>
         </div>
       </div>

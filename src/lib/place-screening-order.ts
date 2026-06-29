@@ -12,6 +12,10 @@ import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import {
+  resolveScreeningOrderOwnershipFields,
+  type ScreeningOrderOwnership,
+} from '@/lib/screening-order-ownership'
 
 export type PlaceScreeningOrderSuccess =
   | { type: 'mvr'; orderId: string; orderNumber: string }
@@ -35,6 +39,12 @@ export interface PlaceScreeningOrderInput {
   paymentTxHash?: string | null
   /** Skip 24h duplicate window (e.g. retrying a failed order) */
   skipDuplicateCheck?: boolean
+  /**
+   * Who is the consumer of record on the Accio pull (DEC-2026-06-005).
+   * `driver` = portable / shareable (ordered_by_company_id NULL).
+   * Default `employer` for employer-initiated screening routes.
+   */
+  ownership?: ScreeningOrderOwnership
 }
 
 /**
@@ -46,6 +56,11 @@ export async function placeScreeningOrder(
   input: PlaceScreeningOrderInput,
 ): Promise<PlaceScreeningOrderResult> {
   const { driverUserId, driverEmail, companyId, employerUserId, type, formData } = input
+  const ownership = input.ownership ?? 'employer'
+  const ownershipFields = resolveScreeningOrderOwnershipFields(ownership, {
+    companyId,
+    employerUserId,
+  })
   const { firstName, lastName, dob, ssn, dlNumber, dlState, address, city, state, zip } = formData as Record<
     string,
     string
@@ -278,9 +293,9 @@ export async function placeScreeningOrder(
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       expiresAtIso: expiresAt,
-      orderedByCompanyId: companyId,
-      orderedByUserId: employerUserId,
-      orderedByEmployer: true,
+      orderedByCompanyId: ownershipFields.ordered_by_company_id,
+      orderedByUserId: ownershipFields.ordered_by_user_id,
+      orderedByEmployer: ownershipFields.ordered_by_employer,
       paymentId: input.paymentId ?? null,
       paymentTxHash: input.paymentTxHash ?? null,
     })
@@ -322,9 +337,9 @@ export async function placeScreeningOrder(
     dl_state: n.dlState,
     status: 'pending',
     order_xml: orderXml,
-    ordered_by_company_id: companyId,
-    ordered_by_user_id: employerUserId,
-    ordered_by_employer: true,
+    ordered_by_company_id: ownershipFields.ordered_by_company_id,
+    ordered_by_user_id: ownershipFields.ordered_by_user_id,
+    ordered_by_employer: ownershipFields.ordered_by_employer,
     expires_at: expiresAt,
   }
 

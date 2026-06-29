@@ -197,7 +197,9 @@ export async function processMvrAccioWebhookCompletion(
     })
     .eq('id', mvrOrder.id)
 
-  if (mvrOrder.driver_user_id) {
+  if (mvrOrder.driver_user_id && !mvrOrder.ordered_by_company_id) {
+    // Only driver-owned (self-ordered) MVRs populate the shared block cache /
+    // career-card surface. Company-private pulls stay in mvr_orders only (031).
     void saveMvrData(supabase, mvrOrder.driver_user_id, {
       order_id: mvrOrder.id,
       result_id: mvrResult.id,

@@ -22,6 +22,7 @@ import type {
   MvrViolation,
   MvrAccident,
 } from '@/types/driver-profile'
+import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
 import type { ParsedResumeExtraction } from '@/types/resume-extraction'
 
 // ── Row types (DB shape) ────────────────────────────────────────────────────
@@ -218,37 +219,112 @@ export interface MvrAttestationContext {
   orderStatus: string
   completedAt: string | null
   licenseClass: string | null
+  /** True when the source pull is driver-owned (ordered_by_company_id IS NULL). */
+  isDriverOwned: true
+}
+
+interface DriverOwnedMvrOrderRow {
+  id: string
+  status: string
+  accio_order_number: string
+  completed_at: string | null
+  expires_at: string | null
+  ordered_at: string | null
+  ordered_by_company_id: string | null
+}
+
+async function getLatestDriverOwnedMvrOrder(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<DriverOwnedMvrOrderRow | null> {
+  const { data: order } = await supabase
+    .from('mvr_orders')
+    .select('id, status, accio_order_number, completed_at, expires_at, ordered_at, ordered_by_company_id')
+    .eq('driver_user_id', userId)
+    .is('ordered_by_company_id', null)
+    .eq('status', 'completed')
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!order?.accio_order_number || !isDriverOwnedScreeningOrder(order)) {
+    return null
+  }
+
+  return order as DriverOwnedMvrOrderRow
+}
+
+function attestationMvrRowFromOrder(
+  userId: string,
+  order: DriverOwnedMvrOrderRow,
+  blockMvr: MvrRow | null,
+  result: {
+    id: string
+    license_class: string | null
+    violations: MvrViolation[] | null
+    accidents: MvrAccident[] | null
+    total_points?: number | null
+    violation_count?: number | null
+    license_status?: string | null
+  } | null,
+): MvrRow {
+  if (blockMvr?.order_id === order.id) {
+    return blockMvr
+  }
+
+  const violations = (result?.violations as MvrViolation[] | null) ?? []
+  const accidents = (result?.accidents as MvrAccident[] | null) ?? []
+  const stamp = order.completed_at ?? order.ordered_at ?? new Date().toISOString()
+
+  return {
+    id: blockMvr?.id ?? '',
+    user_id: userId,
+    order_id: order.id,
+    result_id: result?.id ?? null,
+    expires_at: order.expires_at,
+    license_status: result?.license_status ?? null,
+    total_points: result?.total_points ?? violations.length,
+    violation_count: result?.violation_count ?? violations.length,
+    violations,
+    accidents,
+    last_ordered_at: order.ordered_at,
+    last_updated: stamp,
+    created_at: blockMvr?.created_at ?? stamp,
+    updated_at: stamp,
+  }
 }
 
 export async function getMvrAttestationContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<MvrAttestationContext | null> {
-  const mvr = await getMvrData(supabase, userId)
-  if (!mvr?.order_id) return null
+  const order = await getLatestDriverOwnedMvrOrder(supabase, userId)
+  if (!order) return null
 
-  const { data: order } = await supabase
-    .from('mvr_orders')
-    .select('id, status, accio_order_number, completed_at')
-    .eq('id', mvr.order_id)
-    .eq('driver_user_id', userId)
-    .maybeSingle()
-
-  if (!order?.accio_order_number) return null
+  const blockMvr = await getMvrData(supabase, userId)
 
   const { data: result } = await supabase
     .from('mvr_results')
-    .select('license_class')
+    .select('id, license_class, violations, accidents, total_points, violation_count, license_status')
     .eq('mvr_order_id', order.id)
     .maybeSingle()
 
   return {
-    mvr,
+    mvr: attestationMvrRowFromOrder(userId, order, blockMvr, result as {
+      id: string
+      license_class: string | null
+      violations: MvrViolation[] | null
+      accidents: MvrAccident[] | null
+      total_points?: number | null
+      violation_count?: number | null
+      license_status?: string | null
+    } | null),
     orderId: order.id,
     accioOrderNumber: order.accio_order_number,
     orderStatus: order.status,
     completedAt: order.completed_at,
     licenseClass: result?.license_class ?? null,
+    isDriverOwned: true,
   }
 }
 

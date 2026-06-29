@@ -543,16 +543,17 @@ async function fetchPspData(
   userId: string,
   contactMode: ProjectedCareerCardContactMode,
 ): Promise<PspData | null> {
-  // Self hub: candidate must see employer-requested PSP/MVR in progress (fulfill-screening).
-  // Public share + employer talent card: omit company-scoped rows from the shared projection
-  // (employer view uses `employerCompanyPsp` for the viewer's company only).
+  // Self hub: candidate sees all orders (employer-paid + driver-owned).
+  // Public share + employer talent card: driver-owned screening is NOT auto-published —
+  // disclosure-controlled (P3.4-C). Consenting employers get driver-owned via talent API.
+  if (contactMode === 'public' || contactMode === 'employer') {
+    return null
+  }
+
   let ordersQuery = supabase
     .from('psp_orders')
     .select('id, status, result_outcome, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
-  if (contactMode === 'public' || contactMode === 'employer') {
-    ordersQuery = ordersQuery.is('ordered_by_company_id', null)
-  }
   const { data: orders } = await ordersQuery.order('created_at', { ascending: false }).limit(8)
 
   if (!orders?.length) return null
@@ -589,13 +590,15 @@ async function fetchMvrData(
   userId: string,
   contactMode: ProjectedCareerCardContactMode,
 ): Promise<MvrData | null> {
+  // Same disclosure gate as fetchPspData — see P3.4-C.
+  if (contactMode === 'public' || contactMode === 'employer') {
+    return null
+  }
+
   let ordersQuery = supabase
     .from('mvr_orders')
     .select('id, status, result_outcome, dl_state, created_at, completed_at, ordered_by_company_id')
     .eq('driver_user_id', userId)
-  if (contactMode === 'public' || contactMode === 'employer') {
-    ordersQuery = ordersQuery.is('ordered_by_company_id', null)
-  }
   const { data: orders } = await ordersQuery.order('created_at', { ascending: false }).limit(8)
 
   if (!orders?.length) return null

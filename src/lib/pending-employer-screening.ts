@@ -23,14 +23,21 @@ export function isPendingScreeningStatus(status: string | null | undefined): boo
 }
 
 /** Any employer-driven screening consent pipeline (MVR ask, PSP ask, or explicit consent block). */
-export function isPendingEmployerScreeningConsentRow(r: CandidateRequestScreeningRow): boolean {
-  if (!isPendingScreeningStatus(r.status)) return false
-  if (r.request_type === 'mvr_order' || r.request_type === 'psp_order') return true
-  if (r.request_type !== 'block_request') return false
-  const t = r.target_block_type
+export function isEmployerScreeningConsentRequest(row: {
+  request_type: string | null
+  target_block_type: string | null
+}): boolean {
+  if (row.request_type === 'mvr_order' || row.request_type === 'psp_order') return true
+  if (row.request_type !== 'block_request') return false
+  const t = row.target_block_type
   return (
     t === 'driver-screening-consent' || t === 'driver-mvr' || t === 'driver-psp'
   )
+}
+
+export function isPendingEmployerScreeningConsentRow(r: CandidateRequestScreeningRow): boolean {
+  if (!isPendingScreeningStatus(r.status)) return false
+  return isEmployerScreeningConsentRequest(r)
 }
 
 export type PickedPendingEmployerScreening = {

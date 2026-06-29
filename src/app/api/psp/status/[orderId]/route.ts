@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { fetchEmployerAccessiblePspOrder } from '@/lib/employer-screening-order-access'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 const PSP_ORDER_SELECT = `
@@ -55,7 +56,7 @@ function jsonFromPspOrder(order: Record<string, unknown>) {
 /**
  * GET /api/psp/status/[orderId]?sessionUserId=...
  *
- * Optional **`employerCandidateUserId`**: employer wallet loads a company-paid order for that candidate.
+ * Optional **`employerCandidateUserId`**: company-paid OR consenting-company driver-owned.
  */
 export async function GET(
   request: NextRequest,
@@ -82,13 +83,11 @@ export async function GET(
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
 
-      const { data: order, error: orderError } = await supabase
-        .from('psp_orders')
-        .select(PSP_ORDER_SELECT)
-        .eq('id', orderId)
-        .eq('driver_user_id', employerCandidateUserId)
-        .eq('ordered_by_company_id', ctx.companyId)
-        .single()
+      const { data: order, error: orderError } = await fetchEmployerAccessiblePspOrder(
+        supabase,
+        PSP_ORDER_SELECT,
+        { companyId: ctx.companyId, candidateUserId: employerCandidateUserId, orderId },
+      )
 
       if (orderError || !order) {
         return NextResponse.json({ error: 'PSP order not found' }, { status: 404 })

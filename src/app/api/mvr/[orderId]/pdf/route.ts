@@ -5,8 +5,8 @@
  *
  * Auth mirrors `/api/mvr/status/[orderId]`:
  *   - Candidate: wallet must own `mvr_orders.driver_user_id`
- *   - Employer:  pass `employerCandidateUserId`; wallet must belong to a user
- *                in the same company that paid (`ordered_by_company_id`).
+ *   - Employer:  pass `employerCandidateUserId`; company-paid OR consenting-company
+ *                driver-owned pre-screen (P3.4-C).
  *
  * Force Node runtime — @react-pdf/renderer uses Node-only APIs (Buffer, fs,
  * canvas font cache) and won't run on the Edge runtime.
@@ -18,6 +18,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { fetchEmployerAccessibleMvrOrder } from '@/lib/employer-screening-order-access'
 import { parseAccioMvrResult } from '@/lib/accio-xml-parser'
 import { MvrReportPdf } from '@/lib/pdf/MvrReportPdf'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
@@ -68,13 +69,11 @@ export async function GET(
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
 
-      const { data, error } = await supabase
-        .from('mvr_orders')
-        .select('id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at')
-        .eq('id', orderId)
-        .eq('driver_user_id', employerCandidateUserId)
-        .eq('ordered_by_company_id', ctx.companyId)
-        .single()
+      const { data, error } = await fetchEmployerAccessibleMvrOrder(
+        supabase,
+        'id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at',
+        { companyId: ctx.companyId, candidateUserId: employerCandidateUserId, orderId },
+      )
 
       if (error || !data) {
         return NextResponse.json({ error: 'MVR order not found' }, { status: 404 })

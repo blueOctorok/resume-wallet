@@ -111,7 +111,9 @@ export function normalizeAccioCdlClass(licenseClass: string | null): string | nu
 async function proveMvrClean36Months(ctx: ProveContext): Promise<FactResult> {
   const mvrCtx = await getMvrAttestationContext(ctx.supabase, ctx.candidateUserId)
   if (!mvrCtx) {
-    throw new AttestationError('No completed MVR on file — cannot attest clean driving record')
+    throw new AttestationError(
+      'No driver-owned completed MVR on file — cannot attest clean driving record',
+    )
   }
   requireCompletedMvr(mvrCtx)
 

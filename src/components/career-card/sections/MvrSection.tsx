@@ -177,9 +177,9 @@ export default function MvrSection({
         <div className='space-y-3'>
           {pending && isEmployerPendingNoOrder ? (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              <span className='font-medium'>{pending.companyName}</span> asked you to complete employer screening consent
+              <span className='font-medium'>{pending.companyName}</span> asked you to complete screening consent
               (background check, FMCSA PSP, and CDLIS written consent). Open the Screening consent block on your hub to
-              finish — your employer places MVR/PSP orders after that.
+              finish — you&apos;ll order your own portable MVR and PSP when you submit.
             </p>
           ) : (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>

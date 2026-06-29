@@ -4,6 +4,56 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Build — P3.4-C driver-initiated MVR/PSP ordering flow** (2026-06-29)
+
+Drivers now **click to order** their own portable MVR + PSP after completing the three-step consent package (DEC-2026-06-005). Ownership follows who submits — `ordered_by_company_id IS NULL` on both orders.
+
+| File | Change |
+|---|---|
+| `src/components/screening/DriverScreeningOwnershipAcknowledgment.tsx` | **New** — mandatory checkbox + Learn more modal (placeholder copy pending counsel) |
+| `src/lib/place-driver-owned-screening-orders-client.ts` | **New** — save consent bundle, then fulfill-screening MVR + PSP |
+| `src/lib/driver-owned-screening.ts` | **New** — active-order flags, consenting-company fetch helpers |
+| `src/components/employer/EmployerPspMvrBundleAttestationStep.tsx` | `consent-then-driver-orders` submitBehavior + acknowledgment gate |
+| `src/components/blocks/ScreeningConsentBlock.tsx` | Switched to driver-owned order flow + updated success copy |
+| `src/components/PspOrderForm.tsx` | Same (consent-bundle employer wizard path) |
+| `src/lib/projected-career-card.ts` | Driver-owned MVR/PSP no longer auto-published to employer/public projection |
+| `src/app/api/employer/talent/[userId]/route.ts` | Consenting company sees driver-owned results; exposes `hasActiveDriverOwned*` flags |
+| `src/app/api/employer/screenings/order/route.ts` | Blocks duplicate pre-screen when driver-owned exists (`purpose=hire` escape hatch) |
+| `src/components/employer/CareerCardModal.tsx` | Hides Order MVR/PSP at pre-screen when driver already ordered |
+
+**Still open (P3.4-C):** decouple funding from ownership (Pace sponsors fee), backfill Pace-derived test attestations, counsel-gated consent wording.
+
+---
+
+## **Build — P3.4-C prod-ready: sponsored payment + employer report access** (2026-06-29)
+
+Finishes the pieces needed to deploy and test with real Pace test accounts in production.
+
+| File | Change |
+|---|---|
+| `src/lib/employer-screening-order-access.ts` | **New** — consenting employer can view driver-owned MVR/PSP (not just company-paid) |
+| `src/app/api/mvr/status`, `mvr/pdf`, `psp/status`, `psp/pdf` | Use shared access helper |
+| `src/app/api/candidate/fulfill-screening/route.ts` | Agency-sponsored waived payment on driver-owned orders; employer notify after PSP |
+| `src/app/api/candidate/screening-consent/route.ts` | `skipEmployerNotify` when bundle flow notifies after orders |
+| `src/app/api/employer/talent/[userId]/route.ts` | Driver-owned on `employerCompanyMvr/Psp` panel for View full report |
+| `src/components/career-card/ProjectedCareerCard.tsx` | "Candidate-owned (shared via consent)" panel titles |
+| `docs/TEST_DRIVER_OWNED_SCREENING.md` | Production test walkthrough |
+
+**Still open:** attestation backfill (2 Pace test rows), counsel-gated consent wording.
+
+---
+
+Employer talent requests often use `request_type: mvr_order` / `psp_order` with `target_block_type: driver-screening-consent`. The consent API only accepted `block_request`, so submit failed after the UI changes. Shared matcher `isEmployerScreeningConsentRequest` now aligns API validation with the employer request pipeline.
+
+| File | Change |
+|---|---|
+| `src/lib/pending-employer-screening.ts` | Exported `isEmployerScreeningConsentRequest` |
+| `src/app/api/candidate/screening-consent/route.ts` | Uses shared matcher |
+| `scripts/seed-screening-consent-request.ts` | **New** dev seed for pending request |
+| `docs/TEST_DRIVER_OWNED_SCREENING.md` | **New** full E2E walkthrough |
+
+---
+
 ## **Fix — MVR violation over-count: route Accio `violation_type` to violations vs suspensions vs admin info** (2026-06-25)
 
 **Root cause:** Accio nests true violations, suspensions, FR filings, and temp-license admin notices in the same `<mvr_violation>` tag with different `violation_type` values. Storm dumped every block into `violations[]`, so Shane Edwards IL showed **9 violations / 0 suspensions** while Key Background showed **4 violations / 2 suspensions / 3 additional driver info**.
@@ -16,6 +66,45 @@ This file tracks major modifications made to the ResumeWallet codebase.
 | `src/lib/accio-xml-parser.test.ts` | IL Edwards regression fixture (4 / 2 / 3 split) |
 
 **Post-deploy:** Run admin reparse so stored `parsed_data` / `violation_count` refresh: `POST /api/admin/reparse-screening-results` with `{ "type": "mvr" }`.
+
+---
+
+## **Docs — P3.4-C driver-ownership flow scoped in EXECUTION_CHECKLIST** (2026-06-25)
+
+Added a build-ready **P3.4-C — Driver-initiated ordering + consent** section so the driver-owned model can be built from the checklist. Buildable-now mechanics: driver-ownership acknowledgment step (statement + mandatory checkbox + "Learn more" modal, standalone from the FMCSA doc), suppress the duplicate employer pre-screen order while keeping the hire-time DQ-file pull, decouple funding from ownership (Pace sponsors a driver-owned order), gate broad career-card exposure behind driver disclosure prefs, and backfill the two Pace-derived test attestations. Counsel-gated items are **wording only** (MVR auth reword; standalone/mandatory questions); the FMCSA PSP form stays verbatim. P3.5 pre-conditions updated to require the P3.4-C gate.
+
+| File | Change |
+|---|---|
+| `docs/midnight/EXECUTION_CHECKLIST.md` | New **P3.4-C** section + P3.5 pre-condition + handoff row + "Last updated" |
+
+---
+
+## **Docs — Consent design for driver-owned screening (FCRA memo §6a)** (2026-06-25)
+
+Captured how the driver-ownership flow works in the consent UI after reviewing the live forms. Key findings: (1) today's MVR + PSP forms authorize the **employer** to pull ("I authorize {company} to order…"); (2) the **FMCSA PSP form is federally locked** — must stay verbatim + standalone, so ownership text/checkbox **cannot** go inside it; (3) the fix is to **add** a separate driver-ownership acknowledgment step (statement + mandatory checkbox + "Learn more" modal) and **edit** the MVR/background wording — never touch the PSP form. Core consent must be clear-and-conspicuous (not hidden behind the modal). Wording is counsel's call; engineering is unblocked.
+
+| File | Change |
+|---|---|
+| `docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md` | New **§6a Consent design** — what changes, what's FMCSA-locked, the add-a-form pattern |
+
+---
+
+## **Build — driver-owned screening ownership wired (P3.4-A step 7 + fulfill-screening)** (2026-06-25)
+
+Engineering proceeds on **driver-initiated ownership** (DEC-2026-06-005 accepted for build; counsel review still gates production claims). Pace-as-owner rejected.
+
+| File | Change |
+|---|---|
+| `src/lib/screening-order-ownership.ts` | **New** — `ScreeningOrderOwnership`, `isDriverOwnedScreeningOrder`, `resolveScreeningOrderOwnershipFields` |
+| `src/lib/block-data.ts` | `getMvrAttestationContext` requires latest **driver-owned** completed MVR; loads violations from `mvr_results` when block cache is stale |
+| `src/lib/place-screening-order.ts` | `ownership: 'driver' \| 'employer'` on order placement (default employer) |
+| `src/app/api/candidate/fulfill-screening/route.ts` | Candidate fulfill → `ownership: 'driver'` (driver clicks order) |
+| `src/lib/process-mvr-accio-webhook.ts` | Only sync `block_driver_mvr` for driver-owned orders (matches PSP webhook) |
+| `src/lib/fact-registry.ts`, `midnight-attestation-service.ts` | Clearer errors when no driver-owned MVR |
+| `docs/midnight/DECISION_LOG.md` | DEC-2026-06-005 → **Accepted for build** (counsel pending) |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4-A step 7 ✅ |
+
+**Still open:** backfill/supersede two Pace-derived test attestations; replay/freshness (step 4); consent copy review with counsel.
 
 ---
 

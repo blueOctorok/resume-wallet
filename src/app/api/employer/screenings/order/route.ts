@@ -9,6 +9,7 @@ import {
 } from '@/lib/employer-company-access'
 import { getLatestScreeningConsentBundle } from '@/lib/screening-consent-bundle'
 import { decryptScreeningSsn } from '@/lib/screening-consent-crypto'
+import { hasBlockingDriverOwnedScreening } from '@/lib/driver-owned-screening'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
 
 /**
@@ -35,8 +36,10 @@ export async function POST(request: NextRequest) {
       paymentTxHash?: string
       /** Skip duplicate check — allows re-ordering when a previous attempt is stuck */
       force?: boolean
+      /** `pre_screen` (default) blocks when driver-owned pull exists; `hire` allows FMCSA DQ-file pull */
+      purpose?: 'pre_screen' | 'hire'
     }
-    const { candidateUserId, type, consentBundleId, paymentTxHash, force } = body
+    const { candidateUserId, type, consentBundleId, paymentTxHash, force, purpose = 'pre_screen' } = body
     if (!candidateUserId || !type || !consentBundleId) {
       return NextResponse.json(
         { error: 'candidateUserId, type, and consentBundleId are required' },
@@ -155,6 +158,20 @@ export async function POST(request: NextRequest) {
         { error: 'Use the latest complete consent bundle for this candidate' },
         { status: 400 },
       )
+    }
+
+    // Pre-screen: suppress duplicate employer pull when driver already owns an active order.
+    if (purpose !== 'hire' && !force) {
+      if (await hasBlockingDriverOwnedScreening(supabase, candidateUserId, type)) {
+        const label = type === 'mvr' ? 'MVR' : 'PSP'
+        return NextResponse.json(
+          {
+            error: `This candidate already ordered their own portable ${label}. Use purpose=hire for an FMCSA DQ-file pull after hire.`,
+            code: 'DRIVER_OWNED_SCREENING_EXISTS',
+          },
+          { status: 409 },
+        )
+      }
     }
 
     let ssn: string

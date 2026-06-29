@@ -9,7 +9,7 @@ Decisions are listed newest first.
 ## DEC-2026-06-005 — Data ownership is decided by "who clicks order"; driver-initiated + agency-funded is the recommended model; Pace-as-signal-reseller is a CRA trap; full review pending counsel
 
 **Date:** 2026-06-22
-**Status:** Working direction — **pending formal legal review** (meeting with counsel being scheduled). Extends DEC-2026-06-002 (driver-owned/agency-funded vault), DEC-2026-06-003 (funded-pull ingestion gated on FCRA opinion), DEC-2026-05-011 (candidate-agent; never a CRA).
+**Status:** **Accepted for build** (2026-06-25) — engineering proceeds on driver-initiated ownership; **formal legal review still required before production/marketing claims.** Pace-as-owner is rejected. Extends DEC-2026-06-002 (driver-owned/agency-funded vault), DEC-2026-06-003 (funded-pull ingestion gated on FCRA opinion), DEC-2026-05-011 (candidate-agent; never a CRA).
 **Decided by:** Owner + engineer (to be confirmed with lawyers)
 
 ### Context
@@ -28,7 +28,7 @@ Spitballing how to make verified facts portable surfaced a foundational question
 ### Consequences
 - New shareable artifact: **`docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md`** (boss + lawyer facing — models, the deciding rule, the confirmed leak, and the counsel agenda). To be shared with the owner and brought to the legal meeting.
 - **Gated on counsel** (same FCRA opinion as DEC-2026-06-003 / DEC-2026-05-013): driver-owned-after-agency-funding, consent design, zk-fact-vs-report distinction, DPPA redisclosure, vendor-contract permissions, the leasing line, and pre-screen positioning. Question list lives in the memo §6.
-- P3.4-A step 7 (FCRA isolation gate in the attestation path) must close before P3.5; backfill of the two Pace-derived test attestations to be decided.
+- P3.4-A step 7 (FCRA isolation gate) **✅ wired 2026-06-25** — attestation + block sync + fulfill-screening ownership. Backfill of Pace-derived test attestations still open.
 - No code changed yet — direction is pending legal sign-off.
 
 ### Related

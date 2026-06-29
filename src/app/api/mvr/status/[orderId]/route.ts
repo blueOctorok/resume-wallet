@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { fetchEmployerAccessibleMvrOrder } from '@/lib/employer-screening-order-access'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
@@ -142,8 +143,9 @@ function jsonFromMvrOrderRow(mvrOrder: Record<string, unknown>) {
  *
  * Candidate (driver): wallet must own the order (`driver_user_id`).
  *
- * Employer purchaser: pass **`employerCandidateUserId`** (the candidate’s `users.id`).
- * Wallet must belong to a user in the **same company** that paid (`ordered_by_company_id`).
+ * Employer: pass **`employerCandidateUserId`**. Access when the company paid
+ * (`ordered_by_company_id`) OR the candidate ordered a portable pull after
+ * completing screening consent with that company (P3.4-C).
  */
 export async function GET(
   request: NextRequest,
@@ -170,13 +172,11 @@ export async function GET(
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
 
-      const { data: mvrOrder, error: orderError } = await supabase
-        .from('mvr_orders')
-        .select(MVR_ORDER_SELECT)
-        .eq('id', orderId)
-        .eq('driver_user_id', employerCandidateUserId)
-        .eq('ordered_by_company_id', ctx.companyId)
-        .single()
+      const { data: mvrOrder, error: orderError } = await fetchEmployerAccessibleMvrOrder(
+        supabase,
+        MVR_ORDER_SELECT,
+        { companyId: ctx.companyId, candidateUserId: employerCandidateUserId, orderId },
+      )
 
       if (orderError || !mvrOrder) {
         return NextResponse.json({ error: 'MVR order not found' }, { status: 404 })

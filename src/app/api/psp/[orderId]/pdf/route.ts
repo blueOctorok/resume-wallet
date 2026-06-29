@@ -11,6 +11,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { fetchEmployerAccessiblePspOrder } from '@/lib/employer-screening-order-access'
 import { parsePspResult } from '@/lib/accio-psp-parser'
 import { PspReportPdf } from '@/lib/pdf/PspReportPdf'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
@@ -59,13 +60,11 @@ export async function GET(
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
 
-      const { data, error } = await supabase
-        .from('psp_orders')
-        .select('id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at')
-        .eq('id', orderId)
-        .eq('driver_user_id', employerCandidateUserId)
-        .eq('ordered_by_company_id', ctx.companyId)
-        .single()
+      const { data, error } = await fetchEmployerAccessiblePspOrder(
+        supabase,
+        'id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at',
+        { companyId: ctx.companyId, candidateUserId: employerCandidateUserId, orderId },
+      )
 
       if (error || !data) {
         return NextResponse.json({ error: 'PSP order not found' }, { status: 404 })
