@@ -74,7 +74,11 @@ export default function MvrSection({
     !data.employerPaidScreening &&
     !isFailed &&
     !hideOrderHeaderForEmployerScreeningPending &&
-    (isComplete ? Boolean(sessionUserId && data.orderId) : Boolean(onNavigateToOrder))
+    (isComplete
+      ? Boolean(sessionUserId && data.orderId)
+      : hasOrder
+        ? false
+        : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 

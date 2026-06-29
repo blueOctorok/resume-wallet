@@ -107,11 +107,32 @@ function trimSafe(value: unknown): string {
 
 /** User-safe DOB check for disclosure steps (before consent is persisted). */
 export function validateDateOfBirth(input: string): { ok: true } | { ok: false; error: string } {
-  const dob = normalizeDob(trimSafe(input))
+  const trimmed = trimSafe(input)
+  if (!trimmed) {
+    return { ok: false, error: 'Date of birth is required.' }
+  }
+
+  const stripped = trimmed.replace(/[^\d]/g, '')
+  if (stripped.length === 8) {
+    const yyyy = parseInt(stripped.slice(0, 4), 10)
+    const mm = parseInt(stripped.slice(4, 6), 10)
+    const dd = parseInt(stripped.slice(6, 8), 10)
+    const now = new Date()
+    const minYear = now.getFullYear() - 100
+    const maxYear = now.getFullYear() - 16
+    if (yyyy < minYear || yyyy > maxYear) {
+      return {
+        ok: false,
+        error: `Birth year ${yyyy} looks wrong — pick your real date of birth (for example ${Math.min(1970, maxYear)}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}).`,
+      }
+    }
+  }
+
+  const dob = normalizeDob(trimmed)
   if (!dob) {
     return {
       ok: false,
-      error: 'Date of birth is missing or invalid. Use YYYY-MM-DD format and confirm the year is correct.',
+      error: 'Date of birth is missing or invalid. Use the date picker and confirm the year is correct.',
     }
   }
   return { ok: true }

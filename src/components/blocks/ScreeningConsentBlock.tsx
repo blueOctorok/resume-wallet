@@ -45,6 +45,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const [orderRetry, setOrderRetry] = useState<OrderRetryState | null>(null)
   const [retryLoading, setRetryLoading] = useState(true)
   const [retryDob, setRetryDob] = useState('')
+  const [invalidStoredDob, setInvalidStoredDob] = useState<string | null>(null)
   const [retrySubmitting, setRetrySubmitting] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
 
@@ -69,7 +70,18 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
           companyName: data.companyName as string,
           storedDob: (data.storedDob as string | null) ?? null,
         })
-        setRetryDob((data.storedDob as string | null) ?? '')
+        const stored = (data.storedDob as string | null) ?? ''
+        if (stored && validateDateOfBirth(stored).ok) {
+          setRetryDob(stored)
+          setInvalidStoredDob(null)
+        } else if (stored) {
+          // Don't trap the user on a bad saved year (e.g. 1070 typo) — force a fresh pick.
+          setRetryDob('')
+          setInvalidStoredDob(stored)
+        } else {
+          setRetryDob('')
+          setInvalidStoredDob(null)
+        }
       })
       .finally(() => {
         if (!cancelled) setRetryLoading(false)
@@ -147,15 +159,24 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
               </h3>
               <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Your screening consent for {orderRetry.companyName} is saved, but the MVR and PSP orders did not
-                submit. Confirm your date of birth and try again — no need to re-sign the disclosure forms.
+                submit. Pick your correct date of birth below and try again — no need to re-sign the disclosure forms.
               </p>
+              {invalidStoredDob && (
+                <p className={`text-sm mb-4 rounded-lg px-3 py-2 ${isDarkTheme(theme) ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-900'}`}>
+                  The saved date ({invalidStoredDob}) was rejected. Use the date picker to choose your real birth date
+                  — check the <strong>year</strong> (e.g. 1970, not 1070).
+                </p>
+              )}
               <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                 Date of birth
               </label>
               <input
                 type="date"
                 value={retryDob}
-                onChange={(e) => setRetryDob(e.target.value)}
+                onChange={(e) => {
+                  setRetryDob(e.target.value)
+                  setRetryError(null)
+                }}
                 className={inputClass}
               />
               {retryError && (

@@ -70,7 +70,11 @@ export default function PspSection({
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
     !isFailed &&
-    (isComplete ? Boolean(sessionUserId && data.orderId) : Boolean(onNavigateToOrder))
+    (isComplete
+      ? Boolean(sessionUserId && data.orderId)
+      : hasOrder
+        ? false
+        : Boolean(onNavigateToOrder))
 
   const display = STATUS_DISPLAY[data.orderStatus] ?? STATUS_DISPLAY.pending
 
