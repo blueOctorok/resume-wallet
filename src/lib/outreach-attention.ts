@@ -74,9 +74,14 @@ export function detectOutreachAttention(
   if (!files || files.length === 0) return null
 
   // 1. Hard failures from Accio — most actionable.
+  //    Key off the RAW status, not the derived doc status: `expired`/`cancelled`
+  //    both collapse to `failed` in hubDocStatusFromScreeningOrder, but an
+  //    expired order is just a lapsed TTL (order window closed), NOT a screening
+  //    that "came back failed". Flagging those produced false "MVR error" panels
+  //    on completed cards for old/lapsed orders.
   for (const f of files) {
-    const docStatus = hubDocStatusFromScreeningOrder(f.status)
-    if (docStatus === 'failed' || f.resultOutcome === 'fail') {
+    const raw = String(f.status ?? '').toLowerCase()
+    if (raw === 'failed' || f.resultOutcome === 'fail') {
       return {
         kind: 'order_failed',
         label: `${f.kind.toUpperCase()} came back failed`,

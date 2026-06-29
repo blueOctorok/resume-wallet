@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — Invite sign-in lost the candidate's email** (2026-06-29)
+
+Clicking "Start my screening" from an outreach email → landing page → `/onboard/[token]` correctly bounced an unauthenticated candidate to `/sign-in`, but only passed `?next=`. The email field came up blank, so the candidate had to remember which address Pace invited (regression from the pre-Supabase flow, which authed inline on the onboard page and already knew the email).
+
+| File | Change |
+|---|---|
+| `src/app/onboard/[token]/page.tsx` | Append `&email=<candidateEmail>` (from the invite) when redirecting to `/sign-in` |
+| `src/app/sign-in/page.tsx` | Read `?email=` and pre-fill the email field; show an invite hint when present |
+
+---
+
+## **Fix — Expired MVR/PSP orders shown as red "MVR error" in outreach** (2026-06-29)
+
+Completed-column cards in the employer outreach kanban displayed a red Stormi panel ("MVR came back failed") and a red "Unsuccessful" pill for candidates whose only screening orders had **expired**. 131 MVR orders (old May test data, all company-owned) were affected.
+
+**Root cause:** `hubDocStatusFromScreeningOrder` collapses `expired`/`cancelled` into the `failed` doc status. The outreach attention detector and file pill both keyed off that derived status, so a lapsed-TTL order (the Accio order window closed before retrieval) was treated identically to a screening that genuinely came back failing.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-attention.ts` | Check #1 keys off the **raw** order status — only `failed` / `fail` outcome raises "came back failed", not `expired`/`cancelled` |
+| `src/lib/hub-document-types.ts` | `employerOutreachFileStatusLabel` returns literal `Expired` / `Cancelled` instead of "Unsuccessful" |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | `FilePill` renders lapsed orders neutral (slate), not red; fallback text shows the real terminal label |
+
+---
+
 ## **Fix — Hub refresh landing on stale screening-consent route** (2026-06-29)
 
 Refreshing the browser while on the driver hub could reopen the screening-consent block empty state instead of staying on the hub.

@@ -47,6 +47,11 @@ export function employerOutreachFileStatusLabel(
   if (s === 'needs_review') return 'Needs review'
   if (s === 'completed') return 'Complete'
   if (s === 'failed') return 'Failed'
+  // `expired`/`cancelled` are administrative terminal states (lapsed TTL / pulled
+  // order) — surface them literally so a recruiter doesn't read them as a failed
+  // screening result.
+  if (s === 'expired') return 'Expired'
+  if (s === 'cancelled') return 'Cancelled'
   if (s === 'processing') return 'Processing'
   if (s === 'pending') return 'Pending'
   return hubScreeningStatusLabel(hubDocStatusFromScreeningOrder(rawOrderStatus))

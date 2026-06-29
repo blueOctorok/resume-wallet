@@ -87,7 +87,12 @@ export default function OnboardPage() {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('stormchain_invite_token', token)
         }
-        router.replace(`/sign-in?next=${encodeURIComponent(`/onboard/${token}`)}`)
+        // Pre-fill the sign-in email with the address the invite was sent to, so
+        // the candidate doesn't have to remember which email Pace used. They can
+        // still change it on the sign-in page if needed.
+        const inviteEmail = inviteData!.invite.candidateEmail
+        const emailParam = inviteEmail ? `&email=${encodeURIComponent(inviteEmail)}` : ''
+        router.replace(`/sign-in?next=${encodeURIComponent(`/onboard/${token}`)}${emailParam}`)
         return
       }
 

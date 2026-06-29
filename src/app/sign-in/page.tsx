@@ -43,7 +43,11 @@ function SignInForm() {
   // user returns to the token page once their Supabase session exists.
   const next = safeNext(searchParams.get('next'))
 
-  const [email, setEmail] = useState('')
+  // Invite/onboard deep-links also pass ?email= (the address the invite was sent
+  // to) so the candidate doesn't have to remember which email to use. Pre-fill it
+  // — useState initializer reads searchParams once, which is what we want.
+  const prefillEmail = searchParams.get('email') ?? ''
+  const [email, setEmail] = useState(prefillEmail)
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -194,6 +198,11 @@ function SignInForm() {
             <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
               Build your verified career card
             </p>
+            {prefillEmail ? (
+              <p className='mt-2 text-xs text-teal-700 dark:text-teal-300'>
+                Use the email your invite was sent to, then we&apos;ll email you a code.
+              </p>
+            ) : null}
           </div>
 
           {error ? (

@@ -850,6 +850,10 @@ function FilePill({
   const docStatus = hubDocStatusFromScreeningOrder(file.status)
   const ready = employerScreeningReportReady(file.status)
   const needsReview = String(file.status ?? '').toLowerCase() === 'needs_review'
+  // `expired`/`cancelled` map to docStatus `failed`, but they're lapsed/pulled
+  // orders — not a screening that came back failed. Render them neutral (slate)
+  // so they don't read as a red error on completed cards.
+  const lapsed = ['expired', 'cancelled'].includes(String(file.status ?? '').toLowerCase())
 
   const pillCls = ready
     ? needsReview
@@ -863,7 +867,7 @@ function FilePill({
       ? isDark
         ? 'bg-amber-500/15 text-amber-200'
         : 'bg-amber-100 text-amber-900'
-      : docStatus === 'failed'
+      : docStatus === 'failed' && !lapsed
         ? isDark
           ? 'bg-red-500/15 text-red-300'
           : 'bg-red-100 text-red-800'
@@ -919,7 +923,11 @@ function FilePill({
           </span>
         ) : (
           <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
-            {docStatus === 'failed' ? 'Failed' : 'Processing'}
+            {lapsed
+              ? employerOutreachFileStatusLabel(file.status)
+              : docStatus === 'failed'
+                ? 'Failed'
+                : 'Processing'}
           </span>
         )}
       </span>
