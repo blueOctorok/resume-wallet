@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — Hub refresh landing on stale screening-consent route** (2026-06-29)
+
+Refreshing the browser while on the driver hub could reopen the screening-consent block empty state instead of staying on the hub.
+
+**Root cause:** Two stale-navigation sources on F5 — (1) `history.state.sc.page` kept the last block route while Zustand reset to `null`, and (2) `?onboard=screening-consent` deep-links from notification URLs re-fired on every reload because `didHandleOnboardRef` resets.
+
+| File | Change |
+|---|---|
+| `src/hooks/use-candidate-shell-history.ts` | On reload, clear stale `history.state` block route; clear state when navigating back to hub |
+| `src/app/page.tsx` | Skip onboard deep-link redirect on full page reload; strip `?onboard=` from URL |
+| `src/components/blocks/ScreeningConsentBlock.tsx` | Clearer empty state when landed with no pending request |
+
+---
+
 ## **Fix — P3.4-C consent saved before order validation (Jason Peterson prod test)** (2026-06-29)
 
 First submit could save screening consent then fail on DOB validation (e.g. typo `1070-01-05`), leaving the employer request completed with no MVR/PSP orders and blocking retry.

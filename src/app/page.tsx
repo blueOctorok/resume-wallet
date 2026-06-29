@@ -240,6 +240,19 @@ const HomeContent = () => {
   // -------------------------------------------------------
   const didHandleOnboardRef = useRef(false)
   useEffect(() => {
+    // Full page reload should land on the hub — not re-run stale ?onboard= deep links
+    // (notification URLs like /?onboard=screening-consent otherwise fire every F5).
+    if (typeof window !== 'undefined' && performance.getEntriesByType('navigation')[0]) {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
+      if (nav.type === 'reload') {
+        window.sessionStorage.removeItem(ONBOARD_TARGET_KEY)
+        if (searchParams.get('onboard')) {
+          router.replace('/', { scroll: false })
+        }
+        return
+      }
+    }
+
     // Invite deep-links pass the target block via ?onboard=<route>. We ALSO read it
     // from sessionStorage (written by /onboard/[token]) as a fallback: the Supabase
     // sign-in round-trip and the guest-redirect below can strip the query string

@@ -204,7 +204,8 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
           </div>
           <div className={`${cardClass} p-8 text-center`}>
             <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
-              No pending screening consent request. When an employer requests screening consent, it will appear here.
+              No pending screening consent request. If you already signed consent, track MVR and PSP progress from
+              your hub career card or My Files. When an employer sends a new request, it will appear here.
             </p>
             <div className="mt-6">
               <Button variant="primary" onClick={onBack}>
