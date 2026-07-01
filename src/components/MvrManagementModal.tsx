@@ -255,7 +255,7 @@ export default function MvrManagementModal({
                     {data?.payments.length || 0}
                   </p>
                   <p className={`text-sm font-medium ${!isDarkTheme(theme) ? 'text-blue-600' : 'text-blue-400/80'}`}>
-                    ${data?.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2) || '0.00'} USDC
+                    No charge to candidate
                   </p>
                 </div>
 
@@ -389,7 +389,7 @@ export default function MvrManagementModal({
                                 <div className="flex justify-between items-start gap-2 mb-3">
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <span className={`text-sm sm:text-base font-bold ${!isDarkTheme(theme) ? 'text-gray-900' : 'text-white'}`}>
-                                      ${payment.amount} USDC
+                                      No charge
                                     </span>
                                     {isOrphaned && (
                                       <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 whitespace-nowrap flex-shrink-0">

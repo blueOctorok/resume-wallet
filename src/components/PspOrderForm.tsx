@@ -637,7 +637,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
               </div>
             </div>
 
-            {/* FMCSA-mandated PSP Disclosure — standalone; must be signed before payment (live FMCSA order). */}
+            {/* FMCSA-mandated PSP Disclosure — standalone; must be signed before submitting (live FMCSA order). */}
             <div
               className={`rounded-2xl border p-5 ${
                 isDarkTheme(theme)
@@ -658,7 +658,7 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
                 }`}
               >
                 PSP orders are live with FMCSA — there is no test environment. You must complete the
-                federal stand-alone disclosure and authorization before paying or submitting this order.
+                federal stand-alone disclosure and authorization before submitting this order.
               </p>
               {pspConsentId ? (
                 <p

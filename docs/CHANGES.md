@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — Remove payment/USDC confusion from candidate screening flow** (2026-07-01)
+
+Pace reported candidates thought they were being asked to pay when submitting MVR/PSP. No payment is actually collected — driver-owned orders run on a synthetic `waived` $0 payment row (`resolve-waived-screening-payment.ts`); USDC was removed in D3 and is never coming back. The confusion was stale copy that mentioned "fee"/"pay"/"USDC".
+
+| File | Change |
+|---|---|
+| `src/components/screening/DriverScreeningOwnershipAcknowledgment.tsx` | "even when they sponsor the fee" → "at no cost to you"; "Who pays?" → "Do I pay anything? No. There is no charge to you. Storm never asks candidates for payment or card details." |
+| `src/components/PspOrderForm.tsx` | Candidate copy "before paying or submitting" → "before submitting"; comment de-payment-ified |
+| `src/components/MvrOrderForm.tsx` | Comment "before pay" → "before submitting" |
+| `src/components/MvrManagementModal.tsx` | Removed two user-facing "$X USDC" labels → "No charge to candidate" / "No charge" |
+| `src/components/career-card/sections/MvrSection.tsx` | Comment "self-pay" → "self-order" |
+
+No pricing/Stripe promises added (Stripe not implemented yet); messaging is simply "no charge to the candidate."
+
+---
+
 ## **Fix — Invite sign-in lost the candidate's email** (2026-06-29)
 
 Clicking "Start my screening" from an outreach email → landing page → `/onboard/[token]` correctly bounced an unauthenticated candidate to `/sign-in`, but only passed `?next=`. The email field came up blank, so the candidate had to remember which address Pace invited (regression from the pre-Supabase flow, which authed inline on the onboard page and already knew the email).

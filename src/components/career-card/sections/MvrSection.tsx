@@ -65,7 +65,7 @@ export default function MvrSection({
     onNavigateToOrder?.()
   }
 
-  // Employer-requested screening: candidate completes consent on another page — hide duplicate self-pay.
+  // Employer-requested screening: candidate completes consent on another page — hide duplicate self-order.
   const hideOrderHeaderForEmployerScreeningPending =
     !isComplete && !isFailed && isEmployerPendingNoOrder
 

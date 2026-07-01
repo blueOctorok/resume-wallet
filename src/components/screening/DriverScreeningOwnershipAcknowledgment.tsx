@@ -53,8 +53,8 @@ export default function DriverScreeningOwnershipAcknowledgment({
               </p>
               <p className={`mt-1 text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 When you submit, <strong>you</strong> are ordering your MVR and PSP reports for your Storm career
-                file. The report belongs to you — portable across employers — even when {recipient} sponsors the
-                fee. You choose what to share on your career card.
+                file — <strong>at no cost to you</strong>. The report belongs to you and is portable across
+                employers. You choose what to share on your career card.
               </p>
             </div>
 
@@ -101,9 +101,9 @@ export default function DriverScreeningOwnershipAcknowledgment({
               file and can travel with you to future employers.
             </p>
             <p>
-              <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Who pays?</strong> Your employer or
-              agency (like {recipient}) may sponsor the screening fee. Payment does not change ownership — you
-              still own the report.
+              <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Do I pay anything?</strong> No. There
+              is <strong>no charge to you</strong>. Storm never asks candidates for payment or card details to run
+              these reports. {recipient} covers the screening on their end.
             </p>
             <p>
               <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>What does {recipient} see?</strong>{' '}

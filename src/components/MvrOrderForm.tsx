@@ -439,7 +439,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </div>
             </div>
 
-            {/* Vendor / CRA disclosure — self-order; express consent required before pay */}
+            {/* Vendor / CRA disclosure — self-order; express consent required before submitting */}
             <div
               className={`rounded-2xl border p-5 ${
                 isDarkTheme(theme)
