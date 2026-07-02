@@ -115,7 +115,7 @@ function GuestStormiHint({
               isDark ? 'text-violet-300/80' : 'text-violet-600',
             )}
           >
-            Stormi
+            Assistant
           </p>
           <p
             className={cn(

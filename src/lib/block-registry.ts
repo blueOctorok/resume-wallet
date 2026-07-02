@@ -153,9 +153,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   // ── General ────────────────────────────────────────────────────────────────
   {
     id: 'storm-resume',
-    label: 'STORM Resume',
+    label: 'ZKnight Resume',
     description:
-      'Upload your own file or build a Storm-style resume — Professional, Driver, or Developer paths in one place.',
+      'Upload your own file or build a ZKnight-style resume — Professional, Driver, or Developer paths in one place.',
     icon: 'Sparkles',
     categoryId: 'general',
     suggestedFor: [
@@ -296,7 +296,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     id: 'driver-screening-consent',
     label: 'Screening consent',
     description:
-      'Sign FCRA background check disclosure, FMCSA PSP authorization, and CDLIS written consent in one flow for employers who use Storm screening.',
+      'Sign FCRA background check disclosure, FMCSA PSP authorization, and CDLIS written consent in one flow for employers who use ZKnight screening.',
     icon: 'ShieldCheck',
     categoryId: 'drivers',
     suggestedFor: ['driver', 'cdl', 'mvr', 'psp', 'screening', 'background check', 'fmcsa', 'trucking'],

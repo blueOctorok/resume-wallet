@@ -145,7 +145,7 @@ export default function StormiNextStepCard({
         eyebrow: 'Do this next',
         title: 'Start with a STORM resume',
         body: `Almost every role wants one \u2014 adding it is your first ~30% of coverage for \u201c${snap.title}\u201d.`,
-        primary: { label: 'Add STORM Resume', onClick: () => onAddBlock('storm-resume') },
+        primary: { label: 'Add ZKnight Resume', onClick: () => onAddBlock('storm-resume') },
       }
     }
 
@@ -167,7 +167,7 @@ export default function StormiNextStepCard({
         icon: Compass,
         eyebrow: 'Honest take',
         title: 'This one\u2019s a stretch right now',
-        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Construct mode for deeper Stormi help.`,
+        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Construct mode for deeper AI help.`,
         primary: { label: 'Pick a closer fit \u2190', onClick: () => {}, variant: 'secondary' },
         secondary: { label: 'Go to Construct', onClick: onGoToWorkspace },
       }
@@ -283,7 +283,7 @@ export default function StormiNextStepCard({
               isDark ? 'text-violet-300/80' : 'text-violet-600',
             )}
           >
-            Stormi
+            Assistant
           </p>
           <p
             className={cn(

@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Rebrand — "Storm"/"Stormi" → "ZKnight" (product-wide, UI + prompts)** (2026-07-02)
+
+The product was renamed from **Storm / stormchain.ai** to **ZKnight / zknight.io**. The AI assistant (previously "Stormi") now has **no persona name** — it works "in the background" and is referred to generically ("the assistant", "your AI coach", "AI", "Assistant"); "Stormi credits" → "AI credits". Off-chain **Storm Points** were removed from the UI.
+
+**Scope (deliberate):** only **user-visible and LLM-prompt** string content changed. Code identifiers, component/file names, import paths, object keys, DB columns/tables (`storm_points`, `storm_distributions`), CSS classes (`storm-wordmark-font`, `storm-glass-panel`, `navStormiButtonClass`), localStorage keys (`stormchain-theme`, `stormchain_invite_token`), env vars, job-source data values (`isStormChain`, `source: 'stormchain'`), attestation issuer values (`'storm'`/`'storm-midnight'`), and code comments were **left unchanged**. Component/file names like `StormChainWordmark.tsx`, `StormiChatPanel.tsx`, `StormTokenMark.tsx` were intentionally **not** renamed.
+
+**Logo/wordmark redesign (design decision — easily changed):** the mark changed from "ST"+cloud-lightning-"O"-tile+"RM" to **"ZKNIGHT" with a leading violet foil tile containing a shield-check icon** (knight's shield + zero-knowledge/verified theme). Applied to both the web wordmark (`StormChainWordmark.tsx`, icon `CloudLightning`→`ShieldCheck`) and the PDF wordmark (`StormPdfWordmark.tsx`). The decorative loader mark (`StormTokenMark.tsx`) icon was also swapped to `ShieldCheck` for consistency.
+
+| Area | Files (representative) | Change |
+|---|---|---|
+| Metadata / SEO / domain | `layout.tsx`, `sitemap.ts`, `card/[token]/layout.tsx`, `og/career-card-og-image.tsx` | Title/description/OG/Twitter, `metadataBase`, siteName, `stormchain.ai`→`zknight.io` everywhere in `src` |
+| Logo / wordmarks / loading | `ui/StormChainWordmark.tsx`, `ui/StormTokenMark.tsx`, `pdf/StormPdfWordmark.tsx`, `LoadingScreen.tsx` | STORM→ZKNIGHT text + shield-check mark; sr-only labels |
+| Marketing / nav / auth | `HomePage.tsx`, `Navigation.tsx`, `sign-in/page.tsx`, `application/[token]/page.tsx` | Hero/section copy, nav wordmark + assistant button labels, "Sign in to ZKnight", "Powered by ZKnight" |
+| LLM prompts / personas | `ava-context.ts`, `ava-brain.ts`, `ava-employer-eval.ts`, `ava-job-chat-tools.ts`, `developer-brain-templates.ts`, `walkthrough-ai.ts`, `ava-auto-welcome.ts` | Prompt prose Storm→ZKnight; assistant self-reference de-named; "Stormi credits"→"AI credits" |
+| Emails / SMS | `send-invite-email.ts`, `send-team-invite-email.ts`, `send-verification-email.ts`, `send-admin-notification.ts` (+ any `email-template.ts`/SMS) | Sender `zknight@verify.zknight.io`, subjects `[Storm]`→`[ZKnight]`, body/footer copy, `NEXT_PUBLIC_APP_URL` fallbacks |
+| PDF / OG images | `career-card-pdf.ts`, `pdf/StormPdfChrome.tsx`, `pdf/MvrReportPdf.tsx`, `pdf/PspReportPdf.tsx`, `og/career-card-og-image.tsx` | Footers (`zknight.io`), "ZKnight Order", document title/author, "Verified by ZKnight" |
+| In-app AI / hub UI | `stormi/StormiChatPanel.tsx`, `StormiCreditModal.tsx`, `ui/AskStormiButton.tsx`, hub/simple/employer components | Empty-state titles, button labels ("Ask AI", "Assistant"), placeholders |
+| Registries / share | `block-registry.ts` ("ZKnight Resume" label), `hub/CareerCardShareModal.tsx`, `career-card/CareerCardEmbed.tsx`, `hub/ReferralBanner.tsx` | Labels, social-share copy, embed footer, "join ZKnight" |
+| Points removal | **Deleted** `components/StormChainView.tsx` | The STORM-token whitepaper/tokenomics view (dead code, no imports) — removed per "remove points entirely"; personal STORM/USDC balance was already gone at T1.12 |
+
+**Follow-ups / not done here:** component & file names still contain "Storm"/"Stormi" (out of scope — no rename); DB columns (`storm_points`) and localStorage keys untouched; favicon/OG PNG assets (`/favicon.svg`, `/og-image.png`) not regenerated; `docs/**` not swept. Pre-existing `tsc` errors in the repo are unrelated to this rebrand.
+
+---
+
 ## **Fix — Remove payment/USDC confusion from candidate screening flow** (2026-07-01)
 
 Pace reported candidates thought they were being asked to pay when submitting MVR/PSP. No payment is actually collected — driver-owned orders run on a synthetic `waived` $0 payment row (`resolve-waived-screening-payment.ts`); USDC was removed in D3 and is never coming back. The confusion was stale copy that mentioned "fee"/"pay"/"USDC".

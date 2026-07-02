@@ -128,7 +128,7 @@ export default function EmployerPspMvrBundleAttestationStep({
       return
     }
     if (usesDriverOwnedFlow && !driverOwnershipAcknowledged) {
-      setError('Check the box confirming you understand you are ordering these reports for your Storm file.')
+      setError('Check the box confirming you understand you are ordering these reports for your ZKnight file.')
       return
     }
 
@@ -430,9 +430,9 @@ export default function EmployerPspMvrBundleAttestationStep({
           The CDLIS instrument above does not ask for your SSN. The line below is for{' '}
           <strong className={textPrimary}>Key Background Screening / Accio</strong> only —{' '}
           {submitBehavior === 'consent-bundle-only'
-            ? 'so your employer can run MVR or PSP later without asking you again. It is encrypted in Storm’s database.'
+            ? 'so your employer can run MVR or PSP later without asking you again. It is encrypted in ZKnight’s database.'
             : usesDriverOwnedFlow
-              ? 'so the vendor can match your identity when you order your MVR and PSP. It is encrypted in Storm’s database.'
+              ? 'so the vendor can match your identity when you order your MVR and PSP. It is encrypted in ZKnight’s database.'
               : 'so the vendor can match your identity when ordering PSP + MVR.'}
         </p>
 

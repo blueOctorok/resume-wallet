@@ -247,7 +247,7 @@ export function buildCareerCardOgElement(
   const headline =
     card.occupation ||
     card.professionalSummary?.slice(0, 120) ||
-    'Verified by Storm career card'
+    'Verified by ZKnight career card'
 
   if (variant === 'signature') {
     return (
@@ -301,13 +301,13 @@ export function buildCareerCardOgElement(
             <span style={{ fontSize: 20, fontWeight: 800, color: white }}>{card.name}</span>
             <span style={{ fontSize: 14, color: muted, maxWidth: 360 }}>{headline}</span>
             <span style={{ fontSize: 12, color: teal, fontWeight: 600 }}>
-              {verified} on-chain credential{verified === 1 ? '' : 's'} · Storm Career Card
+              {verified} on-chain credential{verified === 1 ? '' : 's'} · ZKnight Career Card
             </span>
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <ScoreRing score={card.careerCardScore} />
-          <span style={{ fontSize: 11, color: muted, fontWeight: 700, letterSpacing: 2 }}>STORM</span>
+          <span style={{ fontSize: 11, color: muted, fontWeight: 700, letterSpacing: 2 }}>ZKNIGHT</span>
         </div>
       </div>
     )
@@ -322,7 +322,7 @@ export function buildCareerCardOgElement(
     bodyLinesRaw.length > 0
       ? bodyLinesRaw
       : [
-          'Open your full Storm Career Card for verified credentials, resume, GitHub, portfolio, and more — everything in one shareable link.',
+          'Open your full ZKnight Career Card for verified credentials, resume, GitHub, portfolio, and more — everything in one shareable link.',
         ]
 
   return (
@@ -438,7 +438,7 @@ export function buildCareerCardOgElement(
           <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', letterSpacing: 3, textTransform: 'uppercase' }}>
             Blocks on card
           </span>
-          <SectionPills labels={sectionLabels.length ? sectionLabels : ['Build your card on Storm']} />
+          <SectionPills labels={sectionLabels.length ? sectionLabels : ['Build your card on ZKnight']} />
         </div>
       </div>
 
@@ -454,9 +454,9 @@ export function buildCareerCardOgElement(
         }}
       >
         <span style={{ fontSize: 14, color: muted, fontWeight: 600 }}>
-          stormchain.ai · Verified by Storm Career Card
+          zknight.io · Verified by ZKnight Career Card
         </span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: teal, letterSpacing: 4 }}>STORM</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: teal, letterSpacing: 4 }}>ZKNIGHT</span>
       </div>
     </div>
   )

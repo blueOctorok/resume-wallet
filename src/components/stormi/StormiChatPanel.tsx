@@ -80,7 +80,7 @@ function StormiJobSuggestionCards(props: {
           isDark ? 'text-gray-500 border-gray-600 bg-gray-800/40' : 'text-slate-500 border-slate-200 bg-slate-50',
         )}
       >
-        You skipped these. Ask Stormi for another search or tweak what you&apos;re looking for.
+        You skipped these. Ask AI for another search or tweak what you&apos;re looking for.
       </p>
     )
   }
@@ -451,7 +451,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
           setOutOfCredits(true)
           setUsage(err.usage)
         } else {
-          setChatError(err instanceof Error ? err.message : 'Stormi could not start')
+          setChatError(err instanceof Error ? err.message : 'The assistant could not start')
         }
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -728,7 +728,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                 : 'Expand chat — taller thread & side-by-side job cards'
             }
             aria-expanded={chatExpanded}
-            aria-label={chatExpanded ? 'Shrink Stormi chat' : 'Expand Stormi chat'}
+            aria-label={chatExpanded ? 'Shrink assistant chat' : 'Expand assistant chat'}
             className={cn(
               'absolute top-2 right-2 z-20 p-2 rounded-xl border transition-colors',
               isDark
@@ -920,7 +920,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                           isDark ? 'text-white' : 'text-slate-800',
                         )}
                       >
-                        Ask Stormi
+                        Ask AI
                       </h2>
                       {usageBadge && (
                         <span
@@ -1046,7 +1046,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
               type='text'
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={outOfCredits ? 'Buy credits to continue...' : 'Ask Stormi anything...'}
+              placeholder={outOfCredits ? 'Buy credits to continue...' : 'Ask AI anything...'}
               disabled={isLoading || outOfCredits}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
@@ -1109,7 +1109,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                     ? 'text-teal-400/90 hover:text-teal-300 hover:bg-gray-800'
                     : 'text-teal-700 hover:text-teal-800 hover:bg-teal-50',
                 )}
-                aria-label='Edit what you told Stormi about your work and goals'
+                aria-label='Edit what you told the assistant about your work and goals'
               >
                 <Sparkles className='w-3 h-3' />
                 Edit intro

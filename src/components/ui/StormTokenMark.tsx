@@ -1,7 +1,7 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { CloudLightning } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -114,7 +114,7 @@ export default function StormTokenMark({
             : 'bg-gradient-to-br from-teal-100/90 to-violet-100/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]',
         )}
       >
-        <CloudLightning
+        <ShieldCheck
           className={cn(s.icon, 'text-teal-600 dark:text-teal-200/90')}
           strokeWidth={s.stroke}
           aria-hidden

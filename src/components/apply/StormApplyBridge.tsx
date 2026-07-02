@@ -277,7 +277,7 @@ export default function StormApplyBridge({
     <>
       <Modal onClose={onClose} maxWidth="max-w-2xl" panelShape="block">
         <ModalHeader
-          title="Apply with Storm"
+          title="Apply with ZKnight"
           subtitle={`${job.title} at ${job.company}`}
           onClose={onClose}
           variant="block"
@@ -383,14 +383,14 @@ export default function StormApplyBridge({
                     isLoading={generatingLetter}
                   >
                     {!generatingLetter && <Sparkles className="w-3.5 h-3.5 shrink-0" />}
-                    Generate with Stormi
+                    Generate with AI
                   </Button>
                 </div>
               </div>
               <textarea
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
-                placeholder="Why are you a great fit? Generate one with Stormi or write your own — copy and paste it on the form."
+                placeholder="Why are you a great fit? Generate one with AI or write your own — copy and paste it on the form."
                 className={cn(
                   'w-full h-28 px-3 py-2.5 rounded-xl resize-none text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent',
                   isDark

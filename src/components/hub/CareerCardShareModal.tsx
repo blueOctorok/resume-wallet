@@ -233,7 +233,7 @@ export default function CareerCardShareModal({
     if (!qrDataUrl || !shareToken) return
     const a = document.createElement('a')
     a.href = qrDataUrl
-    a.download = `stormchain-career-card-${shareToken}.png`
+    a.download = `zknight-career-card-${shareToken}.png`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -248,7 +248,7 @@ export default function CareerCardShareModal({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `storm-career-card-${shareToken}.png`
+      a.download = `zknight-career-card-${shareToken}.png`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -260,7 +260,7 @@ export default function CareerCardShareModal({
 
   const embedSnippet =
     shareToken && publicOrigin
-      ? `<iframe src="${publicOrigin}/card/${shareToken}/embed" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="Storm Career Card" loading="lazy"></iframe>`
+      ? `<iframe src="${publicOrigin}/card/${shareToken}/embed" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="ZKnight Career Card" loading="lazy"></iframe>`
       : ''
 
   // ── Social posts: Stormi-generated → fallback to static templates ──────────
@@ -270,9 +270,9 @@ export default function CareerCardShareModal({
     if (!shareToken || !fullUrl) return []
     const name = displayName ?? 'my'
     return [
-      `I built my Storm Career Card — verified credentials and selective disclosure, not a PDF resume.\n\n${fullUrl}\n\nCreate yours free at https://stormchain.ai\n\n#CareerCard #VerifiedCredentials #Storm`,
-      `Resumes lie. Career Cards don't.\n\nMine shows verified third-party facts employers can trust — MVR, CDL, employment checks when I choose to share them.\n\n${fullUrl}\n\nGet yours free at https://stormchain.ai`,
-      `Just shipped my verified Career Card on Storm.\n\nEmployers see the facts I choose to share — derived from real screening data, not self-reported fluff.\n\n${fullUrl}\n\nWant one? https://stormchain.ai #OpenToWork #Storm`,
+      `I built my ZKnight Career Card — verified credentials and selective disclosure, not a PDF resume.\n\n${fullUrl}\n\nCreate yours free at https://zknight.io\n\n#CareerCard #VerifiedCredentials #ZKnight`,
+      `Resumes lie. Career Cards don't.\n\nMine shows verified third-party facts employers can trust — MVR, CDL, employment checks when I choose to share them.\n\n${fullUrl}\n\nGet yours free at https://zknight.io`,
+      `Just shipped my verified Career Card on ZKnight.\n\nEmployers see the facts I choose to share — derived from real screening data, not self-reported fluff.\n\n${fullUrl}\n\nWant one? https://zknight.io #OpenToWork #ZKnight`,
     ]
   })()
 
@@ -311,12 +311,12 @@ export default function CareerCardShareModal({
 
   const signatureHtml =
     shareToken && publicOrigin && fullUrl
-      ? `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer"><img src="${publicOrigin}/card/${shareToken}/signature" width="600" height="150" alt="Storm Career Card" style="max-width:100%;height:auto;border:0;" /></a>`
+      ? `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer"><img src="${publicOrigin}/card/${shareToken}/signature" width="600" height="150" alt="ZKnight Career Card" style="max-width:100%;height:auto;border:0;" /></a>`
       : ''
 
   const badgeMarkdown =
     shareToken && publicOrigin && fullUrl
-      ? `[![Storm Career Card](${publicOrigin}/card/${shareToken}/badge)](${fullUrl})`
+      ? `[![ZKnight Career Card](${publicOrigin}/card/${shareToken}/badge)](${fullUrl})`
       : ''
 
   const downloadPdf = async () => {
@@ -338,7 +338,7 @@ export default function CareerCardShareModal({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'storm-career-card.pdf'
+      a.download = 'zknight-career-card.pdf'
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -532,12 +532,12 @@ export default function CareerCardShareModal({
                               {stormiPostsLoading ? (
                                 <span className={cn('flex items-center gap-1 text-[10px]', isDark ? 'text-teal-400' : 'text-teal-600')}>
                                   <Loader2 className='h-3 w-3 animate-spin' />
-                                  Stormi writing…
+                                  Writing…
                                 </span>
                               ) : stormiPosts ? (
                                 <span className={cn('flex items-center gap-1 text-[10px]', isDark ? 'text-teal-400/70' : 'text-teal-600/70')}>
                                   <Sparkles className='h-3 w-3' />
-                                  by Stormi
+                                  by AI
                                 </span>
                               ) : null}
                             </div>
@@ -831,7 +831,7 @@ export default function CareerCardShareModal({
                       </p>
                     ) : null}
                     <div className='mb-3 flex items-center gap-2'>
-                      <img src={`${publicOrigin}/card/${shareToken}/badge`} alt='Storm badge' className='h-8' />
+                      <img src={`${publicOrigin}/card/${shareToken}/badge`} alt='ZKnight badge' className='h-8' />
                     </div>
                     <textarea
                       readOnly

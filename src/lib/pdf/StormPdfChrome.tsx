@@ -276,7 +276,7 @@ export function StormPdfFooter({
           <Text style={stormPdfStyles.verifiedChip}>VERIFIED ON-CHAIN</Text>
         ) : null}
         <Text style={stormPdfStyles.footerLine}>
-          Storm Order {orderId}
+          ZKnight Order {orderId}
           {vendorReference ? ` · Vendor ref ${vendorReference}` : ''}
         </Text>
         {verifiedExplorerUrl ? (
@@ -294,7 +294,7 @@ export function StormPdfFooter({
             `Page ${pageNumber} of ${totalPages}`
           }
         />
-        <Text style={stormPdfStyles.footerLine}>stormchain.ai</Text>
+        <Text style={stormPdfStyles.footerLine}>zknight.io</Text>
       </View>
     </View>
   )
@@ -307,7 +307,7 @@ export interface StormPdfDocumentProps {
 
 export function StormPdfDocument({ title, children }: StormPdfDocumentProps) {
   return (
-    <Document title={title} author="Storm">
+    <Document title={title} author="ZKnight">
       {children}
     </Document>
   )

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         requesterName: fullName,
         companyName: trimmedCompanyName,
         description:
-          'Company profile setup — authorized representative completing Storm employer onboarding (owner, HR, or authorized signatory).',
+          'Company profile setup — authorized representative completing ZKnight employer onboarding (owner, HR, or authorized signatory).',
         emailDomain,
       },
       existingCompanyNamesForEval,
@@ -205,14 +205,14 @@ export async function POST(request: NextRequest) {
             : 'none on file'
 
         await insertStormiFlaggedAccessRequest(
-          `Company "${matchedCompany.company_name}" already exists on Storm. Requester could not be auto-verified (on-file domain: ${onFileDomain}).`,
+          `Company "${matchedCompany.company_name}" already exists on ZKnight. Requester could not be auto-verified (on-file domain: ${onFileDomain}).`,
           `Company "${matchedCompany.company_name}" already exists. Requester @${emailDomain ?? 'unknown'} could not be auto-verified (on-file domain: ${onFileDomain}).`,
         )
 
         return NextResponse.json({
           success: true,
           reviewRequired: true,
-          message: `${matchedCompany.company_name} already exists on Storm. Your request to join has been submitted for review.`,
+          message: `${matchedCompany.company_name} already exists on ZKnight. Your request to join has been submitted for review.`,
           reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added.`,
         })
       }
@@ -371,7 +371,7 @@ export async function POST(request: NextRequest) {
         success: true,
         reviewRequired: true,
         message:
-          `${trimmedCompanyName} is already on Storm. We submitted your details to Storm admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
+          `${trimmedCompanyName} is already on ZKnight. We submitted your details to ZKnight admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
       })
     }
 

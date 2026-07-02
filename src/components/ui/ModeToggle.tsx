@@ -91,7 +91,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
         isDark ? 'border-gray-700 bg-gray-900/60' : 'border-slate-200 bg-white/80 shadow-sm',
       )}
       role='group'
-      aria-label='Storm mode'
+      aria-label='ZKnight mode'
     >
       <button
         type='button'
@@ -101,7 +101,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
           active('simple'),
         )}
         aria-pressed={mode === 'simple'}
-        title='Apply mode — job-first, Stormi as co-pilot'
+        title='Apply mode — job-first, AI as co-pilot'
       >
         <Sparkles className='h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4' aria-hidden />
         <span>Apply</span>

@@ -52,7 +52,7 @@ export default function StormiCreditModal({ onClose }: StormiCreditModalProps) {
             <Sparkles className={cn('w-5 h-5', isDark ? 'text-amber-400' : 'text-amber-500')} />
           </div>
           <div>
-            <h3 className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>Stormi credits</h3>
+            <h3 className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>AI credits</h3>
             <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
               Extra chat messages beyond your daily free pool
             </p>
@@ -60,7 +60,7 @@ export default function StormiCreditModal({ onClose }: StormiCreditModalProps) {
         </div>
 
         <p className={cn('text-sm mb-6', isDark ? 'text-gray-300' : 'text-gray-600')}>
-          Paid credit packs are coming soon with Stripe checkout. For now, Stormi uses your daily free message pool.
+          Paid credit packs are coming soon with Stripe checkout. For now, the assistant uses your daily free message pool.
         </p>
 
         <Button variant='secondary' className='w-full' onClick={onClose}>

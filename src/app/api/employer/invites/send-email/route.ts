@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     if (candidateUserId) {
       const targetBlock = (invite as any).target_block_type as string | null
       const blockDef = targetBlock ? getBlockDefinition(targetBlock) : null
-      const inviteLabel = blockDef ? `${blockDef.label} Invite` : 'Storm Invite'
+      const inviteLabel = blockDef ? `${blockDef.label} Invite` : 'ZKnight Invite'
       const companyDisplayName = company?.company_name || 'An employer'
 
       createNotification({

@@ -645,7 +645,7 @@ export default function PersonalInfoForm1({
   const renderApplicantInformation = () => (
     <div className='space-y-8'>
       <AskStormiButton
-        label='Ask Stormi about this section'
+        label='Ask AI about this section'
         className='justify-end'
         onClick={() =>
           requestHelp({

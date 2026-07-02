@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'out_of_credits',
           message:
-            'You have used your free cover letters for today. Purchase Stormi credits to generate more, or try again tomorrow.',
+            'You have used your free cover letters for today. Purchase AI credits to generate more, or try again tomorrow.',
           coverLettersDailyRemaining: 0,
           credits: usage.credits,
         },

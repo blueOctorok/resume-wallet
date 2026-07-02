@@ -88,7 +88,7 @@ function BuildModeMockup({ isDark }: { isDark: boolean }) {
                 : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
             )}
           >
-            <Zap className='h-2.5 w-2.5' /> Storm
+            <Zap className='h-2.5 w-2.5' /> ZKnight
           </span>
           <span className={cn('text-[10px] uppercase tracking-wider', muted)}>Job</span>
         </div>
@@ -181,7 +181,7 @@ function HeroCareerCardMockup({ isDark }: { isDark: boolean }) {
     { label: 'DOT application', verified: true },
     { label: 'MVR — clean record', verified: true },
     { label: 'Employment history', verified: true },
-    { label: 'STORM Resume', verified: false },
+    { label: 'ZKnight Resume', verified: false },
   ]
 
   return (
@@ -428,7 +428,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   isDark ? 'text-gray-400' : 'text-slate-600',
                 )}
               >
-                Browse real jobs, build a verified career card block by block with Stormi as your coach, and apply with proof, not promises.
+                Browse real jobs, build a verified career card block by block with an AI coach, and apply with proof, not promises.
               </p>
 
               <div className='mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start'>
@@ -485,7 +485,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
 
                 <div data-reveal className='reveal-item'>
                   <p className={cn('text-base leading-relaxed sm:text-lg', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                    Storm starts with the role you actually want, then guides you to build only what that job needs. Your verified career card grows in real time on the right while the job stays anchored on the left, and you graduate when you&rsquo;re ready to apply.
+                    ZKnight starts with the role you actually want, then guides you to build only what that job needs. Your verified career card grows in real time on the right while the job stays anchored on the left, and you graduate when you&rsquo;re ready to apply.
                   </p>
 
                   <ol className='mt-8 space-y-6'>
@@ -495,7 +495,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                         title: 'The job goes on the left.',
                         body: (
                           <>
-                            Pick any open role from a blended feed &mdash; Storm employers first, aggregated listings underneath. Storm reads the requirements and reverse-engineers exactly what you&rsquo;ll need to stand out.
+                            Pick any open role from a blended feed &mdash; ZKnight employers first, aggregated listings underneath. ZKnight reads the requirements and reverse-engineers exactly what you&rsquo;ll need to stand out.
                           </>
                         ),
                       },
@@ -513,7 +513,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                         title: 'Apply with a tailored lens.',
                         body: (
                           <>
-                            Stormi drafts a focused view of your card &mdash; a <em>lens</em> &mdash; for every application. One verified profile, every angle. Employers see exactly what you chose to share.
+                            Your AI coach drafts a focused view of your card &mdash; a <em>lens</em> &mdash; for every application. One verified profile, every angle. Employers see exactly what you chose to share.
                           </>
                         ),
                       },
@@ -568,13 +568,13 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             <BlockCard
               variant='embed'
               icon={Sparkles}
-              title='Meet Stormi'
+              title='Meet your AI coach'
               description='A coach who knows your career.'
             >
               <div className='grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14'>
                 <div data-reveal className='reveal-item'>
                   <p className={cn('text-base leading-relaxed sm:text-lg', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                    Stormi watches what you&rsquo;ve built, sees the job you&rsquo;re chasing, and tells you exactly what to do next. Every conversation builds on the last.
+                    Your AI coach watches what you&rsquo;ve built, sees the job you&rsquo;re chasing, and tells you exactly what to do next. Every conversation builds on the last.
                   </p>
 
                   <ul className='mt-6 space-y-4'>
@@ -649,7 +649,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   isDark ? 'text-gray-300' : 'text-slate-700',
                 )}
               >
-                Most users get what they need from Apply Mode and that&rsquo;s fine. When you want full ownership of your career, switch to Construct Mode &mdash; every block category, open chat with Stormi, verified credentials, and tools to maintain your professional identity over time.
+                Most users get what they need from Apply Mode and that&rsquo;s fine. When you want full ownership of your career, switch to Construct Mode &mdash; every block category, open AI chat, verified credentials, and tools to maintain your professional identity over time.
               </p>
 
               <div className='mt-8 grid gap-4 lg:grid-cols-3'>
@@ -667,7 +667,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   },
                   {
                     icon: Sparkles,
-                    title: 'Stormi on your terms.',
+                    title: 'AI on your terms.',
                     body: (
                       <>
                         Open chat for career questions, deep-dives, and what-ifs that go beyond the job in front of you.

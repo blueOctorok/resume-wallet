@@ -178,7 +178,7 @@ export default function Navigation({
 
               {/* Center — stacked Storm / StormTokenMark / Chain (matches LoadingScreen + whitepaper) */}
               <div className='pointer-events-none flex flex-1 justify-center py-1 sm:-ml-6 sm:py-1.5 lg:-ml-10'>
-                <h1 className='pointer-events-none' aria-label='Storm'>
+                <h1 className='pointer-events-none' aria-label='ZKnight'>
                   <StormChainWordmark size='nav' vaultChrome={false} />
                 </h1>
               </div>
@@ -230,9 +230,9 @@ export default function Navigation({
                       navStormiButtonClass(isDark, theme),
                       tHasUnread && 'animate-pulse',
                     )}
-                    aria-label='Open Stormi assistant'
+                    aria-label='Open AI assistant'
                   >
-                    <span className='text-sm font-bold tracking-wide'>Stormi</span>
+                    <span className='text-sm font-bold tracking-wide'>Assistant</span>
                     {tHasUnread && (
                       <span
                         className={cn(
@@ -407,7 +407,7 @@ export default function Navigation({
                   )}
                 >
                   <Sparkles className='w-4 h-4' />
-                  <span>{tHasUnread ? 'Stormi has updates' : 'Chat with Stormi'}</span>
+                  <span>{tHasUnread ? 'Assistant has updates' : 'Chat with assistant'}</span>
                   {tHasUnread && (
                     <span
                       className={cn(
@@ -720,7 +720,7 @@ export default function Navigation({
                               )}
                             >
                               <HelpCircle className='w-4 h-4' />
-                              <span>Stormi Journey Guide</span>
+                              <span>Journey Guide</span>
                               <span className='ml-auto text-xs opacity-60'>?</span>
                             </button>
                           </>

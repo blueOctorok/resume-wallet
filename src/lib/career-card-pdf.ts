@@ -31,11 +31,11 @@ export async function buildCareerCardPdfBuffer(
   pdf.text(card.name, margin, 22)
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(10)
-  const headline = card.occupation || 'Storm Career Card'
+  const headline = card.occupation || 'ZKnight Career Card'
   pdf.text(headline.slice(0, 90), margin, 30)
   pdf.setFontSize(8)
   pdf.setTextColor(...TEAL)
-  pdf.text('Verified by Storm — selective disclosure career platform', margin, 37)
+  pdf.text('Verified by ZKnight — selective disclosure career platform', margin, 37)
 
   y = 52
   pdf.setTextColor(...SLATE)
@@ -69,11 +69,11 @@ export async function buildCareerCardPdfBuffer(
   pdf.addImage(qrDataUrl, 'PNG', margin, y, 32, 32)
   pdf.setFontSize(8)
   pdf.setTextColor(...MUTED)
-  pdf.text('Scan for live Career Card on Storm', margin + 36, y + 10)
+  pdf.text('Scan for live Career Card on ZKnight', margin + 36, y + 10)
   pdf.text(publicCardUrl.slice(0, 80), margin + 36, y + 16)
   pdf.setFont('helvetica', 'bold')
   pdf.setTextColor(...TEAL)
-  pdf.text('stormchain.ai', margin, pageH - 8)
+  pdf.text('zknight.io', margin, pageH - 8)
 
   // ── Page 2: ATS plain text ───────────────────────────────────────────────
   pdf.addPage()

@@ -91,8 +91,8 @@ export default function StormiWalkthrough({
         <BlockCard
           variant="embed"
           headerIconSlot={stormiIcon}
-          title={isAiLoadingPlaceholder ? 'Stormi is writing your welcome…' : step.title}
-          description={`Stormi · Step ${index + 1} of ${steps.length}`}
+          title={isAiLoadingPlaceholder ? 'Writing your welcome…' : step.title}
+          description={`Assistant · Step ${index + 1} of ${steps.length}`}
           headerActions={
             <button
               type="button"
@@ -209,7 +209,7 @@ export default function StormiWalkthrough({
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-400 text-teal-600 focus:ring-teal-500"
               />
               <span className={isDark ? 'text-gray-300' : 'text-slate-700'}>
-                Don&apos;t show Stormi tips and walkthroughs again (turn back on under{' '}
+                Don&apos;t show assistant tips and walkthroughs again (turn back on under{' '}
                 <span className="font-medium">My Hub → Journey Tips</span>)
               </span>
             </label>

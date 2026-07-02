@@ -1,6 +1,6 @@
 /**
- * PDF-native STORM wordmark — mirrors the navbar `StormChainWordmark` (no vault
- * chrome): ST + violet-framed O tile with cloud-lightning + RM.
+ * PDF-native ZKNIGHT wordmark — mirrors the navbar `StormChainWordmark` (no vault
+ * chrome): a violet-framed shield tile with a check mark + ZKNIGHT.
  *
  * Built with @react-pdf Svg/Text so server-side PDF generation needs no Chromium
  * or rasterized logo assets.
@@ -13,10 +13,10 @@ const INK = '#0f172a'
 const MUTED = '#475569'
 const TEAL = '#0d9488'
 
-/** Lucide CloudLightning paths (24×24 viewBox) — same icon as the web wordmark. */
-const CLOUD_LIGHTNING_PATHS = [
-  'M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973',
-  'm13 12-3 5h4l-3 5',
+/** Lucide ShieldCheck paths (24×24 viewBox) — same icon as the web wordmark. */
+const SHIELD_CHECK_PATHS = [
+  'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
+  'm9 12 2 2 4-4',
 ] as const
 
 const styles = StyleSheet.create({
@@ -31,10 +31,10 @@ const styles = StyleSheet.create({
     color: INK,
     letterSpacing: 1.1,
   },
-  oTile: {
+  markTile: {
     width: 13,
     height: 13,
-    marginHorizontal: 1,
+    marginRight: 3,
     borderWidth: 1.4,
     borderColor: '#7c3aed',
     borderRadius: 2,
@@ -55,11 +55,11 @@ export interface StormPdfWordmarkProps {
   tagline?: string
 }
 
-function StormPdfOTile() {
+function StormPdfShieldTile() {
   return (
-    <View style={styles.oTile}>
+    <View style={styles.markTile}>
       <Svg width={9} height={9} viewBox="0 0 24 24">
-        {CLOUD_LIGHTNING_PATHS.map((d) => (
+        {SHIELD_CHECK_PATHS.map((d) => (
           <Path
             key={d}
             d={d}
@@ -79,9 +79,8 @@ export function StormPdfWordmark({ tagline }: StormPdfWordmarkProps) {
   return (
     <View>
       <View style={styles.row}>
-        <Text style={styles.letter}>ST</Text>
-        <StormPdfOTile />
-        <Text style={styles.letter}>RM</Text>
+        <StormPdfShieldTile />
+        <Text style={styles.letter}>ZKNIGHT</Text>
       </View>
       {tagline ? <Text style={styles.tagline}>{tagline}</Text> : null}
     </View>

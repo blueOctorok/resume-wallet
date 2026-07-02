@@ -20,7 +20,7 @@ interface AskStormiButtonProps {
  * - `className` applies to the outer wrapper for positioning
  */
 export default function AskStormiButton({
-  label = 'Ask Stormi',
+  label = 'Ask AI',
   onClick,
   className,
 }: AskStormiButtonProps) {

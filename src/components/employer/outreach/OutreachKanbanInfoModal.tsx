@@ -65,7 +65,7 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
           </h4>
           <p>
             Tiles are compact on purpose. <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Click a card</strong> to open the full
-            detail view: copy link, QR, email, MVR/PSP files, internal notes, Stormi, cancel, or remove.
+            detail view: copy link, QR, email, MVR/PSP files, internal notes, Assistant, cancel, or remove.
           </p>
         </section>
 
@@ -76,7 +76,7 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
           <p>
             Cards with a <span className="inline-flex h-2 w-2 translate-y-[1px] rounded-full bg-red-500 align-baseline" /> {' '}
             red dot have a stalled or failed screening — usually a typo in the driver license field, a provider rejection,
-            or an order pending more than 24h. Open the card to see Stormi&apos;s reason and a one-click{' '}
+            or an order pending more than 24h. Open the card to see the assistant&apos;s reason and a one-click{' '}
             <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Resend consent</strong> button, which mints a
             fresh invite and emails the candidate to redo the form with corrected info.
           </p>

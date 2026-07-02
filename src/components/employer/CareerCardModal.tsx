@@ -177,7 +177,7 @@ export default function CareerCardModal({
   // bgcheck consent API, and FCRA disclosure stay on the same pipeline.
 
   const buildEmployerRequestBody = (blockType: string) => {
-    const message = 'Requested via Storm Talent Search'
+    const message = 'Requested via ZKnight Talent Search'
     if (blockType === 'driver-mvr') {
       return {
         requestType: 'mvr_order' as const,
@@ -1004,7 +1004,7 @@ function MvrOrderModal({
             {useStoredConsentOnly ? (
               <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
                 This candidate&apos;s FCRA disclosure, FMCSA PSP authorization, CDLIS written consent, and full identity
-                are already on file from their screening consent package. Submit the order below — Storm will send
+                are already on file from their screening consent package. Submit the order below — ZKnight will send
                 it to the vendor using the stored package (no re-entry).
               </p>
             ) : (

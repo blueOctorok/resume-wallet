@@ -159,7 +159,7 @@ function tone(score: number): JobFitResult['toneBand'] {
 function labelFor(score: number): string {
   if (score >= 85) return 'Strong match'
   if (score >= 60) return 'Good match — close a few gaps'
-  if (score >= 40) return 'Stretch role — Stormi can help'
+  if (score >= 40) return 'Stretch role — the assistant can help'
   return 'Long shot — try a closer fit'
 }
 

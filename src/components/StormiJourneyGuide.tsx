@@ -85,7 +85,7 @@ export default function StormiJourneyGuide() {
         )}
         role='dialog'
         aria-modal='true'
-        aria-label='Stormi Journey Guide'
+        aria-label='Journey Guide'
       >
         <div className='min-w-0 flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-teal-500/12 to-transparent p-6 dark:border-gray-700 dark:from-teal-400/10'>
           <div className='flex items-start justify-between gap-2'>

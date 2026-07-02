@@ -189,7 +189,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
             'min-w-0 truncate text-sm font-semibold tracking-tight',
             isDark ? 'text-white' : 'text-slate-900',
           )}
-          title='Pick a role — Stormi shapes your career card around what you target.'
+          title='Pick a role — your AI coach shapes your career card around what you target.'
         >
           Find jobs
         </h3>
@@ -456,7 +456,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
                   isDark ? 'text-gray-200' : 'text-slate-700',
                 )}
               >
-                Pick a trending search below, or ask Stormi in the card column for ideas.
+                Pick a trending search below, or ask AI in the card column for ideas.
               </p>
             </div>
             <div className='flex flex-wrap gap-1'>
@@ -529,7 +529,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
                     )}
                   >
                     <Zap className='h-2.5 w-2.5' />
-                    Storm
+                    ZKnight
                   </span>
                 )}
               </div>

@@ -31,12 +31,12 @@ const EMPLOYER_AUTH_TIERS = [
   {
     id: 'company_owner',
     label: 'Company Owner',
-    description: 'I\'m authorized to set up and manage this company on Storm.',
+    description: 'I\'m authorized to set up and manage this company on ZKnight.',
   },
   {
     id: 'team_member',
     label: 'Team Member',
-    description: 'My company is already on Storm — I\'m joining the team.',
+    description: 'My company is already on ZKnight — I\'m joining the team.',
   },
 ] as const
 
@@ -296,7 +296,7 @@ export default function RoleSelectionModal({
               <span className='text-2xl sm:text-3xl'>⛈️</span>
             </div>
             <h2 className={`text-xl sm:text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Welcome to Storm!
+              Welcome to ZKnight!
             </h2>
             <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
               Let's get you set up. What brings you here?
@@ -518,7 +518,7 @@ export default function RoleSelectionModal({
                   {showRequestForm && !pendingRequest && !requestSubmitted && (
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
                       <h4 className={`font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        Set up your company on Storm
+                        Set up your company on ZKnight
                       </h4>
                       <p className={`text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         This request is for company owners, HR directors, or hiring managers.
@@ -659,7 +659,7 @@ export default function RoleSelectionModal({
                       </div>
 
                       <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        <strong>Team members:</strong> If your company is already on Storm, use your company email and you&apos;ll be added automatically.
+                        <strong>Team members:</strong> If your company is already on ZKnight, use your company email and you&apos;ll be added automatically.
                       </p>
                     </div>
                   )}

@@ -102,10 +102,10 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
   'storm-resume': {
     resolve: (d) => [{
       id: 'storm-resume',
-      label: 'STORM Resume',
-      description: 'Upload a file or build a Storm-style resume for your career path',
+      label: 'ZKnight Resume',
+      description: 'Upload a file or build a ZKnight-style resume for your career path',
       status: d.hasResume ? 'complete' : 'pending',
-      action: !d.hasResume ? { label: 'Open STORM Resume', target: 'storm-resume' } : undefined,
+      action: !d.hasResume ? { label: 'Open ZKnight Resume', target: 'storm-resume' } : undefined,
     }],
     nextAction: (d) => !d.hasResume ? {
       label: 'Complete Your Resume',
@@ -369,7 +369,7 @@ export function calculateBlockJourney(
           id: 'verified-attestation',
           label: 'Share a verified fact',
           description:
-            'Issue a Verified by Storm credential from your screening data and choose which employers see it',
+            'Issue a Verified by ZKnight credential from your screening data and choose which employers see it',
           status: data.hasVerifiedAttestation ? 'complete' : 'pending',
           isOptional: true,
         }
@@ -379,7 +379,7 @@ export function calculateBlockJourney(
   const jobStep: JourneyStep = {
     id: 'find-jobs',
     label: 'Browse & Apply to Jobs',
-    description: 'Search Storm and external job listings',
+    description: 'Search ZKnight and external job listings',
     status: data.hasAppliedToJobs ? 'complete' : 'pending',
     action: !data.hasAppliedToJobs ? { label: 'Find Jobs', target: 'jobs' } : undefined,
   }
@@ -455,7 +455,7 @@ export function calculateBlockJourney(
     if (!data.hasAppliedToJobs) {
       nextActions.push({
         label: 'Find Jobs',
-        description: 'Search Storm and external job listings',
+        description: 'Search ZKnight and external job listings',
         target: 'jobs',
         priority: 'low',
       })
@@ -465,7 +465,7 @@ export function calculateBlockJourney(
   // 6. Greeting
   let greeting: string
   if (!data.isWalletConnected) {
-    greeting = "Welcome to Storm! Let's get you started."
+    greeting = "Welcome to ZKnight! Let's get you started."
   } else if (installedBlockTypes.length === 0) {
     greeting = 'Add blocks to your hub — each one is proof employers see on your Career Card.'
   } else if (overallProgress < 30) {

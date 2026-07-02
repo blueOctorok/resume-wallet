@@ -71,7 +71,7 @@ export default function StormiContextModal() {
   return (
     <Modal onClose={closeStormiContextModal} maxWidth='max-w-lg' zIndex={1000}>
       <ModalHeader
-        title='Tell Stormi more about you'
+        title='Tell the assistant more about you'
         subtitle='The more context you share, the better she can coach you and suggest next steps.'
         onClose={closeStormiContextModal}
       />
@@ -109,18 +109,18 @@ export default function StormiContextModal() {
 
         <div>
           <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-            Additional context for Stormi <span className='font-normal text-gray-500'>(optional)</span>
+            Additional context for the assistant <span className='font-normal text-gray-500'>(optional)</span>
           </label>
           <textarea
             value={extraContext}
             onChange={(e) => setExtraContext(e.target.value)}
-            placeholder='Goals, preferences, constraints, or anything else that helps Stormi give you better advice'
+            placeholder='Goals, preferences, constraints, or anything else that helps the assistant give you better advice'
             rows={4}
             disabled={isSubmitting}
             className={`w-full px-3.5 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/30 resize-none ${inputClasses}`}
           />
           <p className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            This is only shared with Stormi so she can personalize her guidance. Examples: &quot;I want to go OTR in 6
+            This is only shared with the assistant so it can personalize its guidance. Examples: &quot;I want to go OTR in 6
             months&quot;, &quot;Prefer local only&quot;, &quot;Building a dev portfolio for fintech&quot;.
           </p>
         </div>
@@ -138,7 +138,7 @@ export default function StormiContextModal() {
                 Saving…
               </span>
             ) : (
-              'Save for Stormi'
+              'Save'
             )}
           </Button>
         </div>

@@ -6,7 +6,7 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'stormchain@verify.stormchain.ai'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
 
 export interface SendInviteEmailParams {
   to: string
@@ -49,10 +49,10 @@ function getEmailContent(targetBlockType: string | null, companyName: string, jo
         ? `${companyName} — Complete your ${label} for ${jobTitle}`
         : `${companyName} — Complete your ${label}`,
       headline: `${companyName} wants you on their team${job}`,
-      intro: `${companyName} has invited you to complete a ${label} through Storm — a secure, blockchain-verified platform. ${description}. Your data is stored safely and only shared with companies you authorize.`,
+      intro: `${companyName} has invited you to complete a ${label} through ZKnight — a secure, blockchain-verified platform. ${description}. Your data is stored safely and only shared with companies you authorize.`,
       checklistTitle: "What you'll do:",
       checklist: [
-        'Create your free Storm account',
+        'Create your free ZKnight account',
         `Complete your ${label}`,
         'Review and submit your information',
         `Connect directly with ${companyName}`,
@@ -64,18 +64,18 @@ function getEmailContent(targetBlockType: string | null, companyName: string, jo
 
   // General invite — no specific block target
   return {
-    subject: `You've been invited to Storm by ${companyName}`,
-    headline: `${companyName} invited you to Storm`,
-    intro: `Storm is a blockchain-verified credential platform for professionals. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
+    subject: `You've been invited to ZKnight by ${companyName}`,
+    headline: `${companyName} invited you to ZKnight`,
+    intro: `ZKnight is a blockchain-verified credential platform for professionals. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
     checklistTitle: "What you'll do:",
     checklist: [
-      'Create your free Storm account',
+      'Create your free ZKnight account',
       'Set up your professional profile',
       'Add relevant credentials and documents',
       `Connect directly with companies like ${companyName}`,
     ],
     timeEstimate: '5–10 minutes to get started',
-    ctaLabel: 'Join Storm',
+    ctaLabel: 'Join ZKnight',
   }
 }
 
@@ -118,7 +118,7 @@ export async function sendInviteEmail(
     </div>
     ${infoBox(`<p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
       <strong>🔒 Your data is secure.</strong><br>
-      Storm uses blockchain verification to protect your credentials. Only ${companyName} will have access to your application.
+      ZKnight uses blockchain verification to protect your credentials. Only ${companyName} will have access to your application.
     </p>`)}
     ${fallbackLink(inviteLink)}
   `
@@ -131,7 +131,7 @@ export async function sendInviteEmail(
     bodyHtml,
     ctaLabel: `${content.ctaLabel} →`,
     ctaUrl: inviteLink,
-    footerNote: `This invitation was sent by <strong>${companyName}</strong> through Storm. If you weren't expecting this, you can safely ignore it.`,
+    footerNote: `This invitation was sent by <strong>${companyName}</strong> through ZKnight. If you weren't expecting this, you can safely ignore it.`,
   })
 
   try {

@@ -261,7 +261,7 @@ function ErrorScreen({
           onClick={onGoHome}
           className="mt-6 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors"
         >
-          Go to Storm
+          Go to ZKnight
         </button>
       </div>
     </div>

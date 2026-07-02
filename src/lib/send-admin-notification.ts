@@ -5,9 +5,9 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'stormchain@verify.stormchain.ai'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
 const ADMIN_EMAILS = process.env.ADMIN_NOTIFICATION_EMAILS?.split(',').map(e => e.trim()) || []
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stormchain.ai'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zknight.io'
 
 export interface NewCompanyNotificationParams {
   companyName: string
@@ -74,14 +74,14 @@ export async function sendNewCompanyNotification(
     bodyHtml,
     ctaLabel: 'Review in Admin Panel',
     ctaUrl: `${APP_URL}/admin`,
-    footerNote: 'This is an automated notification from Storm admin systems.',
+    footerNote: 'This is an automated notification from ZKnight admin systems.',
   })
 
   try {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: ADMIN_EMAILS,
-      subject: `[Storm Admin] New Company: ${companyName}`,
+      subject: `[ZKnight Admin] New Company: ${companyName}`,
       html,
     })
     if (error) {
@@ -117,21 +117,21 @@ function resolveLabel(requestType: string, params: CandidateRequestNotificationP
 
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
   mvr_order: () =>
-    'They would like to order your Motor Vehicle Record (MVR). Log in to Storm to review and sign the required FCRA disclosure before the MVR can be ordered.',
+    'They would like to order your Motor Vehicle Record (MVR). Log in to ZKnight to review and sign the required FCRA disclosure before the MVR can be ordered.',
   psp_order: () =>
-    'They would like to order an FMCSA PSP (crash and inspection history) for you. Log in to Storm to review and sign the required FCRA disclosure before the PSP can be ordered.',
+    'They would like to order an FMCSA PSP (crash and inspection history) for you. Log in to ZKnight to review and sign the required FCRA disclosure before the PSP can be ordered.',
   document_upload: (p) =>
     p.documentType === 'resume'
-      ? 'They are requesting your resume. Log in to Storm to upload or create one.'
+      ? 'They are requesting your resume. Log in to ZKnight to upload or create one.'
       : `They are requesting you upload your ${p.documentType || 'document'}.`,
   verification: () => 'They are requesting employment verification for your work history.',
   profile_completion: (p) =>
     p.documentType === 'dot_application'
-      ? 'They are requesting you complete your DOT Driver Application on Storm. A completed application strengthens your profile and speeds up the hiring process.'
+      ? 'They are requesting you complete your DOT Driver Application on ZKnight. A completed application strengthens your profile and speeds up the hiring process.'
       : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
   block_request: (p) =>
-    `They are requesting your ${p.blockLabel || 'data'}. Log in to Storm to complete it.`,
+    `They are requesting your ${p.blockLabel || 'data'}. Log in to ZKnight to complete it.`,
 }
 
 /**
@@ -160,19 +160,19 @@ export async function sendCandidateRequestNotification(
       ${message && requestType !== 'custom' ? `<p style="margin:10px 0 0;font-size:13px;font-style:italic;color:#64748b;">"${message}"</p>` : ''}
     `)}
     <p style="margin:0 0 4px;color:#64748b;font-size:14px;line-height:1.6;">
-      Log in to your Storm account to view and respond to this request.
+      Log in to your ZKnight account to view and respond to this request.
     </p>
   `
 
   const html = buildEmail({
-    preheader: `${companyName} has a new request for you on Storm`,
+    preheader: `${companyName} has a new request for you on ZKnight`,
     headerEyebrow: companyName,
     headerTitle: `You have a new request`,
     greeting: `Hi ${firstName},`,
     bodyHtml,
     ctaLabel: 'View Request',
     ctaUrl: APP_URL,
-    footerNote: `You're receiving this because an employer on Storm is interested in your profile. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because an employer on ZKnight is interested in your profile. Reply to this email with any questions.`,
   })
 
   try {
@@ -180,7 +180,7 @@ export async function sendCandidateRequestNotification(
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: candidateEmail,
-      subject: `${companyName} has a request for you on Storm`,
+      subject: `${companyName} has a request for you on ZKnight`,
       html,
     })
     if (error) {
@@ -207,7 +207,7 @@ const STATUS_CONFIG: Record<string, {
   contacted: {
     subject: 'Employer reached out',
     heading: "They've marked you as contacted",
-    body: "The employer has moved your application forward and marked you as contacted. Check Storm for messages or follow up in your usual channels.",
+    body: "The employer has moved your application forward and marked you as contacted. Check ZKnight for messages or follow up in your usual channels.",
     accentColor: '#0d9488',
   },
 }
@@ -241,7 +241,7 @@ export async function sendApplicationStatusNotification(
       <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${config.accentColor};">${config.heading}</p>
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${config.body}</p>
     `, config.accentColor)}
-    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your Storm account to view your full application status.</p>
+    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your ZKnight account to view your full application status.</p>
   `
 
   const html = buildEmail({
@@ -253,7 +253,7 @@ export async function sendApplicationStatusNotification(
     ctaLabel: 'View Application',
     ctaUrl: APP_URL,
     accentColor: config.accentColor,
-    footerNote: `You're receiving this because you applied to a job on Storm. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because you applied to a job on ZKnight. Reply to this email with any questions.`,
   })
 
   try {
@@ -282,23 +282,23 @@ export async function sendApplicationStatusNotification(
 const SCREENING_READY_COPY = {
   mvr: {
     candidateTitle: 'Your MVR is ready',
-    candidatePreheader: 'Your motor vehicle record has arrived on Storm',
+    candidatePreheader: 'Your motor vehicle record has arrived on ZKnight',
     candidateLead:
-      'Your <strong>Motor Vehicle Record (MVR)</strong> has been processed and is available in your Storm account.',
+      'Your <strong>Motor Vehicle Record (MVR)</strong> has been processed and is available in your ZKnight account.',
     employerTitle: (candidateName: string) => `MVR ready: ${candidateName}`,
-    employerPreheader: 'A requested motor vehicle record is available on Storm',
+    employerPreheader: 'A requested motor vehicle record is available on ZKnight',
     employerLead: (candidateName: string, companyName: string) =>
-      `The <strong>MVR</strong> you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Storm.`,
+      `The <strong>MVR</strong> you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in ZKnight.`,
   },
   psp: {
     candidateTitle: 'Your PSP report is ready',
-    candidatePreheader: 'Your FMCSA PSP screening has arrived on Storm',
+    candidatePreheader: 'Your FMCSA PSP screening has arrived on ZKnight',
     candidateLead:
-      'Your <strong>FMCSA PSP</strong> (crash and inspection history) report has been processed and is available in your Storm account.',
+      'Your <strong>FMCSA PSP</strong> (crash and inspection history) report has been processed and is available in your ZKnight account.',
     employerTitle: (candidateName: string) => `PSP report ready: ${candidateName}`,
-    employerPreheader: 'A requested FMCSA PSP report is available on Storm',
+    employerPreheader: 'A requested FMCSA PSP report is available on ZKnight',
     employerLead: (candidateName: string, companyName: string) =>
-      `The <strong>FMCSA PSP</strong> report you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Storm.`,
+      `The <strong>FMCSA PSP</strong> report you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in ZKnight.`,
   },
 } as const
 
@@ -326,14 +326,14 @@ export async function sendCandidateScreeningReadyEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Log in to review the result in your screening block. If anything looks incorrect, contact support through Storm.
+        Log in to review the result in your screening block. If anything looks incorrect, contact support through ZKnight.
       </p>
     `)}
   `
 
   const html = buildEmail({
     preheader: copy.candidatePreheader,
-    headerEyebrow: 'Storm',
+    headerEyebrow: 'ZKnight',
     headerTitle: copy.candidateTitle,
     greeting: `Hi ${first},`,
     bodyHtml,
@@ -346,7 +346,7 @@ export async function sendCandidateScreeningReadyEmail(params: {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: candidateEmail,
-      subject: `[Storm] ${copy.candidateTitle}`,
+      subject: `[ZKnight] ${copy.candidateTitle}`,
       html,
     })
     if (error) {
@@ -389,7 +389,7 @@ export async function sendEmployerScreeningReadyEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Open Storm to view the report in your hiring workflow. Full report details stay inside Storm — we never send the screening document by email.
+        Open ZKnight to view the report in your hiring workflow. Full report details stay inside ZKnight — we never send the screening document by email.
       </p>
     `)}
   `
@@ -400,16 +400,16 @@ export async function sendEmployerScreeningReadyEmail(params: {
     headerTitle: copy.employerTitle(candidateDisplayName),
     greeting: `Hi ${first},`,
     bodyHtml,
-    ctaLabel: 'Open Storm',
+    ctaLabel: 'Open ZKnight',
     ctaUrl,
-    footerNote: `You're receiving this because your company requested this screening on Storm.`,
+    footerNote: `You're receiving this because your company requested this screening on ZKnight.`,
   })
 
   try {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: employerEmail,
-      subject: `[Storm] ${copy.employerTitle(candidateDisplayName)}`,
+      subject: `[ZKnight] ${copy.employerTitle(candidateDisplayName)}`,
       html,
     })
     if (error) {
@@ -450,7 +450,7 @@ const EMPLOYER_ACTION_EMAIL_COPY: Record<
     preheader: 'FCRA, FMCSA, and CDLIS package signed — ready to order MVR/PSP',
     lead: (n, c) =>
       `<strong>${n}</strong> completed the full screening consent package (FCRA background check authorization, FMCSA PSP disclosure, and CDLIS written consent) for <strong>${c}</strong>. You can now place MVR and PSP orders from Outreach without sending another invite.`,
-    ctaLabel: 'Open Storm',
+    ctaLabel: 'Open ZKnight',
   },
   bgcheck_consent: {
     subject: (n) => `${n} signed background check consent`,
@@ -458,25 +458,25 @@ const EMPLOYER_ACTION_EMAIL_COPY: Record<
     preheader: 'A candidate signed your FCRA authorization',
     lead: (n, c) =>
       `<strong>${n}</strong> signed the background check authorization for <strong>${c}</strong>.`,
-    ctaLabel: 'Open Storm',
+    ctaLabel: 'Open ZKnight',
   },
   psp_consent: {
     subject: (n) => `${n} signed PSP disclosure`,
     title: () => `PSP disclosure signed`,
-    preheader: 'FMCSA PSP disclosure recorded on Storm',
+    preheader: 'FMCSA PSP disclosure recorded on ZKnight',
     lead: (n, c) =>
       `<strong>${n}</strong> signed the FMCSA PSP Disclosure &amp; Authorization for <strong>${c}</strong>.`,
-    ctaLabel: 'Open Storm',
+    ctaLabel: 'Open ZKnight',
   },
   block_completed: {
     subject: (n) => `${n} completed your request`,
     title: () => `Request fulfilled`,
-    preheader: 'A candidate finished something you requested on Storm',
+    preheader: 'A candidate finished something you requested on ZKnight',
     lead: (n, c, block) =>
       block
         ? `<strong>${n}</strong> completed your <strong>${block}</strong> request for <strong>${c}</strong>.`
         : `<strong>${n}</strong> fulfilled a request for <strong>${c}</strong>.`,
-    ctaLabel: 'View in Storm',
+    ctaLabel: 'View in ZKnight',
   },
   invite_completed: {
     subject: (n) => `${n} completed your invite`,
@@ -527,7 +527,7 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Open Storm to review the update in your hiring workflow. Sensitive screening documents are never sent by email — only this confirmation.
+        Open ZKnight to review the update in your hiring workflow. Sensitive screening documents are never sent by email — only this confirmation.
       </p>
     `)}
   `
@@ -540,14 +540,14 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
     bodyHtml,
     ctaLabel: copy.ctaLabel,
     ctaUrl,
-    footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on Storm.`,
+    footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on ZKnight.`,
   })
 
   try {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: employerEmail,
-      subject: `[Storm] ${copy.subject(candidate)}`,
+      subject: `[ZKnight] ${copy.subject(candidate)}`,
       html,
     })
     if (error) {

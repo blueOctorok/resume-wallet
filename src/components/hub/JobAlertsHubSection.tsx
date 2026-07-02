@@ -202,7 +202,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   const atCap = preferences.length >= maxAlerts
 
   const ALERTS_DESCRIPTION =
-    'Browse Storm + external listings; star roles on Hunt Desk. Daily scans, Stormi-scored matches, in-app notifications — each job pings once.'
+    'Browse ZKnight + external listings; star roles on Hunt Desk. Daily scans, AI-scored matches, in-app notifications — each job pings once.'
 
   const toolbar = (
     <div className='flex w-full flex-wrap gap-2 justify-start sm:w-auto sm:justify-end'>
@@ -238,7 +238,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
           <span className='text-teal-600 dark:text-teal-400'> (credits)</span>
         )}
         {maxAlerts === JOB_ALERTS_MAX_FREE && preferences.length >= JOB_ALERTS_MAX_FREE && (
-          <span> · Add Stormi credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
+          <span> · Add AI credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
         )}
       </p>
 
@@ -347,7 +347,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
         <Modal onClose={() => !saving && setFormOpen(false)} maxWidth='max-w-md'>
           <ModalHeader
             title={editing ? 'Edit job alert' : 'New job alert'}
-            subtitle="Stormi compares new listings to your profile; you only get notified when the score clears your threshold."
+            subtitle="The assistant compares new listings to your profile; you only get notified when the score clears your threshold."
             onClose={() => !saving && setFormOpen(false)}
           />
           <div className='p-4 space-y-3'>

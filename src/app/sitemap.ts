@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next'
 
 /**
- * Dynamic sitemap for Storm
+ * Dynamic sitemap for ZKnight
  * Next.js automatically serves this at /sitemap.xml
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://stormchain.ai'
+  const baseUrl = 'https://zknight.io'
 
   return [
     {

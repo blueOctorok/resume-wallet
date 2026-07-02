@@ -7,18 +7,21 @@ Copy these from your `.env.local` file to Vercel.
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_APP_URL=               # Production: https://stormchain.ai (no trailing slash)
+NEXT_PUBLIC_APP_URL=               # Production: https://zknight.io (no trailing slash)
 ```
 
 ## Private Variables (Backend only — DO NOT prefix with NEXT_PUBLIC)
 
 ```
 SUPABASE_SERVICE_ROLE_KEY=
-AVA_BRAIN=                         # Anthropic API key for Stormi
+AVA_BRAIN=                         # Anthropic API key for the AI assistant
 ADMIN_EMAILS=                      # Comma-separated admin emails (replaces ADMIN_WALLETS)
 ADMIN_API_KEY=                     # Legacy admin routes (reset-wallet, etc.)
 CRON_SECRET=                       # Reconcile-screenings cron
 RESEND_API_KEY=                    # Transactional email
+RESEND_FROM_EMAIL=                 # e.g. ZKnight <zknight@verify.zknight.io> — MUST be a Resend-verified domain
+GITHUB_CLIENT_ID=                  # GitHub OAuth app (callback: https://zknight.io/api/github/callback)
+GITHUB_CLIENT_SECRET=
 ACCIO_ACCOUNT=
 ACCIO_USERNAME=
 ACCIO_PASSWORD=
@@ -52,6 +55,28 @@ PINATA_API_KEY
 PINATA_API_SECRET
 DYNAMIC_API_TOKEN
 ```
+
+## Domain cutover — stormchain.ai → zknight.io (2026-07-02)
+
+Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop auth/email/webhooks from silently breaking.
+
+1. **Vercel → Project → Settings → Domains → Add** `zknight.io` and `www.zknight.io`.
+   - Set `zknight.io` as **Primary**; make `www` **redirect to** the apex (or vice-versa — pick one canonical host).
+   - Vercel shows the exact DNS records to create.
+2. **Namecheap → Domain List → zknight.io → Advanced DNS.** Add what Vercel shows, typically:
+   - `A` record — Host `@` → `76.76.21.21`
+   - `CNAME` — Host `www` → `cname.vercel-dns.com`
+   - (Alternative: switch Namecheap to Vercel's nameservers — simpler but hands all DNS to Vercel.)
+   - Wait for propagation; Vercel auto-issues the SSL cert once records resolve.
+3. **Vercel → Settings → Environment Variables → `NEXT_PUBLIC_APP_URL`** = `https://zknight.io` (Production). This one var drives email links, Accio webhooks, share URLs, and the GitHub OAuth redirect. Then **redeploy** (env changes need a fresh build).
+4. **Supabase → Authentication → URL Configuration** (critical — magic-link/Google sign-in break otherwise):
+   - **Site URL** → `https://zknight.io`
+   - **Redirect URLs** allow-list → add `https://zknight.io/**` (keep `http://localhost:3000/**` for dev). Remove the stormchain.ai entries once cut over.
+5. **Resend → Domains → verify `zknight.io`** (or `verify.zknight.io`), then add the SPF/DKIM/DMARC records it gives you to Namecheap. Set `RESEND_FROM_EMAIL` to a sender on that verified domain. Unverified = transactional emails silently fail.
+6. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://zknight.io/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
+7. **Keep stormchain.ai (optional):** leave it on the Vercel project as a domain that **redirects to** zknight.io so old links/emails don't 404.
+
+> Google sign-in runs through Supabase's `/auth/v1/callback`, so the Google Cloud console redirect URI does **not** change — only the Supabase Site URL (step 4) matters.
 
 ## How to Add in Vercel
 

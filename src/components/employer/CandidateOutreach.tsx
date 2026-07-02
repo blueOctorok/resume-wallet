@@ -133,7 +133,7 @@ function inviteQrFilename(name: string) {
     .replace(/\s+/g, '-')
     .toLowerCase()
     .slice(0, 40) || 'invite'
-  return `stormchain-invite-qr-${slug}.png`
+  return `zknight-invite-qr-${slug}.png`
 }
 
 function QrModal({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
@@ -186,13 +186,13 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'Storm invite',
+            title: 'ZKnight invite',
             text: `Open or scan: ${url}`,
           })
           return
         }
       }
-      await navigator.share({ title: 'Storm invite', text: url })
+      await navigator.share({ title: 'ZKnight invite', text: url })
     } catch (e: unknown) {
       if (e && typeof e === 'object' && 'name' in e && (e as Error).name === 'AbortError') return
       console.error('[QrModal] share failed', e)
@@ -1183,7 +1183,7 @@ export default function CandidateOutreach({
                 </div>
                 <div>
                   <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Find someone already on Storm
+                    Find someone already on ZKnight
                   </h5>
                   <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
                     Search by name, email, or city. We attach the invite to their account so they get in-app notifications.
@@ -1205,7 +1205,7 @@ export default function CandidateOutreach({
                         {selectedProfile.full_name || selectedProfile.email}
                       </p>
                       <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500' : 'text-teal-500'}`}>
-                        Connected to Storm · In-app notification will fire when email is sent
+                        Connected to ZKnight · In-app notification will fire when email is sent
                       </p>
                     </div>
                   </div>
@@ -1276,12 +1276,12 @@ export default function CandidateOutreach({
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                             isDarkTheme(theme) ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
                           }`}>
-                            Storm
+                            ZKnight
                           </span>
                         </button>
                       ))}
                       <div className={`px-3 py-2 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on Storm</span> section below.
+                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on ZKnight</span> section below.
                       </div>
                     </div>
                   )}
@@ -1290,7 +1290,7 @@ export default function CandidateOutreach({
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
                       isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
                     }`}>
-                      No Storm profiles found — use the section below for name / email (email-only invite).
+                      No ZKnight profiles found — use the section below for name / email (email-only invite).
                     </div>
                   )}
                 </div>
@@ -1300,7 +1300,7 @@ export default function CandidateOutreach({
             <div
               className="relative my-7"
               role="separator"
-              aria-label="Alternative: invite someone who is not in Storm search results"
+              aria-label="Alternative: invite someone who is not in ZKnight search results"
             >
               <div className="absolute inset-0 flex items-center" aria-hidden>
                 <span
@@ -1343,10 +1343,10 @@ export default function CandidateOutreach({
                 </div>
                 <div className="min-w-0">
                   <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Invite someone not on Storm yet
+                    Invite someone not on ZKnight yet
                   </h5>
                   <p className={cn('text-xs leading-relaxed', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add an email if you want Storm to send the invite.
+                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add an email if you want ZKnight to send the invite.
                   </p>
                 </div>
               </div>
@@ -1372,7 +1372,7 @@ export default function CandidateOutreach({
                   </label>
                   <input
                     type="email"
-                    placeholder="Optional — needed to email from Storm"
+                    placeholder="Optional — needed to email from ZKnight"
                     value={form.candidateEmail}
                     onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
                     className={inputBase}
@@ -2771,7 +2771,7 @@ function StormiCandidateModal({
         scrollToBottom()
       } catch (e) {
         if (e instanceof OutOfCreditsError) {
-          setError('Out of Stormi credits for today. Try again tomorrow or purchase more.')
+          setError('Out of AI credits for today. Try again tomorrow or purchase more.')
         } else {
           setError(e instanceof Error ? e.message : 'Failed to get a response')
         }
@@ -2809,7 +2809,7 @@ function StormiCandidateModal({
   return (
     <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={1250}>
       <ModalHeader
-        title={`Stormi — ${candidateLabel}`}
+        title={`Assistant — ${candidateLabel}`}
         subtitle="AI coaching for this candidate"
         onClose={onClose}
       />
@@ -2832,7 +2832,7 @@ function StormiCandidateModal({
             )}
           >
             <p className={cn('mb-1 text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-violet-400' : 'text-violet-600')}>
-              Context shared with Stormi
+              Context shared with the assistant
             </p>
             <p>
               <strong>{invite.candidateName || invite.candidateEmail || 'Anonymous'}</strong>
@@ -2874,7 +2874,7 @@ function StormiCandidateModal({
                   <div className="mb-1 flex items-center gap-1.5">
                     <Bot className={cn('h-3.5 w-3.5', isDark ? 'text-violet-400' : 'text-violet-600')} />
                     <span className={cn('text-[10px] font-semibold', isDark ? 'text-violet-400' : 'text-violet-600')}>
-                      Stormi
+                      Assistant
                     </span>
                   </div>
                 )}
@@ -2897,7 +2897,7 @@ function StormiCandidateModal({
                 )}
               >
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span className="text-xs">Stormi is thinking…</span>
+                <span className="text-xs">Assistant is thinking…</span>
               </div>
             </div>
           )}

@@ -875,7 +875,7 @@ export default function PersonalInfoForm3({
           EMPLOYMENT HISTORY
         </h2>
         <AskStormiButton
-          label='Ask Stormi about 10-year history'
+          label='Ask AI about 10-year history'
           className='justify-end mb-4'
           onClick={() =>
             requestHelp({

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(
             {
               error: 'out_of_credits',
-              message: 'Refresh costs 1 Stormi credit. Purchase credits or try again tomorrow for a free match.',
+              message: 'Refresh costs 1 AI credit. Purchase credits or try again tomorrow for a free match.',
               credits: 0,
             },
             { status: 402 },

@@ -632,7 +632,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
             variant="embed"
             icon={Clock}
             title="Employer access pending"
-            description={`Your request to join ${p.companyName} is in the queue. Storm admin will approve it.`}
+            description={`Your request to join ${p.companyName} is in the queue. ZKnight admin will approve it.`}
           >
             <p className={`mb-4 text-center text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
               Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}

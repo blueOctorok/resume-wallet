@@ -37,7 +37,7 @@ export function PspReportPdf({ parsed, meta }: PspReportPdfProps) {
     'No vendor report text was returned for this order.'
 
   return (
-    <StormPdfDocument title={`Storm PSP — ${meta.candidateName}`}>
+    <StormPdfDocument title={`ZKnight PSP — ${meta.candidateName}`}>
       <StormPdfPage wrap>
         <Text style={stormPdfStyles.pre}>{reportBody}</Text>
 

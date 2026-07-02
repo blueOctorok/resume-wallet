@@ -183,7 +183,7 @@ export default function CandidateHub() {
                       className={cn('object-contain', !isDark && 'invert')}
                     />
                   }
-                  title='Ask Stormi'
+                  title='Ask AI'
                   description='Ranked jobs, interview practice, and talking points from your Career Card — you choose every apply.'
                 >
                   <StormiChatPanel

@@ -128,7 +128,7 @@ export default function ProfileSetupModal({
             </div>
             <div>
               <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Welcome to Storm!
+                Welcome to ZKnight!
               </h2>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Let&apos;s set up your profile

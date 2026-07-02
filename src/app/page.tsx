@@ -545,7 +545,7 @@ const Home = () => {
   useEffect(() => { setMounted(true) }, [])
 
   if (!mounted) {
-    return <LoadingScreen message='Starting Storm…' fullScreen />
+    return <LoadingScreen message='Starting ZKnight…' fullScreen />
   }
 
   return <HomeContent />

@@ -34,7 +34,7 @@ export function formatAttestationProvenance(
   sourcePullId: string | null | undefined,
 ): string {
   if (!sourceCra?.trim()) {
-    return 'Verified by Storm'
+    return 'Verified by ZKnight'
   }
   const label = CRA_LABELS[sourceCra] ?? sourceCra
   if (sourcePullId?.trim()) {
@@ -65,7 +65,7 @@ export function formatVerifiedByStormLine(
   sourceCra?: string | null,
   sourcePullId?: string | null,
 ): string {
-  return `Verified by Storm on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
+  return `Verified by ZKnight on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
 }
 
 export function formatFactDisclosedFields(fields: Record<string, unknown>): string[] {

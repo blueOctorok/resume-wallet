@@ -21,15 +21,15 @@ const stormWordmark = Orbitron({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://stormchain.ai'),
+  metadataBase: new URL('https://zknight.io'),
   title: {
-    default: 'Storm | Blockchain-Verified Career Platform',
-    template: '%s | Storm',
+    default: 'ZKnight | Blockchain-Verified Career Platform',
+    template: '%s | ZKnight',
   },
   description:
     'Build your Career Card, apply to jobs instantly, and get verified on-chain. The blockchain-verified career platform for drivers and software engineers.',
   keywords: [
-    'Storm',
+    'ZKnight',
     'Career Card',
     'blockchain verification',
     'driver applications',
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     'CDL driver jobs',
     'software engineer portfolio',
   ],
-  authors: [{ name: 'Storm' }],
-  creator: 'Storm',
-  publisher: 'Storm',
+  authors: [{ name: 'ZKnight' }],
+  creator: 'ZKnight',
+  publisher: 'ZKnight',
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',
@@ -51,9 +51,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://stormchain.ai',
-    siteName: 'Storm',
-    title: 'Storm | Blockchain-Verified Career Platform',
+    url: 'https://zknight.io',
+    siteName: 'ZKnight',
+    title: 'ZKnight | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain. For drivers and software engineers.',
     images: [
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Storm - Your Career, One Verified Card',
+        alt: 'ZKnight - Your Career, One Verified Card',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Storm | Blockchain-Verified Career Platform',
+    title: 'ZKnight | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain.',
     images: ['/og-image.png'],

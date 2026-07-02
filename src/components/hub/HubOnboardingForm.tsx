@@ -74,7 +74,7 @@ export default function HubOnboardingForm() {
           Let's build your hub
         </h2>
         <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          Tell Stormi a bit about yourself. She'll suggest exactly which blocks to add first.
+          Tell the assistant a bit about yourself. It'll suggest exactly which blocks to add first.
         </p>
       </div>
 
@@ -111,7 +111,7 @@ export default function HubOnboardingForm() {
 
         <div>
           <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-            Anything else you want Stormi to know? <span className="font-normal text-gray-500">(optional)</span>
+            Anything else you want the assistant to know? <span className="font-normal text-gray-500">(optional)</span>
           </label>
           <textarea
             value={extraContext}

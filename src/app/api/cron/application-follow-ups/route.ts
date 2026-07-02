@@ -76,7 +76,7 @@ export async function POST() {
         userId: app.applicant_user_id,
         type: 'application_follow_up',
         title: `Any reply from ${company}?`,
-        body: `You applied to "${jobTitle}" ${FOLLOW_UP_AFTER_DAYS} days ago. Update your status so Stormi can help with next steps.`,
+        body: `You applied to "${jobTitle}" ${FOLLOW_UP_AFTER_DAYS} days ago. Update your status so the assistant can help with next steps.`,
         actionUrl: '/?page=applications',
         data: { applicationId: app.id },
       })

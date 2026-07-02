@@ -84,7 +84,7 @@ export default function HubExploreLinks({ onCloseDrawer, className }: HubExplore
           )}
         >
           <Sparkles className='w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0' />
-          Stormi — search, apply, prep
+          Assistant — search, apply, prep
         </button>
       </div>
     </div>

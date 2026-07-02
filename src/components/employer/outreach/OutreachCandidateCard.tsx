@@ -452,7 +452,7 @@ export default function OutreachCandidateCard({
                 isDark ? 'text-red-300' : 'text-red-700',
               )}
             >
-              Stormi: {attention.label}
+              Assistant: {attention.label}
             </p>
             <p
               className={cn(
@@ -828,7 +828,7 @@ export default function OutreachCandidateCard({
           )}
         >
           <Bot className="h-3.5 w-3.5" />
-          Ask Stormi about this candidate
+          Ask AI about this candidate
         </button>
       </div>
     </article>

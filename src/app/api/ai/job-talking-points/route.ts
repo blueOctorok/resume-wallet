@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'out_of_credits',
           message:
-            'You have used your free AI career assists for today. Purchase Stormi credits or try again tomorrow.',
+            'You have used your free AI career assists for today. Purchase AI credits or try again tomorrow.',
           coverLettersDailyRemaining: 0,
           credits: usage.credits,
         },

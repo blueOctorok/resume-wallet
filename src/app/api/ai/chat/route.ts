@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     if (isEmployerChat) {
       if (userRole !== 'employer') {
         return NextResponse.json(
-          { error: 'Employer Stormi chat is only available for employer accounts.' },
+          { error: 'Employer AI chat is only available for employer accounts.' },
           { status: 403 }
         )
       }

@@ -212,7 +212,7 @@ export default function AccessRequestsTab({
                           ? isDarkTheme(theme) ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-700'
                           : isDarkTheme(theme) ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
                     }`}>
-                      <span className='font-medium shrink-0'>Stormi:</span>
+                      <span className='font-medium shrink-0'>Assistant:</span>
                       <span>{req.ai_reason}</span>
                       {req.ai_confidence != null && (
                         <span className='shrink-0 opacity-60'>({Math.round(req.ai_confidence * 100)}%)</span>

@@ -37,7 +37,7 @@ export const STORMI_JOB_CHAT_TOOLS = [
   {
     name: 'search_ranked_jobs',
     description:
-      'Search external job boards (Adzuna) and rank results against this user\'s Storm profile (skills, blocks, headline, etc.). Use when they want to find jobs, see openings, explore roles, or ask what might fit them. If keywords are vague, infer reasonable search terms from their occupation and blocks. At most one call per user message.',
+      'Search external job boards (Adzuna) and rank results against this user\'s ZKnight profile (skills, blocks, headline, etc.). Use when they want to find jobs, see openings, explore roles, or ask what might fit them. If keywords are vague, infer reasonable search terms from their occupation and blocks. At most one call per user message.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -56,7 +56,7 @@ export const STORMI_JOB_CHAT_TOOLS = [
   {
     name: 'save_job_alert',
     description:
-      'Create a daily email-style in-app job alert: Storm will scan for new listings on a schedule and notify when Stormi scores a strong match. Use when the user wants ongoing monitoring, alerts, or to "watch" a search. Respect limits (2 alerts free, 5 with Stormi credits). At most one save per user message unless they explicitly ask for two different alerts.',
+      'Create a daily email-style in-app job alert: ZKnight will scan for new listings on a schedule and notify when the assistant scores a strong match. Use when the user wants ongoing monitoring, alerts, or to "watch" a search. Respect limits (2 alerts free, 5 with AI credits). At most one save per user message unless they explicitly ask for two different alerts.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -354,7 +354,7 @@ export async function executeStormiJobChatTool(params: {
         return {
           toolResult: JSON.stringify({
             ok: false,
-            error: `At the ${maxAlerts} alert limit. They can remove one on the hub or add Stormi credits for more.`,
+            error: `At the ${maxAlerts} alert limit. They can remove one on the hub or add AI credits for more.`,
           }),
         }
       }

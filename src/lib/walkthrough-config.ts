@@ -43,7 +43,7 @@ export function candidateHubStaticSteps(input: {
   if (generalOnly) {
     nextBody =
       `Based on what you shared (${occ}), our catalog leans on **${categoryLabel('general')}** blocks for now — resume, file upload, and employment verification — so you can still build an apply-ready Career Card.\n\n` +
-      `Open **Add Blocks** and start with one general block. If you want specialty blocks for your lane later, tell Stormi — we're always expanding.`
+      `Open **Add Blocks** and start with one general block. If you want specialty blocks for your lane later, just ask the assistant — we're always expanding.`
   } else {
     const lanes = categories
       .filter((id) => id !== 'general')
@@ -51,7 +51,7 @@ export function candidateHubStaticSteps(input: {
       .join(' and ')
     const lanePhrase = lanes ? `**${lanes}** and **${categoryLabel('general')}**` : `**${categoryLabel('general')}**`
     nextBody =
-      `Stormi matched what you shared to ${lanePhrase} categories — those show up first when you browse **Add Blocks**.\n\n` +
+      `The assistant matched what you shared to ${lanePhrase} categories — those show up first when you browse **Add Blocks**.\n\n` +
       `Pick one block to install now; you can add more anytime.`
   }
 

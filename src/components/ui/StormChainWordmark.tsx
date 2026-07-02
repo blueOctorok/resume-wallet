@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { CloudLightning } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getBlockColor } from '@/lib/block-registry'
@@ -263,7 +263,7 @@ function StormWordmarkOBlock({
           <WordmarkDropletField isDark={isDark} variant='o-tile' />
 
           <span className='relative z-[2] flex h-full w-full items-center justify-center p-px sm:p-[1.5px]'>
-            <CloudLightning
+            <ShieldCheck
               className={cn(
                 'min-h-0 min-w-0 shrink-0 origin-center scale-[1.14] sm:scale-[1.12]',
                 'h-full w-full',
@@ -282,9 +282,9 @@ function StormWordmarkOBlock({
 }
 
 /**
- * **STORM** with **O** = violet foil tile + cloud. Full chrome uses **`VaultCredentialChrome`** from the hub
- * (`clipVariant="horizontal"`) — same rim, conic, chamfer spark, frosted face, sheen, foot strip + sweep,
- * and hover drop-shadow as **My blocks** tiles. `vaultChrome={false}` = type + O only (e.g. inside `NavVaultShell`).
+ * **ZKNIGHT** with a leading violet foil tile + shield-check mark. Full chrome uses **`VaultCredentialChrome`**
+ * from the hub (`clipVariant="horizontal"`) — same rim, conic, chamfer spark, frosted face, sheen, foot strip +
+ * sweep, and hover drop-shadow as **My blocks** tiles. `vaultChrome={false}` = tile + type only (e.g. inside `NavVaultShell`).
  */
 export default function StormChainWordmark({
   size = 'nav',
@@ -343,12 +343,9 @@ export default function StormChainWordmark({
         !isDark && 'isolate',
       )}
     >
-      <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
-        ST
-      </WordmarkLetterGroup>
       <StormWordmarkOBlock isDark={isDark} isHero={isLarge} isDisplay={isDisplay} />
       <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
-        RM
+        ZKNIGHT
       </WordmarkLetterGroup>
     </div>
   )
@@ -356,7 +353,7 @@ export default function StormChainWordmark({
   if (!vaultChrome) {
     return (
       <div className={cn('inline-flex leading-none', typeStyles, className)}>
-        <span className='sr-only'>Storm</span>
+        <span className='sr-only'>ZKnight</span>
         {stormMarkRow}
       </div>
     )
@@ -364,7 +361,7 @@ export default function StormChainWordmark({
 
   return (
     <div className={cn('inline-flex leading-none', typeStyles, className)}>
-      <span className='sr-only'>Storm</span>
+      <span className='sr-only'>ZKnight</span>
       <VaultCredentialChrome
         isDark={isDark}
         glowColor={tileColors.glowColor}

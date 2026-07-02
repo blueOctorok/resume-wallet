@@ -52,7 +52,7 @@ export default function DriverScreeningOwnershipAcknowledgment({
                 Your screening report stays yours
               </p>
               <p className={`mt-1 text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                When you submit, <strong>you</strong> are ordering your MVR and PSP reports for your Storm career
+                When you submit, <strong>you</strong> are ordering your MVR and PSP reports for your ZKnight career
                 file — <strong>at no cost to you</strong>. The report belongs to you and is portable across
                 employers. You choose what to share on your career card.
               </p>
@@ -67,8 +67,8 @@ export default function DriverScreeningOwnershipAcknowledgment({
                 onChange={(e) => onCheckedChange(e.target.checked)}
               />
               <span className={`text-sm leading-relaxed ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                I understand that I am ordering these reports for my own Storm file and that I control how they
-                are shared. I authorize Storm to submit MVR and PSP orders to the screening vendor on my behalf.
+                I understand that I am ordering these reports for my own ZKnight file and that I control how they
+                are shared. I authorize ZKnight to submit MVR and PSP orders to the screening vendor on my behalf.
               </span>
             </label>
 
@@ -90,24 +90,24 @@ export default function DriverScreeningOwnershipAcknowledgment({
         <Modal onClose={() => setLearnMoreOpen(false)} maxWidth="max-w-lg" panelShape="block">
           <ModalHeader
             title="Driver-owned screening"
-            subtitle="How Storm handles MVR and PSP"
+            subtitle="How ZKnight handles MVR and PSP"
             onClose={() => setLearnMoreOpen(false)}
             variant="block"
           />
           <div className={`space-y-4 px-6 pb-6 text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             <p>
               <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Who owns the report?</strong> You do.
-              Storm records you as the consumer of record on the order. The completed report lives in your career
+              ZKnight records you as the consumer of record on the order. The completed report lives in your career
               file and can travel with you to future employers.
             </p>
             <p>
               <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>Do I pay anything?</strong> No. There
-              is <strong>no charge to you</strong>. Storm never asks candidates for payment or card details to run
+              is <strong>no charge to you</strong>. ZKnight never asks candidates for payment or card details to run
               these reports. {recipient} covers the screening on their end.
             </p>
             <p>
               <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>What does {recipient} see?</strong>{' '}
-              Because you applied through them and signed consent, they can view your results in Storm while
+              Because you applied through them and signed consent, they can view your results in ZKnight while
               evaluating your application. Other employers only see what you choose to share on your career card.
             </p>
             <p>

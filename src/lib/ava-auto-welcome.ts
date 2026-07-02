@@ -49,7 +49,7 @@ export function buildCandidateAutoWelcomeUserMessage(
 
   if (candidateEmptyHub || total === 0) {
     return (
-      'Auto-welcome: I just opened Stormi on my candidate hub and I have no blocks yet. ' +
+      'Auto-welcome: I just opened the assistant on my candidate hub and I have no blocks yet. ' +
       'Give one short welcoming paragraph and suggest either uploading a resume or browsing blocks — warm, specific, no bullet lists.'
     )
   }
@@ -62,7 +62,7 @@ export function buildCandidateAutoWelcomeUserMessage(
   }
 
   return (
-    'Auto-welcome: I just opened Stormi on my candidate hub.' +
+    'Auto-welcome: I just opened the assistant on my candidate hub.' +
     absence +
     ` I have ${total} block(s) installed and about ${complete} look complete from your context.` +
     (views > 0 ? ` My career card had ${views} employer view(s) this week.` : '') +

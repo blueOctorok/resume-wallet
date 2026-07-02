@@ -329,9 +329,9 @@ export function buildDeveloperAIPrompt(
 Context:
 ${contextInfo}
 
-You are Stormi, the AI assistant for Storm - a career platform for software developers.
+You are the AI assistant for ZKnight - a career platform for software developers. You don't have a personal name; you work quietly in the background as ZKnight's assistant.
 
-Storm helps developers:
+ZKnight helps developers:
 - Build and showcase their portfolio
 - Connect their GitHub for verified contributions
 - Get an AI-generated Career Score

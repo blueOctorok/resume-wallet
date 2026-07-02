@@ -26,18 +26,18 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
   if (!card) {
     return {
       title: 'Career Card',
-      description: 'Storm Career Card — verified credentials and selective disclosure.',
+      description: 'ZKnight Career Card — verified credentials and selective disclosure.',
       robots: { index: false, follow: false },
     }
   }
 
   const n = card.employerConfirmedEmploymentCount
-  const title = `${card.name} — Storm Career Card`
-  const description = `Verified by Storm career card.${n > 0 ? ` ${n} employer confirmation${n === 1 ? '' : 's'}.` : ''}${card.occupation ? ` ${card.occupation}` : ''}`
+  const title = `${card.name} — ZKnight Career Card`
+  const description = `Verified by ZKnight career card.${n > 0 ? ` ${n} employer confirmation${n === 1 ? '' : 's'}.` : ''}${card.occupation ? ` ${card.occupation}` : ''}`
 
   const h = await headers()
   const host =
-    firstForwarded(h.get('x-forwarded-host')) ?? firstForwarded(h.get('host')) ?? 'stormchain.ai'
+    firstForwarded(h.get('x-forwarded-host')) ?? firstForwarded(h.get('host')) ?? 'zknight.io'
   const proto = firstForwarded(h.get('x-forwarded-proto')) ?? 'https'
   const cardUrl = absoluteCardUrl(host, proto, token)
   /** Absolute PNG URL for crawlers (LinkedIn, Slack, iMessage). Next file convention serves this path; explicit tags avoid merge gaps with client-only pages. */
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
       description,
       type: 'website',
       url: cardUrl,
-      siteName: 'Storm',
+      siteName: 'ZKnight',
       locale: 'en_US',
       images: [
         {

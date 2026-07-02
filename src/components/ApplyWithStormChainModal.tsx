@@ -238,7 +238,7 @@ export default function ApplyWithStormChainModal({
                 Easy apply with Career Card
               </h2>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                One submission — your Storm profile snapshot
+                One submission — your ZKnight profile snapshot
               </p>
             </div>
           </div>
@@ -255,7 +255,7 @@ export default function ApplyWithStormChainModal({
                 Application Submitted!
               </h3>
               <p className="text-green-700 dark:text-green-300">
-                Your Storm application has been sent to {job.company}
+                Your ZKnight application has been sent to {job.company}
               </p>
             </div>
           </div>
@@ -394,11 +394,11 @@ export default function ApplyWithStormChainModal({
                   isLoading={generatingLetter}
                 >
                   {!generatingLetter && <Sparkles className="w-3.5 h-3.5 shrink-0" />}
-                  Generate with Stormi
+                  Generate with AI
                 </Button>
               </div>
               <p className={`text-xs mb-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                3 free per day (Sonnet), then uses your Stormi credits (Haiku).
+                3 free per day (Sonnet), then uses your AI credits (Haiku).
               </p>
               <textarea
                 value={coverLetter}
@@ -445,7 +445,7 @@ export default function ApplyWithStormChainModal({
             )}
 
             <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              By submitting, employers receive your Storm application snapshot and link.
+              By submitting, employers receive your ZKnight application snapshot and link.
               <br />
               Track status in My Applications.
             </p>

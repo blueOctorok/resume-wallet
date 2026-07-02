@@ -263,7 +263,7 @@ export async function sendToStormi(payload: SendToStormiPayload): Promise<Stormi
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || 'Failed to reach Stormi')
+    throw new Error(err.error || 'Failed to reach the assistant')
   }
 
   const data = await res.json()
