@@ -811,6 +811,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.4** | **Real predicate proof for `mvr-clean-36` (anchor 🟡 → real 🟢)** — predicate + provenance. **Mandatory** (delivers the moat; CIRCUITS.md). Predicate track **unblocked**; 🟢 provenance **pending Key/Accio signing** | 🟡 |
 | **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ⬜ |
 | **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
+| **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ⬜ |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
 
@@ -1257,7 +1258,47 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 **Commit:** `feat(midnight): per-fact honesty gate for Midnight copy (P3.6)`
 
-**Phase 3a complete when:** P3.3–P3.6 ✅ (incl. ≥1 real **🟢** predicate proof with in-circuit issuer signature — P3.4-B) → flip active marker to Phase 3b design. P3.4-A alone does not complete Phase 3a.
+**Phase 3a complete when:** P3.3–P3.6 ✅ (incl. ≥1 real **🟢** predicate proof with in-circuit issuer signature — P3.4-B) → flip active marker to Phase 3b design. P3.4-A alone does not complete Phase 3a. **P3.7 (verified DQ-file assembly)** is the use-case payoff layer that *consumes* these facts — it can start its MVR→Form 1 slice on P3.4-A and broadens with P3.5; tracked as its own step, **not** a blocker for declaring the circuit slice done.
+
+#### P3.7 — Verified DQ-file assembly (DOT app prefill + field lock)
+
+| | |
+|---|---|
+| Status | ⬜ |
+| Pre-conditions | P3.4-A ✅ (MVR predicate — the reference slice); P3.5 broadens the fact set; **field-level provenance model** (new — stamp each DOT field with its originating fact). P3.4-B (🟢) / P3.6 gate the *wording*, not the build. |
+| Pace risk | Medium — touches the DOT app (`DotApplicationFlow`, `driver_applications`) + career-card/employer views. Additive; **never** hard-locks a driver out of *adding* a required 391.21 disclosure. |
+
+**Why this step exists (the use case):** proofs are only worth what they *do*. The payoff is a **portable, mostly-verified DQ intake packet** — proven third-party facts (MVR/PSP/CDL/employment) auto-fill the DOT app, are badged, and are protected from silent editing. This is the object that raises carrier conversion and lets **one driver-owned pull serve many carriers** (money logic below). It is the **pre-screen packet**, NOT the regulated 49 CFR 391.51 DQ file — the carrier still runs its own consented hire-time pull (never disintermediate the CRA; DEC-2026-05-011).
+
+**The "call it verified" decision (direction 2026-07-07 — formalize as a DEC):**
+- **Principle, not a fixed number:** once a **majority of the risk-bearing DQ fields** are issuer-backed, the packet can carry a headline **"Verified" with a protective small-print caveat.** *60% is an illustrative figure the boss used — the real target is "over half," and the number we actually surface is whatever we genuinely reach, computed live, never a chosen marketing figure.* This headline is allowed **only** because the claim is *decomposable and true at the field level*:
+  - The surfaced % is a **real computed number** = issuer-backed fields ÷ a defined denominator (the risk-bearing DQ fields, not every text box). No vanity numbers, no rounding up.
+  - **Every field carries an honest badge:** "Verified — sourced from Accio order #X, as of {date}" vs "Self-certified by driver." A carrier can always tell which is which.
+  - **Self-reported fields are NEVER badged verified** (provenance gate, DEC-2026-05-014). Residency, employment gaps, acknowledgements, signature stay self-certified — that's the un-verifiable remainder, whatever its size.
+  - **Per-fact "proven on Midnight" stays gated** by P3.6 / P3.4-B. Interim wording is "Verified by Storm — sourced from {CRA} order #X."
+- **Why the small print is non-negotiable (legal armor, not just ethics):** this is a regulated FCRA/FMCSA context. A carrier relying on a "verified" badge that secretly covers self-reported data is a consumer-protection exposure. Honest, decomposable labeling is exactly what makes "Verified" **defensible** where a competitor's puffery isn't — here the honesty gate is a moat, not a constraint (`strategic-direction.mdc` — "Storm is not a crypto scam project"). Market the *headline*; let the *badges* carry the truth.
+
+**Field lock model (per field type):**
+| Field type | Source | Behavior |
+|---|---|---|
+| Identity + license (name, DOB, DL #, class, state, expiry, status) | MVR/DMV verbatim | **Hard-locked** — projected from the fact, uneditable (also kills the "1070 vs 1970" typo failure mode) |
+| Accidents / violations / convictions (Form 2) | MVR | Verified rows **lock against edit/delete**; driver may **append** own disclosures (self-certified) — 391.21 is a driver *attestation*, so blocking additions could suppress a required disclosure |
+| Crash / inspection history (Form 2) | PSP | Same as above, once a PSP fact exists (P3.5) |
+| Employment entries (Form 3) | `previous_employer_verified` | Verified entries badged + edit-locked; unverified entries stay open |
+| Everything else | driver | Open, self-certified |
+
+**Do in order:**
+1. **Field provenance model** — a mapping (fact type → DOT field paths) + render locked fields *from the attestation/fact registry* rather than the mutable `application_data` JSON. Locked ≠ "copied then disabled"; locked = "projected from the fact." Re-validate server-side on save (a value claiming a fact source must still match it).
+2. **Prefill + lock UI** — start with the **MVR → Form 1 identity/license** slice (most circuit-ready), then Form 2 violations, then employment.
+3. **Verified-% meter** — computed over the defined denominator; drives the headline + Stormi nudges ("add your PSP to raise your verified score").
+4. **Two-tone rendering** — verified vs self-certified on the DOT app, career card (`DotAppSection`), and employer preview (`DotAppPreviewContent`).
+5. **Honesty pass** — walk back any legacy Base-era "Verified on Blockchain" / DB `verification_status='VERIFIED'` treatment on the self-reported DOT app to honest language (small separate cleanup; log in CHANGES).
+
+**Money logic (why this pays):** higher carrier conversion (a pre-verified packet beats a raw self-report), better pull efficiency (fewer wasted hire-time pulls on drivers who won't qualify), and — per Key's own proposal (P3.4-B handoff 2026-06-25) — recurring **monitoring** re-pulls (90/180/365-day) that refresh the verified fields and generate recurring CRA orders. The DOT app is the human-readable *vehicle* for those proofs, not the product being sold.
+
+**Verification:** a driver with a proven MVR sees Form 1 license fields locked + badged; edits blocked client- **and** server-side; verified-% reflects only issuer-backed fields; no self-reported field renders a "verified" badge; per-fact "Midnight"/"on-chain" strings still gated by `proof.kind === 'midnight_zk'`.
+
+**Commit:** `feat(dq): verified DOT app assembly — prefill + field lock (P3.7)`
 
 ---
 
@@ -1366,6 +1407,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-07-07 | Docs — **P3.7** verified DQ-file assembly direction | Claude Opus 4.8 | uncommitted | **Docs only.** Captured the use-case payoff: proven MVR/PSP/CDL/employment facts prefill + **lock** the DOT app into a portable, mostly-verified DQ **pre-screen** packet (NOT the 391.51 file — CRA hire-time pull preserved, DEC-2026-05-011). **Direction (formalize as a DEC):** once a **majority** of risk-bearing fields are issuer-backed, surface a headline **"Verified" + honest small print** — allowed only because it's decomposable/true at the field level (real computed %, per-field badges, self-reported never badged, per-fact "Midnight" still P3.6-gated). *60% is illustrative (boss's number); the real bar is "over half," and the surfaced % is computed live, never chosen.* Framed the small print as **legal armor** in an FCRA/FMCSA context, not just ethics. Lock model: hard-lock identity/license, **append-only** for 391.21 disclosures. Added P3.7 to the Phase 3a table + full detail section; noted money logic (conversion + pull efficiency + Key-proposed recurring monitoring). **Next:** field-provenance model + MVR→Form 1 slice; formalize the "call it verified" DEC in `DECISION_LOG.md`. |
 | 2026-06-29 | **P3.4-C** prod-test ready | Composer | uncommitted | **Funding decouple:** fulfill-screening attaches waived `payments.company_id` sponsor on driver-owned orders. **Employer access:** `employer-screening-order-access.ts` — consenting company can view driver-owned MVR/PSP PDF/status. **Notify:** single employer bell after PSP leg. **Bugfix:** screening-consent accepts mvr_order/psp_order; duplicate `cdlisPayload` build fix. See `docs/TEST_DRIVER_OWNED_SCREENING.md`. |
 | 2026-06-29 | **P3.4-C** driver-owned order flow shipped | Composer | uncommitted | **UI:** `DriverScreeningOwnershipAcknowledgment` + `consent-then-driver-orders` on ScreeningConsentBlock/PspOrderForm. **Backend:** talent API exposes driver-owned flags + consenting-company view; employer screenings/order blocks pre-screen duplicate (`purpose=hire` escape); projected career card no longer auto-publishes driver-owned to all employers. **Still open:** funding decouple, backfill 2 Pace attestations, counsel copy. |
 | 2026-06-25 | **P3.4-C** driver-ownership flow scoped | Claude Opus 4.8 | uncommitted | Added build-ready **P3.4-C** section: driver-ownership acknowledgment step (statement + mandatory checkbox + Learn more modal, standalone from FMCSA doc), suppress duplicate employer pre-screen order (keep hire-time pull for DQ file), decouple funding from ownership, gate broad career-card exposure, backfill 2 Pace-derived attestations. Counsel-gated = **wording only** (MVR auth reword + standalone/mandatory questions); FMCSA PSP form stays verbatim. Mechanics buildable now. Consent constraints in FCRA memo §6a. |
@@ -1438,4 +1480,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-06-29 (P3.4-C prod-test ready — sponsored payment + employer PDF access for driver-owned pulls)
+**Last updated:** 2026-07-07 (P3.7 direction added — verified DQ-file assembly: proven facts prefill + lock the DOT app; majority-verified "Verified" headline with honest per-field badges)

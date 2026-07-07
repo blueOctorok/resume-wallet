@@ -46,7 +46,6 @@ import type { UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
-import ModeToggle from './ui/ModeToggle'
 import { getDisplayRole } from '@/lib/employer-roles'
 
 // Define the navigation page type
@@ -512,11 +511,6 @@ export default function Navigation({
                               .join(' · ')}
                           </p>
                         )}
-                      </div>
-                    )}
-                    {userRole === 'candidate' && (
-                      <div className='flex shrink-0 items-center self-center'>
-                        <ModeToggle variant='pill' onAfterToggle={() => setIsMenuOpen(false)} />
                       </div>
                     )}
                   </div>

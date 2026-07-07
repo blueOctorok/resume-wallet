@@ -8,11 +8,8 @@ import MessageInbox from '@/components/messaging/MessageInbox'
 import DotApplicationFlow from '@/components/app/DotApplicationFlow'
 import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
-import SimpleModeShell from '@/components/simple/SimpleModeShell'
 import { useAuthStore, useUIStore } from '@/stores'
-import { useUIModeStore } from '@/stores/ui-mode-store'
 import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
-import { isSimpleModeEnabled } from '@/lib/feature-flags'
 import type { PageType } from '@/stores/types'
 import HubOnboardingForm from '@/components/hub/HubOnboardingForm'
 
@@ -111,8 +108,6 @@ export default function CandidateShell() {
   const { user, sessionUserId } = useAuthStore()
   const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
     useUIStore()
-  const uiMode = useUIModeStore((s) => s.mode)
-  const setUiMode = useUIModeStore((s) => s.setMode)
   const needsOnboarding = useNeedsOnboarding()
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
 
@@ -128,20 +123,14 @@ export default function CandidateShell() {
 
   /*
    Legacy `'jobs'` redirect: old bookmarks, journey configs, hub explore links,
-   and Stormi tools all still navigate to `'jobs'`. We now have a single
-   job-discovery surface (Guided Mode), so when we see that target we flip into
-   simple mode AND clear the page so the SimpleModeShell renders.
+   and Stormi tools all still navigate to `'jobs'`. Apply (job-first) mode has
+   been removed, so we simply clear the page and land on the composable hub.
   */
   useEffect(() => {
-    if (currentPage === 'jobs') {
-      setUiMode('simple')
-      setCurrentPage(null)
-      return
-    }
-    if (unknownCandidatePage) {
+    if (currentPage === 'jobs' || unknownCandidatePage) {
       setCurrentPage(null)
     }
-  }, [currentPage, unknownCandidatePage, setCurrentPage, setUiMode])
+  }, [currentPage, unknownCandidatePage, setCurrentPage])
 
   const goBack = useCallback(() => {
     setEditingResumeId(undefined)
@@ -285,11 +274,7 @@ export default function CandidateShell() {
     )
   }
 
-  // Default route: Simple mode (job-first split) when flag is on AND user preference is simple.
-  // Otherwise the composable hub. Both chromes read the same hub-blocks store, so toggling
-  // preserves installed blocks, saved jobs, etc.
-  if (isSimpleModeEnabled() && uiMode === 'simple') {
-    return <SimpleModeShell />
-  }
+  // Construct (the composable hub) is the only candidate chrome. Apply mode was
+  // removed, so we always render the hub regardless of any legacy saved preference.
   return <CandidateHub />
 }

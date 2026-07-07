@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Candidate hub — remove Apply mode, make Construct the only chrome** (2026-07-06)
+
+The candidate hub previously offered two chromes toggled by a nav pill: **Apply** (job-first split view, `SimpleModeShell`, `uiMode='simple'`) and **Construct** (the composable hub, `CandidateHub`, `uiMode='hub'`). Per product decision, Apply was removed for candidates — Construct is now the default and only chrome.
+
+| File | Change |
+|---|---|
+| `src/stores/ui-mode-store.ts` | `DEFAULT_MODE` `'simple'` → `'hub'` (default is now Construct) |
+| `src/components/app/CandidateShell.tsx` | Removed the `uiMode === 'simple'` branch — **always renders `<CandidateHub />`** so users with a legacy `'simple'` saved preference aren't trapped in Apply once the toggle is gone. Dropped now-unused `SimpleModeShell` / `isSimpleModeEnabled` imports and `uiMode`/`setUiMode`. Legacy `'jobs'` redirect now just clears the page to land on the hub (no longer flips to `'simple'`). |
+| `src/components/Navigation.tsx` | Removed the candidate `ModeToggle` pill + its import |
+| `src/components/ui/ModeToggle.tsx` | **Deleted** — only the nav used it; dead after removing Apply |
+
+**Intentionally left in place:** `SimpleModeShell` and the `'simple'` `UIMode` value still exist — they're used by the **guest "Browse jobs"** flow (`page.tsx` renders `SimpleModeShell` directly for signed-out visitors) and legacy `DriverShell`/`DeveloperShell` (`currentPage === 'jobs'`). The mode store keeps `simple` for those paths. `CandidateHub`'s vestigial "Back to Apply?" banner (`returnToApply`) is now unreachable for candidates but harmless.
+
+**Side effect to note:** candidate job discovery via Apply's job-first view is gone; `'jobs'` navigation lands on the hub. If dedicated in-hub job discovery is wanted later, that's a separate follow-up.
+
+---
+
 ## **Rebrand — "Storm"/"Stormi" → "ZKnight" (product-wide, UI + prompts)** (2026-07-02)
 
 The product was renamed from **Storm / stormchain.ai** to **ZKnight / zknight.io**. The AI assistant (previously "Stormi") now has **no persona name** — it works "in the background" and is referred to generically ("the assistant", "your AI coach", "AI", "Assistant"); "Stormi credits" → "AI credits". Off-chain **Storm Points** were removed from the UI.

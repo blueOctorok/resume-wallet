@@ -40,7 +40,7 @@ interface UIModeActions {
   setOpenPickerAfterHub: (value: boolean) => void
 }
 
-const DEFAULT_MODE: UIMode = 'simple'
+const DEFAULT_MODE: UIMode = 'hub'
 
 export const useUIModeStore = create<UIModeState & UIModeActions>()(
   persist(
