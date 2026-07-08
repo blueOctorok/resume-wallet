@@ -186,6 +186,24 @@ Employer talent requests often use `request_type: mvr_order` / `psp_order` with 
 
 ---
 
+## **Fix — MVR `filledCode=discrepancy` showed "Pending review" instead of Key's "Discrepancy"** (2026-07-08)
+
+**Root cause:** Accio sends `filledCode="discrepancy"` for completed MVRs with hits and/or identity mismatch alerts (e.g. Carlos Rivera MN — DOB mismatch + violation). `accio-result-status.ts` did not map `discrepancy`, so orders fell through to `needs_review` / `unknown` → UI and PDF showed **"Pending review"** while Key showed **"COMPLETE - discrepancy"**.
+
+**Fix:** Map `discrepancy` → `{ status: 'completed', outcome: 'discrepancy' }` with label **Discrepancy** (amber, same weight as hits). PDF prefers freshly parsed Accio codes over stale `result_outcome`. Reparse endpoint now refreshes `mvr_orders.status` + `result_outcome`. Migration `101` adds the CHECK value and backfills existing rows.
+
+| File | Change |
+|---|---|
+| `src/lib/accio-result-status.ts` | `discrepancy` outcome + label |
+| `src/lib/accio-result-status.test.ts` | Regression tests |
+| `src/lib/pdf/MvrReportPdf.tsx` | Prefer parsed filledCode over stale DB outcome |
+| `src/app/api/admin/reparse-screening-results/route.ts` | Re-derive order status/outcome on reparse |
+| `supabase/migrations/101_mvr_discrepancy_outcome.sql` | CHECK constraint + backfill |
+
+**Post-deploy:** Apply migration `101`, then run MVR reparse (or wait for migration backfill on discrepancy rows).
+
+---
+
 ## **Docs — P3.4-C driver-ownership flow scoped in EXECUTION_CHECKLIST** (2026-06-25)
 
 Added a build-ready **P3.4-C — Driver-initiated ordering + consent** section so the driver-owned model can be built from the checklist. Buildable-now mechanics: driver-ownership acknowledgment step (statement + mandatory checkbox + "Learn more" modal, standalone from the FMCSA doc), suppress the duplicate employer pre-screen order while keeping the hire-time DQ-file pull, decouple funding from ownership (Pace sponsors a driver-owned order), gate broad career-card exposure behind driver disclosure prefs, and backfill the two Pace-derived test attestations. Counsel-gated items are **wording only** (MVR auth reword; standalone/mandatory questions); the FMCSA PSP form stays verbatim. P3.5 pre-conditions updated to require the P3.4-C gate.

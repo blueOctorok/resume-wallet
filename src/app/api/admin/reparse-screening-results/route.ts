@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { parseAccioMvrResult, mvrResultToJsonb } from '@/lib/accio-xml-parser'
 import { parsePspResult, pspResultToJsonb } from '@/lib/accio-psp-parser'
 import { saveMvrData } from '@/lib/block-data'
@@ -65,6 +66,26 @@ export async function POST(request: NextRequest) {
         const jsonb = mvrResultToJsonb(parsed)
 
         if (!dryRun) {
+          const { status, outcome } = deriveScreeningStatus({
+            filledStatus: parsed.filledStatus,
+            filledCode: parsed.filledCode,
+            heldForReview: parsed.heldForReview,
+          })
+
+          const { error: orderUpdateErr } = await supabase
+            .from('mvr_orders')
+            .update({
+              status,
+              result_outcome: outcome,
+            })
+            .eq('id', order.id)
+
+          if (orderUpdateErr) {
+            console.error(`[REPARSE] MVR order status update error for ${order.id}:`, orderUpdateErr)
+            mvrStats.errors++
+            continue
+          }
+
           // Refresh parsed_data AND the flat columns the UI reads directly
           // (license_class/status/etc.) — updating only the JSONB would leave
           // stale pre-fix values visible in the modal and career card.

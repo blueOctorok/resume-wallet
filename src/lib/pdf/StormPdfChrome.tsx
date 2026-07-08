@@ -212,6 +212,7 @@ export function outcomeColors(outcome: ScreeningOutcome): {
     case 'pass':
       return { bg: STORM_COLORS.emeraldBg, fg: STORM_COLORS.emerald }
     case 'hits':
+    case 'discrepancy':
       return { bg: STORM_COLORS.amberBg, fg: STORM_COLORS.amber }
     case 'fail':
       return { bg: STORM_COLORS.roseBg, fg: STORM_COLORS.rose }

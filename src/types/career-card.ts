@@ -45,7 +45,7 @@ export interface MvrData {
    * badge in MvrSection / MvrViewModal / employer Files vault.
    * See `src/lib/accio-result-status.ts` (`ScreeningOutcome`) for the union.
    */
-  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'pass' | 'fail' | 'unknown' | null
+  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'discrepancy' | 'pass' | 'fail' | 'unknown' | null
   licenseState: string
   orderedAt: string
   completedAt: string | null
@@ -69,7 +69,7 @@ export interface PspData {
   orderId: string
   orderStatus: string
   /** Same semantics as {@link MvrData.resultOutcome}. */
-  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'pass' | 'fail' | 'unknown' | null
+  resultOutcome?: 'clear' | 'no_hits' | 'hits' | 'discrepancy' | 'pass' | 'fail' | 'unknown' | null
   licenseState: string
   orderedAt: string
   completedAt: string | null

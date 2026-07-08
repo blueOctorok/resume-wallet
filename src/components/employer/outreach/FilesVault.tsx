@@ -72,7 +72,7 @@ export default function FilesVault({ rows, consentBundles = [], loading, error, 
       const k = r.resultOutcome ?? 'pending'
       counts[k] = (counts[k] ?? 0) + 1
     }
-    const order = ['clear', 'hits', 'no_hits', 'unknown', 'pending']
+    const order = ['clear', 'hits', 'discrepancy', 'no_hits', 'unknown', 'pending']
     return order
       .filter((k) => (counts[k] ?? 0) > 0)
       .map((k) => ({

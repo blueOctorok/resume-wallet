@@ -116,13 +116,15 @@ export interface MvrReportPdfProps {
 }
 
 export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
-  const outcome: ScreeningOutcome =
-    meta.outcome ??
-    deriveScreeningStatus({
-      filledStatus: parsed.filledStatus,
-      filledCode: parsed.filledCode,
-      heldForReview: parsed.heldForReview,
-    }).outcome
+  const derivedOutcome = deriveScreeningStatus({
+    filledStatus: parsed.filledStatus,
+    filledCode: parsed.filledCode,
+    heldForReview: parsed.heldForReview,
+  }).outcome
+
+  // Prefer freshly parsed Accio codes — stored result_outcome can be stale
+  // until a backfill/reparse runs (e.g. filledCode=discrepancy was unknown).
+  const outcome: ScreeningOutcome = derivedOutcome ?? meta.outcome ?? null
 
   const subjectName =
     [parsed.subject?.firstName, parsed.subject?.middleName, parsed.subject?.lastName]

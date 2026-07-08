@@ -4,9 +4,12 @@
  *
  * Per Accio's `result_receipt.md` section 2.10 ("postResults Attribute Definitions"),
  * the only valid filledCode values Accio ever sends are:
- *   no hits | hits | clear | unknown | drugpositive | drugnegative |
+ *   no hits | hits | clear | discrepancy | unknown | drugpositive | drugnegative |
  *   contact MRO | lab-reject | test-canceled | unobtainable |
  *   previous-positive | pass | fail
+ *
+ * MVR-specific: `discrepancy` = completed report with hits and/or identity
+ * mismatch alerts (Key Background shows "COMPLETE - discrepancy").
  *
  * filledStatus values per Accio docs: `filled` (success), `unfilled` (vendor
  * couldn't fulfill — terminal), `failed` (terminal error), `in progress`
@@ -35,6 +38,7 @@ export type ScreeningOutcome =
   | 'clear'
   | 'no_hits'
   | 'hits'
+  | 'discrepancy'
   | 'pass'
   | 'fail'
   | 'unknown'
@@ -56,6 +60,7 @@ export interface DeriveScreeningStatusResult {
 
 const CLEAN_CODES = new Set(['clear', 'no hits', 'no_hits'])
 const HIT_CODES = new Set(['hits', 'previous-positive', 'drugpositive'])
+const DISCREPANCY_CODES = new Set(['discrepancy'])
 const PASS_CODES = new Set(['pass', 'drugnegative'])
 const FAIL_CODES = new Set(['fail'])
 const REVIEW_CODES = new Set(['contact mro', 'lab-reject', 'test-canceled'])
@@ -120,6 +125,9 @@ export function deriveScreeningStatus(
   if (HIT_CODES.has(code)) {
     return { status: 'completed', outcome: 'hits' }
   }
+  if (DISCREPANCY_CODES.has(code)) {
+    return { status: 'completed', outcome: 'discrepancy' }
+  }
   if (PASS_CODES.has(code)) {
     return { status: 'completed', outcome: 'pass' }
   }
@@ -140,6 +148,7 @@ export function deriveScreeningStatus(
 function outcomeFromCode(code: string): ScreeningOutcome {
   if (CLEAN_CODES.has(code)) return code === 'no hits' ? 'no_hits' : 'clear'
   if (HIT_CODES.has(code)) return 'hits'
+  if (DISCREPANCY_CODES.has(code)) return 'discrepancy'
   if (PASS_CODES.has(code)) return 'pass'
   if (FAIL_CODES.has(code)) return 'fail'
   return 'unknown'
@@ -154,6 +163,8 @@ export function outcomeLabel(outcome: ScreeningOutcome): string {
       return 'No hits'
     case 'hits':
       return 'Hits found'
+    case 'discrepancy':
+      return 'Discrepancy'
     case 'pass':
       return 'Pass'
     case 'fail':
@@ -173,6 +184,7 @@ export function outcomeBadgeClasses(outcome: ScreeningOutcome): string {
     case 'pass':
       return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30'
     case 'hits':
+    case 'discrepancy':
       return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/30'
     case 'fail':
       return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/30'
