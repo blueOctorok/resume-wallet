@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  collapseCumulativePipeField,
   formatDisplayGender,
   hasDmvPersonalCharacteristics,
   isPlaceholderPhone,
@@ -40,5 +41,13 @@ describe('mvr-display-sanitize', () => {
   it('requires DMV fields for personal characteristics section (not age alone)', () => {
     expect(hasDmvPersonalCharacteristics({ age: 61 })).toBe(false)
     expect(hasDmvPersonalCharacteristics({ age: 61, height: '5-10' })).toBe(true)
+  })
+
+  it('collapses WI-style cumulative pipe-delimited restriction chains', () => {
+    const wiChain =
+      'E- No Manual Trans Equip CMV | E- No Manual Trans Equip CMV- H- Restriction: Use Of H | E- No Manual Trans Equip CMV- H- Restriction: Use Of H- Corr Lenses'
+    expect(collapseCumulativePipeField(wiChain)).toBe(
+      'E- No Manual Trans Equip CMV- H- Restriction: Use Of H- Corr Lenses',
+    )
   })
 })

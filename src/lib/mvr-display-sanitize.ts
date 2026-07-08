@@ -84,3 +84,21 @@ export function hasDmvPersonalCharacteristics(
       pc.donor?.trim(),
   )
 }
+
+/**
+ * WI (and some other states) send pipe-delimited fields where each segment
+ * repeats the previous text and appends the next restriction — e.g.
+ * "E- Foo | E- Foo- H- Bar | E- Foo- H- Bar- Corr Lenses". Accio stores the
+ * full chain verbatim. For PDF/UI, keep only the last segment (the complete list).
+ */
+export function collapseCumulativePipeField(
+  value: string | null | undefined,
+): string | undefined {
+  if (!value?.trim()) return undefined
+  const parts = value
+    .split('|')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (parts.length === 0) return undefined
+  return parts[parts.length - 1]
+}

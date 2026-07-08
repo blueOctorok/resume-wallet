@@ -141,6 +141,7 @@ export const stormPdfStyles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     borderTopWidth: 1,
     borderTopColor: STORM_COLORS.border,
   },
@@ -353,7 +354,7 @@ export interface SectionProps {
 
 export function Section({ heading, children }: SectionProps) {
   return (
-    <View style={stormPdfStyles.sectionWrap} wrap={false}>
+    <View style={stormPdfStyles.sectionWrap}>
       <Text style={stormPdfStyles.sectionHeading}>{heading}</Text>
       {children}
     </View>

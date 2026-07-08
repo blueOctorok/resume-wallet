@@ -33,6 +33,7 @@ import {
 } from '@/lib/accio-result-status'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 import {
+  collapseCumulativePipeField,
   formatDisplayGender,
   hasDmvPersonalCharacteristics,
   resolveDisplayPhone,
@@ -229,7 +230,10 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
                   <Cell value={lic.status} width={LICENSE_COLS[2]} />
                   <Cell value={formatYmd(lic.expirationDate)} width={LICENSE_COLS[3]} />
                   <Cell value={lic.endorsements} width={LICENSE_COLS[4]} />
-                  <Cell value={lic.restrictions} width={LICENSE_COLS[5]} />
+                  <Cell
+                    value={collapseCumulativePipeField(lic.restrictions)}
+                    width={LICENSE_COLS[5]}
+                  />
                 </View>
               ))}
             </View>

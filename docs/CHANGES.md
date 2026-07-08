@@ -204,6 +204,20 @@ Employer talent requests often use `request_type: mvr_order` / `psp_order` with 
 
 ---
 
+## **Fix — MVR PDF layout overlap on WI multi-license reports (Jordin Groth)** (2026-07-08)
+
+**Root cause:** Two compounding issues on dense WI CDL reports: (1) `Section` used `wrap={false}`, so when License History (6 rows + long restriction text) exceeded remaining page space, react-pdf drew later sections on top of earlier ones; (2) Accio sends WI restrictions as cumulative pipe chains (`A | A-B | A-B-C`) that balloon cell height.
+
+**Fix:** Allow sections to break across pages; table rows align to top so wrapped cells expand row height; collapse cumulative pipe fields to the final segment for the Restrictions column.
+
+| File | Change |
+|---|---|
+| `src/lib/pdf/StormPdfChrome.tsx` | Remove `wrap={false}` on `Section`; `alignItems: flex-start` on table rows |
+| `src/lib/mvr-display-sanitize.ts` | `collapseCumulativePipeField()` for WI-style restriction chains |
+| `src/lib/pdf/MvrReportPdf.tsx` | Collapse restrictions before render |
+
+---
+
 ## **Docs — P3.4-C driver-ownership flow scoped in EXECUTION_CHECKLIST** (2026-06-25)
 
 Added a build-ready **P3.4-C — Driver-initiated ordering + consent** section so the driver-owned model can be built from the checklist. Buildable-now mechanics: driver-ownership acknowledgment step (statement + mandatory checkbox + "Learn more" modal, standalone from the FMCSA doc), suppress the duplicate employer pre-screen order while keeping the hire-time DQ-file pull, decouple funding from ownership (Pace sponsors a driver-owned order), gate broad career-card exposure behind driver disclosure prefs, and backfill the two Pace-derived test attestations. Counsel-gated items are **wording only** (MVR auth reword; standalone/mandatory questions); the FMCSA PSP form stays verbatim. P3.5 pre-conditions updated to require the P3.4-C gate.
