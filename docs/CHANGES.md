@@ -4,6 +4,44 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **P3.7 — Late MVR overwrite + Form 2 locked rows** (2026-07-09)
+
+Drivers often fill the DOT app **before** an MVR exists (invite / organic signup). When a driver-owned MVR completes later, issuer-backed fields **overwrite** self-entry (even if values match), lock, and show Accio source badges.
+
+| File | Change |
+|---|---|
+| `src/lib/mvr-to-form2-mapper.ts` | MVR → Form 2 accident/conviction rows (`_source:'mvr'`) |
+| `src/lib/dot-field-provenance.ts` | `mergeMvrRowsIntoForm2` — replace MVR rows, keep self disclosures |
+| `src/lib/apply-mvr-to-dot-application.ts` | Persist projection into `driver_applications` |
+| `src/lib/process-mvr-accio-webhook.ts` | On driver-owned MVR complete → apply DOT projection |
+| `src/app/api/driver/prefill-from-mvr` | Returns Form 1 **and** Form 2 |
+| `src/app/api/driver-applications/save-progress` | Re-projects Form 1+2 on GET/POST |
+| `DotApplicationFlow` | Always re-applies on entry (no early exit if already “filled”) |
+| `PersonalInfoForm2` | Lock MVR rows + badges; append-only self accidents/convictions |
+
+**Still open:** verified-% meter, employer two-tone, PSP → Form 2, honesty pass on legacy whole-app `VERIFIED`.
+
+---
+
+## **P3.7 — MVR → DOT Form 1 identity/license lock** (2026-07-09)
+
+First use-case slice of verified DQ-file assembly: when a driver has a parsed MVR, Form 1 name / DOB / primary license fields are **projected from the MVR**, hard-locked in the UI, and **re-projected on every save/load** so client tampering cannot stick.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-field-provenance.ts` | Field paths, provenance stamp (`_fieldProvenance`), project/merge helpers |
+| `src/lib/mvr-form1-projection.ts` | Load driver-owned (preferred) or latest parsed MVR → Form 1 + provenance |
+| `src/lib/dot-field-provenance.test.ts` | Unit tests (incl. tampered save projection) |
+| `src/app/api/driver/prefill-from-mvr/route.ts` | Returns merged Form 1 + lock metadata |
+| `src/app/api/driver-applications/save-progress/route.ts` | Fixed missing admin client import; GET/POST re-project locked fields |
+| `src/components/driver-application/PersonalInfoForm1.tsx` | Disabled locked inputs + Accio source badges |
+| `src/components/driver-application/VerifiedFieldBadge.tsx` | Honest per-field badge |
+| `src/components/app/DotApplicationFlow.tsx` | Auto-apply MVR projection after bootstrap |
+
+**Honesty:** badges say "Verified — sourced from Accio order #X" (not "proven on Midnight"). Self-reported fields (SSN, position, residency years, disclosures) stay editable. Form 2 / verified-% / employer two-tone are follow-ups.
+
+---
+
 ## **Candidate hub — remove Apply mode, make Construct the only chrome** (2026-07-06)
 
 The candidate hub previously offered two chromes toggled by a nav pill: **Apply** (job-first split view, `SimpleModeShell`, `uiMode='simple'`) and **Construct** (the composable hub, `CandidateHub`, `uiMode='hub'`). Per product decision, Apply was removed for candidates — Construct is now the default and only chrome.

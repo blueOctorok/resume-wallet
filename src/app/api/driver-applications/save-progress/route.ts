@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveDriverApplicationClient } from '@/lib/supabase-client-db'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
+import { applyProjectionToApplicationData } from '@/lib/apply-mvr-to-dot-application'
+import type { Form1WithProvenance, Form2WithProvenance } from '@/lib/dot-field-provenance'
 
 /**
- * GET — load saved application (form1–3) for edit / resume. Source of truth over localStorage.
+ * GET — load saved application. Re-projects MVR-locked Form 1 + Form 2 rows from live MVR.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +29,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to load application' }, { status: 500 })
     }
 
-    return NextResponse.json({ application: data ?? null })
+    if (!data) {
+      return NextResponse.json({ application: null })
+    }
+
+    const applicationData = (data.application_data ?? {}) as {
+      form1?: Form1WithProvenance | null
+      form2?: Form2WithProvenance | null
+      form3?: unknown
+    }
+
+    const projection = await loadMvrDotProjection(supabase, userId)
+    if (projection && (applicationData.form1 || applicationData.form2)) {
+      const next = applyProjectionToApplicationData(applicationData, projection)
+      applicationData.form1 = next.form1
+      applicationData.form2 = next.form2
+    }
+
+    return NextResponse.json({
+      application: {
+        ...data,
+        application_data: applicationData,
+      },
+    })
   } catch (e) {
     console.error('[SAVE PROGRESS GET]', e)
     return NextResponse.json({ error: 'Failed to load application' }, { status: 500 })
@@ -33,71 +59,66 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/driver-applications/save-progress
- * Save in-progress DOT application data to database
- * 
- * This allows users to resume their application across devices/sessions.
- * 
- * Headers:
- *   x-wallet-address: User's wallet address (required)
- * 
- * Body:
- *   {
- *     form1Data?: DotForm1Data,
- *     form2Data?: DotForm2Data,
- *     form3Data?: DotForm3Data,
- *     currentStep: number (1, 2, or 3)
- *   }
+ * POST — save in-progress DOT application. MVR-locked Form 1 fields and Form 2
+ * MVR rows are overwritten from the live MVR before persist (P3.7).
  */
 export async function POST(request: NextRequest) {
   try {
     const userId = await getStormUserIdFromRequest(request)
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { form1Data, form2Data, form3Data, currentStep } = await request.json()
 
-    if (!currentStep || (currentStep < 1 || currentStep > 3)) {
+    if (!currentStep || currentStep < 1 || currentStep > 3) {
       return NextResponse.json(
         { error: 'Valid currentStep (1-3) is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    // Combine all form data into a single application_data object
+    const supabase = await getAdminSupabaseClient()
+    let safeForm1 = form1Data as Form1WithProvenance | null
+    let safeForm2 = form2Data as Form2WithProvenance | null
+
+    const projection = await loadMvrDotProjection(supabase, userId)
+    if (projection && (form1Data || form2Data)) {
+      const next = applyProjectionToApplicationData(
+        {
+          form1: (form1Data as Record<string, unknown>) ?? null,
+          form2: (form2Data as Record<string, unknown>) ?? null,
+          form3: form3Data,
+        },
+        projection,
+      )
+      safeForm1 = next.form1
+      safeForm2 = next.form2
+    }
+
     const applicationData = {
-      form1: form1Data || null,
-      form2: form2Data || null,
+      form1: safeForm1 || null,
+      form2: safeForm2 || null,
       form3: form3Data || null,
     }
 
     console.log('[SAVE PROGRESS] Saving application progress:', {
       userId,
       currentStep,
-      hasForm1: !!form1Data,
-      hasForm2: !!form2Data,
+      hasForm1: !!safeForm1,
+      hasForm2: !!safeForm2,
       hasForm3: !!form3Data,
+      lockedFields: projection
+        ? Object.keys(projection.form1Provenance.fields).length
+        : 0,
     })
 
-    // Save to database (creates or updates existing application).
-    // Pass the resolved userId so the helper skips the wallet get-or-create.
     const result = await saveDriverApplicationClient(
       '',
-      applicationData,
+      applicationData as unknown as Parameters<typeof saveDriverApplicationClient>[1],
       currentStep,
-      userId
+      userId,
     )
-
-    console.log('[SAVE PROGRESS] Application saved successfully:', {
-      applicationId: result.id,
-      userId: result.user_id,
-      currentStep: result.current_step,
-      isComplete: result.is_complete,
-    })
 
     return NextResponse.json({
       success: true,
@@ -107,15 +128,15 @@ export async function POST(request: NextRequest) {
         isComplete: result.is_complete,
         updatedAt: result.updated_at,
       },
+      form1Data: safeForm1,
+      form2Data: safeForm2,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred'
     console.error('[SAVE PROGRESS] Error:', error)
     return NextResponse.json(
-      {
-        error: 'Failed to save progress',
-        details: error.message || 'An unexpected error occurred',
-      },
-      { status: 500 }
+      { error: 'Failed to save progress', details: message },
+      { status: 500 },
     )
   }
 }

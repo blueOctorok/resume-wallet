@@ -9,6 +9,7 @@ import {
 import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
 import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
+import { applyMvrProjectionToDriverApplication } from '@/lib/apply-mvr-to-dot-application'
 
 export interface MvrWebhookProcessOutcome {
   status: number
@@ -212,6 +213,12 @@ export async function processMvrAccioWebhookCompletion(
       last_ordered_at: mvrOrder.ordered_at,
       last_updated: new Date().toISOString(),
     }).catch((err) => console.warn('[MVR PROCESS] Block sync non-fatal:', err))
+
+    // P3.7 late-MVR: if the driver already started/completed a DOT app, overwrite
+    // Form 1 lock paths + Form 2 MVR rows and stamp badges (even when values match).
+    void applyMvrProjectionToDriverApplication(supabase, mvrOrder.driver_user_id).catch((err) =>
+      console.warn('[MVR PROCESS] DOT projection non-fatal:', err),
+    )
   }
 
   if (hasFmcsaSuborder) {

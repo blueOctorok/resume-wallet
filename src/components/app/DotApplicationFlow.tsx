@@ -15,6 +15,10 @@ import {
 } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 import { normalizeForm3Data } from '@/lib/dot-application-hydrate'
+import type {
+  DotForm1FieldProvenance,
+  DotForm2RowProvenance,
+} from '@/lib/dot-field-provenance'
 
 // Dynamic imports for code-splitting
 const PersonalInfoForm1 = dynamic(
@@ -92,6 +96,10 @@ export default function DotApplicationFlow({
 
   /** False until we merge server application_data (form3 / employment live in DB, not only localStorage). */
   const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !sessionUserId?.trim())
+  const [mvrPrefillStatus, setMvrPrefillStatus] = useState<
+    'idle' | 'loading' | 'applied' | 'unavailable' | 'error'
+  >('idle')
+  const mvrPrefillAttemptedRef = useRef(false)
 
   // Track save reference to detect unsaved changes
   const lastSavedDataRef = useRef<{ form1: unknown; form2: unknown; form3: unknown }>({
@@ -172,6 +180,78 @@ export default function DotApplicationFlow({
       cancelled = true
     }
   }, [sessionUserId])
+
+  // -------------------------------------------------------
+  // P3.7 — Always re-project MVR → Form 1 + Form 2 after bootstrap.
+  // Late-MVR path: even if the driver already typed matching values, we
+  // overwrite lock paths / MVR rows and stamp badges. Skip only when no MVR.
+  // -------------------------------------------------------
+  useEffect(() => {
+    if (!dotBootstrapReady || !sessionUserId?.trim()) return
+    if (mvrPrefillAttemptedRef.current) return
+
+    mvrPrefillAttemptedRef.current = true
+    let cancelled = false
+    setMvrPrefillStatus('loading')
+
+    ;(async () => {
+      try {
+        const store = useDotApplicationStore.getState()
+        const res = await fetch('/api/driver/prefill-from-mvr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            existingForm1: store.form1Data,
+            existingForm2: store.form2Data,
+          }),
+        })
+        if (cancelled) return
+        if (res.status === 404) {
+          setMvrPrefillStatus('unavailable')
+          return
+        }
+        if (!res.ok) {
+          setMvrPrefillStatus('error')
+          return
+        }
+        const json = (await res.json()) as {
+          form1Data?: Record<string, unknown>
+          form2Data?: Record<string, unknown>
+          lockedFieldCount?: number
+          mvrAccidentCount?: number
+          mvrConvictionCount?: number
+        }
+        if (!json.form1Data && !json.form2Data) {
+          setMvrPrefillStatus('unavailable')
+          return
+        }
+        if (json.form1Data) store.setForm1Data(json.form1Data)
+        if (json.form2Data) store.setForm2Data(json.form2Data)
+        store.incrementFormResetKey()
+        setMvrPrefillStatus('applied')
+        console.log(
+          '[DOT] MVR Form 1+2 projection applied:',
+          json.lockedFieldCount ?? 0,
+          'locked fields,',
+          json.mvrAccidentCount ?? 0,
+          'accidents,',
+          json.mvrConvictionCount ?? 0,
+          'convictions',
+        )
+      } catch (e) {
+        if (!cancelled) {
+          console.warn('[DOT] MVR prefill failed (non-fatal)', e)
+          setMvrPrefillStatus('error')
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // Once after bootstrap — always re-apply so late MVR overwrites self-entry
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dotBootstrapReady, sessionUserId])
 
   // -------------------------------------------------------
   // Profile prefill — load from unified profile into forms
@@ -751,6 +831,12 @@ export default function DotApplicationFlow({
 
     // Note: key must be passed directly to JSX, not through spread
     const formKey = `form-${dotApp.formResetKey}`
+    const form1Provenance =
+      (dotApp.form1Data as { _fieldProvenance?: DotForm1FieldProvenance } | null)
+        ?._fieldProvenance ?? null
+    const form2RowProvenance =
+      (dotApp.form2Data as { _rowProvenance?: DotForm2RowProvenance } | null)
+        ?._rowProvenance ?? null
     const formProps = {
       onNavigateToForm: handleFormNavigation,
       sessionUserId: userAddress,
@@ -765,6 +851,7 @@ export default function DotApplicationFlow({
             {...formProps}
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}
+            fieldProvenance={form1Provenance}
           />
         )
       case 2:
@@ -774,6 +861,7 @@ export default function DotApplicationFlow({
             {...formProps}
             onDataChange={dotApp.setForm2Data}
             initialData={dotApp.form2Data}
+            rowProvenance={form2RowProvenance}
           />
         )
       case 3:
@@ -793,6 +881,7 @@ export default function DotApplicationFlow({
             {...formProps}
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}
+            fieldProvenance={form1Provenance}
           />
         )
     }
@@ -868,6 +957,25 @@ export default function DotApplicationFlow({
       {/* Forms */}
       {!dotApp.showPrefillUpload && (
         <>
+          {mvrPrefillStatus === 'applied' && (
+            <div
+              className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border ${
+                isDarkTheme(theme)
+                  ? 'bg-teal-900/20 border-teal-500/40 text-teal-200'
+                  : 'bg-teal-50 border-teal-200 text-teal-900'
+              }`}
+            >
+              <p className='text-sm font-medium'>
+                MVR data applied — identity, license, and driving-record rows are locked
+                with source badges.
+              </p>
+              <p className='mt-1 text-xs opacity-90'>
+                Fields from your MVR overwrite what you typed (even if the values match)
+                and show a verified badge. You can still add extra accident or conviction
+                disclosures the MVR does not list.
+              </p>
+            </div>
+          )}
           {dotApp.hasPrefilled && !dotApp.isApplicationCompleted && (
             <div
               className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${

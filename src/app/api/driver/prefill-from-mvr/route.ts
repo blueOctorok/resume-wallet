@@ -1,26 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
-import { ParsedMvrResult } from '@/lib/accio-xml-parser'
-import { mapMvrToForm1Data, getMvrExtractionSummary } from '@/lib/mvr-to-dot-mapper'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
+import { applyProjectionToApplicationData } from '@/lib/apply-mvr-to-dot-application'
 
 /**
- * API Route: Prefill DOT Application from MVR Results
- * 
  * POST /api/driver/prefill-from-mvr
- * 
- * Gets the latest MVR result for a driver and maps it to DOT application Form 1 data.
- * Only returns data - does not update the application. The client should merge this
- * with existing application data and update the form.
- * 
- * Request Body: { sessionUserId: string }
- * 
- * Response: {
- *   success: boolean
- *   form1Data: any (Form 1 data structure)
- *   summary: { totalFields, extractedFields, fieldNames }
- *   mvrResultId: string (UUID of the MVR result used)
- * }
+ *
+ * Returns Form 1 + Form 2 projected from the latest MVR, with provenance so the
+ * DOT wizard can hard-lock identity/license and MVR accident/conviction rows (P3.7).
+ *
+ * Always overwrites lock paths / MVR rows even when values match (late-MVR path).
+ *
+ * Body (optional): { existingForm1?, existingForm2? }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,133 +21,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[MVR PREFILL] Starting prefill for user:', sessionUserId)
-
-    const supabase = await createClient()
-
-    // 1. Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', sessionUserId)
-      .single()
-
-    if (userError || !user) {
-      console.error('[MVR PREFILL] User not found:', sessionUserId)
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    let existingForm1: Record<string, unknown> | null = null
+    let existingForm2: Record<string, unknown> | null = null
+    try {
+      const body = await request.json()
+      if (body?.existingForm1 && typeof body.existingForm1 === 'object') {
+        existingForm1 = body.existingForm1 as Record<string, unknown>
+      }
+      if (body?.existingForm2 && typeof body.existingForm2 === 'object') {
+        existingForm2 = body.existingForm2 as Record<string, unknown>
+      }
+    } catch {
+      // empty body is fine
     }
 
-    // 2. Get latest MVR result with parsed data
-    const { data: mvrResult, error: mvrError } = await supabase
-      .from('mvr_results')
-      .select('id, parsed_data, license_number, license_state, license_expiration_date, result_status, received_at')
-      .eq('driver_user_id', user.id)
-      .eq('result_status', 'parsed') // Only use successfully parsed results
-      .order('received_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const supabase = await getAdminSupabaseClient()
+    const projection = await loadMvrDotProjection(supabase, sessionUserId)
 
-    if (mvrError) {
-      console.error('[MVR PREFILL] Error fetching MVR result:', mvrError)
+    if (!projection) {
       return NextResponse.json(
-        { error: 'Failed to fetch MVR result' },
-        { status: 500 }
-      )
-    }
-
-    if (!mvrResult || !mvrResult.parsed_data) {
-      console.log('[MVR PREFILL] No parsed MVR result found for user')
-      return NextResponse.json(
-        { 
+        {
           error: 'No MVR results found',
-          message: 'Please order an MVR first before using prefill'
+          message: 'Complete a driver-owned MVR first, then return to auto-fill the DOT app.',
         },
-        { status: 404 }
+        { status: 404 },
       )
     }
 
-    // 3. Convert parsed_data JSONB to ParsedMvrResult format
-    // The parsed_data is stored as JSONB from mvrResultToJsonb function
-    // We need to reconstruct it to match ParsedMvrResult interface
-    const parsedData = mvrResult.parsed_data as any
+    const merged = applyProjectionToApplicationData(
+      { form1: existingForm1, form2: existingForm2, form3: null },
+      projection,
+    )
 
-    // Reconstruct ParsedMvrResult from stored JSONB
-    const mvrResultParsed: ParsedMvrResult = {
-      orderNumber: parsedData.orderNumber || '',
-      subOrderNumber: parsedData.subOrderNumber || '',
-      remoteOrderNumber: parsedData.remoteOrderNumber,
-      remoteSubOrderNumber: parsedData.remoteSubOrderNumber,
-      timeOrdered: parsedData.timeOrdered,
-      timeFilled: parsedData.timeFilled,
-      filledStatus: parsedData.status?.filledStatus,
-      filledCode: parsedData.status?.filledCode,
-      heldForReview: parsedData.status?.heldForReview,
-      heldForReleaseForm: parsedData.status?.heldForReleaseForm,
-      subject: parsedData.subject ? {
-        firstName: parsedData.subject.firstName,
-        middleName: parsedData.subject.middleName,
-        lastName: parsedData.subject.lastName,
-        nameSuffix: parsedData.subject.nameSuffix,
-        dateOfBirth: parsedData.subject.dateOfBirth,
-        email: parsedData.subject.email,
-        phone: parsedData.subject.phone,
-        address: parsedData.subject.address,
-        city: parsedData.subject.city,
-        state: parsedData.subject.state,
-        zip: parsedData.subject.zip,
-        country: parsedData.subject.country,
-        gender: parsedData.subject.gender
-      } : undefined,
-      licenseNumber: parsedData.license?.number || mvrResult.license_number,
-      licenseState: parsedData.license?.state || mvrResult.license_state,
-      licenseExpirationDate: parsedData.license?.expirationDate || mvrResult.license_expiration_date,
-      licenses: parsedData.licenses ? parsedData.licenses.map((l: any) => ({
-        issueDate: l.issueDate,
-        expirationDate: l.expirationDate,
-        class: l.class,
-        code: l.code,
-        type: l.type,
-        status: l.status,
-        endorsements: l.endorsements,
-        restrictions: l.restrictions
-      })) : undefined,
-      violations: parsedData.violations?.details || [],
-      violationCount: parsedData.violations?.count || 0,
-      totalPoints: parsedData.violations?.totalPoints || 0,
-      accidents: parsedData.accidents?.details || [],
-      accidentCount: parsedData.accidents?.count || 0,
-      suspensions: parsedData.suspensions?.details || [],
-      suspensionCount: parsedData.suspensions?.count || 0,
-      medicalCertExpiration: parsedData.medical?.certExpiration,
-      medicalCertStatus: parsedData.medical?.certStatus,
-      fees: parsedData.fees
-    }
-
-    // 4. Map MVR result to Form 1 data
-    const form1Data = mapMvrToForm1Data(mvrResultParsed)
-
-    // 5. Get extraction summary
-    const summary = getMvrExtractionSummary(mvrResultParsed)
-
-    console.log('[MVR PREFILL] Successfully mapped MVR to Form 1 data:', summary.extractedFields, 'fields extracted')
+    console.log(
+      '[MVR PREFILL] Projected Form 1+2 for',
+      sessionUserId,
+      Object.keys(projection.form1Provenance.fields).length,
+      'locked fields,',
+      projection.mvrAccidents.length,
+      'accidents,',
+      projection.mvrConvictions.length,
+      'convictions',
+    )
 
     return NextResponse.json({
       success: true,
-      form1Data,
-      summary,
-      mvrResultId: mvrResult.id,
-      mvrReceivedAt: mvrResult.received_at
+      form1Data: merged.form1,
+      form2Data: merged.form2,
+      summary: projection.summary,
+      mvrResultId: projection.mvrResultId,
+      mvrReceivedAt: projection.mvrReceivedAt,
+      orderId: projection.orderId,
+      accioOrderNumber: projection.accioOrderNumber,
+      lockedFieldCount: Object.keys(projection.form1Provenance.fields).length,
+      mvrAccidentCount: projection.mvrAccidents.length,
+      mvrConvictionCount: projection.mvrConvictions.length,
     })
-
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[MVR PREFILL] Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
+      { error: 'Internal server error', details: message },
+      { status: 500 },
     )
   }
 }
-

@@ -6,6 +6,11 @@ import { useTheme } from '@/contexts/ThemeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { StateSelect, normalizeState } from '@/components/ui/StateSelect'
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
+import VerifiedFieldBadge from '@/components/driver-application/VerifiedFieldBadge'
+import type {
+  DotFieldProvenanceEntry,
+  DotForm2RowProvenance,
+} from '@/lib/dot-field-provenance'
 
 /** Normalize saved values to MM/YYYY for MonthYearPicker (legacy text or ISO dates). */
 function normalizeConvictionMonthYear(raw: string): string {
@@ -54,6 +59,8 @@ interface PersonalInfoForm2Props {
   sessionUserId?: string
   /** Centralized save function - saves ALL forms to driver profile */
   onSaveProgress?: () => Promise<boolean | undefined>
+  /** P3.7 — MVR row provenance for accident/conviction locks + badges. */
+  rowProvenance?: DotForm2RowProvenance | null
 }
 
 export default function PersonalInfoForm2({
@@ -62,10 +69,27 @@ export default function PersonalInfoForm2({
   initialData,
   sessionUserId,
   onSaveProgress,
+  rowProvenance = null,
 }: PersonalInfoForm2Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const lockedInputClass = isDarkTheme(theme)
+    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
+    : 'bg-gray-100 cursor-not-allowed'
+  const isMvrRow = (row: { _source?: string } | undefined) => row?._source === 'mvr'
+  const rowBadgeEntry = (path: string): DotFieldProvenanceEntry | null => {
+    if (!rowProvenance) return null
+    return {
+      path: path as DotFieldProvenanceEntry['path'],
+      source: 'mvr',
+      mvrResultId: rowProvenance.mvrResultId,
+      orderId: rowProvenance.orderId,
+      accioOrderNumber: rowProvenance.accioOrderNumber,
+      asOf: rowProvenance.asOf,
+      value: '',
+    }
+  }
   const [formData, setFormData] = useState({
     // Driving Experience
     drivingExperience: [
@@ -84,6 +108,8 @@ export default function PersonalInfoForm2({
         injuries: '',
         chemicalSpills: '',
         atFault: '',
+        _source: 'self' as 'mvr' | 'self',
+        _mvrKey: undefined as string | undefined,
       },
     ],
     hasNoAccidents: false,
@@ -95,6 +121,8 @@ export default function PersonalInfoForm2({
         violation: '',
         stateOfViolation: '',
         penalty: '',
+        _source: 'self' as 'mvr' | 'self',
+        _mvrKey: undefined as string | undefined,
       },
     ],
     hasNoConvictions: false,
@@ -112,6 +140,23 @@ export default function PersonalInfoForm2({
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
+    // P3.7 — block edits to MVR-sourced accident/conviction rows
+    if (
+      index !== undefined &&
+      (field === 'accidents' || field === 'convictions') &&
+      isMvrRow(formData[field as 'accidents' | 'convictions']?.[index])
+    ) {
+      return
+    }
+    if (field === 'hasNoAccidents' || field === 'hasNoConvictions') {
+      // Don't let "none" wipe MVR rows — server will re-project on save anyway
+      const hasMvr =
+        field === 'hasNoAccidents'
+          ? formData.accidents.some((a) => a._source === 'mvr')
+          : formData.convictions.some((c) => c._source === 'mvr')
+      if (hasMvr && value === true) return
+    }
+
     setFormData((prev) => {
       if (index !== undefined) {
         if (typeof value === 'object') {
@@ -156,8 +201,13 @@ export default function PersonalInfoForm2({
     }
     // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
-    onDataChange?.(formData)
-  }, [formData, onDataChange, initialData])
+    const provenance =
+      rowProvenance ??
+      (initialData as { _rowProvenance?: DotForm2RowProvenance } | null)?._rowProvenance
+    onDataChange?.(
+      provenance ? { ...formData, _rowProvenance: provenance } : formData,
+    )
+  }, [formData, onDataChange, initialData, rowProvenance])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
@@ -168,9 +218,9 @@ export default function PersonalInfoForm2({
       hasHydratedRef.current = false
       setFormData({
         drivingExperience: [{ equipmentType: '', yearsOfExperience: '' }],
-        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '' }],
+        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '', _source: 'self' as const, _mvrKey: undefined as string | undefined }],
         hasNoAccidents: false,
-        convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', penalty: '' }],
+        convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', penalty: '', _source: 'self' as const, _mvrKey: undefined as string | undefined }],
         hasNoConvictions: false,
         deniedLicense: '',
         deniedLicenseExplain: '',
@@ -302,6 +352,7 @@ export default function PersonalInfoForm2({
   const addAccident = () => {
     setFormData((prev) => ({
       ...prev,
+      hasNoAccidents: false,
       accidents: [
         ...prev.accidents,
         {
@@ -311,12 +362,15 @@ export default function PersonalInfoForm2({
           injuries: '',
           chemicalSpills: '',
           atFault: '',
+          _source: 'self' as const,
+          _mvrKey: undefined as string | undefined,
         },
       ],
     }))
   }
 
   const removeAccident = (index: number) => {
+    if (isMvrRow(formData.accidents[index])) return
     setFormData((prev) => ({
       ...prev,
       accidents: prev.accidents.filter((_, i) => i !== index),
@@ -326,6 +380,7 @@ export default function PersonalInfoForm2({
   const addConviction = () => {
     setFormData((prev) => ({
       ...prev,
+      hasNoConvictions: false,
       convictions: [
         ...prev.convictions,
         {
@@ -333,12 +388,15 @@ export default function PersonalInfoForm2({
           violation: '',
           stateOfViolation: '',
           penalty: '',
+          _source: 'self' as const,
+          _mvrKey: undefined as string | undefined,
         },
       ],
     }))
   }
 
   const removeConviction = (index: number) => {
+    if (isMvrRow(formData.convictions[index])) return
     setFormData((prev) => ({
       ...prev,
       convictions: prev.convictions.filter((_, i) => i !== index),
@@ -373,6 +431,8 @@ export default function PersonalInfoForm2({
               injuries: '1',
               chemicalSpills: 'N',
               atFault: 'no',
+              _source: 'self' as const,
+              _mvrKey: undefined as string | undefined,
             },
           ],
       hasNoAccidents: prev.hasNoAccidents ?? false,
@@ -386,6 +446,8 @@ export default function PersonalInfoForm2({
               violation: 'Speeding - 15 mph over limit',
               stateOfViolation: 'OH',
               penalty: 'Fine $150, 2 points',
+              _source: 'self' as const,
+              _mvrKey: undefined as string | undefined,
             },
           ],
       hasNoConvictions: prev.hasNoConvictions ?? false,
@@ -548,6 +610,7 @@ export default function PersonalInfoForm2({
           type='checkbox'
           id='hasNoAccidents'
           checked={formData.hasNoAccidents}
+          disabled={formData.accidents.some((a) => a._source === 'mvr')}
           onChange={(e) =>
             handleInputChange('hasNoAccidents', e.target.checked)
           }
@@ -563,15 +626,27 @@ export default function PersonalInfoForm2({
 
       {!formData.hasNoAccidents && (
         <div className='space-y-6'>
-          {formData.accidents.map((accident, index) => (
-            <div key={index} className='space-y-4'>
+          {formData.accidents.map((accident, index) => {
+            const locked = isMvrRow(accident)
+            const badge = locked ? rowBadgeEntry(`accidents.${index}`) : null
+            return (
+            <div key={accident._mvrKey || `acc-${index}`} className='space-y-4'>
               <div className='flex justify-between items-center'>
                 <h3
                   className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                 >
                   ACCIDENT {index + 1}
+                  {locked && (
+                    <span
+                      className={`ml-2 text-xs font-medium ${
+                        isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'
+                      }`}
+                    >
+                      (from MVR)
+                    </span>
+                  )}
                 </h3>
-                {formData.accidents.length > 1 && (
+                {!locked && formData.accidents.length > 1 && (
                   <button
                     type='button'
                     onClick={() => removeAccident(index)}
@@ -585,6 +660,7 @@ export default function PersonalInfoForm2({
                   </button>
                 )}
               </div>
+              {badge && <VerifiedFieldBadge entry={badge} />}
               {/* Label row uses min-h so multi-line labels don't push inputs down; keeps inputs aligned */}
               <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
                 <div className='flex flex-col'>
@@ -596,6 +672,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='date'
                     value={accident.date}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -607,7 +685,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -619,6 +697,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.nature}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -631,7 +711,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -643,6 +723,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.fatalities}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -654,7 +736,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -666,6 +748,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.injuries}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -677,7 +761,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -689,6 +773,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.chemicalSpills}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -700,7 +786,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
               </div>
@@ -719,6 +805,7 @@ export default function PersonalInfoForm2({
                       name={`atFault-${index}`}
                       value='yes'
                       checked={accident.atFault === 'yes'}
+                      disabled={locked}
                       onChange={(e) =>
                         handleInputChange(
                           'accidents',
@@ -740,6 +827,7 @@ export default function PersonalInfoForm2({
                       name={`atFault-${index}`}
                       value='no'
                       checked={accident.atFault === 'no'}
+                      disabled={locked}
                       onChange={(e) =>
                         handleInputChange(
                           'accidents',
@@ -758,9 +846,10 @@ export default function PersonalInfoForm2({
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
 
-          {/* Add More Button */}
+          {/* Add More Button — append-only self disclosures (391.21) */}
           <div className='flex justify-center pt-4'>
             <button
               type='button'
@@ -940,6 +1029,7 @@ export default function PersonalInfoForm2({
           type='checkbox'
           id='hasNoConvictions'
           checked={formData.hasNoConvictions}
+          disabled={formData.convictions.some((c) => c._source === 'mvr')}
           onChange={(e) =>
             handleInputChange('hasNoConvictions', e.target.checked)
           }
@@ -955,15 +1045,27 @@ export default function PersonalInfoForm2({
 
       {!formData.hasNoConvictions && (
         <div className='space-y-6'>
-          {formData.convictions.map((conviction, index) => (
-            <div key={index} className='space-y-4'>
+          {formData.convictions.map((conviction, index) => {
+            const locked = isMvrRow(conviction)
+            const badge = locked ? rowBadgeEntry(`convictions.${index}`) : null
+            return (
+            <div key={conviction._mvrKey || `conv-${index}`} className='space-y-4'>
               <div className='flex justify-between items-center'>
                 <h3
                   className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
                 >
                   CONVICTION {index + 1}
+                  {locked && (
+                    <span
+                      className={`ml-2 text-xs font-medium ${
+                        isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'
+                      }`}
+                    >
+                      (from MVR)
+                    </span>
+                  )}
                 </h3>
-                {formData.convictions.length > 1 && (
+                {!locked && formData.convictions.length > 1 && (
                   <button
                     type='button'
                     onClick={() => removeConviction(index)}
@@ -977,6 +1079,7 @@ export default function PersonalInfoForm2({
                   </button>
                 )}
               </div>
+              {badge && <VerifiedFieldBadge entry={badge} />}
               <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <div className='flex flex-col'>
                   <label
@@ -984,17 +1087,31 @@ export default function PersonalInfoForm2({
                   >
                     DATE CONVICTED
                   </label>
-                  <MonthYearPicker
-                    value={conviction.dateConvicted}
-                    onChange={(v) =>
-                      handleInputChange('convictions', { dateConvicted: v }, index)
-                    }
-                    placeholder='Select month & year'
-                    allowPresent={false}
-                    error={!!errors[`conviction${index}Date`]}
-                    theme={isDarkTheme(theme) ? 'dark' : 'light'}
-                    minDate={convictionMinBoundary}
-                  />
+                  {locked ? (
+                    <input
+                      type='text'
+                      value={conviction.dateConvicted}
+                      disabled
+                      readOnly
+                      className={`w-full px-4 py-3 border-2 rounded-md ${
+                        isDarkTheme(theme)
+                          ? 'border-gray-600 text-white rounded-lg'
+                          : 'border-gray-200 text-gray-900 rounded-lg'
+                      } ${lockedInputClass}`}
+                    />
+                  ) : (
+                    <MonthYearPicker
+                      value={conviction.dateConvicted}
+                      onChange={(v) =>
+                        handleInputChange('convictions', { dateConvicted: v }, index)
+                      }
+                      placeholder='Select month & year'
+                      allowPresent={false}
+                      error={!!errors[`conviction${index}Date`]}
+                      theme={isDarkTheme(theme) ? 'dark' : 'light'}
+                      minDate={convictionMinBoundary}
+                    />
+                  )}
                   {errors[`conviction${index}Date`] && (
                     <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}Date`]}</p>
                   )}
@@ -1008,6 +1125,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={conviction.violation}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'convictions',
@@ -1019,7 +1138,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -1033,10 +1152,11 @@ export default function PersonalInfoForm2({
                     id={`conviction-state-${index}`}
                     name={`conviction-state-${index}`}
                     value={conviction.stateOfViolation}
+                    disabled={locked}
                     onChange={(value) =>
                       handleInputChange('convictions', { stateOfViolation: value }, index)
                     }
-                    className={inputClass}
+                    className={`${inputClass} ${locked ? lockedInputClass : ''}`}
                   />
                   {errors[`conviction${index}State`] && (
                     <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}State`]}</p>
@@ -1051,6 +1171,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={conviction.penalty}
+                    disabled={locked}
+                    readOnly={locked}
                     onChange={(e) =>
                       handleInputChange(
                         'convictions',
@@ -1063,14 +1185,15 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
 
-          {/* Add More Button */}
+          {/* Add More — append-only self disclosures */}
           <div className='flex justify-center pt-4'>
             <button
               type='button'

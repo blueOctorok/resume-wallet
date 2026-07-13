@@ -8,6 +8,12 @@ import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput, SSNInput, ZipCodeInput } from '@/components/ui/MaskedInputs'
 import { StateSelect } from '@/components/ui/StateSelect'
 import AskStormiButton from '@/components/ui/AskStormiButton'
+import VerifiedFieldBadge from '@/components/driver-application/VerifiedFieldBadge'
+import {
+  getLockedPaths,
+  type DotFieldPath,
+  type DotForm1FieldProvenance,
+} from '@/lib/dot-field-provenance'
 
 // Motor carrier (employing carrier) is not collected here — it is injected by the
 // specific employer when a driver's application is linked to their company.
@@ -55,6 +61,8 @@ interface PersonalInfoForm1Props {
   sessionUserId?: string
   /** Centralized save function - saves ALL forms to driver profile */
   onSaveProgress?: () => Promise<boolean | undefined>
+  /** P3.7 — MVR-projected field locks (identity + primary license). */
+  fieldProvenance?: DotForm1FieldProvenance | null
 }
 
 export default function PersonalInfoForm1({
@@ -63,11 +71,18 @@ export default function PersonalInfoForm1({
   initialData,
   sessionUserId,
   onSaveProgress,
+  fieldProvenance = null,
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
   const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const lockedPaths = getLockedPaths(fieldProvenance)
+  const isLocked = (path: DotFieldPath) => lockedPaths.has(path)
+  const lockEntry = (path: DotFieldPath) => fieldProvenance?.fields?.[path] ?? null
+  const lockedInputClass = isDarkTheme(theme)
+    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
+    : 'bg-gray-100 cursor-not-allowed'
   const [formData, setFormData] = useState({
     // Applicant Information
     firstName: '',
@@ -117,6 +132,28 @@ export default function PersonalInfoForm1({
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
+    // P3.7 — ignore client edits to MVR-locked paths (server also re-projects on save)
+    if (index === undefined) {
+      if (
+        (field === 'firstName' ||
+          field === 'middleName' ||
+          field === 'lastName' ||
+          field === 'dateOfBirth') &&
+        isLocked(field)
+      ) {
+        return
+      }
+    } else if (field === 'currentLicenses' && index === 0 && typeof value === 'object') {
+      const keys = Object.keys(value)
+      const filtered: Record<string, unknown> = {}
+      for (const k of keys) {
+        const path = `currentLicenses.0.${k}` as DotFieldPath
+        if (!isLocked(path)) filtered[k] = (value as Record<string, unknown>)[k]
+      }
+      if (Object.keys(filtered).length === 0) return
+      value = filtered
+    }
+
     setFormData((prev) => {
       if (index !== undefined) {
         // Handle array updates with object values
@@ -165,8 +202,14 @@ export default function PersonalInfoForm1({
     }
     // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
-    onDataChange?.(formData)
-  }, [formData, onDataChange, initialData])
+    // Keep P3.7 provenance on the store object even if local state omitted it
+    const provenance =
+      fieldProvenance ??
+      (initialData as { _fieldProvenance?: DotForm1FieldProvenance } | null)?._fieldProvenance
+    onDataChange?.(
+      provenance ? { ...formData, _fieldProvenance: provenance } : formData,
+    )
+  }, [formData, onDataChange, initialData, fieldProvenance])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
@@ -693,8 +736,13 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.firstName}
             onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            disabled={isLocked('firstName')}
+            readOnly={isLocked('firstName')}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+              isLocked('firstName') ? lockedInputClass : ''
+            }`}
           />
+          {lockEntry('firstName') && <VerifiedFieldBadge entry={lockEntry('firstName')!} />}
           {errors.firstName && (
             <p className='mt-1 text-sm text-red-600'>{errors.firstName}</p>
           )}
@@ -709,8 +757,13 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.middleName}
             onChange={(e) => handleInputChange('middleName', e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            disabled={isLocked('middleName')}
+            readOnly={isLocked('middleName')}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+              isLocked('middleName') ? lockedInputClass : ''
+            }`}
           />
+          {lockEntry('middleName') && <VerifiedFieldBadge entry={lockEntry('middleName')!} />}
         </div>
         <div>
           <label
@@ -722,8 +775,13 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.lastName}
             onChange={(e) => handleInputChange('lastName', e.target.value)}
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            disabled={isLocked('lastName')}
+            readOnly={isLocked('lastName')}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+              isLocked('lastName') ? lockedInputClass : ''
+            }`}
           />
+          {lockEntry('lastName') && <VerifiedFieldBadge entry={lockEntry('lastName')!} />}
           {errors.lastName && (
             <p className='mt-1 text-sm text-red-600'>{errors.lastName}</p>
           )}
@@ -771,8 +829,13 @@ export default function PersonalInfoForm1({
             type='date'
             value={formData.dateOfBirth}
             onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            disabled={isLocked('dateOfBirth')}
+            readOnly={isLocked('dateOfBirth')}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+              isLocked('dateOfBirth') ? lockedInputClass : ''
+            }`}
           />
+          {lockEntry('dateOfBirth') && <VerifiedFieldBadge entry={lockEntry('dateOfBirth')!} />}
           {errors.dateOfBirth && (
             <p className='mt-1 text-sm text-red-600'>{errors.dateOfBirth}</p>
           )}
@@ -1199,15 +1262,26 @@ export default function PersonalInfoForm1({
       </div>
 
       {/* Current Licenses */}
-      {formData.currentLicenses?.map((license, index) => (
+      {formData.currentLicenses?.map((license, index) => {
+        const primaryLocked = index === 0 && lockedPaths.size > 0
+        return (
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
               className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
             >
               CURRENT LICENSE {index + 1}
+              {primaryLocked && (
+                <span
+                  className={`ml-2 text-xs font-medium ${
+                    isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'
+                  }`}
+                >
+                  (from MVR)
+                </span>
+              )}
             </h3>
-            {formData.currentLicenses.length > 1 && (
+            {formData.currentLicenses.length > 1 && index > 0 && (
               <button
                 type='button'
                 onClick={() => removeCurrentLicense(index)}
@@ -1237,8 +1311,14 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                disabled={index === 0 && isLocked('currentLicenses.0.state')}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+                  index === 0 && isLocked('currentLicenses.0.state') ? lockedInputClass : ''
+                }`}
               />
+              {index === 0 && lockEntry('currentLicenses.0.state') && (
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.state')!} />
+              )}
             </div>
             <div>
               <label
@@ -1256,8 +1336,17 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                disabled={index === 0 && isLocked('currentLicenses.0.licenseNumber')}
+                readOnly={index === 0 && isLocked('currentLicenses.0.licenseNumber')}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+                  index === 0 && isLocked('currentLicenses.0.licenseNumber')
+                    ? lockedInputClass
+                    : ''
+                }`}
               />
+              {index === 0 && lockEntry('currentLicenses.0.licenseNumber') && (
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.licenseNumber')!} />
+              )}
             </div>
             <div>
               <label
@@ -1275,8 +1364,17 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                disabled={index === 0 && isLocked('currentLicenses.0.typeClass')}
+                readOnly={index === 0 && isLocked('currentLicenses.0.typeClass')}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+                  index === 0 && isLocked('currentLicenses.0.typeClass')
+                    ? lockedInputClass
+                    : ''
+                }`}
               />
+              {index === 0 && lockEntry('currentLicenses.0.typeClass') && (
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.typeClass')!} />
+              )}
             </div>
             <div>
               <label
@@ -1294,8 +1392,17 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                disabled={index === 0 && isLocked('currentLicenses.0.endorsements')}
+                readOnly={index === 0 && isLocked('currentLicenses.0.endorsements')}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+                  index === 0 && isLocked('currentLicenses.0.endorsements')
+                    ? lockedInputClass
+                    : ''
+                }`}
               />
+              {index === 0 && lockEntry('currentLicenses.0.endorsements') && (
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.endorsements')!} />
+              )}
             </div>
             <div>
               <label
@@ -1313,12 +1420,22 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                disabled={index === 0 && isLocked('currentLicenses.0.expirationDate')}
+                readOnly={index === 0 && isLocked('currentLicenses.0.expirationDate')}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+                  index === 0 && isLocked('currentLicenses.0.expirationDate')
+                    ? lockedInputClass
+                    : ''
+                }`}
               />
+              {index === 0 && lockEntry('currentLicenses.0.expirationDate') && (
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.expirationDate')!} />
+              )}
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
 
       {/* Add Current License Button */}
       <div className='flex justify-center pt-4'>
