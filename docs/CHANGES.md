@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — DOT app React #185 (max update depth) on open** (2026-07-13)
+
+Opening the DOT block after MVR autofill crashed Candidate Hub with minified React error #185 ("Maximum update depth exceeded").
+
+**Cause:** Form 1/2 sync `useEffect` listed `initialData` + provenance props in its dependency array. Sync called `setForm1Data` with a new object → parent re-render → new `initialData` → sync again → infinite loop.
+
+| File | Change |
+|---|---|
+| `PersonalInfoForm1.tsx` / `PersonalInfoForm2.tsx` | Sync effect depends only on `formData`; provenance read via refs; JSON equality skip |
+| `dot-application-store.ts` | `setForm1Data` / `setForm2Data` no-op when payload JSON-equals current |
+
+---
+
 ## **P3.7 — Late MVR overwrite + Form 2 locked rows** (2026-07-09)
 
 Drivers often fill the DOT app **before** an MVR exists (invite / organic signup). When a driver-owned MVR completes later, issuer-backed fields **overwrite** self-entry (even if values match), lock, and show Accio source badges.

@@ -144,8 +144,37 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
       ...initialState,
 
       // Form data actions
-      setForm1Data: (data) => set({ form1Data: data, hasUnsavedChanges: true }),
-      setForm2Data: (data) => set({ form2Data: data, hasUnsavedChanges: true }),
+      setForm1Data: (data) =>
+        set((state) => {
+          // Avoid no-op identity churn that can ping-pong with Form1 sync (React #185)
+          try {
+            if (
+              data != null &&
+              state.form1Data != null &&
+              JSON.stringify(data) === JSON.stringify(state.form1Data)
+            ) {
+              return state
+            }
+          } catch {
+            /* fall through */
+          }
+          return { form1Data: data, hasUnsavedChanges: true }
+        }),
+      setForm2Data: (data) =>
+        set((state) => {
+          try {
+            if (
+              data != null &&
+              state.form2Data != null &&
+              JSON.stringify(data) === JSON.stringify(state.form2Data)
+            ) {
+              return state
+            }
+          } catch {
+            /* fall through */
+          }
+          return { form2Data: data, hasUnsavedChanges: true }
+        }),
       setForm3Data: (data) => set({ form3Data: data, hasUnsavedChanges: true }),
       
       updateForm1Field: (field, value) => set((state) => ({

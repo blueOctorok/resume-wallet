@@ -190,26 +190,43 @@ export default function PersonalInfoForm1({
     })
   }
 
-  // Sync form data to parent component
-  // Don't sync on initial mount if initialData is null (reset scenario)
-  // But DO sync after user makes any changes
+  // Sync local edits up to the store. ONLY depend on formData — putting
+  // initialData / fieldProvenance here caused React #185 (max update depth):
+  // sync → setForm1Data → new initialData → sync → … forever.
   const initialMountRef = useRef(true)
+  const onDataChangeRef = useRef(onDataChange)
+  const fieldProvenanceRef = useRef(fieldProvenance)
+  const initialDataRef = useRef(initialData)
+  const lastSyncedJsonRef = useRef<string>('')
+  onDataChangeRef.current = onDataChange
+  fieldProvenanceRef.current = fieldProvenance
+  initialDataRef.current = initialData
+
   useEffect(() => {
     // On initial mount with no data, don't sync the empty form state
-    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+    if (initialMountRef.current && (!initialDataRef.current || Object.keys(initialDataRef.current).length === 0)) {
       initialMountRef.current = false
       return
     }
-    // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
-    // Keep P3.7 provenance on the store object even if local state omitted it
+
     const provenance =
-      fieldProvenance ??
-      (initialData as { _fieldProvenance?: DotForm1FieldProvenance } | null)?._fieldProvenance
-    onDataChange?.(
-      provenance ? { ...formData, _fieldProvenance: provenance } : formData,
-    )
-  }, [formData, onDataChange, initialData, fieldProvenance])
+      fieldProvenanceRef.current ??
+      (initialDataRef.current as { _fieldProvenance?: DotForm1FieldProvenance } | null)
+        ?._fieldProvenance
+    const payload = provenance ? { ...formData, _fieldProvenance: provenance } : formData
+
+    // Skip if nothing actually changed — stops parent↔child ping-pong
+    let json: string
+    try {
+      json = JSON.stringify(payload)
+    } catch {
+      json = ''
+    }
+    if (json && json === lastSyncedJsonRef.current) return
+    lastSyncedJsonRef.current = json
+    onDataChangeRef.current?.(payload)
+  }, [formData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)

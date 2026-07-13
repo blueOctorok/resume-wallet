@@ -189,25 +189,40 @@ export default function PersonalInfoForm2({
     })
   }
 
-  // Sync form data to parent component
-  // Don't sync on initial mount if initialData is null (reset scenario)
-  // But DO sync after user makes any changes
+  // Sync local edits up to the store. ONLY depend on formData — including
+  // initialData / rowProvenance here caused React #185 (infinite setState loop).
   const initialMountRef = useRef(true)
+  const onDataChangeRef = useRef(onDataChange)
+  const rowProvenanceRef = useRef(rowProvenance)
+  const initialDataRef = useRef(initialData)
+  const lastSyncedJsonRef = useRef<string>('')
+  onDataChangeRef.current = onDataChange
+  rowProvenanceRef.current = rowProvenance
+  initialDataRef.current = initialData
+
   useEffect(() => {
-    // On initial mount with no data, don't sync the empty form state
-    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+    if (initialMountRef.current && (!initialDataRef.current || Object.keys(initialDataRef.current).length === 0)) {
       initialMountRef.current = false
       return
     }
-    // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
+
     const provenance =
-      rowProvenance ??
-      (initialData as { _rowProvenance?: DotForm2RowProvenance } | null)?._rowProvenance
-    onDataChange?.(
-      provenance ? { ...formData, _rowProvenance: provenance } : formData,
-    )
-  }, [formData, onDataChange, initialData, rowProvenance])
+      rowProvenanceRef.current ??
+      (initialDataRef.current as { _rowProvenance?: DotForm2RowProvenance } | null)
+        ?._rowProvenance
+    const payload = provenance ? { ...formData, _rowProvenance: provenance } : formData
+
+    let json: string
+    try {
+      json = JSON.stringify(payload)
+    } catch {
+      json = ''
+    }
+    if (json && json === lastSyncedJsonRef.current) return
+    lastSyncedJsonRef.current = json
+    onDataChangeRef.current?.(payload)
+  }, [formData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
