@@ -11,6 +11,7 @@ import Button from './ui/Button'
 import Modal, { ModalHeader } from './ui/Modal'
 import type { ParsedResumeExtraction } from '@/types/resume-extraction'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
+import { useAuthStore } from '@/stores'
 
 interface UploadStep {
   id: string
@@ -49,6 +50,7 @@ export default function ResumeUploadWithVerification({
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
   const { notifyResumeUploadEvent } = useAssistantBridge()
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
 
   const sessionAddress = sessionUserId as string | undefined
 
@@ -61,12 +63,7 @@ export default function ResumeUploadWithVerification({
     },
     {
       id: 'upload',
-      name: '📁 Upload & Database Validation',
-      status: 'pending',
-    },
-    {
-      id: 'blockchain',
-      name: '⛓️ Blockchain Verification (Optional)',
+      name: '📁 Upload & save',
       status: 'pending',
     },
   ])
@@ -291,7 +288,7 @@ export default function ResumeUploadWithVerification({
         if (uploadResponse.status === 429) {
           tMessage = 'You\'ve hit the rate limit (3 uploads/week on free tier). Wait a day or upgrade to premium for unlimited uploads.'
         } else if (uploadResponse.status === 402) {
-          tMessage = 'Payment required. This upload costs ~$0.12 (IPFS + blockchain verification).'
+          tMessage = 'Payment required to upload this resume.'
         } else if (uploadResponse.status === 409) {
           tMessage = 'This resume is already on file. Want to use the existing one instead?'
         } else {
@@ -330,62 +327,8 @@ export default function ResumeUploadWithVerification({
           wasPaid: uploadData.resume.wasPaid,
           costUSDC: uploadData.resume.costUSDC,
         },
-        message: '✅ Resume uploaded to IPFS! Marking as verified...',
+        message: '✅ Resume uploaded successfully.',
       })
-
-      // Step 3: DB verification (Phase 2 attestation replaces on-chain registry)
-      updateStep('blockchain', 'loading')
-      notifyResumeUploadEvent?.({
-        type: 'blockchain_start',
-        step: 'blockchain',
-        message: 'Verifying your resume (almost done!)...',
-      })
-      console.log('🔄 Step 3: Resume verification...')
-
-      const verifyResponse = await fetch(`/api/resumes/${uploadData.resume.id}/verify`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-
-      let verifyPayload: { resumeId?: string; verified?: boolean } | null = null
-
-      if (!verifyResponse.ok) {
-        console.warn('⚠️ Verification failed, but upload succeeded')
-        updateStep(
-          'blockchain',
-          'error',
-          undefined,
-          'Verification failed, but your resume was uploaded successfully',
-        )
-        notifyResumeUploadEvent?.({
-          type: 'upload_error',
-          step: 'blockchain',
-          error: 'Verification failed',
-          message:
-            '⚠️ Verification failed, but your resume was uploaded successfully. You can verify it later.',
-        })
-      } else {
-        const verifyData = await verifyResponse.json()
-        console.log('✅ Step 3 Complete: Resume verified:', verifyData)
-
-        verifyPayload = {
-          resumeId: verifyData.resumeId,
-          verified: verifyData.verified ?? verifyData.success,
-        }
-
-        updateStep('blockchain', 'success', {
-          resumeId: verifyData.resumeId,
-        })
-        notifyResumeUploadEvent?.({
-          type: 'blockchain_complete',
-          step: 'blockchain',
-          data: {
-            resumeId: verifyData.resumeId,
-          },
-          message:
-            '🎉 All done! Your resume is verified. Analyzing it now to extract key information...',
-        })
-      }
 
       const resultPayload = {
         ipfsHash: uploadData.resume.ipfsHash,
@@ -395,7 +338,7 @@ export default function ResumeUploadWithVerification({
         wasPaid: uploadData.resume.wasPaid,
         costUSDC: uploadData.resume.costUSDC,
         eligibility: uploadData.eligibility,
-        blockchainData: verifyPayload,
+        blockchainData: null,
       }
 
       setFinalResult(resultPayload)
@@ -778,36 +721,6 @@ export default function ResumeUploadWithVerification({
               <strong>Uploads This Week:</strong>{' '}
               {finalResult.eligibility?.uploadsThisWeek || 0}
             </div>
-            {finalResult.blockchainData && (
-              <>
-                <div>
-                  <strong>Blockchain Resume ID:</strong>{' '}
-                  {finalResult.blockchainData.resumeId}
-                </div>
-                <div>
-                  <strong>Transaction:</strong>{' '}
-                  <a
-                    href={finalResult.blockchainData.explorerUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-blue-600 hover:underline'
-                  >
-                    View on BaseScan
-                  </a>
-                </div>
-                <div>
-                  <strong>Contract:</strong>{' '}
-                  <a
-                    href={`https://sepolia.basescan.org/address/${finalResult.blockchainData.contractAddress}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-blue-600 hover:underline'
-                  >
-                    View Contract
-                  </a>
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}

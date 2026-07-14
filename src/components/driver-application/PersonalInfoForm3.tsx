@@ -10,6 +10,8 @@ import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { Briefcase, Clock, GraduationCap, Truck, Shield, X } from 'lucide-react'
 import AskStormiButton from '@/components/ui/AskStormiButton'
 import { MonthYearPicker, parseDateToNumber } from '@/components/ui/MonthYearPicker'
+import { resolveEmploymentDotBadge, type AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
+import type { DotForm3EmployerProvenance } from '@/lib/employment-form3-provenance'
 
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
@@ -47,6 +49,8 @@ interface PersonalInfoForm3Props {
   sessionUserId?: string
   /** Centralized save function - saves ALL forms to driver profile */
   onSaveProgress?: () => Promise<boolean | undefined>
+  /** Active attestations for honesty-tier badge upgrades on EVR rows */
+  attestations?: AttestationBadgeSummary[]
 }
 
 export default function PersonalInfoForm3({
@@ -55,6 +59,7 @@ export default function PersonalInfoForm3({
   initialData,
   sessionUserId,
   onSaveProgress,
+  attestations = [],
 }: PersonalInfoForm3Props) {
   const { theme } = useTheme()
   const { requestHelp } = useAssistantBridge()
@@ -66,6 +71,7 @@ export default function PersonalInfoForm3({
   const [formData, setFormData] = useState({
     // Employment History - now with entry type
     employers: [] as Array<{
+      id?: string
       type: HistoryEntryType
       name: string
       phone: string
@@ -85,6 +91,11 @@ export default function PersonalInfoForm3({
       courseOfStudy?: string
       militaryBranch?: string
       dischargeType?: string
+      _source?: 'verified' | 'self'
+      _verificationRequestId?: string
+      _evrKey?: string
+      _verificationStatus?: string
+      _verifiedAt?: string
     }>,
 
     // Education
@@ -128,7 +139,21 @@ export default function PersonalInfoForm3({
     fcraAcknowledgement: false,
   })
 
+  const lockedInputClass = isDarkTheme(theme)
+    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
+    : 'bg-gray-100 cursor-not-allowed'
+  const isVerifiedEmployer = (row: { _source?: string } | undefined) =>
+    row?._source === 'verified'
+
   const handleInputChange = (field: string, value: any, index?: number) => {
+    // P3.7 — block edits to prior-employer-verified employment rows
+    if (
+      index !== undefined &&
+      field === 'employers' &&
+      isVerifiedEmployer(formData.employers[index])
+    ) {
+      return
+    }
     setFormData((prev) => {
       if (index !== undefined) {
         if (typeof value === 'object') {
@@ -165,6 +190,11 @@ export default function PersonalInfoForm3({
   // Don't sync on initial mount if initialData is null (reset scenario)
   // But DO sync after user makes any changes
   const initialMountRef = useRef(true)
+  const employerProvenanceRef = useRef<DotForm3EmployerProvenance | null>(null)
+  employerProvenanceRef.current =
+    (initialData as { _employerProvenance?: DotForm3EmployerProvenance } | null)
+      ?._employerProvenance ?? null
+
   useEffect(() => {
     // On initial mount with no data, don't sync the empty form state
     if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
@@ -173,7 +203,10 @@ export default function PersonalInfoForm3({
     }
     // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
-    onDataChange?.(formData)
+    const provenance = employerProvenanceRef.current
+    onDataChange?.(
+      provenance ? { ...formData, _employerProvenance: provenance } : formData,
+    )
   }, [formData, onDataChange, initialData])
 
   // Initialize/restore from parent once to avoid loops
@@ -515,6 +548,10 @@ export default function PersonalInfoForm3({
       employers: [
         ...prev.employers,
         {
+          id:
+            typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `emp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           type,
           name: '',
           phone: '',
@@ -534,6 +571,7 @@ export default function PersonalInfoForm3({
           courseOfStudy: '',
           militaryBranch: '',
           dischargeType: '',
+          _source: 'self' as const,
         },
       ],
     }))
@@ -544,6 +582,7 @@ export default function PersonalInfoForm3({
   const addEmployer = () => addHistoryEntry('employment')
 
   const removeEmployer = (index: number) => {
+    if (isVerifiedEmployer(formData.employers[index])) return
     setFormData((prev) => ({
       ...prev,
       employers: prev.employers.filter((_, i) => i !== index),
@@ -1196,11 +1235,33 @@ export default function PersonalInfoForm3({
         const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
         const typeInfo = HISTORY_TYPES.find(t => t.value === entryType) || HISTORY_TYPES[0]
         const TypeIcon = typeInfo.icon
+        const locked = isVerifiedEmployer(employer)
+        const verifiedBadge =
+          entryType === 'employment' && locked
+            ? resolveEmploymentDotBadge(
+                {
+                  status: employer._verificationStatus,
+                  verifiedAt: employer._verifiedAt,
+                  verificationRequestId: employer._verificationRequestId,
+                  employmentId: employer.id,
+                },
+                attestations,
+              )
+            : null
         
         return (
-        <div key={index} className={`rounded-xl border-2 overflow-hidden ${
-          isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'
-        }`}>
+        <div
+          key={employer.id || employer._evrKey || `emp-${index}`}
+          className={`rounded-xl border-2 overflow-hidden ${
+            locked
+              ? isDarkTheme(theme)
+                ? 'border-teal-500/40 bg-teal-950/20'
+                : 'border-teal-200 bg-teal-50/40'
+              : isDarkTheme(theme)
+                ? 'border-gray-700 bg-gray-800/30'
+                : 'border-gray-200 bg-white'
+          }`}
+        >
           {/* Entry Header with Type Badge */}
           <div className={`flex items-center justify-between p-4 ${
             isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
@@ -1213,13 +1274,22 @@ export default function PersonalInfoForm3({
                 <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
                   {index === 0 ? 'Most Recent' : `Entry ${index + 1}`} — {typeInfo.label}
                 </h3>
-                {entryType === 'employment' && index < 3 && (
+                {verifiedBadge && (
+                  <span
+                    className={`text-xs ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}
+                    data-honesty-tier={verifiedBadge.tier}
+                  >
+                    {verifiedBadge.text}
+                  </span>
+                )}
+                {entryType === 'employment' && !isVerifiedEmployer(employer) && index < 3 && (
                   <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                    Verification Required
+                    Self-certified — request prior-employer verification from your hub
                   </span>
                 )}
               </div>
             </div>
+            {!isVerifiedEmployer(employer) && (
             <button
               type='button'
               onClick={() => removeEmployer(index)}
@@ -1231,9 +1301,10 @@ export default function PersonalInfoForm3({
             >
               <X className="w-5 h-5" />
             </button>
+            )}
           </div>
           
-          <div className="p-6 space-y-5">
+          <fieldset disabled={locked} className="p-6 space-y-5 border-0 min-w-0 disabled:opacity-90">
             {/* Date Range - Common to ALL types */}
             {(() => {
               // Only enforce that "To" is after "From" within the same entry.
@@ -1662,7 +1733,7 @@ export default function PersonalInfoForm3({
                 </div>
               </>
             )}
-          </div>
+          </fieldset>
         </div>
         )
       })}

@@ -123,10 +123,7 @@ export function useJourneyProgress(): JourneyProgress {
     return calculateEmployerProgress(data)
   }
 
-  const hasVerifiedDotApp = hubStore.dotApplications.some(
-    (app) => app.blockchainTxHash != null
-  )
-
+  // DEC-2026-07-001: journey completion uses isComplete only (not legacy VERIFIED / Base tx)
   const dotCompleteFromHub =
     hubStore.dotApplications.some((app) => app.isComplete) ||
     (hubStore.stats?.completedDotApps ?? 0) > 0
@@ -156,7 +153,8 @@ export function useJourneyProgress(): JourneyProgress {
     hasGeneralResume,
     resumeCount: resumes.length,
     dotAppComplete: dotDone,
-    dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),
+    // DEC-2026-07-001: whole-app VERIFIED / Base tx is not issuer verification
+    dotAppVerified: false,
     dotAppInProgress:
       !dotDone &&
       (hubStore.dotApplications.some((app) => app.isInProgress) ||

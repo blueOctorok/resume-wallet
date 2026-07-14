@@ -163,7 +163,6 @@ interface DriverHubProps {
   /** Called when user wants to edit a resume in the Resume Builder */
   onEditResume?: (resumeId: string) => void
   /** Called when user wants to verify a resume (upload to IPFS/blockchain) */
-  onVerifyResume?: (resumeId: string) => void
   /** Called when user wants to complete employment verification for a submitted DOT app */
   onStartEmploymentVerification?: () => void
 }
@@ -179,7 +178,6 @@ export default function DriverHub({
   onViewMvr,
   onDeleteInProgressDotApp,
   onEditResume,
-  onVerifyResume,
   onStartEmploymentVerification,
 }: DriverHubProps) {
   const { theme } = useTheme()
@@ -201,8 +199,6 @@ export default function DriverHub({
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deletingInProgressDotApp, setDeletingInProgressDotApp] =
     useState(false)
-  const [verifyingResume, setVerifyingResume] = useState(false)
-  const [verifyingDotApp, setVerifyingDotApp] = useState(false)
   const [deletingDotApp, setDeletingDotApp] = useState(false)
   const [resumeActionMessage, setResumeActionMessage] = useState<{
     type: 'success' | 'error'
@@ -249,123 +245,9 @@ export default function DriverHub({
   }
 
   // Handle verify resume (upload to IPFS and blockchain)
-  const handleVerifyResume = async (resume: HubResume) => {
-    if (!userAddress) return
-
-    setVerifyingResume(true)
-    setResumeActionMessage({
-      type: 'success',
-      text: 'Generating PDF and uploading to blockchain...',
-    })
-
-    try {
-      const response = await fetch(`/api/resumes/${resume.id}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-        },
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Verification failed')
-      }
-
-      setResumeActionMessage({
-        type: 'success',
-        text: `Resume verified! Transaction: ${data.txHash?.slice(0, 10)}...`,
-      })
-
-      // Clear message after 5 seconds and refresh data
-      setTimeout(() => {
-        setResumeActionMessage(null)
-        setSelectedResume(null)
-        fetchHubData()
-      }, 5000)
-    } catch (err: unknown) {
-      console.error('Verify error:', err)
-      setResumeActionMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Verification failed',
-      })
-    } finally {
-      setVerifyingResume(false)
-    }
-  }
-
-  // Handle verify DOT application (submit to blockchain)
-  const handleVerifyDotApp = async (dotApp: HubDotApplication) => {
-    if (!userAddress) return
-
-    setVerifyingDotApp(true)
-    setDotAppActionMessage({
-      type: 'success',
-      text: 'Submitting to blockchain...',
-    })
-
-    try {
-      const response = await fetch(
-        `/api/driver-applications/${dotApp.id}/verify`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-          },
-        },
-      )
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Handle duplicate case gracefully
-        if (response.status === 409) {
-          setDotAppActionMessage({
-            type: 'success',
-            text: 'Application already verified on blockchain',
-          })
-          // Still refresh to show updated status
-          setTimeout(() => {
-            setDotAppActionMessage(null)
-            fetchHubData()
-          }, 3000)
-          return
-        }
-        throw new Error(data.details || data.error || 'Verification failed')
-      }
-
-      setDotAppActionMessage({
-        type: 'success',
-        text: `Application verified! Transaction: ${data.transactionHash?.slice(0, 10)}...`,
-      })
-
-      // Clear message after 5 seconds and refresh data
-      setTimeout(() => {
-        setDotAppActionMessage(null)
-        setSelectedDotApp(null)
-        fetchHubData()
-      }, 5000)
-    } catch (err: unknown) {
-      console.error('DOT verify error:', err)
-      setDotAppActionMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Verification failed',
-      })
-    } finally {
-      setVerifyingDotApp(false)
-    }
-  }
-
-  // Handle delete DOT application (only for apps not yet on blockchain)
+  // Handle delete DOT application
   const handleDeleteDotApp = async (dotApp: HubDotApplication) => {
     if (!userAddress) return
-
-    // Double-check: don't allow deleting apps already on blockchain
-    if (dotApp.blockchainTxHash) {
-      setDotAppActionMessage({
-        type: 'error',
-        text: 'Cannot delete an application that has been verified on blockchain',
-      })
-      return
-    }
 
     if (
       !window.confirm('Delete this DOT application? This cannot be undone.')
@@ -1094,14 +976,7 @@ export default function DriverHub({
           ) : (
             <div className='space-y-3'>
               {data.resumes.slice(0, 3).map((resume) => {
-                // Check if resume has real IPFS hash or just a placeholder
-                const hasRealIpfs =
-                  resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
-                // Determine actual status: verified if has blockchain tx hash
-                const isVerified = resume.verificationStatus === 'VERIFIED' || resume.blockchainTxHash
-                // Can verify if has real IPFS hash but not yet verified on blockchain
-                const canVerify = hasRealIpfs && !resume.blockchainTxHash
-                // Can edit if it's a built resume
+                // DEC-2026-05-014: resumes are self-reported — never chain-verified
                 const canEdit = resume.resumeType === 'built'
 
                 return (
@@ -1122,13 +997,7 @@ export default function DriverHub({
                         >
                           {resume.title || resume.filename}
                         </p>
-                        {isVerified && (
-                          <span className='flex items-center gap-1 text-xs text-green-400'>
-                            <CheckCircle className='w-3 h-3' />
-                            Verified
-                          </span>
-                        )}
-                        {resume.resumeType === 'built' && !isVerified && (
+                        {resume.resumeType === 'built' && (
                           <span
                             className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
                               isDarkTheme(theme)
@@ -1176,16 +1045,6 @@ export default function DriverHub({
                           title='Edit'
                         >
                           <Edit className='w-4 h-4' />
-                        </button>
-                      )}
-                      {/* Verify button - only for resumes with IPFS hash but not yet on blockchain */}
-                      {canVerify && (
-                        <button
-                          onClick={() => handleSelectResume(resume)}
-                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                          title='Verify on Blockchain'
-                        >
-                          <Shield className='w-4 h-4' />
                         </button>
                       )}
                     </div>
@@ -1274,15 +1133,9 @@ export default function DriverHub({
                   ? `${app.applicantName}'s Application`
                   : `DOT Application ${data.dotApplications.length - index}`
 
-                // Determine actual status: if has blockchain tx hash, it's VERIFIED
-                const actualStatus = app.blockchainTxHash
-                  ? 'VERIFIED'
-                  : app.isComplete
-                    ? 'PENDING'
-                    : 'IN_PROGRESS'
-
-                // Can verify if complete but not yet on blockchain
-                const canVerify = app.isComplete && !app.blockchainTxHash
+                // DEC-2026-07-001: never promote blockchain_tx_hash / VERIFIED to "Verified"
+                const actualStatus = app.isComplete ? 'SUBMITTED' : 'IN_PROGRESS'
+                const canEdit = app.isInProgress || app.isComplete
 
                 return (
                   <div
@@ -1302,10 +1155,10 @@ export default function DriverHub({
                         >
                           {appTitle}
                         </p>
-                        {actualStatus === 'VERIFIED' && (
-                          <span className='flex items-center gap-1 text-xs text-green-400'>
+                        {actualStatus === 'SUBMITTED' && (
+                          <span className='flex items-center gap-1 text-xs text-teal-500 dark:text-teal-400'>
                             <CheckCircle className='w-3 h-3' />
-                            Verified
+                            Submitted
                           </span>
                         )}
                         {!app.isComplete && (
@@ -1343,8 +1196,7 @@ export default function DriverHub({
                       >
                         <Eye className='w-4 h-4' />
                       </button>
-                      {/* Edit button - only for in-progress or complete but not verified */}
-                      {(app.isInProgress || canVerify) && (
+                      {canEdit && (
                         <button
                           onClick={() => onNavigate('dotapp')}
                           className={`p-2 rounded-lg ${
@@ -1355,16 +1207,6 @@ export default function DriverHub({
                           title={app.isInProgress ? 'Continue' : 'Edit'}
                         >
                           <Edit className='w-4 h-4' />
-                        </button>
-                      )}
-                      {/* Verify button - only for complete apps not yet on blockchain */}
-                      {canVerify && (
-                        <button
-                          onClick={() => handleVerifyDotApp(app)}
-                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                          title='Verify on Blockchain'
-                        >
-                          <Shield className='w-4 h-4' />
                         </button>
                       )}
                       {/* Delete button - only for in-progress */}
@@ -1701,17 +1543,11 @@ export default function DriverHub({
                 }
               : undefined
           }
-          onVerify={() => handleVerifyResume(selectedResume)}
           onDelete={() => {
             handleCloseResumePreview()
             setDeletingResume(selectedResume)
           }}
-          isVerifying={verifyingResume}
-          canVerify={
-            selectedResume.resumeType === 'built' &&
-            (!selectedResume.ipfsHash ||
-              selectedResume.ipfsHash.startsWith('built_'))
-          }
+          canVerify={false}
         />
       )}
 
@@ -1780,8 +1616,6 @@ export default function DriverHub({
             theme={theme}
             onNavigate={onNavigate}
             onStartEmploymentVerification={onStartEmploymentVerification}
-            onVerify={() => handleVerifyDotApp(selectedDotApp)}
-            isVerifying={verifyingDotApp}
             actionMessage={dotAppActionMessage}
             onDelete={() => handleDeleteDotApp(selectedDotApp)}
             isDeleting={deletingDotApp}
@@ -2067,8 +1901,6 @@ function DotAppDetailContent({
   theme,
   onNavigate,
   onStartEmploymentVerification,
-  onVerify,
-  isVerifying,
   actionMessage,
   onDelete,
   isDeleting,
@@ -2079,8 +1911,6 @@ function DotAppDetailContent({
     page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'career-card' | 'profile-setup',
   ) => void
   onStartEmploymentVerification?: () => void
-  onVerify?: () => void
-  isVerifying?: boolean
   actionMessage?: { type: 'success' | 'error'; text: string } | null
   onDelete?: () => void
   isDeleting?: boolean
@@ -2090,23 +1920,12 @@ function DotAppDetailContent({
   }`
   const valueClass = `text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`
 
-  // Check if this app can be edited (complete but not yet submitted to blockchain)
-  const canEdit =
-    dotApp.isComplete && !dotApp.blockchainTxHash && !dotApp.isInProgress
-
-  // Check if this app can be verified (complete but not yet on blockchain)
-  const canVerify =
-    dotApp.isComplete &&
-    !dotApp.blockchainTxHash &&
-    !dotApp.isInProgress &&
-    onVerify
-
-  // Check if this app can be deleted (not yet on blockchain)
-  const canDelete = !dotApp.blockchainTxHash && onDelete
+  // DEC-2026-07-001: no whole-app blockchain verify CTA for self-reported DOT apps
+  const canEdit = dotApp.isComplete && !dotApp.isInProgress
+  const canDelete = Boolean(onDelete)
 
   return (
     <div className='space-y-4'>
-      {/* Action Message Toast */}
       {actionMessage && (
         <div
           className={`p-3 rounded-lg text-sm ${
@@ -2122,7 +1941,6 @@ function DotAppDetailContent({
           {actionMessage.text}
         </div>
       )}
-      {/* Applicant name if available */}
       {dotApp.applicantName && (
         <div>
           <p className={labelClass}>Applicant</p>
@@ -2139,7 +1957,7 @@ function DotAppDetailContent({
       <div>
         <p className={labelClass}>Status</p>
         <StatusBadge
-          status={dotApp.isComplete ? dotApp.verificationStatus : 'IN_PROGRESS'}
+          status={dotApp.isComplete ? 'SUBMITTED' : 'IN_PROGRESS'}
           theme={theme}
         />
       </div>
@@ -2157,7 +1975,6 @@ function DotAppDetailContent({
               style={{ width: `${(dotApp.currentStep / 3) * 100}%` }}
             />
           </div>
-          {/* Continue button for in-progress applications */}
           {dotApp.isInProgress && (
             <button
               onClick={() => onNavigate('dotapp')}
@@ -2173,55 +1990,6 @@ function DotAppDetailContent({
         </div>
       )}
 
-      {/* Verify on Blockchain - Primary CTA for completed apps not yet on chain */}
-      {canVerify && (
-        <div
-          className={`p-4 rounded-lg border ${
-            isDarkTheme(theme)
-              ? 'bg-yellow-900/20 border-yellow-500/30'
-              : 'bg-yellow-50 border-yellow-200'
-          }`}
-        >
-          <p
-            className={`text-sm font-medium mb-2 ${
-              isDarkTheme(theme) ? 'text-yellow-400' : 'text-yellow-800'
-            }`}
-          >
-            Ready to Verify
-          </p>
-          <p
-            className={`text-xs mb-3 ${
-              isDarkTheme(theme) ? 'text-yellow-400/70' : 'text-yellow-700'
-            }`}
-          >
-            Submit your application to the blockchain to make it permanent and
-            tamper-proof.
-          </p>
-          <button
-            onClick={onVerify}
-            disabled={isVerifying}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${
-              isDarkTheme(theme)
-                ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
-                : 'bg-yellow-500 text-white hover:bg-yellow-600'
-            }`}
-          >
-            {isVerifying ? (
-              <>
-                <Loader2 className='w-4 h-4 animate-spin' />
-                Verifying...
-              </>
-            ) : (
-              <>
-                <Shield className='w-4 h-4' />
-                Verify on Blockchain
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Edit button for completed apps not yet submitted to blockchain */}
       {canEdit && (
         <button
           onClick={() => onNavigate('dotapp')}
@@ -2236,7 +2004,6 @@ function DotAppDetailContent({
         </button>
       )}
 
-      {/* Delete button for apps not yet on blockchain */}
       {canDelete && (
         <button
           onClick={onDelete}
@@ -2261,26 +2028,17 @@ function DotAppDetailContent({
         </button>
       )}
 
-      {dotApp.blockchainApplicationId && (
-        <div>
-          <p className={labelClass}>Application ID</p>
-          <p className={`${valueClass} font-mono`}>
-            {dotApp.blockchainApplicationId}
-          </p>
-        </div>
-      )}
-      {dotApp.blockchainTxHash && (
-        <div>
-          <p className={labelClass}>Blockchain Transaction</p>
-          <a
-            href={`https://sepolia.basescan.org/tx/${dotApp.blockchainTxHash}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='text-sm text-blue-500 hover:underline flex items-center gap-1'
-          >
-            View on BaseScan <ExternalLink className='w-3 h-3' />
-          </a>
-        </div>
+      {onStartEmploymentVerification && dotApp.isComplete && (
+        <button
+          onClick={onStartEmploymentVerification}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
+            isDarkTheme(theme)
+              ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30'
+              : 'bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100'
+          }`}
+        >
+          Employment Verification
+        </button>
       )}
     </div>
   )
@@ -2336,10 +2094,11 @@ function getStatusConfig(status: string): {
 
   switch (normalized) {
     case 'VERIFIED':
+      // DEC-2026-07-001: legacy whole-app flag ≠ issuer verified
       return {
-        label: 'Verified',
+        label: 'Submitted',
         icon: <CheckCircle className='w-3 h-3' />,
-        className: 'bg-green-500/10 text-green-600 dark:text-green-400',
+        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
       }
     case 'PENDING':
       return {

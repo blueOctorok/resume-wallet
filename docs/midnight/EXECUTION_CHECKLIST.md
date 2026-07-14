@@ -811,7 +811,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.4** | **Real predicate proof for `mvr-clean-36` (anchor 🟡 → real 🟢)** — predicate + provenance. **Mandatory** (delivers the moat; CIRCUITS.md). Predicate track **unblocked**; 🟢 provenance **pending Key/Accio signing** | 🟡 |
 | **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ⬜ |
 | **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
-| **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | 🟡 MVR→Form 1 identity/license slice shipped |
+| **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
 
@@ -1264,13 +1264,13 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 | | |
 |---|---|
-| Status | 🟡 **In progress** — MVR→Form 1 identity/license prefill + hard-lock + server projection shipped (2026-07-09). Form 2 append-only / verified-% / employer two-tone still open. |
+| Status | ✅ **Core shipped** — MVR/PSP/EVR locks + verified-% + two-tone + **DEC-2026-07-001** + legacy whole-app VERIFIED honesty pass (2026-07-14) + **DOT field badges consume attestations** (2026-07-14; Midnight copy still P3.6-gated via `proof.kind`). |
 | Pre-conditions | P3.4-A ✅ (MVR predicate — the reference slice); P3.5 broadens the fact set; **field-level provenance model** (new — stamp each DOT field with its originating fact). P3.4-B (🟢) / P3.6 gate the *wording*, not the build. |
 | Pace risk | Medium — touches the DOT app (`DotApplicationFlow`, `driver_applications`) + career-card/employer views. Additive; **never** hard-locks a driver out of *adding* a required 391.21 disclosure. |
 
 **Why this step exists (the use case):** proofs are only worth what they *do*. The payoff is a **portable, mostly-verified DQ intake packet** — proven third-party facts (MVR/PSP/CDL/employment) auto-fill the DOT app, are badged, and are protected from silent editing. This is the object that raises carrier conversion and lets **one driver-owned pull serve many carriers** (money logic below). It is the **pre-screen packet**, NOT the regulated 49 CFR 391.51 DQ file — the carrier still runs its own consented hire-time pull (never disintermediate the CRA; DEC-2026-05-011).
 
-**The "call it verified" decision (direction 2026-07-07 — formalize as a DEC):**
+**The "call it verified" decision (✅ DEC-2026-07-001):**
 - **Principle, not a fixed number:** once a **majority of the risk-bearing DQ fields** are issuer-backed, the packet can carry a headline **"Verified" with a protective small-print caveat.** *60% is an illustrative figure the boss used — the real target is "over half," and the number we actually surface is whatever we genuinely reach, computed live, never a chosen marketing figure.* This headline is allowed **only** because the claim is *decomposable and true at the field level*:
   - The surfaced % is a **real computed number** = issuer-backed fields ÷ a defined denominator (the risk-bearing DQ fields, not every text box). No vanity numbers, no rounding up.
   - **Every field carries an honest badge:** "Verified — sourced from Accio order #X, as of {date}" vs "Self-certified by driver." A carrier can always tell which is which.
@@ -1289,10 +1289,11 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 **Do in order:**
 1. ✅ **Field provenance model** — `src/lib/dot-field-provenance.ts` + `mvr-form1-projection.ts`. Locked paths stamped as `_fieldProvenance` on Form 1; save/load **re-project** from live MVR (not copy-then-disable).
-2. 🟡 **Prefill + lock UI** — **MVR → Form 1 identity/license** + **Form 2 accidents/convictions** shipped (late-MVR overwrite via webhook + reopen; badges; append-only self rows). Employment still open.
-3. **Verified-% meter** — computed over the defined denominator; drives the headline + Stormi nudges ("add your PSP to raise your verified score").
-4. **Two-tone rendering** — verified vs self-certified on the DOT app, career card (`DotAppSection`), and employer preview (`DotAppPreviewContent`).
-5. **Honesty pass** — walk back any legacy Base-era "Verified on Blockchain" / DB `verification_status='VERIFIED'` treatment on the self-reported DOT app to honest language (small separate cleanup; log in CHANGES).
+2. ✅ **Prefill + lock UI** — MVR → Form 1/2, PSP → Form 2, EVR → Form 3 (hard-lock + append-only self disclosures where required).
+3. ✅ **Verified-% meter** — `dot-verified-coverage.ts` + `DotVerifiedMeter`; majority = strict >50%.
+4. ✅ **Two-tone rendering** — teal (issuer) / amber (self) on DOT preview + career card.
+5. ✅ **Honesty pass** — DEC-2026-07-001; walked back Base-era "Verified on Blockchain" / whole-app `VERIFIED` on self-reported DOT (ApplicationSubmitted, journey, CareerCard, DriverHub, hub docs, verify API → 410).
+6. ✅ **Badge honesty tier** — `dot-attestation-badge.ts` + `GET /api/attestation/mine`; Form 1/2/3 upgrade Accio/EVR badges when a matching attestation exists (`signed_jwt` → Verified by ZKnight; `midnight_zk` → Proven on Midnight). PSP stays Accio-only until a PSP fact type ships. Meter denominator unchanged.
 
 **Money logic (why this pays):** higher carrier conversion (a pre-verified packet beats a raw self-report), better pull efficiency (fewer wasted hire-time pulls on drivers who won't qualify), and — per Key's own proposal (P3.4-B handoff 2026-06-25) — recurring **monitoring** re-pulls (90/180/365-day) that refresh the verified fields and generate recurring CRA orders. The DOT app is the human-readable *vehicle* for those proofs, not the product being sold.
 
@@ -1407,6 +1408,12 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-07-14 | **P3.7** DOT badge honesty tier | Grok | uncommitted | Issuer badges upgrade via `/api/attestation/mine` + `dot-attestation-badge.ts`. Midnight copy only when `proof.kind === midnight_zk`. PSP badges stay Accio-only. |
+| 2026-07-14 | **Honesty** resume verify retired | Grok | uncommitted | Self-reported resumes: verify API 410; removed Base Verify CTAs; "On file" not Verified. Extends DEC-2026-07-001 §7. |
+| 2026-07-14 | **P3.7** DEC-2026-07-001 + honesty pass | Grok | uncommitted | **Shipped:** formal DEC (majority Verified headline + field honesty); retired DOT whole-app blockchain UX (ApplicationSubmitted, journey, CareerCard, DriverHub, hub docs `canVerify`, verify API 410, projected on-chain strip). Prefer Submitted + live verified-%. |
+| 2026-07-14 | **P3.7** Form 3 EVR locks | Grok | uncommitted | **Shipped:** EVR VERIFIED/PARTIALLY_VERIFIED → Form 3 `_source:'verified'` rows; stable employer ids; save/prefill/late-respond re-project; Form 3 UI lock + badge; verified-% + preview two-tone. Self never badged. |
+| 2026-07-14 | **P3.7** PSP→Form 2 | Grok | uncommitted | **Shipped:** PSP crashes→`accidents[]` (`_source:'psp'`), inspections→`inspections[]`; `mergePspRowsIntoForm2` preserves MVR stamp; prefill/save/webhook late-apply; Form 2 locks + lean inspection UI; verified-% counts PSP clean flags. Accepts `needs_review` orders; webhook `result_status:'parsed'`. **Still open:** Form 3 employment verified rows, formal DEC, legacy VERIFIED honesty. |
+| 2026-07-13 | **P3.7** verified-% + two-tone | Grok | uncommitted | **Shipped:** `dot-verified-coverage.ts` (live % = issuer-backed ÷ filled risk-bearing slots; majority = strict >50%); `DotVerifiedMeter` on DOT flow + career card chip; employer DOT preview teal/amber two-tone + legend; `DotAppData` projects %. **Still open:** PSP→Form 2, employment verified rows, formal DEC, legacy VERIFIED honesty. |
 | 2026-07-09 | **P3.7** late-MVR + Form 2 locks | Grok | uncommitted | **Late-MVR:** webhook + DOT reopen always re-project Form 1 locks + Form 2 MVR rows (overwrite even when values match) and stamp Accio badges. **Form 2:** MVR accidents/convictions locked + append-only self disclosures (391.21). `apply-mvr-to-dot-application.ts` persists into `driver_applications` on Accio complete. **Still open:** verified-% meter, employer two-tone, PSP. |
 | 2026-07-09 | **P3.7** MVR→Form 1 lock slice | Grok | uncommitted | **Shipped:** `dot-field-provenance.ts` + `mvr-form1-projection.ts`; `/api/driver/prefill-from-mvr` returns locked Form 1 + provenance; save-progress GET/POST **re-projects** locked fields from live MVR (tamper-proof); `PersonalInfoForm1` hard-locks name/DOB/license[0] with honest Accio badges; `DotApplicationFlow` auto-applies on entry. Unit tests for projection. **Still open:** Form 2 append-only, verified-% meter, employer two-tone, honesty pass on legacy VERIFIED flag. Key/P3.4-B still not required for this slice. |
 | 2026-07-07 | Docs — **P3.7** verified DQ-file assembly direction | Claude Opus 4.8 | uncommitted | **Docs only.** Captured the use-case payoff: proven MVR/PSP/CDL/employment facts prefill + **lock** the DOT app into a portable, mostly-verified DQ **pre-screen** packet (NOT the 391.51 file — CRA hire-time pull preserved, DEC-2026-05-011). **Direction (formalize as a DEC):** once a **majority** of risk-bearing fields are issuer-backed, surface a headline **"Verified" + honest small print** — allowed only because it's decomposable/true at the field level (real computed %, per-field badges, self-reported never badged, per-fact "Midnight" still P3.6-gated). *60% is illustrative (boss's number); the real bar is "over half," and the surfaced % is computed live, never chosen.* Framed the small print as **legal armor** in an FCRA/FMCSA context, not just ethics. Lock model: hard-lock identity/license, **append-only** for 391.21 disclosures. Added P3.7 to the Phase 3a table + full detail section; noted money logic (conversion + pull efficiency + Key-proposed recurring monitoring). **Next:** field-provenance model + MVR→Form 1 slice; formalize the "call it verified" DEC in `DECISION_LOG.md`. |
@@ -1482,4 +1489,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-07-09 (P3.7 late-MVR overwrite + Form 2 locked rows; Key still only blocks P3.4-B / P3.6 Midnight copy)
+**Last updated:** 2026-07-14 (P3.7 DEC-2026-07-001 + DOT honesty pass; Key still only blocks P3.4-B / P3.6 Midnight copy)

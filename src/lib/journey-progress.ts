@@ -202,8 +202,9 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
 
   'driver-dot-application': {
     resolve: (d) => {
-      // Form submitted (DB is_complete) counts as done; on-chain verify is optional follow-up
-      const done = d.dotAppComplete || d.dotAppVerified
+      // DEC-2026-07-001: complete = form submitted. Issuer coverage is separate (verified-% meter).
+      // Never nudge "Verify on Blockchain" for a self-reported DOT app.
+      const done = d.dotAppComplete
       return [{
         id: 'driver-dot-application',
         label: 'DOT Application',
@@ -214,13 +215,11 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
               label: d.dotAppInProgress ? 'Continue Application' : 'Start Application',
               target: 'dotapp',
             }
-          : d.dotAppComplete && !d.dotAppVerified
-            ? { label: 'Verify on Blockchain (optional)', target: 'dotapp' }
-            : undefined,
+          : undefined,
       }]
     },
     nextAction: (d) => {
-      if (d.dotAppComplete || d.dotAppVerified) return null
+      if (d.dotAppComplete) return null
       return {
         label: d.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
         description: 'Complete your DOT compliance application',

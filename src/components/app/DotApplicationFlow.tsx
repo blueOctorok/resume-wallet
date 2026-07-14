@@ -18,7 +18,12 @@ import { normalizeForm3Data } from '@/lib/dot-application-hydrate'
 import type {
   DotForm1FieldProvenance,
   DotForm2RowProvenance,
+  Form1WithProvenance,
+  Form2WithProvenance,
 } from '@/lib/dot-field-provenance'
+import { computeDotVerifiedCoverage } from '@/lib/dot-verified-coverage'
+import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
+import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 
 // Dynamic imports for code-splitting
 const PersonalInfoForm1 = dynamic(
@@ -100,6 +105,10 @@ export default function DotApplicationFlow({
     'idle' | 'loading' | 'applied' | 'unavailable' | 'error'
   >('idle')
   const mvrPrefillAttemptedRef = useRef(false)
+  /** Attestation summaries for honesty-tier DOT field badges (no raw JWTs). */
+  const [attestationSummaries, setAttestationSummaries] = useState<AttestationBadgeSummary[]>(
+    [],
+  )
 
   // Track save reference to detect unsaved changes
   const lastSavedDataRef = useRef<{ form1: unknown; form2: unknown; form3: unknown }>({
@@ -120,6 +129,31 @@ export default function DotApplicationFlow({
     // NOTE: we use a dedicated trigger counter instead
     () => {},
   ]
+
+  // -------------------------------------------------------
+  // Attestation summaries for field badge honesty tiers
+  // -------------------------------------------------------
+  useEffect(() => {
+    const w = sessionUserId?.trim()
+    if (!w) {
+      setAttestationSummaries([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/attestation/mine')
+        if (!res.ok || cancelled) return
+        const json = (await res.json()) as { attestations?: AttestationBadgeSummary[] }
+        if (!cancelled) setAttestationSummaries(json.attestations ?? [])
+      } catch (err) {
+        console.warn('[DOT] Failed to load attestation summaries:', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sessionUserId])
 
   // -------------------------------------------------------
   // Server-first hydrate — DB is source of truth for all three forms (esp. form3 / employers)
@@ -203,6 +237,7 @@ export default function DotApplicationFlow({
           body: JSON.stringify({
             existingForm1: store.form1Data,
             existingForm2: store.form2Data,
+            existingForm3: store.form3Data,
           }),
         })
         if (cancelled) return
@@ -217,26 +252,31 @@ export default function DotApplicationFlow({
         const json = (await res.json()) as {
           form1Data?: Record<string, unknown>
           form2Data?: Record<string, unknown>
+          form3Data?: Record<string, unknown>
           lockedFieldCount?: number
           mvrAccidentCount?: number
           mvrConvictionCount?: number
+          verifiedEmployerCount?: number
         }
-        if (!json.form1Data && !json.form2Data) {
+        if (!json.form1Data && !json.form2Data && !json.form3Data) {
           setMvrPrefillStatus('unavailable')
           return
         }
         if (json.form1Data) store.setForm1Data(json.form1Data)
         if (json.form2Data) store.setForm2Data(json.form2Data)
+        if (json.form3Data) store.setForm3Data(json.form3Data)
         store.incrementFormResetKey()
         setMvrPrefillStatus('applied')
         console.log(
-          '[DOT] MVR Form 1+2 projection applied:',
+          '[DOT] Screening projection applied:',
           json.lockedFieldCount ?? 0,
           'locked fields,',
           json.mvrAccidentCount ?? 0,
           'accidents,',
           json.mvrConvictionCount ?? 0,
-          'convictions',
+          'convictions,',
+          json.verifiedEmployerCount ?? 0,
+          'verified employers',
         )
       } catch (e) {
         if (!cancelled) {
@@ -852,6 +892,7 @@ export default function DotApplicationFlow({
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}
             fieldProvenance={form1Provenance}
+            attestations={attestationSummaries}
           />
         )
       case 2:
@@ -862,6 +903,7 @@ export default function DotApplicationFlow({
             onDataChange={dotApp.setForm2Data}
             initialData={dotApp.form2Data}
             rowProvenance={form2RowProvenance}
+            attestations={attestationSummaries}
           />
         )
       case 3:
@@ -872,6 +914,7 @@ export default function DotApplicationFlow({
             onComplete={handleDriverApplicationCompleted}
             onDataChange={dotApp.setForm3Data}
             initialData={dotApp.form3Data}
+            attestations={attestationSummaries}
           />
         )
       default:
@@ -882,6 +925,7 @@ export default function DotApplicationFlow({
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}
             fieldProvenance={form1Provenance}
+            attestations={attestationSummaries}
           />
         )
     }
@@ -966,14 +1010,26 @@ export default function DotApplicationFlow({
               }`}
             >
               <p className='text-sm font-medium'>
-                MVR data applied — identity, license, and driving-record rows are locked
-                with source badges.
+                Screening data applied — identity, license, crashes, and inspections are
+                locked with source badges.
               </p>
               <p className='mt-1 text-xs opacity-90'>
-                Fields from your MVR overwrite what you typed (even if the values match)
+                Fields from your MVR/PSP overwrite what you typed (even if the values match)
                 and show a verified badge. You can still add extra accident or conviction
-                disclosures the MVR does not list.
+                disclosures the reports do not list.
               </p>
+            </div>
+          )}
+          {!dotApp.isApplicationCompleted && (
+            <div className='max-w-4xl mx-auto mb-6'>
+              <DotVerifiedMeter
+                coverage={computeDotVerifiedCoverage(
+                  dotApp.form1Data as Form1WithProvenance | null,
+                  dotApp.form2Data as Form2WithProvenance | null,
+                  dotApp.form3Data as Record<string, unknown> | null,
+                )}
+                isDark={isDarkTheme(theme)}
+              />
             </div>
           )}
           {dotApp.hasPrefilled && !dotApp.isApplicationCompleted && (

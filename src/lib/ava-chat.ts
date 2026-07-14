@@ -155,12 +155,11 @@ export function useHubContext(): HubContext {
 
   const verifiedBlockCount = useMemo(() => {
     let n = 0
-    if (resumes.some((r) => String(r.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
-    if (dotApplications.some((a) => String(a.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
+    // DEC-2026-05-014: resumes are self-reported — never count as verified blocks
     if (mvrRecords.some((m) => m.orderStatus === 'completed' || m.orderStatus === 'needs_review')) n += 1
     if (pspRecords.some((p) => p.orderStatus === 'completed' || p.orderStatus === 'needs_review')) n += 1
     return n
-  }, [resumes, dotApplications, mvrRecords, pspRecords])
+  }, [mvrRecords, pspRecords])
 
   return {
     occupation: onboarding?.occupation,

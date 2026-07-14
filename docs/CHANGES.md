@@ -4,6 +4,113 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **P3.7 — DOT field badges → attestation honesty tier** (2026-07-14)
+
+Issuer-locked DOT fields upgrade badge copy when a matching attestation exists: Accio/EVR issuer copy by default → Verified by ZKnight for `signed_jwt` → Proven on Midnight only when `proof.kind === 'midnight_zk'`.
+
+| File | Change |
+|---|---|
+| `dot-attestation-badge.ts` (+ tests) | Match MVR / EVR attestations; honesty-tier formatter |
+| `GET /api/attestation/mine` | Lightweight summaries (`proof.kind` only — no raw JWT) |
+| `DotApplicationFlow` + Form 1/2/3 + `VerifiedFieldBadge` | Fetch once; upgrade MVR + Form 3 EVR badges |
+| PSP Form 2 | Unchanged (no shipped PSP fact type yet) |
+
+**Non-goals:** no prove CTA in DOT; verified-% meter unchanged (DEC-2026-07-001).
+
+---
+
+## **Honesty — retire resume "Verify on Blockchain"** (2026-07-14)
+
+Self-reported resumes are not issuer-backed; Midnight does not change that (DEC-2026-05-014 + DEC-2026-07-001 §7).
+
+| File | Change |
+|---|---|
+| `api/resumes/[id]/verify` | **410 Gone** — retired whole-resume verify |
+| `use-hub-documents` / CareerCard / projected strip | Never green from Base `VERIFIED` / tx |
+| DriverHub / DeveloperHub / ResumeDashboard / upload | Removed Verify-on-Blockchain CTAs + BaseScan |
+| Journey / Stormi nudge / public + employer APIs | Honest "On file" / `resumeVerified = has resume` |
+
+PDF download stays on builder/export paths — verify was never a Midnight proof.
+
+---
+
+## **P3.7 — DEC-2026-07-001 + DOT honesty pass** (2026-07-14)
+
+Formalized the majority "Verified" headline rule and walked back Base-era whole-app DOT overclaims.
+
+| File | Change |
+|---|---|
+| `docs/midnight/DECISION_LOG.md` | **DEC-2026-07-001** — strict majority, live %, field badges, small print, Midnight still P3.6-gated; legacy `VERIFIED` ≠ issuer proof |
+| `src/lib/dot-app-honesty.ts` | Shared status labels (Submitted / Partially verified / Verified pre-screen) |
+| `ApplicationSubmitted.tsx` | No "Verified on Blockchain"; next steps = raise coverage + EVR |
+| `journey-progress.ts` / `journey-store.ts` | DOT done = `isComplete`; no blockchain verify CTA |
+| `CareerCard.tsx` / `projected-career-card.ts` | Honest DOT pill; DOT dropped from Base on-chain strip |
+| `use-hub-documents.tsx` | DOT `canVerify: false`; never green from Base tx |
+| `DriverHub.tsx` / `DriverDashboard.tsx` | Removed Verify-on-Blockchain / BaseScan for DOT |
+| `api/.../driver-applications/[id]/verify` | **410 Gone** — retired whole-app verify |
+| Hub / public / ava-chat / PDF | Stop treating DOT `VERIFIED` as issuer verification |
+
+**Teaching note:** `verification_status='VERIFIED'` was a DB flag from the Base registry era. Keeping the column for history is fine; surfacing it as green "Verified" is the bug — provenance lives on fields (`_source` / `_fieldProvenance`), not the row.
+
+**Still open (out of scope):** resume "Verify on Blockchain" CTAs; per-fact Midnight copy (P3.6).
+
+---
+
+## **P3.7 — Form 3 employment verified rows (prior-employer EVR)** (2026-07-14)
+
+Prior-employer portal confirmations (`employment_verification_requests` VERIFIED / PARTIALLY_VERIFIED) now project into DOT Form 3 the same way MVR/PSP project into Form 1–2.
+
+| File | Change |
+|---|---|
+| `employment-to-form3-mapper.ts` / `employment-form3-provenance.ts` / `employment-form3-projection.ts` | Map EVR → locked `_source:'verified'` employers; preserve contact fields from matched self rows |
+| `dot-form-mapper.ts` | Stable `id` on employers; never regenerate on `form3ToProfile` |
+| `save-progress` + `prefill-from-mvr` | Re-project Form 3 from live EVRs |
+| `verification/respond/[token]` | Late-EVR: apply Form 3 projection when status becomes verified |
+| `PersonalInfoForm3` | Lock verified rows (fieldset + no delete); honest badge copy |
+| `dot-verified-coverage.ts` + preview | Count verified employers; teal/amber two-tone on Form 3 |
+
+**Honesty:** self-reported employment is never badged verified. Jason has no EVR rows yet — infrastructure is ready; locks appear once a prior employer confirms.
+
+---
+
+## **P3.7 — PSP → DOT Form 2 crashes + inspections** (2026-07-14)
+
+Driver-owned PSP results now project into Form 2 the same way MVR does: server re-projects on prefill / save / late webhook, UI locks issuer rows, verified-% counts PSP slots.
+
+| File | Change |
+|---|---|
+| `psp-to-form2-mapper.ts` / `psp-form2-projection.ts` | Map crashes → `accidents[]` (`_source:'psp'`), inspections → new `inspections[]` |
+| `dot-field-provenance.ts` | `mergePspRowsIntoForm2`; preserve MVR stamp; extend `_rowProvenance` with PSP meta |
+| `apply-psp-to-dot-application.ts` | Persist projection into `driver_applications` |
+| `prefill-from-mvr` + `save-progress` | Apply MVR then PSP (order preserves both stamps) |
+| `process-psp-accio-webhook.ts` | Late-PSP DOT apply; `result_status:'parsed'` when parse succeeds |
+| `PersonalInfoForm2` | Lock PSP accident/inspection rows; lean FMCSA inspection section |
+| `dot-verified-coverage.ts` | Count PSP crashes/inspections + clean-record flags |
+| `DotAppPreviewContent` | Two-tone for PSP + inspection preview |
+
+**Jason fixture:** clean PSP (0 crashes / 0 inspections) still stamps provenance so the meter and "No FMCSA crashes/inspections" badges appear.
+
+**Still open:** employment verified rows (Form 3), formal DEC, honesty pass on legacy whole-app `VERIFIED`.
+
+---
+
+## **P3.7 — Verified-% meter + employer two-tone DOT preview** (2026-07-13)
+
+Surfaces a **live computed** verified % (issuer-backed risk fields ÷ filled risk-bearing denominator) on the DOT flow and career card, plus teal/amber two-tone on employer DOT preview.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-verified-coverage.ts` | Denominator = filled Form 1 lock paths + Form 2 accident/conviction rows + MVR clean-record flags; `majorityVerified` = strict majority |
+| `DotVerifiedMeter.tsx` | Full meter (DOT flow / preview) + compact chip (career card) with honest small print |
+| `DotApplicationFlow.tsx` | Meter above form tabs while editing |
+| `DotAppPreviewContent.tsx` | Meter + teal (MVR) / amber (self-certified) field + row chrome |
+| `DotAppSection.tsx` | Compact % chip; employer **View** opens two-tone preview |
+| `projected-career-card.ts` / `DotAppData` | Projects `verifiedPercent` / `majorityVerified` from `application_data` |
+
+**Still open:** PSP → Form 2, employment verified rows, formal DEC, honesty pass on legacy whole-app `VERIFIED`.
+
+---
+
 ## **Fix — DOT app React #185 (max update depth) on open** (2026-07-13)
 
 Opening the DOT block after MVR autofill crashed Candidate Hub with minified React error #185 ("Maximum update depth exceeded").

@@ -238,7 +238,6 @@ export default function ResumeSection({
   onAction,
   sessionUserId = '',
 }: ResumeSectionProps) {
-  const isVerified = String(data.verificationStatus || '').toLowerCase() === 'verified'
   const [showDriverPreview, setShowDriverPreview] = useState(false)
   const [showDevPreview, setShowDevPreview] = useState(false)
   const [showIpfsPreview, setShowIpfsPreview] = useState(false)
@@ -403,7 +402,7 @@ export default function ResumeSection({
             id: data.id,
             title: data.title || data.filename,
             structured_data: structuredRecord as unknown as DeveloperResumeData,
-            verification_status: isVerified ? 'VERIFIED' : 'PENDING',
+            verification_status: 'PENDING',
             created_at: data.createdAt,
             ipfs_hash: data.ipfsHash ?? undefined,
           }}
@@ -412,7 +411,6 @@ export default function ResumeSection({
             setShowDevPreview(false)
             onAction?.()
           }}
-          onVerify={() => setShowDevPreview(false)}
           onDelete={() => setShowDevPreview(false)}
           userAddress={sessionUserId}
         />

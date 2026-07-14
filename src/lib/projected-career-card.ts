@@ -5,6 +5,14 @@ import {
   getDevGithub,
   saveDevGithub,
 } from '@/lib/block-data'
+import {
+  computeDotVerifiedCoverage,
+  summarizeDotVerifiedCoverage,
+} from '@/lib/dot-verified-coverage'
+import type {
+  Form1WithProvenance,
+  Form2WithProvenance,
+} from '@/lib/dot-field-provenance'
 import type {
   ProjectedCareerCard,
   CareerCardSection,
@@ -78,44 +86,13 @@ function computeCareerCardSignals(
   careerCardScore: number
   onChainCredentials: OnChainCredential[]
 } {
+  // DEC-2026-05-014 / 07-001: self-reported resumes/DOT never count as on-chain credentials.
+  // Issuer-backed Midnight facts surface via attestation panels, not Base tx hashes.
   const onChainCredentials: OnChainCredential[] = []
-  for (const s of sections) {
-    if (
-      s.blockType === 'storm-resume' ||
-      s.blockType === 'driver-resume' ||
-      s.blockType === 'developer-resume' ||
-      s.blockType === 'general-resume'
-    ) {
-      const d = s.data as ResumeData
-      const tx = d.blockchainTxHash
-      if (tx && String(d.verificationStatus || '').toUpperCase() === 'VERIFIED') {
-        const def = getBlockDefinition(s.blockType)
-        onChainCredentials.push({
-          blockType: s.blockType,
-          label: def?.label ?? 'Resume',
-          txHash: tx,
-          verifiedAt: d.createdAt,
-        })
-      }
-    }
-    if (s.blockType === 'driver-dot-application') {
-      const d = s.data as DotAppData
-      const tx = d.blockchainTxHash
-      if (tx) {
-        const def = getBlockDefinition('driver-dot-application')
-        onChainCredentials.push({
-          blockType: 'driver-dot-application',
-          label: def?.label ?? 'DOT Application',
-          txHash: tx,
-          verifiedAt: d.updatedAt ?? d.createdAt,
-        })
-      }
-    }
-  }
-  const onChain = onChainCredentials.length
+  const onChain = 0
   const sectionScore = Math.min(sections.length * 12, 60)
   const employerBonus = Math.min(employerConfirmedEmploymentCount * 10, 20)
-  const chainBonus = Math.min(onChain * 12, 20)
+  const chainBonus = 0
   return {
     onChainCredentialCount: onChain,
     careerCardScore: Math.min(100, sectionScore + employerBonus + chainBonus),
@@ -521,13 +498,25 @@ async function fetchResumeData(
 async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promise<DotAppData | null> {
   const { data } = await supabase
     .from('driver_applications')
-    .select('id, verification_status, is_complete, created_at, updated_at, blockchain_tx_hash')
+    .select(
+      'id, verification_status, is_complete, created_at, updated_at, blockchain_tx_hash, application_data',
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (!data) return null
+
+  const appData = (data.application_data ?? {}) as {
+    form1?: Form1WithProvenance
+    form2?: Form2WithProvenance
+    form3?: Record<string, unknown>
+  }
+  const coverage = summarizeDotVerifiedCoverage(
+    computeDotVerifiedCoverage(appData.form1, appData.form2, appData.form3),
+  )
+
   return {
     id: data.id,
     status: data.verification_status,
@@ -535,6 +524,10 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     blockchainTxHash: data.blockchain_tx_hash,
+    verifiedPercent: coverage.percent,
+    verifiedCount: coverage.verifiedCount,
+    verifiedTotalCount: coverage.totalCount,
+    majorityVerified: coverage.majorityVerified,
   }
 }
 

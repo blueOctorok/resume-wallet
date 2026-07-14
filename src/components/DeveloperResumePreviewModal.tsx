@@ -6,7 +6,6 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   X,
   Edit,
-  Shield,
   Trash2,
   Loader2,
   User,
@@ -18,7 +17,6 @@ import {
   Github,
   Globe,
   ExternalLink,
-  CheckCircle,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
@@ -36,10 +34,10 @@ interface DeveloperResumePreviewModalProps {
   }
   onClose: () => void
   onEdit: () => void
-  onVerify: () => void
+  onVerify?: () => void
   onDelete: () => void
   userAddress: string
-  /** My Files / career card: preview only — row has Edit, Verify, Delete */
+  /** My Files / career card: preview only — row owns actions */
   viewOnly?: boolean
 }
 
@@ -47,39 +45,15 @@ export default function DeveloperResumePreviewModal({
   resume,
   onClose,
   onEdit,
-  onVerify,
   onDelete,
   userAddress,
   viewOnly = false,
 }: DeveloperResumePreviewModalProps) {
   const { theme } = useTheme()
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const data = resume.structured_data
-  const isVerified = resume.verification_status === 'VERIFIED'
-
-  const handleVerify = async () => {
-    setIsVerifying(true)
-    try {
-      const res = await fetch(`/api/resumes/${resume.id}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ resumeType: 'developer' }),
-      })
-
-      if (res.ok) {
-        onVerify()
-        void syncDriverHubFromApi(userAddress)
-      }
-    } catch (error) {
-      console.error('Verify error:', error)
-    } finally {
-      setIsVerifying(false)
-    }
-  }
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -123,12 +97,6 @@ export default function DeveloperResumePreviewModal({
             >
               {resume.title}
             </h2>
-            {isVerified && (
-              <span className='inline-flex items-center gap-1 mt-1 text-xs text-green-400'>
-                <CheckCircle className='w-3 h-3' />
-                Verified on Blockchain
-              </span>
-            )}
           </div>
           <button
             onClick={onClose}
@@ -158,23 +126,7 @@ export default function DeveloperResumePreviewModal({
                 <Edit className='w-4 h-4' />
                 Edit
               </button>
-
-              {!isVerified && (
-                <button
-                  onClick={handleVerify}
-                  disabled={isVerifying}
-                  className='flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 disabled:opacity-50'
-                >
-                  {isVerifying ? (
-                    <Loader2 className='w-4 h-4 animate-spin' />
-                  ) : (
-                    <Shield className='w-4 h-4' />
-                  )}
-                  Verify on Blockchain
-                </button>
-              )}
-
-              <button
+<button
                 onClick={() => setShowDeleteConfirm(true)}
                 className='flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 rounded-lg font-medium hover:bg-red-600/30 ml-auto'
               >

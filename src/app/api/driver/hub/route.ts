@@ -510,9 +510,10 @@ export async function GET(request: NextRequest) {
     const stats = {
       profileCompleteness,
       totalResumes: resumes.length,
-      verifiedResumes: resumes.filter(r => r.verificationStatus === 'VERIFIED').length,
+      verifiedResumes: 0, // DEC-2026-05-014: self-reported resumes are never chain-verified
       totalDotApps: dotApplications.length,
-      verifiedDotApps: dotApplications.filter(a => a.verificationStatus === 'VERIFIED').length,
+      // DEC-2026-07-001: legacy whole-app VERIFIED ≠ issuer-backed majority
+      verifiedDotApps: 0,
       completedDotApps: dotApplications.filter(a => a.isComplete).length,
       inProgressDotApps: inProgressApps.length,
       totalMvrRecords: mvrRecords.length,
@@ -610,20 +611,14 @@ function calculateProfileCompleteness(
   // Has at least one resume
   if (resumes.length > 0) {
     score += weights.resume
-    // Bonus for verified resume
-    if (resumes.some(r => r.verificationStatus === 'VERIFIED')) {
-      score += weights.verifiedResume
-    }
+    // DEC-2026-05-014: no bonus for legacy whole-resume VERIFIED flag
   }
 
   // Has completed DOT application
   const completedDotApps = dotApplications.filter(a => a.isComplete)
   if (completedDotApps.length > 0) {
     score += weights.dotApplication
-    // Bonus for verified DOT app
-    if (completedDotApps.some(a => a.verificationStatus === 'VERIFIED')) {
-      score += weights.verifiedDotApp
-    }
+    // DEC-2026-07-001: no bonus for legacy whole-app VERIFIED flag
   }
 
   // Has MVR record

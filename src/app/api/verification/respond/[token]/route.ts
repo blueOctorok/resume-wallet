@@ -309,6 +309,19 @@ export async function POST(
       verifier: verifierEmail,
     })
 
+    // P3.7 late-EVR: project verified employers into DOT Form 3 when an app exists
+    if (newStatus === 'VERIFIED' || newStatus === 'PARTIALLY_VERIFIED') {
+      const driverId = request_data.driver_id as string | undefined
+      if (driverId) {
+        const { applyEmploymentProjectionToDriverApplication } = await import(
+          '@/lib/employment-form3-projection'
+        )
+        void applyEmploymentProjectionToDriverApplication(supabase, driverId).catch((err) =>
+          console.warn('[EVR RESPOND] DOT projection non-fatal:', err),
+        )
+      }
+    }
+
     return NextResponse.json({
       success: true,
       status: newStatus,

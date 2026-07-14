@@ -65,22 +65,6 @@ export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudge
 
   const visible = useMemo((): Nudge[] => {
     const list: Nudge[] = []
-    const hasResumeNotOnChain = resumes.some(
-      (r) =>
-        String(r.verificationStatus || '').toUpperCase() !== 'VERIFIED' ||
-        !(r.blockchainTxHash && String(r.blockchainTxHash).length > 10),
-    )
-    if (resumes.length > 0 && hasResumeNotOnChain) {
-      list.push({
-        id: 'verify-resume',
-        title: 'Finish your resume block',
-        body: 'A complete resume on your Career Card helps employers scan your background quickly.',
-        cta: 'Go to resume',
-        icon: Shield,
-        onCta: () => go('storm-resume'),
-      })
-    }
-
     const hasCdlBlock = installedBlocks.some((b) => b.blockType === 'driver-cdl-credentials')
     const pr = profile as { cdl_number?: string | null; cdl_state?: string | null } | null
     const cdlThin = !pr?.cdl_number || !pr?.cdl_state

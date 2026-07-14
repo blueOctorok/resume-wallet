@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
         jobTargetRole: jobPosting?.target_role || null,
         hasResume: !!resume,
         resumeId: resume?.id || null,
-        resumeVerified: resume?.verification_status === 'VERIFIED',
+        resumeVerified: Boolean(resume),
       }
     })
 

@@ -4,20 +4,29 @@ import { useState } from 'react'
 import { ClipboardList, CheckCircle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
+import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import type { DotAppData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
+import type { DotVerifiedCoverage } from '@/lib/dot-verified-coverage'
 
 interface DotAppSectionProps {
   data: DotAppData
   mode: CareerCardMode
   isDark: boolean
   onAction?: () => void
-  /** Required when mode === 'self' to fetch the full DOT app for preview */
+  /** Required to fetch the full DOT app for preview (self + employer) */
   userId?: string
   sessionUserId?: string
 }
 
-export default function DotAppSection({ data, mode, isDark, onAction, userId, sessionUserId }: DotAppSectionProps) {
+export default function DotAppSection({
+  data,
+  mode,
+  isDark,
+  onAction,
+  userId,
+  sessionUserId,
+}: DotAppSectionProps) {
   const isComplete = data.isComplete
   const [showPreview, setShowPreview] = useState(false)
 
@@ -25,8 +34,30 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, se
   const statusLabel = isComplete ? 'Complete' : 'In Progress'
   const statusColor = isComplete ? 'text-green-500' : 'text-yellow-500'
 
-  const handleAction =
-    isComplete && userId && sessionUserId ? () => setShowPreview(true) : onAction
+  const canPreview = Boolean(isComplete && userId && sessionUserId)
+  const openPreview = () => setShowPreview(true)
+  const handleAction = canPreview ? openPreview : onAction
+
+  // Owner: View (complete) or Continue (in progress via onAction).
+  // Employer: View only when complete (two-tone preview).
+  const showAction =
+    (isCareerCardOwnerMode(mode) && Boolean(handleAction)) ||
+    (mode === 'employer' && canPreview)
+
+  const coverage: DotVerifiedCoverage | null =
+    typeof data.verifiedPercent === 'number' &&
+    typeof data.verifiedTotalCount === 'number' &&
+    data.verifiedTotalCount > 0
+      ? {
+          verifiedCount: data.verifiedCount ?? 0,
+          totalCount: data.verifiedTotalCount,
+          percent: data.verifiedPercent,
+          majorityVerified: Boolean(data.majorityVerified),
+          slots: [],
+          caveat:
+            'Verified fields are sourced from the candidate MVR (Accio). Other fields are self-certified.',
+        }
+      : null
 
   return (
     <>
@@ -38,13 +69,15 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, se
               DOT Application
             </h3>
           </div>
-          {isCareerCardOwnerMode(mode) && handleAction && (
+          {showAction && (
             <button
               type='button'
               onClick={handleAction}
               className={cn(
                 'text-xs px-3 py-1 rounded-lg transition-colors',
-                isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100',
+                isDark
+                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                  : 'bg-teal-50 text-teal-600 hover:bg-teal-100',
               )}
             >
               {isComplete ? 'View' : 'Continue'}
@@ -54,13 +87,18 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, se
 
         <div className='flex items-center gap-3'>
           <StatusIcon className={cn('w-5 h-5', statusColor)} />
-          <div>
+          <div className='min-w-0 flex-1'>
             <p className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
               FMCSA Driver Qualification File
             </p>
             <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
               {statusLabel} · Started {new Date(data.createdAt).toLocaleDateString()}
             </p>
+            {coverage && (
+              <div className='mt-2'>
+                <DotVerifiedMeter coverage={coverage} isDark={isDark} variant='compact' />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -53,7 +53,7 @@ const DriverDashboard = ({
         const { data: appRows } = await supabase
           .from('driver_applications')
           .select(
-            'id, created_at, application_hash, blockchain_tx_hash, blockchain_application_id, verification_status'
+            'id, created_at, is_complete, verification_status'
           )
           .eq('user_id', userRow.id)
           .order('created_at', { ascending: false })
@@ -61,30 +61,20 @@ const DriverDashboard = ({
 
         const latest = appRows && appRows.length > 0 ? appRows[0] : null
 
-        // Prefer a fresh submission date if this view follows an immediate chain tx
-        const submittedDate = blockchainData
-          ? new Date()
-          : latest?.created_at
-            ? new Date(latest.created_at)
-            : new Date()
+        const submittedDate = latest?.created_at
+          ? new Date(latest.created_at)
+          : new Date()
 
+        // DEC-2026-07-001: do not surface Base tx / whole-app VERIFIED as issuer proof
         const dashboardInfo: any = {
-          status: latest?.verification_status || 'PENDING',
+          status: latest?.is_complete ? 'SUBMITTED' : (latest?.verification_status || 'PENDING'),
           submittedDate: submittedDate.toLocaleDateString(),
           estimatedReviewTime: '3-5 business days',
-          driverApplicationVerified: !!latest?.blockchain_tx_hash,
-          employmentVerified: false, // Update when employment verification stored
+          driverApplicationVerified: false,
+          employmentVerified: false,
           dotApproved: false,
-          blockchainTxHash: latest?.blockchain_tx_hash || blockchainData?.transactionHash,
-          blockNumber: blockchainData?.blockNumber,
-          applicationId: latest?.blockchain_application_id
-            ? Number(latest.blockchain_application_id)
-            : blockchainData?.applicationId ?? null,
-          ipfsHash: latest?.application_hash || undefined,
-          shareLink:
-            (latest?.blockchain_tx_hash || blockchainData?.transactionHash)
-              ? `https://sepolia.basescan.org/tx/${latest?.blockchain_tx_hash || blockchainData?.transactionHash}`
-              : '',
+          applicationId: latest?.id ?? null,
+          shareLink: '',
         }
 
         setDashboardData(dashboardInfo)
@@ -120,10 +110,13 @@ const DriverDashboard = ({
   const statusDisplay = (() => {
     switch (normalizedStatus) {
       case 'VERIFIED':
-        return { label: 'Verified', tone: 'success' as const }
+        // Legacy whole-app DB flag — not issuer verification (DEC-2026-07-001)
+        return { label: 'Submitted', tone: 'success' as const }
       case 'REJECTED':
       case 'FAILED':
         return { label: 'Failed', tone: 'danger' as const }
+      case 'SUBMITTED':
+        return { label: 'Submitted', tone: 'success' as const }
       case 'PENDING DOT REVIEW':
       case 'PENDING':
       default:
@@ -437,7 +430,6 @@ const DriverDashboard = ({
             (() => {
               const parts: string[] = []
               if (data.applicationId) parts.push(`Application ID: ${data.applicationId}`)
-              if (data.blockchainTxHash) parts.push(`Tx: ${data.blockchainTxHash}`)
               if (data.submittedDate) parts.push(`Submitted: ${data.submittedDate}`)
               return parts.join(' | ')
             })()
@@ -445,14 +437,14 @@ const DriverDashboard = ({
         />
       </div>
 
-      {/* Blockchain Verification */}
+      {/* Verified coverage (DEC-2026-07-001) */}
       <div className='mb-8'>
         <h2
           className={`text-xl font-semibold mb-4 ${
             isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
           }`}
         >
-          🔗 Blockchain Verification
+          Verified coverage
         </h2>
 
         <div
@@ -460,76 +452,12 @@ const DriverDashboard = ({
             isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
           }`}
         >
-          <div className='space-y-3'>
-            <div className='flex justify-between items-center'>
-              <span
-                className={`font-medium ${
-                  isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-                }`}
-              >
-                Transaction Hash:
-              </span>
-              {data.blockchainTxHash ? (
-                <a
-                  href={`https://sepolia.basescan.org/tx/${data.blockchainTxHash}`}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className={`font-mono text-sm hover:underline ${
-                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
-                  }`}
-                >
-                  {data.blockchainTxHash.slice(0, 10)}...
-                  {data.blockchainTxHash.slice(-8)}
-                </a>
-              ) : (
-                <span
-                  className={`font-mono text-sm ${
-                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
-                  }`}
-                >
-                  Not available
-                </span>
-              )}
-            </div>
-
-            {data.blockNumber && (
-              <div className='flex justify-between items-center'>
-                <span
-                  className={`font-medium ${
-                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-                  }`}
-                >
-                  Block Number:
-                </span>
-                <span
-                  className={`font-mono text-sm ${
-                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
-                  }`}
-                >
-                  {data.blockNumber.toLocaleString()}
-                </span>
-              </div>
-            )}
-
-            {data.ipfsHash && (
-              <div className='flex justify-between items-center'>
-                <span
-                  className={`font-medium ${
-                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-                  }`}
-                >
-                  IPFS Hash:
-                </span>
-                <span
-                  className={`font-mono text-sm ${
-                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
-                  }`}
-                >
-                  {data.ipfsHash.slice(0, 10)}...{data.ipfsHash.slice(-8)}
-                </span>
-              </div>
-            )}
-          </div>
+          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
+            Submitting this application does not mark it verified. Issuer-backed
+            MVR, PSP, and prior-employer confirmations lock fields and raise your
+            live verified %. A packet headlines &quot;Verified&quot; only when a
+            majority of risk-bearing fields are issuer-backed.
+          </p>
         </div>
       </div>
 

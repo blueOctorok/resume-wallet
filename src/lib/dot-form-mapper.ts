@@ -148,6 +148,15 @@ export interface DotForm3Employer {
   subjectToFMCSR: string
   safetySensitiveFunction: string
   isUnemployment: boolean
+  /** Stable id — links to block_driver_employment.history[].id / EVR.employment_id */
+  id?: string
+  /** P3.7 — prior-employer portal confirmation vs driver self-entry */
+  _source?: 'verified' | 'self'
+  _verificationRequestId?: string
+  _evrKey?: string
+  /** 'VERIFIED' | 'PARTIALLY_VERIFIED' when _source is verified */
+  _verificationStatus?: string
+  _verifiedAt?: string
 }
 
 export interface DotForm3Education {
@@ -394,7 +403,8 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
   const employmentHistory: UnifiedEmployment[] = employers
     .filter(emp => !emp.isUnemployment && emp.name) // Skip unemployment periods and empty entries
     .map((emp, idx): UnifiedEmployment => ({
-      id: `form3-emp-${idx}-${Date.now()}`,
+      // Preserve stable id so EVR.employment_id linkage survives Form 3 ↔ profile sync
+      id: emp.id?.trim() || `form3-emp-${idx}-${Date.now()}`,
       companyName: emp.name,
       position: emp.positionHeld,
       location: emp.address,
@@ -436,6 +446,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
 export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3Data> {
   // Map profile employmentHistory to Form 3 employers
   const employers: DotForm3Employer[] = profile.employmentHistory.map(emp => ({
+    id: emp.id,
     name: emp.companyName,
     phone: emp.supervisorPhone || '',
     email: emp.supervisorEmail || '',
@@ -449,6 +460,7 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
     subjectToFMCSR: emp.subjectToFMCSR ? 'yes' : 'no',
     safetySensitiveFunction: emp.subjectToDrugTest ? 'yes' : 'no',
     isUnemployment: false,
+    _source: 'self',
   }))
 
   // Map profile education to Form 3 education

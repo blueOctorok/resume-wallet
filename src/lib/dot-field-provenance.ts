@@ -54,17 +54,25 @@ export interface DotForm1FieldProvenance {
   fields: Partial<Record<DotFieldPath, DotFieldProvenanceEntry>>
 }
 
-/** Row-level provenance for Form 2 MVR accidents / convictions. */
+/** Row-level provenance for Form 2 issuer-backed accidents / convictions / inspections. */
 export interface DotForm2RowProvenance {
   version: 1
-  mvrResultId: string
+  /** MVR stamp — present when Form 2 has been projected from an MVR */
+  mvrResultId: string | null
   orderId: string | null
   accioOrderNumber: string | null
-  asOf: string
+  asOf: string | null
   /** Count of MVR-sourced accident rows currently projected. */
   mvrAccidentCount: number
   /** Count of MVR-sourced conviction rows currently projected. */
   mvrConvictionCount: number
+  /** PSP stamp — present when Form 2 has been projected from a PSP */
+  pspResultId?: string | null
+  pspOrderId?: string | null
+  pspAccioOrderNumber?: string | null
+  pspAsOf?: string | null
+  pspCrashCount?: number
+  pspInspectionCount?: number
 }
 
 export type Form1WithProvenance = Record<string, unknown> & {
@@ -74,8 +82,10 @@ export type Form1WithProvenance = Record<string, unknown> & {
 export type Form2WithProvenance = Record<string, unknown> & {
   accidents?: Form2AccidentRow[]
   convictions?: Form2ConvictionRow[]
+  inspections?: import('@/lib/psp-to-form2-mapper').Form2InspectionRow[]
   hasNoAccidents?: boolean
   hasNoConvictions?: boolean
+  hasNoInspections?: boolean
   _rowProvenance?: DotForm2RowProvenance
 }
 
@@ -226,7 +236,7 @@ export function mergeMvrPrefillIntoForm1(
 /**
  * Merge MVR accident/conviction rows into Form 2.
  * - Replaces all prior `_source:'mvr'` rows with the fresh MVR projection
- * - Keeps `_source:'self'` (or untagged legacy) rows the driver added
+ * - Keeps `_source:'psp'` and `_source:'self'` (or untagged legacy) rows
  * - Even identical values get re-stamped so badges appear (late-MVR path)
  */
 export function mergeMvrRowsIntoForm2(
@@ -241,6 +251,7 @@ export function mergeMvrRowsIntoForm2(
   },
 ): Form2WithProvenance {
   const base: Record<string, unknown> = existing ? { ...existing } : {}
+  const prevProv = (base._rowProvenance as DotForm2RowProvenance | undefined) ?? null
 
   const existingAccidents = Array.isArray(base.accidents)
     ? (base.accidents as Form2AccidentRow[])
@@ -249,23 +260,25 @@ export function mergeMvrRowsIntoForm2(
     ? (base.convictions as Form2ConvictionRow[])
     : []
 
-  // Keep only self-certified / untagged non-empty rows (driver disclosures)
-  const selfAccidents = existingAccidents
+  // Keep PSP + self-certified rows (driver disclosures / FMCSA crashes)
+  const keepAccidents = existingAccidents
     .filter((row) => {
       if (row._source === 'mvr') return false
       return Boolean(row.date?.trim() || row.nature?.trim())
     })
-    .map((row) => ({ ...row, _source: 'self' as const }))
+    .map((row) =>
+      row._source === 'psp' ? row : { ...row, _source: 'self' as const },
+    )
 
-  const selfConvictions = existingConvictions
+  const keepConvictions = existingConvictions
     .filter((row) => {
       if (row._source === 'mvr') return false
       return Boolean(row.dateConvicted?.trim() || row.violation?.trim())
     })
-    .map((row) => ({ ...row, _source: 'self' as const }))
+    .map((row) => ({ ...row, _source: (row._source === 'psp' ? 'psp' : 'self') as const }))
 
-  const accidents = [...mvrAccidents, ...selfAccidents]
-  const convictions = [...mvrConvictions, ...selfConvictions]
+  const accidents = [...mvrAccidents, ...keepAccidents]
+  const convictions = [...mvrConvictions, ...keepConvictions]
 
   const hasNoAccidents = accidents.length === 0
   const hasNoConvictions = convictions.length === 0
@@ -278,6 +291,13 @@ export function mergeMvrRowsIntoForm2(
     asOf: meta.asOf,
     mvrAccidentCount: mvrAccidents.length,
     mvrConvictionCount: mvrConvictions.length,
+    // Preserve any prior PSP stamp
+    pspResultId: prevProv?.pspResultId ?? null,
+    pspOrderId: prevProv?.pspOrderId ?? null,
+    pspAccioOrderNumber: prevProv?.pspAccioOrderNumber ?? null,
+    pspAsOf: prevProv?.pspAsOf ?? null,
+    pspCrashCount: prevProv?.pspCrashCount,
+    pspInspectionCount: prevProv?.pspInspectionCount,
   }
 
   return {
@@ -314,6 +334,97 @@ export function mergeMvrRowsIntoForm2(
   }
 }
 
+/**
+ * Merge PSP crash/inspection rows into Form 2.
+ * - Crashes replace prior `_source:'psp'` accident rows; keep MVR + self
+ * - Inspections array is fully replaced with PSP projection (self appends kept)
+ * - Preserves MVR provenance fields on `_rowProvenance`
+ */
+export function mergePspRowsIntoForm2(
+  existing: Record<string, unknown> | null | undefined,
+  pspCrashesAsAccidents: Form2AccidentRow[],
+  pspInspections: import('@/lib/psp-to-form2-mapper').Form2InspectionRow[],
+  meta: {
+    pspResultId: string
+    orderId?: string | null
+    accioOrderNumber?: string | null
+    asOf: string
+  },
+): Form2WithProvenance {
+  const base: Record<string, unknown> = existing ? { ...existing } : {}
+  const prevProv = (base._rowProvenance as DotForm2RowProvenance | undefined) ?? null
+
+  const existingAccidents = Array.isArray(base.accidents)
+    ? (base.accidents as Form2AccidentRow[])
+    : []
+  const existingInspections = Array.isArray(base.inspections)
+    ? (base.inspections as import('@/lib/psp-to-form2-mapper').Form2InspectionRow[])
+    : []
+
+  const keepAccidents = existingAccidents
+    .filter((row) => {
+      if (row._source === 'psp') return false
+      return Boolean(row.date?.trim() || row.nature?.trim())
+    })
+    .map((row) =>
+      row._source === 'mvr' ? row : { ...row, _source: 'self' as const },
+    )
+
+  const keepInspections = existingInspections
+    .filter((row) => {
+      if (row._source === 'psp') return false
+      return Boolean(row.date?.trim() || row.reportNumber?.trim() || row.result?.trim())
+    })
+    .map((row) => ({ ...row, _source: 'self' as const }))
+
+  // Order: MVR crashes, PSP crashes, self disclosures
+  const mvrAcc = keepAccidents.filter((r) => r._source === 'mvr')
+  const selfAcc = keepAccidents.filter((r) => r._source !== 'mvr')
+  const orderedAccidents = [...mvrAcc, ...pspCrashesAsAccidents, ...selfAcc]
+  const inspections = [...pspInspections, ...keepInspections]
+
+  const hasNoAccidents = orderedAccidents.length === 0
+  const hasNoInspections = inspections.length === 0
+
+  const rowProvenance: DotForm2RowProvenance = {
+    version: 1,
+    mvrResultId: prevProv?.mvrResultId ?? null,
+    orderId: prevProv?.orderId ?? null,
+    accioOrderNumber: prevProv?.accioOrderNumber ?? null,
+    asOf: prevProv?.asOf ?? null,
+    mvrAccidentCount: prevProv?.mvrAccidentCount ?? 0,
+    mvrConvictionCount: prevProv?.mvrConvictionCount ?? 0,
+    pspResultId: meta.pspResultId,
+    pspOrderId: meta.orderId ?? null,
+    pspAccioOrderNumber: meta.accioOrderNumber ?? null,
+    pspAsOf: meta.asOf,
+    pspCrashCount: pspCrashesAsAccidents.length,
+    pspInspectionCount: pspInspections.length,
+  }
+
+  return {
+    ...base,
+    accidents:
+      orderedAccidents.length > 0
+        ? orderedAccidents
+        : [
+            {
+              date: '',
+              nature: '',
+              fatalities: '',
+              injuries: '',
+              chemicalSpills: '',
+              atFault: '',
+              _source: 'self',
+            },
+          ],
+    inspections,
+    hasNoAccidents,
+    hasNoInspections,
+    _rowProvenance: rowProvenance,
+  }
+}
+
 export function getLockedPaths(
   provenance: DotForm1FieldProvenance | null | undefined,
 ): Set<DotFieldPath> {
@@ -338,8 +449,12 @@ export function formatMvrFieldBadge(entry: DotFieldProvenanceEntry): string {
 export function formatMvrRowBadge(meta: {
   accioOrderNumber?: string | null
   asOf?: string | null
+  /** Defaults to MVR; PSP rows pass 'psp' for honest copy */
+  kind?: 'mvr' | 'psp'
 }): string {
-  const order = meta.accioOrderNumber ? `Accio order #${meta.accioOrderNumber}` : 'your MVR'
+  const kind = meta.kind ?? 'mvr'
+  const fallback = kind === 'psp' ? 'your PSP' : 'your MVR'
+  const order = meta.accioOrderNumber ? `Accio order #${meta.accioOrderNumber}` : fallback
   const asOf = meta.asOf ? new Date(meta.asOf).toLocaleDateString() : null
   return asOf
     ? `Verified — sourced from ${order}, as of ${asOf}`

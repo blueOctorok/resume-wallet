@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         hasResume: !!resume,
         resumeId: resume?.id || null,
         resumeTitle: resume?.title || resume?.filename || null,
-        resumeVerified: resume?.verification_status === 'VERIFIED',
+        resumeVerified: Boolean(resume),
         resumeIpfsHash: resume?.ipfs_hash || null,
         // Legacy aliases for backward compatibility
         driverUserId: app.applicant_user_id,

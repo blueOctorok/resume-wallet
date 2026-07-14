@@ -895,12 +895,6 @@ export default function DeveloperHub({
                         >
                           {resume.title}
                         </h3>
-                        {resume.verification_status === 'VERIFIED' && (
-                          <span className='flex items-center gap-1 text-xs text-green-400'>
-                            <CheckCircle className='w-3 h-3' />
-                            Verified
-                          </span>
-                        )}
                       </div>
                       <p
                         className={`text-xs mt-1 ${
@@ -937,15 +931,6 @@ export default function DeveloperHub({
                       >
                         <Edit className='w-4 h-4' />
                       </button>
-                      {resume.verification_status !== 'VERIFIED' && (
-                        <button
-                          onClick={() => setPreviewResume(resume)}
-                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                          title='Verify on Blockchain'
-                        >
-                          <Shield className='w-4 h-4' />
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>

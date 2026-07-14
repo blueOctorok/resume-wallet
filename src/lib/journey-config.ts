@@ -97,8 +97,8 @@ export const JOURNEY_STEPS: JourneyConfig = {
     },
     resumeVerified: {
       id: 'driver.resumeVerified',
-      title: 'Resume Verified on Blockchain!',
-      message: 'Your resume is now tamper-proof and verifiable by any employer. This builds trust with hiring companies.',
+      title: 'Resume on file!',
+      message: 'Your resume is ready on your Career Card. Issuer-backed facts (MVR, PSP, employment) are what carry Verified badges — not the resume PDF itself.',
       icon: 'CheckCircle',
       nextStep: {
         label: 'Return to Hub',

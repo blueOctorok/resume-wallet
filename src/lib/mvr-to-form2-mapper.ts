@@ -13,8 +13,9 @@ export interface Form2AccidentRow {
   injuries: string
   chemicalSpills: string
   atFault: string
-  _source?: 'mvr' | 'self'
+  _source?: 'mvr' | 'psp' | 'self'
   _mvrKey?: string
+  _pspKey?: string
 }
 
 export interface Form2ConvictionRow {
@@ -22,7 +23,7 @@ export interface Form2ConvictionRow {
   violation: string
   stateOfViolation: string
   penalty: string
-  _source?: 'mvr' | 'self'
+  _source?: 'mvr' | 'psp' | 'self'
   _mvrKey?: string
 }
 

@@ -7,10 +7,14 @@ import SaveProgressButton from './SaveProgressButton'
 import { StateSelect, normalizeState } from '@/components/ui/StateSelect'
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
 import VerifiedFieldBadge from '@/components/driver-application/VerifiedFieldBadge'
-import type {
-  DotFieldProvenanceEntry,
-  DotForm2RowProvenance,
+import {
+  type DotForm2RowProvenance,
+  type DotFieldProvenanceEntry,
 } from '@/lib/dot-field-provenance'
+import {
+  resolveMvrRowDotBadge,
+  type AttestationBadgeSummary,
+} from '@/lib/dot-attestation-badge'
 
 /** Normalize saved values to MM/YYYY for MonthYearPicker (legacy text or ISO dates). */
 function normalizeConvictionMonthYear(raw: string): string {
@@ -59,8 +63,10 @@ interface PersonalInfoForm2Props {
   sessionUserId?: string
   /** Centralized save function - saves ALL forms to driver profile */
   onSaveProgress?: () => Promise<boolean | undefined>
-  /** P3.7 — MVR row provenance for accident/conviction locks + badges. */
+  /** P3.7 — issuer row provenance for accident/conviction/inspection locks + badges. */
   rowProvenance?: DotForm2RowProvenance | null
+  /** Active attestations for honesty-tier badge upgrades (MVR only in v1) */
+  attestations?: AttestationBadgeSummary[]
 }
 
 export default function PersonalInfoForm2({
@@ -70,6 +76,7 @@ export default function PersonalInfoForm2({
   sessionUserId,
   onSaveProgress,
   rowProvenance = null,
+  attestations = [],
 }: PersonalInfoForm2Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
@@ -77,16 +84,44 @@ export default function PersonalInfoForm2({
   const lockedInputClass = isDarkTheme(theme)
     ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
     : 'bg-gray-100 cursor-not-allowed'
-  const isMvrRow = (row: { _source?: string } | undefined) => row?._source === 'mvr'
-  const rowBadgeEntry = (path: string): DotFieldProvenanceEntry | null => {
+  const isIssuerRow = (row: { _source?: string } | undefined) =>
+    row?._source === 'mvr' || row?._source === 'psp'
+  const issuerKindLabel = (row: { _source?: string } | undefined) =>
+    row?._source === 'psp' ? 'PSP' : 'MVR'
+  const rowBadgeText = (kind: 'mvr' | 'psp'): string | null => {
     if (!rowProvenance) return null
+    if (kind === 'psp') {
+      if (!rowProvenance.pspResultId) return null
+      return resolveMvrRowDotBadge(
+        {
+          kind: 'psp',
+          accioOrderNumber: rowProvenance.pspAccioOrderNumber,
+          asOf: rowProvenance.pspAsOf,
+        },
+        attestations,
+      ).text
+    }
+    if (!rowProvenance.mvrResultId) return null
+    return resolveMvrRowDotBadge(
+      {
+        kind: 'mvr',
+        accioOrderNumber: rowProvenance.accioOrderNumber,
+        asOf: rowProvenance.asOf,
+        orderId: rowProvenance.orderId,
+      },
+      attestations,
+    ).text
+  }
+  /** Form 1-style badge entry still used for MVR conviction rows that share Accio stamp */
+  const rowBadgeEntry = (path: string): DotFieldProvenanceEntry | null => {
+    if (!rowProvenance?.mvrResultId) return null
     return {
       path: path as DotFieldProvenanceEntry['path'],
       source: 'mvr',
       mvrResultId: rowProvenance.mvrResultId,
       orderId: rowProvenance.orderId,
       accioOrderNumber: rowProvenance.accioOrderNumber,
-      asOf: rowProvenance.asOf,
+      asOf: rowProvenance.asOf ?? new Date().toISOString(),
       value: '',
     }
   }
@@ -108,8 +143,9 @@ export default function PersonalInfoForm2({
         injuries: '',
         chemicalSpills: '',
         atFault: '',
-        _source: 'self' as 'mvr' | 'self',
+        _source: 'self' as 'mvr' | 'psp' | 'self',
         _mvrKey: undefined as string | undefined,
+        _pspKey: undefined as string | undefined,
       },
     ],
     hasNoAccidents: false,
@@ -121,11 +157,24 @@ export default function PersonalInfoForm2({
         violation: '',
         stateOfViolation: '',
         penalty: '',
-        _source: 'self' as 'mvr' | 'self',
+        _source: 'self' as 'mvr' | 'psp' | 'self',
         _mvrKey: undefined as string | undefined,
       },
     ],
     hasNoConvictions: false,
+    // FMCSA PSP inspections (P3.7) — issuer-backed when _source:'psp'
+    inspections: [] as Array<{
+      date: string
+      reportNumber: string
+      level: string
+      state: string
+      result: string
+      outOfService: string
+      violationSummary: string
+      _source?: 'psp' | 'self'
+      _pspKey?: string
+    }>,
+    hasNoInspections: false,
     deniedLicense: '',
     deniedLicenseExplain: '',
     suspendedLicense: '',
@@ -140,21 +189,25 @@ export default function PersonalInfoForm2({
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
-    // P3.7 — block edits to MVR-sourced accident/conviction rows
+    // P3.7 — block edits to issuer-sourced accident/conviction/inspection rows
     if (
       index !== undefined &&
-      (field === 'accidents' || field === 'convictions') &&
-      isMvrRow(formData[field as 'accidents' | 'convictions']?.[index])
+      (field === 'accidents' || field === 'convictions' || field === 'inspections') &&
+      isIssuerRow(
+        (formData as Record<string, Array<{ _source?: string }>>)[field]?.[index],
+      )
     ) {
       return
     }
-    if (field === 'hasNoAccidents' || field === 'hasNoConvictions') {
-      // Don't let "none" wipe MVR rows — server will re-project on save anyway
-      const hasMvr =
+    if (field === 'hasNoAccidents' || field === 'hasNoConvictions' || field === 'hasNoInspections') {
+      // Don't let "none" wipe issuer rows — server will re-project on save anyway
+      const hasIssuer =
         field === 'hasNoAccidents'
-          ? formData.accidents.some((a) => a._source === 'mvr')
-          : formData.convictions.some((c) => c._source === 'mvr')
-      if (hasMvr && value === true) return
+          ? formData.accidents.some((a) => isIssuerRow(a))
+          : field === 'hasNoConvictions'
+            ? formData.convictions.some((c) => c._source === 'mvr')
+            : formData.inspections.some((i) => i._source === 'psp')
+      if (hasIssuer && value === true) return
     }
 
     setFormData((prev) => {
@@ -233,10 +286,12 @@ export default function PersonalInfoForm2({
       hasHydratedRef.current = false
       setFormData({
         drivingExperience: [{ equipmentType: '', yearsOfExperience: '' }],
-        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '', _source: 'self' as const, _mvrKey: undefined as string | undefined }],
+        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '', _source: 'self' as const, _mvrKey: undefined as string | undefined, _pspKey: undefined as string | undefined }],
         hasNoAccidents: false,
         convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', penalty: '', _source: 'self' as const, _mvrKey: undefined as string | undefined }],
         hasNoConvictions: false,
+        inspections: [],
+        hasNoInspections: false,
         deniedLicense: '',
         deniedLicenseExplain: '',
         suspendedLicense: '',
@@ -385,7 +440,7 @@ export default function PersonalInfoForm2({
   }
 
   const removeAccident = (index: number) => {
-    if (isMvrRow(formData.accidents[index])) return
+    if (isIssuerRow(formData.accidents[index])) return
     setFormData((prev) => ({
       ...prev,
       accidents: prev.accidents.filter((_, i) => i !== index),
@@ -411,7 +466,7 @@ export default function PersonalInfoForm2({
   }
 
   const removeConviction = (index: number) => {
-    if (isMvrRow(formData.convictions[index])) return
+    if (isIssuerRow(formData.convictions[index])) return
     setFormData((prev) => ({
       ...prev,
       convictions: prev.convictions.filter((_, i) => i !== index),
@@ -625,7 +680,7 @@ export default function PersonalInfoForm2({
           type='checkbox'
           id='hasNoAccidents'
           checked={formData.hasNoAccidents}
-          disabled={formData.accidents.some((a) => a._source === 'mvr')}
+          disabled={formData.accidents.some((a) => isIssuerRow(a))}
           onChange={(e) =>
             handleInputChange('hasNoAccidents', e.target.checked)
           }
@@ -642,10 +697,13 @@ export default function PersonalInfoForm2({
       {!formData.hasNoAccidents && (
         <div className='space-y-6'>
           {formData.accidents.map((accident, index) => {
-            const locked = isMvrRow(accident)
-            const badge = locked ? rowBadgeEntry(`accidents.${index}`) : null
+            const locked = isIssuerRow(accident)
+            const badgeText =
+              accident._source === 'psp' || accident._source === 'mvr'
+                ? rowBadgeText(accident._source)
+                : null
             return (
-            <div key={accident._mvrKey || `acc-${index}`} className='space-y-4'>
+            <div key={accident._pspKey || accident._mvrKey || `acc-${index}`} className='space-y-4'>
               <div className='flex justify-between items-center'>
                 <h3
                   className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
@@ -657,7 +715,7 @@ export default function PersonalInfoForm2({
                         isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'
                       }`}
                     >
-                      (from MVR)
+                      (from {issuerKindLabel(accident)})
                     </span>
                   )}
                 </h3>
@@ -675,7 +733,15 @@ export default function PersonalInfoForm2({
                   </button>
                 )}
               </div>
-              {badge && <VerifiedFieldBadge entry={badge} />}
+              {badgeText && (
+                <p
+                  className={`flex items-start gap-1 text-[11px] leading-snug ${
+                    isDarkTheme(theme) ? 'text-teal-300/90' : 'text-teal-800'
+                  }`}
+                >
+                  {badgeText}
+                </p>
+              )}
               {/* Label row uses min-h so multi-line labels don't push inputs down; keeps inputs aligned */}
               <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
                 <div className='flex flex-col'>
@@ -880,6 +946,114 @@ export default function PersonalInfoForm2({
           </div>
         </div>
       )}
+
+      {/* FMCSA PSP inspections (P3.7) — shown when PSP projected rows or clean stamp */}
+      {(formData.inspections.length > 0 ||
+        formData.hasNoInspections ||
+        Boolean(rowProvenance?.pspResultId)) && (
+        <div className='mt-8 space-y-4 border-t pt-6 border-gray-200 dark:border-gray-700'>
+          <h3
+            className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
+          >
+            FMCSA Inspection History (PSP)
+          </h3>
+          <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+            Projected from your Pre-Employment Screening Program report. Rows are locked;
+            you can still add a self-certified note below if needed.
+          </p>
+          {formData.hasNoInspections || formData.inspections.length === 0 ? (
+            <p
+              className={`text-sm rounded-md px-3 py-2 ${
+                isDarkTheme(theme)
+                  ? 'bg-teal-500/10 text-teal-200'
+                  : 'bg-teal-50 text-teal-800'
+              }`}
+            >
+              {rowBadgeText('psp') ?? 'No FMCSA inspections on file (PSP)'}
+            </p>
+          ) : (
+            <div className='space-y-4'>
+              {formData.inspections.map((insp, index) => {
+                const locked = insp._source === 'psp'
+                const badgeText = locked ? rowBadgeText('psp') : null
+                return (
+                  <div
+                    key={insp._pspKey || `insp-${index}`}
+                    className={`rounded-lg p-4 space-y-3 ${
+                      locked
+                        ? isDarkTheme(theme)
+                          ? 'bg-teal-500/10 ring-1 ring-teal-500/30'
+                          : 'bg-teal-50 ring-1 ring-teal-200'
+                        : isDarkTheme(theme)
+                          ? 'bg-gray-800'
+                          : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className='flex justify-between items-center'>
+                      <h4
+                        className={`text-sm font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
+                      >
+                        INSPECTION {index + 1}
+                        {locked && (
+                          <span className='ml-2 text-xs font-medium text-teal-700 dark:text-teal-300'>
+                            (from PSP)
+                          </span>
+                        )}
+                      </h4>
+                    </div>
+                    {badgeText && (
+                      <p
+                        className={`text-[11px] ${isDarkTheme(theme) ? 'text-teal-300/90' : 'text-teal-800'}`}
+                      >
+                        {badgeText}
+                      </p>
+                    )}
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+                      {(
+                        [
+                          ['date', 'Date'],
+                          ['reportNumber', 'Report #'],
+                          ['level', 'Level'],
+                          ['state', 'State'],
+                          ['result', 'Result'],
+                          ['outOfService', 'Out of service'],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <div key={key}>
+                          <label
+                            className={`block text-xs mb-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
+                          >
+                            {label}
+                          </label>
+                          <input
+                            type='text'
+                            value={insp[key] || ''}
+                            disabled={locked}
+                            readOnly={locked}
+                            onChange={(e) =>
+                              handleInputChange('inspections', { [key]: e.target.value }, index)
+                            }
+                            className={`w-full px-3 py-2 border rounded-md text-sm ${
+                              isDarkTheme(theme)
+                                ? 'bg-gray-700/50 border-gray-600 text-white'
+                                : 'bg-white border-gray-200 text-gray-900'
+                            } ${locked ? lockedInputClass : ''}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {insp.violationSummary && (
+                      <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Violations: {insp.violationSummary}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 
@@ -1061,8 +1235,10 @@ export default function PersonalInfoForm2({
       {!formData.hasNoConvictions && (
         <div className='space-y-6'>
           {formData.convictions.map((conviction, index) => {
-            const locked = isMvrRow(conviction)
-            const badge = locked ? rowBadgeEntry(`convictions.${index}`) : null
+            const locked = isIssuerRow(conviction)
+            const badge = locked && conviction._source === 'mvr'
+              ? rowBadgeEntry(`convictions.${index}`)
+              : null
             return (
             <div key={conviction._mvrKey || `conv-${index}`} className='space-y-4'>
               <div className='flex justify-between items-center'>
@@ -1076,7 +1252,7 @@ export default function PersonalInfoForm2({
                         isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'
                       }`}
                     >
-                      (from MVR)
+                      (from {issuerKindLabel(conviction)})
                     </span>
                   )}
                 </h3>
@@ -1094,7 +1270,7 @@ export default function PersonalInfoForm2({
                   </button>
                 )}
               </div>
-              {badge && <VerifiedFieldBadge entry={badge} />}
+              {badge && <VerifiedFieldBadge entry={badge} attestations={attestations} />}
               <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <div className='flex flex-col'>
                   <label

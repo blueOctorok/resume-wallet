@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import { hasStoredResumeFile } from '@/lib/document-storage'
 import Modal from './ui/Modal'
 import { 
   Trash2, 
@@ -45,12 +44,11 @@ interface ResumeDashboardProps {
   onResumesLoaded?: (count: number, latestResume?: ResumeRecord) => void
   onEditResume?: (resumeId: string) => void
   onDuplicateResume?: (resumeId: string, structuredData: Record<string, unknown>) => void
-  onVerifyResume?: (resumeId: string) => void
 }
 
 // Updated labels: "Pending" -> "Not Verified" for clearer UX
 const STATUS_LABELS: Record<string, string> = {
-  VERIFIED: 'Verified',
+  VERIFIED: 'On file',
   PENDING: 'Not Verified',
   FAILED: 'Failed',
 }
@@ -95,7 +93,6 @@ export default function ResumeDashboard({
   onResumesLoaded,
   onEditResume,
   onDuplicateResume,
-  onVerifyResume,
 }: ResumeDashboardProps) {
   const { theme } = useTheme()
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
@@ -111,7 +108,6 @@ export default function ResumeDashboard({
   const [resumeToDelete, setResumeToDelete] = useState<ResumeRecord | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const fetchResumes = useCallback(async (address: string) => {
@@ -403,63 +399,6 @@ export default function ResumeDashboard({
     }
   }
 
-  // One-click verify: built/developer PDF-from-structured, or uploaded PDF already on IPFS
-  const handleVerify = async (resume: ResumeRecord) => {
-    if (!sessionUserId) return
-
-    const canOneClickVerify =
-      (resume.resume_type === 'built' && resume.structured_data) ||
-      (resume.resume_type === 'developer_built' && resume.structured_data) ||
-      (resume.resume_type === 'uploaded' &&
-        hasStoredResumeFile({ storage_path: resume.storage_path, ipfs_hash: resume.ipfs_hash }))
-
-    if (canOneClickVerify) {
-      setIsVerifying(true)
-      setActionMessage({
-        type: 'success',
-        text:
-          resume.resume_type === 'uploaded'
-            ? 'Saving your resume...'
-            : 'Generating PDF and saving...',
-      })
-
-      try {
-        const response = await fetch(`/api/resumes/${resume.id}/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-          },
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Verification failed')
-        }
-
-        const tx = (data.transactionHash ?? data.txHash) as string | undefined
-        setActionMessage({
-          type: 'success',
-          text: tx
-            ? `Resume verified on blockchain! TX: ${tx.slice(0, 10)}...`
-            : 'Resume verification updated.',
-        })
-
-        fetchResumes(sessionUserId)
-        const wa = sessionUserId || sessionUserId
-        if (wa) void syncDriverHubFromApi(wa)
-      } catch (err) {
-        setActionMessage({
-          type: 'error',
-          text: err instanceof Error ? err.message : 'Failed to verify resume',
-        })
-      } finally {
-        setIsVerifying(false)
-      }
-    } else if (onVerifyResume) {
-      onVerifyResume(resume.id)
-    }
-  }
-
   if (!sessionUserId) {
     return (
       <div
@@ -470,7 +409,7 @@ export default function ResumeDashboard({
         }`}
       >
         <p className='text-center text-sm sm:text-base'>
-          Sign in to manage and review your verified resumes.
+          Sign in to manage and review your resumes.
         </p>
       </div>
     )
@@ -510,22 +449,6 @@ export default function ResumeDashboard({
                 }`}>
                   Are you sure you want to delete &quot;{resumeToDelete.title || resumeToDelete.filename}&quot;?
                 </p>
-                
-                {/* Warning for verified resumes */}
-                {resumeToDelete.verification_status === 'VERIFIED' && (
-                  <div className={`mt-3 p-3 rounded-lg border ${
-                    isDarkTheme(theme)
-                      ? 'bg-amber-500/10 border-amber-500/30'
-                      : 'bg-amber-50 border-amber-200'
-                  }`}>
-                    <p className={`text-xs ${
-                      isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-700'
-                    }`}>
-                      <strong>Note:</strong> This resume is verified on the blockchain. 
-                      Deleting will remove it from your dashboard, but the blockchain record is permanent and cannot be removed.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -707,6 +630,8 @@ export default function ResumeDashboard({
                   <div className='flex flex-col gap-3 max-h-[420px] overflow-y-auto pr-1'>
                     {filteredResumes.map((resume) => {
                       const status = resume.verification_status || 'PENDING'
+                      const statusLabel = status === 'VERIFIED' ? 'On file' : (STATUS_LABELS[status] || status.toLowerCase())
+                      const displayStatus = status === 'VERIFIED' ? 'PENDING' : status
                       return (
                         <button
                           key={resume.id}
@@ -754,9 +679,9 @@ export default function ResumeDashboard({
                               </p>
                             </div>
                             <span
-                              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0 ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0 ${STATUS_STYLES[displayStatus] || STATUS_STYLES.PENDING}`}
                             >
-                              {STATUS_LABELS[status] || status.toLowerCase()}
+                              {statusLabel}
                             </span>
                           </div>
                           <div
@@ -792,9 +717,7 @@ export default function ResumeDashboard({
                   onDelete={handleDeleteClick}
                   onDownloadPDF={handleDownloadPDF}
                   onDuplicate={handleDuplicate}
-                  onVerify={handleVerify}
                   isDownloading={isDownloading}
-                  isVerifying={isVerifying}
                 />
               ) : (
                 <div
@@ -849,9 +772,7 @@ interface ResumeDetailProps {
   onDelete: (resume: ResumeRecord) => void
   onDownloadPDF: (resume: ResumeRecord) => void
   onDuplicate: (resume: ResumeRecord) => void
-  onVerify: (resume: ResumeRecord) => void
   isDownloading: boolean
-  isVerifying: boolean
 }
 
 function ResumeDetail({
@@ -861,13 +782,12 @@ function ResumeDetail({
   onDelete,
   onDownloadPDF,
   onDuplicate,
-  onVerify,
   isDownloading,
-  isVerifying
 }: ResumeDetailProps) {
   const status = resume.verification_status || 'PENDING'
-  const statusLabel = STATUS_LABELS[status] || status.toLowerCase()
-  const isVerified = status === 'VERIFIED'
+  // DEC-2026-05-014: never surface whole-resume VERIFIED as chain verification
+  const statusLabel = status === 'VERIFIED' ? 'On file' : (STATUS_LABELS[status] || status.toLowerCase())
+  const displayStatus = status === 'VERIFIED' ? 'PENDING' : status
   const isBuilt =
     resume.resume_type === 'built' || resume.resume_type === 'developer_built'
 
@@ -948,30 +868,11 @@ function ResumeDetail({
           </p>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[displayStatus] || STATUS_STYLES.PENDING}`}
         >
           {statusLabel}
         </span>
       </div>
-
-      {/* Not Verified CTA */}
-      {!isVerified && (
-        <div className={`p-3 rounded-lg border ${
-          isDarkTheme(theme)
-            ? 'bg-amber-500/10 border-amber-500/30'
-            : 'bg-amber-50 border-amber-200'
-        }`}>
-          <div className="flex items-center gap-2">
-            <Shield className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-600'}`} />
-            <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-700'}`}>
-              Secure this resume on the blockchain
-            </p>
-          </div>
-          <p className={`mt-1 text-xs ${isDarkTheme(theme) ? 'text-amber-300/70' : 'text-amber-600'}`}>
-            Verification creates a permanent, tamper-proof record that employers can trust.
-          </p>
-        </div>
-      )}
 
       {isBuilt ? (
         // Built Resume View
@@ -1032,25 +933,9 @@ function ResumeDetail({
           
           {/* Action Buttons for Built Resumes */}
           <div className='flex flex-wrap gap-2'>
-            {/* Verify on Blockchain - Primary CTA for unverified */}
-            {!isVerified && (
-              <button 
-                onClick={() => onVerify(resume)} 
-                disabled={isVerifying}
-                className={primaryButtonClass}
-              >
-                {isVerifying ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Shield className="w-4 h-4" />
-                )}
-                {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
-              </button>
-            )}
-            
-            {/* Edit */}
+{/* Edit */}
             {onEdit && (
-              <button onClick={() => onEdit(resume.id)} className={isVerified ? primaryButtonClass : secondaryButtonClass}>
+              <button onClick={() => onEdit(resume.id)} className={primaryButtonClass}>
                 <Edit3 className="w-4 h-4" />
                 Edit
               </button>
@@ -1092,85 +977,13 @@ function ResumeDetail({
               <InfoRow label='File Size' value={formatFileSize(resume.file_size)} />
               <InfoRow label='MIME Type' value={resume.mime_type} />
             </div>
-            <InfoRow label='IPFS Hash' value={resume.ipfs_hash} mono />
-            <InfoRow label='IPFS URL' value={resume.ipfs_url} mono />
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <InfoRow
-                label='Blockchain Tx Hash'
-                value={resume.blockchain_tx_hash || undefined}
-                mono
-              />
-              <InfoRow
-                label='Blockchain Resume ID'
-                value={resume.blockchain_resume_id || undefined}
-              />
-            </div>
-            
             <InfoRow
               label='Payment'
               value={resume.is_paid ? 'Paid' : 'Free Tier'}
             />
           </div>
-          
-          {/* Action Buttons for Uploaded Resumes */}
+
           <div className='flex flex-wrap gap-2'>
-            {/* Verify on Blockchain - Primary CTA for unverified */}
-            {!isVerified && (
-              <button 
-                onClick={() => onVerify(resume)} 
-                disabled={isVerifying}
-                className={primaryButtonClass}
-              >
-                {isVerifying ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Shield className="w-4 h-4" />
-                )}
-                {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
-              </button>
-            )}
-            
-            {/* View on IPFS */}
-            {resume.ipfs_url && (
-              <a
-                href={resume.ipfs_url}
-                target='_blank'
-                rel='noopener noreferrer'
-                className={secondaryButtonClass}
-              >
-                <ExternalLink className="w-4 h-4" />
-                View on IPFS
-              </a>
-            )}
-            
-            {/* View on BaseScan */}
-            {resume.blockchain_tx_hash && (
-              <a
-                href={`https://sepolia.basescan.org/tx/${resume.blockchain_tx_hash}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className={secondaryButtonClass}
-              >
-                <ExternalLink className="w-4 h-4" />
-                View on BaseScan
-              </a>
-            )}
-            
-            {/* Download from IPFS */}
-            {resume.ipfs_url && (
-              <a
-                href={resume.ipfs_url}
-                target='_blank'
-                rel='noopener noreferrer'
-                download
-                className={secondaryButtonClass}
-              >
-                <Download className="w-4 h-4" />
-                Download
-              </a>
-            )}
-            
-            {/* Delete */}
             <button onClick={() => onDelete(resume)} className={dangerButtonClass}>
               <Trash2 className="w-4 h-4" />
               Delete

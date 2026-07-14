@@ -35,6 +35,10 @@ import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import Avatar from '@/components/ui/Avatar'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
+import {
+  formatDotAppHonestyLabel,
+  resolveDotAppHonestyStatus,
+} from '@/lib/dot-app-honesty'
 
 /** Normalize employer / title strings for matching verified jobs to work history rows. */
 function normEmploymentField(value: string | null | undefined): string {
@@ -107,7 +111,11 @@ export interface CareerCardData {
     status: string
     isComplete: boolean
     createdAt: string
+    /** @deprecated Legacy Base hash-seal — never surface as issuer/blockchain verified */
     blockchainTxHash?: string | null
+    verifiedPercent?: number
+    verifiedTotalCount?: number
+    majorityVerified?: boolean
   } | null
   // Self-ordered MVR — shareable, visible to driver and all employers
   mvr: {
@@ -526,25 +534,9 @@ export default function CareerCard({
               <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 {data.resume.title || data.resume.filename}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded ${
-                data.resume.verificationStatus === 'VERIFIED'
-                  ? 'bg-green-500/20 text-green-500'
-                  : 'bg-yellow-500/20 text-yellow-500'
-              }`}>
-                {data.resume.verificationStatus}
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                On file
               </span>
-              {data.resume.verificationStatus === 'VERIFIED' && data.resume.blockchainTxHash ? (
-                <a
-                  href={`https://sepolia.basescan.org/tx/${data.resume.blockchainTxHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-1 text-xs font-medium ${
-                    isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
-                  }`}
-                >
-                  View on Base <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : null}
             </div>
           </div>
         ) : (
@@ -655,25 +647,25 @@ export default function CareerCard({
               <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                 {data.driverApplication.isComplete ? 'Complete' : 'In Progress'}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded ${
-                data.driverApplication.status === 'VERIFIED'
-                  ? 'bg-green-500/20 text-green-500'
-                  : 'bg-yellow-500/20 text-yellow-500'
-              }`}>
-                {data.driverApplication.status}
-              </span>
-              {data.driverApplication.blockchainTxHash ? (
-                <a
-                  href={`https://sepolia.basescan.org/tx/${data.driverApplication.blockchainTxHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-1 text-xs font-medium ${
-                    isDarkTheme(theme) ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
-                  }`}
-                >
-                  View on Base <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : null}
+              {(() => {
+                const honesty = resolveDotAppHonestyStatus(data.driverApplication)
+                const label = formatDotAppHonestyLabel(honesty)
+                const strong =
+                  honesty === 'majority_verified' || honesty === 'partially_verified'
+                return (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      strong
+                        ? 'bg-teal-500/20 text-teal-600 dark:text-teal-400'
+                        : data.driverApplication.isComplete
+                          ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                          : 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                    }`}
+                  >
+                    {label}
+                  </span>
+                )
+              })()}
             </div>
           ) : (
             <EmptyState message="No DOT application on file" theme={theme} />

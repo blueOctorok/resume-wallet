@@ -33,8 +33,14 @@ export interface DotAppData {
   createdAt: string
   /** Row last update — closer to on-chain confirmation time than createdAt */
   updatedAt?: string | null
-  /** Base Sepolia tx when DOT app hash was submitted on-chain */
+  /** @deprecated Legacy Base hash-seal — never treat as issuer verification (DEC-2026-07-001) */
   blockchainTxHash?: string | null
+  /** P3.7 — issuer-backed risk fields ÷ filled risk-bearing denominator */
+  verifiedPercent?: number
+  verifiedCount?: number
+  verifiedTotalCount?: number
+  /** True when verifiedCount is a strict majority of verifiedTotalCount */
+  majorityVerified?: boolean
 }
 
 export interface MvrData {

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * POST /api/driver-applications/[id]/verify
- * Mark a complete DOT application as verified (DB flag until Phase 2 attestation).
+ *
+ * DEPRECATED (DEC-2026-07-001). Base-era whole-app "VERIFIED" / blockchain seal is
+ * not issuer verification. Field-level Accio MVR/PSP + EVR provenance + the live
+ * verified-% meter are the honest signals. Callers should not use this endpoint.
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params
@@ -17,88 +19,19 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    console.log('[DOT VERIFY] Verifying application:', id, 'for user:', userId)
+    console.warn(
+      '[DOT VERIFY] Deprecated endpoint called — refusing whole-app VERIFIED flag',
+      { id, userId },
+    )
 
-    const supabase = await getAdminSupabaseClient()
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single()
-    if (!userData) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    const { data: application, error: appError } = await supabase
-      .from('driver_applications')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userData.id)
-      .single()
-
-    if (appError || !application) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 })
-    }
-
-    if (
-      application.verification_status === 'VERIFIED' ||
-      application.blockchain_tx_hash
-    ) {
-      return NextResponse.json(
-        {
-          error: 'Application already verified',
-          details: 'This application has already been marked verified.',
-          transactionHash: application.blockchain_tx_hash,
-          applicationId: application.blockchain_application_id,
-        },
-        { status: 409 },
-      )
-    }
-
-    if (!application.is_complete) {
-      return NextResponse.json(
-        {
-          error: 'Application not complete',
-          details: 'Please complete the application before verifying.',
-        },
-        { status: 400 },
-      )
-    }
-
-    if (!application.application_hash) {
-      return NextResponse.json(
-        {
-          error: 'Missing application hash',
-          details: 'Application hash is required for verification.',
-        },
-        { status: 400 },
-      )
-    }
-
-    const { error: updateError } = await supabase
-      .from('driver_applications')
-      .update({
-        verification_status: 'VERIFIED',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (updateError) {
-      console.error('[DOT VERIFY] Failed to update database:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update verification status' },
-        { status: 500 },
-      )
-    }
-
-    console.log('[DOT VERIFY] Verification complete (DB flag, no on-chain registry)')
-
-    return NextResponse.json({
-      success: true,
-      verified: true,
-      applicationId: id,
-    })
+    return NextResponse.json(
+      {
+        error: 'DOT whole-app verification is retired',
+        details:
+          'Self-reported DOT applications are not marked Verified as a whole. Raise verified coverage via MVR, PSP, or prior-employer confirmations (DEC-2026-07-001).',
+      },
+      { status: 410 },
+    )
   } catch (error: unknown) {
     console.error('[DOT VERIFY] Error:', error)
     return NextResponse.json(

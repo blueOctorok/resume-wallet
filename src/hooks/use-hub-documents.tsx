@@ -130,25 +130,16 @@ export function useHubDocuments(refreshKey: number): {
             if (role === 'developer' && !allowDeveloperResume) continue
             if (role === 'general' && !allowGeneralResume) continue
             if (role !== 'driver' && role !== 'developer' && role !== 'general') continue
-            const isBuilt = resume.resumeType === 'built' || resume.resumeType === 'developer_built'
-            const uploadedCanVerify =
-              !isBuilt &&
-              !resume.blockchainTxHash &&
-              hasStoredResumeFile({
-                storage_path: resume.storagePath,
-                ipfs_hash: resume.ipfsHash,
-              })
             docs.push({
               id: resume.id,
               type: 'resume',
               title: resume.title || 'Resume',
               status: 'complete',
               createdAt: resume.createdAt,
-              verified: !!resume.blockchainTxHash,
-              txHash: resume.blockchainTxHash,
-              canVerify: Boolean(
-                !resume.blockchainTxHash && ((isBuilt && resume.structuredData) || uploadedCanVerify),
-              ),
+              // DEC-2026-05-014 / 07-001: self-reported resumes are never chain-verified
+              verified: false,
+              txHash: null,
+              canVerify: false,
               canDelete: true,
               editPage: hasStormResumeBlock
                 ? 'storm-resume'
@@ -207,10 +198,11 @@ export function useHubDocuments(refreshKey: number): {
               type: 'dotapp',
               title: 'DOT Application',
               status: complete ? 'complete' : 'in-progress',
-              verified: !!app.blockchainTxHash,
-              txHash: app.blockchainTxHash,
-              canVerify: !!complete && !app.blockchainTxHash,
-              canDelete: !app.blockchainTxHash,
+              // DEC-2026-07-001: Base tx / whole-app VERIFIED is not issuer verification
+              verified: false,
+              txHash: null,
+              canVerify: false,
+              canDelete: !complete,
               editPage: 'dotapp',
             })
           }

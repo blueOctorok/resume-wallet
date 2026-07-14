@@ -130,7 +130,7 @@ export async function processPspAccioWebhookCompletion(
     parsed_data: parsedPsp
       ? pspResultToJsonb(parsedPsp)
       : { parseError: true, extracted: parsed },
-    result_status: 'received' as const,
+    result_status: parsedPsp ? ('parsed' as const) : ('received' as const),
     received_at: new Date().toISOString(),
   }
 
@@ -224,6 +224,14 @@ export async function processPspAccioWebhookCompletion(
           }
         : null,
     }).catch((err) => console.warn('[PSP WEBHOOK] block sync non-fatal:', err))
+
+    // P3.7 late-PSP: project crashes/inspections into DOT Form 2 when an app exists
+    const { applyPspProjectionToDriverApplication } = await import(
+      '@/lib/apply-psp-to-dot-application'
+    )
+    void applyPspProjectionToDriverApplication(supabase, pspOrder.driver_user_id).catch((err) =>
+      console.warn('[PSP WEBHOOK] DOT projection non-fatal:', err),
+    )
   }
 
   return {

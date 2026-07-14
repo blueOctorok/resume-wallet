@@ -279,8 +279,8 @@ export async function GET(
           id: resumeData.id,
           title: resumeData.title,
           filename: resumeData.filename,
-          verified: resumeData.verification_status === 'VERIFIED',
-          blockchainVerified: !!resumeData.blockchain_tx_hash,
+          verified: false, // DEC-2026-05-014: self-reported resume is never chain-verified
+          blockchainVerified: false,
           type: resumeData.resume_type,
           createdAt: resumeData.created_at,
           ipfsHash: resumeData.ipfs_hash,
@@ -310,8 +310,9 @@ export async function GET(
 
         dotApp = {
           id: dotAppData.id,
-          verified: dotAppData.verification_status === 'VERIFIED',
-          blockchainVerified: !!dotAppData.blockchain_tx_hash,
+          // DEC-2026-07-001: never surface whole-app VERIFIED / Base tx as verified
+          verified: false,
+          blockchainVerified: false,
           isComplete: dotAppData.is_complete,
           completionPercentage: completionPct,
           createdAt: dotAppData.created_at,

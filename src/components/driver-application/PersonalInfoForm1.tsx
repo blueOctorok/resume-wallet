@@ -14,6 +14,7 @@ import {
   type DotFieldPath,
   type DotForm1FieldProvenance,
 } from '@/lib/dot-field-provenance'
+import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 
 // Motor carrier (employing carrier) is not collected here — it is injected by the
 // specific employer when a driver's application is linked to their company.
@@ -63,6 +64,8 @@ interface PersonalInfoForm1Props {
   onSaveProgress?: () => Promise<boolean | undefined>
   /** P3.7 — MVR-projected field locks (identity + primary license). */
   fieldProvenance?: DotForm1FieldProvenance | null
+  /** Active attestations for honesty-tier badge upgrades */
+  attestations?: AttestationBadgeSummary[]
 }
 
 export default function PersonalInfoForm1({
@@ -72,6 +75,7 @@ export default function PersonalInfoForm1({
   sessionUserId,
   onSaveProgress,
   fieldProvenance = null,
+  attestations = [],
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
   const { requestHelp } = useAssistantBridge()
@@ -759,7 +763,7 @@ export default function PersonalInfoForm1({
               isLocked('firstName') ? lockedInputClass : ''
             }`}
           />
-          {lockEntry('firstName') && <VerifiedFieldBadge entry={lockEntry('firstName')!} />}
+          {lockEntry('firstName') && <VerifiedFieldBadge entry={lockEntry('firstName')!} attestations={attestations} />}
           {errors.firstName && (
             <p className='mt-1 text-sm text-red-600'>{errors.firstName}</p>
           )}
@@ -780,7 +784,7 @@ export default function PersonalInfoForm1({
               isLocked('middleName') ? lockedInputClass : ''
             }`}
           />
-          {lockEntry('middleName') && <VerifiedFieldBadge entry={lockEntry('middleName')!} />}
+          {lockEntry('middleName') && <VerifiedFieldBadge entry={lockEntry('middleName')!} attestations={attestations} />}
         </div>
         <div>
           <label
@@ -798,7 +802,7 @@ export default function PersonalInfoForm1({
               isLocked('lastName') ? lockedInputClass : ''
             }`}
           />
-          {lockEntry('lastName') && <VerifiedFieldBadge entry={lockEntry('lastName')!} />}
+          {lockEntry('lastName') && <VerifiedFieldBadge entry={lockEntry('lastName')!} attestations={attestations} />}
           {errors.lastName && (
             <p className='mt-1 text-sm text-red-600'>{errors.lastName}</p>
           )}
@@ -852,7 +856,7 @@ export default function PersonalInfoForm1({
               isLocked('dateOfBirth') ? lockedInputClass : ''
             }`}
           />
-          {lockEntry('dateOfBirth') && <VerifiedFieldBadge entry={lockEntry('dateOfBirth')!} />}
+          {lockEntry('dateOfBirth') && <VerifiedFieldBadge entry={lockEntry('dateOfBirth')!} attestations={attestations} />}
           {errors.dateOfBirth && (
             <p className='mt-1 text-sm text-red-600'>{errors.dateOfBirth}</p>
           )}
@@ -1334,7 +1338,7 @@ export default function PersonalInfoForm1({
                 }`}
               />
               {index === 0 && lockEntry('currentLicenses.0.state') && (
-                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.state')!} />
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.state')!} attestations={attestations} />
               )}
             </div>
             <div>
@@ -1362,7 +1366,7 @@ export default function PersonalInfoForm1({
                 }`}
               />
               {index === 0 && lockEntry('currentLicenses.0.licenseNumber') && (
-                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.licenseNumber')!} />
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.licenseNumber')!} attestations={attestations} />
               )}
             </div>
             <div>
@@ -1390,7 +1394,7 @@ export default function PersonalInfoForm1({
                 }`}
               />
               {index === 0 && lockEntry('currentLicenses.0.typeClass') && (
-                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.typeClass')!} />
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.typeClass')!} attestations={attestations} />
               )}
             </div>
             <div>
@@ -1418,7 +1422,7 @@ export default function PersonalInfoForm1({
                 }`}
               />
               {index === 0 && lockEntry('currentLicenses.0.endorsements') && (
-                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.endorsements')!} />
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.endorsements')!} attestations={attestations} />
               )}
             </div>
             <div>
@@ -1446,7 +1450,7 @@ export default function PersonalInfoForm1({
                 }`}
               />
               {index === 0 && lockEntry('currentLicenses.0.expirationDate') && (
-                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.expirationDate')!} />
+                <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.expirationDate')!} attestations={attestations} />
               )}
             </div>
           </div>

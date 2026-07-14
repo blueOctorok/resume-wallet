@@ -6,6 +6,43 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-07-001 — DOT pre-screen packet may headline "Verified" only on a live majority of issuer-backed risk fields
+
+**Date:** 2026-07-14
+**Status:** Accepted — formalizes the 2026-07-07 P3.7 direction; implements with `computeDotVerifiedCoverage` + honesty pass on legacy whole-app `VERIFIED`
+**Decided by:** Owner + engineer
+**Extends:** DEC-2026-05-014 (provenance gate), DEC-2026-05-004 (honesty gate), DEC-2026-05-011 (not a CRA; pre-screen ≠ 391.51 file)
+
+### Context
+
+P3.7 builds a portable, mostly-verified DQ **pre-screen** packet: MVR/PSP/EVR facts prefill + lock DOT fields with honest per-field badges. The product question was when the *packet* (not a single field) may carry a headline **"Verified."** Boss floated ~60% as an illustration; engineering needed a durable rule that is legally defensible in an FCRA/FMCSA context and cannot be gamed as marketing.
+
+Separately, Base-era code still treated `driver_applications.verification_status = 'VERIFIED'` / `blockchain_tx_hash` as if the whole self-reported DOT app were issuer- or chain-verified. That overclaim collapses the provenance gate.
+
+### Decision
+
+1. **Majority rule (strict):** headline **"Verified"** (or "Verified pre-screen") is allowed only when `verifiedCount * 2 > totalCount` over a **defined risk-bearing denominator** (Form 1 MVR-lockable filled paths + Form 2 accident/conviction/inspection slots + issuer clean-record flags + Form 3 EVR-verified employers). Equality at 50% stays **"Partially verified."**
+2. **Live computed % only.** The surfaced number is `round(100 * verifiedCount / totalCount)` from real application_data provenance — never a chosen marketing target. *60% was illustrative.*
+3. **Decomposable claim.** The headline is allowed *only because* every counted slot carries an honest badge (Accio MVR/PSP, prior-employer EVR) vs self-certified. Self-reported fields (SSN, medical Qs, signature, education, untagged employment) are **never** in the verified numerator and **never** badged verified.
+4. **Small print is mandatory** wherever the headline or % appears (DOT flow meter, career-card chip, employer preview). Caveat must state issuer source vs self-certified remainder.
+5. **Per-fact "proven on Midnight" stays gated** by P3.6 / P3.4-B (`proof.kind === 'midnight_zk'`). Interim wording: "Verified — sourced from {CRA/prior employer}…"
+6. **Legacy whole-app DOT `VERIFIED` / Base tx is not issuer verification.** UI must not present `verification_status='VERIFIED'` or `blockchain_tx_hash` (Base Sepolia) as "Verified on Blockchain" or as proof the packet is issuer-backed. Prefer complete / submitted + the live verified-% meter. The DB flag may remain as an internal "hash sealed" artifact until a later cleanup migration; it must not drive green "verified" copy.
+7. **Self-reported resumes follow the same rule.** A resume PDF/builder output is never Midnight- or chain-verified. `/api/resumes/[id]/verify` is retired (410). Career-card / hub copy uses "On file," not "Verified." Trust lives on issuer-backed facts (MVR/PSP/EVR), which the resume may *display* but does not itself prove.
+
+### Consequences
+
+- `src/lib/dot-verified-coverage.ts` is the source of truth for % and `majorityVerified`.
+- Honesty pass (2026-07-14): ApplicationSubmitted, journey DOT step, career-card on-chain strip, CareerCard DOT badge, hub document `canVerify` for DOT, DriverHub DOT CTAs.
+- Resume honesty pass (2026-07-14): verify API 410; hub/career-card/DriverHub/DeveloperHub/ResumeDashboard/upload flow; projected on-chain strip empty for resumes.
+- This is a **pre-screen** claim, not a substitute for the carrier's consented hire-time CRA pull (DEC-2026-05-011).
+
+### Related
+
+- P3.7 in `docs/midnight/EXECUTION_CHECKLIST.md`
+- DEC-2026-05-004, DEC-2026-05-014, DEC-2026-05-011
+
+---
+
 ## DEC-2026-06-005 — Data ownership is decided by "who clicks order"; driver-initiated + agency-funded is the recommended model; Pace-as-signal-reseller is a CRA trap; full review pending counsel
 
 **Date:** 2026-06-22

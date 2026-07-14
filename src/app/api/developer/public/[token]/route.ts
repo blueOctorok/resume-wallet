@@ -177,8 +177,8 @@ export async function GET(
           id: devResumeData.id,
           title: devResumeData.title ?? devResumeData.filename,
           filename: devResumeData.filename,
-          verified: devResumeData.verification_status === 'VERIFIED',
-          blockchainVerified: !!devResumeData.blockchain_tx_hash,
+          verified: false,
+          blockchainVerified: false,
           type: 'developer_built',
           createdAt: devResumeData.created_at,
           ipfsHash: devResumeData.ipfs_hash ?? null,
@@ -192,7 +192,6 @@ export async function GET(
             'id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, created_at, resume_type'
           )
           .eq('user_id', userId)
-          .eq('verification_status', 'VERIFIED')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -202,8 +201,8 @@ export async function GET(
             id: resumeData.id,
             title: resumeData.title ?? resumeData.filename,
             filename: resumeData.filename,
-            verified: resumeData.verification_status === 'VERIFIED',
-            blockchainVerified: !!resumeData.blockchain_tx_hash,
+            verified: false,
+            blockchainVerified: false,
             type: (resumeData.resume_type as string) ?? 'file',
             createdAt: resumeData.created_at,
             ipfsHash: resumeData.ipfs_hash ?? null,

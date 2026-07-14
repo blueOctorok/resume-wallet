@@ -4,10 +4,49 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
 import { applyProjectionToApplicationData } from '@/lib/apply-mvr-to-dot-application'
+import { loadPspDotProjection } from '@/lib/psp-form2-projection'
+import { applyPspProjectionToApplicationData } from '@/lib/apply-psp-to-dot-application'
+import {
+  loadEmploymentForm3Projection,
+  applyEmploymentProjectionToForm3,
+} from '@/lib/employment-form3-projection'
 import type { Form1WithProvenance, Form2WithProvenance } from '@/lib/dot-field-provenance'
+import type { Form3WithProvenance } from '@/lib/employment-form3-provenance'
+
+/** Re-project MVR → PSP → EVR onto application_data (order preserves prior stamps). */
+function reprojectScreeningOntoApp(
+  applicationData: {
+    form1?: Form1WithProvenance | null
+    form2?: Form2WithProvenance | null
+    form3?: Form3WithProvenance | Record<string, unknown> | null
+  },
+  mvr: Awaited<ReturnType<typeof loadMvrDotProjection>>,
+  psp: Awaited<ReturnType<typeof loadPspDotProjection>>,
+  employment: Awaited<ReturnType<typeof loadEmploymentForm3Projection>>,
+) {
+  let form1 = applicationData.form1 ?? null
+  let form2 = applicationData.form2 ?? null
+  let form3 = (applicationData.form3 as Form3WithProvenance | null) ?? null
+
+  if (mvr && (form1 || form2)) {
+    const next = applyProjectionToApplicationData({ form1, form2, form3 }, mvr)
+    form1 = next.form1
+    form2 = next.form2
+  }
+  if (psp && (form1 || form2)) {
+    const next = applyPspProjectionToApplicationData({ form1, form2, form3 }, psp)
+    form1 = next.form1 as Form1WithProvenance | null
+    form2 = next.form2
+  }
+  // Form 3 EVR projection runs even when form3 is empty — injects verified rows
+  if (employment) {
+    form3 = applyEmploymentProjectionToForm3(form3, employment)
+  }
+  return { form1, form2, form3 }
+}
 
 /**
- * GET — load saved application. Re-projects MVR-locked Form 1 + Form 2 rows from live MVR.
+ * GET — load saved application. Re-projects MVR + PSP locked Form 2 rows from live results.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -36,20 +75,20 @@ export async function GET(request: NextRequest) {
     const applicationData = (data.application_data ?? {}) as {
       form1?: Form1WithProvenance | null
       form2?: Form2WithProvenance | null
-      form3?: unknown
+      form3?: Form3WithProvenance | null
     }
 
-    const projection = await loadMvrDotProjection(supabase, userId)
-    if (projection && (applicationData.form1 || applicationData.form2)) {
-      const next = applyProjectionToApplicationData(applicationData, projection)
-      applicationData.form1 = next.form1
-      applicationData.form2 = next.form2
-    }
+    const [mvr, psp, employment] = await Promise.all([
+      loadMvrDotProjection(supabase, userId),
+      loadPspDotProjection(supabase, userId),
+      loadEmploymentForm3Projection(supabase, userId),
+    ])
+    const next = reprojectScreeningOntoApp(applicationData, mvr, psp, employment)
 
     return NextResponse.json({
       application: {
         ...data,
-        application_data: applicationData,
+        application_data: next,
       },
     })
   } catch (e) {
@@ -59,8 +98,8 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST — save in-progress DOT application. MVR-locked Form 1 fields and Form 2
- * MVR rows are overwritten from the live MVR before persist (P3.7).
+ * POST — save in-progress DOT application. MVR + PSP Form 2 rows are overwritten
+ * from live screening results before persist (P3.7).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -79,38 +118,39 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    let safeForm1 = form1Data as Form1WithProvenance | null
-    let safeForm2 = form2Data as Form2WithProvenance | null
+    const [mvr, psp, employment] = await Promise.all([
+      loadMvrDotProjection(supabase, userId),
+      loadPspDotProjection(supabase, userId),
+      loadEmploymentForm3Projection(supabase, userId),
+    ])
 
-    const projection = await loadMvrDotProjection(supabase, userId)
-    if (projection && (form1Data || form2Data)) {
-      const next = applyProjectionToApplicationData(
-        {
-          form1: (form1Data as Record<string, unknown>) ?? null,
-          form2: (form2Data as Record<string, unknown>) ?? null,
-          form3: form3Data,
-        },
-        projection,
-      )
-      safeForm1 = next.form1
-      safeForm2 = next.form2
-    }
+    const projected = reprojectScreeningOntoApp(
+      {
+        form1: (form1Data as Form1WithProvenance) ?? null,
+        form2: (form2Data as Form2WithProvenance) ?? null,
+        form3: form3Data,
+      },
+      mvr,
+      psp,
+      employment,
+    )
 
     const applicationData = {
-      form1: safeForm1 || null,
-      form2: safeForm2 || null,
-      form3: form3Data || null,
+      form1: projected.form1 || null,
+      form2: projected.form2 || null,
+      form3: projected.form3 || null,
     }
 
     console.log('[SAVE PROGRESS] Saving application progress:', {
       userId,
       currentStep,
-      hasForm1: !!safeForm1,
-      hasForm2: !!safeForm2,
-      hasForm3: !!form3Data,
-      lockedFields: projection
-        ? Object.keys(projection.form1Provenance.fields).length
-        : 0,
+      hasForm1: !!projected.form1,
+      hasForm2: !!projected.form2,
+      hasForm3: !!projected.form3,
+      lockedFields: mvr ? Object.keys(mvr.form1Provenance.fields).length : 0,
+      pspCrashes: psp?.crashCount ?? 0,
+      pspInspections: psp?.inspectionCount ?? 0,
+      verifiedEmployers: employment?.verifiedCount ?? 0,
     })
 
     const result = await saveDriverApplicationClient(
@@ -128,8 +168,9 @@ export async function POST(request: NextRequest) {
         isComplete: result.is_complete,
         updatedAt: result.updated_at,
       },
-      form1Data: safeForm1,
-      form2Data: safeForm2,
+      form1Data: projected.form1,
+      form2Data: projected.form2,
+      form3Data: projected.form3,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred'
