@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, MapPin, CreditCard } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'

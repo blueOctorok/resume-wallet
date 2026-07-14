@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — MVR/PSP order form crash (`CreditCard is not defined`)** (2026-07-14)
+
+Ordering MVR (or PSP) from the hub crashed Candidate Hub: `CreditCard` was used in the license section header but not imported from `lucide-react`.
+
+| File | Change |
+|---|---|
+| `MvrOrderForm.tsx` | Add `CreditCard` import |
+| `PspOrderForm.tsx` | Same (identical license section) |
+
+---
+
 ## **P3.7 — DOT field badges → attestation honesty tier** (2026-07-14)
 
 Issuer-locked DOT fields upgrade badge copy when a matching attestation exists: Accio/EVR issuer copy by default → Verified by ZKnight for `signed_jwt` → Proven on Midnight only when `proof.kind === 'midnight_zk'`.
