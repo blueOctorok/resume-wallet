@@ -1,31 +1,18 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import Image from 'next/image'
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
-import type { PageType } from '@/stores/types'
-import {
-  useHubBlocksStore,
-  useInstalledBlocks,
-  useStormiAutoWelcomeCandidateDone,
-} from '@/stores/hub-blocks-store'
+import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
-import { getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import Button from '@/components/ui/Button'
-import BlockCard from '@/components/ui/BlockCard'
-import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockPickerModal from './BlockPickerModal'
-import StormiContextModal from './StormiContextModal'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import { useHubContext } from '@/lib/ava-chat'
-import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
 import HubWorkspaceCareerCard from '@/components/hub/HubWorkspaceCareerCard'
-import HubInboxSection from '@/components/hub/HubInboxSection'
 import HubAccountSection from '@/components/hub/HubAccountSection'
 
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
@@ -56,13 +43,14 @@ function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
   )
 }
 
-// ── CandidateHub ─────────────────────────────────────────────────────────────
-
+/**
+ * Candidate hub home — career card builder only.
+ * Inbox + Ask AI live under My Hub (see CandidateInboxPage / CandidateAskAiPage).
+ */
 export default function CandidateHub() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
-  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
 
   const [refreshKey, setRefreshKey] = useState(0)
@@ -71,27 +59,15 @@ export default function CandidateHub() {
   const isLoading = useHubBlocksStore((s) => s.isLoading)
   const fetchError = useHubBlocksStore((s) => s.fetchError)
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
-  const setStormiAutoWelcomeCandidateDone = useHubBlocksStore((s) => s.setStormiAutoWelcomeCandidateDone)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
 
   const openPickerAfterHub = useUIModeStore((s) => s.openPickerAfterHub)
   const setOpenPickerAfterHub = useUIModeStore((s) => s.setOpenPickerAfterHub)
 
-  const installedBlocks = useInstalledBlocks()
-  const hubContext = useHubContext()
-  const stormiAutoWelcomeCandidateDone = useStormiAutoWelcomeCandidateDone()
-  const isStormiContextModalOpen = useHubBlocksStore((s) => s.isStormiContextModalOpen)
-
-  const candidateEmptyHub = installedBlocks.every((b) => isCoreBlock(b.blockType))
-
-  // Primary fetchHubData call lives in CandidateShell (serves both modes).
-  // syncDriverHubFromApi is already called inside fetchHubData, but we keep
-  // this for in-Construct refreshes (e.g. after block edits).
   useEffect(() => {
     if (sessionUserId) void syncDriverHubFromApi(sessionUserId)
   }, [sessionUserId])
 
-  /** One-shot from Apply mode: open the block picker once Construct is visible. */
   useEffect(() => {
     if (!openPickerAfterHub) return
     openPicker()
@@ -143,66 +119,12 @@ export default function CandidateHub() {
   return (
     <>
       <BlockPickerModal />
-      {isStormiContextModalOpen && <StormiContextModal />}
 
-      <div className='w-full'>
-        <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start lg:gap-x-8'>
-          <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1'>
-            {sessionUserId ? (
-              <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} />
-            ) : null}
-
-            <ReturnToApplyBanner isDark={isDark} />
-
-            <HubWorkspaceCareerCard refreshNonce={refreshKey} />
-
-            <HubInboxSection
-              sessionUserId={sessionUserId}
-              onNavigateToResume={(targetBlockType) => {
-                const route = targetBlockType ? getBlockDefinition(targetBlockType)?.pageRoute : null
-                if (route) setCurrentPage(route as PageType)
-                else setCurrentPage('storm-resume')
-              }}
-              onNavigateToDotApp={() => setCurrentPage('dotapp')}
-            />
-
-            {sessionUserId ? <HubAccountSection /> : null}
-          </div>
-
-          <aside className='min-w-0 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 lg:self-start'>
-            <div id='stormi-hub-panel' className='scroll-mt-24'>
-              <HubSectionPanel isDark={isDark} accent='violet'>
-                <BlockCard
-                  variant='embed'
-                  headerIconSlot={
-                    <Image
-                      src='/ava-robot.png'
-                      alt=''
-                      width={36}
-                      height={36}
-                      className={cn('object-contain', !isDark && 'invert')}
-                    />
-                  }
-                  title='Ask AI'
-                  description='Ranked jobs, interview practice, and talking points from your Career Card — you choose every apply.'
-                >
-                  <StormiChatPanel
-                    mode='candidate'
-                    sessionUserId={sessionUserId}
-                    hubContext={hubContext}
-                    candidateEmptyHub={candidateEmptyHub}
-                    stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
-                    onStormiAutoWelcomeSynced={() => {
-                      setStormiAutoWelcomeCandidateDone(true)
-                      if (sessionUserId) void fetchHubData(sessionUserId)
-                    }}
-                    hubEmbedSurface
-                  />
-                </BlockCard>
-              </HubSectionPanel>
-            </div>
-          </aside>
-        </div>
+      <div className='mx-auto w-full max-w-3xl space-y-6'>
+        {sessionUserId ? <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} /> : null}
+        <ReturnToApplyBanner isDark={isDark} />
+        <HubWorkspaceCareerCard refreshNonce={refreshKey} />
+        {sessionUserId ? <HubAccountSection /> : null}
       </div>
     </>
   )

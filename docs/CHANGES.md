@@ -4,6 +4,44 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **My Hub menu — drop Switch Role / Journey Tips / Journey Guide** (2026-07-14)
+
+Candidate My Hub dropdown keeps Career Card / Inbox / Ask AI only.
+
+---
+
+## **Construct section chrome — left vault + clearer content** (2026-07-14)
+
+Vault illustration stays on the left with a color accent strip; content column gets a tighter accent-colored label + actions row. Resume/DOT bodies drop duplicate icons and use a cleaner left-aligned header.
+
+---
+
+## **Hub declutter — Inbox + Ask AI under My Hub** (2026-07-14)
+
+Candidate home is career-card focused. Inbox and Ask AI are dedicated pages from the My Hub menu.
+
+| File | Change |
+|---|---|
+| `CandidateHub.tsx` | Removed Inbox + Ask AI right rail; single-column career card |
+| `CandidateInboxPage` / `CandidateAskAiPage` | New pages |
+| `CandidateShell` + `PageType` | Routes `inbox`, `ask-ai` |
+| `Navigation.tsx` | My Hub → Career Card / Inbox / Ask AI |
+
+---
+
+## **Drivers-only career card features** (2026-07-14)
+
+Candidate feature install is drivers-wedge only: flat picker (no General / Drivers / Developers), named primary CTAs under the card, and “Add features to career card” copy.
+
+| File | Change |
+|---|---|
+| `block-registry.ts` | Picker + suggest = `drivers` only; hide general EV; `getDriverFeatureCtas` |
+| `BlockPickerModal.tsx` | Flat list; deleted category step / `BlockPickerCategoryCard` |
+| `CareerCardFeatureActions` | Per-block accent tiles + teal browse CTA (replaces plain primary buttons) |
+| PathGuidance / CareerPathSteps / empty states / walkthrough | “features” language |
+
+---
+
 ## **Fix — MVR/PSP order form crash (`CreditCard is not defined`)** (2026-07-14)
 
 Ordering MVR (or PSP) from the hub crashed Candidate Hub: `CreditCard` was used in the license section header but not imported from `lucide-react`.

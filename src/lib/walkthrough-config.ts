@@ -1,4 +1,4 @@
-import { suggestCategories, BLOCK_CATEGORIES } from '@/lib/block-registry'
+import { suggestCategories } from '@/lib/block-registry'
 
 /** One slide in a multi-step Stormi / hub walkthrough */
 export interface WalkthroughStep {
@@ -11,13 +11,9 @@ export interface WalkthroughStep {
 
 export const CANDIDATE_HUB_WELCOME_STEP_ID = 'candidate.hubWelcome' as const
 
-function categoryLabel(id: string): string {
-  return BLOCK_CATEGORIES.find((c) => c.id === id)?.label ?? id
-}
-
 /**
  * Static steps 2–3 after the AI-written welcome (step 1).
- * Step 3 uses `suggestCategories` so we never push driver/dev examples when the text match is general-only.
+ * Drivers wedge: feature catalog is flat — no General / Developers lanes.
  */
 export function candidateHubStaticSteps(input: {
   firstName: string
@@ -28,38 +24,24 @@ export function candidateHubStaticSteps(input: {
   const { firstName, occupation, seekingReason, hasBlocks } = input
   const name = firstName.trim() || 'there'
   const occ = occupation.trim() || 'your field'
-  const categories = suggestCategories(occupation, seekingReason)
-  const hasDrivers = categories.includes('drivers')
-  const hasDevelopers = categories.includes('developers')
-  const generalOnly = !hasDrivers && !hasDevelopers
+  // Keep call so onboarding still records suggested categories (always drivers).
+  void suggestCategories(occupation, seekingReason)
 
-  const blocksBody = hasBlocks
-    ? `Your hub is built from blocks. Each block is one piece of your profile — resume, verifications, portfolio pieces, and more.\n\n` +
-      `Keep filling them in to strengthen your Career Card — the snapshot employers see when they discover you.`
-    : `Your hub is made of blocks. Each block is one piece of your profile — resume, verifications, portfolio pieces, and more.\n\n` +
-      `Right now your hub is empty. Add blocks to build your Career Card: the snapshot employers see when they discover you. More real data = a stronger card.`
+  const featuresBody = hasBlocks
+    ? `Your career card grows from features you add — DOT application, MVR, PSP, CDL credentials, and more.\n\n` +
+      `Keep finishing them to strengthen the snapshot employers see when they discover you.`
+    : `Your career card grows from features you add — DOT application, MVR, PSP, CDL credentials, and more.\n\n` +
+      `Right now the card is light. Add a feature to start building what employers see. More real data = a stronger card.`
 
-  let nextBody: string
-  if (generalOnly) {
-    nextBody =
-      `Based on what you shared (${occ}), our catalog leans on **${categoryLabel('general')}** blocks for now — resume, file upload, and employment verification — so you can still build an apply-ready Career Card.\n\n` +
-      `Open **Add Blocks** and start with one general block. If you want specialty blocks for your lane later, just ask the assistant — we're always expanding.`
-  } else {
-    const lanes = categories
-      .filter((id) => id !== 'general')
-      .map((id) => categoryLabel(id))
-      .join(' and ')
-    const lanePhrase = lanes ? `**${lanes}** and **${categoryLabel('general')}**` : `**${categoryLabel('general')}**`
-    nextBody =
-      `The assistant matched what you shared to ${lanePhrase} categories — those show up first when you browse **Add Blocks**.\n\n` +
-      `Pick one block to install now; you can add more anytime.`
-  }
+  const nextBody =
+    `Based on what you shared (${occ}), start with the features that carriers care about most — **DOT Application**, **MVR**, and **PSP**.\n\n` +
+    `Use the buttons under your career card, or open **Add features to career card** to browse the full list.`
 
   return [
     {
       id: 'blocks',
-      title: `${name}, what are blocks?`,
-      body: blocksBody,
+      title: `${name}, what strengthens your card?`,
+      body: featuresBody,
     },
     {
       id: 'next',

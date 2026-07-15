@@ -36,11 +36,11 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
         <IdCard className='w-8 h-8 mx-auto mb-2 opacity-50 text-gray-500 dark:text-gray-400' />
         <p className='text-sm font-medium text-gray-800 dark:text-gray-200'>Nothing here yet</p>
         <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-          {isEmployer ? 'Load your hub to see your job path.' : 'Add blocks from the store to see your next steps.'}
+          {isEmployer ? 'Load your hub to see your job path.' : 'Add features to your career card to see your next steps.'}
         </p>
         {!isEmployer && (
           <Button type='button' variant='primary' size='sm' className='mt-3' onClick={() => openPicker()}>
-            Open block store
+            Add features
           </Button>
         )}
       </div>

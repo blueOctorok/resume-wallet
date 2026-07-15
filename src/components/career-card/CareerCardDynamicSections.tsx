@@ -9,17 +9,18 @@
 
 import type { ReactNode, TouchEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { CareerCardMode, CareerCardSection } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
-import { isCoreBlock, getBlockDefinition } from '@/lib/block-registry'
+import { isCoreBlock, getBlockDefinition, getDriverFeatureCtas } from '@/lib/block-registry'
 import { groupSectionsByCardPage } from '@/lib/career-card-pages'
 import { CARD_PAGE_MAX } from '@/lib/hub-block-config'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import { pickHubDocForCareerBlock } from '@/lib/hub-document-types'
 import ConstructSectionWrapper from '@/components/career-card/ConstructSectionWrapper'
+import CareerCardFeatureActions from '@/components/career-card/CareerCardFeatureActions'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 
 function pageOf(s: CareerCardSection): number {
@@ -46,6 +47,8 @@ export interface CareerCardDynamicSectionsProps {
   sessionUserId?: string
   onNavigateToBlock?: (blockType: string) => void
   onAddBlock?: () => void
+  /** Install a priority driver feature (+ navigate when it has a pageRoute) */
+  onAddFeature?: (blockType: string) => void
   hubDocuments?: HubDocumentsHandle
   selfSectionNav?: 'resume-only' | 'all'
   recentlyInstalledBlockIds?: string[]
@@ -60,6 +63,7 @@ export default function CareerCardDynamicSections({
   sessionUserId,
   onNavigateToBlock,
   onAddBlock,
+  onAddFeature,
   hubDocuments,
   selfSectionNav = 'all',
   recentlyInstalledBlockIds,
@@ -345,6 +349,11 @@ export default function CareerCardDynamicSections({
     </div>
   ) : null
 
+  const featureCtas = useMemo(() => {
+    const installed = new Set(installedBlocks.map((b) => b.blockType))
+    return getDriverFeatureCtas(installed)
+  }, [installedBlocks])
+
   return (
     <div className='space-y-5 relative z-[1]'>
       <div
@@ -367,20 +376,13 @@ export default function CareerCardDynamicSections({
 
       {pageNavRow}
 
-      {mode === 'construct' && onAddBlock && (
-        <button
-          type='button'
-          onClick={onAddBlock}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-sm font-semibold transition-colors',
-            isDark
-              ? 'border-gray-600 text-gray-400 hover:border-teal-500/50 hover:text-teal-300 hover:bg-teal-500/5'
-              : 'border-slate-300 text-slate-500 hover:border-teal-500/50 hover:text-teal-700 hover:bg-teal-50',
-          )}
-        >
-          <Plus className='w-4 h-4' />
-          Add block
-        </button>
+      {mode === 'construct' && (onAddFeature || onAddBlock) && (
+        <CareerCardFeatureActions
+          isDark={isDark}
+          featureCtas={featureCtas}
+          onAddFeature={onAddFeature}
+          onBrowseFeatures={onAddBlock}
+        />
       )}
     </div>
   )

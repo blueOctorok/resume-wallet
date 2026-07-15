@@ -302,20 +302,26 @@ export default function ResumeSection({
           aria-hidden
           className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent dark:via-teal-400/20'
         />
-        <div className='flex flex-wrap items-start justify-between gap-2 mb-1'>
-          <div className='flex items-center gap-2 min-w-0'>
-            <FileText className={cn('w-4 h-4 flex-shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} />
-            <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Resume</h3>
-            {isAiExtracted && (
-              <span
-                className={cn(
-                  'text-[10px] font-medium px-2 py-0.5 rounded-md border flex-shrink-0',
-                  isDark ? 'bg-gray-600/40 text-gray-300 border-gray-500/40' : 'bg-gray-100 text-gray-600 border-gray-200',
-                )}
-              >
-                Parsed from resume
-              </span>
-            )}
+        <div className='mb-3 flex flex-wrap items-start justify-between gap-2'>
+          <div className='min-w-0 flex-1'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <p className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>
+                {data.title || data.filename || 'Resume'}
+              </p>
+              {isAiExtracted && (
+                <span
+                  className={cn(
+                    'text-[10px] font-medium px-2 py-0.5 rounded-md border flex-shrink-0',
+                    isDark ? 'bg-gray-600/40 text-gray-300 border-gray-500/40' : 'bg-gray-100 text-gray-600 border-gray-200',
+                  )}
+                >
+                  Parsed from resume
+                </span>
+              )}
+            </div>
+            <p className={cn('mt-0.5 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              On file · {new Date(data.createdAt).toLocaleDateString()}
+            </p>
           </div>
           {canOpenFull && (
             <Button
@@ -333,27 +339,6 @@ export default function ResumeSection({
               Full resume
             </Button>
           )}
-        </div>
-
-        <div className='flex items-center gap-3 mb-1'>
-          <div
-            className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-              isDark ? 'bg-gray-700' : 'bg-gray-200/60',
-            )}
-          >
-            <FileText className={cn('w-5 h-5', isDark ? 'text-gray-400' : 'text-gray-500')} />
-          </div>
-          <div className='min-w-0 flex-1'>
-            <p className={cn('text-sm font-medium truncate', isDark ? 'text-gray-200' : 'text-gray-800')}>
-              {data.title || data.filename}
-            </p>
-            <p className={cn('text-xs flex flex-wrap items-center gap-x-1 gap-y-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
-              <span>
-                On file · {new Date(data.createdAt).toLocaleDateString()}
-              </span>
-            </p>
-          </div>
         </div>
 
         {isBuiltResume && structuredRecord && isDevShape && (

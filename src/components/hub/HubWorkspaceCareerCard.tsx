@@ -34,6 +34,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const addBlock = useHubBlocksStore((s) => s.addBlock)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const setUIMode = useUIModeStore((s) => s.setMode)
   const installedBlocks = useInstalledBlocks()
@@ -53,6 +54,17 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
       if (route) setCurrentPage(route as PageType)
     },
     [setCurrentPage],
+  )
+
+  const handleAddFeature = useCallback(
+    async (blockType: string) => {
+      if (!sessionUserId) return
+      await addBlock(blockType, sessionUserId)
+      const route = getBlockDefinition(blockType)?.pageRoute
+      if (route) setCurrentPage(route as PageType)
+      void refresh()
+    },
+    [sessionUserId, addBlock, setCurrentPage, refresh],
   )
 
   if (!sessionUserId) {
@@ -98,6 +110,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
         sessionUserId={sessionUserId}
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
+        onAddFeature={handleAddFeature}
         onCardMutation={() => void refresh()}
         onAvatarUploadSuccess={(url) => {
           updateAvatarUrl(url)

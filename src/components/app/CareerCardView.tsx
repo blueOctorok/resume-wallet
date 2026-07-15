@@ -139,7 +139,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
           This is your Career Card
         </p>
         <p className={cn('text-xs mt-1', isDark ? 'text-teal-400/70' : 'text-teal-600')}>
-          Employers see this when searching for candidates. It reflects the blocks in your hub.
+          Employers see this when searching for candidates. It reflects the features on your career card.
         </p>
       </div>
 

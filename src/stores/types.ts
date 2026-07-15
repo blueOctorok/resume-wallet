@@ -32,6 +32,8 @@ export type PageType =
   | 'career-card'
   | 'profile-setup'
   | 'messages'
+  | 'inbox'
+  | 'ask-ai'
   | 'employment-verification'
   | 'screening-consent'
   | null

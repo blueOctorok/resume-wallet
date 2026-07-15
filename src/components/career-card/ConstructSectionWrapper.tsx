@@ -93,29 +93,44 @@ export default function ConstructSectionWrapper({
   return (
     <div
       className={cn(
-        'rounded-xl border p-3 sm:p-4',
+        'relative overflow-hidden rounded-xl border p-3 sm:p-4',
         isDark ? 'border-gray-700/80 bg-gray-900/30' : 'border-slate-200 bg-white/80',
       )}
     >
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4'>
-        <div className='relative mx-auto h-[4.5rem] w-[4.5rem] shrink-0 sm:mx-0 sm:h-[5rem] sm:w-[5rem]'>
+      {/* Accent strip — ties the vault tile to the content column */}
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-0 left-0 w-0.5 sm:w-1',
+          colors.badgeColor,
+          'opacity-70',
+        )}
+      />
+
+      <div className='flex gap-3 sm:gap-4 pl-1 sm:pl-1.5'>
+        <div className='relative mt-0.5 h-[4.25rem] w-[4.25rem] shrink-0 sm:h-[4.75rem] sm:w-[4.75rem]'>
           <VaultCredentialChrome
             isDark={isDark}
             glowColor={colors.glowColor}
             hasRoute
-            className='h-full min-h-[4.5rem] sm:min-h-[5rem]'
+            className='h-full min-h-[4.25rem] sm:min-h-[4.75rem]'
             style={{ filter: vaultFilter }}
           >
-            <div className='flex h-full scale-[0.82] items-center justify-center p-1 sm:scale-90'>
+            <div className='flex h-full scale-[0.82] items-center justify-center p-1 sm:scale-[0.88]'>
               <Illustration accentText={accentClass} isDark={isDark} />
             </div>
           </VaultCredentialChrome>
         </div>
 
-        <div className='min-w-0 flex-1 space-y-3'>
-          <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <p className={cn('text-xs font-semibold', isDark ? 'text-gray-300' : 'text-slate-600')}>
+        <div className='min-w-0 flex-1 space-y-2.5'>
+          <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
+            <div className='flex min-w-0 flex-wrap items-center gap-2'>
+              <p
+                className={cn(
+                  'text-[11px] font-bold uppercase tracking-[0.12em]',
+                  isDark ? colors.iconText.dark : colors.iconText.light,
+                )}
+              >
                 {getBlockDefinition(blockType)?.label ?? blockType}
               </p>
               {doc &&
@@ -137,7 +152,7 @@ export default function ConstructSectionWrapper({
                   </span>
                 )}
             </div>
-            <div className='flex flex-wrap items-center gap-1.5 sm:justify-end'>
+            <div className='flex flex-wrap items-center gap-1.5'>
               {!doc && (
                 <Button type='button' variant='secondary' size='sm' onClick={() => onNavigateToBlock(blockType)}>
                   Set up

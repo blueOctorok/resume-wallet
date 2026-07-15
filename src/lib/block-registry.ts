@@ -257,6 +257,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: null,
     completionField: null,
     requiredEmployerBlocks: null,
+    /** Drivers-wedge: hide general EV from candidate feature picker. */
+    hiddenFromBlockPicker: true,
   },
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
@@ -581,9 +583,17 @@ export function employerCanRequest(
   return blockDef.requiredEmployerBlocks.some((eb) => installedEmployerBlocks.includes(eb))
 }
 
-/** Blocks shown in Add Blocks (excludes legacy aliases). */
+/**
+ * Candidate feature picker is drivers-only (no General / Developers category step).
+ * Legacy resume aliases + general EV stay hidden via `hiddenFromBlockPicker`.
+ */
+function isCandidatePickerBlock(b: BlockDefinition): boolean {
+  return !b.hiddenFromBlockPicker && b.categoryId === 'drivers'
+}
+
+/** Features shown in Add features to career card (drivers wedge). */
 export function getPickerBlockDefinitions(): BlockDefinition[] {
-  return BLOCK_DEFINITIONS.filter((b) => !b.hiddenFromBlockPicker)
+  return BLOCK_DEFINITIONS.filter(isCandidatePickerBlock)
 }
 
 /** Get all block definitions for a category, sorted by complexity (simple first). */
@@ -592,6 +602,48 @@ export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
   return BLOCK_DEFINITIONS
     .filter((b) => b.categoryId === categoryId && !b.hiddenFromBlockPicker)
     .sort((a, b) => order[a.complexity] - order[b.complexity])
+}
+
+/**
+ * Priority feature CTAs under the career card (construct mode).
+ * Order is product-locked; labels are candidate-facing (not registry labels).
+ */
+export const DRIVER_FEATURE_CTA_IDS = [
+  'driver-dot-application',
+  'driver-mvr',
+  'driver-psp',
+  'driver-cdl-credentials',
+  'driver-screening-consent',
+] as const
+
+const DRIVER_FEATURE_CTA_LABELS: Record<(typeof DRIVER_FEATURE_CTA_IDS)[number], string> = {
+  'driver-dot-application': 'Add DOT Application',
+  'driver-mvr': 'Order MVR',
+  'driver-psp': 'Add PSP Report',
+  'driver-cdl-credentials': 'Add CDL Credentials',
+  'driver-screening-consent': 'Add Screening Consent',
+}
+
+export interface DriverFeatureCta {
+  id: string
+  label: string
+  pageRoute: string | null
+}
+
+/** Missing priority driver features for named CTAs under the career card. */
+export function getDriverFeatureCtas(installedTypes: Set<string> | Iterable<string>): DriverFeatureCta[] {
+  const installed = installedTypes instanceof Set ? installedTypes : new Set(installedTypes)
+  return DRIVER_FEATURE_CTA_IDS.filter((id) => !installed.has(id)).flatMap((id) => {
+    const def = getBlockDefinition(id)
+    if (!def || def.hiddenFromBlockPicker) return []
+    return [
+      {
+        id,
+        label: DRIVER_FEATURE_CTA_LABELS[id] ?? def.label,
+        pageRoute: def.pageRoute,
+      },
+    ]
+  })
 }
 
 /**
@@ -604,7 +656,7 @@ export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
 export function suggestBlocks(occupation: string, seekingReason: string): string[] {
   const input = `${occupation} ${seekingReason}`.toLowerCase()
 
-  const scored = BLOCK_DEFINITIONS.filter((b) => !b.hiddenFromBlockPicker).map((block) => {
+  const scored = BLOCK_DEFINITIONS.filter(isCandidatePickerBlock).map((block) => {
     const score = block.suggestedFor.filter((keyword) =>
       input.includes(keyword.toLowerCase())
     ).length
@@ -619,19 +671,8 @@ export function suggestBlocks(occupation: string, seekingReason: string): string
 
 /**
  * Suggest relevant category ids based on free-text input.
- * Used to pre-filter the block picker when Stormi populates suggested_categories.
+ * Drivers wedge: picker is flat/drivers-only — always `drivers`.
  */
-export function suggestCategories(occupation: string, seekingReason: string): string[] {
-  const suggestedBlockIds = suggestBlocks(occupation, seekingReason)
-  const categories = new Set<string>()
-
-  for (const id of suggestedBlockIds) {
-    const block = getBlockDefinition(id)
-    if (block) categories.add(block.categoryId)
-  }
-
-  // General category is always included — it applies to everyone
-  categories.add('general')
-
-  return Array.from(categories)
+export function suggestCategories(_occupation: string, _seekingReason: string): string[] {
+  return ['drivers']
 }

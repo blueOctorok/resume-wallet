@@ -103,8 +103,10 @@ interface ProjectedCareerCardProps {
   mode: CareerCardMode
   /** Navigate to a block's page (self mode only) */
   onNavigateToBlock?: (blockType: string) => void
-  /** Open the block picker to add missing blocks (self mode only) */
+  /** Open the feature picker (construct / self) */
   onAddBlock?: () => void
+  /** Install a priority driver feature and navigate when it has a pageRoute */
+  onAddFeature?: (blockType: string) => void
   /** Connect action (public mode) */
   onConnect?: () => void
   /** Used by DotAppSection to fetch the full DOT preview (self mode only) */
@@ -182,6 +184,7 @@ export default function ProjectedCareerCard({
   mode,
   onNavigateToBlock,
   onAddBlock,
+  onAddFeature,
   onConnect,
   sessionUserId,
   footerSlot,
@@ -479,6 +482,7 @@ export default function ProjectedCareerCard({
             sessionUserId={sessionUserId}
             onNavigateToBlock={onNavigateToBlock}
             onAddBlock={onAddBlock}
+            onAddFeature={onAddFeature}
             hubDocuments={hubDocuments}
             selfSectionNav={selfSectionNav}
             recentlyInstalledBlockIds={recentlyInstalledBlockIds}
@@ -727,13 +731,13 @@ export default function ProjectedCareerCard({
             </p>
             <p className={cn('text-xs mb-5 max-w-xs mx-auto', isDark ? 'text-gray-400' : 'text-gray-600')}>
               {selfSectionNav === 'resume-only'
-                ? 'Specialized blocks (DOT, MVR, portfolio, etc.) are added in Construct — your resume stays here in Apply.'
-                : 'Add blocks — they appear here in the order you install them. Each block is a capability employers can discover.'}
+                ? 'Specialized features (DOT, MVR, etc.) are added in Construct — your resume stays here in Apply.'
+                : 'Add features — they appear here in the order you install them. Each one is a capability employers can discover.'}
             </p>
             {onAddBlock && (
               <Button type='button' variant='primary' size='sm' onClick={onAddBlock}>
                 <Plus className='w-4 h-4' />
-                {selfSectionNav === 'resume-only' ? 'Open Construct mode' : 'Add blocks'}
+                {selfSectionNav === 'resume-only' ? 'Open Construct mode' : 'Add features to career card'}
               </Button>
             )}
           </div>

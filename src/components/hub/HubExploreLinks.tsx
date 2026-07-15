@@ -18,9 +18,7 @@ export default function HubExploreLinks({ onCloseDrawer, className }: HubExplore
 
   const scrollToStormi = () => {
     onCloseDrawer?.()
-    requestAnimationFrame(() => {
-      document.getElementById('stormi-hub-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    })
+    setCurrentPage('ask-ai')
   }
 
   return (

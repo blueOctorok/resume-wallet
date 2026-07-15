@@ -68,7 +68,7 @@ export default function PathGuidance({
   }
 
   const stepsCandidate = [
-    { Icon: LayoutGrid, label: 'Add blocks', caption: 'Block store' },
+    { Icon: LayoutGrid, label: 'Add features', caption: 'Career card' },
     { Icon: ListChecks, label: 'Finish them', caption: 'Your data' },
     { Icon: IdCard, label: 'Career card', caption: 'Share' },
   ] as const
@@ -183,8 +183,8 @@ export default function PathGuidance({
         >
           {audience === 'candidate' ? (
             <>
-              <li>Open the block store and add pieces that match your work (driver, developer, etc.).</li>
-              <li>Each block asks for a slice of your story; completing blocks fills your career card.</li>
+              <li>Add features to your career card (DOT app, MVR, PSP, CDL, and more).</li>
+              <li>Each feature asks for a slice of your story; finishing them strengthens your card.</li>
               <li>Share your card when you apply or network.</li>
             </>
           ) : (
