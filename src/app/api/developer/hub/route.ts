@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('applications')
         .select(`id, status, applied_at, view_count, job_postings (title, companies (company_name))`)
-        .eq('driver_user_id', user.id)
+        .eq('applicant_user_id', user.id)
         .order('applied_at', { ascending: false }),
     ])
 

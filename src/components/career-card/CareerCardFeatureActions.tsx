@@ -44,12 +44,14 @@ export default function CareerCardFeatureActions({
   onAddFeature,
   onBrowseFeatures,
 }: CareerCardFeatureActionsProps) {
+  // Defensive: never crash the hub if a caller omits the array
+  const ctas = featureCtas ?? []
   if (!onAddFeature && !onBrowseFeatures) return null
-  if (featureCtas.length === 0 && !onBrowseFeatures) return null
+  if (ctas.length === 0 && !onBrowseFeatures) return null
 
   return (
     <div className='space-y-3 pt-1'>
-      {onAddFeature && featureCtas.length > 0 && (
+      {onAddFeature && ctas.length > 0 && (
         <div className='space-y-2.5'>
           <div className='flex items-baseline justify-between gap-3 px-0.5'>
             <p
@@ -61,12 +63,12 @@ export default function CareerCardFeatureActions({
               Strengthen your card
             </p>
             <p className={cn('text-[11px] tabular-nums', isDark ? 'text-gray-500' : 'text-slate-500')}>
-              {featureCtas.length} available
+              {ctas.length} available
             </p>
           </div>
 
           <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
-            {featureCtas.map((cta) => {
+            {ctas.map((cta) => {
               const def = getBlockDefinition(cta.id)
               const colors = getBlockColor(cta.id)
               const Icon = FEATURE_ICONS[cta.id] ?? Plus

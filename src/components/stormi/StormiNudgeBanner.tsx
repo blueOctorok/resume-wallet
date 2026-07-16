@@ -65,7 +65,9 @@ export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudge
 
   const visible = useMemo((): Nudge[] => {
     const list: Nudge[] = []
-    const hasCdlBlock = installedBlocks.some((b) => b.blockType === 'driver-cdl-credentials')
+    const blocks = installedBlocks ?? []
+    const apps = dotApplications ?? []
+    const hasCdlBlock = blocks.some((b) => b.blockType === 'driver-cdl-credentials')
     const pr = profile as { cdl_number?: string | null; cdl_state?: string | null } | null
     const cdlThin = !pr?.cdl_number || !pr?.cdl_state
     if (hasCdlBlock && cdlThin) {
@@ -80,7 +82,7 @@ export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudge
       })
     }
 
-    const staleDot = dotApplications.find((a) => {
+    const staleDot = apps.find((a) => {
       if (a.isComplete) return false
       const started = new Date(a.createdAt).getTime()
       return Date.now() - started > 5 * 86400000
@@ -97,7 +99,7 @@ export default function StormiNudgeBanner({ isDark, sessionUserId }: StormiNudge
     }
 
     const week = stats?.careerCardViewsThisWeek ?? 0
-    if (week > 0 && installedBlocks.length < 4) {
+    if (week > 0 && blocks.length < 4) {
       list.push({
         id: 'views-grow',
         title: 'Employers are looking',

@@ -1319,7 +1319,7 @@ export default function PersonalInfoForm1({
                 </span>
               )}
             </h3>
-            {formData.currentLicenses.length > 1 && index > 0 && (
+            {(formData.currentLicenses?.length ?? 0) > 1 && index > 0 && (
               <button
                 type='button'
                 onClick={() => removeCurrentLicense(index)}

@@ -45,7 +45,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
 
   const { card, loading, error, refresh } = useProjectedCareerCard(sessionUserId, {
     refreshNonce,
-    installedBlockCount: installedBlocks.length,
+    installedBlockCount: installedBlocks?.length ?? 0,
   })
 
   const handleNavigateToBlock = useCallback(

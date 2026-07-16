@@ -70,14 +70,15 @@ export default function CareerCardDynamicSections({
   renderSectionInner,
   onCardMutation,
 }: CareerCardDynamicSectionsProps) {
-  const pages = useMemo(() => groupSectionsByCardPage(sections), [sections])
+  const safeSections = sections ?? []
+  const pages = useMemo(() => groupSectionsByCardPage(safeSections), [safeSections])
   const multiPage = pages.length > 1
   const [activePage, setActivePage] = useState(0)
   const [flipOut, setFlipOut] = useState(false)
   const touchStartX = useRef<number | null>(null)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
   const patchBlockConfig = useHubBlocksStore((s) => s.patchBlockConfig)
-  const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
+  const installedBlocks = useHubBlocksStore((s) => s.installedBlocks) ?? []
 
   useEffect(() => {
     if (activePage >= pages.length) setActivePage(Math.max(0, pages.length - 1))
@@ -114,8 +115,8 @@ export default function CareerCardDynamicSections({
   /** Global index in `sections` (hub order) for reorder. */
   const sectionGlobalIndex = useCallback(
     (section: CareerCardSection) =>
-      sections.findIndex((s) => (s.hubBlockId && section.hubBlockId ? s.hubBlockId === section.hubBlockId : s.blockType === section.blockType)),
-    [sections],
+      safeSections.findIndex((s) => (s.hubBlockId && section.hubBlockId ? s.hubBlockId === section.hubBlockId : s.blockType === section.blockType)),
+    [safeSections],
   )
 
   const moveSectionOrder = useCallback(
@@ -124,11 +125,11 @@ export default function CareerCardDynamicSections({
       const idx = sectionGlobalIndex(section)
       if (idx < 0) return
       const newIdx = direction === 'up' ? idx - 1 : idx + 1
-      if (newIdx < 0 || newIdx >= sections.length) return
+      if (newIdx < 0 || newIdx >= safeSections.length) return
       // Resume block stays first when present
-      if (sections[0]?.blockType === 'storm-resume' && newIdx === 0 && section.blockType !== 'storm-resume') return
+      if (safeSections[0]?.blockType === 'storm-resume' && newIdx === 0 && section.blockType !== 'storm-resume') return
 
-      const reorderedSections = arrayMove(sections, idx, newIdx)
+      const reorderedSections = arrayMove(safeSections, idx, newIdx)
       const typeOrder = reorderedSections.map((s) => s.blockType)
       const byType = new Map(installedBlocks.map((b) => [b.blockType, b]))
       const reordered = typeOrder
@@ -142,7 +143,7 @@ export default function CareerCardDynamicSections({
 
       void reorderBlocks(finalOrder, sessionUserId).then(() => onCardMutation?.())
     },
-    [sessionUserId, mode, sections, installedBlocks, reorderBlocks, onCardMutation, sectionGlobalIndex],
+    [sessionUserId, mode, safeSections, installedBlocks, reorderBlocks, onCardMutation, sectionGlobalIndex],
   )
 
   const moveBlockToCardPage = useCallback(
@@ -169,9 +170,9 @@ export default function CareerCardDynamicSections({
     if (mode !== 'construct' || !sessionUserId || isCoreBlock(section.blockType)) return null
     const idx = sectionGlobalIndex(section)
     if (idx < 0) return null
-    const stormLocked = sections[0]?.blockType === 'storm-resume'
+    const stormLocked = safeSections[0]?.blockType === 'storm-resume'
     const canUp = idx > 0 && !(stormLocked && idx === 1 && section.blockType !== 'storm-resume')
-    const canDown = idx < sections.length - 1
+    const canDown = idx < safeSections.length - 1
 
     const btn =
       'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm transition-colors disabled:opacity-30 disabled:pointer-events-none'
@@ -350,7 +351,7 @@ export default function CareerCardDynamicSections({
   ) : null
 
   const featureCtas = useMemo(() => {
-    const installed = new Set(installedBlocks.map((b) => b.blockType))
+    const installed = new Set((installedBlocks ?? []).map((b) => b.blockType))
     return getDriverFeatureCtas(installed)
   }, [installedBlocks])
 

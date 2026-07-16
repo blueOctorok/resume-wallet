@@ -209,6 +209,7 @@ export default function ProjectedCareerCard({
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const employerList = data.employerConfirmations ?? []
+  const sections = data.sections ?? []
   const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
 
   const employerScreeningReady = (s: string | undefined) => {
@@ -474,9 +475,9 @@ export default function ProjectedCareerCard({
 
       {/* ── Dynamic Sections ── */}
       <div className='px-6 sm:px-8 pb-7 space-y-5 relative z-[1]'>
-        {data.sections.length > 0 ? (
+        {sections.length > 0 ? (
           <CareerCardDynamicSections
-            sections={data.sections}
+            sections={sections}
             mode={mode}
             isDark={isDark}
             sessionUserId={sessionUserId}
@@ -718,7 +719,7 @@ export default function ProjectedCareerCard({
         )}
 
         {/* ── Empty state (self / construct) ── */}
-        {(mode === 'self' || mode === 'construct') && data.sections.length === 0 && (
+        {(mode === 'self' || mode === 'construct') && sections.length === 0 && (
           <div
             className={cn(
               'rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center',
@@ -745,7 +746,7 @@ export default function ProjectedCareerCard({
 
         {/* ── Empty state: employer viewing candidate with no hub blocks on card ── */}
         {mode === 'employer' &&
-          data.sections.length === 0 &&
+          sections.length === 0 &&
           !data.employerCompanyMvr &&
           !data.employerCompanyPsp && (
           <div

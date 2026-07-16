@@ -286,7 +286,12 @@ export default function PersonalInfoForm3({
     if (hasHydratedRef.current) return
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true
-      setFormData((prev) => ({ ...prev, ...initialData }))
+      setFormData((prev) => {
+        const merged = { ...prev, ...initialData }
+        if (!Array.isArray(merged.employers)) merged.employers = prev.employers
+        if (!Array.isArray(merged.education)) merged.education = prev.education
+        return merged
+      })
     }
   }, [initialData])
 
@@ -361,7 +366,7 @@ export default function PersonalInfoForm3({
         return isNaN(isoDate.getTime()) ? null : isoDate
       }
 
-      formData.employers.forEach((employer, index) => {
+      ;(formData.employers ?? []).forEach((employer, index) => {
         // Check both old flag and new type field
         const isUnemploymentEntry = employer.isUnemployment || employer.type === 'unemployment'
         const isSchoolEntry = employer.type === 'school' || employer.type === 'drivingSchool'
@@ -474,7 +479,7 @@ export default function PersonalInfoForm3({
       }
     } else if (step === 2) {
       // Education validation
-      formData.education.forEach((edu, index) => {
+      ;(formData.education ?? []).forEach((edu, index) => {
         if (edu.schoolType?.trim() || edu.nameAndLocation?.trim()) {
           if (!edu.schoolType?.trim())
             newErrors[`education${index}Type`] = 'School type is required'
@@ -1178,7 +1183,7 @@ export default function PersonalInfoForm3({
                   <div className={`text-xs mt-2 p-2 rounded ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
                     <p className="mb-2">The DOT requires documentation of the <strong>last 10 years</strong> leading up to today.</p>
                     <ul className="space-y-1">
-                      {formData.employers.map((emp, idx) => {
+                      {(formData.employers ?? []).map((emp, idx) => {
                         if (!emp.fromDate || !emp.toDate) {
                           return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing dates</li>
                         }
@@ -1226,7 +1231,7 @@ export default function PersonalInfoForm3({
       </div>
 
       {/* Show message if no entries yet */}
-      {formData.employers.length === 0 && (
+      {(formData.employers?.length ?? 0) === 0 && (
         <div className={`p-8 rounded-xl border-2 border-dashed text-center ${
           isDarkTheme(theme) ? 'border-gray-600 bg-gray-800/30' : 'border-gray-300 bg-gray-50'
         }`}>
@@ -1239,7 +1244,7 @@ export default function PersonalInfoForm3({
         </div>
       )}
       
-      {formData.employers.map((employer, index) => {
+      {(formData.employers ?? []).map((employer, index) => {
         // Get type info for this entry (default to employment for legacy entries)
         const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
         const typeInfo = HISTORY_TYPES.find(t => t.value === entryType) || HISTORY_TYPES[0]
@@ -1830,7 +1835,7 @@ export default function PersonalInfoForm3({
         </h2>
       </div>
 
-      {formData.education.map((edu, index) => (
+      {(formData.education ?? []).map((edu, index) => (
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
@@ -1838,7 +1843,7 @@ export default function PersonalInfoForm3({
             >
               EDUCATION {index + 1}
             </h3>
-            {formData.education.length > 1 && (
+            {(formData.education?.length ?? 0) > 1 && (
               <button
                 type='button'
                 onClick={() => removeEducation(index)}

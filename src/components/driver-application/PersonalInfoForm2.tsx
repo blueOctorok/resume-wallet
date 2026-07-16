@@ -209,10 +209,10 @@ export default function PersonalInfoForm2({
       // Don't let "none" wipe issuer rows — server will re-project on save anyway
       const hasIssuer =
         field === 'hasNoAccidents'
-          ? formData.accidents.some((a) => isIssuerRow(a))
+          ? (formData.accidents ?? []).some((a) => isIssuerRow(a))
           : field === 'hasNoConvictions'
-            ? formData.convictions.some((c) => c._source === 'mvr')
-            : formData.inspections.some((i) => i._source === 'psp')
+            ? (formData.convictions ?? []).some((c) => c._source === 'mvr')
+            : (formData.inspections ?? []).some((i) => i._source === 'psp')
       if (hasIssuer && value === true) return
     }
 
@@ -315,14 +315,21 @@ export default function PersonalInfoForm2({
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true
       setFormData((prev) => {
+        // Spread can overwrite array fields with undefined/null from older saves —
+        // re-normalize so render never hits `.length` / `.map` on undefined.
         const merged = { ...prev, ...initialData }
-        if (Array.isArray(merged.convictions)) {
-          merged.convictions = merged.convictions.map((c: { stateOfViolation?: string; dateConvicted?: string; [k: string]: unknown }) => ({
-            ...c,
-            stateOfViolation: normalizeState(String(c.stateOfViolation ?? '')),
-            dateConvicted: normalizeConvictionMonthYear(String(c.dateConvicted ?? '')),
-          }))
+        if (!Array.isArray(merged.drivingExperience) || merged.drivingExperience.length === 0) {
+          merged.drivingExperience = prev.drivingExperience
         }
+        if (!Array.isArray(merged.accidents)) merged.accidents = prev.accidents
+        if (!Array.isArray(merged.convictions)) merged.convictions = prev.convictions
+        if (!Array.isArray(merged.inspections)) merged.inspections = []
+        if (!Array.isArray(merged.cfr391ConvictedOffenses)) merged.cfr391ConvictedOffenses = []
+        merged.convictions = merged.convictions.map((c: { stateOfViolation?: string; dateConvicted?: string; [k: string]: unknown }) => ({
+          ...c,
+          stateOfViolation: normalizeState(String(c.stateOfViolation ?? '')),
+          dateConvicted: normalizeConvictionMonthYear(String(c.dateConvicted ?? '')),
+        }))
         return merged
       })
     }
@@ -333,7 +340,7 @@ export default function PersonalInfoForm2({
 
     if (step === 1) {
       // Driving Experience validation
-      formData.drivingExperience.forEach((exp, index) => {
+      ;(formData.drivingExperience ?? []).forEach((exp, index) => {
         if (!exp.equipmentType.trim())
           newErrors[`drivingExp${index}Equipment`] =
             'Equipment type is required'
@@ -344,7 +351,7 @@ export default function PersonalInfoForm2({
     } else if (step === 2) {
       // Accident Record validation
       if (!formData.hasNoAccidents) {
-        formData.accidents.forEach((accident, index) => {
+        ;(formData.accidents ?? []).forEach((accident, index) => {
           if (accident.date.trim() || accident.nature.trim()) {
             if (!accident.date.trim())
               newErrors[`accident${index}Date`] = 'Accident date is required'
@@ -365,7 +372,7 @@ export default function PersonalInfoForm2({
       if (!formData.cfr391ConvictedYesNo)
         newErrors.cfr391ConvictedYesNo = 'Please answer this question'
       // Traffic Convictions
-      formData.convictions.forEach((conviction, index) => {
+      ;(formData.convictions ?? []).forEach((conviction, index) => {
         if (conviction.dateConvicted?.trim() || conviction.violation?.trim()) {
           if (!conviction.dateConvicted?.trim())
             newErrors[`conviction${index}Date`] = 'Conviction date is required'
@@ -565,7 +572,7 @@ export default function PersonalInfoForm2({
         </h2>
       </div>
 
-      {formData.drivingExperience.map((experience, index) => (
+      {(formData.drivingExperience ?? []).map((experience, index) => (
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
@@ -691,7 +698,7 @@ export default function PersonalInfoForm2({
           type='checkbox'
           id='hasNoAccidents'
           checked={formData.hasNoAccidents}
-          disabled={formData.accidents.some((a) => isIssuerRow(a))}
+          disabled={(formData.accidents ?? []).some((a) => isIssuerRow(a))}
           onChange={(e) =>
             handleInputChange('hasNoAccidents', e.target.checked)
           }
@@ -707,7 +714,7 @@ export default function PersonalInfoForm2({
 
       {!formData.hasNoAccidents && (
         <div className='space-y-6'>
-          {formData.accidents.map((accident, index) => {
+          {(formData.accidents ?? []).map((accident, index) => {
             const locked = isIssuerRow(accident)
             const badgeText =
               accident._source === 'psp' || accident._source === 'mvr'
@@ -730,7 +737,7 @@ export default function PersonalInfoForm2({
                     </span>
                   )}
                 </h3>
-                {!locked && formData.accidents.length > 1 && (
+                {!locked && (formData.accidents?.length ?? 0) > 1 && (
                   <button
                     type='button'
                     onClick={() => removeAccident(index)}
@@ -962,7 +969,7 @@ export default function PersonalInfoForm2({
       )}
 
       {/* FMCSA PSP inspections (P3.7) — shown when PSP projected rows or clean stamp */}
-      {(formData.inspections.length > 0 ||
+      {((formData.inspections?.length ?? 0) > 0 ||
         formData.hasNoInspections ||
         Boolean(rowProvenance?.pspResultId)) && (
         <div className='mt-8 space-y-4 border-t pt-6 border-gray-200 dark:border-gray-700'>
@@ -975,7 +982,7 @@ export default function PersonalInfoForm2({
             Projected from your Pre-Employment Screening Program report. Rows are locked;
             you can still add a self-certified note below if needed.
           </p>
-          {formData.hasNoInspections || formData.inspections.length === 0 ? (
+          {formData.hasNoInspections || (formData.inspections?.length ?? 0) === 0 ? (
             <p
               className={`text-sm rounded-md px-3 py-2 ${
                 isDarkTheme(theme)
@@ -987,7 +994,7 @@ export default function PersonalInfoForm2({
             </p>
           ) : (
             <div className='space-y-4'>
-              {formData.inspections.map((insp, index) => {
+              {(formData.inspections ?? []).map((insp, index) => {
                 const locked = insp._source === 'psp'
                 const badgeText = locked ? rowBadgeText('psp') : null
                 return (
@@ -1232,7 +1239,7 @@ export default function PersonalInfoForm2({
           type='checkbox'
           id='hasNoConvictions'
           checked={formData.hasNoConvictions}
-          disabled={formData.convictions.some((c) => c._source === 'mvr')}
+          disabled={(formData.convictions ?? []).some((c) => c._source === 'mvr')}
           onChange={(e) =>
             handleInputChange('hasNoConvictions', e.target.checked)
           }
@@ -1248,7 +1255,7 @@ export default function PersonalInfoForm2({
 
       {!formData.hasNoConvictions && (
         <div className='space-y-6'>
-          {formData.convictions.map((conviction, index) => {
+          {(formData.convictions ?? []).map((conviction, index) => {
             const locked = isIssuerRow(conviction)
             const badge = locked && conviction._source === 'mvr'
               ? rowBadgeEntry(`convictions.${index}`)
@@ -1270,7 +1277,7 @@ export default function PersonalInfoForm2({
                     </span>
                   )}
                 </h3>
-                {!locked && formData.convictions.length > 1 && (
+                {!locked && (formData.convictions?.length ?? 0) > 1 && (
                   <button
                     type='button'
                     onClick={() => removeConviction(index)}

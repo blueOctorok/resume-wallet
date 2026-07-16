@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix — Candidate Hub `.length` crash + applications query** (2026-07-16)
+
+Hub ErrorBoundary was throwing `Cannot read properties of undefined (reading 'length')`. Hardened career-card / Stormi nudge / DOT Form 2–3 array access after hydrate (missing `inspections` etc.). Also fixed `/api/driver/hub` and `/api/developer/hub` still filtering `applications.driver_user_id` (renamed to `applicant_user_id` in migration 016) — that was returning PostgREST 400s in logs.
+
+---
+
 ## **DOT Forms 1–3 — validation feedback on Next** (2026-07-16)
 
 `validateStep` already blocked advance, but many fields never rendered their errors (e.g. empty email on Form 1). Shared helpers in `dot-form-validation.tsx` add a summary banner + field messages + scroll-into-view. Wired across PersonalInfoForm1/2/3 so Next always explains what’s missing.

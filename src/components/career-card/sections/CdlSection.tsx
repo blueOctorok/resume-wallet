@@ -14,7 +14,8 @@ interface CdlSectionProps {
 }
 
 export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionProps) {
-  const hasData = data.cdlClass || data.cdlState || (data.endorsements.length > 0)
+  const endorsements = data.endorsements ?? []
+  const hasData = data.cdlClass || data.cdlState || endorsements.length > 0
   if (!hasData) {
     if (!isCareerCardOwnerMode(mode)) return null
     return <SectionNeedsSetup icon={IdCard} label='CDL Credentials' isDark={isDark} onAction={onAction} />
@@ -59,11 +60,11 @@ export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionP
         )}
       </div>
 
-      {data.endorsements.length > 0 && (
+      {endorsements.length > 0 && (
         <div className='mt-3 pt-3 border-t border-gray-700/30'>
           <p className={cn('text-xs mb-2', isDark ? 'text-gray-400' : 'text-gray-500')}>Endorsements</p>
           <div className='flex flex-wrap gap-1.5'>
-            {data.endorsements.map((e) => (
+            {endorsements.map((e) => (
               <span
                 key={e}
                 className={cn(

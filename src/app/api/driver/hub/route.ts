@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
         .eq('driver_user_id', user.id)
         .order('received_at', { ascending: false }),
 
-      // 14. Job applications
+      // 14. Job applications (column renamed in migration 016)
       supabase
         .from('applications')
         .select(`
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
             companies (company_name)
           )
         `)
-        .eq('driver_user_id', user.id)
+        .eq('applicant_user_id', user.id)
         .order('applied_at', { ascending: false }),
 
       // 15. All payments

@@ -24,17 +24,18 @@ export default function ScreeningConsentSection({
   onAction,
 }: ScreeningConsentSectionProps) {
   const owner = isCareerCardOwnerMode(mode)
-  const hasIncomplete = data.bundles.some((b) => b.status !== 'complete')
+  const bundles = data.bundles ?? []
+  const hasIncomplete = bundles.some((b) => b.status !== 'complete')
 
   return (
     <div className='space-y-3 text-sm'>
-      {data.bundles.length === 0 ? (
+      {bundles.length === 0 ? (
         <p className={cn(isDark ? 'text-gray-400' : 'text-slate-600')}>
           When an employer requests screening consent, your signed packages will appear here.
         </p>
       ) : (
         <ul className='space-y-2'>
-          {data.bundles.map((b) => (
+          {bundles.map((b) => (
             <li
               key={b.id}
               className={cn(
