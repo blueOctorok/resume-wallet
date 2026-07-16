@@ -15,6 +15,12 @@ import {
   type DotForm1FieldProvenance,
 } from '@/lib/dot-field-provenance'
 import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
+import {
+  DotFieldError,
+  DotValidationBanner,
+  dotErrorInputClass,
+  scrollToDotValidationErrors,
+} from '@/components/driver-application/dot-form-validation'
 
 // Motor carrier (employing carrier) is not collected here — it is injected by the
 // specific employer when a driver's application is linked to their company.
@@ -507,6 +513,7 @@ export default function PersonalInfoForm1({
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
+      setErrors({})
       if (currentStep < STEPS.length) {
         setCurrentStep(currentStep + 1)
         if (typeof window !== 'undefined') {
@@ -516,6 +523,8 @@ export default function PersonalInfoForm1({
         // Form is completed, navigate to Form 2
         onNavigateToForm?.(2)
       }
+    } else {
+      scrollToDotValidationErrors()
     }
   }
 
@@ -820,8 +829,9 @@ export default function PersonalInfoForm1({
           <PhoneInput
             value={formData.phone}
             onChange={(value) => handleInputChange('phone', value)}
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.phone)}`}
           />
+          <DotFieldError message={errors.phone} />
         </div>
         <div>
           <label
@@ -833,8 +843,9 @@ export default function PersonalInfoForm1({
             type='email'
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.email)}`}
           />
+          <DotFieldError message={errors.email} />
         </div>
       </div>
 
@@ -874,8 +885,9 @@ export default function PersonalInfoForm1({
             value={formData.socialSecurity}
             onChange={(value) => handleInputChange('socialSecurity', value)}
             placeholder='000-00-0000'
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.socialSecurity)}`}
           />
+          <DotFieldError message={errors.socialSecurity} />
         </div>
       </div>
 
@@ -893,8 +905,9 @@ export default function PersonalInfoForm1({
             onChange={(e) =>
               handleInputChange('dateOfApplication', e.target.value)
             }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.dateOfApplication)}`}
           />
+          <DotFieldError message={errors.dateOfApplication} />
         </div>
         <div>
           <label
@@ -908,8 +921,9 @@ export default function PersonalInfoForm1({
             onChange={(e) =>
               handleInputChange('dateAvailableForWork', e.target.value)
             }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.dateAvailableForWork)}`}
           />
+          <DotFieldError message={errors.dateAvailableForWork} />
         </div>
       </div>
 
@@ -932,11 +946,7 @@ export default function PersonalInfoForm1({
               }
               className={`mr-2 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
-            <span
-              className={`${labelClass}`}
-            >
-              YES
-            </span>
+            <span className={`${labelClass}`}>YES</span>
           </label>
           <label className='flex items-center'>
             <input
@@ -949,13 +959,10 @@ export default function PersonalInfoForm1({
               }
               className={`mr-2 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
-            <span
-              className={`${labelClass}`}
-            >
-              NO
-            </span>
+            <span className={`${labelClass}`}>NO</span>
           </label>
         </div>
+        <DotFieldError message={errors.hasLegalRightToWork} />
       </div>
     </div>
   )
@@ -998,8 +1005,9 @@ export default function PersonalInfoForm1({
                   street: e.target.value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.currentMailingStreet)}`}
             />
+            <DotFieldError message={errors.currentMailingStreet} />
           </div>
           <div>
             <label
@@ -1016,8 +1024,9 @@ export default function PersonalInfoForm1({
                   city: e.target.value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.currentMailingCity)}`}
             />
+            <DotFieldError message={errors.currentMailingCity} />
           </div>
           <div>
             <label
@@ -1033,8 +1042,9 @@ export default function PersonalInfoForm1({
                   state: value,
                 })
               }
-              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.currentMailingState)}`}
             />
+            <DotFieldError message={errors.currentMailingState} />
           </div>
           <div>
             <label
@@ -1050,8 +1060,9 @@ export default function PersonalInfoForm1({
                   zipCode: value,
                 })
               }
-              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.currentMailingZip)}`}
             />
+            <DotFieldError message={errors.currentMailingZip} />
           </div>
         </div>
         <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
@@ -1070,8 +1081,9 @@ export default function PersonalInfoForm1({
                   yearsAtAddress: e.target.value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.currentMailingYears)}`}
             />
+            <DotFieldError message={errors.currentMailingYears} />
           </div>
         </div>
       </div>
@@ -1167,8 +1179,9 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousAddress${index}Street`])}`}
               />
+              <DotFieldError message={errors[`previousAddress${index}Street`]} />
             </div>
             <div>
               <label
@@ -1186,8 +1199,9 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousAddress${index}City`])}`}
               />
+              <DotFieldError message={errors[`previousAddress${index}City`]} />
             </div>
             <div>
               <label
@@ -1204,8 +1218,9 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousAddress${index}State`])}`}
               />
+              <DotFieldError message={errors[`previousAddress${index}State`]} />
             </div>
             <div>
               <label
@@ -1218,8 +1233,9 @@ export default function PersonalInfoForm1({
                 onChange={(value) =>
                   handleInputChange('previousAddresses', { zipCode: value }, index)
                 }
-                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousAddress${index}Zip`])}`}
               />
+              <DotFieldError message={errors[`previousAddress${index}Zip`]} />
             </div>
           </div>
           <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
@@ -1239,8 +1255,9 @@ export default function PersonalInfoForm1({
                     index
                   )
                 }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousAddress${index}Years`])}`}
               />
+              <DotFieldError message={errors[`previousAddress${index}Years`]} />
             </div>
           </div>
         </div>
@@ -1335,11 +1352,12 @@ export default function PersonalInfoForm1({
                 disabled={index === 0 && isLocked('currentLicenses.0.state')}
                 className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
                   index === 0 && isLocked('currentLicenses.0.state') ? lockedInputClass : ''
-                }`}
+                } ${dotErrorInputClass(!!errors[`currentLicense${index}State`])}`}
               />
               {index === 0 && lockEntry('currentLicenses.0.state') && (
                 <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.state')!} attestations={attestations} />
               )}
+              <DotFieldError message={errors[`currentLicense${index}State`]} />
             </div>
             <div>
               <label
@@ -1363,11 +1381,12 @@ export default function PersonalInfoForm1({
                   index === 0 && isLocked('currentLicenses.0.licenseNumber')
                     ? lockedInputClass
                     : ''
-                }`}
+                } ${dotErrorInputClass(!!errors[`currentLicense${index}Number`])}`}
               />
               {index === 0 && lockEntry('currentLicenses.0.licenseNumber') && (
                 <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.licenseNumber')!} attestations={attestations} />
               )}
+              <DotFieldError message={errors[`currentLicense${index}Number`]} />
             </div>
             <div>
               <label
@@ -1391,11 +1410,12 @@ export default function PersonalInfoForm1({
                   index === 0 && isLocked('currentLicenses.0.typeClass')
                     ? lockedInputClass
                     : ''
-                }`}
+                } ${dotErrorInputClass(!!errors[`currentLicense${index}Class`])}`}
               />
               {index === 0 && lockEntry('currentLicenses.0.typeClass') && (
                 <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.typeClass')!} attestations={attestations} />
               )}
+              <DotFieldError message={errors[`currentLicense${index}Class`]} />
             </div>
             <div>
               <label
@@ -1447,11 +1467,12 @@ export default function PersonalInfoForm1({
                   index === 0 && isLocked('currentLicenses.0.expirationDate')
                     ? lockedInputClass
                     : ''
-                }`}
+                } ${dotErrorInputClass(!!errors[`currentLicense${index}ExpirationDate`])}`}
               />
               {index === 0 && lockEntry('currentLicenses.0.expirationDate') && (
                 <VerifiedFieldBadge entry={lockEntry('currentLicenses.0.expirationDate')!} attestations={attestations} />
               )}
+              <DotFieldError message={errors[`currentLicense${index}ExpirationDate`]} />
             </div>
           </div>
         </div>
@@ -1511,8 +1532,9 @@ export default function PersonalInfoForm1({
                       index
                     )
                   }
-                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousLicense${index}State`])}`}
                 />
+                <DotFieldError message={errors[`previousLicense${index}State`]} />
               </div>
               <div>
                 <label
@@ -1530,8 +1552,9 @@ export default function PersonalInfoForm1({
                       index
                     )
                   }
-className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousLicense${index}Number`])}`}
                 />
+                <DotFieldError message={errors[`previousLicense${index}Number`]} />
               </div>
               <div>
                 <label
@@ -1549,8 +1572,9 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                       index
                     )
                   }
-className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousLicense${index}Class`])}`}
                 />
+                <DotFieldError message={errors[`previousLicense${index}Class`]} />
               </div>
               <div>
                 <label
@@ -1568,7 +1592,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                       index
                     )
                   }
-className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                 />
               </div>
               <div>
@@ -1587,8 +1611,9 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                       index
                     )
                   }
-className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors[`previousLicense${index}ExpirationDate`])}`}
                 />
+                <DotFieldError message={errors[`previousLicense${index}ExpirationDate`]} />
               </div>
             </div>
           </div>
@@ -2076,7 +2101,10 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
       </div>
 
       {/* Step Content */}
-      <div className='px-6 py-8'>{renderStepContent()}</div>
+      <div className='px-6 py-8'>
+        <DotValidationBanner errors={errors} isDark={isDarkTheme(theme)} />
+        {renderStepContent()}
+      </div>
 
       {/* Navigation */}
       <div

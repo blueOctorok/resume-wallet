@@ -15,6 +15,12 @@ import {
   resolveMvrRowDotBadge,
   type AttestationBadgeSummary,
 } from '@/lib/dot-attestation-badge'
+import {
+  DotFieldError,
+  DotValidationBanner,
+  dotErrorInputClass,
+  scrollToDotValidationErrors,
+} from '@/components/driver-application/dot-form-validation'
 
 /** Normalize saved values to MM/YYYY for MonthYearPicker (legacy text or ISO dates). */
 function normalizeConvictionMonthYear(raw: string): string {
@@ -378,6 +384,7 @@ export default function PersonalInfoForm2({
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
+      setErrors({})
       if (currentStep < STEPS.length) {
         setCurrentStep(currentStep + 1)
         if (typeof window !== 'undefined') {
@@ -387,6 +394,8 @@ export default function PersonalInfoForm2({
         // Form is completed, navigate to Form 3
         onNavigateToForm?.(3)
       }
+    } else {
+      scrollToDotValidationErrors()
     }
   }
 
@@ -596,7 +605,7 @@ export default function PersonalInfoForm2({
                   isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
+                } ${dotErrorInputClass(!!errors[`drivingExp${index}Equipment`])}`}
               >
                 <option value=''>Select equipment type...</option>
                 <option value='STRAIGHT TRUCK'>Straight Truck</option>
@@ -612,6 +621,7 @@ export default function PersonalInfoForm2({
                 <option value='SCHOOL BUS'>School Bus</option>
                 <option value='OTHER'>Other</option>
               </select>
+              <DotFieldError message={errors[`drivingExp${index}Equipment`]} />
             </div>
             <div>
               <label
@@ -634,8 +644,9 @@ export default function PersonalInfoForm2({
                   isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
+                } ${dotErrorInputClass(!!errors[`drivingExp${index}Years`])}`}
               />
+              <DotFieldError message={errors[`drivingExp${index}Years`]} />
             </div>
           </div>
         </div>
@@ -766,8 +777,9 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`accident${index}Date`])}`}
                   />
+                  <DotFieldError message={errors[`accident${index}Date`]} />
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -792,8 +804,9 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`accident${index}Nature`])}`}
                   />
+                  <DotFieldError message={errors[`accident${index}Nature`]} />
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -925,6 +938,7 @@ export default function PersonalInfoForm2({
                     </span>
                   </label>
                 </div>
+                <DotFieldError message={errors[`accident${index}AtFault`]} />
               </div>
             </div>
             )
@@ -1303,9 +1317,7 @@ export default function PersonalInfoForm2({
                       minDate={convictionMinBoundary}
                     />
                   )}
-                  {errors[`conviction${index}Date`] && (
-                    <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}Date`]}</p>
-                  )}
+                  <DotFieldError message={errors[`conviction${index}Date`]} />
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -1329,8 +1341,9 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`conviction${index}Violation`])}`}
                   />
+                  <DotFieldError message={errors[`conviction${index}Violation`]} />
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -1347,11 +1360,9 @@ export default function PersonalInfoForm2({
                     onChange={(value) =>
                       handleInputChange('convictions', { stateOfViolation: value }, index)
                     }
-                    className={`${inputClass} ${locked ? lockedInputClass : ''}`}
+                    className={`${inputClass} ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`conviction${index}State`])}`}
                   />
-                  {errors[`conviction${index}State`] && (
-                    <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}State`]}</p>
-                  )}
+                  <DotFieldError message={errors[`conviction${index}State`]} />
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -1638,7 +1649,10 @@ export default function PersonalInfoForm2({
       </div>
 
       {/* Step Content */}
-      <div className='px-6 py-8'>{renderStepContent()}</div>
+      <div className='px-6 py-8'>
+        <DotValidationBanner errors={errors} isDark={isDarkTheme(theme)} />
+        {renderStepContent()}
+      </div>
 
       {/* Navigation */}
       <div

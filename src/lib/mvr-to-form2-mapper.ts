@@ -59,6 +59,17 @@ function faultToYesNo(fault: string | undefined): string {
   return ''
 }
 
+/**
+ * Accio often omits `<state>` on individual `<mvr_violation>` blocks.
+ * Fall back to the MVR's DL state (`dlstate`) — the issuing jurisdiction —
+ * so Form 2 locked conviction rows are not stuck empty / uneditable.
+ */
+function convictionState(v: Violation, mvr: ParsedMvrResult): string {
+  const raw = (v.state || mvr.licenseState || '').trim().toUpperCase()
+  if (/^[A-Z]{2}$/.test(raw)) return raw
+  return ''
+}
+
 function violationKey(v: Violation, index: number): string {
   const d = v.convictionDate || v.date || ''
   const desc = (v.description || v.type || '').slice(0, 40)
@@ -89,7 +100,7 @@ export function mapMvrToForm2Rows(mvr: ParsedMvrResult): {
   const convictions: Form2ConvictionRow[] = (mvr.violations ?? []).map((v, i) => ({
     dateConvicted: toMonthYear(v.convictionDate || v.date),
     violation: v.description || v.type || '',
-    stateOfViolation: v.state || '',
+    stateOfViolation: convictionState(v, mvr),
     penalty: v.points != null && v.points > 0 ? `${v.points} pts` : '',
     _source: 'mvr' as const,
     _mvrKey: violationKey(v, i),

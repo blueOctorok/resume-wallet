@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT Forms 1–3 — validation feedback on Next** (2026-07-16)
+
+`validateStep` already blocked advance, but many fields never rendered their errors (e.g. empty email on Form 1). Shared helpers in `dot-form-validation.tsx` add a summary banner + field messages + scroll-into-view. Wired across PersonalInfoForm1/2/3 so Next always explains what’s missing.
+
+---
+
+## **Fix — MVR Form 2 conviction state from DL state** (2026-07-16)
+
+Accio often omits `<state>` on individual MVR violation blocks. Locked Form 2 conviction rows then failed validation ("State of violation is required") with the field disabled. `mapMvrToForm2Rows` now falls back to the MVR `dlstate` / `licenseState`. Reloading the DOT app re-projects via save-progress GET.
+
+---
+
 ## **My Hub menu — drop Switch Role / Journey Tips / Journey Guide** (2026-07-14)
 
 Candidate My Hub dropdown keeps Career Card / Inbox / Ask AI only.

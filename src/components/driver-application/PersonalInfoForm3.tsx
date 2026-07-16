@@ -12,6 +12,12 @@ import AskStormiButton from '@/components/ui/AskStormiButton'
 import { MonthYearPicker, parseDateToNumber } from '@/components/ui/MonthYearPicker'
 import { resolveEmploymentDotBadge, type AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 import type { DotForm3EmployerProvenance } from '@/lib/employment-form3-provenance'
+import {
+  DotFieldError,
+  DotValidationBanner,
+  dotErrorInputClass,
+  scrollToDotValidationErrors,
+} from './dot-form-validation'
 
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
@@ -521,6 +527,7 @@ export default function PersonalInfoForm3({
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
+      setErrors({})
       if (currentStep < STEPS.length) {
         setCurrentStep(currentStep + 1)
         if (typeof window !== 'undefined') {
@@ -530,6 +537,8 @@ export default function PersonalInfoForm3({
         // Form is completed, call onComplete callback
         onComplete?.()
       }
+    } else {
+      scrollToDotValidationErrors()
     }
   }
 
@@ -1334,6 +1343,7 @@ export default function PersonalInfoForm3({
                         theme={theme}
                         maxDate={maxFromDate}
                       />
+                      <DotFieldError message={errors[`employer${index}FromDate`]} />
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1348,6 +1358,7 @@ export default function PersonalInfoForm3({
                         theme={theme}
                         minDate={employer.fromDate}
                       />
+                      <DotFieldError message={errors[`employer${index}ToDate`]} />
                     </div>
                   </div>
                   {dateOrderError && (
@@ -1385,11 +1396,9 @@ export default function PersonalInfoForm3({
                         isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      } ${errors[`employer${index}Name`] ? 'border-red-500' : ''}`}
+                      } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                     />
-                    {errors[`employer${index}Name`] && (
-                      <p className="mt-1 text-sm text-red-500">{errors[`employer${index}Name`]}</p>
-                    )}
+                    <DotFieldError message={errors[`employer${index}Name`]} />
                   </div>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1418,11 +1427,9 @@ export default function PersonalInfoForm3({
                         isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      } ${errors[`employer${index}Email`] ? 'border-red-500' : ''}`}
+                      } ${dotErrorInputClass(!!errors[`employer${index}Email`])}`}
                     />
-                    {errors[`employer${index}Email`] && (
-                      <p className="mt-1 text-sm text-red-500">{errors[`employer${index}Email`]}</p>
-                    )}
+                    <DotFieldError message={errors[`employer${index}Email`]} />
                   </div>
                 </div>
 
@@ -1440,8 +1447,9 @@ export default function PersonalInfoForm3({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${dotErrorInputClass(!!errors[`employer${index}Address`])}`}
                   />
+                  <DotFieldError message={errors[`employer${index}Address`]} />
                 </div>
 
                 {/* Position and Salary */}
@@ -1458,8 +1466,9 @@ export default function PersonalInfoForm3({
                         isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      }`}
+                      } ${dotErrorInputClass(!!errors[`employer${index}Position`])}`}
                     />
+                    <DotFieldError message={errors[`employer${index}Position`]} />
                   </div>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1511,13 +1520,14 @@ export default function PersonalInfoForm3({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${dotErrorInputClass(!!errors[`employer${index}Reason`])}`}
                   />
+                  <DotFieldError message={errors[`employer${index}Reason`]} />
                 </div>
 
                 {/* FMCSR Questions */}
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'} ${errors[`employer${index}FMCSR`] ? 'ring-1 ring-red-500' : ''}`}>
                     <label className={`block text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       Subject to FMCSR? <span className="text-red-500">*</span>
                     </label>
@@ -1538,8 +1548,9 @@ export default function PersonalInfoForm3({
                         </label>
                       ))}
                     </div>
+                    <DotFieldError message={errors[`employer${index}FMCSR`]} />
                   </div>
-                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <div className={`p-4 rounded-lg ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'} ${errors[`employer${index}Safety`] ? 'ring-1 ring-red-500' : ''}`}>
                     <label className={`block text-sm font-medium mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       Safety-sensitive function? <span className="text-red-500">*</span>
                     </label>
@@ -1560,6 +1571,7 @@ export default function PersonalInfoForm3({
                         </label>
                       ))}
                     </div>
+                    <DotFieldError message={errors[`employer${index}Safety`]} />
                   </div>
                 </div>
               </>
@@ -1606,8 +1618,9 @@ export default function PersonalInfoForm3({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                   />
+                  <DotFieldError message={errors[`employer${index}Name`]} />
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1644,8 +1657,9 @@ export default function PersonalInfoForm3({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                   />
+                  <DotFieldError message={errors[`employer${index}Name`]} />
                 </div>
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1681,7 +1695,7 @@ export default function PersonalInfoForm3({
                         isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      }`}
+                      } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                     >
                       <option value="">Select branch...</option>
                       <option value="Army">Army</option>
@@ -1693,6 +1707,7 @@ export default function PersonalInfoForm3({
                       <option value="National Guard">National Guard</option>
                       <option value="Reserves">Reserves</option>
                     </select>
+                    <DotFieldError message={errors[`employer${index}Name`]} />
                   </div>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1858,7 +1873,7 @@ export default function PersonalInfoForm3({
                   isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
+                } ${dotErrorInputClass(!!errors[`education${index}Type`])}`}
               >
                 <option value=''>Select school type...</option>
                 <option value='HIGH SCHOOL'>High School</option>
@@ -1869,6 +1884,7 @@ export default function PersonalInfoForm3({
                 <option value='CERTIFICATION'>Certification Program</option>
                 <option value='OTHER'>Other</option>
               </select>
+              <DotFieldError message={errors[`education${index}Type`]} />
             </div>
             <div className='md:col-span-2 flex flex-col'>
               <label
@@ -1890,8 +1906,9 @@ export default function PersonalInfoForm3({
                   isDarkTheme(theme)
                     ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
+                } ${dotErrorInputClass(!!errors[`education${index}Name`])}`}
               />
+              <DotFieldError message={errors[`education${index}Name`]} />
             </div>
             <div className='flex flex-col'>
               <label
@@ -2912,7 +2929,10 @@ export default function PersonalInfoForm3({
       </div>
 
       {/* Step Content */}
-      <div className='px-6 py-8'>{renderStepContent()}</div>
+      <div className='px-6 py-8'>
+        <DotValidationBanner errors={errors} isDark={isDarkTheme(theme)} />
+        {renderStepContent()}
+      </div>
 
       {/* Navigation */}
       <div
