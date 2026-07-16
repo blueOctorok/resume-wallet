@@ -16,6 +16,10 @@ Hub ErrorBoundary was throwing `Cannot read properties of undefined (reading 'le
 
 ---
 
+## **Fix — MVR Form 2 conviction state still empty in UI** (2026-07-16)
+
+Follow-up: mapper fallback to DL state was correct in DB for some users, but Form 2 still showed "Select State" on locked rows (stale localStorage hydrate, or `license.state: ""` blocking column fallback via `??`). Hardened `reconstructParsedMvr` / `convictionState` to treat empty strings as missing (also subject.state fallback). Form 2 late-patches empty MVR conviction state from re-projected `initialData` or Form 1 license state, and soft-unlocks the state dropdown when issuer left it blank so Next is not bricked.
+
 ## **Fix — MVR Form 2 conviction state from DL state** (2026-07-16)
 
 Accio often omits `<state>` on individual MVR violation blocks. Locked Form 2 conviction rows then failed validation ("State of violation is required") with the field disabled. `mapMvrToForm2Rows` now falls back to the MVR `dlstate` / `licenseState`. Reloading the DOT app re-projects via save-progress GET.

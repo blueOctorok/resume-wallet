@@ -61,12 +61,15 @@ function faultToYesNo(fault: string | undefined): string {
 
 /**
  * Accio often omits `<state>` on individual `<mvr_violation>` blocks.
- * Fall back to the MVR's DL state (`dlstate`) — the issuing jurisdiction —
- * so Form 2 locked conviction rows are not stuck empty / uneditable.
+ * Fall back to MVR DL state (`dlstate`), then subject address state.
+ * Use `||` (not `??`) so empty strings from parsed JSON don't block fallbacks.
  */
 function convictionState(v: Violation, mvr: ParsedMvrResult): string {
-  const raw = (v.state || mvr.licenseState || '').trim().toUpperCase()
-  if (/^[A-Z]{2}$/.test(raw)) return raw
+  const candidates = [v.state, mvr.licenseState, mvr.subject?.state]
+  for (const candidate of candidates) {
+    const raw = (candidate || '').trim().toUpperCase()
+    if (/^[A-Z]{2}$/.test(raw)) return raw
+  }
   return ''
 }
 

@@ -21,6 +21,7 @@ import {
   dotErrorInputClass,
   scrollToDotValidationErrors,
 } from '@/components/driver-application/dot-form-validation'
+import { useDotApplicationStore } from '@/stores'
 
 /** Normalize saved values to MM/YYYY for MonthYearPicker (legacy text or ISO dates). */
 function normalizeConvictionMonthYear(raw: string): string {
@@ -87,6 +88,10 @@ export default function PersonalInfoForm2({
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Form 1 MVR license state — last-resort fill when Accio omits per-violation state
+  const form1LicenseState = useDotApplicationStore((s) =>
+    normalizeState(String(s.form1Data?.currentLicenses?.[0]?.state ?? '')),
+  )
   const lockedInputClass = isDarkTheme(theme)
     ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
     : 'bg-gray-100 cursor-not-allowed'
@@ -195,7 +200,9 @@ export default function PersonalInfoForm2({
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
-    // P3.7 — block edits to issuer-sourced accident/conviction/inspection rows
+    // P3.7 — block edits to issuer-sourced accident/conviction/inspection rows.
+    // Exception: Accio often omits violation state — allow filling empty stateOfViolation
+    // on an otherwise locked MVR conviction so the driver isn't stuck on Next.
     if (
       index !== undefined &&
       (field === 'accidents' || field === 'convictions' || field === 'inspections') &&
@@ -203,7 +210,15 @@ export default function PersonalInfoForm2({
         (formData as Record<string, Array<{ _source?: string }>>)[field]?.[index],
       )
     ) {
-      return
+      const fillingEmptyConvictionState =
+        field === 'convictions' &&
+        typeof value === 'object' &&
+        value !== null &&
+        'stateOfViolation' in value &&
+        !String(
+          (formData.convictions ?? [])[index]?.stateOfViolation ?? '',
+        ).trim()
+      if (!fillingEmptyConvictionState) return
     }
     if (field === 'hasNoAccidents' || field === 'hasNoConvictions' || field === 'hasNoInspections') {
       // Don't let "none" wipe issuer rows — server will re-project on save anyway
@@ -311,8 +326,7 @@ export default function PersonalInfoForm2({
     }
     previousInitialDataRef.current = initialData
     
-    if (hasHydratedRef.current) return
-    if (initialData && Object.keys(initialData).length > 0) {
+    if (!hasHydratedRef.current && initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true
       setFormData((prev) => {
         // Spread can overwrite array fields with undefined/null from older saves —
@@ -325,15 +339,61 @@ export default function PersonalInfoForm2({
         if (!Array.isArray(merged.convictions)) merged.convictions = prev.convictions
         if (!Array.isArray(merged.inspections)) merged.inspections = []
         if (!Array.isArray(merged.cfr391ConvictedOffenses)) merged.cfr391ConvictedOffenses = []
-        merged.convictions = merged.convictions.map((c: { stateOfViolation?: string; dateConvicted?: string; [k: string]: unknown }) => ({
-          ...c,
-          stateOfViolation: normalizeState(String(c.stateOfViolation ?? '')),
-          dateConvicted: normalizeConvictionMonthYear(String(c.dateConvicted ?? '')),
-        }))
+        const licFallback = normalizeState(
+          String(
+            useDotApplicationStore.getState().form1Data?.currentLicenses?.[0]?.state ?? '',
+          ),
+        )
+        merged.convictions = merged.convictions.map(
+          (c: {
+            stateOfViolation?: string
+            dateConvicted?: string
+            _source?: string
+            [k: string]: unknown
+          }) => {
+            let state = normalizeState(String(c.stateOfViolation ?? ''))
+            // Stale localStorage can keep empty state after server re-projection filled it
+            if (!state && c._source === 'mvr' && licFallback) state = licFallback
+            return {
+              ...c,
+              stateOfViolation: state,
+              dateConvicted: normalizeConvictionMonthYear(String(c.dateConvicted ?? '')),
+            }
+          },
+        )
         return merged
       })
+      return
     }
-  }, [initialData])
+
+    // Late patch: server/prefill filled MVR state after first hydrate (or Form 1 license arrived)
+    if (!hasHydratedRef.current || !initialData) return
+    const incoming = initialData.convictions
+    if (!Array.isArray(incoming)) return
+
+    setFormData((prev) => {
+      let changed = false
+      const convictions = (prev.convictions ?? []).map((c, index) => {
+        if (c._source !== 'mvr') return c
+        const localState = normalizeState(String(c.stateOfViolation ?? ''))
+        if (localState) return c
+
+        const match =
+          (c._mvrKey
+            ? incoming.find(
+                (x: { _mvrKey?: string; stateOfViolation?: string }) =>
+                  x._mvrKey === c._mvrKey,
+              )
+            : undefined) ?? incoming[index]
+        const fromIncoming = normalizeState(String(match?.stateOfViolation ?? ''))
+        const next = fromIncoming || form1LicenseState
+        if (!next) return c
+        changed = true
+        return { ...c, stateOfViolation: next }
+      })
+      return changed ? { ...prev, convictions } : prev
+    })
+  }, [initialData, form1LicenseState])
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {}
@@ -1257,6 +1317,9 @@ export default function PersonalInfoForm2({
         <div className='space-y-6'>
           {(formData.convictions ?? []).map((conviction, index) => {
             const locked = isIssuerRow(conviction)
+            // Soft-unlock state when Accio/projection left it empty — other fields stay locked
+            const stateLocked =
+              locked && Boolean(String(conviction.stateOfViolation ?? '').trim())
             const badge = locked && conviction._source === 'mvr'
               ? rowBadgeEntry(`convictions.${index}`)
               : null
@@ -1363,11 +1426,11 @@ export default function PersonalInfoForm2({
                     id={`conviction-state-${index}`}
                     name={`conviction-state-${index}`}
                     value={conviction.stateOfViolation}
-                    disabled={locked}
+                    disabled={stateLocked}
                     onChange={(value) =>
                       handleInputChange('convictions', { stateOfViolation: value }, index)
                     }
-                    className={`${inputClass} ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`conviction${index}State`])}`}
+                    className={`${inputClass} ${stateLocked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`conviction${index}State`])}`}
                   />
                   <DotFieldError message={errors[`conviction${index}State`]} />
                 </div>

@@ -42,4 +42,14 @@ describe('mapMvrToForm2Rows', () => {
     const { convictions } = mapMvrToForm2Rows(withState)
     expect(convictions[0].stateOfViolation).toBe('OH')
   })
+
+  it('treats empty-string licenseState as missing and uses subject.state', () => {
+    const parsed = parseAccioMvrResult(IL_VIOLATIONS_NO_STATE)
+    const { convictions } = mapMvrToForm2Rows({
+      ...parsed,
+      licenseState: '',
+      subject: { ...(parsed.subject ?? {}), state: 'TX' },
+    })
+    expect(convictions[0].stateOfViolation).toBe('TX')
+  })
 })

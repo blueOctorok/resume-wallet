@@ -73,10 +73,11 @@ function reconstructParsedMvr(
           gender: subject.gender as string | undefined,
         }
       : undefined,
-    licenseNumber: String(license?.number ?? columns.license_number ?? ''),
-    licenseState: String(license?.state ?? columns.license_state ?? ''),
+    // `||` not `??` — parsed_data often has license.state: "" while the column has "OH"
+    licenseNumber: String(license?.number || columns.license_number || ''),
+    licenseState: String(license?.state || columns.license_state || ''),
     licenseExpirationDate: String(
-      license?.expirationDate ?? columns.license_expiration_date ?? '',
+      license?.expirationDate || columns.license_expiration_date || '',
     ),
     licenses: licenses?.map((l) => ({
       issueDate: l.issueDate as string | undefined,
