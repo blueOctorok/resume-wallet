@@ -2127,17 +2127,16 @@ export default function PersonalInfoForm3({
         </button>
       </div>
 
-      {/* White "legal document" container - use dark text since bg is always light */}
+      {/*
+        Legal “paper” — always light surface + dark ink.
+        Quiet Ink remaps .bg-white / .text-gray-* to zinc/white and made the
+        nested reminder unreadable (light text on light gray).
+      */}
       <div
-        className={`p-6 rounded-lg border-2 ${
-          isDarkTheme(theme)
-            ? 'bg-white border-gray-300'
-            : 'bg-gray-50 border-gray-200'
-        }`}
+        className='dot-legal-paper p-6 rounded-lg border-2 border-gray-300 bg-white'
+        style={{ backgroundColor: '#ffffff', color: '#1f2937' }}
       >
-        <div
-          className='text-sm space-y-4 text-gray-800'
-        >
+        <div className='text-sm space-y-4' style={{ color: '#1f2937' }}>
           <p>
             I authorize you to make investigations (including contacting current
             and prior employers) into my personal, employment, financial,
@@ -2194,12 +2193,14 @@ export default function PersonalInfoForm3({
             Carrier Safety Regulations.
           </p>
 
-          {/* Reminder box inside the white container - use consistent light styling */}
           <div
-            className='mt-4 p-4 rounded-xl border border-gray-300 bg-gray-100 text-gray-900'
+            className='mt-4 p-4 rounded-xl border border-gray-300'
+            style={{ backgroundColor: '#f3f4f6', color: '#111827' }}
           >
-            <p className='text-sm font-semibold'>Reminder: 49 CFR 391.41 Medical Qualification</p>
-            <p className='text-sm mt-2'>
+            <p className='text-sm font-semibold' style={{ color: '#111827' }}>
+              Reminder: 49 CFR 391.41 Medical Qualification
+            </p>
+            <p className='text-sm mt-2' style={{ color: '#1f2937' }}>
               Motor carriers must verify that your medical certificate is current, retain it in your driver qualification file, and keep any variance documentation on hand. Please ensure the medical information you provided is accurate so we can stay compliant.
             </p>
           </div>

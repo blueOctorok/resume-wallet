@@ -117,10 +117,10 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
           size='sm'
           onClick={() => setShareModalOpen(true)}
           className='text-[11px] px-2.5 py-1 h-auto'
-          title='Share link and QR code'
+          title='Share public career card link'
         >
           <QrCode className='w-3 h-3' />
-          QR & link
+          Share
         </Button>
       </div>
 

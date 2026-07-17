@@ -3,7 +3,7 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, FileWarning } from 'lucide-react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, FileWarning, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
@@ -142,16 +142,17 @@ interface ProjectedCareerCardProps {
    */
   lensSwitchNote?: { toName: string } | null
   onUndoLensSwitch?: () => void
-  /** Self mode: pinned top-right inside the vault header (e.g. Share + Edit). Sits above the lens chip when both exist. */
+  /** Self mode: pinned top-right inside the vault header (e.g. Resume chip). */
   selfHeaderActions?: ReactNode
   /**
    * Self mode: extra header content placed BELOW `selfHeaderActions` in the
-   * top-right column. Used by Construct for the "Use this card to apply" CTA
-   * so it shows up under Share / Edit without crowding the icon row.
+   * top-right column (e.g. Construct “Use this card to apply” CTA).
    */
   selfHeaderActionsBelow?: ReactNode
   /** Self mode + wallet: after POST /api/user/avatar — parent refetches card / syncs hub store */
   onAvatarUploadSuccess?: (url: string) => void
+  /** Self mode: click name to edit profile (replaces a dedicated header Edit button) */
+  onEditProfile?: () => void
   /**
    * Apply mode: only resume sections receive `onAction` (navigate to resume builder).
    * Other blocks are read-only until the user switches to Construct mode.
@@ -199,6 +200,7 @@ export default function ProjectedCareerCard({
   selfHeaderActions,
   selfHeaderActionsBelow,
   onAvatarUploadSuccess,
+  onEditProfile,
   selfSectionNav = 'all',
   hubDocuments,
   onCardMutation,
@@ -347,14 +349,43 @@ export default function ProjectedCareerCard({
               >
                 Career card
               </p>
-              <h1
-                className={cn(
-                  'text-xl sm:text-2xl font-bold tracking-tight truncate',
-                  isDark ? 'text-white' : 'text-gray-900',
-                )}
-              >
-                {data.name}
-              </h1>
+              {isCareerCardOwnerMode(mode) && onEditProfile ? (
+                <button
+                  type='button'
+                  onClick={onEditProfile}
+                  title='Edit profile'
+                  className={cn(
+                    'group inline-flex max-w-full items-center gap-1.5 rounded-md text-left transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50',
+                    isDark ? 'hover:bg-white/5' : 'hover:bg-slate-900/5',
+                  )}
+                >
+                  <h1
+                    className={cn(
+                      'text-xl sm:text-2xl font-bold tracking-tight truncate',
+                      isDark ? 'text-white' : 'text-gray-900',
+                    )}
+                  >
+                    {data.name}
+                  </h1>
+                  <Pencil
+                    className={cn(
+                      'h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
+                      isDark ? 'text-gray-400' : 'text-slate-500',
+                    )}
+                    aria-hidden
+                  />
+                </button>
+              ) : (
+                <h1
+                  className={cn(
+                    'text-xl sm:text-2xl font-bold tracking-tight truncate',
+                    isDark ? 'text-white' : 'text-gray-900',
+                  )}
+                >
+                  {data.name}
+                </h1>
+              )}
               {data.occupation && (
                 <p className={cn('text-sm font-medium mt-0.5', isDark ? 'text-teal-300' : 'text-teal-700')}>
                   {data.occupation}

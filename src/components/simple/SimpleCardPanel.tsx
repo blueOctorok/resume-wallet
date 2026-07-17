@@ -25,7 +25,6 @@ import { useSimpleModeStore } from '@/stores/simple-mode-store'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { useUIModeStore } from '@/stores/ui-mode-store'
 import type { PageType } from '@/stores/types'
-import type { ResumeData } from '@/types/career-card'
 import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import ProjectedCareerCard, { type GhostSection } from '@/components/career-card/ProjectedCareerCard'
@@ -186,18 +185,13 @@ export default function SimpleCardPanel() {
   } | null>(null)
   const [isDraftingLens, setIsDraftingLens] = useState(false)
 
+  // Prop name kept for StormiNextStepCard — means "core DOT spine not started"
   const resumeNeedsStart = useMemo(() => {
     if (!card) return true
-    const sec = card.sections.find((s) => RESUME_BLOCK_TYPES.has(s.blockType))
+    const sec = card.sections.find((s) => s.blockType === 'driver-dot-application')
     if (!sec) return true
-    const d = sec.data as ResumeData
-    if (d.id === '__storm_resume_placeholder__') return true
-    if (
-      String(d.verificationStatus || '').toUpperCase() === 'EMPTY' &&
-      !d.title?.trim() &&
-      !d.filename?.trim()
-    )
-      return true
+    const d = sec.data as { id?: string; status?: string; isComplete?: boolean }
+    if (!d.id || d.status === 'empty') return true
     return false
   }, [card])
 
@@ -209,8 +203,8 @@ export default function SimpleCardPanel() {
 
   const handleNavigateToBlock = useCallback(
     (blockType?: string) => {
-      const bt = blockType ?? 'storm-resume'
-      if (RESUME_BLOCK_TYPES.has(bt)) {
+      const bt = blockType ?? 'driver-dot-application'
+      if (RESUME_BLOCK_TYPES.has(bt) || bt === 'driver-dot-application') {
         const route = getBlockDefinition(bt)?.pageRoute
         if (route) setCurrentPage(route as PageType)
         return

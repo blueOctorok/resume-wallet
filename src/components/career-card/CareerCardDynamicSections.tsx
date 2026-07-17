@@ -126,8 +126,14 @@ export default function CareerCardDynamicSections({
       if (idx < 0) return
       const newIdx = direction === 'up' ? idx - 1 : idx + 1
       if (newIdx < 0 || newIdx >= safeSections.length) return
-      // Resume block stays first when present
-      if (safeSections[0]?.blockType === 'storm-resume' && newIdx === 0 && section.blockType !== 'storm-resume') return
+      // DOT core block stays first when present
+      if (
+        safeSections[0]?.blockType === 'driver-dot-application' &&
+        newIdx === 0 &&
+        section.blockType !== 'driver-dot-application'
+      ) {
+        return
+      }
 
       const reorderedSections = arrayMove(safeSections, idx, newIdx)
       const typeOrder = reorderedSections.map((s) => s.blockType)
@@ -137,9 +143,9 @@ export default function CareerCardDynamicSections({
         .filter((b): b is NonNullable<typeof b> => Boolean(b))
       if (reordered.length !== installedBlocks.length) return
 
-      const storm = reordered.find((b) => b.blockType === 'storm-resume')
-      const rest = reordered.filter((b) => b.blockType !== 'storm-resume')
-      const finalOrder = storm ? [storm, ...rest] : reordered
+      const dot = reordered.find((b) => b.blockType === 'driver-dot-application')
+      const rest = reordered.filter((b) => b.blockType !== 'driver-dot-application')
+      const finalOrder = dot ? [dot, ...rest] : reordered
 
       void reorderBlocks(finalOrder, sessionUserId).then(() => onCardMutation?.())
     },
@@ -170,8 +176,9 @@ export default function CareerCardDynamicSections({
     if (mode !== 'construct' || !sessionUserId || isCoreBlock(section.blockType)) return null
     const idx = sectionGlobalIndex(section)
     if (idx < 0) return null
-    const stormLocked = safeSections[0]?.blockType === 'storm-resume'
-    const canUp = idx > 0 && !(stormLocked && idx === 1 && section.blockType !== 'storm-resume')
+    const dotLocked = safeSections[0]?.blockType === 'driver-dot-application'
+    const canUp =
+      idx > 0 && !(dotLocked && idx === 1 && section.blockType !== 'driver-dot-application')
     const canDown = idx < safeSections.length - 1
 
     const btn =

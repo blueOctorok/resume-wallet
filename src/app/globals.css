@@ -364,6 +364,58 @@ body {
 }
 
 /*
+ * DOT Form 3 legal acknowledgement paper — always light + dark text under Quiet Ink.
+ * (Nested reminder used .bg-gray-100 + .text-gray-900 → white-on-white after ink remaps.)
+ */
+[data-theme='ink'] .dot-legal-paper {
+  color-scheme: light;
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+[data-theme='ink'] .dot-legal-paper.bg-white {
+  background-color: #ffffff !important;
+}
+
+/*
+ * Printable / export documents that must stay true light paper under Quiet Ink.
+ * Ink remaps bare `.bg-white` → zinc (below); opt out with `.resume-packet-paper`.
+ */
+[data-theme='ink'] .resume-packet-paper {
+  color-scheme: light;
+  background-color: #ffffff !important;
+  color: #1c1917 !important;
+}
+[data-theme='ink'] .resume-packet-paper.bg-white,
+[data-theme='ink'] .resume-packet-paper .bg-white {
+  background-color: #ffffff !important;
+}
+[data-theme='ink'] .resume-packet-paper .bg-stone-50 {
+  background-color: #fafaf9 !important;
+}
+[data-theme='ink'] .resume-packet-paper .border-stone-200 {
+  border-color: #e7e5e4 !important;
+}
+[data-theme='ink'] .resume-packet-paper .border-stone-300 {
+  border-color: #d6d3d1 !important;
+}
+[data-theme='ink'] .resume-packet-paper .border-stone-900 {
+  border-color: #1c1917 !important;
+}
+[data-theme='ink'] .resume-packet-paper .ring-stone-200 {
+  --tw-ring-color: #e7e5e4 !important;
+}
+[data-theme='ink'] .resume-packet-paper .bg-emerald-500 {
+  background-color: #10b981 !important;
+}
+[data-theme='ink'] .resume-packet-paper .text-emerald-600 {
+  color: #059669 !important;
+}
+[data-theme='ink'] .resume-packet-mat {
+  background-color: #f5f5f4 !important; /* stone-100 desk under the page */
+}
+
+/*
  * Ink — surfaces: force common “paper” Tailwind fills to zinc so embeds aren’t bright slabs.
  * (Career card sections, pickers, and legacy `bg-white` without a `dark:` pair.)
  */

@@ -4,6 +4,72 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT-first — hide resume block section under DOT on career card** (2026-07-17)
+
+Legacy DOT→`/api/resumes/create` installed `storm-resume`, which still projected as a card section under DOT. Resume access is the header chip / live packet only: `appearsOnCareerCard: false` on `storm-resume` + `driver-resume`, and projection skips resume block types when `driver-dot-application` is installed.
+
+## **Fix — hooks error leaving DOT submitted screen** (2026-07-17)
+
+“Return to Hub” cleared `isApplicationCompleted` before navigating off `dotapp`, which remounted Form 3 for a frame across unbatched Zustand updates and could throw “Rendered more hooks than during the previous render.” Navigate first, then reset completion in a microtask. Also moved Form 2’s `convictionMinBoundary` `useMemo` above render helpers.
+
+## **DOT submitted screen — drop Employment Verification CTA** (2026-07-17)
+
+`ApplicationSubmitted` no longer pushes “Complete Employment Verification” (button + next-step card). Hub return is the only action; verification stays available from the hub when needed.
+
+## **DOT complete — stop auto-creating a second resume** (2026-07-17)
+
+Removed post-submit `/api/resumes/create` from `DotApplicationFlow` and the `DriverShell` safety net. Live Resume chip / DOT packet is the byproduct from login onward; auto-inserting a `resumes` row (+ `storm-resume` block) duplicated that path. Submitted UI now says the packet is ready on the career card.
+
+## **Fix — DOT submit “User not found for wallet address” (session UUID)** (2026-07-17)
+
+Completing the DOT app failed because `completeDriverApplicationClient` / duplicate-hash helpers still looked up `users.wallet_address` with the Supabase session UUID (`users.id`). Resolved via `getUserByWallet` (UUID → `users.id`). Dropped fake `placeholder_ipfs_hash_*` on submit — not Base/IPFS anymore; Midnight attestations are a later attestationService swap, not this DB write.
+
+## **Fix — DOT Form 3 medical reminder unreadable (Quiet Ink)** (2026-07-17)
+
+Form 3 signature step: nested “49 CFR 391.41” reminder used `bg-gray-100` + `text-gray-900`. Quiet Ink remaps gray-900 → near-white but leaves gray-100 light → white-on-white. Locked legal paper + reminder to dark ink on light fill (`.dot-legal-paper` + inline colors).
+
+## **Resume packet — clickable card link + Copy** (2026-07-17)
+
+On-screen DOT packet treated QR as secondary (print/phone). Public card URL is now a clickable link with Copy in the meta row and footer — desktop-usable without a camera.
+
+## **Fix — Candidate Hub `Button is not defined`** (2026-07-17)
+
+Removing “Use this card to apply” dropped the `Button` import while the card error/retry state still used `<Button>`. Restored the import.
+
+## **Fix — career card signature OG `verified is not defined`** (2026-07-17)
+
+`/card/[token]/signature` 500ed: `buildCareerCardOgElement` referenced undeclared `verified`. Uses `onChainCredentials.length` and “verified credentials” copy (not “on-chain”).
+
+## **Hub career card — drop “Use this card to apply”** (2026-07-17)
+
+Removed the Construct header CTA that switched into Simple/Apply mode. Card chrome is Resume-only; apply-elsewhere = Download PDF, bring-people-in = Share card.
+
+## **Simplify Share card — link + caption only** (2026-07-17)
+
+Collapsed `CareerCardShareModal` to one job: bring people to the public career card. Copy link, Open, one LinkedIn caption, Privacy link. Removed Embed tab, iframe/email-sig/badge, social carousel, QR overlay, and career-card PDF download from Share (PDF for applications stays on resume preview → Download PDF).
+
+## **Career card chrome — Resume-only header; Share in preview** (2026-07-17)
+
+Construct card top-right is just the **Resume** status chip. Share + verified-fact Privacy moved into the resume preview toolbar (`Share card` / `Privacy`). Profile edit is on the card name (hover pencil). Clears the crowded Sharing / Share / Edit row.
+
+## **Fix — DOT-packet resume stays light under Quiet Ink** (2026-07-16)
+
+Quiet Ink remaps `.bg-white` → zinc, so the premium resume paper looked dark. Added `.resume-packet-paper` / `.resume-packet-mat` escape in `globals.css` + inline white lock on `DriverResumeDocument`. Preview mat is always stone-100 regardless of theme.
+
+## **Premium DOT-packet resume layout** (2026-07-16)
+
+Live Resume-chip preview/PDF matches the Marcus Hale mock (`docs/midnight/example_resume.png`): serif name, green-dot proof chips (CDL / endorsements / med card / PSP no DQ / license valid when true), dual scannable QRs → `/card/{shareToken}`, CREDENTIALS / EXPERIENCE / SAFETY sections, footer CTA. Model in `driver-resume-packet.ts`; HTML `DriverResumeDocument`; PDF `generateDriverResumePacketPDF`. Chips = ZKnight-verified claims (Phase 3 ZK surface later) — not “proven on Midnight.” Legacy `generateStyledResumePDF` unchanged for ResumeBuilder.
+
+## **Live resume projection from Resume chip** (2026-07-16)
+
+Career-card **Resume** chrome opens a **live projected resume** via `GET /api/driver/resume-projection` (DOT + blocks + MVR). Download PDF + Continue/Start DOT. No raw MVR/PSP PDFs in the resume.
+
+## **DOT-first driver hub** (2026-07-16)
+
+Drivers-wedge spine is now **DOT Application**, not ZKnight Resume. `driver-dot-application` is `coreBlock` (auto-install, pinned first, hidden from picker, not removable). `storm-resume` is no longer core — resume appears only when a real artifact exists (e.g. auto-generated after DOT complete). Career card empty hero + “Upload resume to prefill” live on the DOT section. Feature CTAs no longer offer “Add DOT Application.” Job-fit always-required + Stormi next-step nudge follow DOT.
+
+---
+
 ## **Fix — Candidate Hub `.length` crash + applications query** (2026-07-16)
 
 Hub ErrorBoundary was throwing `Cannot read properties of undefined (reading 'length')`. Hardened career-card / Stormi nudge / DOT Form 2–3 array access after hydrate (missing `inspections` etc.). Also fixed `/api/driver/hub` and `/api/developer/hub` still filtering `applications.driver_user_id` (renamed to `applicant_user_id` in migration 016) — that was returning PostgREST 400s in logs.

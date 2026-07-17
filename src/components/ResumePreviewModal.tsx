@@ -2,8 +2,11 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import React from 'react'
-import { X, Download, Loader2, Edit, Shield, Trash2 } from 'lucide-react'
+import { X, Download, Loader2, Edit, Shield, Trash2, Share2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
+import DriverResumeDocument from '@/components/resume/DriverResumeDocument'
+import type { DriverResumePacket } from '@/lib/driver-resume-packet'
 
 // Types for structured resume data
 interface PersonalInfo {
@@ -72,6 +75,14 @@ interface StructuredResumeData {
   references?: Reference[]
 }
 
+export interface ResumePreviewMvrSummary {
+  licenseState: string | null
+  licenseStatus: string | null
+  totalPoints: number
+  violationCount: number
+  verifiedByStorm?: boolean
+}
+
 interface ResumePreviewModalProps {
   title: string
   structuredData: StructuredResumeData | null
@@ -82,12 +93,22 @@ interface ResumePreviewModalProps {
   theme: string
   // Optional action handlers
   onEdit?: () => void
+  /** Override default "Edit" label (e.g. "Continue DOT") */
+  editLabel?: string
   onVerify?: () => void
   onDelete?: () => void
   isVerifying?: boolean
   canVerify?: boolean
   // Allow overriding z-index when stacking above other modals
   zIndex?: number
+  /** Live hub projection banner */
+  subtitle?: string
+  /** Issuer-backed MVR rollup (optional section) */
+  mvrSummary?: ResumePreviewMvrSummary | null
+  /** Premium DOT-packet layout — replaces form-dump body when set */
+  packet?: DriverResumePacket | null
+  /** Open career-card share (link + social caption) — packet toolbar */
+  onShare?: () => void
 }
 
 const SKILL_CATEGORIES: { value: 'equipment' | 'route' | 'technology' | 'safety' | 'other'; label: string }[] = [
@@ -106,11 +127,16 @@ export default function ResumePreviewModal({
   isDownloading = false,
   theme,
   onEdit,
+  editLabel = 'Edit',
   onVerify,
   onDelete,
   isVerifying = false,
   canVerify = false,
   zIndex = 1000,
+  subtitle,
+  mvrSummary = null,
+  packet = null,
+  onShare,
 }: ResumePreviewModalProps) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return ''
@@ -146,12 +172,23 @@ export default function ResumePreviewModal({
           }`}
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-              {title}
-            </h3>
+            <div className="min-w-0">
+              <h3 className={`text-lg font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+                {title}
+              </h3>
+              {subtitle ? (
+                <p
+                  className={`mt-0.5 text-xs ${
+                    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  {subtitle}
+                </p>
+              ) : null}
+            </div>
             <button
               onClick={onClose}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors shrink-0 ${
                 isDarkTheme(theme) ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
               }`}
             >
@@ -159,7 +196,50 @@ export default function ResumePreviewModal({
             </button>
           </div>
           
-          {/* Action buttons row */}
+          {/* Action buttons — packet mode: Download PDF / Share card / Continue DOT */}
+          {packet ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {onDownloadProp ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isDownloading}
+                  onClick={onDownloadProp}
+                  className="gap-1.5"
+                >
+                  <Download className="h-4 w-4" aria-hidden />
+                  {isDownloading ? 'Generating…' : 'Download PDF'}
+                </Button>
+              ) : null}
+              {onShare ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={onShare}
+                  className="gap-1.5"
+                  title="Copy your public career card link"
+                >
+                  <Share2 className="h-4 w-4" aria-hidden />
+                  Share card
+                </Button>
+              ) : null}
+              <div className="flex-1 min-w-[0.5rem]" />
+              {onEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEdit}
+                  className="gap-1.5"
+                >
+                  <Edit className="h-4 w-4" aria-hidden />
+                  {editLabel}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
           <div className="flex items-center gap-2 flex-wrap">
             {onDownloadProp ? (
               <button
@@ -181,7 +261,6 @@ export default function ResumePreviewModal({
               </button>
             ) : null}
 
-            {/* Edit button */}
             {onEdit && (
               <button
                 onClick={onEdit}
@@ -192,11 +271,10 @@ export default function ResumePreviewModal({
                 }`}
               >
                 <Edit className="w-4 h-4" />
-                Edit
+                {editLabel}
               </button>
             )}
             
-            {/* Verify button */}
             {canVerify && onVerify && (
               <button
                 onClick={onVerify}
@@ -216,7 +294,6 @@ export default function ResumePreviewModal({
               </button>
             )}
             
-            {/* Delete button */}
             {onDelete && (
               <button
                 onClick={onDelete}
@@ -231,11 +308,22 @@ export default function ResumePreviewModal({
               </button>
             )}
           </div>
+          )}
         </div>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Resume preview content - matches ReviewStep styling */}
+        <div
+          className={`flex-1 overflow-y-auto ${
+            packet
+              ? // Always light “desk” under the paper page (Quiet Ink must not darken it)
+                'resume-packet-mat bg-stone-100 p-4 sm:p-6'
+              : 'p-6'
+          }`}
+        >
+          {packet ? (
+            <DriverResumeDocument packet={packet} />
+          ) : (
+          /* Resume preview content - matches ReviewStep styling */
           <div
             className={`rounded-lg border p-6 ${
               isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
@@ -275,6 +363,54 @@ export default function ResumePreviewModal({
                 </p>
               )}
             </section>
+
+            {/* Issuer-backed MVR rollup (live projection) */}
+            {mvrSummary && (
+              <section className="mb-6 pb-6 border-b border-gray-300 dark:border-gray-700">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h5
+                    className={`text-base font-semibold ${
+                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
+                    }`}
+                  >
+                    Driving record (MVR)
+                  </h5>
+                  {mvrSummary.verifiedByStorm !== false && (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        isDarkTheme(theme)
+                          ? 'bg-teal-500/15 text-teal-300'
+                          : 'bg-teal-50 text-teal-800'
+                      }`}
+                    >
+                      <Shield className="w-3 h-3" aria-hidden />
+                      Verified by Storm
+                    </span>
+                  )}
+                </div>
+                <div
+                  className={`text-sm space-y-1 ${
+                    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  {mvrSummary.licenseState && (
+                    <p>
+                      <span className="font-medium">License state:</span> {mvrSummary.licenseState}
+                    </p>
+                  )}
+                  {mvrSummary.licenseStatus && (
+                    <p>
+                      <span className="font-medium">License status:</span> {mvrSummary.licenseStatus}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-medium">Points:</span> {mvrSummary.totalPoints}
+                    <span className="mx-2">·</span>
+                    <span className="font-medium">Violations:</span> {mvrSummary.violationCount}
+                  </p>
+                </div>
+              </section>
+            )}
 
             {/* CDL Information */}
             {(cdlInfo.cdlClass || (cdlInfo.endorsements && cdlInfo.endorsements.length > 0) || cdlInfo.expirationDate) && (
@@ -516,6 +652,7 @@ export default function ResumePreviewModal({
                 </div>
               )}
           </div>
+          )}
         </div>
       </div>
     </Modal>

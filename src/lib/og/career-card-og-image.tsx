@@ -244,6 +244,8 @@ export function buildCareerCardOgElement(
 ) {
   const sectionLabels = card.sections.map((s) => s.label)
   const employerConfirmed = card.employerConfirmedEmploymentCount
+  // Issuer-backed / verified credential count for signature strip (never invent)
+  const verifiedCount = card.onChainCredentials?.length ?? 0
   const headline =
     card.occupation ||
     card.professionalSummary?.slice(0, 120) ||
@@ -301,7 +303,9 @@ export function buildCareerCardOgElement(
             <span style={{ fontSize: 20, fontWeight: 800, color: white }}>{card.name}</span>
             <span style={{ fontSize: 14, color: muted, maxWidth: 360 }}>{headline}</span>
             <span style={{ fontSize: 12, color: teal, fontWeight: 600 }}>
-              {verified} on-chain credential{verified === 1 ? '' : 's'} · ZKnight Career Card
+              {verifiedCount > 0
+                ? `${verifiedCount} verified credential${verifiedCount === 1 ? '' : 's'} · ZKnight Career Card`
+                : 'ZKnight Career Card'}
             </span>
           </div>
         </div>

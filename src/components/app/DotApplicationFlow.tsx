@@ -8,11 +8,8 @@ import BackToHubButton from '@/components/ui/BackToHubButton'
 import ProfileConflictModal from '@/components/ProfileConflictModal'
 import SyncIndicator, { useSyncIndicator } from '@/components/SyncIndicator'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useDotApplicationStore, useUIStore, useDriverHubStore } from '@/stores'
-import {
-  profileToDotApplication,
-  profileToResumeBuilder,
-} from '@/lib/profile-mapper'
+import { useDotApplicationStore, useUIStore } from '@/stores'
+import { profileToDotApplication } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 import { normalizeForm3Data } from '@/lib/dot-application-hydrate'
 import type {
@@ -92,13 +89,6 @@ export default function DotApplicationFlow({
   const dotApp = useDotApplicationStore()
   const { showEmploymentVerification, setShowEmploymentVerification } = useUIStore()
 
-  // Resume auto-creation state
-  // 'idle' | 'creating' | 'created' | 'skipped' (already had a resume) | 'failed'
-  const [resumeAutoCreateStatus, setResumeAutoCreateStatus] = useState<
-    'idle' | 'creating' | 'created' | 'skipped' | 'failed'
-  >('idle')
-  const hubStore = useDriverHubStore()
-
   /** False until we merge server application_data (form3 / employment live in DB, not only localStorage). */
   const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !sessionUserId?.trim())
   const [mvrPrefillStatus, setMvrPrefillStatus] = useState<
@@ -124,11 +114,6 @@ export default function DotApplicationFlow({
   // When true, loads from profile even if forms have data (navigating from Resume Builder)
   const forceProfileLoadRef = useRef(false)
   const resetInProgressRef = useRef(false)
-  const [profileLoadTrigger, setProfileLoadTrigger] = [
-    dotApp.applicationId, // repurpose as trigger key — actually use local state
-    // NOTE: we use a dedicated trigger counter instead
-    () => {},
-  ]
 
   // -------------------------------------------------------
   // Attestation summaries for field badge honesty tiers
@@ -559,10 +544,16 @@ export default function DotApplicationFlow({
         return
       }
 
-      const ipfsHash = 'placeholder_ipfs_hash_' + Date.now()
+      // No IPFS — Phase 1 dropped Pinata; content hash is enough for duplicate detection.
+      // Phase 3 Midnight attestations go through attestationService later, not this submit path.
       const { completeDriverApplicationClient } = await import('@/lib/supabase-client-db')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dbResult = await completeDriverApplicationClient(sessionUserId, combinedData as any, ipfsHash, applicationHash)
+      const dbResult = await completeDriverApplicationClient(
+        sessionUserId,
+        combinedData as any,
+        undefined,
+        applicationHash,
+      )
 
       if (!dbResult.success) {
         dotApp.setSubmissionError('Failed to save application to database: ' + dbResult.error)
@@ -658,120 +649,8 @@ export default function DotApplicationFlow({
     onBack()
   }, [dotApp.hasUnsavedChanges, onBack])
 
-  // -------------------------------------------------------
-  // Resume auto-creation (when DOT app completes with no resume on file)
-  // Many drivers don't have resumes - we silently create one from their DOT data
-  // so it's already waiting for them in the hub when they navigate back.
-  //
-  // AbortController pattern: React 18 Strict Mode double-fires effects. An abort
-  // signal is passed to all fetches so the first run's in-flight requests are
-  // cancelled when the effect re-runs, preventing duplicate resumes.
-  // -------------------------------------------------------
-  useEffect(() => {
-    if (!dotApp.isApplicationCompleted || !sessionUserId) return
-
-    const controller = new AbortController()
-    const { signal } = controller
-
-    const autoCreateResume = async () => {
-      // Step 1: check whether the driver already has a resume
-      let hasResumes = false
-      try {
-        const res = await fetch('/api/resumes', {
-          headers: { 'x-wallet-address': sessionUserId },
-          signal,
-        })
-        if (res.ok) {
-          const resumes = await res.json()
-          hasResumes = Array.isArray(resumes) && resumes.length > 0
-        }
-      } catch (err) {
-        if (signal.aborted) return
-        console.warn('⚠️ [DOT] Failed to check for resumes:', err)
-        return
-      }
-
-      if (signal.aborted) return
-
-      if (hasResumes) {
-        setResumeAutoCreateStatus('skipped')
-        return
-      }
-
-      // Step 2: auto-create a resume from the driver profile
-      setResumeAutoCreateStatus('creating')
-      try {
-        const profileRes = await fetch('/api/driver/profile', {
-          signal,
-        })
-        if (!profileRes.ok) throw new Error('Failed to fetch profile')
-
-        const { profile } = await profileRes.json()
-        if (!profile) throw new Error('No profile data found')
-
-        if (signal.aborted) return
-
-        const resumeData = profileToResumeBuilder(profile as UnifiedDriverProfile)
-
-        const structuredData = {
-          personalInfo: resumeData.personalInfo,
-          cdlInfo: resumeData.cdlInfo,
-          employments: resumeData.employments,
-          educations: resumeData.educations,
-          skills: resumeData.skills,
-          references: resumeData.references,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          autoGenerated: true,
-          source: 'dot_application',
-        }
-
-        const firstName = resumeData.personalInfo?.firstName ?? ''
-        const lastName = resumeData.personalInfo?.lastName ?? ''
-        const title = [firstName, lastName].filter(Boolean).join(' ')
-
-        const createRes = await fetch('/api/resumes/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-            'x-wallet-address': sessionUserId,
-          },
-        body: JSON.stringify({
-            title: title ? `${title} - Resume` : 'My Resume',
-            structuredData,
-            resumeType: 'built',
-          }),
-          signal,
-        })
-
-        if (signal.aborted) return
-
-        if (!createRes.ok) {
-          const err = await createRes.json()
-          throw new Error(err.error || 'Failed to create resume')
-        }
-
-        const { resume } = await createRes.json()
-
-        console.log('✅ [DOT] Resume auto-created from DOT application data')
-        setResumeAutoCreateStatus('created')
-
-        // Update hub store immediately so the resume appears when driver navigates back
-        if (resume) {
-          hubStore.addResume(resume)
-        }
-        hubStore.setHasResume(true)
-      } catch (err) {
-        if (signal.aborted) return
-        console.error('❌ [DOT] Failed to auto-create resume:', err)
-        setResumeAutoCreateStatus('failed')
-      }
-    }
-
-    autoCreateResume()
-
-    // Cancel all in-flight fetches if this effect re-runs (Strict Mode double-invoke)
-    return () => controller.abort()
-  }, [dotApp.isApplicationCompleted, sessionUserId])
+  // Resume: live DOT packet on the career card (no second `resumes` row on submit).
+  // Legacy auto-create via /api/resumes/create was removed — it duplicated the projection.
 
   // -------------------------------------------------------
   // Render helpers
@@ -844,14 +723,19 @@ export default function DotApplicationFlow({
     if (dotApp.isApplicationCompleted && !showEmploymentVerification) {
       return (
         <ApplicationSubmitted
-          onNavigateToSafetyForm={() => setShowEmploymentVerification(true)}
           onNavigateToDashboard={() => {
-            dotApp.setHasUnsavedChanges(false)
-            dotApp.setIsApplicationCompleted(false)
+            // Navigate off `dotapp` first. Clearing `isApplicationCompleted` while
+            // this flow is still mounted remounts Form 3 for a frame — and because
+            // UI store + DOT store updates aren't always batched together, that
+            // flash has triggered "Rendered more hooks than during the previous render".
             onBack()
+            queueMicrotask(() => {
+              const store = useDotApplicationStore.getState()
+              store.setHasUnsavedChanges(false)
+              store.setIsApplicationCompleted(false)
+            })
           }}
           blockchainData={dotApp.blockchainData}
-          resumeAutoCreateStatus={resumeAutoCreateStatus}
         />
       )
     }
@@ -862,8 +746,10 @@ export default function DotApplicationFlow({
           userAddress={userAddress}
           onComplete={() => {
             setShowEmploymentVerification(false)
-            dotApp.setIsApplicationCompleted(false)
             onBack()
+            queueMicrotask(() => {
+              useDotApplicationStore.getState().setIsApplicationCompleted(false)
+            })
           }}
         />
       )

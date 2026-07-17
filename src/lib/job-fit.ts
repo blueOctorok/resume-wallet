@@ -112,8 +112,8 @@ function normalize(text: string | null | undefined): string {
   return (text ?? '').toLowerCase()
 }
 
-/** Hard floor: every job benefits from a resume — surface it even if not in the description. */
-const ALWAYS_REQUIRED_BLOCK_IDS = new Set<string>(['storm-resume'])
+/** Hard floor: drivers-wedge spine — surface DOT even if not named in the posting. */
+const ALWAYS_REQUIRED_BLOCK_IDS = new Set<string>(['driver-dot-application'])
 
 function deriveRequirementsFromJob(snap: SelectedJobSnapshot): Requirement[] {
   const text = `${normalize(snap.title)} ${normalize(snap.description)}`

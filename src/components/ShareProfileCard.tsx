@@ -312,7 +312,7 @@ export default function ShareProfileCard({
             </button>
             <button
               onClick={() => setShowQrModal(true)}
-              title='Share link and QR code'
+              title='Share public career card link'
               className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isDark
                   ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -320,7 +320,7 @@ export default function ShareProfileCard({
               }`}
             >
               <QrCode className='w-4 h-4' />
-              Share QR
+              Share card
             </button>
           </div>
         </div>

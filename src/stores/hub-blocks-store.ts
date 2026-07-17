@@ -190,17 +190,17 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       // default lens server-side; the card still renders.
       void useCareerCardLensesStore.getState().fetchLenses(sessionUserId)
 
-      // Mandatory STORM Resume — every hub has this block first (not pickable).
-      const hasStormResume = get().installedBlocks.some((b) => b.blockType === 'storm-resume')
-      if (!hasStormResume) {
-        await get().addBlock('storm-resume', sessionUserId)
-        const after = get().installedBlocks
-        const stormIdx = after.findIndex((b) => b.blockType === 'storm-resume')
-        if (stormIdx > 0) {
-          const storm = after[stormIdx]
-          const rest = after.filter((_, i) => i !== stormIdx)
-          await get().reorderBlocks([storm, ...rest], sessionUserId)
-        }
+      // Mandatory DOT Application — drivers-wedge spine, pinned first (not pickable).
+      const hasDotApp = get().installedBlocks.some((b) => b.blockType === 'driver-dot-application')
+      if (!hasDotApp) {
+        await get().addBlock('driver-dot-application', sessionUserId)
+      }
+      const afterDot = get().installedBlocks
+      const dotIdx = afterDot.findIndex((b) => b.blockType === 'driver-dot-application')
+      if (dotIdx > 0) {
+        const dot = afterDot[dotIdx]
+        const rest = afterDot.filter((_, i) => i !== dotIdx)
+        await get().reorderBlocks([dot, ...rest], sessionUserId)
       }
     } catch (err) {
       set({

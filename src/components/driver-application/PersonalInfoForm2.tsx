@@ -395,6 +395,14 @@ export default function PersonalInfoForm2({
     })
   }, [initialData, form1LicenseState])
 
+  // Keep hooks above render helpers — never interleave useMemo with JSX factories.
+  // DOT asks for convictions in the past 3 years — disable months before this boundary.
+  const convictionMinBoundary = useMemo(() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 3)
+    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  }, [])
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -1155,13 +1163,6 @@ export default function PersonalInfoForm2({
       ? 'bg-gray-700/50 border-gray-600 text-white'
       : 'bg-white border-gray-200 text-gray-900'
   }`
-
-  // DOT asks for convictions in the past 3 years — disable months before this boundary
-  const convictionMinBoundary = useMemo(() => {
-    const d = new Date()
-    d.setFullYear(d.getFullYear() - 3)
-    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-  }, [])
 
   const renderSafetyCompliance = () => (
     <div className='space-y-10'>

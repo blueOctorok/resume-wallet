@@ -29,7 +29,7 @@ import type {
   OnChainCredential,
 } from '@/types/career-card'
 
-/** Shown on the career card when storm-resume is installed but no resume row exists yet. */
+/** @deprecated Empty resume heroes are no longer shown — resume appears only with a real artifact. */
 export const EMPTY_STORM_RESUME_CARD: ResumeData = {
   id: '__storm_resume_placeholder__',
   title: '',
@@ -40,19 +40,24 @@ export const EMPTY_STORM_RESUME_CARD: ResumeData = {
   createdAt: new Date(0).toISOString(),
 }
 
+const EMPTY_DOT_APP_CARD: DotAppData = {
+  id: '',
+  status: 'empty',
+  isComplete: false,
+  createdAt: '',
+}
+
 /**
  * Fallback data for installed blocks that have no user data yet.
  * Without this, blocks the user just added would silently disappear from the
  * career card because `fetchSectionData` returns null → the section loop
  * skips them. The empty placeholder ensures the block still renders
  * (particularly in Construct with a "Set up" button).
+ *
+ * Resume types intentionally omit empty fallbacks — no empty resume hero.
  */
 const EMPTY_SECTION_DATA: Record<string, unknown> = {
-  'storm-resume': EMPTY_STORM_RESUME_CARD,
-  'driver-resume': EMPTY_STORM_RESUME_CARD,
-  'developer-resume': EMPTY_STORM_RESUME_CARD,
-  'general-resume': EMPTY_STORM_RESUME_CARD,
-  'driver-dot-application': { id: '', status: 'empty', isComplete: false, createdAt: '' } satisfies DotAppData,
+  'driver-dot-application': EMPTY_DOT_APP_CARD,
   'driver-mvr': {
     orderId: '',
     orderStatus: 'none',
@@ -197,6 +202,12 @@ export async function buildProjectedCareerCard(
   const installedTypes = hubRows.map((b) => b.block_type)
   const hasStormResume = installedTypes.includes('storm-resume')
   const legacyResumeBlockTypes = new Set(['driver-resume', 'developer-resume', 'general-resume'])
+  const resumeBlockTypes = new Set([
+    'storm-resume',
+    'driver-resume',
+    'developer-resume',
+    'general-resume',
+  ])
 
   let pickedPendingScreening: PickedPendingEmployerScreening | null = null
   if (meta.contactMode === 'self') {
@@ -242,9 +253,14 @@ export async function buildProjectedCareerCard(
 
   const sections: CareerCardSection[] = []
 
+  // DOT-first: resume lives on the Resume chip / live packet — never as a
+  // second section under DOT (legacy auto-create left storm-resume installed).
+  const hasDotApp = installedTypes.includes('driver-dot-application')
+
   for (const row of hubRows) {
     const blockType = row.block_type
     if (hasStormResume && legacyResumeBlockTypes.has(blockType)) continue
+    if (hasDotApp && resumeBlockTypes.has(blockType)) continue
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
 
@@ -257,6 +273,8 @@ export async function buildProjectedCareerCard(
     )
     let needsSetup = false
     if (!sectionData) {
+      // Resume: only show when a real artifact exists (no empty hero).
+      if (resumeBlockTypes.has(blockType)) continue
       const fallback = EMPTY_SECTION_DATA[blockType]
       if (!fallback) continue
       sectionData = fallback as typeof sectionData
@@ -264,7 +282,8 @@ export async function buildProjectedCareerCard(
     }
 
     let cardPage = readCardPage(row.config ?? undefined)
-    if (blockType === 'storm-resume') {
+    // DOT is the locked first section on page 1
+    if (blockType === 'driver-dot-application') {
       cardPage = 1
     }
 
@@ -300,10 +319,10 @@ export async function buildProjectedCareerCard(
     }
   }
 
-  const stormIdx = sections.findIndex((s) => s.blockType === 'storm-resume')
-  if (stormIdx > 0) {
-    const [storm] = sections.splice(stormIdx, 1)
-    sections.unshift(storm)
+  const dotIdx = sections.findIndex((s) => s.blockType === 'driver-dot-application')
+  if (dotIdx > 0) {
+    const [dot] = sections.splice(dotIdx, 1)
+    sections.unshift(dot)
   }
 
   // Apply the lens ordering + filter before computing signals so score reflects

@@ -12,7 +12,6 @@ import { useAuthStore, useUIStore } from '@/stores'
 import { useInstalledBlocks } from '@/stores/hub-blocks-store'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { hasStoredResumeFile } from '@/lib/document-storage'
-import type { PageType } from '@/stores/types'
 import type { HubDocument } from '@/lib/hub-document-types'
 import { hubDocStatusFromScreeningOrder } from '@/lib/hub-document-types'
 import type { PickedPendingEmployerScreening } from '@/lib/pending-employer-screening'
@@ -157,38 +156,7 @@ export function useHubDocuments(refreshKey: number): {
           }
         }
 
-        const resumeRows = docs.filter((d) => d.type === 'resume').length
-        if (hasResumeBlock && resumeRows === 0) {
-          const editPage: PageType = hasStormResumeBlock
-            ? 'storm-resume'
-            : hasDriverResumeBlock
-              ? 'resume'
-              : hasGeneralResumeBlock
-                ? 'general-resume'
-                : 'developer-resume'
-          const resumeSourceRole: 'driver' | 'developer' | 'general' = hasStormResumeBlock
-            ? 'general'
-            : hasDriverResumeBlock
-              ? 'driver'
-              : hasGeneralResumeBlock
-                ? 'general'
-                : 'developer'
-          docs.push({
-            id: 'resume-hub-placeholder',
-            type: 'resume',
-            title: 'Resume',
-            status: 'empty',
-            verified: false,
-            txHash: null,
-            canVerify: false,
-            canDelete: false,
-            editPage,
-            ipfsHash: null,
-            structuredData: null,
-            resumeSourceRole,
-            stormResumeInitialPanel: hasStormResumeBlock ? 'upload' : undefined,
-          })
-        }
+        // No empty resume placeholder — resume is a byproduct of DOT / upload, not a hub hero.
 
         if (hasDotAppBlock && data.dotApplications) {
           for (const app of data.dotApplications) {

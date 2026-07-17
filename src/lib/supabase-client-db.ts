@@ -1,6 +1,19 @@
 'use server'
 
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
+
+/**
+ * Resolve Storm `users.id` from a session user id (UUID) or legacy wallet.
+ * Post–Phase-1 callers pass Supabase auth / users.id — NOT a chain address.
+ */
+async function resolveDriverAppUserId(
+  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
+  sessionOrWallet: string,
+): Promise<string | null> {
+  const user = await getUserByWallet(supabase, sessionOrWallet)
+  return user?.id ?? null
+}
 
 // Types for driver application data
 export interface DriverApplicationData {
@@ -276,17 +289,8 @@ export async function getDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Normalize to lowercase for consistent lookup (match saveDriverApplicationClient)
-    const normalizedAddress = userAddress.toLowerCase()
-    
-    // First, get the user_id from the wallet address (case-insensitive)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
-
-    if (!userData) {
+    const userId = await resolveDriverAppUserId(supabase, userAddress)
+    if (!userId) {
       console.log('📖 Driver App DB: User not found')
       return null
     }
@@ -294,7 +298,7 @@ export async function getDriverApplicationClient(
     const { data, error } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .maybeSingle()
 
     if (error) {
@@ -340,34 +344,28 @@ export async function completeDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // First, save the final application data
-    const savedApplication = await saveDriverApplicationClient(
+    // Resolve id first — sessionUserId is users.id (UUID), not a wallet address
+    const userId = await resolveDriverAppUserId(supabase, userAddress)
+    if (!userId) {
+      throw new Error(`User not found for session id: ${userAddress}`)
+    }
+
+    // Save final application data (pass resolved id so we skip wallet get-or-create)
+    await saveDriverApplicationClient(
       userAddress,
       applicationData,
-      10 // Final step
+      10, // Final step
+      userId,
     )
 
-    // Get user_id for the update (user should exist at this point from saveDriverApplicationClient)
-    // Use ilike for case-insensitive match to stay consistent
-    const normalizedAddress = userAddress.toLowerCase()
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
-
-    if (!userData) {
-      throw new Error(`User not found for wallet address: ${normalizedAddress}`)
-    }
-
-    // Then mark as complete and add IPFS hash and application hash
-    const updateData: any = {
+    // Mark complete. ipfs_hash is legacy (Pinata removed); keep column nullable.
+    const updateData: Record<string, unknown> = {
       is_complete: true,
-      ipfs_hash: ipfsHash || null,
+      ipfs_hash: ipfsHash && !ipfsHash.startsWith('placeholder_') ? ipfsHash : null,
       updated_at: new Date().toISOString(),
     }
-    
-    // Add application_hash if provided (needed for blockchain persist endpoint to find the record)
+
+    // Content hash for duplicate detection (not a chain tx)
     if (applicationHash) {
       updateData.application_hash = applicationHash
     }
@@ -375,7 +373,7 @@ export async function completeDriverApplicationClient(
     const { data, error } = await supabase
       .from('driver_applications')
       .update(updateData)
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -420,27 +418,16 @@ export async function checkDuplicateApplicationHash(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Normalize to lowercase for consistent lookup
-    const normalizedAddress = userAddress.toLowerCase()
-    
-    // Get user_id from wallet address (case-insensitive)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
-
-    if (!userData) {
-      // User doesn't exist yet, so no duplicate
+    const userId = await resolveDriverAppUserId(supabase, userAddress)
+    if (!userId) {
       console.log('🔍 Driver App DB: User not found, no duplicate possible')
       return { exists: false }
     }
 
-    // Check if application with this hash exists for this user
     const { data, error } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .eq('application_hash', applicationHash)
       .maybeSingle()
 
@@ -481,17 +468,8 @@ export async function getAllDriverApplicationsClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Normalize to lowercase for consistent lookup
-    const normalizedAddress = userAddress.toLowerCase()
-    
-    // Get user_id from wallet address (case-insensitive)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
-
-    if (!userData) {
+    const userId = await resolveDriverAppUserId(supabase, userAddress)
+    if (!userId) {
       console.log('📖 Driver App DB: User not found')
       return []
     }
@@ -499,7 +477,7 @@ export async function getAllDriverApplicationsClient(
     const { data, error } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -536,24 +514,15 @@ export async function deleteDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Normalize to lowercase for consistent lookup
-    const normalizedAddress = userAddress.toLowerCase()
-    
-    // Get user_id from wallet address (case-insensitive)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
-
-    if (!userData) {
-      throw new Error(`User not found for wallet address: ${normalizedAddress}`)
+    const userId = await resolveDriverAppUserId(supabase, userAddress)
+    if (!userId) {
+      throw new Error(`User not found for session id: ${userAddress}`)
     }
 
     const { error } = await supabase
       .from('driver_applications')
       .delete()
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .eq('id', applicationId)
 
     if (error) {

@@ -15,6 +15,8 @@ import type { ShippedFactType } from '@/lib/fact-registry'
 interface DisclosurePreferencesModalProps {
   isOpen: boolean
   onClose: () => void
+  /** Stack above another modal (e.g. resume preview at 1000) */
+  zIndex?: number
 }
 
 function FactShareToggle({
@@ -71,6 +73,7 @@ function FactShareToggle({
 export default function DisclosurePreferencesModal({
   isOpen,
   onClose,
+  zIndex = 1000,
 }: DisclosurePreferencesModalProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
@@ -95,7 +98,7 @@ export default function DisclosurePreferencesModal({
   if (!isOpen) return null
 
   return (
-    <Modal onClose={onClose} maxWidth="max-w-2xl" panelShape="block">
+    <Modal onClose={onClose} maxWidth="max-w-2xl" panelShape="block" zIndex={zIndex}>
       <ModalHeader
         variant="block"
         title="Verified fact sharing"

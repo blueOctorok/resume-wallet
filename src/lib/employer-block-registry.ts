@@ -29,8 +29,8 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
   // exactly this request option. No surprise developer concepts on a driver
   // employer's hub, and vice versa.
   //
-  // Resume is NOT here — storm-resume is a core block auto-installed on
-  // every candidate's hub, so there's nothing to "request."
+  // Resume is NOT here — it's a byproduct of the DOT application (core block),
+  // not an employer-requestable install.
   //
   // ── Developers ────────────────────────────────────────────────────────────
   {

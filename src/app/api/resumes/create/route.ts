@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { ensureHubBlockInstalled } from '@/lib/block-data'
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('✅ Resume Builder API: Built resume created successfully', resume.id)
+
+    // Resume is a byproduct of DOT / builder — install block so it can appear on the card
+    await ensureHubBlockInstalled(adminClient, userId, 'storm-resume')
 
     return NextResponse.json({
       success: true,

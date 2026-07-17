@@ -103,16 +103,13 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'storm-resume',
       label: 'ZKnight Resume',
-      description: 'Upload a file or build a ZKnight-style resume for your career path',
+      description: 'Generated from your DOT application (or upload) — optional career card artifact',
       status: d.hasResume ? 'complete' : 'pending',
-      action: !d.hasResume ? { label: 'Open ZKnight Resume', target: 'storm-resume' } : undefined,
+      isOptional: true,
+      action: !d.hasResume ? { label: 'Open DOT to prefill', target: 'dotapp' } : undefined,
     }],
-    nextAction: (d) => !d.hasResume ? {
-      label: 'Complete Your Resume',
-      description: 'Upload a PDF/DOC or use a guided builder',
-      target: 'storm-resume',
-      priority: 'high',
-    } : null,
+    // DOT is the spine — don't nudge resume as the primary next action
+    nextAction: () => null,
   },
 
   'driver-resume': {
@@ -208,7 +205,7 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       return [{
         id: 'driver-dot-application',
         label: 'DOT Application',
-        description: 'Complete your DOT compliance application',
+        description: 'Build your federal driver qualification file — the hub spine for screening',
         status: done ? 'complete' : d.dotAppInProgress ? 'in_progress' : 'pending',
         action: !done
           ? {
@@ -222,7 +219,7 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       if (d.dotAppComplete) return null
       return {
         label: d.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
-        description: 'Complete your DOT compliance application',
+        description: 'Your DQ file is the first thing to complete on your hub',
         target: 'dotapp',
         priority: 'high',
       }

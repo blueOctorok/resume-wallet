@@ -11,7 +11,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
  *
  * Copy branches on:
  *   - No job selected → nudge to pick one
- *   - Empty hub (zero blocks) + job selected → start with a resume
+ *   - Empty hub + job selected → start with DOT application
  *   - No lens clears apply threshold → offer lens draft
  *   - `toneBand === 'redirect'` → suggest picking a better-fit job
  *   - Missing block → install the biggest gap
@@ -39,7 +39,7 @@ const LENS_DRAFT_MARGIN_THRESHOLD = 10
 export interface StormiNextStepCardProps {
   snap: SelectedJobSnapshot | null
   fit: JobFitResult | null
-  /** True when STORM resume is still empty (core block is installed but no artifact yet). */
+  /** True when core DOT application is still empty / not started. */
   resumeNeedsStart: boolean
   onAddBlock: (blockId?: string) => void
   onApply: () => void
@@ -138,14 +138,14 @@ export default function StormiNextStepCard({
       }
     }
 
-    // Fresh card — universal first step is a resume (core block may already be installed).
+    // Fresh card — drivers-wedge spine is the DOT application.
     if (resumeNeedsStart) {
       return {
         icon: Plus,
         eyebrow: 'Do this next',
-        title: 'Start with a STORM resume',
-        body: `Almost every role wants one \u2014 adding it is your first ~30% of coverage for \u201c${snap.title}\u201d.`,
-        primary: { label: 'Add ZKnight Resume', onClick: () => onAddBlock('storm-resume') },
+        title: 'Start your DOT application',
+        body: `Your driver qualification file is the hub spine \u2014 it\u2019s the first big step for \u201c${snap.title}\u201d.`,
+        primary: { label: 'Open DOT Application', onClick: () => onAddBlock('driver-dot-application') },
       }
     }
 

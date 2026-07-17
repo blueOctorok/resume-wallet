@@ -145,9 +145,9 @@ export const BLOCK_CATEGORIES: BlockCategory[] = [
 
 // ── Block Definitions ─────────────────────────────────────────────────────────
 //
-// STORM Resume is the single hub entry for upload + career-specific guided builders.
-// Legacy block ids (general-resume, driver-resume, developer-resume) remain defined
-// for existing installs and data routing; they are hidden from the picker only.
+// DOT Application is the drivers-wedge core block (always installed, pinned first).
+// ZKnight Resume is an optional artifact (upload / generated from DOT).
+// Legacy resume ids remain for existing installs; all are hidden from the picker.
 
 export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   // ── General ────────────────────────────────────────────────────────────────
@@ -179,7 +179,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
       'warehouse',
     ],
     complexity: 'moderate',
-    appearsOnCareerCard: true,
+    // DOT-first: resume is the live chip/packet byproduct, not a card section under DOT.
+    appearsOnCareerCard: false,
     pageRoute: 'storm-resume',
     dataTables: [
       'block_education',
@@ -193,9 +194,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: null,
     completionField: null,
     requiredEmployerBlocks: null,
-    /** Mandatory first step — not pickable; auto-installed for every hub. */
+    /** Generated/uploaded artifact — not the hub spine (DOT is core). */
     hiddenFromBlockPicker: true,
-    coreBlock: true,
   },
   {
     id: 'general-resume',
@@ -269,7 +269,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     categoryId: 'drivers',
     suggestedFor: ['driver', 'cdl', 'trucking', 'hauling', 'logistics', 'freight', 'commercial'],
     complexity: 'moderate',
-    appearsOnCareerCard: true,
+    // Same as storm-resume — live packet / Resume chip, not a card section.
+    appearsOnCareerCard: false,
     pageRoute: 'resume',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_education', 'block_skills', 'block_references'],
     employerRequestable: false,
@@ -293,6 +294,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: 'DOT Application',
     completionField: 'hasDriverApp',
     requiredEmployerBlocks: ['employer-dot-screening'],
+    /** Drivers-wedge spine — always installed, pinned first, not pickable/removable. */
+    hiddenFromBlockPicker: true,
+    coreBlock: true,
   },
   {
     id: 'driver-screening-consent',
@@ -609,7 +613,6 @@ export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
  * Order is product-locked; labels are candidate-facing (not registry labels).
  */
 export const DRIVER_FEATURE_CTA_IDS = [
-  'driver-dot-application',
   'driver-mvr',
   'driver-psp',
   'driver-cdl-credentials',
@@ -617,7 +620,6 @@ export const DRIVER_FEATURE_CTA_IDS = [
 ] as const
 
 const DRIVER_FEATURE_CTA_LABELS: Record<(typeof DRIVER_FEATURE_CTA_IDS)[number], string> = {
-  'driver-dot-application': 'Add DOT Application',
   'driver-mvr': 'Order MVR',
   'driver-psp': 'Add PSP Report',
   'driver-cdl-credentials': 'Add CDL Credentials',

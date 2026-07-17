@@ -259,7 +259,7 @@ export default function ResumeSection({
         <FileText className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-teal-300' : 'text-teal-600')} />
         <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Add your resume</p>
         <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-          Upload a PDF or build in STORM Resume — it&apos;s the first thing employers scan.
+          Optional — usually generated from your DOT application, or upload a PDF here.
         </p>
         {isCareerCardOwnerMode(mode) && onAction ? (
           <Button type='button' variant='primary' size='sm' className='mt-4' onClick={onAction}>
