@@ -15,6 +15,8 @@
  *   3.  Register it in CandidateShell's lazy block map + route case
  *   4.  Gate career card section on installedBlockTypes (CareerCard.tsx)
  *   5.  Set employerRequestable + requestLabel + completionField (CareerCardModal reads this)
+ *   5b. If employers can *order* this (MVR/PSP/future CRA): set employerOrderEvidenceTable
+ *       + call ensureHubBlockInstalled on the order route / webhook (see ensure-hub-blocks-psp-mvr-bundle.ts)
  *   6.  Add BLOCK_TO_SLOT in CareerCardModal.tsx if employerRequestable
  *   7.  Add BLOCK_JOURNEY_MAP entry (journey-progress.ts)
  *   8.  Register PageType if block has a full-page route (stores/types.ts)
@@ -95,6 +97,20 @@ export interface BlockDefinition {
    * @example ['employer-mvr-orders'] — standalone MVR ordering for the company
    */
   requiredEmployerBlocks: string[] | null
+
+  /**
+   * Orders table that proves an employer (or candidate) already placed this product.
+   * Hub GET backfills `hub_blocks` when any row exists for the candidate
+   * (`driver_user_id`). Add a new table name here when a future CRA product
+   * (e.g. CDLIS) ships — plus install on that product's order route/webhook.
+   */
+  employerOrderEvidenceTable?: 'mvr_orders' | 'psp_orders' | null
+
+  /**
+   * Extra candidate hub blocks to install whenever this block is employer-installed
+   * (request, invite, or order). Screening consent is the on-ramp to MVR + PSP tiles.
+   */
+  employerActionCompanionBlocks?: string[] | null
 
   /**
    * Omit from Add Blocks picker (legacy aliases). Keeps registry + hub_rows working.
@@ -314,6 +330,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: 'Screening Consent',
     completionField: 'hasScreeningConsentBundle',
     requiredEmployerBlocks: ['employer-screening-consent'],
+    // Consent is the on-ramp — surface MVR + PSP status tiles once employers engage.
+    employerActionCompanionBlocks: ['driver-mvr', 'driver-psp'],
   },
   {
     id: 'driver-mvr',
@@ -330,6 +348,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: 'MVR',
     completionField: 'hasMvr',
     requiredEmployerBlocks: ['employer-mvr-orders'],
+    employerOrderEvidenceTable: 'mvr_orders',
   },
   {
     id: 'driver-psp',
@@ -346,6 +365,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: 'PSP',
     completionField: 'hasPsp',
     requiredEmployerBlocks: ['employer-psp-orders'],
+    employerOrderEvidenceTable: 'psp_orders',
+    // Standalone PSP outreach historically also revealed the MVR tile (paired screening).
+    employerActionCompanionBlocks: ['driver-mvr'],
   },
   {
     id: 'driver-cdl-credentials',

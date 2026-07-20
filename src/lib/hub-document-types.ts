@@ -14,7 +14,9 @@ export interface HubPendingEmployerScreening {
 export function hubDocStatusFromScreeningOrder(orderStatus: string | null | undefined): HubDocument['status'] {
   const s = String(orderStatus ?? '').toLowerCase()
   if (s === 'completed' || s === 'needs_review') return 'complete'
-  if (s === 'failed' || s === 'cancelled' || s === 'expired') return 'failed'
+  // `superseded` = duplicate cleanup (migration 102) — a newer order of the
+  // same kind replaced this row, so treat it like other terminal states.
+  if (s === 'failed' || s === 'cancelled' || s === 'expired' || s === 'superseded') return 'failed'
   if (s === 'processing') return 'processing'
   if (s === 'pending') return 'in-progress'
   return 'in-progress'
@@ -52,6 +54,7 @@ export function employerOutreachFileStatusLabel(
   // screening result.
   if (s === 'expired') return 'Expired'
   if (s === 'cancelled') return 'Cancelled'
+  if (s === 'superseded') return 'Superseded'
   if (s === 'processing') return 'Processing'
   if (s === 'pending') return 'Pending'
   return hubScreeningStatusLabel(hubDocStatusFromScreeningOrder(rawOrderStatus))

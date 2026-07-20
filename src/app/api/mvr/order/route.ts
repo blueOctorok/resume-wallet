@@ -6,6 +6,11 @@ import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
+import {
+  finalizeScreeningOrderReservation,
+  releaseScreeningOrderReservation,
+  reserveScreeningOrder,
+} from '@/lib/screening-order-reservation'
 
 /**
  * API Route: Order MVR from Accio
@@ -271,9 +276,32 @@ export async function POST(request: NextRequest) {
       webhookGuid
     })
 
+    // 5. Reserve the order row BEFORE calling Accio — the partial unique index
+    // (migration 102) makes this the atomic duplicate lock, so a concurrent or
+    // repeat order fails here with 409 instead of costing another pull.
+    const expiresAtIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const reservation = await reserveScreeningOrder(supabaseService, {
+      kind: 'mvr',
+      driverUserId: user.id,
+      orderNumber,
+      orderXml,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
+      expiresAtIso,
+      paymentId: payment.id,
+      paymentTxHash: storedPaymentTxHash,
+      mvrSearchType,
+    })
+    if (reservation.ok === false) {
+      if (reservation.reason === 'duplicate') {
+        return NextResponse.json({ error: reservation.message }, { status: 409 })
+      }
+      return NextResponse.json({ error: 'Failed to store MVR order' }, { status: 500 })
+    }
+
     console.log('[MVR ORDER] Built XML order, sending to Accio...')
 
-    // 5. Send order to Accio API
+    // 6. Send order to Accio API
     let accioResponse
     try {
       const accioResponseRaw = await fetch(accioApiUrl, {
@@ -295,13 +323,14 @@ export async function POST(request: NextRequest) {
       console.log('[MVR ORDER] Accio response (first 500 chars):', accioResponse.substring(0, 500))
     } catch (error: any) {
       console.error('[MVR ORDER] Error calling Accio API:', error)
+      await releaseScreeningOrderReservation(supabaseService, 'mvr', reservation.orderId)
       return NextResponse.json(
         { error: 'Failed to submit MVR order to Accio', details: error.message },
         { status: 500 }
       )
     }
 
-    // 6. Parse Accio response to get suborder ID and applicant portal URL
+    // 7. Parse Accio response to get suborder ID and applicant portal URL
     // Response format (from Accio docs):
     // <?xml version="1.0" encoding="UTF-8"?>
     // <XML>
@@ -373,39 +402,23 @@ export async function POST(request: NextRequest) {
       console.warn('[MVR ORDER] Could not parse Accio response. Full response:', accioResponse)
     }
 
-    // 7. Store order in database (use service role to bypass RLS)
-    // Reuse supabaseService declared earlier in the function
-    // Link order to the payment that was used
-    const { data: mvrOrder, error: orderError } = await supabaseService
+    // 8. Attach Accio's IDs to the reserved row (status stays pending —
+    // webhooks/reconcile move it forward)
+    await finalizeScreeningOrderReservation(supabaseService, 'mvr', reservation.orderId, {
+      accio_suborder_number: subOrderId,
+      accio_remote_order_number: accioOrderId || null,
+      accio_remote_suborder_number: subOrderId || null,
+      applicant_portal_url: applicantPortalUrl,
+    })
+
+    const { data: mvrOrder } = await supabaseService
       .from('mvr_orders')
-      .insert({
-        driver_user_id: user.id,
-        driver_profile_id: null,
-        driver_application_id: dotApplication?.id || null,
-        payment_id: payment.id,
-        payment_tx_hash: storedPaymentTxHash,
-        accio_order_number: orderNumber,
-        accio_suborder_number: subOrderId,
-        accio_remote_order_number: accioOrderId || null, // Accio's internal order number (from orderID in response)
-        accio_remote_suborder_number: subOrderId || null, // Accio's internal suborder number (same as suborderID)
-        order_type: 'MVR',
-        mvr_search_type: mvrSearchType,
-        dl_number: n.dlNumber,
-        dl_state: n.dlState,
-        status: 'pending', // Will be updated to 'processing' when Accio accepts it
-        order_xml: orderXml,
-        applicant_portal_url: applicantPortalUrl,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
-      })
-      .select()
+      .select('id, accio_order_number, accio_suborder_number, status, ordered_at, applicant_portal_url')
+      .eq('id', reservation.orderId)
       .single()
 
-    if (orderError) {
-      console.error('[MVR ORDER] Error storing order:', orderError)
-      return NextResponse.json(
-        { error: 'Failed to store MVR order' },
-        { status: 500 }
-      )
+    if (!mvrOrder) {
+      return NextResponse.json({ error: 'Failed to load MVR order after insert' }, { status: 500 })
     }
 
     console.log('[MVR ORDER] Order created successfully:', mvrOrder.id)

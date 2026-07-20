@@ -4,7 +4,7 @@ import { decryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
-import { getDriverOwnedScreeningFlags } from '@/lib/driver-owned-screening'
+import { getScreeningOrderLocks } from '@/lib/driver-owned-screening'
 import { validateScreeningOrderInput } from '@/lib/screening-validation'
 
 export interface DriverOwnedOrderRetryInput {
@@ -78,8 +78,10 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
     return { ok: false, status: 404, error: 'Screening consent not found — complete the consent forms first' }
   }
 
-  const flags = await getDriverOwnedScreeningFlags(supabase, driverUserId)
-  if (flags.hasActiveDriverOwnedMvr && flags.hasActiveDriverOwnedPsp) {
+  // Any active order (driver- OR employer-owned) locks its kind — matches the
+  // duplicate guard in screening-validation.ts, so we skip legs that would 409.
+  const locks = await getScreeningOrderLocks(supabase, driverUserId)
+  if (locks.mvr.locked && locks.psp.locked) {
     return { ok: false, status: 409, error: 'MVR and PSP orders are already on file' }
   }
 
@@ -125,7 +127,7 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
   const companyId = candidateRequest.company_id as string
   const employerUserId = (candidateRequest.requested_by_user_id as string | null) ?? null
 
-  if (!flags.hasActiveDriverOwnedMvr) {
+  if (!locks.mvr.locked) {
     const paymentResult = await resolveScreeningPayment(supabase, {
       paymentType: 'MVR_ORDER',
       userId: employerUserId ?? driverUserId,
@@ -152,7 +154,7 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
     }
   }
 
-  if (!flags.hasActiveDriverOwnedPsp) {
+  if (!locks.psp.locked) {
     const paymentResult = await resolveScreeningPayment(supabase, {
       paymentType: 'PSP_ORDER',
       userId: employerUserId ?? driverUserId,

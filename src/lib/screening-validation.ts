@@ -252,49 +252,78 @@ export function validateScreeningOrderInput(input: ScreeningOrderInput): Validat
 }
 
 /**
- * Cross-row check: prevent accidental double-orders for the same driver +
- * same screening kind within a 24-hour window. Any pending OR completed
- * order in the window blocks a new one — completed within 24h means the user
- * already has a fresh report and shouldn't be charged again.
+ * Statuses after which a re-order is legitimate. Everything else (pending,
+ * processing, completed, needs_review) means a report is in flight or on
+ * file, so a new order is a duplicate spend. Keep in sync with
+ * INACTIVE_STATUSES in driver-owned-screening.ts and the partial unique
+ * indexes from migration 102.
+ */
+const REORDERABLE_STATUSES = ['failed', 'cancelled', 'expired', 'superseded']
+
+/**
+ * Cross-row duplicate guard: block a new order while ANY active order of the
+ * same kind exists for this driver and its report hasn't expired. History:
+ * the old version only looked at 'pending'/'completed' within a 24h window —
+ * PSP orders flip to needs_review within minutes (filledCode="unknown"), so
+ * candidates who saw "Pending review" re-ordered repeatedly, each one a real
+ * Accio charge (Ray Case placed 4 PSPs in one day). The lock now follows the
+ * report's 30-day validity (expires_at), not a fixed window.
+ *
+ * This is the friendly-message layer; the race-proof enforcement is the
+ * partial unique index + reserve-then-place (screening-order-reservation.ts).
  *
  * Returns null if it's safe to place a new order; returns an error string
- * (user-safe wording) if a recent order blocks placement.
+ * (user-safe wording) if an existing order blocks placement.
  */
 export async function checkRecentDuplicateOrder(
   supabase: SupabaseClient,
   params: {
     driverUserId: string
     kind: 'mvr' | 'psp'
-    /** Window in milliseconds. Defaults to 24h. */
-    windowMs?: number
   },
 ): Promise<string | null> {
-  const { driverUserId, kind, windowMs = 24 * 60 * 60 * 1000 } = params
-  const since = new Date(Date.now() - windowMs).toISOString()
+  const { driverUserId, kind } = params
   const table = kind === 'mvr' ? 'mvr_orders' : 'psp_orders'
+  const label = kind === 'mvr' ? 'MVR' : 'PSP'
 
   const { data, error } = await supabase
     .from(table)
-    .select('id, status, ordered_at')
+    .select('id, status, ordered_at, expires_at')
     .eq('driver_user_id', driverUserId)
-    .in('status', ['pending', 'completed'])
-    .gte('ordered_at', since)
+    .not('status', 'in', `(${REORDERABLE_STATUSES.join(',')})`)
     .order('ordered_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   if (error) {
-    // Don't block placement on a transient DB error; log so we notice.
-    console.warn(`[SCREENING VALIDATION] Duplicate check failed for ${kind}:`, error)
-    return null
+    // Fail CLOSED: every order placed is real vendor spend, so a transient
+    // DB error must not open the door (the old fail-open version was a
+    // free-order hole for anyone who could induce an error).
+    console.error(`[SCREENING GUARD] Duplicate check errored for ${kind} — blocking placement:`, error)
+    return `We couldn't verify your existing ${label} orders. Please try again in a moment.`
   }
   if (!data) return null
 
-  const label = kind === 'mvr' ? 'MVR' : 'PSP'
-  if (data.status === 'pending') {
-    return `A ${label} order placed ${friendlyAge(data.ordered_at)} is still pending. Wait for it to finish before ordering another.`
+  // The nightly cron flips past-expiry orders to 'expired', but don't depend
+  // on its timing — an order past expires_at no longer blocks a fresh pull.
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+    return null
   }
-  return `A ${label} order completed ${friendlyAge(data.ordered_at)}. Reports are valid for 30 days — re-order after ${new Date(new Date(data.ordered_at).getTime() + windowMs).toLocaleDateString()} or contact support if you need a fresh pull.`
+
+  console.warn(
+    `[SCREENING GUARD] Blocked duplicate ${kind} order for driver ${driverUserId} (existing ${data.id} is ${data.status})`,
+  )
+
+  if (data.status === 'pending' || data.status === 'processing') {
+    return `A ${label} order placed ${friendlyAge(data.ordered_at)} is still processing. Wait for it to finish before ordering another.`
+  }
+  if (data.status === 'needs_review') {
+    return `A ${label} report from ${friendlyAge(data.ordered_at)} is already on file and being reviewed. You don't need to order again — check My Files for its status.`
+  }
+  const validUntil = data.expires_at
+    ? new Date(data.expires_at).toLocaleDateString()
+    : 'the current report expires'
+  return `A ${label} report completed ${friendlyAge(data.ordered_at)} is already on file. Reports are valid for 30 days — you can re-order after ${validUntil}, or contact support if you need a fresh pull.`
 }
 
 function friendlyAge(iso: string): string {

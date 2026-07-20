@@ -3,8 +3,10 @@ import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
 import { toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
 import type { MvrData, PspData } from '@/types/career-card'
 
-/** Terminal failure states — a driver can re-order after these. */
-const INACTIVE_STATUSES = new Set(['failed', 'cancelled', 'expired'])
+/** Terminal states — a driver can re-order after these. Keep in sync with
+ * REORDERABLE_STATUSES in screening-validation.ts and the partial unique
+ * indexes from migration 102. */
+const INACTIVE_STATUSES = new Set(['failed', 'cancelled', 'expired', 'superseded'])
 
 /** Active = pending through completed — blocks duplicate employer pre-screen pulls. */
 export function isActiveScreeningOrderStatus(status: string | null | undefined): boolean {
@@ -56,6 +58,47 @@ export async function getDriverOwnedScreeningFlags(
     driverOwnedMvrStatus: mvrStatus,
     driverOwnedPspStatus: pspStatus,
   }
+}
+
+export interface ScreeningKindLock {
+  locked: boolean
+  status: string | null
+  orderedAt: string | null
+  expiresAt: string | null
+}
+
+/**
+ * The re-order lock per kind, matching the duplicate guard in
+ * screening-validation.ts: ANY active order — driver-owned or
+ * employer-owned — whose report hasn't expired locks that kind.
+ * (getDriverOwnedScreeningFlags above is ownership-scoped; this is not.)
+ */
+export async function getScreeningOrderLocks(
+  supabase: SupabaseClient,
+  driverUserId: string,
+): Promise<{ mvr: ScreeningKindLock; psp: ScreeningKindLock }> {
+  const activeStatuses = ['pending', 'processing', 'completed', 'needs_review']
+
+  const latestActive = (table: 'mvr_orders' | 'psp_orders') =>
+    supabase
+      .from(table)
+      .select('id, status, ordered_at, expires_at')
+      .eq('driver_user_id', driverUserId)
+      .in('status', activeStatuses)
+      .order('ordered_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+  const [mvrRes, pspRes] = await Promise.all([latestActive('mvr_orders'), latestActive('psp_orders')])
+
+  const toLock = (row: { status: string; ordered_at: string; expires_at: string | null } | null): ScreeningKindLock => {
+    // Past-expiry orders don't lock even if the nightly cron hasn't flipped them yet.
+    const expired = row?.expires_at ? new Date(row.expires_at).getTime() < Date.now() : false
+    if (!row || expired) return { locked: false, status: null, orderedAt: null, expiresAt: null }
+    return { locked: true, status: row.status, orderedAt: row.ordered_at, expiresAt: row.expires_at }
+  }
+
+  return { mvr: toLock(mvrRes.data), psp: toLock(pspRes.data) }
 }
 
 /** Block employer pre-screen duplicate when driver already owns an active pull of this kind. */

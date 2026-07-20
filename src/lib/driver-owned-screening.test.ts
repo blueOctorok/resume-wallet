@@ -9,10 +9,12 @@ describe('isActiveScreeningOrderStatus', () => {
     expect(isActiveScreeningOrderStatus('needs_review')).toBe(true)
   })
 
-  it('treats failed/cancelled/expired as inactive', () => {
+  it('treats failed/cancelled/expired/superseded as inactive', () => {
     expect(isActiveScreeningOrderStatus('failed')).toBe(false)
     expect(isActiveScreeningOrderStatus('cancelled')).toBe(false)
     expect(isActiveScreeningOrderStatus('expired')).toBe(false)
+    // superseded = duplicate replaced by a newer order (migration 102 backfill)
+    expect(isActiveScreeningOrderStatus('superseded')).toBe(false)
   })
 
   it('treats empty as inactive', () => {

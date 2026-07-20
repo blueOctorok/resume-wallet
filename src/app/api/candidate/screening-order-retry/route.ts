@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { placeDriverOwnedOrdersFromConsentBundle } from '@/lib/place-driver-owned-orders-from-bundle'
-import { getDriverOwnedScreeningFlags } from '@/lib/driver-owned-screening'
+import { getScreeningOrderLocks } from '@/lib/driver-owned-screening'
 
 /**
  * GET /api/candidate/screening-order-retry
@@ -32,8 +32,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ retryable: false })
     }
 
-    const flags = await getDriverOwnedScreeningFlags(supabase, userId)
-    if (flags.hasActiveDriverOwnedMvr && flags.hasActiveDriverOwnedPsp) {
+    // Any active order (driver- OR employer-owned) locks its kind — offering a
+    // retry the duplicate guard would 409 just confuses the candidate.
+    const locks = await getScreeningOrderLocks(supabase, userId)
+    if (locks.mvr.locked && locks.psp.locked) {
       return NextResponse.json({ retryable: false })
     }
 
@@ -51,8 +53,8 @@ export async function GET(request: NextRequest) {
       requestId: bundle.candidate_request_id as string,
       companyName: (company as { company_name?: string } | null)?.company_name ?? 'Your employer',
       storedDob,
-      needsMvr: !flags.hasActiveDriverOwnedMvr,
-      needsPsp: !flags.hasActiveDriverOwnedPsp,
+      needsMvr: !locks.mvr.locked,
+      needsPsp: !locks.psp.locked,
     })
   } catch (e) {
     console.error('[SCREENING ORDER RETRY GET]', e)

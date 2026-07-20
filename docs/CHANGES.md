@@ -4,6 +4,39 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Security — driver MVR/PSP re-ordering locked end-to-end** (2026-07-20)
+
+Follow-up to the duplicate-PSP fix below, hardening the whole ordering path against both honest double-orders and malicious hammering (every driver-owned order is a synthetic waived payment to the user but a real Accio charge to Storm). Policy: **one active (not failed/cancelled/expired/superseded) order per kind per driver — employer-ordered included** — self-releasing when the report expires (30 days) or the order fails. Four layers:
+
+1. **Database lock — `supabase/migrations/102_driver_screening_order_lock.sql`** (⚠️ not yet applied — MCP is read-only; run it in the SQL editor). Adds `superseded` to both status CHECKs; backfills older active driver-owned duplicates to `superseded` (found 8 drivers with dup PSPs — more than the 3 reported — and 1 with dup MVRs); creates partial unique indexes `uniq_active_driver_owned_{mvr,psp}` on `(driver_user_id) WHERE ordered_by_company_id IS NULL AND status IN (active)`; schedules pg_cron `expire-psp-orders` (PSP had NO expiry job — 200+ past-expiry rows were still "active", which would have made the lock permanent), re-schedules `expire-mvr-orders` to skip `superseded`, and unschedules `sync-driver-mvr-expiry` (still targeted the dropped `driver_profiles` table).
+2. **Reserve-then-place** — new `src/lib/screening-order-reservation.ts`. `placeScreeningOrder`, `/api/mvr/order`, and `/api/psp/order` now insert the `pending` row BEFORE calling Accio (the unique index makes it an atomic reservation; concurrent duplicates get a friendly 409 *before* any vendor charge), attach Accio IDs on success, and mark the row `failed` (slot freed) on Accio rejection/network error. The old flow was check-then-act: N parallel requests = N charges, and an insert failure after Accio left us charged with no record.
+3. **App guard** — `checkRecentDuplicateOrder` (`screening-validation.ts`) drops the 24h window for the report-lifetime policy (blocks while the latest active order isn't past `expires_at`), **fails closed** on DB errors, and logs rejections with a `[SCREENING GUARD]` prefix. Unit-tested (`screening-validation.test.ts`).
+4. **UI stops offering the form** — new `GET /api/candidate/screening-lock` + `useScreeningOrderLock` hook; `MvrOrderForm` / `PspOrderForm` render a `ScreeningReportOnFileCard` ("report on file — valid through {date}") instead of the order form when locked. The `ScreeningConsentBlock` retry endpoint and `placeDriverOwnedOrdersFromConsentBundle` now gate per-kind on the shared `getScreeningOrderLocks` (any ownership) instead of driver-owned-only flags, so retries skip legs the guard would 409.
+
+`superseded` is handled in `INACTIVE_STATUSES` (`driver-owned-screening.ts`), My Files status mapping + employer file pills (`hub-document-types.ts`), and tests. Explicitly out of scope (deliberate): Stripe enforcement on driver-owned orders, rate-limit middleware/admin alerting, and fixing why every PSP surfaces as "Pending review" (`filledCode="unknown"`) — that copy is still the UX trigger behind honest duplicates.
+
+## **Fix — duplicate PSP orders slipping past the 24h duplicate guard** (2026-07-20)
+
+Kenny Reyes, Kevis Francis (2 PSP orders each) and Ray Case (4) racked up repeat billable Accio PSP pulls. Root cause chain: (1) Accio PSP results come back `filledStatus="filled" filledCode="unknown"`, which maps to `needs_review` / "Pending review" within minutes of placement; (2) candidates read that as "my PSP didn't go through", reopened the PSP block's self-order form, signed a fresh FMCSA consent, and re-ordered; (3) `checkRecentDuplicateOrder` in `screening-validation.ts` only blocked when a recent order was `pending` or `completed` — `needs_review` sailed through, so every re-order placed a real Accio order. Fix: the duplicate guard now blocks on any non-terminal status (everything except `failed` / `cancelled` / `expired`, matching `INACTIVE_STATUSES` in `driver-owned-screening.ts`) and returns a "report already on file and being reviewed" message for `needs_review`. Guards both `/api/psp/order` self-orders and `placeScreeningOrder` (fulfill-screening / employer routes). Not user-action-free: every duplicate correlated 1:1 with a freshly signed + consumed self-service `psp_consents` row.
+
+Open follow-ups: the order-form gating shipped same-day (see the re-order lock entry above). Still open: decide how PSP `filledCode="unknown"` should surface (today every PSP sits at "Pending review" until admin review — that's the copy that triggered the re-orders).
+
+## **Fix — employer screening hub ownership by email** (2026-07-17)
+
+Pace MVR/PSP orders were attached via talent-card / `used_by` user id (name path), so Jason Peterson PII + `stormchaintest@gmail.com` could land on Jason’s account instead of Leon’s. New `resolveEmployerOrderDriverUserId`: Accio still gets legal name/DL/SSN; `driver_user_id` + hub install follow the Storm account that owns the order email. Wired on employer MVR/PSP/screenings order; outreach passes `orderEmail`; invite start reclaims stale `used_by` when session owns `candidate_email`.
+
+## **Fix — career card self-view heals employer-ordered hub blocks** (2026-07-17)
+
+`/api/career-card` builds from `hub_blocks` without going through `GET /api/hub/blocks`, so a hub-only backfill never updated the card. Self-view now runs `ensureHubBlocksForEmployerInitiatedActions` before projecting sections.
+
+## **Fix — employer-ordered blocks auto-install on candidate hub** (2026-07-17)
+
+Pace/employer MVR (and any future CRA product) wrote orders without installing the matching candidate `hub_blocks` row, so the career card stayed “DOT only + Order MVR.” Generalized: registry fields `employerOrderEvidenceTable` + `employerActionCompanionBlocks`; `ensureHubBlockInstalled` installs the target and companions; hub GET backfills from order tables + `candidate_requests` + claimed invites; MVR/PSP order routes + Accio webhooks install; talent request / invite use the same helper. Career card stays status-only for employer-paid. Company MVR no longer locks DOT Form 1 via unscoped `mvr_results`.
+
+## **Fix — employer MVR installs candidate hub block** (2026-07-17)
+
+Superseded by the registry-driven entry above (same day).
+
 ## **DOT-first — hide resume block section under DOT on career card** (2026-07-17)
 
 Legacy DOT→`/api/resumes/create` installed `storm-resume`, which still projected as a card section under DOT. Resume access is the header chip / live packet only: `appearsOnCareerCard: false` on `storm-resume` + `driver-resume`, and projection skips resume block types when `driver-dot-application` is installed.

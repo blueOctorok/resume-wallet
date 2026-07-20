@@ -7,8 +7,12 @@ import {
   generateWebhookGuid,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
-import { insertPspOrderOnly } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import {
+  finalizeScreeningOrderReservation,
+  releaseScreeningOrderReservation,
+  reserveScreeningOrder,
+} from '@/lib/screening-order-reservation'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
@@ -26,12 +30,22 @@ export type PlaceScreeningOrderResult =
   | { ok: false; status: number; error: string; details?: string }
 
 export interface PlaceScreeningOrderInput {
+  /**
+   * Storm hub owner for the order row (`mvr_orders` / `psp_orders.driver_user_id`).
+   * Resolved by order email when a matching account exists — not by legal name.
+   */
   driverUserId: string
   driverEmail: string | null
   companyId: string
   employerUserId: string | null
   type: 'mvr' | 'psp'
   formData: Record<string, unknown>
+  /**
+   * Who signed consent (talent-card / bundle subject). Defaults to `driverUserId`.
+   * When email rebinds the hub to a different Storm user, consent still checks
+   * the signer who completed the disclosure package.
+   */
+  consentDriverUserId?: string
   /** When set, marks this candidate_requests row completed after a successful order */
   candidateRequestIdToComplete?: string | null
   /** Employer-paid USDC row — linked on PSP bundle inserts when present */
@@ -56,6 +70,7 @@ export async function placeScreeningOrder(
   input: PlaceScreeningOrderInput,
 ): Promise<PlaceScreeningOrderResult> {
   const { driverUserId, driverEmail, companyId, employerUserId, type, formData } = input
+  const consentDriverUserId = input.consentDriverUserId ?? driverUserId
   const ownership = input.ownership ?? 'employer'
   const ownershipFields = resolveScreeningOrderOwnershipFields(ownership, {
     companyId,
@@ -98,7 +113,7 @@ export async function placeScreeningOrder(
     const { data: consent } = await supabase
       .from('bgcheck_consents')
       .select('id')
-      .eq('driver_user_id', driverUserId)
+      .eq('driver_user_id', consentDriverUserId)
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -110,7 +125,7 @@ export async function placeScreeningOrder(
     const { data: bgConsent } = await supabase
       .from('bgcheck_consents')
       .select('id')
-      .eq('driver_user_id', driverUserId)
+      .eq('driver_user_id', consentDriverUserId)
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -121,7 +136,7 @@ export async function placeScreeningOrder(
     const { data: pspConsent } = await supabase
       .from('psp_consents')
       .select('id')
-      .eq('driver_user_id', driverUserId)
+      .eq('driver_user_id', consentDriverUserId)
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -217,6 +232,34 @@ export async function placeScreeningOrder(
     })
   }
 
+  // ── Reserve BEFORE paying Accio ──────────────────────────────────────────
+  // The pending row is the atomic lock (partial unique index from migration
+  // 102): a concurrent duplicate fails right here with a 409, before any
+  // vendor charge. On Accio failure we release (mark failed) so the slot
+  // frees for a retry.
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const reservation = await reserveScreeningOrder(supabase, {
+    kind: type,
+    driverUserId,
+    orderNumber,
+    orderXml,
+    dlNumber: n.dlNumber,
+    dlState: n.dlState,
+    expiresAtIso: expiresAt,
+    orderedByCompanyId: ownershipFields.ordered_by_company_id,
+    orderedByUserId: ownershipFields.ordered_by_user_id,
+    orderedByEmployer: ownershipFields.ordered_by_employer,
+    paymentId: input.paymentId ?? null,
+    paymentTxHash: input.paymentTxHash ?? null,
+  })
+  if (reservation.ok === false) {
+    if (reservation.reason === 'duplicate') {
+      return { ok: false, status: 409, error: reservation.message }
+    }
+    return { ok: false, status: 500, error: 'Failed to store order', details: reservation.message }
+  }
+  const reservedOrderId = reservation.orderId
+
   console.log('[PLACE SCREENING ORDER] Submitting to Accio:', {
     type,
     orderNumber,
@@ -241,18 +284,20 @@ export async function placeScreeningOrder(
     if (!raw.ok) {
       const text = await raw.text()
       console.error(`[PLACE SCREENING ORDER] Accio API HTTP error:`, raw.status, text)
+      await releaseScreeningOrderReservation(supabase, type, reservedOrderId)
       return { ok: false, status: 500, error: 'Failed to submit screening order', details: String(raw.status) }
     }
     accioResponse = await raw.text()
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     console.error('[PLACE SCREENING ORDER] Accio network error:', msg)
+    await releaseScreeningOrderReservation(supabase, type, reservedOrderId)
     return { ok: false, status: 500, error: 'Failed to submit screening order', details: msg }
   }
 
   // ── Accio error detection ────────────────────────────────────────────────
   // Accio can return HTTP 200 with an error in the XML body. Detect common
-  // error patterns and fail loudly so we never store a "pending" order that
+  // error patterns and fail loudly so we never keep a "pending" order that
   // Accio actually rejected.
   console.log('[PLACE SCREENING ORDER] Accio response length:', accioResponse.length, 'type:', type, 'orderNumber:', orderNumber)
   console.log('[PLACE SCREENING ORDER] Accio response body:', accioResponse.substring(0, 2000))
@@ -271,6 +316,7 @@ export async function placeScreeningOrder(
       hasError,
       responseSnippet: accioResponse.substring(0, 1000),
     })
+    await releaseScreeningOrderReservation(supabase, type, reservedOrderId)
     return {
       ok: false,
       status: 502,
@@ -279,29 +325,13 @@ export async function placeScreeningOrder(
     }
   }
 
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-
   if (type === 'psp') {
     const ids = parseAccioPlaceOrderBundleIds(accioResponse)
-    const inserted = await insertPspOrderOnly(supabase, {
-      driverUserId,
-      orderNumber,
-      orderXml,
-      accioOrderId: ids.accioOrderId,
-      fmcsaSuborderId: ids.fmcsaSuborderId,
-      applicantPortalUrl: ids.applicantPortalUrl,
-      dlNumber: n.dlNumber,
-      dlState: n.dlState,
-      expiresAtIso: expiresAt,
-      orderedByCompanyId: ownershipFields.ordered_by_company_id,
-      orderedByUserId: ownershipFields.ordered_by_user_id,
-      orderedByEmployer: ownershipFields.ordered_by_employer,
-      paymentId: input.paymentId ?? null,
-      paymentTxHash: input.paymentTxHash ?? null,
+    await finalizeScreeningOrderReservation(supabase, 'psp', reservedOrderId, {
+      accio_suborder_number: ids.fmcsaSuborderId,
+      accio_remote_order_number: ids.accioOrderId,
+      accio_remote_suborder_number: ids.fmcsaSuborderId,
     })
-    if ('error' in inserted) {
-      return { ok: false, status: 500, error: 'Failed to store order', details: inserted.error }
-    }
     await ensureHubBlockInstalled(supabase, driverUserId, 'driver-psp')
     if (input.candidateRequestIdToComplete) {
       await supabase
@@ -314,7 +344,7 @@ export async function placeScreeningOrder(
       ok: true,
       result: {
         type: 'psp',
-        pspOrderId: inserted.pspOrderId,
+        pspOrderId: reservedOrderId,
         orderNumber,
       },
     }
@@ -327,38 +357,12 @@ export async function placeScreeningOrder(
     accioResponse.match(/<applicantPortalURL>(.*?)<\/applicantPortalURL>/)
   const applicantPortalUrl = portalMatch?.[1] ?? null
 
-  const sharedRow = {
-    driver_user_id: driverUserId,
-    accio_order_number: orderNumber,
+  await finalizeScreeningOrderReservation(supabase, 'mvr', reservedOrderId, {
     accio_suborder_number: subOrderId,
     accio_remote_order_number: accioOrderId,
     accio_remote_suborder_number: subOrderId,
-    dl_number: n.dlNumber,
-    dl_state: n.dlState,
-    status: 'pending',
-    order_xml: orderXml,
-    ordered_by_company_id: ownershipFields.ordered_by_company_id,
-    ordered_by_user_id: ownershipFields.ordered_by_user_id,
-    ordered_by_employer: ownershipFields.ordered_by_employer,
-    expires_at: expiresAt,
-  }
-
-  const orderRow: Record<string, unknown> = {
-    ...sharedRow,
-    order_type: 'MVR',
-    mvr_search_type: 'standard',
     applicant_portal_url: applicantPortalUrl,
-  }
-  if (input.paymentId) {
-    orderRow.payment_id = input.paymentId
-    orderRow.payment_tx_hash = input.paymentTxHash ?? null
-  }
-
-  const { data: order, error: orderError } = await supabase.from('mvr_orders').insert(orderRow).select().single()
-  if (orderError || !order) {
-    console.error(`[PLACE SCREENING ORDER] DB insert error (mvr_orders):`, orderError)
-    return { ok: false, status: 500, error: 'Failed to store order', details: orderError?.message }
-  }
+  })
 
   await ensureHubBlockInstalled(supabase, driverUserId, 'driver-mvr')
 
@@ -370,5 +374,5 @@ export async function placeScreeningOrder(
       .neq('status', 'completed')
   }
 
-  return { ok: true, result: { type: 'mvr', orderId: order.id as string, orderNumber } }
+  return { ok: true, result: { type: 'mvr', orderId: reservedOrderId, orderNumber } }
 }

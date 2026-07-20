@@ -104,7 +104,8 @@ function reconstructParsedMvr(
 
 /**
  * Prefer a completed driver-owned MVR order's result.
- * Falls back to latest parsed mvr_results for the user (legacy / self-order without order link).
+ * Falls back only to legacy self-order results (no company pull) — employer-paid
+ * MVRs must not lock DOT Form 1 (FCRA / company-private report).
  */
 export async function loadMvrDotProjection(
   supabase: SupabaseClient,
@@ -132,7 +133,7 @@ export async function loadMvrDotProjection(
 
   let orderId: string | null = null
   let accioOrderNumber: string | null = null
-  let asOf: string
+  let asOf = new Date().toISOString()
 
   if (order && isDriverOwnedScreeningOrder(order)) {
     orderId = order.id
@@ -150,6 +151,8 @@ export async function loadMvrDotProjection(
 
     mvrResult = byOrder as typeof mvrResult
   } else {
+    // Legacy rows without ordered_by_company_id on the order — still require a
+    // driver-owned (or unscoped) order link so company pulls never win.
     const { data: latest } = await supabase
       .from('mvr_results')
       .select(
@@ -158,12 +161,33 @@ export async function loadMvrDotProjection(
       .eq('driver_user_id', userId)
       .eq('result_status', 'parsed')
       .order('received_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .limit(5)
 
-    mvrResult = latest as typeof mvrResult
-    asOf = mvrResult?.received_at ?? new Date().toISOString()
-    orderId = mvrResult?.mvr_order_id ?? null
+    for (const row of latest ?? []) {
+      if (!row.mvr_order_id) {
+        mvrResult = row as typeof mvrResult
+        break
+      }
+      const { data: linkedOrder } = await supabase
+        .from('mvr_orders')
+        .select('id, ordered_by_company_id, accio_order_number, completed_at')
+        .eq('id', row.mvr_order_id)
+        .maybeSingle()
+      if (linkedOrder && isDriverOwnedScreeningOrder(linkedOrder)) {
+        mvrResult = row as typeof mvrResult
+        orderId = linkedOrder.id
+        accioOrderNumber = linkedOrder.accio_order_number
+        asOf = linkedOrder.completed_at ?? row.received_at ?? new Date().toISOString()
+        break
+      }
+    }
+
+    if (mvrResult && !orderId) {
+      asOf = mvrResult.received_at ?? new Date().toISOString()
+      orderId = mvrResult.mvr_order_id ?? null
+    } else if (!mvrResult) {
+      return null
+    }
   }
 
   if (!mvrResult?.parsed_data) return null

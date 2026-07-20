@@ -11,6 +11,7 @@ import { getLatestScreeningConsentBundle } from '@/lib/screening-consent-bundle'
 import { decryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { hasBlockingDriverOwnedScreening } from '@/lib/driver-owned-screening'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
+import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
 
 /**
  * POST /api/employer/screenings/order
@@ -38,8 +39,21 @@ export async function POST(request: NextRequest) {
       force?: boolean
       /** `pre_screen` (default) blocks when driver-owned pull exists; `hire` allows FMCSA DQ-file pull */
       purpose?: 'pre_screen' | 'hire'
+      /**
+       * Outreach / invite email — preferred for hub binding when consent form email
+       * is empty or still has a stale talent-card address.
+       */
+      orderEmail?: string
     }
-    const { candidateUserId, type, consentBundleId, paymentTxHash, force, purpose = 'pre_screen' } = body
+    const {
+      candidateUserId,
+      type,
+      consentBundleId,
+      paymentTxHash,
+      force,
+      purpose = 'pre_screen',
+      orderEmail: bodyOrderEmail,
+    } = body
     if (!candidateUserId || !type || !consentBundleId) {
       return NextResponse.json(
         { error: 'candidateUserId, type, and consentBundleId are required' },
@@ -160,20 +174,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Pre-screen: suppress duplicate employer pull when driver already owns an active order.
-    if (purpose !== 'hire' && !force) {
-      if (await hasBlockingDriverOwnedScreening(supabase, candidateUserId, type)) {
-        const label = type === 'mvr' ? 'MVR' : 'PSP'
-        return NextResponse.json(
-          {
-            error: `This candidate already ordered their own portable ${label}. Use purpose=hire for an FMCSA DQ-file pull after hire.`,
-            code: 'DRIVER_OWNED_SCREENING_EXISTS',
-          },
-          { status: 409 },
-        )
-      }
-    }
-
     let ssn: string
     try {
       ssn = decryptScreeningSsn(bundle.ssn_encrypted as string)
@@ -205,9 +205,31 @@ export async function POST(request: NextRequest) {
       .eq('id', candidateUserId)
       .maybeSingle()
 
+    // Hub ownership by email (not legal name on the Accio form). Consent stays
+    // on the signer (bundle / talent-card user).
+    const { driverUserId: hubUserId } = await resolveEmployerOrderDriverUserId(supabase, {
+      candidateUserId,
+      orderEmail: bodyOrderEmail || formData.email || driverUser?.email || null,
+    })
+
+    // Pre-screen: suppress duplicate employer pull when hub owner already has a portable order.
+    if (purpose !== 'hire' && !force) {
+      if (await hasBlockingDriverOwnedScreening(supabase, hubUserId, type)) {
+        const label = type === 'mvr' ? 'MVR' : 'PSP'
+        return NextResponse.json(
+          {
+            error: `This candidate already ordered their own portable ${label}. Use purpose=hire for an FMCSA DQ-file pull after hire.`,
+            code: 'DRIVER_OWNED_SCREENING_EXISTS',
+          },
+          { status: 409 },
+        )
+      }
+    }
+
     const placed = await placeScreeningOrder(supabase, request, {
-      driverUserId: candidateUserId,
-      driverEmail: driverUser?.email ?? null,
+      driverUserId: hubUserId,
+      consentDriverUserId: candidateUserId,
+      driverEmail: formData.email || driverUser?.email || null,
       companyId: access.companyId,
       employerUserId: access.employerUserId,
       type,

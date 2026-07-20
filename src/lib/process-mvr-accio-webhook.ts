@@ -10,6 +10,7 @@ import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
 import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
 import { applyMvrProjectionToDriverApplication } from '@/lib/apply-mvr-to-dot-application'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 export interface MvrWebhookProcessOutcome {
   status: number
@@ -197,6 +198,14 @@ export async function processMvrAccioWebhookCompletion(
       fee_amount: parsedResult.fees?.addon || null,
     })
     .eq('id', mvrOrder.id)
+
+  if (mvrOrder.driver_user_id) {
+    // Hub tile always — employer-paid orders need status-only career-card visibility.
+    // Full report cache / DOT Form locks stay driver-owned only (FCRA / company-private).
+    void ensureHubBlockInstalled(supabase, mvrOrder.driver_user_id, 'driver-mvr').catch((err) =>
+      console.warn('[MVR PROCESS] Hub block install non-fatal:', err),
+    )
+  }
 
   if (mvrOrder.driver_user_id && !mvrOrder.ordered_by_company_id) {
     // Only driver-owned (self-ordered) MVRs populate the shared block cache /

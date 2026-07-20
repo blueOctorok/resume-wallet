@@ -2303,6 +2303,8 @@ function EditInviteModal({
           type,
           consentBundleId: consentBundle.id,
           force: true,
+          // Hub ownership follows invite email, not candidate_name / stale used_by.
+          orderEmail: invite.candidateEmail || undefined,
         }),
       })
       if (!res.ok) {

@@ -2,11 +2,13 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, MapPin, CreditCard } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, MapPin, CreditCard, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
+import { useScreeningOrderLock } from '@/hooks/use-screening-order-lock'
+import ScreeningReportOnFileCard from '@/components/screening/ScreeningReportOnFileCard'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { useUIStore } from '@/stores'
 import LoadingScreen from './LoadingScreen'
@@ -48,6 +50,11 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // This is defense in depth — the inbox flow handles it too, but candidates can deep-link
   // here straight from the bell notification (`?onboard=mvr`), bypassing the inbox entirely.
   const { pendingRequest: pendingEmployerRequest } = usePendingScreeningRequest('mvr', userAddress)
+
+  // One active MVR per driver — if a report is already on file (any status
+  // short of failed/cancelled/expired), the self-order form must not render.
+  // This mirrors the server guard; see use-screening-order-lock.ts.
+  const { lock: mvrLock, isLoading: mvrLockLoading } = useScreeningOrderLock('mvr', userAddress)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
@@ -155,6 +162,18 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
   if (needsConsentBundle) {
     return <LoadingScreen message="Opening screening consent…" fullScreen={false} />
+  }
+
+  // If an active MVR already exists, offer status instead of a form.
+  if (mvrLockLoading) {
+    return (
+      <div className='w-full p-4 sm:p-6 lg:p-8 flex justify-center'>
+        <Loader2 className='w-6 h-6 animate-spin text-gray-400 mt-12' />
+      </div>
+    )
+  }
+  if (mvrLock.locked) {
+    return <ScreeningReportOnFileCard kind='mvr' lock={mvrLock} onBack={onBack} />
   }
 
   return (

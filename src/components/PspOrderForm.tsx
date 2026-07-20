@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle, AlertCircle, FileText, User, MapPin, CreditCard } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, MapPin, CreditCard, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import PspDisclosureForm from './PspDisclosureForm'
 import BackgroundCheckDisclosure from './BackgroundCheckDisclosure'
@@ -13,6 +13,8 @@ import EmployerPspMvrBundleAttestationStep, {
 import BackToHubButton from './ui/BackToHubButton'
 import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
+import { useScreeningOrderLock } from '@/hooks/use-screening-order-lock'
+import ScreeningReportOnFileCard from '@/components/screening/ScreeningReportOnFileCard'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { CDLIS_PAGE_BREADCRUMB } from '@/lib/employer-psp-mvr-page3-copy'
 
@@ -54,6 +56,11 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
   // the company-scoped FMCSA PSP disclosure so the employer's order endpoint can proceed.
   const { pendingRequest: pendingEmployerRequest, refresh: refreshPendingRequest } =
     usePendingScreeningRequest('psp', userAddress)
+
+  // One active PSP per driver — if a report is already on file (any status
+  // short of failed/cancelled/expired), the self-order form must not render.
+  // This mirrors the server guard; see use-screening-order-lock.ts.
+  const { lock: pspLock, isLoading: pspLockLoading } = useScreeningOrderLock('psp', userAddress)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
@@ -353,6 +360,19 @@ export default function PspOrderForm({ userAddress, onBack }: PspOrderFormProps)
         </div>
       </div>
     )
+  }
+
+  // Self-order path only (the employer consent wizard above manages its own
+  // flow): if an active PSP already exists, offer status instead of a form.
+  if (pspLockLoading) {
+    return (
+      <div className='w-full p-4 sm:p-6 lg:p-8 flex justify-center'>
+        <Loader2 className='w-6 h-6 animate-spin text-gray-400 mt-12' />
+      </div>
+    )
+  }
+  if (pspLock.locked) {
+    return <ScreeningReportOnFileCard kind='psp' lock={pspLock} onBack={onBack} />
   }
 
   return (

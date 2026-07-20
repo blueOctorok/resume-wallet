@@ -14,6 +14,7 @@ import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
+import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
 
 /**
  * POST /api/employer/psp/order — employer-paid FMCSA PSP for a candidate (company-scoped, FCRA).
@@ -145,6 +146,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
+    const { driverUserId: hubUserId } = await resolveEmployerOrderDriverUserId(supabase, {
+      candidateUserId,
+      orderEmail: email || candidate.email || null,
+    })
+
     const { data: pspConsent } = await supabase
       .from('psp_consents')
       .select('id')
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     const dupErr = await checkRecentDuplicateOrder(supabase, {
-      driverUserId: candidateUserId,
+      driverUserId: hubUserId,
       kind: 'psp',
     })
     if (dupErr) {
@@ -237,7 +243,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
     const inserted = await insertPspOrderOnly(supabase, {
-      driverUserId: candidateUserId,
+      driverUserId: hubUserId,
       orderNumber,
       orderXml,
       accioOrderId: ids.accioOrderId,
@@ -258,7 +264,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
     }
 
-    await ensureHubBlockInstalled(supabase, candidateUserId, 'driver-psp')
+    await ensureHubBlockInstalled(supabase, hubUserId, 'driver-psp')
 
     const { data: pspOrder } = await supabase
       .from('psp_orders')

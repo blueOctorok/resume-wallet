@@ -6,6 +6,7 @@ import { deriveScreeningStatus } from '@/lib/accio-result-status'
 import { parsePspResult, pspResultToJsonb } from '@/lib/accio-psp-parser'
 import { matchScreeningOrder, buildRemoteIdPatch } from '@/lib/screening-webhook-match'
 import { syncOutreachInviteForDriver } from '@/lib/sync-outreach-invite-status'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 export interface PspWebhookProcessOutcome {
   status: number
@@ -200,6 +201,13 @@ export async function processPspAccioWebhookCompletion(
       ordered_by_user_id: pspOrder.ordered_by_user_id,
       ordered_by_employer: pspOrder.ordered_by_employer,
     }).catch((err) => console.warn('[PSP WEBHOOK] Screening notify non-fatal:', err))
+  }
+
+  // Hub tile for status-only visibility (employer-paid or self). Companions via registry.
+  if (pspOrder.driver_user_id) {
+    void ensureHubBlockInstalled(supabase, pspOrder.driver_user_id, 'driver-psp').catch((err) =>
+      console.warn('[PSP WEBHOOK] Hub block install non-fatal:', err),
+    )
   }
 
   if (!pspOrder.ordered_by_company_id) {

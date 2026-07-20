@@ -4,7 +4,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
 import { getBlockDefinition } from '@/lib/block-registry'
-import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * POST /api/employer/talent/[userId]/request
@@ -209,39 +209,13 @@ export async function POST(
 
     console.log(`[CANDIDATE REQUEST] Created request ${newRequest.id} for candidate ${candidateUserId}`)
 
-    // Auto-install the target block on the candidate's hub (if they don't have it yet)
+    // Auto-install target (+ registry companions, e.g. consent → MVR/PSP tiles).
     const blockDef = effectiveTargetBlockType ? getBlockDefinition(effectiveTargetBlockType) : null
     if (effectiveTargetBlockType && blockDef) {
-      const { data: existingBlock } = await supabase
-        .from('hub_blocks')
-        .select('id')
-        .eq('user_id', candidateUserId)
-        .eq('block_type', effectiveTargetBlockType)
-        .maybeSingle()
-
-      if (!existingBlock) {
-        const { data: maxPos } = await supabase
-          .from('hub_blocks')
-          .select('position')
-          .eq('user_id', candidateUserId)
-          .order('position', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        await supabase.from('hub_blocks').insert({
-          user_id: candidateUserId,
-          block_type: effectiveTargetBlockType,
-          position: (maxPos?.position ?? -1) + 1,
-        })
-        console.log(
-          `[CANDIDATE REQUEST] Auto-installed block ${effectiveTargetBlockType} for candidate ${candidateUserId}`,
-        )
-      }
-    }
-
-    // Screening consent is the on-ramp to MVR + PSP tiles (My Files + career card sections).
-    if (isEmployerScreeningConsentPipeline) {
-      await ensureHubBlocksForPspMvrBundle(supabase, candidateUserId)
+      await ensureHubBlockInstalled(supabase, candidateUserId, effectiveTargetBlockType)
+      console.log(
+        `[CANDIDATE REQUEST] Ensured hub block ${effectiveTargetBlockType} for candidate ${candidateUserId}`,
+      )
     }
 
     // Deep-link: route to the block's page so the candidate lands right on it

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { ensureHubBlocksForEmployerInitiatedActions } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * GET /api/hub/blocks
@@ -27,6 +28,10 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
+
+    // Heal missing tiles when Pace/employer already ordered or requested a block
+    // (MVR/PSP orders, candidate_requests, claimed invites) — registry-driven.
+    await ensureHubBlocksForEmployerInitiatedActions(supabase, user.id)
 
     const [blocksResult, onboardingResult, profileResult] = await Promise.all([
       supabase

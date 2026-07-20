@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
-import { ensureHubBlocksForPspMvrBundle } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import {
+  normalizeStormEmail,
+  resolveStormUserIdByEmail,
+} from '@/lib/resolve-candidate-by-email'
 
 /**
  * GET /api/invite/[token]
@@ -145,7 +149,9 @@ export async function POST(
     // Get the invite (include company + block info for screening request creation)
     const { data: invite, error: fetchError } = await supabase
       .from('application_invites')
-      .select('id, status, expires_at, company_id, created_by_user_id, target_block_type')
+      .select(
+        'id, status, expires_at, company_id, created_by_user_id, target_block_type, candidate_email, used_by_user_id',
+      )
       .eq('token', token)
       .single()
 
@@ -161,14 +167,32 @@ export async function POST(
 
     const userId = sessionUserId
 
+    // Invite ownership is by email. Reclaim when the session user owns
+    // candidate_email but used_by still points at a stale account.
+    let claimUserId = userId
+    if (userId && invite.candidate_email) {
+      const emailOwnerId = await resolveStormUserIdByEmail(supabase, invite.candidate_email)
+      if (emailOwnerId === userId) {
+        claimUserId = userId
+        if (invite.used_by_user_id && invite.used_by_user_id !== userId) {
+          console.log('[INVITE START] Reclaiming invite by email', {
+            inviteId: invite.id,
+            from: invite.used_by_user_id,
+            to: userId,
+            email: normalizeStormEmail(invite.candidate_email),
+          })
+        }
+      }
+    }
+
     // Starting onboarding ≠ consent signed. We record who claimed the invite
     // and mark it `viewed` (engaged), but NOT `in_progress` — that status is
     // reserved for "consent bundle fully filled out + signed" and is set by
     // sync-outreach-invite-status once the bundle is complete. Never downgrade
     // an invite that already advanced (in_progress / completed handled above).
     const updateData: Record<string, unknown> = {}
-    if (userId) {
-      updateData.used_by_user_id = userId
+    if (claimUserId) {
+      updateData.used_by_user_id = claimUserId
       updateData.used_at = new Date().toISOString()
     }
     if (invite.status === 'pending') {
@@ -187,59 +211,55 @@ export async function POST(
       }
     }
 
-    // For screening blocks (MVR, PSP, unified consent), create a candidate_requests
-    // record so the disclosure/consent gate fires when the candidate lands on the form.
-    // Without this, invite-based deep-links bypass disclosure entirely.
+    // Employer-targeted invite → install the block (+ registry companions).
+    // Screening blocks also get a candidate_requests row so disclosure/consent gates fire.
     const screeningBlocks = ['driver-mvr', 'driver-psp', 'driver-screening-consent']
     const targetBlock = invite.target_block_type
-    if (userId && targetBlock && screeningBlocks.includes(targetBlock)) {
-      const requestType =
-        targetBlock === 'driver-mvr' ? 'mvr_order'
-        : targetBlock === 'driver-psp' ? 'psp_order'
-        : 'block_request'
+    if (claimUserId && targetBlock && getBlockDefinition(targetBlock)) {
+      await ensureHubBlockInstalled(supabase, claimUserId, targetBlock)
 
-      const blockDef = getBlockDefinition(targetBlock)
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 30)
+      if (screeningBlocks.includes(targetBlock)) {
+        const requestType =
+          targetBlock === 'driver-mvr' ? 'mvr_order'
+          : targetBlock === 'driver-psp' ? 'psp_order'
+          : 'block_request'
 
-      // Only create if no pending screening request already exists (idempotent).
-      // Use broad OR filter: any of the screening pipeline types count as a dupe.
-      const { data: existing } = await supabase
-        .from('candidate_requests')
-        .select('id')
-        .eq('candidate_user_id', userId)
-        .eq('company_id', invite.company_id)
-        .in('status', ['pending', 'viewed'])
-        .or(
-          'request_type.eq.mvr_order,request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-screening-consent)',
-        )
-        .maybeSingle()
+        const blockDef = getBlockDefinition(targetBlock)
+        const expiresAt = new Date()
+        expiresAt.setDate(expiresAt.getDate() + 30)
 
-      if (!existing) {
-        const { error: reqError } = await supabase
+        // Only create if no pending screening request already exists (idempotent).
+        const { data: existing } = await supabase
           .from('candidate_requests')
-          .insert({
-            company_id: invite.company_id,
-            requested_by_user_id: invite.created_by_user_id,
-            candidate_user_id: userId,
-            request_type: requestType,
-            target_block_type: targetBlock,
-            message: `Invited via outreach to complete ${blockDef?.label ?? targetBlock}`,
-            status: 'pending',
-            expires_at: expiresAt.toISOString(),
-          })
+          .select('id')
+          .eq('candidate_user_id', claimUserId)
+          .eq('company_id', invite.company_id)
+          .in('status', ['pending', 'viewed'])
+          .or(
+            'request_type.eq.mvr_order,request_type.eq.psp_order,and(request_type.eq.block_request,target_block_type.eq.driver-screening-consent)',
+          )
+          .maybeSingle()
 
-        if (reqError) {
-          console.error('[INVITE START] Failed to create screening request:', reqError)
-        } else {
-          console.log(`[INVITE START] Created ${requestType} candidate_request for invite ${invite.id}`)
+        if (!existing) {
+          const { error: reqError } = await supabase
+            .from('candidate_requests')
+            .insert({
+              company_id: invite.company_id,
+              requested_by_user_id: invite.created_by_user_id,
+              candidate_user_id: claimUserId,
+              request_type: requestType,
+              target_block_type: targetBlock,
+              message: `Invited via outreach to complete ${blockDef?.label ?? targetBlock}`,
+              status: 'pending',
+              expires_at: expiresAt.toISOString(),
+            })
+
+          if (reqError) {
+            console.error('[INVITE START] Failed to create screening request:', reqError)
+          } else {
+            console.log(`[INVITE START] Created ${requestType} candidate_request for invite ${invite.id}`)
+          }
         }
-      }
-
-      // Screening consent and PSP both need the full MVR + PSP hub block set
-      // so My Files and career card sections appear correctly.
-      if (targetBlock === 'driver-psp' || targetBlock === 'driver-screening-consent') {
-        await ensureHubBlocksForPspMvrBundle(supabase, userId)
       }
     }
 

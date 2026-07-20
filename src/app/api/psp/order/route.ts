@@ -6,8 +6,12 @@ import {
   generateWebhookGuid,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
-import { insertPspOrderOnly } from '@/lib/place-psp-mvr-bundle-db'
 import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import {
+  finalizeScreeningOrderReservation,
+  releaseScreeningOrderReservation,
+  reserveScreeningOrder,
+} from '@/lib/screening-order-reservation'
 import { normalizeWalletAddress } from '@/lib/user-by-wallet'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -237,6 +241,28 @@ export async function POST(request: NextRequest) {
       webhookGuid,
     })
 
+    // Reserve the order row BEFORE calling Accio — the partial unique index
+    // (migration 102) makes this the atomic duplicate lock, so a concurrent
+    // or repeat order fails here with 409 instead of costing another pull.
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const reservation = await reserveScreeningOrder(supabaseService, {
+      kind: 'psp',
+      driverUserId: user.id,
+      orderNumber,
+      orderXml,
+      dlNumber: n.dlNumber,
+      dlState: n.dlState,
+      expiresAtIso: expiresAt,
+      paymentId: payment.id,
+      paymentTxHash: storedPaymentTxHash,
+    })
+    if (reservation.ok === false) {
+      if (reservation.reason === 'duplicate') {
+        return NextResponse.json({ error: reservation.message }, { status: 409 })
+      }
+      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
+    }
+
     let accioResponse: string
     try {
       const accioResponseRaw = await fetch(accioApiUrl, {
@@ -252,37 +278,24 @@ export async function POST(request: NextRequest) {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Accio request failed'
       console.error('[PSP ORDER] Accio error:', msg)
+      await releaseScreeningOrderReservation(supabaseService, 'psp', reservation.orderId)
       return NextResponse.json({ error: 'Failed to submit PSP order to Accio', details: msg }, { status: 500 })
     }
 
     const ids = parseAccioPlaceOrderBundleIds(accioResponse)
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    const inserted = await insertPspOrderOnly(supabaseService, {
-      driverUserId: user.id,
-      orderNumber,
-      orderXml,
-      accioOrderId: ids.accioOrderId,
-      fmcsaSuborderId: ids.fmcsaSuborderId,
-      applicantPortalUrl: ids.applicantPortalUrl,
-      dlNumber: n.dlNumber,
-      dlState: n.dlState,
-      expiresAtIso: expiresAt,
-      paymentId: payment.id,
-      paymentTxHash: storedPaymentTxHash,
+    await finalizeScreeningOrderReservation(supabaseService, 'psp', reservation.orderId, {
+      accio_suborder_number: ids.fmcsaSuborderId,
+      accio_remote_order_number: ids.accioOrderId,
+      accio_remote_suborder_number: ids.fmcsaSuborderId,
     })
-
-    if ('error' in inserted) {
-      console.error('[PSP ORDER] DB insert:', inserted.error)
-      return NextResponse.json({ error: 'Failed to store PSP order' }, { status: 500 })
-    }
 
     await ensureHubBlockInstalled(supabaseService, user.id, 'driver-psp')
 
     const { data: pspOrder } = await supabaseService
       .from('psp_orders')
       .select('id, accio_order_number, accio_suborder_number, status, ordered_at')
-      .eq('id', inserted.pspOrderId)
+      .eq('id', reservation.orderId)
       .single()
 
     if (!pspOrder) {

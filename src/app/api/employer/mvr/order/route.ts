@@ -7,6 +7,8 @@ import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
+import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
 
 /**
  * POST /api/employer/mvr/order
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
     const payment = { id: paymentResult.paymentId }
     const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
 
-    // Verify the candidate exists and has signed the disclosure
+    // Verify the talent-card / consent subject exists
     const { data: candidate } = await supabase
       .from('users')
       .select('id, email')
@@ -162,9 +164,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // Check for a signed bgcheck consent from this company for this candidate.
-    // The driver must have signed before the employer can run an MVR.
-    // Note: the table uses driver_user_id, not candidate_user_id.
+    // Storm hub ownership by order email (Accio still uses legal name / DL / SSN).
+    const { driverUserId: hubUserId } = await resolveEmployerOrderDriverUserId(supabase, {
+      candidateUserId,
+      orderEmail: email || candidate.email || null,
+    })
+
+    // Consent stays on the talent-card subject who signed; order row → hub email owner.
     const { data: consent } = await supabase
       .from('bgcheck_consents')
       .select('id')
@@ -181,9 +187,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prevent accidental double-orders for the same driver within 24h.
+    // Prevent accidental double-orders for the same hub owner within 24h.
     const dupErr = await checkRecentDuplicateOrder(supabase, {
-      driverUserId: candidateUserId,
+      driverUserId: hubUserId,
       kind: 'mvr',
     })
     if (dupErr) {
@@ -194,7 +200,7 @@ export async function POST(request: NextRequest) {
     const { data: cdlBlock } = await supabase
       .from('block_driver_cdl')
       .select('id')
-      .eq('user_id', candidateUserId)
+      .eq('user_id', hubUserId)
       .maybeSingle()
 
     // Check Accio credentials
@@ -280,11 +286,11 @@ export async function POST(request: NextRequest) {
 
     console.log('[EMPLOYER MVR] Accio response parsed:', { accioOrderId, subOrderId })
 
-    // Store in database — linked to both the candidate user and the ordering company
+    // Store in database — hub owner by email + ordering company
     const { data: mvrOrder, error: orderError } = await supabase
       .from('mvr_orders')
       .insert({
-        driver_user_id:             candidateUserId,
+        driver_user_id:             hubUserId,
         driver_profile_id:          cdlBlock?.id || null,
         accio_order_number:         orderNumber,
         accio_suborder_number:      subOrderId,
@@ -310,7 +316,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to store MVR order' }, { status: 500 })
     }
 
-    console.log('[EMPLOYER MVR] Order created:', mvrOrder.id)
+    console.log('[EMPLOYER MVR] Order created:', mvrOrder.id, { hubUserId, candidateUserId })
+
+    // Status-only tile on the email owner's hub (full report stays company-private).
+    await ensureHubBlockInstalled(supabase, hubUserId, 'driver-mvr')
 
     return NextResponse.json({
       success: true,

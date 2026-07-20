@@ -107,6 +107,7 @@ function computeCareerCardSignals(
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 import { applyLensOrderAndFilterPerPage, getLensOrDefault } from '@/lib/career-card-lenses'
+import { ensureHubBlocksForEmployerInitiatedActions } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { readCardPage } from '@/lib/hub-block-config'
 import {
   pickPendingEmployerScreening,
@@ -190,6 +191,12 @@ export async function buildProjectedCareerCard(
         phone: userProfile?.phone ?? null,
       }
     : undefined
+
+  // Career card reads hub_blocks directly (not /api/hub/blocks). Heal missing
+  // tiles here for self-view so employer orders appear without a separate hub refresh.
+  if (meta.contactMode === 'self') {
+    await ensureHubBlocksForEmployerInitiatedActions(supabase, userId)
+  }
 
   const { data: hubBlocks } = await supabase
     .from('hub_blocks')
@@ -630,6 +637,16 @@ async function fetchMvrData(
   const row = resultByOrderId.get(order.id)
   const employerPaidScreening =
     contactMode === 'self' && Boolean((order as { ordered_by_company_id?: string | null }).ordered_by_company_id)
+  // Employer-paid: status + outcome only — never surface points/violations on the card.
+  const results =
+    !employerPaidScreening && row
+      ? {
+          licenseStatus: row.license_status,
+          licenseClass: row.license_class,
+          totalPoints: row.total_points,
+          violationCount: row.violation_count,
+        }
+      : null
   return {
     orderId: order.id,
     orderStatus: order.status,
@@ -637,14 +654,7 @@ async function fetchMvrData(
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,
-    results: row
-      ? {
-          licenseStatus: row.license_status,
-          licenseClass: row.license_class,
-          totalPoints: row.total_points,
-          violationCount: row.violation_count,
-        }
-      : null,
+    results,
     employerPaidScreening,
   }
 }
