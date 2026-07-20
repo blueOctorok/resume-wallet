@@ -6,6 +6,36 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-07-002 — All consent-bundle screening pulls are driver-owned; ownership follows the signed consent, never the click or the payment
+
+**Date:** 2026-07-20
+**Status:** Accepted — supersedes the "who clicks order" rule of DEC-2026-06-005 for consent-bundle pulls; implemented same day (employer screenings/order route + migration 102 backfill)
+**Decided by:** Owner
+
+### Context
+
+DEC-2026-06-005 set ownership by "who clicks order": Pace-initiated pulls were company-private (`ordered_by_company_id` set). In practice that meant the exact same consented pull was portable when the *candidate* clicked (fulfill-screening / consent wizard) but locked away from the candidate's career card when *Pace's recruiter* clicked (`/api/employer/screenings/order`, which defaulted to `ownership: 'employer'`). Live data on 2026-07-20: 86 fresh company-private pulls (56 MVR, 30 PSP) invisible on candidate cards — every one of them backed by a complete `screening_consent_bundles` row. With the one-active-order-per-kind lock (migration 102), those candidates would have been card-less AND unable to order a portable pull.
+
+### Decision
+
+1. **Ownership follows the driver's signed consent bundle.** Every pull placed from a complete consent bundle is `ownership: 'driver'` (`ordered_by_company_id` NULL) — portable, on the career card, shareable — regardless of who clicked the order button or who paid. Company sponsorship is a funding fact (`payments.company_id`), never an ownership fact.
+2. **The `purpose: 'hire'` company-private escape on the employer route is removed.** A report already on the candidate's card is the report; one active order per kind per driver, zero re-pulls. (If a future carrier genuinely requires an employer-purpose 391.23 pull as a distinct artifact, that returns as a deliberate, counsel-reviewed feature — not a default.)
+3. **Backfill:** active, unexpired company-private pulls with a matching complete consent bundle are converted to driver-owned (migration 102 step 2 — all 86 qualify). Past-expiry rows are left to the expiry cron. Legacy talent-card pulls without a consent bundle stay company-private.
+4. **Consenting-company visibility is unchanged** — `employer-screening-order-access.ts` already grants the consented company read access to driver-owned reports, so Pace loses nothing.
+
+### Consequences
+
+- `placeScreeningOrder` requires an explicit `ownership` argument — the silent `'employer'` default is gone (it's how this leak happened).
+- FCRA-isolation gate (P3.4-A step 7) and attestation eligibility now cover Pace-clicked pulls too, since they're driver-owned.
+- `hasBlockingDriverOwnedScreening`'s employer pre-screen suppression on the order route is replaced by the universal duplicate lock (guard + DB unique index).
+
+### Related
+
+- DEC-2026-06-005 (superseded in part), DEC-2026-06-002 (driver-owned/agency-funded vault), DEC-2026-05-011 (candidate-agent posture)
+- Migration `102_driver_screening_order_lock.sql`, `docs/CHANGES.md` 2026-07-20
+
+---
+
 ## DEC-2026-07-001 — DOT pre-screen packet may headline "Verified" only on a live majority of issuer-backed risk fields
 
 **Date:** 2026-07-14

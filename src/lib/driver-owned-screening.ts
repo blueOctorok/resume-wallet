@@ -101,16 +101,6 @@ export async function getScreeningOrderLocks(
   return { mvr: toLock(mvrRes.data), psp: toLock(pspRes.data) }
 }
 
-/** Block employer pre-screen duplicate when driver already owns an active pull of this kind. */
-export async function hasBlockingDriverOwnedScreening(
-  supabase: SupabaseClient,
-  driverUserId: string,
-  kind: 'mvr' | 'psp',
-): Promise<boolean> {
-  const flags = await getDriverOwnedScreeningFlags(supabase, driverUserId)
-  return kind === 'mvr' ? flags.hasActiveDriverOwnedMvr : flags.hasActiveDriverOwnedPsp
-}
-
 /** Full MvrData for the latest driver-owned order (consenting-company view). */
 export async function fetchLatestDriverOwnedMvrData(
   supabase: SupabaseClient,

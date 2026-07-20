@@ -54,11 +54,13 @@ export interface PlaceScreeningOrderInput {
   /** Skip 24h duplicate window (e.g. retrying a failed order) */
   skipDuplicateCheck?: boolean
   /**
-   * Who is the consumer of record on the Accio pull (DEC-2026-06-005).
-   * `driver` = portable / shareable (ordered_by_company_id NULL).
-   * Default `employer` for employer-initiated screening routes.
+   * Who is the consumer of record on the Accio pull. Required — no default,
+   * because a silent `employer` default is how consented pulls ended up
+   * company-private and off the candidate's career card. Per DEC-2026-07-002
+   * every consent-bundle pull is `driver` (portable, ordered_by_company_id
+   * NULL) regardless of who clicked or paid.
    */
-  ownership?: ScreeningOrderOwnership
+  ownership: ScreeningOrderOwnership
 }
 
 /**
@@ -71,8 +73,7 @@ export async function placeScreeningOrder(
 ): Promise<PlaceScreeningOrderResult> {
   const { driverUserId, driverEmail, companyId, employerUserId, type, formData } = input
   const consentDriverUserId = input.consentDriverUserId ?? driverUserId
-  const ownership = input.ownership ?? 'employer'
-  const ownershipFields = resolveScreeningOrderOwnershipFields(ownership, {
+  const ownershipFields = resolveScreeningOrderOwnershipFields(input.ownership, {
     companyId,
     employerUserId,
   })

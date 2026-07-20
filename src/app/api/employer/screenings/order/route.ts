@@ -9,7 +9,6 @@ import {
 } from '@/lib/employer-company-access'
 import { getLatestScreeningConsentBundle } from '@/lib/screening-consent-bundle'
 import { decryptScreeningSsn } from '@/lib/screening-consent-crypto'
-import { hasBlockingDriverOwnedScreening } from '@/lib/driver-owned-screening'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
 import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
 
@@ -18,6 +17,14 @@ import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-ema
  *
  * Places MVR or PSP using the candidate's latest complete screening consent
  * bundle (decrypts SSN server-side only on this path).
+ *
+ * Ownership: **driver-owned** (DEC-2026-07-002). The signed consent bundle is
+ * the driver's authorization — the company clicking the button and paying the
+ * fee does NOT make the pull company-private. The report lands on the
+ * candidate's career card / My Files, and the consenting company views it via
+ * consent-scoped access (`employer-screening-order-access.ts`). One active
+ * order per kind per driver, so there is never a reason to re-pull while a
+ * report is on file.
  *
  * `paymentTxHash` is optional. When omitted the order is recorded as an
  * internal/waived order — a synthetic payment row is upserted so the rest of
@@ -35,10 +42,12 @@ export async function POST(request: NextRequest) {
       type?: 'mvr' | 'psp'
       consentBundleId?: string
       paymentTxHash?: string
-      /** Skip duplicate check — allows re-ordering when a previous attempt is stuck */
+      /**
+       * Skip the app-level duplicate guard (e.g. retrying after a failed
+       * attempt). The database lock (one active order per kind per driver)
+       * still applies — force cannot create a duplicate pull.
+       */
       force?: boolean
-      /** `pre_screen` (default) blocks when driver-owned pull exists; `hire` allows FMCSA DQ-file pull */
-      purpose?: 'pre_screen' | 'hire'
       /**
        * Outreach / invite email — preferred for hub binding when consent form email
        * is empty or still has a stale talent-card address.
@@ -51,7 +60,6 @@ export async function POST(request: NextRequest) {
       consentBundleId,
       paymentTxHash,
       force,
-      purpose = 'pre_screen',
       orderEmail: bodyOrderEmail,
     } = body
     if (!candidateUserId || !type || !consentBundleId) {
@@ -212,20 +220,10 @@ export async function POST(request: NextRequest) {
       orderEmail: bodyOrderEmail || formData.email || driverUser?.email || null,
     })
 
-    // Pre-screen: suppress duplicate employer pull when hub owner already has a portable order.
-    if (purpose !== 'hire' && !force) {
-      if (await hasBlockingDriverOwnedScreening(supabase, hubUserId, type)) {
-        const label = type === 'mvr' ? 'MVR' : 'PSP'
-        return NextResponse.json(
-          {
-            error: `This candidate already ordered their own portable ${label}. Use purpose=hire for an FMCSA DQ-file pull after hire.`,
-            code: 'DRIVER_OWNED_SCREENING_EXISTS',
-          },
-          { status: 409 },
-        )
-      }
-    }
-
+    // Duplicate protection lives in placeScreeningOrder: the app guard
+    // (skippable via force) plus the DB reservation lock (never skippable) —
+    // one active order per kind per driver, so a report already on the
+    // candidate's card can't be re-pulled.
     const placed = await placeScreeningOrder(supabase, request, {
       driverUserId: hubUserId,
       consentDriverUserId: candidateUserId,
@@ -235,6 +233,10 @@ export async function POST(request: NextRequest) {
       type,
       formData,
       candidateRequestIdToComplete: null,
+      // DEC-2026-07-002: the pull belongs to the DRIVER even though the
+      // company clicked and paid. The consent bundle is the authorization;
+      // payment rows keep company_id for the funding audit trail.
+      ownership: 'driver',
       paymentId,
       paymentTxHash: resolvedTxHash,
       skipDuplicateCheck: force === true,
