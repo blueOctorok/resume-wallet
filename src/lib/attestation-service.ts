@@ -42,9 +42,19 @@ export interface Attestation {
   proof: ProofArtifact
 }
 
+export type AttestationProvenanceTier = 'metadata' | 'issuer_signed'
+
+export type MidnightProofArtifact = {
+  kind: 'midnight_zk'
+  txHash: string
+  proofId: string
+  /** metadata until P3.4-B in-circuit issuer signature — gates Midnight marketing copy. */
+  provenanceTier?: AttestationProvenanceTier
+}
+
 export type ProofArtifact =
   | { kind: 'signed_jwt'; jwt: string; issuer: string }
-  | { kind: 'midnight_zk'; txHash: string; proofId: string }
+  | MidnightProofArtifact
 
 export interface VerificationResult {
   valid: boolean

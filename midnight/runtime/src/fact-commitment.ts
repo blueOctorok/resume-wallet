@@ -6,6 +6,8 @@ export function buildFactCommitment(input: {
   factType: string
   sourceCra: string
   sourcePullId: string
+  /** YYYYMMDD from screening completion — binds cert to that pull event (P3.4-A). */
+  asOfDateYmd: number
   disclosedFields: Record<string, unknown>
 }): string {
   const payload = JSON.stringify({
@@ -13,6 +15,7 @@ export function buildFactCommitment(input: {
     factType: input.factType,
     sourceCra: input.sourceCra,
     sourcePullId: input.sourcePullId,
+    asOfDateYmd: input.asOfDateYmd,
     disclosedFields: sortKeys(input.disclosedFields),
   })
   return createHash('sha256').update(payload).digest('hex')

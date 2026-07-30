@@ -123,6 +123,8 @@ witness violationAt(index: Uint<8>): ViolationEntry;
 export circuit proveCleanMvr(
   windowStart: Uint<32>,
   windowEnd: Uint<32>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
   commitment: Opaque<"string">
 ): Boolean {
   for (const i of 0..32) {
@@ -132,6 +134,9 @@ export circuit proveCleanMvr(
       "violation in verification window"
     );
   }
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
   factCommitment = disclose(commitment);
   return disclose(true);
 }
@@ -139,11 +144,32 @@ export circuit proveCleanMvr(
 
 - **Witness (private):** 32 fixed `ViolationEntry` slots (`dateYmd` + `active`), built off-chain from `block_driver_mvr.violations` via `src/lib/mvr-clean-predicate.ts`.
 - **Constraints:** every active violation must fall **outside** the public 36-month window (`windowStart`/`windowEnd` as YYYYMMDD ints).
+- **Freshness (P3.4-A step 4, 2026-07-29):** public `asOfDate` (YYYYMMDD from MVR `completed_at`); commitment includes `asOfDateYmd`; ledger `usedPullNullifiers` blocks replay of the same Accio order; off-chain mirror in `midnight-prove-guards.ts`.
 - **Discloses:** boolean `true` + fact commitment (SHA-256 over attestation metadata — `midnight/runtime/src/fact-commitment.ts`). Never violations or PII.
 - **Taxonomy v1:** any parseable violation date inside the window fails (mirrors `fact-registry.ts`). Full ACD disqualifying-code list is a future version bump.
-- **Not yet in-circuit:** issuer signature (P3.4-B), replay/nullifier binding (P3.4-A step 4).
+- **Not yet in-circuit:** issuer signature (P3.4-B).
 
-**Honesty status:** still 🟡 — real predicate math over private violation dates, but provenance trusts Storm/Accio metadata, not an in-circuit CRA signature. **Do NOT** attach per-fact "this MVR is ZK-proven on-chain / trust the math not Storm" until P3.4-B lands (DEC-2026-05-004).
+**Honesty status:** still 🟡 — real predicate math over private violation dates, but provenance trusts Storm/Accio metadata, not an in-circuit CRA signature. **Do NOT** attach per-fact "this MVR is ZK-proven on-chain / trust the math not Storm" until P3.4-B lands (DEC-2026-05-004). P3.6 gate ships with `provenanceTier: 'metadata'` on new proofs.
+
+---
+
+### `cdl-class-a` — status 🟡 (P3.5, 2026-07-29)
+
+- **Fact:** `cdl_class_a` — holds Class A CDL per driver-owned Accio MVR.
+- **Witness (private):** `holdsClassA(): Boolean` — built from `normalizeAccioCdlClass(mvrCtx.licenseClass) === 'A'`.
+- **Public inputs:** `asOfDate`, `pullNullifier`, `commitment`.
+- **Constraints:** assert Class A; nullifier ledger prevents double-prove of same pull.
+- **Deploy:** set `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` after `npm run midnight:compile` + deploy.
+
+---
+
+### `previous-employer-verified` — status 🟡 (P3.5, 2026-07-29)
+
+- **Fact:** `previous_employer_verified` — prior employer confirmed employment (EVR).
+- **Witness (private):** `employerVerified(): Boolean` — true when EVR row has `verified_at`.
+- **Public inputs:** `asOfDate` (from `verified_at`), `pullNullifier` (EVR request id), `commitment`.
+- **Constraints:** assert verified; nullifier ledger prevents double-prove.
+- **Deploy:** set `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER` after compile + deploy.
 
 ---
 

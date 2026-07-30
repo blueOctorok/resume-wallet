@@ -1,0 +1,23 @@
+// Storm P3.5 — Class A CDL from driver-owned MVR (predicate only; P3.4-B provenance pending).
+
+pragma language_version >= 0.16 && <= 0.31;
+
+import CompactStandardLibrary;
+
+witness holdsClassA(): Boolean;
+
+export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
+
+export circuit proveCdlClassA(
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
+  commitment: Opaque<"string">
+): Boolean {
+  assert(holdsClassA(), "DMV MVR does not show Class A");
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
+  factCommitment = disclose(commitment);
+  return disclose(true);
+}

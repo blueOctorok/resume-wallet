@@ -2,13 +2,12 @@
  * DOT issuer badges → attestation honesty tier (P3.7 follow-on).
  *
  * Provenance first: no matching attestation → Accio / prior-employer issuer copy.
- * Midnight copy only when proof.kind === 'midnight_zk' (DEC-2026-05-004 / P3.6).
+ * Midnight copy only when proof.kind === 'midnight_zk' AND provenanceTier === 'issuer_signed'.
  */
 
 import {
-  formatAttestationProvenance,
-  formatAttestationIssuedDate,
-  formatVerifiedByStormLine,
+  formatAttestationVerificationLine,
+  type AttestationProvenanceTier,
 } from '@/lib/attestation-fact-ui'
 import {
   formatMvrFieldBadge,
@@ -23,11 +22,12 @@ export type AttestationProofKind = 'signed_jwt' | 'midnight_zk' | string
 export interface AttestationBadgeSummary {
   factType: FactType | string
   proofKind: AttestationProofKind
+  provenanceTier?: AttestationProvenanceTier
   sourceCra: string | null
   sourcePullId: string | null
   issuedAt: string
-  /** Midnight tx — optional; never required for badge copy */
   txHash?: string | null
+  proofId?: string | null
 }
 
 export type DotBadgeHonestyTier = 'issuer_only' | 'storm_jwt' | 'midnight_zk'
@@ -37,23 +37,26 @@ export interface DotBadgeResult {
   tier: DotBadgeHonestyTier
 }
 
-function formatMidnightLine(
-  issuedAt: string,
-  sourceCra: string | null | undefined,
-  sourcePullId: string | null | undefined,
-): string {
-  return `Proven on Midnight on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
-}
-
-function tierFromProof(proofKind: AttestationProofKind): Exclude<DotBadgeHonestyTier, 'issuer_only'> {
-  return proofKind === 'midnight_zk' ? 'midnight_zk' : 'storm_jwt'
+function tierFromAttestation(att: AttestationBadgeSummary): DotBadgeHonestyTier {
+  if (att.proofKind === 'midnight_zk' && att.provenanceTier === 'issuer_signed') {
+    return 'midnight_zk'
+  }
+  if (att.proofKind === 'midnight_zk' || att.proofKind === 'signed_jwt') {
+    return 'storm_jwt'
+  }
+  return 'storm_jwt'
 }
 
 function textFromAttestation(att: AttestationBadgeSummary): string {
-  if (att.proofKind === 'midnight_zk') {
-    return formatMidnightLine(att.issuedAt, att.sourceCra, att.sourcePullId)
-  }
-  return formatVerifiedByStormLine(att.issuedAt, att.sourceCra, att.sourcePullId)
+  return formatAttestationVerificationLine({
+    issuedAt: att.issuedAt,
+    sourceCra: att.sourceCra,
+    sourcePullId: att.sourcePullId,
+    proofKind: att.proofKind,
+    provenanceTier: att.provenanceTier,
+    txHash: att.txHash,
+    proofId: att.proofId,
+  })
 }
 
 function pullIdsMatch(
@@ -87,7 +90,6 @@ export function matchMvrAttestation(
   )
   if (matched) return matched
 
-  // No pull ids to match (or none matched) — only fall back when unambiguous
   if (mvr.length === 1) return mvr[0]
   return null
 }
@@ -110,7 +112,6 @@ export function matchEmploymentAttestation(
   )
   if (byRequest) return byRequest
 
-  // Fallback: some older rows may have stored employment id as pull id
   const byEmployment = rows.find((a) => pullIdsMatch(a.sourcePullId, [meta.employmentId]))
   if (byEmployment) return byEmployment
 
@@ -128,7 +129,7 @@ export function resolveMvrFieldDotBadge(
     accioOrderNumber: entry.accioOrderNumber,
   })
   if (!att) return { text: issuerText, tier: 'issuer_only' }
-  return { text: textFromAttestation(att), tier: tierFromProof(att.proofKind) }
+  return { text: textFromAttestation(att), tier: tierFromAttestation(att) }
 }
 
 /** Form 2 MVR row badge (PSP stays issuer-only — no shipped PSP fact type). */
@@ -155,7 +156,7 @@ export function resolveMvrRowDotBadge(
     accioOrderNumber: meta.accioOrderNumber,
   })
   if (!att) return { text: issuerText, tier: 'issuer_only' }
-  return { text: textFromAttestation(att), tier: tierFromProof(att.proofKind) }
+  return { text: textFromAttestation(att), tier: tierFromAttestation(att) }
 }
 
 /** Form 3 EVR-verified employer badge. */
@@ -177,5 +178,5 @@ export function resolveEmploymentDotBadge(
     employmentId: meta.employmentId,
   })
   if (!att) return { text: issuerText, tier: 'issuer_only' }
-  return { text: textFromAttestation(att), tier: tierFromProof(att.proofKind) }
+  return { text: textFromAttestation(att), tier: tierFromAttestation(att) }
 }

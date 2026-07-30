@@ -4,7 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Security — driver MVR/PSP re-ordering locked end-to-end** (2026-07-20)
+## **Phase 3 — P3.4–P3.6 while waiting on Key** (2026-07-29)
+
+Key-independent Midnight slice shipped in code (redeploy + Preprod smokes are operator follow-ups):
+
+| Track | What shipped |
+|---|---|
+| **P3.4-A step 4** | `asOfDateYmd` in commitment + public circuit input; on-chain `usedPullNullifiers` Map; off-chain replay guards (`midnight-prove-guards.ts`, latest-driver-owned MVR only). **Requires contract redeploy** — `proveCleanMvr` ABI changed. |
+| **P3.4-A backfill** | `npm run midnight:supersede-pace-tests` voids Pace-derived Preprod smokes (`167040f7-…` + `ab0114b1-…` candidate rows). |
+| **P3.5** | Shared `proveFactOnChain` dispatcher; new `cdl-class-a` + `previous-employer-verified` Compact circuits; `midnight-attestation-service` supports all three shipped facts; `midnight:prove-fact -- --fact …`. |
+| **P3.6 gate** | `formatAttestationVerificationLine` — Midnight marketing copy only when `provenanceTier === 'issuer_signed'` (default `metadata` on new proofs). Wired: `CredentialFactsPanel`, DOT badges, `/api/attestation/verify` display, Stormi context. |
+
+**Operator next:** `npm run midnight:compile` → redeploy MVR contract (freshness ABI) → deploy CDL + EVR contracts → set `MIDNIGHT_CONTRACT_ADDRESS_*` → `midnight:supersede-pace-tests` → driver-owned prove smokes.
+
+---
+
 
 Follow-up to the duplicate-PSP fix below, hardening the whole ordering path against both honest double-orders and malicious hammering (every driver-owned order is a synthetic waived payment to the user but a real Accio charge to Storm). Policy: **one active (not failed/cancelled/expired/superseded) order per kind per driver — employer-ordered included** — self-releasing when the report expires (30 days) or the order fails. Four layers:
 

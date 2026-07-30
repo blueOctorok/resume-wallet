@@ -1091,10 +1091,10 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 1. ✅ **Witness shape** — `src/lib/mvr-clean-predicate.ts` (32 fixed slots, YYYYMMDD ints, v1 taxonomy = any dated violation in window). Builder reads `block_driver_mvr.violations` (parsed Accio data).
 2. ✅ **Predicate constraint** — `compact/mvr-clean-36/mvr-clean-36.compact` loops 32 slots; `assert` no active violation inside public `[windowStart, windowEnd]`. Taxonomy v1 mirrors `fact-registry.ts` (not full ACD disqualifying-code list yet).
 3. ✅ **Disclosure** — `disclose()` only boolean + commitment; violations stay in witness.
-4. ⬜ **Replay / freshness** — bind proof to pull date / nullifier so stale clean MVR can't be reused after new violation.
+4. ✅ **Replay / freshness** — public `asOfDate` + `usedPullNullifiers` ledger Map; commitment includes `asOfDateYmd`; off-chain guards in `midnight-prove-guards.ts`. **Redeploy required** (ABI change vs `2b7032a6…`).
 5. ✅ Wire witness through `midnight-prove-bridge` → `prove-on-chain.ts` → `midnight-attestation-service.ts` (+ unit tests).
 6. ✅ **Provenance (interim)** — cite `source_cra='accio'` + `source_pull_id` in attestation metadata; **no** in-circuit signature yet.
-7. ✅ **FCRA isolation gate (2026-06-25)** — `getMvrAttestationContext` requires **driver-owned** completed MVR (`ordered_by_company_id IS NULL`); loads violations from `mvr_results` when block cache points at a company pull. `process-mvr-accio-webhook` only syncs `block_driver_mvr` for driver-owned orders (matches existing PSP webhook). Candidate `fulfill-screening` passes `ownership: 'driver'` → portable pull even when employer requested + may fund. Shared helper: `src/lib/screening-order-ownership.ts`. **Build assumption pending counsel** (DEC-2026-06-005). **Still open:** backfill/supersede the two existing Pace-derived test attestations.
+7. ✅ **FCRA isolation gate (2026-06-25)** — `getMvrAttestationContext` requires **driver-owned** completed MVR (`ordered_by_company_id IS NULL`); loads violations from `mvr_results` when block cache points at a company pull. `process-mvr-accio-webhook` only syncs `block_driver_mvr` for driver-owned orders (matches existing PSP webhook). Candidate `fulfill-screening` passes `ownership: 'driver'` → portable pull even when employer requested + may fund. Shared helper: `src/lib/screening-order-ownership.ts`. **Build assumption pending counsel** (DEC-2026-06-005). **Backfill script:** `npm run midnight:supersede-pace-tests` (2026-07-29).
 
 **Redeploy:** ✅ Done — contract `2b7032a622c339a1494265812064df28a9e708da330be3e0a4e50856eea54cdb` (replaces P3.3 anchor `6c3f0ea8…`).
 
@@ -1103,7 +1103,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 - **Attestation:** `167040f7-dfd5-4d3d-b15c-53b6c09b83bc` — `proof_artifact.kind='midnight_zk'`; P3.3 row `6bc932c7…` superseded
 - **Circuit:** `proveCleanMvr` with 32-slot violation witness (empty violations = clean record)
 
-**Still open on P3.4-A:** step 4 (replay/freshness) + backfill of Pace-derived test attestations (step 7 gate ✅ wired).
+**Operator smoke (2026-07-30):** ✅ Redeployed freshness contract `fb46c572…2465e`; supersede Pace rows; driver-owned prove tx `00a2f520…306635` (attestation `7caadb3c-…`, Michael Hardin); replay blocked off-chain; violation negative blocked off-chain. Overall P3.4 stays 🟡 until P3.4-B issuer signature.
 
 **Negative smoke:** ✅ **2026-06-22** — `061d7eeb-…` (violation 2025-02-20 inside window) rejected **before** on-chain prove: `Moving violations found within the 36-month verification window — cannot attest clean MVR`. No tx submitted.
 
@@ -1213,7 +1213,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 | | |
 |---|---|
-| Status | ⬜ |
+| Status | 🟡 **Code shipped 2026-07-29** — operator deploy + Preprod smokes pending |
 | Pre-conditions | P3.4-A ✅ (predicate pattern established); P3.4-B (🟢 provenance) recommended but not required to start shared plumbing; **P3.4-C driver-owned gate** (so broadened facts attest off driver-owned pulls, not company-private) |
 | Pace risk | Low — additive circuits + prove scripts |
 
@@ -1240,7 +1240,7 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 | | |
 |---|---|
-| Status | ⬜ |
+| Status | ✅ **Gate shipped 2026-07-29** — Midnight marketing copy requires `provenanceTier === 'issuer_signed'` (default `metadata`). Flip is one line after P3.4-B. |
 | Pre-conditions | P3.4-A ✅; P3.4-B ✅ required before enabling per-fact "proven on Midnight" strings |
 | Pace risk | **Copy/UI only** — no screening pipeline changes |
 
@@ -1408,6 +1408,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-07-30 | **P3.4-A freshness + P3.5/P3.6 gate** | Composer | (this push) | **P3.4-A:** asOfDate + pull nullifiers; Preprod redeploy `fb46c572…`; Pace supersede; driver-owned prove + replay/negative smokes ✅. **P3.5:** CDL/EVR circuits in repo (deploy smokes still open). **P3.6:** honesty gate shipped; Midnight marketing copy dark until issuer_signed. Prod stays JWT (`ATTESTATION_BACKEND` unset). |
 | 2026-07-14 | **P3.7** DOT badge honesty tier | Grok | uncommitted | Issuer badges upgrade via `/api/attestation/mine` + `dot-attestation-badge.ts`. Midnight copy only when `proof.kind === midnight_zk`. PSP badges stay Accio-only. |
 | 2026-07-14 | **Honesty** resume verify retired | Grok | uncommitted | Self-reported resumes: verify API 410; removed Base Verify CTAs; "On file" not Verified. Extends DEC-2026-07-001 §7. |
 | 2026-07-14 | **P3.7** DEC-2026-07-001 + honesty pass | Grok | uncommitted | **Shipped:** formal DEC (majority Verified headline + field honesty); retired DOT whole-app blockchain UX (ApplicationSubmitted, journey, CareerCard, DriverHub, hub docs `canVerify`, verify API 410, projected on-chain strip). Prefer Submitted + live verified-%. |

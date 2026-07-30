@@ -1,11 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { assertDisclosureAllowsProve } from '@/lib/disclosure-preferences'
-import { resolveAttestationFact } from '@/lib/fact-registry'
-import { getMvrAttestationContext } from '@/lib/block-data'
+import { normalizeAccioCdlClass, resolveAttestationFact } from '@/lib/fact-registry'
+import {
+  getEmploymentVerificationForAttestation,
+  getMvrAttestationContext,
+} from '@/lib/block-data'
 import {
   assertMvrCleanPredicatePasses,
   buildMvrCleanWitnessPayload,
+  computeAsOfDateYmd,
 } from '@/lib/mvr-clean-predicate'
 import {
   proveFactOnMidnight,
@@ -16,18 +20,30 @@ import type {
   Attestation,
   AttestationInput,
   AttestationService,
+  MidnightProofArtifact,
   ProofArtifact,
   VerificationResult,
   FactType,
 } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
 import { supersedePriorAttestations } from '@/lib/attestation-supersede'
+import type { ShippedFactType } from '@/lib/fact-registry'
+import {
+  assertMvrPullMatchesLatest,
+  assertNoActiveAttestationForPull,
+} from '@/lib/midnight-prove-guards'
 
 export interface MidnightAttestationServiceConfig {
   getSupabase?: () => Promise<SupabaseClient>
   /** Override for tests — skips tsx subprocess. */
   proveOnChain?: (input: MidnightOnChainProveInput) => Promise<MidnightOnChainProveResult>
 }
+
+const MIDNIGHT_SHIPPED_FACTS: ReadonlySet<ShippedFactType> = new Set([
+  'mvr_clean_36_months',
+  'cdl_class_a',
+  'previous_employer_verified',
+])
 
 function rowToAttestation(row: {
   id: string
@@ -55,6 +71,117 @@ function defaultExpiresAt(): string {
   return new Date(Date.now() + DEFAULT_TTL_MS).toISOString()
 }
 
+function mvrAnchorDate(completedAt: string | null, lastOrderedAt: string | null): Date {
+  if (completedAt) return new Date(completedAt)
+  if (lastOrderedAt) return new Date(lastOrderedAt)
+  return new Date()
+}
+
+function buildMidnightProof(onChain: MidnightOnChainProveResult): MidnightProofArtifact {
+  return {
+    kind: 'midnight_zk',
+    txHash: onChain.txHash,
+    proofId: onChain.proofId,
+    // P3.4-B flips to issuer_signed — until then UI stays on Storm+CRA copy.
+    provenanceTier: 'metadata',
+  }
+}
+
+async function buildOnChainInput(
+  supabase: SupabaseClient,
+  input: AttestationInput,
+  material: Awaited<ReturnType<typeof resolveAttestationFact>>,
+): Promise<MidnightOnChainProveInput> {
+  if (!material.sourceCra || !material.sourcePullId) {
+    throw new AttestationError('Missing source_cra or source_pull_id for Midnight attestation')
+  }
+
+  const factType = input.factType as ShippedFactType
+
+  await assertNoActiveAttestationForPull(supabase, {
+    candidateUserId: input.candidateUserId,
+    factType,
+    sourcePullId: material.sourcePullId,
+    audienceId: input.audienceId,
+  })
+
+  if (factType === 'mvr_clean_36_months' || factType === 'cdl_class_a') {
+    const mvrCtx = await getMvrAttestationContext(supabase, input.candidateUserId)
+    if (!mvrCtx) {
+      throw new AttestationError('No driver-owned completed MVR on file — cannot build predicate witness')
+    }
+
+    assertMvrPullMatchesLatest(mvrCtx.accioOrderNumber, material.sourcePullId)
+
+    const anchor = mvrAnchorDate(mvrCtx.completedAt, mvrCtx.mvr.last_ordered_at)
+    const asOfDateYmd = computeAsOfDateYmd(anchor)
+
+    if (factType === 'mvr_clean_36_months') {
+      const witnessPayload = buildMvrCleanWitnessPayload({
+        anchor,
+        violations: mvrCtx.mvr.violations ?? [],
+      })
+      assertMvrCleanPredicatePasses(witnessPayload)
+
+      return {
+        candidateUserId: input.candidateUserId,
+        factType,
+        sourceCra: material.sourceCra,
+        sourcePullId: material.sourcePullId,
+        asOfDateYmd,
+        disclosedFields: material.disclosedFields,
+        windowStartYmd: witnessPayload.window.windowStartYmd,
+        windowEndYmd: witnessPayload.window.windowEndYmd,
+        violationSlots: witnessPayload.slots,
+      }
+    }
+
+    const holdsClassA = normalizeAccioCdlClass(mvrCtx.licenseClass) === 'A'
+    if (!holdsClassA) {
+      throw new AttestationError('DMV MVR does not show Class A CDL — cannot prove on Midnight')
+    }
+
+    return {
+      candidateUserId: input.candidateUserId,
+      factType,
+      sourceCra: material.sourceCra,
+      sourcePullId: material.sourcePullId,
+      asOfDateYmd,
+      disclosedFields: material.disclosedFields,
+      holdsClassA: true,
+    }
+  }
+
+  const employmentId =
+    typeof input.parameters?.employmentId === 'string' ? input.parameters.employmentId : undefined
+  const verificationRequestId =
+    typeof input.parameters?.verificationRequestId === 'string'
+      ? input.parameters.verificationRequestId
+      : undefined
+
+  const evrRow = await getEmploymentVerificationForAttestation(supabase, input.candidateUserId, {
+    employmentId,
+    verificationRequestId,
+  })
+
+  if (!evrRow?.verified_at) {
+    throw new AttestationError('No verified prior-employer response on file')
+  }
+
+  const verifiedAt = new Date(evrRow.verified_at)
+  const asOfDateYmd = computeAsOfDateYmd(verifiedAt)
+
+  return {
+    candidateUserId: input.candidateUserId,
+    factType: 'previous_employer_verified',
+    sourceCra: material.sourceCra,
+    sourcePullId: material.sourcePullId,
+    asOfDateYmd,
+    disclosedFields: material.disclosedFields,
+    employerVerified: true,
+  }
+}
+
 export function createMidnightAttestationService(
   config: MidnightAttestationServiceConfig = {},
 ): AttestationService {
@@ -63,9 +190,10 @@ export function createMidnightAttestationService(
 
   return {
     async proveFact(input: AttestationInput): Promise<Attestation> {
-      if (input.factType !== 'mvr_clean_36_months') {
+      const factType = input.factType as ShippedFactType
+      if (!MIDNIGHT_SHIPPED_FACTS.has(factType)) {
         throw new AttestationError(
-          `Midnight backend (P3.3) only supports mvr_clean_36_months — got ${input.factType}`,
+          `Midnight backend does not support ${input.factType} — shipped facts: ${[...MIDNIGHT_SHIPPED_FACTS].join(', ')}`,
         )
       }
 
@@ -73,47 +201,13 @@ export function createMidnightAttestationService(
       await assertDisclosureAllowsProve(supabase, input)
 
       const material = await resolveAttestationFact(input)
-      if (!material.sourceCra || !material.sourcePullId) {
-        throw new AttestationError('Missing source_cra or source_pull_id for Midnight attestation')
-      }
-
-      const mvrCtx = await getMvrAttestationContext(supabase, input.candidateUserId)
-      if (!mvrCtx) {
-        throw new AttestationError('No driver-owned completed MVR on file — cannot build predicate witness')
-      }
-
-      const anchor = mvrCtx.completedAt
-        ? new Date(mvrCtx.completedAt)
-        : mvrCtx.mvr.last_ordered_at
-          ? new Date(mvrCtx.mvr.last_ordered_at)
-          : new Date()
-
-      const witnessPayload = buildMvrCleanWitnessPayload({
-        anchor,
-        violations: mvrCtx.mvr.violations ?? [],
-      })
-      assertMvrCleanPredicatePasses(witnessPayload)
-
-      const onChain = await proveOnChain({
-        candidateUserId: input.candidateUserId,
-        factType: input.factType,
-        sourceCra: material.sourceCra,
-        sourcePullId: material.sourcePullId,
-        disclosedFields: material.disclosedFields,
-        windowStartYmd: witnessPayload.window.windowStartYmd,
-        windowEndYmd: witnessPayload.window.windowEndYmd,
-        violationSlots: witnessPayload.slots,
-      })
+      const onChainInput = await buildOnChainInput(supabase, input, material)
+      const onChain = await proveOnChain(onChainInput)
 
       const attestationId = crypto.randomUUID()
       const issuedAt = new Date().toISOString()
       const expiresAt = material.expiresAt ?? defaultExpiresAt()
-
-      const proof: ProofArtifact = {
-        kind: 'midnight_zk',
-        txHash: onChain.txHash,
-        proofId: onChain.proofId,
-      }
+      const proof = buildMidnightProof(onChain)
 
       const { data: inserted, error: insertError } = await supabase
         .from('attestations')
@@ -166,7 +260,6 @@ export function createMidnightAttestationService(
         return { valid: false, ...base, reason: 'Missing txHash on midnight_zk proof' }
       }
 
-      // P3.3: tx submitted + persisted — indexer read verification ships in P3.5.
       return {
         valid: true,
         ...base,

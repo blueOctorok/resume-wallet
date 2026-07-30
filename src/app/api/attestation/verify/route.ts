@@ -9,6 +9,11 @@ import {
   attestationFromRow,
   isUuid,
 } from '@/lib/attestation-route-helpers'
+import {
+  attestationDisplayFromProof,
+  formatAttestationVerificationLine,
+  formatAttestationVerifyDetails,
+} from '@/lib/attestation-fact-ui'
 
 /**
  * POST /api/attestation/verify
@@ -35,6 +40,8 @@ export async function POST(request: NextRequest) {
     let attestation: Attestation | null = null
     let candidateUserId: string | null = null
     let audienceId: string | null = null
+    let sourceCra: string | null = null
+    let sourcePullId: string | null = null
 
     if (body.id) {
       if (typeof body.id !== 'string' || !isUuid(body.id)) {
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
       const { data: row, error: rowError } = await supabase
         .from('attestations')
         .select(
-          'id, candidate_user_id, fact_type, fact_summary, disclosed_fields, issued_at, expires_at, proof_artifact, audience_id',
+          'id, candidate_user_id, fact_type, fact_summary, disclosed_fields, issued_at, expires_at, proof_artifact, audience_id, source_cra, source_pull_id',
         )
         .eq('id', body.id)
         .maybeSingle()
@@ -60,6 +67,8 @@ export async function POST(request: NextRequest) {
 
       candidateUserId = row.candidate_user_id as string
       audienceId = (row.audience_id as string | null) ?? null
+      sourceCra = (row.source_cra as string | null) ?? null
+      sourcePullId = (row.source_pull_id as string | null) ?? null
       attestation = attestationFromRow(row)
     } else if (body.attestation && typeof body.attestation === 'object') {
       attestation = body.attestation
@@ -97,7 +106,21 @@ export async function POST(request: NextRequest) {
 
     const result = await attestationService.verifyAttestation(attestation)
 
-    return NextResponse.json({ success: true, verification: result })
+    const display = attestationDisplayFromProof(
+      attestation.issuedAt,
+      sourceCra,
+      sourcePullId,
+      attestation.proof,
+    )
+
+    return NextResponse.json({
+      success: true,
+      verification: result,
+      display: {
+        verificationLine: formatAttestationVerificationLine(display),
+        technicalDetails: formatAttestationVerifyDetails(display),
+      },
+    })
   } catch (error) {
     if (error instanceof AttestationError) {
       console.error('[ATTESTATION] verify failed:', error.message)

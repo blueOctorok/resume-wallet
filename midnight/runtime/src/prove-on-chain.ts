@@ -5,35 +5,68 @@ import {
   deployContract,
   findDeployedContract,
 } from '@midnight-ntwrk/midnight-js-contracts'
+import type { Contract as CompactContract } from '@midnight-ntwrk/compact-js'
+import { CompiledContract } from '@midnight-ntwrk/compact-js'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import path from 'node:path'
 
 import { buildFactCommitment } from './fact-commitment.js'
+import { buildPullNullifier } from './pull-nullifier.js'
 import {
-  loadCompiledContract,
+  MIDNIGHT_CIRCUIT_CONFIGS,
+  resolveContractAddressForFact,
+  type MidnightShippedFactType,
+} from './contract-registry.js'
+import {
   createMidnightWallet,
   saveWalletState,
-  createEmptyMvrCleanWitness,
 } from './wallet.js'
 import { createMidnightProviders } from './providers.js'
 import { mnemonicToSeedBuffer } from './mnemonic-seed.js'
-import { MIDNIGHT_CONFIG, resolveContractAddress } from './config.js'
 import {
   createMvrCleanCircuitWitness,
   type MvrCleanViolationSlot,
 } from './mvr-clean-witness.js'
+import {
+  createCdlClassACircuitWitness,
+  createEmptyCdlClassAWitness,
+} from './cdl-class-a-witness.js'
+import {
+  createPreviousEmployerVerifiedCircuitWitness,
+  createEmptyPreviousEmployerVerifiedWitness,
+} from './previous-employer-verified-witness.js'
 
-export interface OnChainProveInput {
+export interface SharedOnChainProveInput {
   candidateUserId: string
-  factType: string
+  factType: MidnightShippedFactType
   sourceCra: string
   sourcePullId: string
+  asOfDateYmd: number
   disclosedFields: Record<string, unknown>
-  /** P3.4-A — public window bounds (YYYYMMDD ints). */
-  windowStartYmd: number
-  windowEndYmd: number
-  /** Fixed 32-slot violation witness for the predicate circuit. */
-  violationSlots: MvrCleanViolationSlot[]
   mnemonic: string
 }
+
+export interface MvrOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'mvr_clean_36_months'
+  windowStartYmd: number
+  windowEndYmd: number
+  violationSlots: MvrCleanViolationSlot[]
+}
+
+export interface CdlOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'cdl_class_a'
+  holdsClassA: boolean
+}
+
+export interface EmployerVerifiedOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'previous_employer_verified'
+  employerVerified: boolean
+}
+
+export type OnChainProveInput =
+  | MvrOnChainProveInput
+  | CdlOnChainProveInput
+  | EmployerVerifiedOnChainProveInput
 
 export interface OnChainProveResult {
   txHash: string
@@ -41,24 +74,14 @@ export interface OnChainProveResult {
   commitment: string
   contractAddress: string
   predicateVersion: string
+  pullNullifier: string
+  asOfDateYmd: number
 }
 
-/**
- * Progress logging goes to STDERR on purpose: the prove CLI writes its JSON
- * result to STDOUT, and the bridge parses that stdout. Keeping diagnostics on
- * stderr lets us stream live progress without corrupting the machine-readable
- * output. (Standard Unix split: data → stdout, diagnostics → stderr.)
- */
 function logProgress(message: string): void {
   console.error(`[MIDNIGHT] ${message}`)
 }
 
-/**
- * Returns an RxJS `tap` callback that logs incremental sync progress, de-duped so
- * we only print when the applied block index actually advances (the state stream
- * emits far more often than the chain tip moves). Progress lives on the shielded
- * sub-state's `.progress` — there is no `syncProgress` on the top-level state.
- */
 function makeSyncProgressLogger(): (s: FacadeState) => void {
   let lastApplied = -1n
   return (s) => {
@@ -83,7 +106,6 @@ export async function registerDustIfNeeded(
   )
   logProgress('Wallet synced')
 
-  // Single exit so we always persist the freshest synced checkpoint below.
   if (state.dust.balance(new Date()) <= 0n) {
     logProgress('No DUST balance — registering tNIGHT UTXOs for DUST generation...')
 
@@ -113,44 +135,79 @@ export async function registerDustIfNeeded(
     )
   }
 
-  // Cache the synced state so the next CLI run resumes incrementally.
   await saveWalletState(walletCtx)
 }
 
-export async function deployMvrCleanContract(mnemonic: string): Promise<{
-  contractAddress: string
-}> {
+async function loadCompiledContractForFact(
+  factType: MidnightShippedFactType,
+  witnesses: unknown,
+) {
+  const cfg = MIDNIGHT_CIRCUIT_CONFIGS[factType]
+  const contractPath = path.join(cfg.managedDir, 'contract', 'index.js')
+  const module = (await import(pathToFileURL(contractPath).href)) as {
+    Contract: new (w: unknown) => CompactContract
+  }
+
+  const ContractCtor = module.Contract as unknown as new (w: unknown) => CompactContract
+  const compiledContract = CompiledContract.make(cfg.contractName, ContractCtor).pipe(
+    CompiledContract.withWitnesses(witnesses),
+    CompiledContract.withCompiledFileAssets(cfg.managedDir),
+  )
+
+  return { compiledContract, module }
+}
+
+function emptyWitnessForFact(factType: MidnightShippedFactType): unknown {
+  switch (factType) {
+    case 'mvr_clean_36_months':
+      return createMvrCleanCircuitWitness(
+        Array.from({ length: 32 }, () => ({ dateYmd: 0, active: false })),
+      )
+    case 'cdl_class_a':
+      return createEmptyCdlClassAWitness()
+    case 'previous_employer_verified':
+      return createEmptyPreviousEmployerVerifiedWitness()
+  }
+}
+
+export async function deployMidnightContract(
+  factType: MidnightShippedFactType,
+  mnemonic: string,
+): Promise<{ contractAddress: string }> {
   const seed = mnemonicToSeedBuffer(mnemonic)
   const walletCtx = await createMidnightWallet(seed)
 
   try {
     await registerDustIfNeeded(walletCtx)
-
-    const { compiledContract } = await loadCompiledContract(createEmptyMvrCleanWitness())
+    const { compiledContract } = await loadCompiledContractForFact(
+      factType,
+      emptyWitnessForFact(factType),
+    )
     const providers = await createMidnightProviders(walletCtx)
-
     const deployed = await deployContract(providers, {
       compiledContract,
       args: [],
     })
-
-    const contractAddress = deployed.deployTxData.public.contractAddress
-    return { contractAddress }
+    return { contractAddress: deployed.deployTxData.public.contractAddress }
   } finally {
     await walletCtx.wallet.stop()
   }
 }
 
-export async function proveCleanMvrOnChain(
-  input: OnChainProveInput,
-): Promise<OnChainProveResult> {
-  const commitment = buildFactCommitment(input)
-  const seed = mnemonicToSeedBuffer(input.mnemonic)
-  const contractAddress = resolveContractAddress()
+export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChainProveResult> {
+  const pullNullifier = buildPullNullifier(input.sourcePullId)
+  const commitment = buildFactCommitment({
+    candidateUserId: input.candidateUserId,
+    factType: input.factType,
+    sourceCra: input.sourceCra,
+    sourcePullId: input.sourcePullId,
+    asOfDateYmd: input.asOfDateYmd,
+    disclosedFields: input.disclosedFields,
+  })
 
-  const witnesses = createMvrCleanCircuitWitness(input.violationSlots)
-  const windowStart = BigInt(input.windowStartYmd)
-  const windowEnd = BigInt(input.windowEndYmd)
+  const seed = mnemonicToSeedBuffer(input.mnemonic)
+  const contractAddress = resolveContractAddressForFact(input.factType)
+  const cfg = MIDNIGHT_CIRCUIT_CONFIGS[input.factType]
 
   logProgress('Initializing wallet...')
   const walletCtx = await createMidnightWallet(seed)
@@ -158,8 +215,15 @@ export async function proveCleanMvrOnChain(
   try {
     await registerDustIfNeeded(walletCtx)
 
-    logProgress('Loading compiled contract + providers...')
-    const { compiledContract } = await loadCompiledContract(witnesses)
+    const witnesses =
+      input.factType === 'mvr_clean_36_months'
+        ? createMvrCleanCircuitWitness(input.violationSlots)
+        : input.factType === 'cdl_class_a'
+          ? createCdlClassACircuitWitness(input.holdsClassA)
+          : createPreviousEmployerVerifiedCircuitWitness(input.employerVerified)
+
+    logProgress(`Loading compiled contract + providers (${input.factType})...`)
+    const { compiledContract } = await loadCompiledContractForFact(input.factType, witnesses)
     const providers = await createMidnightProviders(walletCtx)
 
     logProgress(`Locating deployed contract ${contractAddress.slice(0, 12)}...`)
@@ -168,51 +232,67 @@ export async function proveCleanMvrOnChain(
       compiledContract,
     })
 
+    const asOfDate = BigInt(input.asOfDateYmd)
     logProgress('Generating ZK predicate proof + submitting transaction (slow step)...')
+
     let tx
     try {
-      tx = await contract.callTx.proveCleanMvr(windowStart, windowEnd, commitment)
+      if (input.factType === 'mvr_clean_36_months') {
+        tx = await contract.callTx.proveCleanMvr(
+          BigInt(input.windowStartYmd),
+          BigInt(input.windowEndYmd),
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
+      } else if (input.factType === 'cdl_class_a') {
+        tx = await contract.callTx.proveCdlClassA(asOfDate, pullNullifier, commitment)
+      } else {
+        tx = await contract.callTx.provePreviousEmployerVerified(
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       const cause =
         err instanceof Error && err.cause instanceof Error ? err.cause.message : ''
       throw new Error(
-        cause ? `proveCleanMvr failed: ${msg} — ${cause}` : `proveCleanMvr failed: ${msg}`,
+        cause ? `${cfg.callMethod} failed: ${msg} — ${cause}` : `${cfg.callMethod} failed: ${msg}`,
         { cause: err instanceof Error ? err : undefined },
       )
     }
+
     const txHash = tx.public.txId
-    const proofId = txHash
     logProgress(`Transaction submitted: ${txHash}`)
 
     return {
       txHash,
-      proofId,
+      proofId: txHash,
       commitment,
       contractAddress,
-      predicateVersion: 'v1-any-violation-in-window',
+      pullNullifier,
+      asOfDateYmd: input.asOfDateYmd,
+      predicateVersion:
+        input.factType === 'mvr_clean_36_months'
+          ? 'v1-any-violation-in-window'
+          : input.factType === 'cdl_class_a'
+            ? 'v1-class-a-from-mvr'
+            : 'v1-evr-verified',
     }
   } finally {
     await walletCtx.wallet.stop()
   }
 }
 
-export async function readOnChainCommitment(
-  contractAddress: string,
-  mnemonic: string,
-): Promise<string | null> {
-  const { module } = await loadCompiledContract(createEmptyMvrCleanWitness())
-  const walletCtx = await createMidnightWallet(mnemonicToSeedBuffer(mnemonic))
+/** @deprecated Use proveFactOnChain — kept for existing imports. */
+export async function proveCleanMvrOnChain(input: MvrOnChainProveInput): Promise<OnChainProveResult> {
+  return proveFactOnChain(input)
+}
 
-  try {
-    const providers = await createMidnightProviders(walletCtx)
-    const state = await providers.publicDataProvider.queryContractState(contractAddress)
-    if (!state) return null
-    const ledgerState = module.ledger(state.data)
-    return ledgerState.factCommitment || null
-  } finally {
-    await walletCtx.wallet.stop()
-  }
+export async function deployMvrCleanContract(mnemonic: string) {
+  return deployMidnightContract('mvr_clean_36_months', mnemonic)
 }
 
 export async function getWalletStatus(mnemonic: string) {
@@ -230,7 +310,6 @@ export async function getWalletStatus(mnemonic: string) {
         Rx.filter((s) => s.isSynced),
       ),
     )
-    // Cache the synced state so subsequent CLI runs resume incrementally.
     await saveWalletState(walletCtx)
 
     const tNight =

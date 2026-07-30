@@ -1,5 +1,5 @@
 // Storm P3.4-A — real predicate proof for mvr_clean_36_months.
-// Witness: fixed violation slots (private). Public: window bounds + commitment.
+// Witness: fixed violation slots (private). Public: window + as-of date + nullifier.
 // Provenance signature (P3.4-B) ships when Key/Accio delivers signing.
 
 pragma language_version >= 0.16 && <= 0.31;
@@ -14,10 +14,13 @@ struct ViolationEntry {
 witness violationAt(index: Uint<8>): ViolationEntry;
 
 export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
 
 export circuit proveCleanMvr(
   windowStart: Uint<32>,
   windowEnd: Uint<32>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
   commitment: Opaque<"string">
 ): Boolean {
   for (const i of 0..32) {
@@ -27,6 +30,10 @@ export circuit proveCleanMvr(
       "violation in verification window"
     );
   }
+  // asOfDate is public metadata — cert is valid as-of this screening completion.
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
   factCommitment = disclose(commitment);
   return disclose(true);
 }

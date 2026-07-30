@@ -5,6 +5,11 @@ import { attestationService } from '@/lib/attestation-service-registry'
 import { attestationFromRow } from '@/lib/attestation-route-helpers'
 import { loadDisclosureDenylistForAudience } from '@/lib/disclosure-preferences'
 import { getFactDefinition, type ShippedFactType } from '@/lib/fact-registry'
+import {
+  attestationDisplayFromProof,
+  formatAttestationVerificationLine,
+  provenanceTierFromProof,
+} from '@/lib/attestation-fact-ui'
 
 export interface EmployerCredentialFact {
   id: string
@@ -16,6 +21,9 @@ export interface EmployerCredentialFact {
   issuer: string
   sourceCra: string | null
   sourcePullId: string | null
+  proofKind: string
+  provenanceTier: ReturnType<typeof provenanceTierFromProof>
+  verificationLine: string
 }
 
 /**
@@ -61,6 +69,13 @@ export async function listVerifiedCredentialFactsForEmployer(
     if (!verification.valid) continue
 
     seenTypes.add(factType)
+    const proof = attestation.proof
+    const display = attestationDisplayFromProof(
+      verification.issuedAt,
+      (row.source_cra as string | null) ?? null,
+      (row.source_pull_id as string | null) ?? null,
+      proof,
+    )
     facts.push({
       id: row.id as string,
       factType: factType as ShippedFactType,
@@ -71,6 +86,9 @@ export async function listVerifiedCredentialFactsForEmployer(
       issuer: verification.issuer,
       sourceCra: (row.source_cra as string | null) ?? null,
       sourcePullId: (row.source_pull_id as string | null) ?? null,
+      proofKind: proof.kind,
+      provenanceTier: display.provenanceTier ?? 'metadata',
+      verificationLine: formatAttestationVerificationLine(display),
     })
   }
 

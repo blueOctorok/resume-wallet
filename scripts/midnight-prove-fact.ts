@@ -1,58 +1,81 @@
 #!/usr/bin/env npx tsx
 /**
- * P3.3 — Prove mvr_clean_36_months on Preprod + persist attestation row.
+ * P3.3+ — Prove a shipped fact on Preprod + persist attestation row.
  *
  * Usage:
  *   npm run midnight:prove-fact -- --user <candidate-uuid>
- *   npm run midnight:prove-fact -- --user <uuid> --json
+ *   npm run midnight:prove-fact -- --user <uuid> --fact cdl_class_a
+ *   npm run midnight:prove-fact -- --user <uuid> --fact previous_employer_verified --employment-id <uuid>
  */
 import { config } from 'dotenv'
 import WebSocket from 'ws'
 config({ path: '.env.local' })
 
-// @supabase/supabase-js constructs a RealtimeClient inside createClient(), which
-// throws on Node < 22 ("no native WebSocket"). These scripts never use realtime,
-// but we still need a global WebSocket to exist. Node 22+ already has one, so only
-// polyfill when missing. Set before the (lazy) createClient call in main().
 if (typeof globalThis.WebSocket === 'undefined') {
   globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket
 }
 
-import { resolveAttestationFact } from '@/lib/fact-registry'
+import type { FactType } from '@/lib/attestation-service'
+import { resolveAttestationFact, type ShippedFactType } from '@/lib/fact-registry'
 import { createMidnightAttestationService } from '@/lib/midnight-attestation-service'
+
+const SHIPPED: ShippedFactType[] = [
+  'mvr_clean_36_months',
+  'cdl_class_a',
+  'previous_employer_verified',
+]
 
 function parseArgs(argv: string[]) {
   let userId = ''
+  let factType: ShippedFactType = 'mvr_clean_36_months'
+  let employmentId = ''
+  let verificationRequestId = ''
   let asJson = false
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === '--user' && argv[i + 1]) userId = argv[++i]
+    else if (arg === '--fact' && argv[i + 1]) factType = argv[++i] as ShippedFactType
+    else if (arg === '--employment-id' && argv[i + 1]) employmentId = argv[++i]
+    else if (arg === '--verification-request-id' && argv[i + 1]) verificationRequestId = argv[++i]
     else if (arg === '--json') asJson = true
   }
 
   if (!userId) {
-    throw new Error('Usage: midnight:prove-fact -- --user <candidate-uuid> [--json]')
+    throw new Error(
+      'Usage: midnight:prove-fact -- --user <candidate-uuid> [--fact mvr_clean_36_months|cdl_class_a|previous_employer_verified] [--json]',
+    )
   }
 
-  return { userId, asJson }
+  if (!SHIPPED.includes(factType)) {
+    throw new Error(`Unsupported --fact ${factType}. Shipped: ${SHIPPED.join(', ')}`)
+  }
+
+  return { userId, factType, employmentId, verificationRequestId, asJson }
 }
 
 async function main() {
   process.env.ATTESTATION_BACKEND = 'midnight'
 
-  const { userId, asJson } = parseArgs(process.argv.slice(2))
+  const { userId, factType, employmentId, verificationRequestId, asJson } = parseArgs(
+    process.argv.slice(2),
+  )
 
-  // Preflight fact resolution (clear error if no MVR data).
+  const parameters: Record<string, unknown> = {}
+  if (employmentId) parameters.employmentId = employmentId
+  if (verificationRequestId) parameters.verificationRequestId = verificationRequestId
+
   await resolveAttestationFact({
     candidateUserId: userId,
-    factType: 'mvr_clean_36_months',
+    factType: factType as FactType,
+    parameters: Object.keys(parameters).length > 0 ? parameters : undefined,
   })
 
   const service = createMidnightAttestationService()
   const attestation = await service.proveFact({
     candidateUserId: userId,
-    factType: 'mvr_clean_36_months',
+    factType: factType as FactType,
+    parameters: Object.keys(parameters).length > 0 ? parameters : undefined,
   })
 
   const out = {
@@ -68,6 +91,7 @@ async function main() {
   } else {
     console.log('[MIDNIGHT] Attestation persisted')
     console.log(`  ID:     ${attestation.id}`)
+    console.log(`  Fact:   ${attestation.factType}`)
     console.log(`  Tx:     ${attestation.proof.kind === 'midnight_zk' ? attestation.proof.txHash : 'n/a'}`)
     console.log(`  Proof:  ${attestation.proof.kind === 'midnight_zk' ? attestation.proof.proofId : 'n/a'}`)
   }

@@ -20,10 +20,16 @@ const jwtMvr = (pull: string | null): AttestationBadgeSummary => ({
 const midnightMvr = (pull: string | null): AttestationBadgeSummary => ({
   factType: 'mvr_clean_36_months',
   proofKind: 'midnight_zk',
+  provenanceTier: 'metadata',
   sourceCra: 'accio',
   sourcePullId: pull,
   issuedAt: '2026-07-01T12:00:00.000Z',
   txHash: 'tx-abc',
+})
+
+const midnightMvrIssuerSigned = (pull: string | null): AttestationBadgeSummary => ({
+  ...midnightMvr(pull),
+  provenanceTier: 'issuer_signed',
 })
 
 const entry = (order: string | null, accio: string | null): DotFieldProvenanceEntry => ({
@@ -105,8 +111,15 @@ describe('resolveMvrFieldDotBadge', () => {
     expect(r.text.toLowerCase()).not.toContain('on-chain')
   })
 
-  it('uses Proven on Midnight only for midnight_zk', () => {
+  it('uses Verified by ZKnight for midnight_zk metadata tier — not Midnight marketing', () => {
     const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [midnightMvr('ACC-1')])
+    expect(r.tier).toBe('storm_jwt')
+    expect(r.text).toMatch(/^Verified by ZKnight on /)
+    expect(r.text).not.toMatch(/Proven on Midnight/i)
+  })
+
+  it('uses Proven on Midnight only for issuer_signed midnight_zk', () => {
+    const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [midnightMvrIssuerSigned('ACC-1')])
     expect(r.tier).toBe('midnight_zk')
     expect(r.text).toMatch(/^Proven on Midnight on /)
     expect(r.text).toContain('Accio')

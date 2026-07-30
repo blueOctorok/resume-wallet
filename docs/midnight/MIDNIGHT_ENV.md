@@ -14,7 +14,9 @@ Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midni
 | `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v4/graphql` | GraphQL indexer v4 (Preprod matrix) |
 | `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | Real-time indexer events |
 | `MIDNIGHT_PRIVATE_STATE_PASSWORD` | yes (P3.3+) | `"Str0ng!LocalOnly"` | Encrypts LevelDB contract private state on disk — server-side only |
-| `MIDNIGHT_CONTRACT_ADDRESS` | after deploy | `mn_shield-addr_…` | Set after `npm run midnight:deploy` |
+| `MIDNIGHT_CONTRACT_ADDRESS` | after deploy | `mn_shield-addr_…` | MVR (`mvr_clean_36_months`) — set after `npm run midnight:deploy` |
+| `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` | after deploy | `mn_shield-addr_…` | P3.5 `cdl_class_a` circuit |
+| `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER` | after deploy | `mn_shield-addr_…` | P3.5 `previous_employer_verified` circuit |
 | `MIDNIGHT_WALLET_MNEMONIC` | yes (P3.3+) | `"word1 word2 … word24"` | **Server-managed** BIP-39 seed — spaces between words, **no commas**; **double quotes required** in `.env.local` so dotenv reads all 24 words |
 | `ATTESTATION_BACKEND` | no | `signed-jwt` (default) | Set to `midnight` only when `midnight-attestation-service.ts` ships (P3.3) |
 
@@ -76,6 +78,16 @@ This repo configures the Midnight MCP server in `.cursor/mcp.json`. It connects 
 - If it fails: run `npm install` in the repo root; ensure Node 20+ in WSL (`nvm use 20`)
 
 Useful MCP tools when writing circuits: `midnight-compile-contract`, `midnight-search-compact`, `midnight-review-contract`, `midnight-get-latest-syntax`.
+
+### Per-fact prove benchmarks (Preprod — fill after smokes)
+
+| Fact | Circuit | First prove (cold wallet) | Redeploy required |
+|---|---|---|---|
+| `mvr_clean_36_months` | `mvr-clean-36` | ~minutes (wallet sync + predicate) | **Yes** — P3.4-A freshness ABI (2026-07-29) |
+| `cdl_class_a` | `cdl-class-a` | TBD | Deploy new contract |
+| `previous_employer_verified` | `previous-employer-verified` | TBD | Deploy new contract |
+
+Compile all: `npm run midnight:compile`. Prove CLI: `npm run midnight:prove-fact -- --user <uuid> [--fact cdl_class_a|previous_employer_verified]`.
 
 ## Related docs
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createMidnightAttestationService } from '@/lib/midnight-attestation-service'
 
 describe('midnight-attestation-service', () => {
-  it('rejects non-mvr facts in P3.3 slice', async () => {
+  it('rejects unknown fact types', async () => {
     const service = createMidnightAttestationService({
       proveOnChain: vi.fn(),
       getSupabase: async () => ({}) as never,
@@ -11,9 +11,9 @@ describe('midnight-attestation-service', () => {
     await expect(
       service.proveFact({
         candidateUserId: 'user-1',
-        factType: 'cdl_class_a',
+        factType: 'mvr_no_dui_ever',
       }),
-    ).rejects.toThrow(/only supports mvr_clean_36_months/)
+    ).rejects.toThrow(/does not support/)
   })
 
   it('verifyAttestation accepts midnight_zk with txHash', async () => {
@@ -24,7 +24,12 @@ describe('midnight-attestation-service', () => {
       factSummary: 'Clean MVR',
       disclosedFields: {},
       issuedAt: new Date().toISOString(),
-      proof: { kind: 'midnight_zk', txHash: 'tx-abc', proofId: 'tx-abc' },
+      proof: {
+        kind: 'midnight_zk',
+        txHash: 'tx-abc',
+        proofId: 'tx-abc',
+        provenanceTier: 'metadata',
+      },
     })
 
     expect(result.valid).toBe(true)

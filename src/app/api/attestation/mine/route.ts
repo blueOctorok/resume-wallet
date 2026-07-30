@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
-import type { ProofArtifact } from '@/lib/attestation-service'
+import {
+  midnightFieldsFromArtifact,
+  proofKindFromArtifact,
+} from '@/lib/attestation-proof-display'
 
 /**
  * GET /api/attestation/mine
@@ -11,18 +14,6 @@ import type { ProofArtifact } from '@/lib/attestation-service'
  * Returns proof.kind only — never the raw JWT. Carrier verify still goes
  * through attestationService.verifyAttestation.
  */
-function proofKindFromArtifact(artifact: unknown): string {
-  if (!artifact || typeof artifact !== 'object') return 'signed_jwt'
-  const kind = (artifact as ProofArtifact).kind
-  return typeof kind === 'string' && kind.length > 0 ? kind : 'signed_jwt'
-}
-
-function txHashFromArtifact(artifact: unknown): string | null {
-  if (!artifact || typeof artifact !== 'object') return null
-  const a = artifact as ProofArtifact
-  if (a.kind === 'midnight_zk' && typeof a.txHash === 'string') return a.txHash
-  return null
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,14 +37,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to load attestations' }, { status: 500 })
     }
 
-    const attestations: AttestationBadgeSummary[] = (rows ?? []).map((row) => ({
-      factType: row.fact_type as string,
-      proofKind: proofKindFromArtifact(row.proof_artifact),
-      sourceCra: (row.source_cra as string | null) ?? null,
-      sourcePullId: (row.source_pull_id as string | null) ?? null,
-      issuedAt: row.issued_at as string,
-      txHash: txHashFromArtifact(row.proof_artifact),
-    }))
+    const attestations: AttestationBadgeSummary[] = (rows ?? []).map((row) => {
+      const midnight = midnightFieldsFromArtifact(row.proof_artifact)
+      return {
+        factType: row.fact_type as string,
+        proofKind: proofKindFromArtifact(row.proof_artifact),
+        provenanceTier: midnight.provenanceTier,
+        sourceCra: (row.source_cra as string | null) ?? null,
+        sourcePullId: (row.source_pull_id as string | null) ?? null,
+        issuedAt: row.issued_at as string,
+        txHash: midnight.txHash,
+        proofId: midnight.proofId,
+      }
+    })
 
     return NextResponse.json({ attestations })
   } catch (err: unknown) {

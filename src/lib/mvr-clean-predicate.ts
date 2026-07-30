@@ -86,6 +86,11 @@ export function computeMvrCleanVerificationWindow(anchor: Date): MvrCleanVerific
   }
 }
 
+/** Screening completion date as public YYYYMMDD (P3.4-A freshness binding). */
+export function computeAsOfDateYmd(anchor: Date): number {
+  return dateToYmdInt(anchor)
+}
+
 function emptySlots(): MvrCleanViolationSlot[] {
   return Array.from({ length: MVR_CLEAN_MAX_VIOLATION_SLOTS }, () => ({
     dateYmd: 0,

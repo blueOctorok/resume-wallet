@@ -1,27 +1,11 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
-import type { MvrCleanViolationSlot } from '@/lib/mvr-clean-predicate'
+import type {
+  MidnightOnChainProveInput,
+  MidnightOnChainProveResult,
+} from '@/lib/midnight-prove-types'
 
-export interface MidnightOnChainProveInput {
-  candidateUserId: string
-  factType: string
-  sourceCra: string
-  sourcePullId: string
-  disclosedFields: Record<string, unknown>
-  /** P3.4-A — public window bounds (YYYYMMDD ints). */
-  windowStartYmd: number
-  windowEndYmd: number
-  /** Fixed 32-slot violation witness for the predicate circuit. */
-  violationSlots: MvrCleanViolationSlot[]
-}
-
-export interface MidnightOnChainProveResult {
-  txHash: string
-  proofId: string
-  commitment: string
-  contractAddress: string
-  predicateVersion?: string
-}
+export type { MidnightOnChainProveInput, MidnightOnChainProveResult }
 
 const REPO_ROOT = path.resolve(process.cwd())
 const CLI_PATH = path.join(REPO_ROOT, 'midnight/runtime/scripts/prove-on-chain-cli.ts')
@@ -45,9 +29,6 @@ export function proveFactOnMidnight(
     })
     child.stderr.on('data', (chunk: Buffer) => {
       stderr += chunk.toString()
-      // Stream the subprocess's progress (it logs to stderr) to our stderr so the
-      // user sees live "syncing / proving / submitting" markers instead of a
-      // silent multi-minute hang. stdout stays untouched for JSON parsing.
       process.stderr.write(chunk)
     })
 

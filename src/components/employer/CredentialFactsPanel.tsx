@@ -9,7 +9,6 @@ import BlockCard from '@/components/ui/BlockCard'
 import {
   FACT_TYPE_UI,
   formatFactDisclosedFields,
-  formatVerifiedByStormLine,
 } from '@/lib/attestation-fact-ui'
 import type { EmployerCredentialFact } from '@/lib/employer-credential-facts'
 
@@ -66,7 +65,7 @@ function FactRow({
             {fact.factSummary}
           </p>
           <p className={cn('mt-1 text-[11px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
-            {formatVerifiedByStormLine(fact.issuedAt, fact.sourceCra, fact.sourcePullId)}
+            {fact.verificationLine}
           </p>
           {detailLines.length > 0 && (
             <button
