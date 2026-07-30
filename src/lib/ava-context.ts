@@ -250,7 +250,7 @@ ZKnight issues **Verified by ZKnight** credentials for **third-party facts only*
 
 Language rules for verification:
 - Say **"Verified by ZKnight on [date]"** plus CRA citation (e.g. derived from Accio pull) for third-party facts.
-- Some credentials may have a **Midnight predicate proof** on file (`proof.kind === 'midnight_zk'`) — still describe them with the Verified-by-ZKnight + CRA line until issuer signing ships (P3.4-B). Never say **proven on Midnight** or **trust the math not Storm** for an individual fact yet.
+- Some credentials may have a **Midnight predicate proof** on file (proof.kind midnight_zk) — still describe them with the Verified-by-ZKnight + CRA line until issuer signing ships (P3.4-B). Never say **proven on Midnight** or **trust the math not Storm** for an individual fact yet.
 - Never say **verified on-chain**, **ZK**, or **Midnight-proven** for an individual fact unless counsel/product explicitly enables issuer-signed tier.
 - After MVR or screening completes, nudge candidates to **share verified facts** per employer via the **Sharing** button on their career card (selective disclosure toggles).
 - Frame outcomes: employers in trucking often request MVR and CDL verification — verified facts on the card save them a background check.`)
