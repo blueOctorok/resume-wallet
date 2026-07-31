@@ -18,28 +18,33 @@ AVA_BRAIN=                         # Anthropic API key for the AI assistant
 ADMIN_EMAILS=                      # Comma-separated admin emails (replaces ADMIN_WALLETS)
 ADMIN_API_KEY=                     # Legacy admin routes (reset-wallet, etc.)
 CRON_SECRET=                       # Reconcile-screenings cron
-PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — invite email + future SMS
+PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — email + future SMS
 PINGRAM_FROM_EMAIL=                # e.g. zknight@verify.zknight.io — MUST be a Pingram-verified domain
 PINGRAM_FROM_NAME=ZKnight          # Display name on outbound email
-RESEND_API_KEY=                    # Legacy — Supabase Auth SMTP only until Pingram SMTP is wired; then remove
-RESEND_FROM_EMAIL=                 # Legacy — same as above
+ADMIN_NOTIFICATION_EMAILS=         # Comma-separated ops alert recipients
 GITHUB_CLIENT_ID=                  # GitHub OAuth app (callback: https://zknight.io/api/github/callback)
 GITHUB_CLIENT_SECRET=
 ACCIO_ACCOUNT=
 ACCIO_USERNAME=
 ACCIO_PASSWORD=
 ACCIO_MODE=                        # TEST or PROD
+ACCIO_API_URL=                     # Optional; has default
 ADZUNA_APP_ID=
 ADZUNA_APP_KEY=
+SCREENING_CONSENT_ENCRYPTION_KEY=  # FCRA consent bundle encryption
+INTERNAL_API_SECRET=               # Server-to-server (referrals, etc.)
 ATTESTATION_JWT_PRIVATE_KEY=        # Phase 2: HS256 secret for signed attestations (32+ chars)
 ATTESTATION_ISSUER=storm           # JWT iss claim (optional; default storm)
 # ATTESTATION_BACKEND=             # Optional; omit for signed JWT (Phase 2). midnight = Phase 3 only.
-# STRIPE_* — add when Stripe Checkout ships (Phase 1 payments track)
+# MIDNIGHT_* — Phase 3 (see docs/midnight)
+# STRIPE_* — add when Stripe Checkout ships
 ```
 
-## Removed after Track 2 demolition (D5) — delete from Vercel if still present
+## Removed — delete from Vercel if still present
 
 ```
+RESEND_API_KEY
+RESEND_FROM_EMAIL
 NEXT_PUBLIC_ALCHEMY_API_KEY
 NEXT_PUBLIC_ALCHEMY_POLICY_ID
 NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS
@@ -47,6 +52,19 @@ NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS
 NEXT_PUBLIC_PINATA_JWT
 NEXT_PUBLIC_PINATA_GATEWAY
 NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID
+DYNAMIC_API_TOKEN
+ALCHEMY_API_KEY
+ALCHEMY_POLICY_ID
+COMPANY_WALLET_SERVICE_PRIVATE_KEY
+NEXT_PUBLIC_COMPANY_WALLET_SERVICE_ADDRESS
+PRIVATE_KEY
+BASE_RPC_URL
+USDC_BASE_SEPOLIA_ADDRESS
+MVR_PRICE_USDC
+X402_PAYMENT_PRIVATE_KEY
+NEXTAUTH_SECRET
+STORM_TOKEN_ADDRESS
+
 PRIVATE_KEY
 X402_PAYMENT_PRIVATE_KEY
 ALCHEMY_API_KEY
@@ -75,7 +93,7 @@ Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop a
 4. **Supabase → Authentication → URL Configuration** (critical — magic-link/Google sign-in break otherwise):
    - **Site URL** → `https://zknight.io`
    - **Redirect URLs** allow-list → add `https://zknight.io/**` (keep `http://localhost:3000/**` for dev). Remove the stormchain.ai entries once cut over.
-5. **Resend → Domains → verify `zknight.io`** (or `verify.zknight.io`), then add the SPF/DKIM/DMARC records it gives you to Namecheap. Set `RESEND_FROM_EMAIL` to a sender on that verified domain. Unverified = transactional emails silently fail.
+5. **Pingram → Domains → verify `verify.zknight.io`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME`. Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
 6. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://zknight.io/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
 7. **Keep stormchain.ai (optional):** leave it on the Vercel project as a domain that **redirects to** zknight.io so old links/emails don't 404.
 

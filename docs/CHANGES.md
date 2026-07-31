@@ -4,9 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Pingram messaging — app email cutover complete (step 2)** (2026-07-31)
+## **Env cleanup — drop Resend + legacy Base/Coinbase/Alchemy locals** (2026-07-31)
 
-All app transactional email helpers now send through Pingram via `src/lib/messaging.ts`. Resend remains only for **Supabase Auth SMTP** (magic-link / OTP codes) until that dashboard setting is flipped.
+Post–Pingram cutover hygiene:
+
+| Change | Detail |
+|---|---|
+| `.env.local` | Rewrote to current stack only (Supabase, Pingram, Accio, Adzuna, GitHub OAuth, attestations, Midnight). Removed Resend, Alchemy/Dynamic/Base/USDC/x402, Coinbase onramp keys, STORM ERC-20 deploy addresses, NextAuth placeholders. |
+| `package.json` | `npm uninstall resend` |
+| `VERCEL_ENV_CHECKLIST.md` | Pingram + current secrets; expanded “Removed” list for Vercel |
+
+Cancel Resend account if not already. DNS: keep `pingram.*` on `verify.zknight.io`; delete `resend._domainkey` / `send.verify` if still present.
+
+---
+
+## **Pingram messaging — full email cutover live (incl. Supabase Auth SMTP)** (2026-07-31)
+
+All app transactional email helpers send through Pingram via `src/lib/messaging.ts`. Supabase Auth SMTP also points at `smtp.pingram.io` (sender `ZKnight <zknight@verify.zknight.io>`). Verified in Pingram production logs: `auth_emails`, `invite_email`, `screening_ready_*`, `employer_candidate_action` delivering (incl. Pace addresses). Resend is unused — safe to cancel and remove `RESEND_*` / `resend` package.
 
 | File | Change |
 |---|---|
@@ -18,9 +32,9 @@ All app transactional email helpers now send through Pingram via `src/lib/messag
 | `src/lib/send-admin-notification.ts` | All 6 send paths → Pingram (`admin_new_company`, `candidate_request`, `application_status`, `screening_ready_*`, `employer_candidate_action`) |
 | `VERCEL_ENV_CHECKLIST.md` | Documented `PINGRAM_*` env vars |
 
-**Still on Resend:** Supabase → Authentication → SMTP (login codes). Flip to Pingram SMTP when ready, then cancel Resend / remove `resend` npm dep.
+**Resend cleanup (optional):** cancel Resend account; remove `RESEND_*` from Vercel/`.env.local` and the `resend` npm package.
 
-**Ops:** Ensure `PINGRAM_API_KEY`, `PINGRAM_FROM_EMAIL`, `PINGRAM_FROM_NAME` are set in Vercel Production.
+**Ops:** Ensure `PINGRAM_API_KEY`, `PINGRAM_FROM_EMAIL`, `PINGRAM_FROM_NAME` are set in Vercel Production. SMS / A2P 10DLC still pending for texting.
 
 ---
 
