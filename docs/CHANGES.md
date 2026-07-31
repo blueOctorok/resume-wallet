@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Pingram messaging — invite email cutover (step 1 of consolidate)** (2026-07-31)
+
+Pace wants SMS; Pingram provides email + SMS under one API/budget. Starting the Resend → Pingram consolidate with **outreach invite email** only.
+
+| File | Change |
+|---|---|
+| `package.json` | Added `pingram` SDK |
+| `src/lib/messaging.ts` | **New** — thin `sendEmail` / `sendSms` / `isMessagingConfigured` over Pingram (`PINGRAM_API_KEY`, `PINGRAM_FROM_EMAIL`, `PINGRAM_FROM_NAME`) |
+| `src/lib/send-invite-email.ts` | Switched from Resend to `sendEmail({ type: 'invite_email', … })` |
+| `VERCEL_ENV_CHECKLIST.md` | Documented `PINGRAM_*` env vars |
+
+**Still on Resend (next steps):** `send-admin-notification.ts`, `send-team-invite-email.ts`, `send-verification-email.ts`, and Supabase Auth SMTP (magic-link codes). SMS UI waits on A2P 10DLC approval.
+
+**Ops:** Add `PINGRAM_API_KEY` (+ from name/email) to Vercel Production and redeploy before invite emails use Pingram in prod. Domain `verify.zknight.io` already verified in Pingram.
+
+---
+
 ## **Phase 3 — P3.4–P3.6 while waiting on Key** (2026-07-29)
 
 Key-independent Midnight slice shipped in code (redeploy + Preprod smokes are operator follow-ups):

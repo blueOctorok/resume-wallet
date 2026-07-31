@@ -1,12 +1,6 @@
-import { Resend } from 'resend'
 import { buildEmail, infoBox, fallbackLink } from './email-template'
 import { getBlockDefinition } from './block-registry'
-
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
+import { isMessagingConfigured, sendEmail } from './messaging'
 
 export interface SendInviteEmailParams {
   to: string
@@ -80,14 +74,13 @@ function getEmailContent(targetBlockType: string | null, companyName: string, jo
 }
 
 /**
- * Sends a block-aware outreach invite email to a candidate.
- * No-op if RESEND_API_KEY is not set.
+ * Sends a block-aware outreach invite email to a candidate via Pingram.
  */
 export async function sendInviteEmail(
   params: SendInviteEmailParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[INVITE EMAIL] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[INVITE EMAIL] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -134,23 +127,19 @@ export async function sendInviteEmail(
     footerNote: `This invitation was sent by <strong>${companyName}</strong> through ZKnight. If you weren't expecting this, you can safely ignore it.`,
   })
 
-  try {
-    console.log('[INVITE EMAIL] Sending targetBlock=%s to=%s from=%s', targetBlockType ?? 'general', params.to, FROM)
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: params.to,
-      subject: content.subject,
-      html,
-    })
-    if (error) {
-      console.error('[INVITE EMAIL] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[INVITE EMAIL] Sent successfully. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[INVITE EMAIL] Send failed:', err)
-    return { ok: false, error: message }
+  console.log('[INVITE EMAIL] Sending targetBlock=%s to=%s via Pingram', targetBlockType ?? 'general', params.to)
+  const result = await sendEmail({
+    type: 'invite_email',
+    to: params.to,
+    subject: content.subject,
+    html,
+  })
+
+  if (!result.ok) {
+    console.error('[INVITE EMAIL] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+
+  console.log('[INVITE EMAIL] Sent successfully. Pingram id:', result.id)
+  return { ok: true }
 }
