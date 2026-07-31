@@ -1,11 +1,6 @@
-import { Resend } from 'resend'
 import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
+import { isMessagingConfigured, sendEmail } from './messaging'
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://zknight.io'
 
 export interface SendTeamInviteEmailParams {
@@ -18,14 +13,13 @@ export interface SendTeamInviteEmailParams {
 }
 
 /**
- * Sends a team invitation email to a new team member.
- * No-op if RESEND_API_KEY is not set.
+ * Sends a team invitation email to a new team member via Pingram.
  */
 export async function sendTeamInviteEmail(
   params: SendTeamInviteEmailParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[TEAM INVITE EMAIL] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[TEAM INVITE EMAIL] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -71,18 +65,19 @@ export async function sendTeamInviteEmail(
 
   const subject = `You're invited to join ${companyName} on ZKnight`
 
-  try {
-    console.log('[TEAM INVITE EMAIL] Sending to:', to, 'from:', FROM)
-    const { data, error } = await resend.emails.send({ from: FROM, to, subject, html })
-    if (error) {
-      console.error('[TEAM INVITE EMAIL] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[TEAM INVITE EMAIL] Sent successfully. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[TEAM INVITE EMAIL] Send failed:', err)
-    return { ok: false, error: message }
+  console.log('[TEAM INVITE EMAIL] Sending to:', to, 'via Pingram')
+  const result = await sendEmail({
+    type: 'team_invite_email',
+    to,
+    subject,
+    html,
+  })
+
+  if (!result.ok) {
+    console.error('[TEAM INVITE EMAIL] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+
+  console.log('[TEAM INVITE EMAIL] Sent successfully. Pingram id:', result.id)
+  return { ok: true }
 }

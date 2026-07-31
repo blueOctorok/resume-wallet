@@ -22,7 +22,8 @@ export type MessagingResult = {
 export type SendEmailParams = {
   /** Notification type id (e.g. 'invite_email') — used for Pingram analytics */
   type: string
-  to: string
+  /** One recipient, or several (sent as separate Pingram calls) */
+  to: string | string[]
   subject: string
   html: string
   fromName?: string
@@ -66,31 +67,47 @@ export async function sendEmail(params: SendEmailParams): Promise<MessagingResul
     return { ok: false, error: 'Email not configured' }
   }
 
+  const recipients = (Array.isArray(params.to) ? params.to : [params.to])
+    .map((e) => e.trim())
+    .filter(Boolean)
+  if (recipients.length === 0) {
+    return { ok: false, error: 'No recipients' }
+  }
+
   const fromName = params.fromName ?? FROM_NAME
   const fromAddress = params.fromAddress ?? FROM_EMAIL
+  const ids: string[] = []
 
   try {
-    const res = await pingram.email.send({
-      type: params.type,
-      to: params.to,
-      subject: params.subject,
-      html: params.html,
-      fromName,
-      fromAddress,
-    })
+    // Pingram's /email endpoint takes one `to` per call — fan out for arrays.
+    for (const to of recipients) {
+      const res = await pingram.email.send({
+        type: params.type,
+        to,
+        subject: params.subject,
+        html: params.html,
+        fromName,
+        fromAddress,
+      })
 
-    // Success responses have trackingId; failures include error.message.
-    if (res?.error?.message) {
-      console.error('[MESSAGING] Pingram email error:', res.error)
-      return { ok: false, error: res.error.message }
-    }
-    if (!res?.trackingId) {
-      console.error('[MESSAGING] Pingram email: no trackingId in response', res)
-      return { ok: false, error: 'Pingram email: empty response' }
+      if (res?.error?.message) {
+        console.error('[MESSAGING] Pingram email error to=%s:', to, res.error)
+        return { ok: false, error: res.error.message }
+      }
+      if (!res?.trackingId) {
+        console.error('[MESSAGING] Pingram email: no trackingId to=%s', to, res)
+        return { ok: false, error: 'Pingram email: empty response' }
+      }
+      ids.push(res.trackingId)
     }
 
-    console.log('[MESSAGING] Email sent type=%s to=%s id=%s', params.type, params.to, res.trackingId)
-    return { ok: true, id: res.trackingId }
+    console.log(
+      '[MESSAGING] Email sent type=%s recipients=%s ids=%s',
+      params.type,
+      recipients.length,
+      ids.join(','),
+    )
+    return { ok: true, id: ids[0] }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[MESSAGING] Email send failed:', err)

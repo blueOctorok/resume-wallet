@@ -1,11 +1,6 @@
-import { Resend } from 'resend'
 import { buildEmail, detailsBox, detailRow, infoBox } from './email-template'
+import { isMessagingConfigured, sendEmail } from './messaging'
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
 const ADMIN_EMAILS = process.env.ADMIN_NOTIFICATION_EMAILS?.split(',').map(e => e.trim()) || []
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zknight.io'
 
@@ -43,8 +38,8 @@ export interface ApplicationStatusNotificationParams {
 export async function sendNewCompanyNotification(
   params: NewCompanyNotificationParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[ADMIN NOTIFICATION] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[ADMIN NOTIFICATION] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
   if (ADMIN_EMAILS.length === 0) {
@@ -77,24 +72,19 @@ export async function sendNewCompanyNotification(
     footerNote: 'This is an automated notification from ZKnight admin systems.',
   })
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: ADMIN_EMAILS,
-      subject: `[ZKnight Admin] New Company: ${companyName}`,
-      html,
-    })
-    if (error) {
-      console.error('[ADMIN NOTIFICATION] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[ADMIN NOTIFICATION] New company email sent. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[ADMIN NOTIFICATION] Send failed:', err)
-    return { ok: false, error: message }
+  console.log('[ADMIN NOTIFICATION] Sending new company email via Pingram')
+  const result = await sendEmail({
+    type: 'admin_new_company',
+    to: ADMIN_EMAILS,
+    subject: `[ZKnight Admin] New Company: ${companyName}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[ADMIN NOTIFICATION] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[ADMIN NOTIFICATION] New company email sent. Pingram id:', result.id)
+  return { ok: true }
 }
 
 // ─── Candidate: Employer Request ──────────────────────────────────────────────
@@ -140,8 +130,8 @@ const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationP
 export async function sendCandidateRequestNotification(
   params: CandidateRequestNotificationParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[CANDIDATE NOTIFICATION] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[CANDIDATE NOTIFICATION] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -175,25 +165,19 @@ export async function sendCandidateRequestNotification(
     footerNote: `You're receiving this because an employer on ZKnight is interested in your profile. Reply to this email with any questions.`,
   })
 
-  try {
-    console.log('[CANDIDATE NOTIFICATION] Sending request notification to:', candidateEmail)
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: candidateEmail,
-      subject: `${companyName} has a request for you on ZKnight`,
-      html,
-    })
-    if (error) {
-      console.error('[CANDIDATE NOTIFICATION] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[CANDIDATE NOTIFICATION] Sent successfully. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[CANDIDATE NOTIFICATION] Send failed:', err)
-    return { ok: false, error: message }
+  console.log('[CANDIDATE NOTIFICATION] Sending request notification to:', candidateEmail)
+  const result = await sendEmail({
+    type: 'candidate_request',
+    to: candidateEmail,
+    subject: `${companyName} has a request for you on ZKnight`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[CANDIDATE NOTIFICATION] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[CANDIDATE NOTIFICATION] Sent successfully. Pingram id:', result.id)
+  return { ok: true }
 }
 
 // ─── Candidate: Application Status ───────────────────────────────────────────
@@ -218,8 +202,8 @@ const STATUS_CONFIG: Record<string, {
 export async function sendApplicationStatusNotification(
   params: ApplicationStatusNotificationParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[STATUS NOTIFICATION] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[STATUS NOTIFICATION] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -256,25 +240,19 @@ export async function sendApplicationStatusNotification(
     footerNote: `You're receiving this because you applied to a job on ZKnight. Reply to this email with any questions.`,
   })
 
-  try {
-    console.log(`[STATUS NOTIFICATION] Sending ${newStatus} notification to:`, candidateEmail)
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: candidateEmail,
-      subject: `[${companyName}] ${config.subject}`,
-      html,
-    })
-    if (error) {
-      console.error('[STATUS NOTIFICATION] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[STATUS NOTIFICATION] Sent successfully. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[STATUS NOTIFICATION] Send failed:', err)
-    return { ok: false, error: message }
+  console.log(`[STATUS NOTIFICATION] Sending ${newStatus} notification to:`, candidateEmail)
+  const result = await sendEmail({
+    type: 'application_status',
+    to: candidateEmail,
+    subject: `[${companyName}] ${config.subject}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[STATUS NOTIFICATION] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[STATUS NOTIFICATION] Sent successfully. Pingram id:', result.id)
+  return { ok: true }
 }
 
 // ─── Screening complete (MVR / PSP) — candidate + employer ───────────────────
@@ -311,8 +289,8 @@ export async function sendCandidateScreeningReadyEmail(params: {
   candidateFirstName: string
   ctaUrl: string
 }): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[SCREENING READY] RESEND_API_KEY not set, skipping candidate email')
+  if (!isMessagingConfigured()) {
+    console.warn('[SCREENING READY] PINGRAM_API_KEY not set, skipping candidate email')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -342,24 +320,18 @@ export async function sendCandidateScreeningReadyEmail(params: {
     footerNote: `You're receiving this because a motor vehicle or FMCSA screening tied to your account completed. Reply to this email with questions.`,
   })
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: candidateEmail,
-      subject: `[ZKnight] ${copy.candidateTitle}`,
-      html,
-    })
-    if (error) {
-      console.error('[SCREENING READY] Candidate Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[SCREENING READY] Candidate email sent. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[SCREENING READY] Candidate send failed:', err)
-    return { ok: false, error: message }
+  const result = await sendEmail({
+    type: 'screening_ready_candidate',
+    to: candidateEmail,
+    subject: `[ZKnight] ${copy.candidateTitle}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[SCREENING READY] Candidate send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[SCREENING READY] Candidate email sent. Pingram id:', result.id)
+  return { ok: true }
 }
 
 /**
@@ -374,8 +346,8 @@ export async function sendEmployerScreeningReadyEmail(params: {
   candidateDisplayName: string
   ctaUrl: string
 }): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[SCREENING READY] RESEND_API_KEY not set, skipping employer email')
+  if (!isMessagingConfigured()) {
+    console.warn('[SCREENING READY] PINGRAM_API_KEY not set, skipping employer email')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -405,24 +377,18 @@ export async function sendEmployerScreeningReadyEmail(params: {
     footerNote: `You're receiving this because your company requested this screening on ZKnight.`,
   })
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: employerEmail,
-      subject: `[ZKnight] ${copy.employerTitle(candidateDisplayName)}`,
-      html,
-    })
-    if (error) {
-      console.error('[SCREENING READY] Employer Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[SCREENING READY] Employer email sent. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[SCREENING READY] Employer send failed:', err)
-    return { ok: false, error: message }
+  const result = await sendEmail({
+    type: 'screening_ready_employer',
+    to: employerEmail,
+    subject: `[ZKnight] ${copy.employerTitle(candidateDisplayName)}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[SCREENING READY] Employer send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[SCREENING READY] Employer email sent. Pingram id:', result.id)
+  return { ok: true }
 }
 
 // ─── Employer: candidate completed a major action ────────────────────────────
@@ -503,8 +469,8 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
   blockLabel?: string | null
   ctaUrl: string
 }): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[EMPLOYER ACTION EMAIL] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[EMPLOYER ACTION EMAIL] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -543,22 +509,16 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
     footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on ZKnight.`,
   })
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to: employerEmail,
-      subject: `[ZKnight] ${copy.subject(candidate)}`,
-      html,
-    })
-    if (error) {
-      console.error('[EMPLOYER ACTION EMAIL] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[EMPLOYER ACTION EMAIL] Sent. Resend id:', data?.id, 'kind:', kind)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[EMPLOYER ACTION EMAIL] Send failed:', err)
-    return { ok: false, error: message }
+  const result = await sendEmail({
+    type: 'employer_candidate_action',
+    to: employerEmail,
+    subject: `[ZKnight] ${copy.subject(candidate)}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[EMPLOYER ACTION EMAIL] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+  console.log('[EMPLOYER ACTION EMAIL] Sent. Pingram id:', result.id, 'kind:', kind)
+  return { ok: true }
 }

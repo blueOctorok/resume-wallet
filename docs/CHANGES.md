@@ -4,20 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Pingram messaging — invite email cutover (step 1 of consolidate)** (2026-07-31)
+## **Pingram messaging — app email cutover complete (step 2)** (2026-07-31)
 
-Pace wants SMS; Pingram provides email + SMS under one API/budget. Starting the Resend → Pingram consolidate with **outreach invite email** only.
+All app transactional email helpers now send through Pingram via `src/lib/messaging.ts`. Resend remains only for **Supabase Auth SMTP** (magic-link / OTP codes) until that dashboard setting is flipped.
 
 | File | Change |
 |---|---|
-| `package.json` | Added `pingram` SDK |
-| `src/lib/messaging.ts` | **New** — thin `sendEmail` / `sendSms` / `isMessagingConfigured` over Pingram (`PINGRAM_API_KEY`, `PINGRAM_FROM_EMAIL`, `PINGRAM_FROM_NAME`) |
-| `src/lib/send-invite-email.ts` | Switched from Resend to `sendEmail({ type: 'invite_email', … })` |
+| `package.json` | Added `pingram` SDK (step 1) |
+| `src/lib/messaging.ts` | `sendEmail` / `sendSms`; `to` accepts `string \| string[]` (fans out for admin multi-recipient) |
+| `src/lib/send-invite-email.ts` | Pingram (`invite_email`) |
+| `src/lib/send-team-invite-email.ts` | Pingram (`team_invite_email`) |
+| `src/lib/send-verification-email.ts` | Pingram (`employment_verification_email`) |
+| `src/lib/send-admin-notification.ts` | All 6 send paths → Pingram (`admin_new_company`, `candidate_request`, `application_status`, `screening_ready_*`, `employer_candidate_action`) |
 | `VERCEL_ENV_CHECKLIST.md` | Documented `PINGRAM_*` env vars |
 
-**Still on Resend (next steps):** `send-admin-notification.ts`, `send-team-invite-email.ts`, `send-verification-email.ts`, and Supabase Auth SMTP (magic-link codes). SMS UI waits on A2P 10DLC approval.
+**Still on Resend:** Supabase → Authentication → SMTP (login codes). Flip to Pingram SMTP when ready, then cancel Resend / remove `resend` npm dep.
 
-**Ops:** Add `PINGRAM_API_KEY` (+ from name/email) to Vercel Production and redeploy before invite emails use Pingram in prod. Domain `verify.zknight.io` already verified in Pingram.
+**Ops:** Ensure `PINGRAM_API_KEY`, `PINGRAM_FROM_EMAIL`, `PINGRAM_FROM_NAME` are set in Vercel Production.
 
 ---
 

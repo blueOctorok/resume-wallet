@@ -1,11 +1,5 @@
-import { Resend } from 'resend'
 import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
-
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null
-
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'zknight@verify.zknight.io'
+import { isMessagingConfigured, sendEmail } from './messaging'
 
 export interface SendVerificationEmailParams {
   to: string
@@ -18,14 +12,13 @@ export interface SendVerificationEmailParams {
 }
 
 /**
- * Sends the employment verification request email to the previous employer.
- * No-op if RESEND_API_KEY is not set.
+ * Sends the employment verification request email to the previous employer via Pingram.
  */
 export async function sendVerificationEmail(
   params: SendVerificationEmailParams
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!resend) {
-    console.warn('[VERIFICATION EMAIL] RESEND_API_KEY not set, skipping send')
+  if (!isMessagingConfigured()) {
+    console.warn('[VERIFICATION EMAIL] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
 
@@ -78,23 +71,19 @@ export async function sendVerificationEmail(
     footerNote: `This request was sent through ZKnight on behalf of a former employee. If you weren't expecting this, you can safely ignore it.`,
   })
 
-  try {
-    console.log('[VERIFICATION EMAIL] Sending to:', to, 'from:', FROM)
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to,
-      subject: `Employment verification request – ${claimedCompanyName}`,
-      html,
-    })
-    if (error) {
-      console.error('[VERIFICATION EMAIL] Resend error:', error)
-      return { ok: false, error: error.message }
-    }
-    console.log('[VERIFICATION EMAIL] Sent successfully. Resend id:', data?.id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[VERIFICATION EMAIL] Send failed:', err)
-    return { ok: false, error: message }
+  console.log('[VERIFICATION EMAIL] Sending to:', to, 'via Pingram')
+  const result = await sendEmail({
+    type: 'employment_verification_email',
+    to,
+    subject: `Employment verification request – ${claimedCompanyName}`,
+    html,
+  })
+
+  if (!result.ok) {
+    console.error('[VERIFICATION EMAIL] Send failed:', result.error)
+    return { ok: false, error: result.error }
   }
+
+  console.log('[VERIFICATION EMAIL] Sent successfully. Pingram id:', result.id)
+  return { ok: true }
 }
