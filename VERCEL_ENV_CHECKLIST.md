@@ -18,9 +18,11 @@ AVA_BRAIN=                         # Anthropic API key for the AI assistant
 ADMIN_EMAILS=                      # Comma-separated admin emails (replaces ADMIN_WALLETS)
 ADMIN_API_KEY=                     # Legacy admin routes (reset-wallet, etc.)
 CRON_SECRET=                       # Reconcile-screenings cron
-PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — email + future SMS
+PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — email + SMS
 PINGRAM_FROM_EMAIL=                # e.g. zknight@verify.zknight.io — MUST be a Pingram-verified domain
 PINGRAM_FROM_NAME=ZKnight          # Display name on outbound email
+# SMS: same PINGRAM_API_KEY. Paid plan ($20/mo) + ZKnight A2P 10DLC required for US production texts.
+# No extra SMS env vars. Start A2P in Pingram dashboard (EIN, zknight.io, sample msgs with STOP).
 ADMIN_NOTIFICATION_EMAILS=         # Comma-separated ops alert recipients
 GITHUB_CLIENT_ID=                  # GitHub OAuth app (callback: https://zknight.io/api/github/callback)
 GITHUB_CLIENT_SECRET=
@@ -94,8 +96,9 @@ Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop a
    - **Site URL** → `https://zknight.io`
    - **Redirect URLs** allow-list → add `https://zknight.io/**` (keep `http://localhost:3000/**` for dev). Remove the stormchain.ai entries once cut over.
 5. **Pingram → Domains → verify `verify.zknight.io`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME`. Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
-6. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://zknight.io/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
-7. **Keep stormchain.ai (optional):** leave it on the Vercel project as a domain that **redirects to** zknight.io so old links/emails don't 404.
+6. **Pingram SMS / A2P 10DLC (Outreach Text):** On the paid plan, start **A2P 10DLC** for brand **ZKnight** (legal name, EIN, address, website `https://zknight.io`, privacy/terms, sample messages matching invite SMS + STOP). No Namecheap DNS for SMS. Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
+7. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://zknight.io/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
+8. **Keep stormchain.ai (optional):** leave it on the Vercel project as a domain that **redirects to** zknight.io so old links/emails don't 404.
 
 > Google sign-in runs through Supabase's `/auth/v1/callback`, so the Google Cloud console redirect URI does **not** change — only the Supabase Site URL (step 4) matters.
 

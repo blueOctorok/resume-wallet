@@ -381,6 +381,7 @@ export default function DriverHub({
         mvrRecords: data.mvrRecords || [],
         jobApplications: data.jobApplications || [],
         stats: data.stats,
+        dqFile: data.dqFile ?? null,
       })
     } catch (err) {
       console.error('Error fetching hub data:', err)

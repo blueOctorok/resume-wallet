@@ -2,6 +2,59 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { fetchAllInChunks } from '@/lib/supabase-in-chunks'
+
+type OrderRow = {
+  id: string
+  driver_user_id: string | null
+  status: string
+  result_outcome: string | null
+  dl_state: string | null
+  dl_number: string | null
+  error_code: string | null
+  error_message: string | null
+  ordered_at: string | null
+  created_at: string
+  completed_at: string | null
+  processed_at: string | null
+  fee_amount: number | string | null
+  ordered_by_company_id: string | null
+}
+
+const ORDER_SELECT =
+  'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id'
+
+/**
+ * Page through all consent bundles for the company (Pace has 500+).
+ * A single `.limit(500)` dropped older drivers from the driver-owned join.
+ */
+async function fetchAllConsentBundles(
+  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
+  companyId: string,
+) {
+  const pageSize = 1000
+  const all: Array<Record<string, unknown>> = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await supabase
+      .from('screening_consent_bundles')
+      .select(
+        'id, driver_user_id, status, completed_at, created_at, bgcheck_consent_id, psp_consent_id, cdlis_signed_at, cdlis_signed_name',
+      )
+      .eq('company_id', companyId)
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .range(from, from + pageSize - 1)
+    if (error) {
+      console.error('[EMPLOYER SCREENINGS] consent page error:', error.message)
+      break
+    }
+    if (!data?.length) break
+    all.push(...data)
+    if (data.length < pageSize) break
+    from += pageSize
+  }
+  return all
+}
 
 /**
  * GET /api/employer/screenings
@@ -29,79 +82,68 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    // 500 per kind is plenty for any single company in normal usage — covers years
-    // of orders before we'd need real pagination. Both the Active outreach tab and
-    // the Files vault tab share this single fetch, so we read once and group client-side.
-    const [{ data: mvrOrders }, { data: pspOrders }, { data: consentBundles }] = await Promise.all([
+    const [{ data: mvrOrders }, { data: pspOrders }, consentBundles] = await Promise.all([
       supabase
         .from('mvr_orders')
-        .select(
-          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
-        )
+        .select(ORDER_SELECT)
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
-        .limit(500),
+        .limit(2000),
       supabase
         .from('psp_orders')
-        .select(
-          'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
-        )
+        .select(ORDER_SELECT)
         .eq('ordered_by_company_id', ctx.companyId)
         .order('created_at', { ascending: false })
-        .limit(500),
-      supabase
-        .from('screening_consent_bundles')
-        .select(
-          'id, driver_user_id, status, completed_at, created_at, bgcheck_consent_id, psp_consent_id, cdlis_signed_at, cdlis_signed_name',
-        )
-        .eq('company_id', ctx.companyId)
-        .order('completed_at', { ascending: false, nullsFirst: false })
-        .limit(500),
+        .limit(2000),
+      fetchAllConsentBundles(supabase, ctx.companyId),
     ])
 
     const consentDriverIds = Array.from(
       new Set(
-        (consentBundles ?? [])
+        consentBundles
           .filter((b) => b.status === 'complete' && b.driver_user_id)
           .map((b) => b.driver_user_id as string),
       ),
     )
 
-    let driverOwnedMvr: typeof mvrOrders = []
-    let driverOwnedPsp: typeof pspOrders = []
-    if (consentDriverIds.length > 0) {
-      const [{ data: domvr }, { data: dosp }] = await Promise.all([
+    // Driver-owned pulls after consent — MUST chunk `.in()`. A single
+    // `.in(driver_user_id, 500 UUIDs)` was silently empty, so outreach showed
+    // "Awaiting candidate orders" for people who already had MVR+PSP (e.g. Hardin).
+    const [driverOwnedMvr, driverOwnedPsp] = await Promise.all([
+      fetchAllInChunks<OrderRow>(consentDriverIds, 'driver-owned mvr', (chunk) =>
         supabase
           .from('mvr_orders')
-          .select(
-            'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
-          )
+          .select(ORDER_SELECT)
           .is('ordered_by_company_id', null)
-          .in('driver_user_id', consentDriverIds)
+          .in('driver_user_id', chunk)
           .order('created_at', { ascending: false })
-          .limit(500),
+          .limit(1000),
+      ),
+      fetchAllInChunks<OrderRow>(consentDriverIds, 'driver-owned psp', (chunk) =>
         supabase
           .from('psp_orders')
-          .select(
-            'id, driver_user_id, status, result_outcome, dl_state, dl_number, error_code, error_message, ordered_at, created_at, completed_at, processed_at, fee_amount, ordered_by_company_id',
-          )
+          .select(ORDER_SELECT)
           .is('ordered_by_company_id', null)
-          .in('driver_user_id', consentDriverIds)
+          .in('driver_user_id', chunk)
           .order('created_at', { ascending: false })
-          .limit(500),
-      ])
-      driverOwnedMvr = domvr ?? []
-      driverOwnedPsp = dosp ?? []
-    }
+          .limit(1000),
+      ),
+    ])
 
-    const mergedMvr = [...(mvrOrders ?? []), ...driverOwnedMvr]
-    const mergedPsp = [...(pspOrders ?? []), ...driverOwnedPsp]
+    const mergedMvr: OrderRow[] = [
+      ...((mvrOrders ?? []) as OrderRow[]),
+      ...driverOwnedMvr,
+    ]
+    const mergedPsp: OrderRow[] = [
+      ...((pspOrders ?? []) as OrderRow[]),
+      ...driverOwnedPsp,
+    ]
 
     const candidateIds = Array.from(
       new Set([
         ...(mergedMvr.map((o) => o.driver_user_id).filter(Boolean) as string[]),
         ...(mergedPsp.map((o) => o.driver_user_id).filter(Boolean) as string[]),
-        ...((consentBundles ?? []).map((b) => b.driver_user_id).filter(Boolean) as string[]),
+        ...(consentBundles.map((b) => b.driver_user_id).filter(Boolean) as string[]),
       ]),
     )
 
@@ -111,87 +153,107 @@ export async function GET(request: NextRequest) {
       string,
       { firstName: string | null; lastName: string | null; avatarUrl: string | null }
     >()
-    if (candidateIds.length > 0) {
-      const { data: profiles } = await supabase
+    const profiles = await fetchAllInChunks<{
+      user_id: string
+      first_name: string | null
+      last_name: string | null
+      avatar_url: string | null
+    }>(candidateIds, 'screening profiles', (chunk) =>
+      supabase
         .from('user_profiles')
         .select('user_id, first_name, last_name, avatar_url')
-        .in('user_id', candidateIds)
-
-      for (const p of profiles ?? []) {
-        candidateById.set(p.user_id as string, {
-          firstName: p.first_name ?? null,
-          lastName: p.last_name ?? null,
-          avatarUrl: p.avatar_url ?? null,
-        })
-      }
+        .in('user_id', chunk),
+    )
+    for (const p of profiles) {
+      candidateById.set(p.user_id, {
+        firstName: p.first_name ?? null,
+        lastName: p.last_name ?? null,
+        avatarUrl: p.avatar_url ?? null,
+      })
     }
 
     const shape = (kind: 'mvr' | 'psp') =>
       (kind === 'mvr' ? mergedMvr : mergedPsp).map((o) => {
-        const id = o.driver_user_id as string | null
+        const id = o.driver_user_id
         const c = id ? candidateById.get(id) : null
         const candidateName = [c?.firstName, c?.lastName].filter(Boolean).join(' ').trim() || null
         const driverOwned = o.ordered_by_company_id == null
         return {
-          id: o.id as string,
+          id: o.id,
           kind,
           candidateUserId: id,
           candidateName,
           avatarUrl: c?.avatarUrl ?? null,
-          status: o.status as string,
-          // Accio outcome (clear/hits/etc) from src/lib/accio-result-status.ts
-          resultOutcome: (o.result_outcome as string | null) ?? null,
-          dlState: o.dl_state as string | null,
-          dlNumber: (o.dl_number as string | null) ?? null,
-          errorCode: (o.error_code as string | null) ?? null,
-          errorMessage: (o.error_message as string | null) ?? null,
-          orderedAt: (o.ordered_at as string | null) ?? (o.created_at as string),
-          processedAt: (o.processed_at as string | null) ?? null,
-          completedAt: o.completed_at as string | null,
-          feeAmount: o.fee_amount as number | string | null,
+          status: o.status,
+          resultOutcome: o.result_outcome ?? null,
+          dlState: o.dl_state,
+          dlNumber: o.dl_number ?? null,
+          errorCode: o.error_code ?? null,
+          errorMessage: o.error_message ?? null,
+          orderedAt: o.ordered_at ?? o.created_at,
+          processedAt: o.processed_at ?? null,
+          completedAt: o.completed_at,
+          feeAmount: o.fee_amount,
           driverOwned,
         }
       })
 
-    const bgIds = (consentBundles ?? [])
+    const bgIds = consentBundles
       .map((b) => b.bgcheck_consent_id)
       .filter(Boolean) as string[]
-    const pspIds = (consentBundles ?? [])
+    const pspConsentIds = consentBundles
       .map((b) => b.psp_consent_id)
       .filter(Boolean) as string[]
 
-    const [{ data: bgRows }, { data: pspRows }] = await Promise.all([
-      bgIds.length
-        ? supabase.from('bgcheck_consents').select('id, signed_name, signed_at').in('id', bgIds)
-        : Promise.resolve({ data: [] as { id: string; signed_name: string; signed_at: string }[] }),
-      pspIds.length
-        ? supabase.from('psp_consents').select('id, signed_name, signed_at, form_version').in('id', pspIds)
-        : Promise.resolve({ data: [] as { id: string; signed_name: string; signed_at: string; form_version: string }[] }),
+    const [bgRows, pspRows] = await Promise.all([
+      fetchAllInChunks<{ id: string; signed_name: string; signed_at: string }>(
+        bgIds,
+        'bgcheck_consents',
+        (chunk) =>
+          supabase.from('bgcheck_consents').select('id, signed_name, signed_at').in('id', chunk),
+      ),
+      fetchAllInChunks<{
+        id: string
+        signed_name: string
+        signed_at: string
+        form_version: string
+      }>(pspConsentIds, 'psp_consents', (chunk) =>
+        supabase
+          .from('psp_consents')
+          .select('id, signed_name, signed_at, form_version')
+          .in('id', chunk),
+      ),
     ])
 
-    const bgById = new Map((bgRows ?? []).map((r) => [r.id, r]))
-    const pspById = new Map((pspRows ?? []).map((r) => [r.id, r]))
+    const bgById = new Map(bgRows.map((r) => [r.id, r]))
+    const pspById = new Map(pspRows.map((r) => [r.id, r]))
 
-    const consentBundleSummaries = (consentBundles ?? []).map((b) => {
-      const bg = b.bgcheck_consent_id ? bgById.get(b.bgcheck_consent_id as string) : null
+    const consentBundleSummaries = consentBundles.map((b) => {
+      const bg = b.bgcheck_consent_id
+        ? bgById.get(b.bgcheck_consent_id as string)
+        : null
       const psp = b.psp_consent_id ? pspById.get(b.psp_consent_id as string) : null
       const driverId = b.driver_user_id as string
       const c = driverId ? candidateById.get(driverId) : null
       return {
         id: b.id as string,
         driverUserId: driverId,
-        candidateName: c ? [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || null : null,
+        candidateName: c
+          ? [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || null
+          : null,
         avatarUrl: c?.avatarUrl ?? null,
         status: b.status as string,
         completedAt: b.completed_at as string | null,
         createdAt: b.created_at as string,
         cdlisSignedAt: b.cdlis_signed_at as string | null,
         cdlisSignedName: b.cdlis_signed_name as string | null,
-        bg: bg
-          ? { signedName: bg.signed_name, signedAt: bg.signed_at }
-          : null,
+        bg: bg ? { signedName: bg.signed_name, signedAt: bg.signed_at } : null,
         psp: psp
-          ? { signedName: psp.signed_name, signedAt: psp.signed_at, formVersion: psp.form_version }
+          ? {
+              signedName: psp.signed_name,
+              signedAt: psp.signed_at,
+              formVersion: psp.form_version,
+            }
           : null,
       }
     })

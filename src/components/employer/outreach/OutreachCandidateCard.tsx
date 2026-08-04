@@ -6,6 +6,7 @@ import {
   FileWarning,
   Eye,
   Mail,
+  MessageSquare,
   CheckCircle,
   Clock,
   Copy,
@@ -131,12 +132,15 @@ interface OutreachCandidateCardProps {
   copiedId: string | null
   sendingEmailId: string | null
   emailSentId: string | null
+  sendingSmsId: string | null
+  smsSentId: string | null
   removingId: string | null
   /** When saving recruiter notes to the API for this invite. */
   notesSaving?: boolean
   onCopy: (url: string, id: string) => void
   onShowQr: (invite: Invite) => void
   onSendEmail: (invite: Invite, emailOverride?: string) => void
+  onSendSms: (invite: Invite, phoneOverride?: string) => void
   onCancel: (id: string) => void
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
@@ -180,11 +184,14 @@ export default function OutreachCandidateCard({
   copiedId,
   sendingEmailId,
   emailSentId,
+  sendingSmsId,
+  smsSentId,
   removingId,
   notesSaving = false,
   onCopy,
   onShowQr,
   onSendEmail,
+  onSendSms,
   onCancel,
   onRemove,
   onViewFile,
@@ -207,6 +214,8 @@ export default function OutreachCandidateCard({
   const isCopiedLink = copiedId === invite.id
   const isSending = sendingEmailId === invite.id
   const isEmailSent = emailSentId === invite.id
+  const isSendingSms = sendingSmsId === invite.id
+  const isSmsSent = smsSentId === invite.id
   const isRemoving = removingId === invite.id
   // Cancelled / expired invites are terminal — the link is dead. Everything
   // else (including completed) stays actionable: Pace's relationship with the
@@ -224,9 +233,11 @@ export default function OutreachCandidateCard({
     return 'Contact details cannot be edited for this invite.'
   })()
 
-  // Inline email override input (when no email is on file yet).
+  // Inline email/phone override inputs (when not on file yet).
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [emailInput, setEmailInput] = useState('')
+  const [showPhoneInput, setShowPhoneInput] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
 
   const [pipelineStatusDraft, setPipelineStatusDraft] = useState<InviteStatus>(invite.status)
 
@@ -313,6 +324,11 @@ export default function OutreachCandidateCard({
           {invite.candidateEmail && invite.candidateName && (
             <p className={cn('mt-0.5 truncate text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
               {invite.candidateEmail}
+            </p>
+          )}
+          {invite.candidatePhone && (
+            <p className={cn('mt-0.5 truncate text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+              {invite.candidatePhone}
             </p>
           )}
           <div
@@ -672,10 +688,67 @@ export default function OutreachCandidateCard({
         </div>
       )}
 
-      {/* ── Actions: 3-col grid — Copy, Edit, QR / Email, Cancel, Remove ──────
-         "Text" removed — it was redundant with Copy. Edit and Stormi are new.
-         Stormi gets its own full-width row below with violet accent so it reads
-         as an AI action, visually separated from the standard CRUD buttons. */}
+      {/* ── Inline phone-override input (Pingram SMS) ───────────────────────── */}
+      {showPhoneInput && (
+        <div className="border-b border-gray-100 px-4 py-2 dark:border-gray-700/70">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="tel"
+              autoFocus
+              placeholder="Phone (e.g. 5551234567)"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && phoneInput.trim()) {
+                  onSendSms(invite, phoneInput)
+                  setShowPhoneInput(false)
+                  setPhoneInput('')
+                }
+                if (e.key === 'Escape') {
+                  setShowPhoneInput(false)
+                  setPhoneInput('')
+                }
+              }}
+              className={cn(
+                'min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-teal-500/40',
+                isDark
+                  ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-500'
+                  : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400',
+              )}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!phoneInput.trim() || isSendingSms}
+                onClick={() => {
+                  onSendSms(invite, phoneInput)
+                  setShowPhoneInput(false)
+                  setPhoneInput('')
+                }}
+              >
+                <Send className="h-3.5 w-3.5" />
+                Text
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowPhoneInput(false)
+                  setPhoneInput('')
+                }}
+                aria-label="Cancel phone override"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Actions: Copy, Edit, QR / Email, Text, Cancel, Remove ───────────── */}
       <div className="grid grid-cols-3 gap-1.5 p-2.5">
         <ActionBtn
           label={isCopiedLink ? 'Copied' : 'Copy'}
@@ -725,6 +798,42 @@ export default function OutreachCandidateCard({
             onClick={() => {
               if (invite.candidateEmail) onSendEmail(invite)
               else setShowEmailInput(true)
+            }}
+            theme={theme}
+          />
+        )}
+        {canAct && (
+          <ActionBtn
+            label={
+              isSendingSms
+                ? 'Sending'
+                : isSmsSent
+                  ? 'Sent'
+                  : invite.smsSentAt
+                    ? 'Resend'
+                    : 'Text'
+            }
+            icon={
+              isSendingSms ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isSmsSent ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : invite.smsSentAt ? (
+                <RefreshCw className="h-3.5 w-3.5" />
+              ) : (
+                <MessageSquare className="h-3.5 w-3.5" />
+              )
+            }
+            tone={isSmsSent ? 'success' : 'default'}
+            disabled={isSendingSms}
+            title={
+              invite.candidatePhone
+                ? undefined
+                : 'Add a phone number to text this invite'
+            }
+            onClick={() => {
+              if (invite.candidatePhone) onSendSms(invite)
+              else setShowPhoneInput(true)
             }}
             theme={theme}
           />

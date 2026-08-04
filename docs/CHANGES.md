@@ -4,6 +4,72 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach “Awaiting candidate orders” false alarm** (2026-08-04)
+
+Pace cards (e.g. Michael Hardin) showed consent complete + “Awaiting candidate orders / MVR + PSP not submitted” even though Accio orders **existed** (Hardin: MVR `completed`/`clear`, PSP `needs_review`, both driver-owned). Ordering did not break — **`GET /api/employer/screenings` failed to load driver-owned rows**.
+
+| Root cause | Fix |
+|---|---|
+| `.in('driver_user_id', ~500 consent UUIDs)` blew PostgREST URL → empty driver-owned MVR/PSP | Chunk via shared `supabase-in-chunks.ts` |
+| Consent bundles capped at `.limit(500)` | Page all company bundles |
+
+Same class of bug as the DQ monitor “Unknown driver” list. Refresh hub / screenings after deploy.
+
+---
+
+## **DQ monitor — search + truncated list** (2026-08-04)
+
+Drivers roster was an unbounded 500+ row wall. Added name search, status chips (All / In progress / Started / Complete / Not started), capped visible rows (12 + Show more), and a max-height scroll region. Count label shows `N of total` when filtered.
+
+---
+
+## **DQ monitor list — Unknown / Not started bug** (2026-08-04)
+
+Roster showed every driver as **Unknown driver · Not started**, but click-through detail was correct (e.g. Todd Golob / Started). Root cause: company had **500+** engaged candidate IDs; a single PostgREST `.in(user_id, …)` blew the URL and returned empty — names + artifacts never joined. Detail used `.eq` per user so it worked.
+
+| Fix | Detail |
+|---|---|
+| `fetchAllInChunks` in `dq-file-load.ts` | Chunk `.in()` queries (80 UUIDs) for profiles + DQ artifacts |
+| Engaged-ID tightening | Active invites + open/completed requests only (not every historical talent row) |
+
+---
+
+## **Employer DQ Candidate Monitor (v1 shell)** (2026-08-04)
+
+Agency-style DQ completeness board: employers see a **Drivers** roster by name (started → complete), click a person for detail, and get a DQ checklist section. Drivers see the same item list on the candidate hub (driver lens).
+
+| Piece | Detail |
+|---|---|
+| `src/lib/dq-file-registry.ts` | Shared DQ item metadata (MVR, PSP, DOT, CDLIS consent, EV, placeholders for DL/med/criminal/drug/Clearinghouse/CDLIS report) |
+| `src/lib/dq-file-status.ts` | Pure company + driver resolvers + overall rollup (placeholders do not block `complete` in v1) |
+| `src/lib/dq-file-load.ts` | Supabase loaders + engaged-candidate union (applicants, invites, requests, screenings, consent) |
+| `GET /api/employer/dq-monitor` | Roster with rollups |
+| `GET /api/employer/dq-monitor/[userId]` | Person detail + full `dqFile` |
+| `GET /api/employer/talent/[userId]` | Also returns `dqFile` |
+| `GET /api/driver/hub` | Returns driver-lens `dqFile` |
+| Employer UI | `DqMonitorSection` on EmployerHub → `EmployerCandidateDetail` → `DqFileSection` |
+| Driver UI | `DriverDqProgressPanel` on CandidateHub (when any `driver-*` block installed) |
+
+FCRA: company lens only counts that company’s paid MVR/PSP. No new Key order products in this pass — empty boxes show Needs driver / Key / gov’t / employer.
+
+---
+
+## **Pingram SMS — employer Outreach Text** (2026-07-31)
+
+Employers can text invite/consent links from Outreach (beside Email). Brand is ZKnight; message includes the company name + `Reply STOP to opt out`.
+
+| Piece | Detail |
+|---|---|
+| Migration `103_application_invites_sms.sql` | `candidate_phone`, `sms_sent_at` on `application_invites` — **apply in Supabase SQL editor** (MCP apply is read-only) |
+| `POST /api/employer/invites/send-sms` | Company-scoped; E.164 normalize; `sendSms({ type: 'invite_sms' })` |
+| Invite create/list/PATCH | Accept/return `candidatePhone` / `smsSentAt` |
+| Outreach UI | Phone on create + edit; **Text** on cards (inline phone prompt if missing) |
+| `invite-sms-body.ts` | STOP line for A2P samples |
+
+**Ops (you):** Already on Pingram $20/mo — start **A2P 10DLC** for ZKnight in the Pingram dashboard (EIN, `https://zknight.io`, privacy/terms, sample invite SMS). No new env vars; uses existing `PINGRAM_*`. Production US SMS needs A2P approval (~3–5 business days).
+
+---
+
 ## **Env cleanup — drop Resend + legacy Base/Coinbase/Alchemy locals** (2026-07-31)
 
 Post–Pingram cutover hygiene:

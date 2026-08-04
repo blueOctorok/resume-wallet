@@ -284,6 +284,8 @@ export default function CandidateOutreach({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
   const [emailSentId, setEmailSentId] = useState<string | null>(null)
+  const [sendingSmsId, setSendingSmsId] = useState<string | null>(null)
+  const [smsSentId, setSmsSentId] = useState<string | null>(null)
   const [qrInvite, setQrInvite] = useState<Invite | null>(null)
   const [companyName, setCompanyName] = useState('')
   const [removingId, setRemovingId] = useState<string | null>(null)
@@ -362,6 +364,7 @@ export default function CandidateOutreach({
 
   const [form, setForm] = useState({
     candidateEmail: '',
+    candidatePhone: '',
     candidateName: '',
     candidateUserId: '',
     jobPostingId: '',
@@ -536,7 +539,14 @@ export default function CandidateOutreach({
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const resetForm = () => {
-    setForm({ candidateEmail: '', candidateName: '', candidateUserId: '', jobPostingId: '', welcomeMessage: '' })
+    setForm({
+      candidateEmail: '',
+      candidatePhone: '',
+      candidateName: '',
+      candidateUserId: '',
+      jobPostingId: '',
+      welcomeMessage: '',
+    })
     setSelectedBlockType(null)
     setSelectedProfile(null)
     setProfileQuery('')
@@ -555,6 +565,7 @@ export default function CandidateOutreach({
         body: JSON.stringify({
           targetBlockType,
           candidateEmail: form.candidateEmail || undefined,
+          candidatePhone: form.candidatePhone || undefined,
           candidateName: form.candidateName || undefined,
           candidateUserId: form.candidateUserId || undefined,
           jobPostingId: form.jobPostingId || undefined,
@@ -566,7 +577,15 @@ export default function CandidateOutreach({
         throw new Error(d.error || 'Failed to create outreach')
       }
       const { invite } = await res.json()
-      setInvites(prev => [{ ...invite, emailSentAt: invite.emailSentAt ?? null }, ...prev])
+      setInvites((prev) => [
+        {
+          ...invite,
+          emailSentAt: invite.emailSentAt ?? null,
+          smsSentAt: invite.smsSentAt ?? null,
+          candidatePhone: invite.candidatePhone ?? null,
+        },
+        ...prev,
+      ])
       setShowForm(false)
       resetForm()
       copyToClipboard(invite.url, invite.id)
@@ -647,16 +666,56 @@ export default function CandidateOutreach({
     }
   }
 
+  const handleSendSms = async (invite: Invite, phoneOverride?: string) => {
+    const phone = phoneOverride || invite.candidatePhone
+    if (!phone) return
+
+    setSendingSmsId(invite.id)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/employer/invites/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId: invite.id, phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send text')
+
+      const sentTo =
+        typeof data.sentTo === 'string' && data.sentTo ? data.sentTo : phone
+      setInvites((prev) =>
+        prev.map((inv) =>
+          inv.id === invite.id
+            ? { ...inv, candidatePhone: sentTo, smsSentAt: new Date().toISOString() }
+            : inv,
+        ),
+      )
+      setSmsSentId(invite.id)
+      setTimeout(() => setSmsSentId(null), 3000)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Text send failed')
+    } finally {
+      setSendingSmsId(null)
+    }
+  }
+
   const copyToClipboard = useCallback((text: string, id: string) => {
     navigator.clipboard.writeText(text).catch(() => {})
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
-  /** Edit an invite's mutable fields (name, email, job, welcome message). */
+  /** Edit an invite's mutable fields (name, email, phone, job, welcome message). */
   const handleEditInvite = async (
     inviteId: string,
-    patch: { candidateName?: string; candidateEmail?: string; jobPostingId?: string; welcomeMessage?: string },
+    patch: {
+      candidateName?: string
+      candidateEmail?: string
+      candidatePhone?: string
+      jobPostingId?: string
+      welcomeMessage?: string
+    },
   ) => {
     const res = await fetch('/api/employer/invites', {
       method: 'PATCH',
@@ -667,6 +726,9 @@ export default function CandidateOutreach({
       const d = await res.json().catch(() => ({}))
       throw new Error((d as { error?: string }).error ?? 'Failed to update invite')
     }
+    const data = await res.json().catch(() => ({})) as {
+      invite?: { candidatePhone?: string | null }
+    }
     // Optimistic local update — the API returns the new field values
     setInvites((prev) =>
       prev.map((inv) =>
@@ -675,6 +737,12 @@ export default function CandidateOutreach({
               ...inv,
               candidateName: patch.candidateName ?? inv.candidateName,
               candidateEmail: patch.candidateEmail ?? inv.candidateEmail,
+              candidatePhone:
+                data.invite?.candidatePhone !== undefined
+                  ? data.invite.candidatePhone
+                  : patch.candidatePhone !== undefined
+                    ? patch.candidatePhone || null
+                    : inv.candidatePhone,
               jobTitle: patch.jobPostingId ? (jobs.find((j) => j.id === patch.jobPostingId)?.title ?? inv.jobTitle) : inv.jobTitle,
             }
           : inv,
@@ -747,6 +815,7 @@ export default function CandidateOutreach({
         body: JSON.stringify({
             targetBlockType: invite.targetBlockType ?? undefined,
             candidateEmail: invite.candidateEmail ?? undefined,
+            candidatePhone: invite.candidatePhone ?? undefined,
             candidateName: invite.candidateName ?? undefined,
             candidateUserId: invite.usedByUserId ?? undefined,
             jobPostingId: invite.jobPostingId ?? undefined,
@@ -756,11 +825,15 @@ export default function CandidateOutreach({
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to resend consent')
-        const newInvite: Invite = data.invite
-        setInvites((prev) => [{ ...newInvite, emailSentAt: newInvite.emailSentAt ?? null }, ...prev])
+        const newInvite: Invite = {
+          ...data.invite,
+          emailSentAt: data.invite.emailSentAt ?? null,
+          smsSentAt: data.invite.smsSentAt ?? null,
+          candidatePhone: data.invite.candidatePhone ?? null,
+        }
+        setInvites((prev) => [newInvite, ...prev])
 
-        // If we already have an email on file, auto-fire it. Otherwise leave
-        // it to the recruiter to use the "Email" button on the new card.
+        // Auto-email when on file; SMS stays manual (same as create — avoid surprise texts).
         if (newInvite.candidateEmail) {
           void handleSendEmail(newInvite)
         }
@@ -910,7 +983,7 @@ export default function CandidateOutreach({
       const q = search.trim().toLowerCase()
       const out = list.filter((inv) => {
         if (q) {
-          const blob = [inv.candidateName, inv.candidateEmail, inv.jobTitle]
+          const blob = [inv.candidateName, inv.candidateEmail, inv.candidatePhone, inv.jobTitle]
             .filter(Boolean)
             .join(' ')
             .toLowerCase()
@@ -1346,7 +1419,7 @@ export default function CandidateOutreach({
                     Invite someone not on ZKnight yet
                   </h5>
                   <p className={cn('text-xs leading-relaxed', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add an email if you want ZKnight to send the invite.
+                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add email and/or phone to send from ZKnight.
                   </p>
                 </div>
               </div>
@@ -1375,6 +1448,16 @@ export default function CandidateOutreach({
                     placeholder="Optional — needed to email from ZKnight"
                     value={form.candidateEmail}
                     onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
+                    className={inputBase}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={label}>Candidate phone</label>
+                  <input
+                    type="tel"
+                    placeholder="Optional — needed to text from ZKnight (US 10-digit or +1…)"
+                    value={form.candidatePhone}
+                    onChange={(e) => setForm((f) => ({ ...f, candidatePhone: e.target.value }))}
                     className={inputBase}
                   />
                 </div>
@@ -1620,11 +1703,14 @@ export default function CandidateOutreach({
                         copiedId={copiedId}
                         sendingEmailId={sendingEmailId}
                         emailSentId={emailSentId}
+                        sendingSmsId={sendingSmsId}
+                        smsSentId={smsSentId}
                         removingId={removingId}
                         savingNotesId={savingNotesId}
                         onCopy={copyToClipboard}
                         onShowQr={(inv) => setQrInvite(inv)}
                         onSendEmail={handleSendEmail}
+                        onSendSms={handleSendSms}
                         onCancel={handleCancel}
                         onRemove={handleRemove}
                         onViewFile={handleViewFile}
@@ -2183,7 +2269,13 @@ function EditInviteModal({
   theme: string
   onSave: (
     id: string,
-    patch: { candidateName?: string; candidateEmail?: string; jobPostingId?: string; welcomeMessage?: string },
+    patch: {
+      candidateName?: string
+      candidateEmail?: string
+      candidatePhone?: string
+      jobPostingId?: string
+      welcomeMessage?: string
+    },
   ) => Promise<void>
   onAddBlock: (newInvite: Invite) => void
   onOrderPlaced?: () => void
@@ -2200,6 +2292,7 @@ function EditInviteModal({
 
   const [name, setName] = useState(invite.candidateName ?? '')
   const [email, setEmail] = useState(invite.candidateEmail ?? '')
+  const [phone, setPhone] = useState(invite.candidatePhone ?? '')
   const [jobId, setJobId] = useState('')
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
@@ -2243,6 +2336,7 @@ function EditInviteModal({
       const patch: Parameters<typeof onSave>[1] = {}
       if (name !== (invite.candidateName ?? '')) patch.candidateName = name
       if (email !== (invite.candidateEmail ?? '')) patch.candidateEmail = email
+      if (phone !== (invite.candidatePhone ?? '')) patch.candidatePhone = phone
       if (jobId) patch.jobPostingId = jobId
       if (message) patch.welcomeMessage = message
       // Nothing changed — skip the network round-trip
@@ -2269,6 +2363,7 @@ function EditInviteModal({
             targetBlockType: blockType,
             candidateName: invite.candidateName || undefined,
             candidateEmail: invite.candidateEmail || undefined,
+            candidatePhone: invite.candidatePhone || undefined,
             candidateUserId: invite.usedByUserId || undefined,
           }),
         })
@@ -2277,7 +2372,12 @@ function EditInviteModal({
           throw new Error((d as { error?: string }).error ?? 'Failed to create invite')
         }
         const { invite: created } = await res.json()
-        onAddBlock({ ...created, emailSentAt: created.emailSentAt ?? null })
+        onAddBlock({
+          ...created,
+          emailSentAt: created.emailSentAt ?? null,
+          smsSentAt: created.smsSentAt ?? null,
+          candidatePhone: created.candidatePhone ?? null,
+        })
       }
     } catch (e: unknown) {
       setAddBlockError(e instanceof Error ? e.message : 'Failed to create invite')
@@ -2370,6 +2470,18 @@ function EditInviteModal({
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputCls}
                 placeholder="Optional"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                Candidate phone
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className={inputCls}
+                placeholder="Optional — for Text invites"
               />
             </div>
           </div>

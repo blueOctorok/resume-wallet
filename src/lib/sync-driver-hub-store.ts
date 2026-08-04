@@ -20,6 +20,7 @@ export async function syncDriverHubFromApi(sessionUserId: string): Promise<void>
       stats: data.stats ?? null,
       portfolio: data.portfolio ?? null,
       github: data.github ?? null,
+      dqFile: data.dqFile ?? null,
     })
   } catch {
     /* non-fatal */

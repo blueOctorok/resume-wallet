@@ -44,6 +44,8 @@ export interface Invite {
   type: string
   targetBlockType: string | null
   candidateEmail: string | null
+  /** E.164 or raw phone for Pingram SMS; null when not set. */
+  candidatePhone: string | null
   candidateName: string | null
   status: InviteStatus
   /** Row update time from DB — used to age completed invites off the Active board. */
@@ -63,6 +65,7 @@ export interface Invite {
   usedByName: string | null
   driverApplicationId: string | null
   emailSentAt: string | null
+  smsSentAt: string | null
 }
 
 export interface ScreeningRow {

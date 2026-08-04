@@ -5,6 +5,7 @@ import { getBlockDefinition } from '@/lib/block-registry'
 import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recruiter-pipeline'
 import { isInviteStatus } from '@/components/employer/outreach/types'
 import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
+import { normalizeToE164 } from '@/lib/phone-e164'
 import crypto from 'crypto'
 
 const RECRUITER_NOTES_MAX = 8000
@@ -13,6 +14,7 @@ type InviteDbRow = {
   id: string
   token: string
   candidate_email: string | null
+  candidate_phone?: string | null
   candidate_name: string | null
   status: string
   type?: string | null
@@ -26,6 +28,7 @@ type InviteDbRow = {
   used_by_user_id?: string | null
   driver_application_id: string | null
   email_sent_at?: string | null
+  sms_sent_at?: string | null
   recruiter_status?: string | null
   recruiter_notes?: string | null
   job_postings?: { title: string } | null
@@ -40,6 +43,7 @@ function mapInviteToClient(invite: InviteDbRow, baseUrl: string) {
     type: invite.type || 'general',
     targetBlockType: invite.target_block_type || null,
     candidateEmail: invite.candidate_email,
+    candidatePhone: invite.candidate_phone ?? null,
     candidateName: invite.candidate_name,
     status: invite.status,
     updatedAt: invite.updated_at ?? invite.created_at,
@@ -55,6 +59,7 @@ function mapInviteToClient(invite: InviteDbRow, baseUrl: string) {
     usedByName: invite.users?.email || null,
     driverApplicationId: invite.driver_application_id,
     emailSentAt: invite.email_sent_at || null,
+    smsSentAt: invite.sms_sent_at || null,
   }
 }
 
@@ -143,10 +148,10 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('application_invites')
       .select(`
-        id, token, candidate_email, candidate_name, status, type,
+        id, token, candidate_email, candidate_phone, candidate_name, status, type,
         target_block_type,
         job_posting_id, view_count, expires_at, created_at, updated_at,
-        used_at, used_by_user_id, driver_application_id, email_sent_at,
+        used_at, used_by_user_id, driver_application_id, email_sent_at, sms_sent_at,
         recruiter_status, recruiter_notes,
         job_postings(title),
         users!application_invites_used_by_user_id_fkey(email)
@@ -222,6 +227,7 @@ export async function POST(request: NextRequest) {
     const {
       targetBlockType,
       candidateEmail,
+      candidatePhone,
       candidateName,
       candidateUserId,
       jobPostingId,
@@ -283,6 +289,18 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + expiresInDays)
 
+    let phoneToStore: string | null = null
+    if (candidatePhone) {
+      const normalized = normalizeToE164(String(candidatePhone))
+      if (!normalized) {
+        return NextResponse.json(
+          { error: 'Invalid phone number. Use a US 10-digit number or E.164 (+1…).' },
+          { status: 400 },
+        )
+      }
+      phoneToStore = normalized
+    }
+
     const { data: invite, error } = await supabase
       .from('application_invites')
       .insert({
@@ -292,6 +310,7 @@ export async function POST(request: NextRequest) {
         type,
         target_block_type: targetBlockType || null,
         candidate_email: candidateEmail || null,
+        candidate_phone: phoneToStore,
         candidate_name: candidateName || null,
         candidate_user_id: candidateUserId || null,
         job_posting_id: jobPostingId || null,
@@ -300,9 +319,9 @@ export async function POST(request: NextRequest) {
       })
       .select(
         `
-        id, token, candidate_email, candidate_name, status, type, target_block_type,
+        id, token, candidate_email, candidate_phone, candidate_name, status, type, target_block_type,
         job_posting_id, view_count, expires_at, created_at, updated_at, used_at, used_by_user_id,
-        driver_application_id, email_sent_at, recruiter_status, recruiter_notes,
+        driver_application_id, email_sent_at, sms_sent_at, recruiter_status, recruiter_notes,
         job_postings(title),
         users!application_invites_used_by_user_id_fkey(email)
       `,
@@ -357,6 +376,7 @@ export async function PATCH(request: NextRequest) {
       status,
       candidateName,
       candidateEmail,
+      candidatePhone,
       jobPostingId,
       welcomeMessage,
       recruiterStatus,
@@ -367,6 +387,7 @@ export async function PATCH(request: NextRequest) {
       status?: string
       candidateName?: string
       candidateEmail?: string
+      candidatePhone?: string
       jobPostingId?: string | null
       welcomeMessage?: string | null
       recruiterStatus?: string
@@ -477,6 +498,7 @@ export async function PATCH(request: NextRequest) {
     const isFieldEdit = status === undefined && (
       candidateName !== undefined ||
       candidateEmail !== undefined ||
+      candidatePhone !== undefined ||
       jobPostingId !== undefined ||
       welcomeMessage !== undefined
     )
@@ -492,6 +514,20 @@ export async function PATCH(request: NextRequest) {
       const patch: Record<string, string | null> = {}
       if (candidateName !== undefined) patch.candidate_name = candidateName || null
       if (candidateEmail !== undefined) patch.candidate_email = candidateEmail || null
+      if (candidatePhone !== undefined) {
+        if (!candidatePhone) {
+          patch.candidate_phone = null
+        } else {
+          const normalized = normalizeToE164(String(candidatePhone))
+          if (!normalized) {
+            return NextResponse.json(
+              { error: 'Invalid phone number. Use a US 10-digit number or E.164 (+1…).' },
+              { status: 400 },
+            )
+          }
+          patch.candidate_phone = normalized
+        }
+      }
       if (jobPostingId !== undefined) patch.job_posting_id = jobPostingId || null
       if (welcomeMessage !== undefined) patch.welcome_message = welcomeMessage || null
 
@@ -513,6 +549,7 @@ export async function PATCH(request: NextRequest) {
           id: updated.id,
           candidateName: updated.candidate_name,
           candidateEmail: updated.candidate_email,
+          candidatePhone: updated.candidate_phone ?? null,
           jobPostingId: updated.job_posting_id,
           welcomeMessage: updated.welcome_message,
         },

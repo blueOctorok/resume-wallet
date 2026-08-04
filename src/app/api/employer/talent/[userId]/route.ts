@@ -8,6 +8,7 @@ import {
   getDriverOwnedScreeningFlags,
 } from '@/lib/driver-owned-screening'
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
+import { resolveCompanyDqForCandidate } from '@/lib/dq-file-load'
 import type { MvrData, PspData } from '@/types/career-card'
 
 /**
@@ -234,6 +235,13 @@ export async function GET(
 
     const driverOwnedFlags = await getDriverOwnedScreeningFlags(supabase, userId)
 
+    let dqFile: Awaited<ReturnType<typeof resolveCompanyDqForCandidate>> | null = null
+    try {
+      dqFile = await resolveCompanyDqForCandidate(supabase, companyId, userId)
+    } catch (e) {
+      console.warn('[EMPLOYER TALENT] dqFile load:', e)
+    }
+
     // Consenting company may view driver-owned pre-screen on the card (not broad-published).
     if (latestScreeningBundle) {
       const [driverOwnedMvr, driverOwnedPsp] = await Promise.all([
@@ -283,6 +291,7 @@ export async function GET(
       driverOwnedMvrStatus: driverOwnedFlags.driverOwnedMvrStatus,
       driverOwnedPspStatus: driverOwnedFlags.driverOwnedPspStatus,
       completionFlags,
+      dqFile,
       verifiedFacts,
       completenessScore: careerRow.completeness_score ?? 0,
       verifiedJobsCount: careerRow.verified_jobs_count ?? 0,

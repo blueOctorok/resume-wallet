@@ -7,6 +7,7 @@ import {
   type CandidateRequestScreeningRow,
 } from '@/lib/pending-employer-screening'
 import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
+import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
 
 /**
  * GET /api/driver/hub
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
         jobApplications: [],
         payments: [],
         screeningConsentBundles: [],
+        dqFile: null,
         stats: {
           profileCompleteness: 0,
           totalResumes: 0,
@@ -538,6 +540,13 @@ export async function GET(request: NextRequest) {
       ? { username: githubRow.username ?? null }
       : null
 
+    let dqFile = null
+    try {
+      dqFile = await loadDriverDqSnapshot(supabase, user.id)
+    } catch (e) {
+      console.warn('[DRIVER HUB] dqFile load:', e)
+    }
+
     return NextResponse.json({
       success: true,
       isNewUser: false,
@@ -558,6 +567,8 @@ export async function GET(request: NextRequest) {
       memberSince: user.created_at,
       pendingEmployerScreening,
       screeningConsentBundles,
+      /** Driver-lens DQ checklist — mirrors employer monitor item list. */
+      dqFile,
     })
 
   } catch (error) {

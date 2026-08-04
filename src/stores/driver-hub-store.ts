@@ -8,6 +8,7 @@ import type {
   DriverHubStats,
 } from './types'
 import type { ResumeUploadEvent } from '@/types/assistant'
+import type { DqFileSnapshot } from '@/lib/dq-file-status'
 
 /**
  * Driver Hub Store - Manages data displayed in the Driver Hub dashboard
@@ -51,6 +52,9 @@ interface DriverHubState {
   portfolio: { portfolioUrl: string | null } | null
   /** GitHub from block_dev_github (for My Files + Stormi journey) */
   github: { username: string | null } | null
+
+  /** Driver-lens DQ checklist (mirrors employer DQ monitor items). */
+  dqFile: DqFileSnapshot | null
   
   // Statistics
   stats: DriverHubStats | null
@@ -84,6 +88,7 @@ interface DriverHubActions {
   setStats: (stats: DriverHubStats | null) => void
   setPortfolio: (portfolio: { portfolioUrl: string | null } | null) => void
   setGithub: (github: { username: string | null } | null) => void
+  setDqFile: (dqFile: DqFileSnapshot | null) => void
   
   // Loading state
   setIsLoading: (loading: boolean) => void
@@ -120,6 +125,7 @@ interface DriverHubActions {
     stats?: DriverHubStats | null
     portfolio?: { portfolioUrl: string | null } | null
     github?: { username: string | null } | null
+    dqFile?: DqFileSnapshot | null
   }) => void
   
   clearHubData: () => void
@@ -157,6 +163,7 @@ const initialState: DriverHubState = {
   jobApplications: [],
   portfolio: null,
   github: null,
+  dqFile: null,
   stats: initialStats,
   isLoading: true,
   isRefreshing: false,
@@ -189,6 +196,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
     setStats: (stats) => set({ stats }),
     setPortfolio: (portfolio) => set({ portfolio }),
     setGithub: (github) => set({ github }),
+    setDqFile: (dqFile) => set({ dqFile }),
 
     // Loading state
     setIsLoading: (loading) => set({ isLoading: loading }),
@@ -267,6 +275,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
       stats: data.stats ?? get().stats,
       portfolio: data.portfolio ?? get().portfolio,
       github: data.github ?? get().github,
+      dqFile: data.dqFile !== undefined ? data.dqFile : get().dqFile,
       hasResume: (data.resumes ?? get().resumes).length > 0,
       latestResumeIpfsHash: (data.resumes ?? get().resumes)[0]?.ipfsHash ?? null,
       isLoading: false,

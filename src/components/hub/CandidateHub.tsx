@@ -14,6 +14,7 @@ import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
 import HubWorkspaceCareerCard from '@/components/hub/HubWorkspaceCareerCard'
 import HubAccountSection from '@/components/hub/HubAccountSection'
+import DriverDqProgressPanel from '@/components/hub/DriverDqProgressPanel'
 
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
 function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
@@ -124,6 +125,7 @@ export default function CandidateHub() {
         {sessionUserId ? <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} /> : null}
         <ReturnToApplyBanner isDark={isDark} />
         <HubWorkspaceCareerCard refreshNonce={refreshKey} />
+        <DriverDqProgressPanel />
         {sessionUserId ? <HubAccountSection /> : null}
       </div>
     </>

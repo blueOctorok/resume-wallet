@@ -43,11 +43,14 @@ export interface KanbanBoardProps {
   copiedId: string | null
   sendingEmailId: string | null
   emailSentId: string | null
+  sendingSmsId: string | null
+  smsSentId: string | null
   removingId: string | null
   savingNotesId: string | null
   onCopy: (url: string, id: string) => void
   onShowQr: (invite: Invite) => void
   onSendEmail: (invite: Invite, emailOverride?: string) => void
+  onSendSms: (invite: Invite, phoneOverride?: string) => void
   onCancel: (id: string) => void
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
@@ -83,11 +86,14 @@ export default function KanbanBoard({
   copiedId,
   sendingEmailId,
   emailSentId,
+  sendingSmsId,
+  smsSentId,
   removingId,
   savingNotesId,
   onCopy,
   onShowQr,
   onSendEmail,
+  onSendSms,
   onCancel,
   onRemove,
   onViewFile,
@@ -238,11 +244,14 @@ export default function KanbanBoard({
               copiedId={copiedId}
               sendingEmailId={sendingEmailId}
               emailSentId={emailSentId}
+              sendingSmsId={sendingSmsId}
+              smsSentId={smsSentId}
               removingId={removingId}
               notesSaving={savingNotesId === activeInvite.id}
               onCopy={onCopy}
               onShowQr={onShowQr}
               onSendEmail={onSendEmail}
+              onSendSms={onSendSms}
               onCancel={onCancel}
               onRemove={(id) => {
                 onRemove(id)

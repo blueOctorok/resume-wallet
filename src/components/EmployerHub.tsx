@@ -52,6 +52,7 @@ import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import type { EmployerInstalledHubBlock } from '@/stores/employer-blocks-store'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
+import DqMonitorSection from '@/components/employer/dq/DqMonitorSection'
 
 // ============================================================
 // TYPES
@@ -786,6 +787,18 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       {/* (Purchased screenings panel removed — its data now lives inside the
           Blocks & outreach section's "Files vault" tab, plus per-candidate file
           pills on each Active outreach card.) */}
+
+      {/* DQ monitor — roster by name; click opens person detail + DQ checklist */}
+      <DqMonitorSection
+        screeningCapable={employerInstalledBlocks.some((b) =>
+          [
+            'employer-mvr-orders',
+            'employer-psp-orders',
+            'employer-dot-screening',
+            'employer-screening-consent',
+          ].includes(b.blockType),
+        )}
+      />
 
       <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
         <BlockCard
