@@ -22,7 +22,38 @@ function displayName(
   return name || fallback
 }
 
-/** Load company-lens inputs for one candidate. */
+const ORDER_COLS = 'id, status, completed_at, processed_at, ordered_at, created_at'
+
+function mapOrderRows(
+  rows: Array<{
+    id: string
+    status: string
+    completed_at?: string | null
+    processed_at?: string | null
+    ordered_at?: string | null
+    created_at?: string | null
+  }> | null | undefined,
+) {
+  return (rows ?? []).map((o) => ({
+    id: o.id,
+    status: o.status,
+    completedAt: o.completed_at,
+    processedAt: o.processed_at,
+    orderedAt: o.ordered_at,
+    createdAt: o.created_at,
+  }))
+}
+
+/**
+ * Load DQ inputs for one candidate as seen by an employer monitor.
+ *
+ * Product rule (multi-employer DQ file):
+ * - MVR / PSP are **driver-owned artifacts** — ignore `ordered_by_company_id`.
+ *   Who paid / who clicked does not matter; any Accio pull for this driver
+ *   counts for every employer's DQ monitor.
+ * - Consent package + employment verifications stay company-scoped (that
+ *   employer's paperwork). DOT app is driver-global.
+ */
 export async function loadCompanyDqInput(
   supabase: SupabaseClient,
   companyId: string,
@@ -38,15 +69,13 @@ export async function loadCompanyDqInput(
   ] = await Promise.all([
     supabase
       .from('mvr_orders')
-      .select('id, status, completed_at, processed_at, ordered_at, created_at')
-      .eq('ordered_by_company_id', companyId)
+      .select(ORDER_COLS)
       .eq('driver_user_id', candidateUserId)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('psp_orders')
-      .select('id, status, completed_at, processed_at, ordered_at, created_at')
-      .eq('ordered_by_company_id', companyId)
+      .select(ORDER_COLS)
       .eq('driver_user_id', candidateUserId)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -73,22 +102,8 @@ export async function loadCompanyDqInput(
   ])
 
   return {
-    mvrOrders: (mvrOrders ?? []).map((o) => ({
-      id: o.id,
-      status: o.status,
-      completedAt: o.completed_at,
-      processedAt: o.processed_at,
-      orderedAt: o.ordered_at,
-      createdAt: o.created_at,
-    })),
-    pspOrders: (pspOrders ?? []).map((o) => ({
-      id: o.id,
-      status: o.status,
-      completedAt: o.completed_at,
-      processedAt: o.processed_at,
-      orderedAt: o.ordered_at,
-      createdAt: o.created_at,
-    })),
+    mvrOrders: mapOrderRows(mvrOrders),
+    pspOrders: mapOrderRows(pspOrders),
     consentBundles: (consentBundles ?? []).map((b) => ({
       id: b.id,
       status: b.status,
@@ -276,53 +291,53 @@ export async function loadDqMonitorList(
     created_at?: string | null
   }
 
-  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows] = await Promise.all([
-    fetchAllInChunks<ProfileRow>(candidateIds, 'profiles', (chunk) =>
-      supabase
-        .from('user_profiles')
-        .select('user_id, first_name, last_name, avatar_url')
-        .in('user_id', chunk),
-    ),
-    fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
-      supabase
-        .from('mvr_orders')
-        .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
-        .eq('ordered_by_company_id', companyId)
-        .in('driver_user_id', chunk)
-        .limit(1000),
-    ),
-    fetchAllInChunks<OrderRow>(candidateIds, 'psp_orders', (chunk) =>
-      supabase
-        .from('psp_orders')
-        .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
-        .eq('ordered_by_company_id', companyId)
-        .in('driver_user_id', chunk)
-        .limit(1000),
-    ),
-    fetchAllInChunks<ConsentRow>(candidateIds, 'consent_bundles', (chunk) =>
-      supabase
-        .from('screening_consent_bundles')
-        .select('id, driver_user_id, status, cdlis_signed_at, completed_at, created_at')
-        .eq('company_id', companyId)
-        .in('driver_user_id', chunk)
-        .limit(1000),
-    ),
-    fetchAllInChunks<DotRow>(candidateIds, 'dot_apps', (chunk) =>
-      supabase
-        .from('driver_applications')
-        .select('id, user_id, is_complete, current_step, updated_at, created_at')
-        .in('user_id', chunk)
-        .limit(1000),
-    ),
-    fetchAllInChunks<EvRow>(candidateIds, 'employment_verifications', (chunk) =>
-      supabase
-        .from('employment_verification_requests')
-        .select('id, driver_id, status, finalized_at, updated_at, created_at')
-        .eq('requesting_company_id', companyId)
-        .in('driver_id', chunk)
-        .limit(1000),
-    ),
-  ])
+  // MVR/PSP: all pulls for the driver (portable). Consent / EV: this company only.
+  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows] =
+    await Promise.all([
+      fetchAllInChunks<ProfileRow>(candidateIds, 'profiles', (chunk) =>
+        supabase
+          .from('user_profiles')
+          .select('user_id, first_name, last_name, avatar_url')
+          .in('user_id', chunk),
+      ),
+      fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
+        supabase
+          .from('mvr_orders')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
+          .in('driver_user_id', chunk)
+          .limit(1000),
+      ),
+      fetchAllInChunks<OrderRow>(candidateIds, 'psp_orders', (chunk) =>
+        supabase
+          .from('psp_orders')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
+          .in('driver_user_id', chunk)
+          .limit(1000),
+      ),
+      fetchAllInChunks<ConsentRow>(candidateIds, 'consent_bundles', (chunk) =>
+        supabase
+          .from('screening_consent_bundles')
+          .select('id, driver_user_id, status, cdlis_signed_at, completed_at, created_at')
+          .eq('company_id', companyId)
+          .in('driver_user_id', chunk)
+          .limit(1000),
+      ),
+      fetchAllInChunks<DotRow>(candidateIds, 'dot_apps', (chunk) =>
+        supabase
+          .from('driver_applications')
+          .select('id, user_id, is_complete, current_step, updated_at, created_at')
+          .in('user_id', chunk)
+          .limit(1000),
+      ),
+      fetchAllInChunks<EvRow>(candidateIds, 'employment_verifications', (chunk) =>
+        supabase
+          .from('employment_verification_requests')
+          .select('id, driver_id, status, finalized_at, updated_at, created_at')
+          .eq('requesting_company_id', companyId)
+          .in('driver_id', chunk)
+          .limit(1000),
+      ),
+    ])
 
   const profileById = new Map(
     profiles.map((p) => [
@@ -437,18 +452,17 @@ export async function loadDriverDqSnapshot(
     { data: evRows },
     { data: pendingRequests },
   ] = await Promise.all([
+    // All Accio pulls for this driver — payment column ignored (portable DQ).
     supabase
       .from('mvr_orders')
       .select('id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id')
       .eq('driver_user_id', driverUserId)
-      .is('ordered_by_company_id', null)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('psp_orders')
       .select('id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id')
       .eq('driver_user_id', driverUserId)
-      .is('ordered_by_company_id', null)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase

@@ -132,7 +132,7 @@ export default function DqFileSection({
   dqFile,
   embedded = false,
   title = 'Driver Qualification file',
-  description = 'Company-scoped compliance checklist. Employer-paid reports stay private to your company.',
+  description = 'Driver qualification checklist. MVR and PSP travel with the driver across employers; consent and employment verifications are yours.',
 }: DqFileSectionProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)

@@ -4,9 +4,10 @@
  * Pure functions over already-fetched rows. API routes gather data;
  * this module never touches Supabase.
  *
- * Teaching note: employer-paid MVR/PSP stay company-scoped (FCRA). The company
- * lens only counts orders for that companyId. The driver lens shows driver-owned
- * artifacts + pending requests — never another company's private reports.
+ * Teaching note: for the DQ monitor, MVR/PSP are portable driver artifacts
+ * (who paid / ordered_by_company_id does not matter). Consent + employment
+ * verification stay company-scoped. Driver lens = same portable screenings +
+ * pending requests.
  */
 
 import {

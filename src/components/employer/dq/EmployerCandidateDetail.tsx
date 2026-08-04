@@ -75,7 +75,7 @@ export default function EmployerCandidateDetail({
       <ModalHeader
         variant="block"
         title={title}
-        subtitle="DQ file and compliance status for your company"
+        subtitle="Driver qualification file — MVR/PSP are portable across employers"
         onClose={onClose}
       />
 

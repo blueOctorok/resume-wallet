@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DQ monitor — MVR/PSP portable across all employers** (2026-08-04)
+
+Product clarification: drivers do not pay for MVR/PSP today; **ownership is always the driver’s**, and **any employer’s DQ monitor** sees that driver’s Accio pulls — ignore `ordered_by_company_id` / who clicked pay. Consent package + employment verifications remain company-scoped. Fixed Dakota Sheipe–class “MVR Missing” by loading all `mvr_orders` / `psp_orders` for `driver_user_id` in `loadCompanyDqInput` + list batch. Roster membership is still “engaged with this company”; artifact visibility for MVR/PSP is not.
+
+---
+
 ## **Outreach “Awaiting candidate orders” false alarm** (2026-08-04)
 
 Pace cards (e.g. Michael Hardin) showed consent complete + “Awaiting candidate orders / MVR + PSP not submitted” even though Accio orders **existed** (Hardin: MVR `completed`/`clear`, PSP `needs_review`, both driver-owned). Ordering did not break — **`GET /api/employer/screenings` failed to load driver-owned rows**.

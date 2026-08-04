@@ -29,13 +29,13 @@ export default function DriverDqProgressPanel() {
         variant="embed"
         icon={ClipboardList}
         title="Your DQ progress"
-        description="Same checklist employers use. Complete what’s yours; employers order the rest through Key."
+        description="Same checklist employers see. MVR and PSP stay on your file for every employer."
       >
         <DqFileSection
           dqFile={dqFile}
           embedded
           title="Your DQ progress"
-          description="Driver-owned view — employer-paid reports stay with that company."
+          description="Your portable DQ progress — screenings travel with you."
         />
       </BlockCard>
     </HubSectionPanel>
