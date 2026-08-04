@@ -84,6 +84,7 @@ export default function LayoutMasterDetail({ isDark }: { isDark: boolean }) {
                   drivers={MOCK_DRIVERS}
                   selectedId={selected?.id ?? null}
                   onSelect={setSelected}
+                  compact
                 />
               ) : (
                 <OutreachRowList items={MOCK_OUTREACH} />

@@ -84,12 +84,29 @@ export function DqStatusBadge({
   status,
   done,
   total,
+  compact = false,
 }: {
   status: DqStatus
   done: number
   total: number
+  /** Dot + count only — for narrow roster rows where the word would crowd the name. */
+  compact?: boolean
 }) {
   const cfg = DQ_STATUS[status]
+  if (compact) {
+    return (
+      <span
+        title={cfg.label}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-semibold tabular-nums ring-1 ring-inset',
+          cfg.classes,
+        )}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+        {done}/{total}
+      </span>
+    )
+  }
   return (
     <span
       className={cn(
@@ -352,10 +369,13 @@ export function DriverRosterList({
   drivers,
   selectedId,
   onSelect,
+  compact = false,
 }: {
   drivers: MockDriver[]
   selectedId?: string | null
   onSelect: (d: MockDriver) => void
+  /** Use dot + count status pills so long names survive a narrow column. */
+  compact?: boolean
 }) {
   const [q, setQ] = useState('')
   const filtered = drivers.filter((d) => d.name.toLowerCase().includes(q.trim().toLowerCase()))
@@ -395,7 +415,12 @@ export function DriverRosterList({
                     {d.activity}
                   </p>
                 </div>
-                <DqStatusBadge status={d.status} done={d.done} total={d.total} />
+                <DqStatusBadge
+                  status={d.status}
+                  done={d.done}
+                  total={d.total}
+                  compact={compact}
+                />
                 <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 dark:text-gray-600" />
               </button>
             </li>
