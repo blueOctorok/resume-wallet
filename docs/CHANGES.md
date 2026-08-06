@@ -21,6 +21,8 @@ Replaced `src/components/HomePage.tsx` with a ground-up Provven landing page bui
 
 **Why it looked "missing" after the first push:** guests were still auto-redirected to `/sign-in`, so the landing component never mounted on the live site. Fixed by stopping that redirect and mounting `LandingPage` as the signed-out front door.
 
+**Nav:** Guest marketing landing hides the global `Navigation` and renders outside the padded app shell so the ink hero is full-bleed. Nav returns for Guided Mode guests and all signed-in shells.
+
 See `src/components/landing/README.md` for fonts + how to swap the card mock for a product screenshot.
 
 ---

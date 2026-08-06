@@ -394,27 +394,31 @@ const HomeContent = () => {
       <div className='min-h-screen overflow-x-hidden relative'>
         <StormBackground />
 
-        {/* Global Navigation */}
-        <Navigation
-          isAuthenticated={!!user}
-          userRole={userRole}
-          onStatusClick={openModal}
-          onNavigate={(page) => {
-            // 'jobs' removed: navigation's "Browse jobs" guest button now flips into
-            // Guided Mode via `onBrowseGuided` rather than navigating to a 'jobs' page.
-            const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'psp']
-            const mapped = page === 'home' || page === 'hub' ? null : page as PageType
-            if (page === 'home' || page === 'hub' || validPages.includes(page as PageType)) {
-              // Exit guest Guided Mode when going home or to sign-in so the
-              // normal auth / landing flow renders instead of SimpleModeShell.
-              if (page === 'home' || page === 'signin') setShowGuidedMode(false)
-              setCurrentPage(mapped)
-            }
-          }}
-          onBrowseGuided={enterGuidedMode}
-          mvrWalletAddress={sessionUserId || null}
-          sessionUserId={sessionUserId ?? null}
-        />
+        {/* Global Navigation — hidden on the guest marketing landing so the
+            hero can own the first viewport (brand-first, no app chrome).
+            Still shown for Guided Mode guests and all signed-in shells. */}
+        {!isGuest && (
+          <Navigation
+            isAuthenticated={!!user}
+            userRole={userRole}
+            onStatusClick={openModal}
+            onNavigate={(page) => {
+              // 'jobs' removed: navigation's "Browse jobs" guest button now flips into
+              // Guided Mode via `onBrowseGuided` rather than navigating to a 'jobs' page.
+              const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'psp']
+              const mapped = page === 'home' || page === 'hub' ? null : page as PageType
+              if (page === 'home' || page === 'hub' || validPages.includes(page as PageType)) {
+                // Exit guest Guided Mode when going home or to sign-in so the
+                // normal auth / landing flow renders instead of SimpleModeShell.
+                if (page === 'home' || page === 'signin') setShowGuidedMode(false)
+                setCurrentPage(mapped)
+              }
+            }}
+            onBrowseGuided={enterGuidedMode}
+            mvrWalletAddress={sessionUserId || null}
+            sessionUserId={sessionUserId ?? null}
+          />
+        )}
 
         {/* User Status Modal */}
         <UserStatusModal
@@ -467,81 +471,85 @@ const HomeContent = () => {
         {/* Journey Modal — guided "what's next" prompts after key actions */}
         <JourneyModal />
 
-        {/* Main content area — employer hub uses a wider cap (two sticky rails + 4K monitors); others stay 7xl */}
-        <div
-          className={`mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0 ${
-            userRole === 'employer' ? 'max-w-[min(100%,120rem)]' : 'max-w-7xl'
-          }`}
-        >
+        {/* Session gate — don't flash marketing over a returning session. */}
+        {(awaitingSessionCheck || awaitingSessionHydration) && (
+          <LoadingScreen message='Loading…' />
+        )}
 
-          {/* Role loading overlay */}
-          {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
-            <LoadingScreen
-              message={isSettingRole ? 'Switching roles...' : 'Loading your dashboard...'}
+        {/* Guest marketing landing — full-bleed, outside the app content shell
+            (no nav offset / max-w-7xl padding) so the ink hero can own the viewport. */}
+        {sessionSettled && isGuest && (
+          <ErrorBoundary section='Landing'>
+            <LandingPage
+              isAuthenticated={false}
+              onGetStarted={() => router.push('/sign-in')}
+              onBrowseJobs={enterGuidedMode}
             />
-          )}
+          </ErrorBoundary>
+        )}
 
-          {/* Session gate — don't flash marketing over a returning session. */}
-          {(awaitingSessionCheck || awaitingSessionHydration) && (
-            <LoadingScreen message='Loading…' />
-          )}
+        {/* Main content area — employer hub uses a wider cap (two sticky rails + 4K monitors); others stay 7xl.
+            Skipped for the guest landing (rendered above, full-bleed). */}
+        {!isGuest && (
+          <div
+            className={`mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0 ${
+              userRole === 'employer' ? 'max-w-[min(100%,120rem)]' : 'max-w-7xl'
+            }`}
+          >
 
-          {/* ── Guest marketing landing (signed-out front door) ── */}
-          {sessionSettled && isGuest && (
-            <ErrorBoundary section='Landing'>
-              <LandingPage
-                isAuthenticated={false}
-                onGetStarted={() => router.push('/sign-in')}
-                onBrowseJobs={enterGuidedMode}
+            {/* Role loading overlay */}
+            {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
+              <LoadingScreen
+                message={isSettingRole ? 'Switching roles...' : 'Loading your dashboard...'}
               />
-            </ErrorBoundary>
-          )}
+            )}
 
-          {/* ── Employer ── */}
-          {user && userRole === 'employer' && !isRoleLoading && (
-            <ErrorBoundary section='Employer Hub'>
-              <EmployerShell sessionUserId={sessionUserId} />
-            </ErrorBoundary>
-          )}
-
-          {/* ── Developer ── */}
-          {user && userRole === 'developer' && !isRoleLoading && (
-            <ErrorBoundary section='Developer Hub'>
-              <DeveloperShell userAddress={sessionUserId} />
-            </ErrorBoundary>
-          )}
-
-          {/* ── Candidate (composable hub) ── */}
-          {user && userRole === 'candidate' && !isRoleLoading && (
-            <ErrorBoundary section='Candidate Hub'>
-              <CandidateShell />
-            </ErrorBoundary>
-          )}
-
-          {/*
-           Guest Guided Mode — rendered BEFORE the DriverShell branch so a
-           visitor who hits "Browse jobs" goes straight into SimpleModeShell
-           with no wallet. SimpleCardPanel detects sessionUserId=null and
-           renders the sign-in teaser; the rail and job detail work as-is.
-          */}
-          {!user && showGuidedMode && !isRoleLoading && (
-            <ErrorBoundary section='Guided Mode'>
-              <SimpleModeShell />
-            </ErrorBoundary>
-          )}
-
-          {/* ── Driver hub (legacy authenticated drivers only) ── */}
-          {user &&
-            (userRole === 'driver' || (!userRole && !showRoleSelection)) &&
-            !isRoleLoading && (
-              <ErrorBoundary section='Driver Hub'>
-                <DriverShell
-                  onResumeUploadEvent={handleResumeUploadEvent}
-                  onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
-                />
+            {/* ── Employer ── */}
+            {user && userRole === 'employer' && !isRoleLoading && (
+              <ErrorBoundary section='Employer Hub'>
+                <EmployerShell sessionUserId={sessionUserId} />
               </ErrorBoundary>
             )}
-        </div>
+
+            {/* ── Developer ── */}
+            {user && userRole === 'developer' && !isRoleLoading && (
+              <ErrorBoundary section='Developer Hub'>
+                <DeveloperShell userAddress={sessionUserId} />
+              </ErrorBoundary>
+            )}
+
+            {/* ── Candidate (composable hub) ── */}
+            {user && userRole === 'candidate' && !isRoleLoading && (
+              <ErrorBoundary section='Candidate Hub'>
+                <CandidateShell />
+              </ErrorBoundary>
+            )}
+
+            {/*
+             Guest Guided Mode — rendered BEFORE the DriverShell branch so a
+             visitor who hits "Browse jobs" goes straight into SimpleModeShell
+             with no wallet. SimpleCardPanel detects sessionUserId=null and
+             renders the sign-in teaser; the rail and job detail work as-is.
+            */}
+            {!user && showGuidedMode && !isRoleLoading && (
+              <ErrorBoundary section='Guided Mode'>
+                <SimpleModeShell />
+              </ErrorBoundary>
+            )}
+
+            {/* ── Driver hub (legacy authenticated drivers only) ── */}
+            {user &&
+              (userRole === 'driver' || (!userRole && !showRoleSelection)) &&
+              !isRoleLoading && (
+                <ErrorBoundary section='Driver Hub'>
+                  <DriverShell
+                    onResumeUploadEvent={handleResumeUploadEvent}
+                    onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
+                  />
+                </ErrorBoundary>
+              )}
+          </div>
+        )}
       </div>
     </AssistantBridgeProvider>
   )
