@@ -183,7 +183,7 @@ export async function deployMidnightContract(
       factType,
       emptyWitnessForFact(factType),
     )
-    const providers = await createMidnightProviders(walletCtx)
+    const providers = await createMidnightProviders(walletCtx, factType)
     const deployed = await deployContract(providers, {
       compiledContract,
       args: [],
@@ -224,7 +224,7 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
 
     logProgress(`Loading compiled contract + providers (${input.factType})...`)
     const { compiledContract } = await loadCompiledContractForFact(input.factType, witnesses)
-    const providers = await createMidnightProviders(walletCtx)
+    const providers = await createMidnightProviders(walletCtx, input.factType)
 
     logProgress(`Locating deployed contract ${contractAddress.slice(0, 12)}...`)
     const contract = await findDeployedContract(providers, {

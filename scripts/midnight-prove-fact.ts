@@ -18,6 +18,7 @@ if (typeof globalThis.WebSocket === 'undefined') {
 import type { FactType } from '@/lib/attestation-service'
 import { resolveAttestationFact, type ShippedFactType } from '@/lib/fact-registry'
 import { createMidnightAttestationService } from '@/lib/midnight-attestation-service'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 const SHIPPED: ShippedFactType[] = [
   'mvr_clean_36_months',
@@ -64,6 +65,31 @@ async function main() {
   const parameters: Record<string, unknown> = {}
   if (employmentId) parameters.employmentId = employmentId
   if (verificationRequestId) parameters.verificationRequestId = verificationRequestId
+
+  // EVR prove requires a request/employment id — default to latest verified row.
+  if (
+    factType === 'previous_employer_verified' &&
+    !parameters.employmentId &&
+    !parameters.verificationRequestId
+  ) {
+    const supabase = await getAdminSupabaseClient()
+    const { data: latest } = await supabase
+      .from('employment_verification_requests')
+      .select('id')
+      .eq('driver_id', userId)
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+      .not('verified_at', 'is', null)
+      .order('verified_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!latest?.id) {
+      throw new Error(
+        'No verified EVR on file — pass --verification-request-id or --employment-id',
+      )
+    }
+    parameters.verificationRequestId = latest.id as string
+    console.error(`[MIDNIGHT] Using latest EVR request ${latest.id}`)
+  }
 
   await resolveAttestationFact({
     candidateUserId: userId,

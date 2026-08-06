@@ -22,7 +22,7 @@
     "midnight:wallet:status": "NODE_OPTIONS='--max-old-space-size=16384' npm run wallet:status --prefix midnight/runtime",
     "midnight:wallet:address": "npm run wallet:address --prefix midnight/runtime",
     "midnight:register-dust": "NODE_OPTIONS='--max-old-space-size=16384' npm run register-dust --prefix midnight/runtime",
-    "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime",
+    "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime --",
     "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts"
   },
   "dependencies": {

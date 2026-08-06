@@ -110,6 +110,14 @@ All app transactional email helpers send through Pingram via `src/lib/messaging.
 
 ---
 
+## **Phase 3 — P3.5 CDL/EVR Preprod deploy + smokes** (2026-08-06)
+
+Finished Key-independent operator leftovers:
+- **Bugfix:** `createMidnightProviders` always loaded MVR ZK keys — CDL/EVR deploy failed with "Failed to read verifier key". Now keyed per `factType`.
+- **Deploy:** `midnight:deploy` accepts `--fact` (multi); persists `deployment.json.contracts` after each success.
+- **Smokes:** `cdl_class_a` tx `00e825b3…`; `previous_employer_verified` tx `002f59e5…`.
+- Checklist Phase 3a summary: P3.5 ✅ / P3.6 ✅ gate; only P3.4-B remains Key-blocked for 🟢.
+
 ## **Phase 3 — P3.4–P3.6 while waiting on Key** (2026-07-29)
 
 Key-independent Midnight slice shipped in code (redeploy + Preprod smokes are operator follow-ups):

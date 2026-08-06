@@ -808,9 +808,9 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
 | **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ✅ Done · 2026-06-10 · preflight all green |
 | **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` — **anchor only 🟡** | ✅ Done · 2026-06-17 · contract `6c3f0ea8…fea49cf` deployed to Preprod; first ZK attestation proven (tx `0024edbc…0e265a`, attestation `6bc932c7…7d4ad4`) |
-| **P3.4** | **Real predicate proof for `mvr-clean-36` (anchor 🟡 → real 🟢)** — predicate + provenance. **Mandatory** (delivers the moat; CIRCUITS.md). Predicate track **unblocked**; 🟢 provenance **pending Key/Accio signing** | 🟡 |
-| **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ⬜ |
-| **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ⬜ |
+| **P3.4** | **Real predicate proof for `mvr-clean-36` (anchor 🟡 → real 🟢)** — predicate + provenance. **Mandatory** (delivers the moat; CIRCUITS.md). **P3.4-A ✅**; 🟢 provenance **pending Key/Accio signing (P3.4-B)** | 🟡 |
+| **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ✅ Code + Preprod smokes (2026-08-06) |
+| **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ✅ Gate shipped (copy dark until P3.4-B) |
 | **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
@@ -1213,7 +1213,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 | | |
 |---|---|
-| Status | 🟡 **Code shipped 2026-07-29** — operator deploy + Preprod smokes pending |
+| Status | ✅ **Done 2026-08-06** — CDL + EVR deployed + proven on Preprod; shared prove plumbing |
 | Pre-conditions | P3.4-A ✅ (predicate pattern established); P3.4-B (🟢 provenance) recommended but not required to start shared plumbing; **P3.4-C driver-owned gate** (so broadened facts attest off driver-owned pulls, not company-private) |
 | Pace risk | Low — additive circuits + prove scripts |
 
@@ -1408,7 +1408,8 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-07-30 | **P3.4-A freshness + P3.5/P3.6 gate** | Composer | (this push) | **P3.4-A:** asOfDate + pull nullifiers; Preprod redeploy `fb46c572…`; Pace supersede; driver-owned prove + replay/negative smokes ✅. **P3.5:** CDL/EVR circuits in repo (deploy smokes still open). **P3.6:** honesty gate shipped; Midnight marketing copy dark until issuer_signed. Prod stays JWT (`ATTESTATION_BACKEND` unset). |
+| 2026-08-06 | **P3.5 CDL/EVR Preprod smokes** | Composer | (this push) | Fixed `createMidnightProviders` to use per-fact ZK key dirs. Deployed `cdl_class_a` `39feba27…` + `previous_employer_verified` `4ef51b67…`. Smokes: CDL tx `00e825b3…` (Michael Hardin); EVR tx `002f59e5…`. Multi-fact `midnight:deploy -- --fact …`. Key-independent Phase 3a operator work done; P3.4-B still pending Key. |
+| 2026-07-30 | **P3.4-A freshness + P3.5/P3.6 gate** | Composer | 3113f89 | **P3.4-A:** asOfDate + pull nullifiers; Preprod redeploy `fb46c572…`; Pace supersede; driver-owned prove + replay/negative smokes ✅. **P3.5:** CDL/EVR circuits in repo. **P3.6:** honesty gate shipped; Midnight marketing copy dark until issuer_signed. Prod stays JWT. |
 | 2026-07-14 | **P3.7** DOT badge honesty tier | Grok | uncommitted | Issuer badges upgrade via `/api/attestation/mine` + `dot-attestation-badge.ts`. Midnight copy only when `proof.kind === midnight_zk`. PSP badges stay Accio-only. |
 | 2026-07-14 | **Honesty** resume verify retired | Grok | uncommitted | Self-reported resumes: verify API 410; removed Base Verify CTAs; "On file" not Verified. Extends DEC-2026-07-001 §7. |
 | 2026-07-14 | **P3.7** DEC-2026-07-001 + honesty pass | Grok | uncommitted | **Shipped:** formal DEC (majority Verified headline + field honesty); retired DOT whole-app blockchain UX (ApplicationSubmitted, journey, CareerCard, DriverHub, hub docs `canVerify`, verify API 410, projected on-chain strip). Prefer Submitted + live verified-%. |

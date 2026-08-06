@@ -81,11 +81,13 @@ Useful MCP tools when writing circuits: `midnight-compile-contract`, `midnight-s
 
 ### Per-fact prove benchmarks (Preprod — fill after smokes)
 
-| Fact | Circuit | First prove (cold wallet) | Redeploy required |
+| Fact | Circuit | First prove (warm cache) | Contract (Preprod) |
 |---|---|---|---|
-| `mvr_clean_36_months` | `mvr-clean-36` | ~minutes (wallet sync + predicate) | **Yes** — P3.4-A freshness ABI (2026-07-29) |
-| `cdl_class_a` | `cdl-class-a` | TBD | Deploy new contract |
-| `previous_employer_verified` | `previous-employer-verified` | TBD | Deploy new contract |
+| `mvr_clean_36_months` | `mvr-clean-36` | ~30–60s after sync | `fb46c572…2465e` (freshness, 2026-07-30) |
+| `cdl_class_a` | `cdl-class-a` | ~30s (2026-08-06 smoke) | `39feba27…be960` |
+| `previous_employer_verified` | `previous-employer-verified` | ~30s (2026-08-06 smoke) | `4ef51b67…49859` |
+
+Deploy one or all: `npm run midnight:deploy -- [--fact cdl_class_a]`. Env vars: `MIDNIGHT_CONTRACT_ADDRESS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A`, `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER`.
 
 Compile all: `npm run midnight:compile`. Prove CLI: `npm run midnight:prove-fact -- --user <uuid> [--fact cdl_class_a|previous_employer_verified]`.
 

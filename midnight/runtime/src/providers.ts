@@ -5,13 +5,24 @@ import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config
 import type { FinalizedTransaction } from '@midnight-ntwrk/ledger-v8'
 
 import { MIDNIGHT_CONFIG, ZK_CONFIG_PATH } from './config.js'
+import {
+  MIDNIGHT_CIRCUIT_CONFIGS,
+  type MidnightShippedFactType,
+} from './contract-registry.js'
 import type { MidnightWalletContext } from './wallet.js'
 
-export async function createMidnightProviders(walletCtx: MidnightWalletContext) {
+export async function createMidnightProviders(
+  walletCtx: MidnightWalletContext,
+  factType: MidnightShippedFactType = 'mvr_clean_36_months',
+) {
   const privateStatePassword = MIDNIGHT_CONFIG.privateStatePassword
   if (!privateStatePassword) {
     throw new Error('MIDNIGHT_PRIVATE_STATE_PASSWORD is required')
   }
+
+  const cfg = MIDNIGHT_CIRCUIT_CONFIGS[factType]
+  // Each circuit has its own compiled keys/ — must not always use mvr-clean-36.
+  const zkConfigPath = cfg?.managedDir ?? ZK_CONFIG_PATH
 
   const state = await walletCtx.wallet.waitForSyncedState()
   const accountId = walletCtx.unshieldedKeystore.getBech32Address().asString()
@@ -38,11 +49,12 @@ export async function createMidnightProviders(walletCtx: MidnightWalletContext) 
     submitTx: (tx: FinalizedTransaction) => walletCtx.wallet.submitTransaction(tx),
   }
 
-  const zkConfigProvider = new NodeZkConfigProvider(ZK_CONFIG_PATH)
+  const zkConfigProvider = new NodeZkConfigProvider(zkConfigPath)
 
   return {
     privateStateProvider: levelPrivateStateProvider({
-      privateStateStoreName: 'storm-mvr-clean-36-state',
+      // Separate LevelDB per circuit so private state never cross-contaminates.
+      privateStateStoreName: `storm-${cfg.contractName}-state`,
       accountId,
       privateStoragePasswordProvider: () => privateStatePassword,
     }),

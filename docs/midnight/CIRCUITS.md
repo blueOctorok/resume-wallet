@@ -153,23 +153,25 @@ export circuit proveCleanMvr(
 
 ---
 
-### `cdl-class-a` — status 🟡 (P3.5, 2026-07-29)
+### `cdl-class-a` — status 🟡 (P3.5 — Preprod proven 2026-08-06; issuer sig pending)
 
 - **Fact:** `cdl_class_a` — holds Class A CDL per driver-owned Accio MVR.
 - **Witness (private):** `holdsClassA(): Boolean` — built from `normalizeAccioCdlClass(mvrCtx.licenseClass) === 'A'`.
 - **Public inputs:** `asOfDate`, `pullNullifier`, `commitment`.
 - **Constraints:** assert Class A; nullifier ledger prevents double-prove of same pull.
-- **Deploy:** set `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` after `npm run midnight:compile` + deploy.
+- **Deployed:** Preprod `39feba2727e8d24766b411f6ff4ede3ce7d440b384a92255090796753e1be960`.
+- **Smoke:** tx `00e825b3…080ce8`, attestation `ad25ec1b-…` (2026-08-06).
 
 ---
 
-### `previous-employer-verified` — status 🟡 (P3.5, 2026-07-29)
+### `previous-employer-verified` — status 🟡 (P3.5 — Preprod proven 2026-08-06; issuer sig pending)
 
 - **Fact:** `previous_employer_verified` — prior employer confirmed employment (EVR).
 - **Witness (private):** `employerVerified(): Boolean` — true when EVR row has `verified_at`.
 - **Public inputs:** `asOfDate` (from `verified_at`), `pullNullifier` (EVR request id), `commitment`.
 - **Constraints:** assert verified; nullifier ledger prevents double-prove.
-- **Deploy:** set `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER` after compile + deploy.
+- **Deployed:** Preprod `4ef51b672f29b80ee5c39c53c176e3a1de63040722a392ddd03a6a53fc049859`.
+- **Smoke:** tx `002f59e5…4f302b`, attestation `6237e4c6-…` (2026-08-06).
 
 ---
 
