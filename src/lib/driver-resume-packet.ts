@@ -2,7 +2,7 @@
  * Premium “DOT packet” resume model — layout matching docs/midnight/example_resume.png.
  *
  * Green-dot chips are issuer-backed / structured claims ready for Phase 3 ZK.
- * Label as ZKnight-verified — never “proven on Midnight” until proofs are live.
+ * Label as Provven-verified — never “proven on Midnight” until proofs are live.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -310,7 +310,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     experience,
     safetySummary,
     qrLabelTop: 'DOT application packet',
-    footerTitle: 'Full career card on ZKnight',
+    footerTitle: 'Full career card on Provven',
     footerBody:
       'Open the link (or scan the QR with a phone). Driver-controlled Candidate Card — proved claims + attestation metadata. Does not include raw MVR/PSP.',
     thinStateHint: thin

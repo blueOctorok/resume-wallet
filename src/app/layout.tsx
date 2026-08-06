@@ -21,15 +21,15 @@ const stormWordmark = Orbitron({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://zknight.io'),
+  metadataBase: new URL('https://provven.com'),
   title: {
-    default: 'ZKnight | Blockchain-Verified Career Platform',
-    template: '%s | ZKnight',
+    default: 'Provven | Blockchain-Verified Career Platform',
+    template: '%s | Provven',
   },
   description:
     'Build your Career Card, apply to jobs instantly, and get verified on-chain. The blockchain-verified career platform for drivers and software engineers.',
   keywords: [
-    'ZKnight',
+    'Provven',
     'Career Card',
     'blockchain verification',
     'driver applications',
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     'CDL driver jobs',
     'software engineer portfolio',
   ],
-  authors: [{ name: 'ZKnight' }],
-  creator: 'ZKnight',
-  publisher: 'ZKnight',
+  authors: [{ name: 'Provven' }],
+  creator: 'Provven',
+  publisher: 'Provven',
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',
@@ -51,9 +51,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://zknight.io',
-    siteName: 'ZKnight',
-    title: 'ZKnight | Blockchain-Verified Career Platform',
+    url: 'https://provven.com',
+    siteName: 'Provven',
+    title: 'Provven | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain. For drivers and software engineers.',
     images: [
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'ZKnight - Your Career, One Verified Card',
+        alt: 'Provven - Your Career, One Verified Card',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ZKnight | Blockchain-Verified Career Platform',
+    title: 'Provven | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain.',
     images: ['/og-image.png'],

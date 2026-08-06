@@ -19,5 +19,5 @@ export function buildCandidateInviteSmsBody(ctx: InviteSmsContext): string {
   const first = ctx.candidateName?.trim().split(/\s+/)[0]
   const hi = first ? `${first}, ` : ''
   const job = ctx.jobTitle ? ` (${ctx.jobTitle})` : ''
-  return `${hi}${ctx.companyName} invited you to complete ${label}${job} on ZKnight:\n${ctx.inviteUrl}\nReply STOP to opt out`
+  return `${hi}${ctx.companyName} invited you to complete ${label}${job} on Provven:\n${ctx.inviteUrl}\nReply STOP to opt out`
 }

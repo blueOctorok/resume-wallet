@@ -7,13 +7,13 @@ import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
 
 const anthropic = new Anthropic({ apiKey: process.env.AVA_BRAIN })
 
-const SYSTEM_PROMPT = `You write short, punchy social media posts for job candidates sharing their verified Career Card on ZKnight.
+const SYSTEM_PROMPT = `You write short, punchy social media posts for job candidates sharing their verified Career Card on Provven.
 
 Rules:
 - Return EXACTLY 3 posts, separated by the delimiter ---POST---
 - Each post is 2-4 short paragraphs — concise, no filler
 - Include the card link (provided) naturally in each post — not as the first line
-- End each post with a CTA driving viewers to create their own: "Create yours free → https://zknight.io" or a natural variation
+- End each post with a CTA driving viewers to create their own: "Create yours free → https://provven.com" or a natural variation
 - Tone: confident, authentic, slightly provocative (challenge the status quo of resumes). Never cringy or corporate
 - DO NOT use emojis
 - DO NOT wrap posts in quotes or labels like "Post 1:"

@@ -115,7 +115,7 @@ export default function HubInboxSection({
               )}
             >
               <p className={cn('text-sm', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                Track applications you&apos;ve submitted to ZKnight employers and follow up from one place.
+                Track applications you&apos;ve submitted to Provven employers and follow up from one place.
               </p>
               <Button
                 type='button'

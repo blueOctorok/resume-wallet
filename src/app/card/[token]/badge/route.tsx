@@ -19,12 +19,12 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
   }
   const n = card.employerConfirmedEmploymentCount
   const label = n > 0 ? `${n} confirmed` : `Score ${card.careerCardScore}`
-  const right = 'ZKnight'
+  const right = 'Provven'
   const w = 200
   const h = 28
   const split = 108
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" role="img" aria-label="ZKnight Career Card">
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" role="img" aria-label="Provven Career Card">
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#0f766e"/>

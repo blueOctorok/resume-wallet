@@ -99,22 +99,22 @@ describe('resolveMvrFieldDotBadge', () => {
     const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [])
     expect(r.tier).toBe('issuer_only')
     expect(r.text).toContain('Accio order #ACC-1')
-    expect(r.text).not.toMatch(/Midnight|ZKnight/i)
+    expect(r.text).not.toMatch(/Midnight|Provven/i)
   })
 
-  it('uses Verified by ZKnight for signed_jwt — never Midnight', () => {
+  it('uses Verified by Provven for signed_jwt — never Midnight', () => {
     const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [jwtMvr('ACC-1')])
     expect(r.tier).toBe('storm_jwt')
-    expect(r.text).toMatch(/^Verified by ZKnight on /)
+    expect(r.text).toMatch(/^Verified by Provven on /)
     expect(r.text).not.toMatch(/Midnight|on-chain|(?<![Zz][Kk]night)\bZK\b/i)
     expect(r.text.toLowerCase()).not.toContain('midnight')
     expect(r.text.toLowerCase()).not.toContain('on-chain')
   })
 
-  it('uses Verified by ZKnight for midnight_zk metadata tier — not Midnight marketing', () => {
+  it('uses Verified by Provven for midnight_zk metadata tier — not Midnight marketing', () => {
     const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [midnightMvr('ACC-1')])
     expect(r.tier).toBe('storm_jwt')
-    expect(r.text).toMatch(/^Verified by ZKnight on /)
+    expect(r.text).toMatch(/^Verified by Provven on /)
     expect(r.text).not.toMatch(/Proven on Midnight/i)
   })
 
@@ -166,6 +166,6 @@ describe('resolveEmploymentDotBadge', () => {
       ],
     )
     expect(r.tier).toBe('storm_jwt')
-    expect(r.text).toMatch(/^Verified by ZKnight on /)
+    expect(r.text).toMatch(/^Verified by Provven on /)
   })
 })

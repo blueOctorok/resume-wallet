@@ -43,10 +43,10 @@ function getEmailContent(targetBlockType: string | null, companyName: string, jo
         ? `${companyName} — Complete your ${label} for ${jobTitle}`
         : `${companyName} — Complete your ${label}`,
       headline: `${companyName} wants you on their team${job}`,
-      intro: `${companyName} has invited you to complete a ${label} through ZKnight — a secure, blockchain-verified platform. ${description}. Your data is stored safely and only shared with companies you authorize.`,
+      intro: `${companyName} has invited you to complete a ${label} through Provven — a secure, blockchain-verified platform. ${description}. Your data is stored safely and only shared with companies you authorize.`,
       checklistTitle: "What you'll do:",
       checklist: [
-        'Create your free ZKnight account',
+        'Create your free Provven account',
         `Complete your ${label}`,
         'Review and submit your information',
         `Connect directly with ${companyName}`,
@@ -58,18 +58,18 @@ function getEmailContent(targetBlockType: string | null, companyName: string, jo
 
   // General invite — no specific block target
   return {
-    subject: `You've been invited to ZKnight by ${companyName}`,
-    headline: `${companyName} invited you to ZKnight`,
-    intro: `ZKnight is a blockchain-verified credential platform for professionals. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
+    subject: `You've been invited to Provven by ${companyName}`,
+    headline: `${companyName} invited you to Provven`,
+    intro: `Provven is a blockchain-verified credential platform for professionals. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
     checklistTitle: "What you'll do:",
     checklist: [
-      'Create your free ZKnight account',
+      'Create your free Provven account',
       'Set up your professional profile',
       'Add relevant credentials and documents',
       `Connect directly with companies like ${companyName}`,
     ],
     timeEstimate: '5–10 minutes to get started',
-    ctaLabel: 'Join ZKnight',
+    ctaLabel: 'Join Provven',
   }
 }
 
@@ -111,7 +111,7 @@ export async function sendInviteEmail(
     </div>
     ${infoBox(`<p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
       <strong>🔒 Your data is secure.</strong><br>
-      ZKnight uses blockchain verification to protect your credentials. Only ${companyName} will have access to your application.
+      Provven uses blockchain verification to protect your credentials. Only ${companyName} will have access to your application.
     </p>`)}
     ${fallbackLink(inviteLink)}
   `
@@ -124,7 +124,7 @@ export async function sendInviteEmail(
     bodyHtml,
     ctaLabel: `${content.ctaLabel} →`,
     ctaUrl: inviteLink,
-    footerNote: `This invitation was sent by <strong>${companyName}</strong> through ZKnight. If you weren't expecting this, you can safely ignore it.`,
+    footerNote: `This invitation was sent by <strong>${companyName}</strong> through Provven. If you weren't expecting this, you can safely ignore it.`,
   })
 
   console.log('[INVITE EMAIL] Sending targetBlock=%s to=%s via Pingram', targetBlockType ?? 'general', params.to)

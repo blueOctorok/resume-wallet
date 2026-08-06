@@ -1225,7 +1225,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 2. **`cdl_class_a`** — Compact circuit + witness builder (provenance + class predicate; follow existing `proveCdlClassA`).
 3. **`previous_employer_verified`** — circuit + witness builder (follow `provePreviousEmployerVerified`).
 4. Extend `midnight-prove-fact.ts` to accept any shipped `FactType`.
-5. Document per-fact DUST cost + proof-latency table in `MIDNIGHT_ENV.md` (from P3.4/P3.5 benchmarks).
+5. Document per-fact DUST cost + proof-latency table in `MIDNIGHT_ENV.md` (from P3.4/P3.5 benchmarks). ✅ **2026-08-06** — `npm run midnight:cost-benchmark`; Preprod `paidFees=1` SPECK (not usable for prod NIGHT sizing; model documented).
 6. Add a `CIRCUITS.md` log entry per new circuit (status, witness, constraints, disclosure, honesty status).
 
 **Verification:**
@@ -1293,7 +1293,7 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 3. ✅ **Verified-% meter** — `dot-verified-coverage.ts` + `DotVerifiedMeter`; majority = strict >50%.
 4. ✅ **Two-tone rendering** — teal (issuer) / amber (self) on DOT preview + career card.
 5. ✅ **Honesty pass** — DEC-2026-07-001; walked back Base-era "Verified on Blockchain" / whole-app `VERIFIED` on self-reported DOT (ApplicationSubmitted, journey, CareerCard, DriverHub, hub docs, verify API → 410).
-6. ✅ **Badge honesty tier** — `dot-attestation-badge.ts` + `GET /api/attestation/mine`; Form 1/2/3 upgrade Accio/EVR badges when a matching attestation exists (`signed_jwt` → Verified by ZKnight; `midnight_zk` → Proven on Midnight). PSP stays Accio-only until a PSP fact type ships. Meter denominator unchanged.
+6. ✅ **Badge honesty tier** — `dot-attestation-badge.ts` + `GET /api/attestation/mine`; Form 1/2/3 upgrade Accio/EVR badges when a matching attestation exists (`signed_jwt` → Verified by Provven; `midnight_zk` → Proven on Midnight). PSP stays Accio-only until a PSP fact type ships. Meter denominator unchanged.
 
 **Money logic (why this pays):** higher carrier conversion (a pre-verified packet beats a raw self-report), better pull efficiency (fewer wasted hire-time pulls on drivers who won't qualify), and — per Key's own proposal (P3.4-B handoff 2026-06-25) — recurring **monitoring** re-pulls (90/180/365-day) that refresh the verified fields and generate recurring CRA orders. The DOT app is the human-readable *vehicle* for those proofs, not the product being sold.
 
@@ -1408,6 +1408,7 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-08-06 | **Preprod cost benchmark** | Composer | uncommitted | Built `midnight:cost-benchmark` + fee capture from `FinalizedTxData.fees`. CDL `paidFees=1` (~35s); EVR `paidFees=1` (~36s). Wallet ΔtDust=0 (tank regenerates). **Finding:** Preprod fees are not economically meaningful — prod NIGHT sizing needs mainnet fee schedule × DUST model (5 DUST/NIGHT, ~1wk refill). |
 | 2026-08-06 | **P3.5 CDL/EVR Preprod smokes** | Composer | (this push) | Fixed `createMidnightProviders` to use per-fact ZK key dirs. Deployed `cdl_class_a` `39feba27…` + `previous_employer_verified` `4ef51b67…`. Smokes: CDL tx `00e825b3…` (Michael Hardin); EVR tx `002f59e5…`. Multi-fact `midnight:deploy -- --fact …`. Key-independent Phase 3a operator work done; P3.4-B still pending Key. |
 | 2026-07-30 | **P3.4-A freshness + P3.5/P3.6 gate** | Composer | 3113f89 | **P3.4-A:** asOfDate + pull nullifiers; Preprod redeploy `fb46c572…`; Pace supersede; driver-owned prove + replay/negative smokes ✅. **P3.5:** CDL/EVR circuits in repo. **P3.6:** honesty gate shipped; Midnight marketing copy dark until issuer_signed. Prod stays JWT. |
 | 2026-07-14 | **P3.7** DOT badge honesty tier | Grok | uncommitted | Issuer badges upgrade via `/api/attestation/mine` + `dot-attestation-badge.ts`. Midnight copy only when `proof.kind === midnight_zk`. PSP badges stay Accio-only. |

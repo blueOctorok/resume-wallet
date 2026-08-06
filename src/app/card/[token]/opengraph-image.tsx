@@ -1,7 +1,7 @@
 import { getCareerCardOpengraphImageResponse } from '@/lib/og/career-card-opengraph-response'
 
 export const runtime = 'nodejs'
-export const alt = 'ZKnight Career Card'
+export const alt = 'Provven Career Card'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

@@ -147,7 +147,7 @@ export async function generateDriverResumePacketPDF(
   pdf.setFontSize(8)
   pdf.setTextColor(...textMuted)
   if (packet.hasVerifiedClaims) {
-    const metaLeft = `ZKnight-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel} • `
+    const metaLeft = `Provven-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel} • `
     pdf.text(metaLeft, MARGIN, y)
     const leftW = pdf.getTextWidth(metaLeft)
     pdf.setTextColor(...linkAmber)

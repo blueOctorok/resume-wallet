@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Your company collects screening consent in ZKnight first. After the candidate finishes the three-step package, place MVR orders with POST /api/employer/screenings/order (payment + consent bundle id).',
+            'Your company collects screening consent in Provven first. After the candidate finishes the three-step package, place MVR orders with POST /api/employer/screenings/order (payment + consent bundle id).',
         },
         { status: 400 },
       )
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'MVR ordering is not enabled for your company. A company owner or admin must install the MVR ordering block (or contact ZKnight support).',
+            'MVR ordering is not enabled for your company. A company owner or admin must install the MVR ordering block (or contact Provven support).',
         },
         { status: 403 },
       )
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
       firstName: n.firstName,
       middleName,
       lastName: n.lastName,
-      email: email || candidate.email || `order-${orderNumber}@zknight.io`,
+      email: email || candidate.email || `order-${orderNumber}@provven.com`,
       phone,
       ssn: n.ssn,
       dob: n.dob,

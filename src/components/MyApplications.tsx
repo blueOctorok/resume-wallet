@@ -224,7 +224,7 @@ export default function MyApplications({
             </p>
 
             <p className={`text-base mb-8 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Browse available positions and apply to jobs using your ZKnight profile
+              Browse available positions and apply to jobs using your Provven profile
             </p>
 
             <button

@@ -58,7 +58,7 @@ function FactRow({
                 isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-800',
               )}
             >
-              Verified by ZKnight
+              Verified by Provven
             </span>
           </div>
           <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
@@ -118,7 +118,7 @@ export default function CredentialFactsPanel({ facts, theme }: CredentialFactsPa
         variant="embed"
         icon={ShieldCheck}
         title="Verified credentials"
-        description="Third-party facts verified by ZKnight — selective disclosure, not full reports."
+        description="Third-party facts verified by Provven — selective disclosure, not full reports."
         status={facts.length > 0 ? 'complete' : 'empty'}
       >
         {facts.length === 0 ? (

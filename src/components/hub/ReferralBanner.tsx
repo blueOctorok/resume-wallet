@@ -65,7 +65,7 @@ export default function ReferralBanner() {
         variant='embed'
         icon={Users}
         title='Refer a friend'
-        description='Share your link — when they join ZKnight, we track the referral on your account.'
+        description='Share your link — when they join Provven, we track the referral on your account.'
         headerActions={
           <Button
             type='button'

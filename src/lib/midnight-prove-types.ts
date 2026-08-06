@@ -40,4 +40,7 @@ export interface MidnightOnChainProveResult {
   predicateVersion?: string
   pullNullifier?: string
   asOfDateYmd?: number
+  /** DUST raw units from FinalizedTxData.fees — ops / NIGHT capacity planning. */
+  paidFees?: string
+  estimatedFees?: string
 }

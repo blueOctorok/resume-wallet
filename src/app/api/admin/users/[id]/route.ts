@@ -195,7 +195,7 @@ export async function DELETE(
         console.error('[ADMIN USER DELETE] storm_distributions delete:', stormDistError)
         return NextResponse.json(
           {
-            error: 'Failed to clear ZKnight distribution rows for this user',
+            error: 'Failed to clear Provven distribution rows for this user',
             details: stormDistError.message,
             code: stormDistError.code,
           },

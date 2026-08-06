@@ -299,7 +299,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
           editLabel={resumeProjection.hasDotApp ? 'Continue DOT' : 'Start DOT'}
           subtitle={
             resumeProjection.status === 'ready'
-              ? 'Download PDF for applications · Share card to bring people to ZKnight'
+              ? 'Download PDF for applications · Share card to bring people to Provven'
               : resumeProjection.status === 'building'
                 ? 'Draft packet — download or share anytime; it fills as you complete DOT'
                 : 'Empty packet — start DOT to fill this resume, or share your card as-is'

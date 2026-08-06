@@ -202,7 +202,7 @@ function CdlisConsentReadOnly({
         <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-5 text-white">
           <div className="mb-1 flex items-center gap-2">
             <FileCheck className="h-5 w-5" aria-hidden />
-            <span className="text-xs font-medium uppercase tracking-widest opacity-90">ZKnight Verified Document</span>
+            <span className="text-xs font-medium uppercase tracking-widest opacity-90">Provven Verified Document</span>
           </div>
           <h2 className="text-xl font-bold">CDLIS Written Consent</h2>
           <p className="mt-1 text-sm opacity-90">Commercial Driver&apos;s License Information System authorization</p>

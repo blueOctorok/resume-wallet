@@ -202,7 +202,7 @@ export default function JobAlertsHubSection({ embedded = false }: JobAlertsHubSe
   const atCap = preferences.length >= maxAlerts
 
   const ALERTS_DESCRIPTION =
-    'Browse ZKnight + external listings; star roles on Hunt Desk. Daily scans, AI-scored matches, in-app notifications — each job pings once.'
+    'Browse Provven + external listings; star roles on Hunt Desk. Daily scans, AI-scored matches, in-app notifications — each job pings once.'
 
   const toolbar = (
     <div className='flex w-full flex-wrap gap-2 justify-start sm:w-auto sm:justify-end'>

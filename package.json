@@ -23,7 +23,8 @@
     "midnight:wallet:address": "npm run wallet:address --prefix midnight/runtime",
     "midnight:register-dust": "NODE_OPTIONS='--max-old-space-size=16384' npm run register-dust --prefix midnight/runtime",
     "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime --",
-    "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts"
+    "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts",
+    "midnight:cost-benchmark": "npx tsx scripts/midnight-cost-benchmark.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

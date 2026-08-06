@@ -79,13 +79,31 @@ This repo configures the Midnight MCP server in `.cursor/mcp.json`. It connects 
 
 Useful MCP tools when writing circuits: `midnight-compile-contract`, `midnight-search-compact`, `midnight-review-contract`, `midnight-get-latest-syntax`.
 
-### Per-fact prove benchmarks (Preprod — fill after smokes)
+### Per-fact prove benchmarks (Preprod — 2026-08-06)
 
-| Fact | Circuit | First prove (warm cache) | Contract (Preprod) |
-|---|---|---|---|
-| `mvr_clean_36_months` | `mvr-clean-36` | ~30–60s after sync | `fb46c572…2465e` (freshness, 2026-07-30) |
-| `cdl_class_a` | `cdl-class-a` | ~30s (2026-08-06 smoke) | `39feba27…be960` |
-| `previous_employer_verified` | `previous-employer-verified` | ~30s (2026-08-06 smoke) | `4ef51b67…49859` |
+Measure with:
+
+```bash
+npm run midnight:cost-benchmark -- --fact cdl_class_a --user <uuid>
+```
+
+Authoritative fee = `tx.public.fees.paidFees` (SPECK; 1 DUST = 10¹⁵ SPECK). Wallet before/after ΔtDust is often **0** because DUST regenerates toward a tank cap between syncs.
+
+| Fact | Circuit | Latency (warm) | `paidFees` (SPECK) | Tx (sample) | Contract |
+|---|---|---|---|---|---|
+| `mvr_clean_36_months` | `mvr-clean-36` | ~29s | *(re-run with fee capture; expect ~1 on Preprod)* | `00133c52…` | `fb46c572…2465e` |
+| `cdl_class_a` | `cdl-class-a` | ~35s | **1** | `0037da72…` | `39feba27…be960` |
+| `previous_employer_verified` | `previous-employer-verified` | ~36s | **1** | `004bcf76…` | `4ef51b67…49859` |
+
+**Preprod ≠ mainnet economics.** Fees of `1` SPECK mean Preprod is effectively free for capacity planning — do **not** size prod NIGHT from these numbers. Use them to prove the fee pipeline works; re-run on mainnet (or when Midnight publishes a realistic fee schedule) before buying/locking NIGHT.
+
+**NIGHT sizing model** (once real `dust_per_prove` is known — see [Tokens](https://docs.midnight.network/tokens) / [DUST architecture](https://docs.midnight.network/concepts/dust-architecture)):
+
+- Cap: **5 DUST per 1 NIGHT**, ~**1 week** to refill to cap.
+- Throughput: `proves_per_week ≈ (5 × NIGHT_held) / dust_per_prove` (then apply a safety factor for bursts + wallet sync lag).
+- NIGHT is **not** spent on proves — it stays locked as DUST backing. Fees burn **DUST**.
+
+Dev wallet today: **5000 tNIGHT** → **25_000 tDUST** tank cap (matches Lace `N / 25,000`).
 
 Deploy one or all: `npm run midnight:deploy -- [--fact cdl_class_a]`. Env vars: `MIDNIGHT_CONTRACT_ADDRESS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A`, `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER`.
 

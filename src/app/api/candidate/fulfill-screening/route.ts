@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         candidateUserId: user.id,
         notificationTitle: 'Candidate ordered portable MVR + PSP',
         notificationBody: `${user.email ?? 'Your candidate'} submitted driver-owned MVR and PSP orders. Track progress in Talent Search or Applicants.`,
-        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://zknight.io'}/?employer=applicants`,
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://provven.com'}/?employer=applicants`,
         notificationData: {
           requestId,
           driverOwned: true,

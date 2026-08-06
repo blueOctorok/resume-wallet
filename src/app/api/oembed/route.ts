@@ -3,7 +3,7 @@ import { loadCareerCardByShareToken } from '@/lib/career-card-by-share-token'
 
 /**
  * oEmbed 1.0 for Storm career cards.
- * Example: `/api/oembed?url=https://zknight.io/card/TOKEN`
+ * Example: `/api/oembed?url=https://provven.com/card/TOKEN`
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const match = pathname.match(/^\/card\/([^/]+)\/?$/)
     if (!match?.[1]) {
-      return NextResponse.json({ error: 'URL must be a ZKnight career card link (/card/{token})' }, { status: 404 })
+      return NextResponse.json({ error: 'URL must be a Provven career card link (/card/{token})' }, { status: 404 })
     }
 
     const token = match[1]
@@ -32,15 +32,15 @@ export async function GET(request: NextRequest) {
 
     const origin = request.nextUrl.origin
     const embedUrl = `${origin}/card/${token}/embed`
-    const iframe = `<iframe src="${embedUrl}" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="${escapeAttr(card.name)} — ZKnight Career Card" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+    const iframe = `<iframe src="${embedUrl}" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="${escapeAttr(card.name)} — Provven Career Card" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`
 
-    const title = `${card.name} — ZKnight Career Card`
+    const title = `${card.name} — Provven Career Card`
     const authorName = card.name
 
     return NextResponse.json({
       version: '1.0',
       type: 'rich',
-      provider_name: 'ZKnight',
+      provider_name: 'Provven',
       provider_url: origin,
       title,
       author_name: authorName,

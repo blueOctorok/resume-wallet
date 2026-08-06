@@ -7,9 +7,9 @@ Employment verification emails are sent via **Pingram** (`src/lib/send-verificat
 In `.env.local` (and Vercel):
 
 - **`PINGRAM_API_KEY`** – Pingram secret key (`pingram_sk_...`)
-- **`PINGRAM_FROM_EMAIL`** – e.g. `zknight@verify.zknight.io` (must be on a Pingram-verified domain)
-- **`PINGRAM_FROM_NAME`** – e.g. `ZKnight`
-- **`NEXT_PUBLIC_APP_URL`** – public app URL used for verify links (production: `https://zknight.io`)
+- **`PINGRAM_FROM_EMAIL`** – e.g. `provven@verify.provven.com` (must be on a Pingram-verified domain)
+- **`PINGRAM_FROM_NAME`** – e.g. `Provven`
+- **`NEXT_PUBLIC_APP_URL`** – public app URL used for verify links (production: `https://provven.com`)
 
 If `PINGRAM_API_KEY` is missing, send is skipped and a warning is logged; the verification request is still created.
 
@@ -22,4 +22,4 @@ If `PINGRAM_API_KEY` is missing, send is skipped and a warning is logged; the ve
 
 ## Deliverability
 
-SPF/DKIM/DMARC for `verify.zknight.io` are managed in Pingram Domains + Namecheap (`pingram.*` hosts). Corporate inboxes may still quarantine new-domain mail until allowlisted.
+SPF/DKIM/DMARC for `verify.provven.com` are managed in Pingram Domains + Namecheap (`pingram.*` hosts). Corporate inboxes may still quarantine new-domain mail until allowlisted.

@@ -45,9 +45,9 @@ export function fallbackStormiWelcomeStep(firstName: string, occupation: string)
   const occ = occupation.trim() || 'your field'
   return {
     id: AI_WELCOME_STEP_ID,
-    title: `Hey ${name} — welcome to ZKnight`,
+    title: `Hey ${name} — welcome to Provven`,
     body:
-      `ZKnight is your career hub: proof and your story in one place so employers see the real you.\n\n` +
+      `Provven is your career hub: proof and your story in one place so employers see the real you.\n\n` +
       `We don't have niche blocks for every path yet — including paths like ${occ}. General resume and verification blocks still help you build a strong Career Card. Chat with me anytime if you want to see specialty blocks for your lane down the road.`,
   }
 }

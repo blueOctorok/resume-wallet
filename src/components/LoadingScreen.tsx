@@ -77,7 +77,7 @@ export default function LoadingScreen({
               isInk ? 'text-zinc-500/90 dark:text-zinc-400/70' : 'text-teal-700/70 dark:text-teal-400/45',
             )}
           >
-            ZKNIGHT
+            PROVVEN
           </p>
         </>
       )}

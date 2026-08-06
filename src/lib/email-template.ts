@@ -42,7 +42,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
   const {
     preheader = '',
     headerTitle,
-    headerEyebrow = 'ZKnight',
+    headerEyebrow = 'Provven',
     greeting,
     bodyHtml,
     ctaLabel,
@@ -75,7 +75,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
   const footerHtml = footerNote
     ? `<p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;text-align:center;">${footerNote}</p>`
     : `<p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;text-align:center;">
-         You're receiving this from ZKnight. If you weren't expecting this email, you can safely ignore it.
+         You're receiving this from Provven. If you weren't expecting this email, you can safely ignore it.
        </p>`
 
   return `<!DOCTYPE html>
@@ -96,7 +96,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
             <table cellpadding="0" cellspacing="0" style="display:inline-table;">
               <tr>
                 <td style="background:${TEAL};border-radius:10px;padding:8px 18px;">
-                  <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">ZKnight</span>
+                  <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">Provven</span>
                 </td>
               </tr>
             </table>

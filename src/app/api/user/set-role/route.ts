@@ -247,7 +247,7 @@ export async function POST(request: Request) {
         const { data: devCompany, error: createErr } = await supabase
           .from('companies')
           .insert({
-            company_name: 'ZKnight Dev',
+            company_name: 'Provven Dev',
             employer_user_id: userToUpdate.id,
             status: 'active',
           })
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
             accepted_at: new Date().toISOString(),
             is_active: true,
           })
-          console.log(`[SET ROLE] Created "ZKnight Dev" company for admin`)
+          console.log(`[SET ROLE] Created "Provven Dev" company for admin`)
         }
       }
     }

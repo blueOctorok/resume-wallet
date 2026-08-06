@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const base =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
       request.headers.get('origin') ||
-      'https://zknight.io'
+      'https://provven.com'
     const publicCardUrl = `${base}/card/${shareToken}`
 
     const buffer = await buildCareerCardPdfBuffer(card, publicCardUrl)

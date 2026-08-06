@@ -15,7 +15,7 @@ Master reference: `docs/midnight/ARCHITECTURE.md`. When this rule is ambiguous, 
 
 A **portable, composable Driver Qualification (DQ) file platform** for trucking, where verified credential facts are eventually backed by **selective-disclosure cryptographic proofs**. The moat is *selective disclosure of verified facts* — competitors (Tenstreet, HireRight, DriverFacts) cannot retrofit it without rebuilding their CRA business model.
 
-The chain is never the moat itself — the moat is *selective disclosure of verified facts*. But "the chain is invisible" applies to **interaction, not narrative**. Users never *interact with* the chain: no wallet, no seed phrase, no gas, no signing. They may absolutely *read about* it — Storm celebrates Midnight / zero-knowledge / selective disclosure as its public credibility story (the domain is `stormchain.ai` on purpose; the in-app product is simply "Storm"). The split is **narrative (encouraged) vs. interaction (gated) vs. per-fact claim (provenance-gated)**. See `DECISION_LOG.md` DEC-2026-05-016.
+The chain is never the moat itself — the moat is *selective disclosure of verified facts*. But "the chain is invisible" applies to **interaction, not narrative**. Users never *interact with* the chain: no wallet, no seed phrase, no gas, no signing. They may absolutely *read about* it — Provven celebrates Midnight / zero-knowledge / selective disclosure as its public credibility story (domain: `provven.com`; prior domains `zknight.io` / `stormchain.ai`). The split is **narrative (encouraged) vs. interaction (gated) vs. per-fact claim (provenance-gated)**. See `DECISION_LOG.md` DEC-2026-05-016.
 
 ---
 
@@ -136,7 +136,7 @@ Revised 2026-05-30 (DEC-2026-05-016): the chain is now part of the **public narr
 - "Proof of [fact]" — e.g. "Proof of clean MVR"
 - "Tamper-proof" (for facts derived from third-party sources)
 - "Storm Points" (if rewards return)
-- **"Blockchain" / "Midnight" / "zero-knowledge" / "on-chain"** as the public credibility narrative — marketing site, decks, talks. Celebrating the chain is encouraged. The domain `stormchain.ai` leans into this on purpose.
+- **"Blockchain" / "Midnight" / "zero-knowledge" / "on-chain"** as the public credibility narrative — marketing site, decks, talks. Celebrating the chain is encouraged. Product domain: `provven.com`.
 
 ### Guardrails when you DO say "blockchain / on-chain / verified" (moat integrity — never loosen)
 - **Provenance gate:** only **issuer-signed / third-party facts** (MVR, PSP, employment verification, future CDLIS) may carry a "verified / tamper-proof / on-chain" claim. **Self-reported data (resume, DOT app, skills, education) is NEVER "blockchain-verified."** See DEC-2026-05-014 + `PROJECT_ROADMAP.md` blockchain policy.

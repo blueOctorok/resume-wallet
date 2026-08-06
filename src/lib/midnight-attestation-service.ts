@@ -84,6 +84,10 @@ function buildMidnightProof(onChain: MidnightOnChainProveResult): MidnightProofA
     proofId: onChain.proofId,
     // P3.4-B flips to issuer_signed — until then UI stays on Storm+CRA copy.
     provenanceTier: 'metadata',
+    ...(onChain.paidFees !== undefined ? { paidFees: onChain.paidFees } : {}),
+    ...(onChain.estimatedFees !== undefined
+      ? { estimatedFees: onChain.estimatedFees }
+      : {}),
   }
 }
 

@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next'
 
 /**
- * Dynamic sitemap for ZKnight
+ * Dynamic sitemap for Provven
  * Next.js automatically serves this at /sitemap.xml
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://zknight.io'
+  const baseUrl = 'https://provven.com'
 
   return [
     {

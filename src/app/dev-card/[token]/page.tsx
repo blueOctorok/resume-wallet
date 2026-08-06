@@ -248,7 +248,7 @@ export default function PublicDeveloperCard() {
             href='/'
             className='inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-500 transition-colors'
           >
-            Go to ZKnight
+            Go to Provven
           </a>
         </div>
       </div>
@@ -275,7 +275,7 @@ export default function PublicDeveloperCard() {
             <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-lg shadow-teal-600/20'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
-            <span className='text-white font-semibold'>ZKnight</span>
+            <span className='text-white font-semibold'>Provven</span>
           </a>
           <div className='flex items-center gap-2'>
             <Sparkles className='w-4 h-4 text-teal-600 dark:text-teal-400' />
@@ -1036,7 +1036,7 @@ export default function PublicDeveloperCard() {
               className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-teal-600 to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-teal-600/30 transition-all hover:scale-105'
             >
               <Sparkles className='w-5 h-5' />
-              Hire with ZKnight
+              Hire with Provven
             </a>
           </div>
         )}
@@ -1045,7 +1045,7 @@ export default function PublicDeveloperCard() {
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
             <a href='/' className='text-teal-600 dark:text-teal-400 hover:underline'>
-              ZKnight
+              Provven
             </a>{' '}
             • Career Card
           </p>

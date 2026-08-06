@@ -1,6 +1,6 @@
 /**
- * PDF-native ZKNIGHT wordmark — mirrors the navbar `StormChainWordmark` (no vault
- * chrome): a violet-framed shield tile with a check mark + ZKNIGHT.
+ * PDF-native PROVVEN wordmark — mirrors the navbar `StormChainWordmark` (no vault
+ * chrome): a violet-framed shield tile with a check mark + PROVVEN.
  *
  * Built with @react-pdf Svg/Text so server-side PDF generation needs no Chromium
  * or rasterized logo assets.
@@ -80,7 +80,7 @@ export function StormPdfWordmark({ tagline }: StormPdfWordmarkProps) {
     <View>
       <View style={styles.row}>
         <StormPdfShieldTile />
-        <Text style={styles.letter}>ZKNIGHT</Text>
+        <Text style={styles.letter}>PROVVEN</Text>
       </View>
       {tagline ? <Text style={styles.tagline}>{tagline}</Text> : null}
     </View>

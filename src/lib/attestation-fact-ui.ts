@@ -39,7 +39,7 @@ export function formatAttestationProvenance(
   sourcePullId: string | null | undefined,
 ): string {
   if (!sourceCra?.trim()) {
-    return 'Verified by ZKnight'
+    return 'Verified by Provven'
   }
   const label = CRA_LABELS[sourceCra] ?? sourceCra
   if (sourcePullId?.trim()) {
@@ -70,7 +70,7 @@ export function formatVerifiedByStormLine(
   sourceCra?: string | null,
   sourcePullId?: string | null,
 ): string {
-  return `Verified by ZKnight on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
+  return `Verified by Provven on ${formatAttestationIssuedDate(issuedAt)} · ${formatAttestationProvenance(sourceCra, sourcePullId)}`
 }
 
 export function provenanceTierFromProof(proof: ProofArtifact | null | undefined): AttestationProvenanceTier {

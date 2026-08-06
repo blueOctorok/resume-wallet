@@ -599,7 +599,7 @@ export default function BackgroundCheckDisclosure({
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="w-6 h-6" />
                 <span className="text-sm font-medium uppercase tracking-widest opacity-90">
-                  ZKnight Verified Document
+                  Provven Verified Document
                 </span>
               </div>
               <h1 className="text-2xl font-bold">Background Check Disclosure</h1>
@@ -863,7 +863,7 @@ export default function BackgroundCheckDisclosure({
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-3">
-                      Signed via ZKnight — {new Date().toISOString()}
+                      Signed via Provven — {new Date().toISOString()}
                     </p>
                   </div>
                 ) : (
@@ -903,7 +903,7 @@ export default function BackgroundCheckDisclosure({
               {/* Document Footer */}
               <div className="border-t border-gray-200 pt-4 flex items-center justify-between text-xs text-gray-400">
                 <span>Key Background Screening, Inc. — 3711 Chester Ave., Cleveland OH 44114 — keybackground.com</span>
-                <span>ZKnight Verified</span>
+                <span>Provven Verified</span>
               </div>
             </div>
           </div>

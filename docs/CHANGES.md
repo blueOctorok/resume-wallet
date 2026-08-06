@@ -4,6 +4,38 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Rebrand — ZKnight → Provven / provven.com** (2026-08-06)
+
+Product renamed from **ZKnight / zknight.io** to **Provven / provven.com**.
+
+**Scope (same as the 2026-07-02 ZKnight rebrand):** user-visible copy, LLM prompts, email/SMS defaults, metadata/SEO, PDF/OG wordmarks, and ops checklists. Code identifiers, file names (`StormChainWordmark`, `StormiChatPanel`, …), localStorage keys (`stormchain-theme`, `stormchain_invite_token`), DB columns, env *names*, and job-source values (`isStormChain`) were **left unchanged**.
+
+| Area | Change |
+|---|---|
+| Domain fallbacks | `https://zknight.io` → `https://provven.com` (`layout.tsx`, `sitemap.ts`, email CTAs, share copy, Accio order email fallbacks) |
+| Brand strings | `ZKnight` / `ZKNIGHT` → `Provven` / `PROVVEN` |
+| Email defaults | `provven@verify.provven.com` + `PINGRAM_FROM_NAME=Provven` |
+| Ops | `VERCEL_ENV_CHECKLIST.md` cutover steps for Supabase Site URL, Pingram domain, GitHub OAuth, A2P |
+
+**You still must do outside the repo:** Vercel `NEXT_PUBLIC_APP_URL=https://provven.com`; Supabase Auth Site URL + redirect allow-list; Pingram verify `verify.provven.com` + update production `PINGRAM_*`; GitHub OAuth callback; optional redirects from `zknight.io` / `stormchain.ai` → `provven.com`. Favicon/OG PNG assets not regenerated.
+
+---
+
+## **Midnight Preprod cost benchmark** (2026-08-06)
+
+Ops work for prod NIGHT capacity planning: measure real prove latency + DUST fees on Preprod.
+
+| Piece | Detail |
+|---|---|
+| `npm run midnight:cost-benchmark` | Before/after wallet snapshot + prove; reports `fees.paidFees` |
+| Fee source | `FinalizedTxData.fees` (wallet ΔtDust is unreliable — DUST regenerates to tank cap) |
+| CDL / EVR results | ~35s warm; **`paidFees=1` SPECK** on Preprod |
+| Docs | Cost table + NIGHT sizing model in `docs/midnight/MIDNIGHT_ENV.md` |
+
+**Takeaway:** Preprod fees are effectively free — do not buy/size prod NIGHT from these numbers. Re-run on mainnet (or when Midnight publishes realistic fees). Formula once `dust_per_prove` is known: ~5 DUST cap per NIGHT, ~1 week refill → `proves/week ≈ 5N / dust_per_prove`.
+
+---
+
 ## **DQ monitor — MVR/PSP portable across all employers** (2026-08-04)
 
 Product clarification: drivers do not pay for MVR/PSP today; **ownership is always the driver’s**, and **any employer’s DQ monitor** sees that driver’s Accio pulls — ignore `ordered_by_company_id` / who clicked pay. Consent package + employment verifications remain company-scoped. Fixed Dakota Sheipe–class “MVR Missing” by loading all `mvr_orders` / `psp_orders` for `driver_user_id` in `loadCompanyDqInput` + list batch. Roster membership is still “engaged with this company”; artifact visibility for MVR/PSP is not.

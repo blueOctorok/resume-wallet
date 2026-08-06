@@ -27,9 +27,9 @@ function buildEvalPrompt(existingCompanyNames: string[]): string {
     ? existingCompanyNames.map(n => `  - ${n}`).join('\n')
     : '  (none yet)'
 
-  return `You are a gatekeeper for ZKnight, a professional career management platform. Your job is to evaluate employer access requests and decide whether the company should be auto-approved, flagged for human review, or blocked.
+  return `You are a gatekeeper for Provven, a professional career management platform. Your job is to evaluate employer access requests and decide whether the company should be auto-approved, flagged for human review, or blocked.
 
-ZKnight serves all industries — trucking, tech, manufacturing, retail, healthcare, etc. Any legitimate business that hires people is a valid employer.
+Provven serves all industries — trucking, tech, manufacturing, retail, healthcare, etc. Any legitimate business that hires people is a valid employer.
 
 ## Duplicate company detection (CRITICAL)
 
@@ -59,7 +59,7 @@ If you detect a match, you MUST set "existingMatch" to the EXACT name from the e
 - Obvious test/dummy data ("test company", "asdf", "123")
 - Confidence < 0.3
 
-## Existing companies on ZKnight
+## Existing companies on Provven
 ${companiesList}
 
 ## Response format

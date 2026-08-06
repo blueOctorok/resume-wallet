@@ -76,6 +76,9 @@ export interface OnChainProveResult {
   predicateVersion: string
   pullNullifier: string
   asOfDateYmd: number
+  /** DUST spent on this prove (from FinalizedTxData.fees) — use for capacity planning. */
+  paidFees: string
+  estimatedFees: string
 }
 
 function logProgress(message: string): void {
@@ -265,7 +268,10 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
     }
 
     const txHash = tx.public.txId
+    const paidFees = tx.public.fees?.paidFees ?? '0'
+    const estimatedFees = tx.public.fees?.estimatedFees ?? '0'
     logProgress(`Transaction submitted: ${txHash}`)
+    logProgress(`Fees paid=${paidFees} estimated=${estimatedFees} (DUST raw units)`)
 
     return {
       txHash,
@@ -274,6 +280,8 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
       contractAddress,
       pullNullifier,
       asOfDateYmd: input.asOfDateYmd,
+      paidFees,
+      estimatedFees,
       predicateVersion:
         input.factType === 'mvr_clean_36_months'
           ? 'v1-any-violation-in-window'

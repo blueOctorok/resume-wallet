@@ -133,7 +133,7 @@ function inviteQrFilename(name: string) {
     .replace(/\s+/g, '-')
     .toLowerCase()
     .slice(0, 40) || 'invite'
-  return `zknight-invite-qr-${slug}.png`
+  return `provven-invite-qr-${slug}.png`
 }
 
 function QrModal({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
@@ -186,13 +186,13 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'ZKnight invite',
+            title: 'Provven invite',
             text: `Open or scan: ${url}`,
           })
           return
         }
       }
-      await navigator.share({ title: 'ZKnight invite', text: url })
+      await navigator.share({ title: 'Provven invite', text: url })
     } catch (e: unknown) {
       if (e && typeof e === 'object' && 'name' in e && (e as Error).name === 'AbortError') return
       console.error('[QrModal] share failed', e)
@@ -1256,7 +1256,7 @@ export default function CandidateOutreach({
                 </div>
                 <div>
                   <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Find someone already on ZKnight
+                    Find someone already on Provven
                   </h5>
                   <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
                     Search by name, email, or city. We attach the invite to their account so they get in-app notifications.
@@ -1278,7 +1278,7 @@ export default function CandidateOutreach({
                         {selectedProfile.full_name || selectedProfile.email}
                       </p>
                       <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500' : 'text-teal-500'}`}>
-                        Connected to ZKnight · In-app notification will fire when email is sent
+                        Connected to Provven · In-app notification will fire when email is sent
                       </p>
                     </div>
                   </div>
@@ -1349,12 +1349,12 @@ export default function CandidateOutreach({
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                             isDarkTheme(theme) ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
                           }`}>
-                            ZKnight
+                            Provven
                           </span>
                         </button>
                       ))}
                       <div className={`px-3 py-2 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on ZKnight</span> section below.
+                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on Provven</span> section below.
                       </div>
                     </div>
                   )}
@@ -1363,7 +1363,7 @@ export default function CandidateOutreach({
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
                       isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
                     }`}>
-                      No ZKnight profiles found — use the section below for name / email (email-only invite).
+                      No Provven profiles found — use the section below for name / email (email-only invite).
                     </div>
                   )}
                 </div>
@@ -1373,7 +1373,7 @@ export default function CandidateOutreach({
             <div
               className="relative my-7"
               role="separator"
-              aria-label="Alternative: invite someone who is not in ZKnight search results"
+              aria-label="Alternative: invite someone who is not in Provven search results"
             >
               <div className="absolute inset-0 flex items-center" aria-hidden>
                 <span
@@ -1416,10 +1416,10 @@ export default function CandidateOutreach({
                 </div>
                 <div className="min-w-0">
                   <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Invite someone not on ZKnight yet
+                    Invite someone not on Provven yet
                   </h5>
                   <p className={cn('text-xs leading-relaxed', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add email and/or phone to send from ZKnight.
+                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add email and/or phone to send from Provven.
                   </p>
                 </div>
               </div>
@@ -1445,7 +1445,7 @@ export default function CandidateOutreach({
                   </label>
                   <input
                     type="email"
-                    placeholder="Optional — needed to email from ZKnight"
+                    placeholder="Optional — needed to email from Provven"
                     value={form.candidateEmail}
                     onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
                     className={inputBase}
@@ -1455,7 +1455,7 @@ export default function CandidateOutreach({
                   <label className={label}>Candidate phone</label>
                   <input
                     type="tel"
-                    placeholder="Optional — needed to text from ZKnight (US 10-digit or +1…)"
+                    placeholder="Optional — needed to text from Provven (US 10-digit or +1…)"
                     value={form.candidatePhone}
                     onChange={(e) => setForm((f) => ({ ...f, candidatePhone: e.target.value }))}
                     className={inputBase}

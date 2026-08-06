@@ -5,7 +5,7 @@ import {
   sendEmployerScreeningReadyEmail,
 } from '@/lib/send-admin-notification'
 
-const appBase = () => (process.env.NEXT_PUBLIC_APP_URL || 'https://zknight.io').replace(/\/$/, '')
+const appBase = () => (process.env.NEXT_PUBLIC_APP_URL || 'https://provven.com').replace(/\/$/, '')
 
 function candidateDeepLink(kind: 'mvr' | 'psp'): string {
   const page = kind === 'mvr' ? 'mvr' : 'psp'

@@ -688,7 +688,7 @@ export default function DeveloperHub({
               <p
                 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
               >
-                ZKnight Tokens
+                Provven Tokens
               </p>
               <p
                 className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}

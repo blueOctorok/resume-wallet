@@ -2,7 +2,7 @@ import { buildEmail, detailsBox, detailRow, infoBox } from './email-template'
 import { isMessagingConfigured, sendEmail } from './messaging'
 
 const ADMIN_EMAILS = process.env.ADMIN_NOTIFICATION_EMAILS?.split(',').map(e => e.trim()) || []
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://zknight.io'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://provven.com'
 
 export interface NewCompanyNotificationParams {
   companyName: string
@@ -69,14 +69,14 @@ export async function sendNewCompanyNotification(
     bodyHtml,
     ctaLabel: 'Review in Admin Panel',
     ctaUrl: `${APP_URL}/admin`,
-    footerNote: 'This is an automated notification from ZKnight admin systems.',
+    footerNote: 'This is an automated notification from Provven admin systems.',
   })
 
   console.log('[ADMIN NOTIFICATION] Sending new company email via Pingram')
   const result = await sendEmail({
     type: 'admin_new_company',
     to: ADMIN_EMAILS,
-    subject: `[ZKnight Admin] New Company: ${companyName}`,
+    subject: `[Provven Admin] New Company: ${companyName}`,
     html,
   })
   if (!result.ok) {
@@ -107,21 +107,21 @@ function resolveLabel(requestType: string, params: CandidateRequestNotificationP
 
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
   mvr_order: () =>
-    'They would like to order your Motor Vehicle Record (MVR). Log in to ZKnight to review and sign the required FCRA disclosure before the MVR can be ordered.',
+    'They would like to order your Motor Vehicle Record (MVR). Log in to Provven to review and sign the required FCRA disclosure before the MVR can be ordered.',
   psp_order: () =>
-    'They would like to order an FMCSA PSP (crash and inspection history) for you. Log in to ZKnight to review and sign the required FCRA disclosure before the PSP can be ordered.',
+    'They would like to order an FMCSA PSP (crash and inspection history) for you. Log in to Provven to review and sign the required FCRA disclosure before the PSP can be ordered.',
   document_upload: (p) =>
     p.documentType === 'resume'
-      ? 'They are requesting your resume. Log in to ZKnight to upload or create one.'
+      ? 'They are requesting your resume. Log in to Provven to upload or create one.'
       : `They are requesting you upload your ${p.documentType || 'document'}.`,
   verification: () => 'They are requesting employment verification for your work history.',
   profile_completion: (p) =>
     p.documentType === 'dot_application'
-      ? 'They are requesting you complete your DOT Driver Application on ZKnight. A completed application strengthens your profile and speeds up the hiring process.'
+      ? 'They are requesting you complete your DOT Driver Application on Provven. A completed application strengthens your profile and speeds up the hiring process.'
       : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
   block_request: (p) =>
-    `They are requesting your ${p.blockLabel || 'data'}. Log in to ZKnight to complete it.`,
+    `They are requesting your ${p.blockLabel || 'data'}. Log in to Provven to complete it.`,
 }
 
 /**
@@ -150,26 +150,26 @@ export async function sendCandidateRequestNotification(
       ${message && requestType !== 'custom' ? `<p style="margin:10px 0 0;font-size:13px;font-style:italic;color:#64748b;">"${message}"</p>` : ''}
     `)}
     <p style="margin:0 0 4px;color:#64748b;font-size:14px;line-height:1.6;">
-      Log in to your ZKnight account to view and respond to this request.
+      Log in to your Provven account to view and respond to this request.
     </p>
   `
 
   const html = buildEmail({
-    preheader: `${companyName} has a new request for you on ZKnight`,
+    preheader: `${companyName} has a new request for you on Provven`,
     headerEyebrow: companyName,
     headerTitle: `You have a new request`,
     greeting: `Hi ${firstName},`,
     bodyHtml,
     ctaLabel: 'View Request',
     ctaUrl: APP_URL,
-    footerNote: `You're receiving this because an employer on ZKnight is interested in your profile. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because an employer on Provven is interested in your profile. Reply to this email with any questions.`,
   })
 
   console.log('[CANDIDATE NOTIFICATION] Sending request notification to:', candidateEmail)
   const result = await sendEmail({
     type: 'candidate_request',
     to: candidateEmail,
-    subject: `${companyName} has a request for you on ZKnight`,
+    subject: `${companyName} has a request for you on Provven`,
     html,
   })
   if (!result.ok) {
@@ -191,7 +191,7 @@ const STATUS_CONFIG: Record<string, {
   contacted: {
     subject: 'Employer reached out',
     heading: "They've marked you as contacted",
-    body: "The employer has moved your application forward and marked you as contacted. Check ZKnight for messages or follow up in your usual channels.",
+    body: "The employer has moved your application forward and marked you as contacted. Check Provven for messages or follow up in your usual channels.",
     accentColor: '#0d9488',
   },
 }
@@ -225,7 +225,7 @@ export async function sendApplicationStatusNotification(
       <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${config.accentColor};">${config.heading}</p>
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${config.body}</p>
     `, config.accentColor)}
-    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your ZKnight account to view your full application status.</p>
+    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your Provven account to view your full application status.</p>
   `
 
   const html = buildEmail({
@@ -237,7 +237,7 @@ export async function sendApplicationStatusNotification(
     ctaLabel: 'View Application',
     ctaUrl: APP_URL,
     accentColor: config.accentColor,
-    footerNote: `You're receiving this because you applied to a job on ZKnight. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because you applied to a job on Provven. Reply to this email with any questions.`,
   })
 
   console.log(`[STATUS NOTIFICATION] Sending ${newStatus} notification to:`, candidateEmail)
@@ -260,23 +260,23 @@ export async function sendApplicationStatusNotification(
 const SCREENING_READY_COPY = {
   mvr: {
     candidateTitle: 'Your MVR is ready',
-    candidatePreheader: 'Your motor vehicle record has arrived on ZKnight',
+    candidatePreheader: 'Your motor vehicle record has arrived on Provven',
     candidateLead:
-      'Your <strong>Motor Vehicle Record (MVR)</strong> has been processed and is available in your ZKnight account.',
+      'Your <strong>Motor Vehicle Record (MVR)</strong> has been processed and is available in your Provven account.',
     employerTitle: (candidateName: string) => `MVR ready: ${candidateName}`,
-    employerPreheader: 'A requested motor vehicle record is available on ZKnight',
+    employerPreheader: 'A requested motor vehicle record is available on Provven',
     employerLead: (candidateName: string, companyName: string) =>
-      `The <strong>MVR</strong> you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in ZKnight.`,
+      `The <strong>MVR</strong> you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Provven.`,
   },
   psp: {
     candidateTitle: 'Your PSP report is ready',
-    candidatePreheader: 'Your FMCSA PSP screening has arrived on ZKnight',
+    candidatePreheader: 'Your FMCSA PSP screening has arrived on Provven',
     candidateLead:
-      'Your <strong>FMCSA PSP</strong> (crash and inspection history) report has been processed and is available in your ZKnight account.',
+      'Your <strong>FMCSA PSP</strong> (crash and inspection history) report has been processed and is available in your Provven account.',
     employerTitle: (candidateName: string) => `PSP report ready: ${candidateName}`,
-    employerPreheader: 'A requested FMCSA PSP report is available on ZKnight',
+    employerPreheader: 'A requested FMCSA PSP report is available on Provven',
     employerLead: (candidateName: string, companyName: string) =>
-      `The <strong>FMCSA PSP</strong> report you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in ZKnight.`,
+      `The <strong>FMCSA PSP</strong> report you requested for <strong>${candidateName}</strong> (${companyName}) has finished processing and is available in Provven.`,
   },
 } as const
 
@@ -304,14 +304,14 @@ export async function sendCandidateScreeningReadyEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Log in to review the result in your screening block. If anything looks incorrect, contact support through ZKnight.
+        Log in to review the result in your screening block. If anything looks incorrect, contact support through Provven.
       </p>
     `)}
   `
 
   const html = buildEmail({
     preheader: copy.candidatePreheader,
-    headerEyebrow: 'ZKnight',
+    headerEyebrow: 'Provven',
     headerTitle: copy.candidateTitle,
     greeting: `Hi ${first},`,
     bodyHtml,
@@ -323,7 +323,7 @@ export async function sendCandidateScreeningReadyEmail(params: {
   const result = await sendEmail({
     type: 'screening_ready_candidate',
     to: candidateEmail,
-    subject: `[ZKnight] ${copy.candidateTitle}`,
+    subject: `[Provven] ${copy.candidateTitle}`,
     html,
   })
   if (!result.ok) {
@@ -361,7 +361,7 @@ export async function sendEmployerScreeningReadyEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Open ZKnight to view the report in your hiring workflow. Full report details stay inside ZKnight — we never send the screening document by email.
+        Open Provven to view the report in your hiring workflow. Full report details stay inside Provven — we never send the screening document by email.
       </p>
     `)}
   `
@@ -372,15 +372,15 @@ export async function sendEmployerScreeningReadyEmail(params: {
     headerTitle: copy.employerTitle(candidateDisplayName),
     greeting: `Hi ${first},`,
     bodyHtml,
-    ctaLabel: 'Open ZKnight',
+    ctaLabel: 'Open Provven',
     ctaUrl,
-    footerNote: `You're receiving this because your company requested this screening on ZKnight.`,
+    footerNote: `You're receiving this because your company requested this screening on Provven.`,
   })
 
   const result = await sendEmail({
     type: 'screening_ready_employer',
     to: employerEmail,
-    subject: `[ZKnight] ${copy.employerTitle(candidateDisplayName)}`,
+    subject: `[Provven] ${copy.employerTitle(candidateDisplayName)}`,
     html,
   })
   if (!result.ok) {
@@ -416,7 +416,7 @@ const EMPLOYER_ACTION_EMAIL_COPY: Record<
     preheader: 'FCRA, FMCSA, and CDLIS package signed — ready to order MVR/PSP',
     lead: (n, c) =>
       `<strong>${n}</strong> completed the full screening consent package (FCRA background check authorization, FMCSA PSP disclosure, and CDLIS written consent) for <strong>${c}</strong>. You can now place MVR and PSP orders from Outreach without sending another invite.`,
-    ctaLabel: 'Open ZKnight',
+    ctaLabel: 'Open Provven',
   },
   bgcheck_consent: {
     subject: (n) => `${n} signed background check consent`,
@@ -424,25 +424,25 @@ const EMPLOYER_ACTION_EMAIL_COPY: Record<
     preheader: 'A candidate signed your FCRA authorization',
     lead: (n, c) =>
       `<strong>${n}</strong> signed the background check authorization for <strong>${c}</strong>.`,
-    ctaLabel: 'Open ZKnight',
+    ctaLabel: 'Open Provven',
   },
   psp_consent: {
     subject: (n) => `${n} signed PSP disclosure`,
     title: () => `PSP disclosure signed`,
-    preheader: 'FMCSA PSP disclosure recorded on ZKnight',
+    preheader: 'FMCSA PSP disclosure recorded on Provven',
     lead: (n, c) =>
       `<strong>${n}</strong> signed the FMCSA PSP Disclosure &amp; Authorization for <strong>${c}</strong>.`,
-    ctaLabel: 'Open ZKnight',
+    ctaLabel: 'Open Provven',
   },
   block_completed: {
     subject: (n) => `${n} completed your request`,
     title: () => `Request fulfilled`,
-    preheader: 'A candidate finished something you requested on ZKnight',
+    preheader: 'A candidate finished something you requested on Provven',
     lead: (n, c, block) =>
       block
         ? `<strong>${n}</strong> completed your <strong>${block}</strong> request for <strong>${c}</strong>.`
         : `<strong>${n}</strong> fulfilled a request for <strong>${c}</strong>.`,
-    ctaLabel: 'View in ZKnight',
+    ctaLabel: 'View in Provven',
   },
   invite_completed: {
     subject: (n) => `${n} completed your invite`,
@@ -493,7 +493,7 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
     </p>
     ${infoBox(`
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
-        Open ZKnight to review the update in your hiring workflow. Sensitive screening documents are never sent by email — only this confirmation.
+        Open Provven to review the update in your hiring workflow. Sensitive screening documents are never sent by email — only this confirmation.
       </p>
     `)}
   `
@@ -506,13 +506,13 @@ export async function sendEmployerCandidateActionCompleteEmail(params: {
     bodyHtml,
     ctaLabel: copy.ctaLabel,
     ctaUrl,
-    footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on ZKnight.`,
+    footerNote: `You're receiving this because a candidate completed an action tied to ${companyName} on Provven.`,
   })
 
   const result = await sendEmail({
     type: 'employer_candidate_action',
     to: employerEmail,
-    subject: `[ZKnight] ${copy.subject(candidate)}`,
+    subject: `[Provven] ${copy.subject(candidate)}`,
     html,
   })
   if (!result.ok) {

@@ -174,7 +174,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
       <div className='mt-3 border-t border-stone-200 pt-2'>
         <p className='text-[11px] leading-relaxed text-stone-500'>
           {packet.hasVerifiedClaims
-            ? `ZKnight-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel}`
+            ? `Provven-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel}`
             : 'Candidate packet'}
         </p>
         <div className='mt-1.5'>

@@ -238,7 +238,7 @@ export default function ApplyWithStormChainModal({
                 Easy apply with Career Card
               </h2>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                One submission — your ZKnight profile snapshot
+                One submission — your Provven profile snapshot
               </p>
             </div>
           </div>
@@ -255,7 +255,7 @@ export default function ApplyWithStormChainModal({
                 Application Submitted!
               </h3>
               <p className="text-green-700 dark:text-green-300">
-                Your ZKnight application has been sent to {job.company}
+                Your Provven application has been sent to {job.company}
               </p>
             </div>
           </div>
@@ -445,7 +445,7 @@ export default function ApplyWithStormChainModal({
             )}
 
             <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              By submitting, employers receive your ZKnight application snapshot and link.
+              By submitting, employers receive your Provven application snapshot and link.
               <br />
               Track status in My Applications.
             </p>

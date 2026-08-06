@@ -1454,9 +1454,9 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           <p
             className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}
           >
-            Your responses are stored securely with ZKnight. Only employers you authorize
+            Your responses are stored securely with Provven. Only employers you authorize
             can view them. Third-party screening facts (MVR, PSP) can become Verified by
-            ZKnight credentials separately.
+            Provven credentials separately.
           </p>
         </div>
 

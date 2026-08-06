@@ -250,8 +250,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           reviewRequired: true,
-          message: `${matchedCompany.company_name} already exists on ZKnight. Your request to join has been submitted for review.`,
-          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added. If your company email should qualify, ask the owner to set the company email in ZKnight to your corporate domain.`,
+          message: `${matchedCompany.company_name} already exists on Provven. Your request to join has been submitted for review.`,
+          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added. If your company email should qualify, ask the owner to set the company email in Provven to your corporate domain.`,
           request: {
             companyName: matchedCompany.company_name,
             status: 'flagged',
@@ -339,7 +339,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       autoApproved: true,
-      message: `${companyName.trim()} has been approved. Welcome to ZKnight!`,
+      message: `${companyName.trim()} has been approved. Welcome to Provven!`,
       company: { id: newCompany.id, name: companyName.trim() },
     })
 

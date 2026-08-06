@@ -282,7 +282,7 @@ function StormWordmarkOBlock({
 }
 
 /**
- * **ZKNIGHT** with a leading violet foil tile + shield-check mark. Full chrome uses **`VaultCredentialChrome`**
+ * **PROVVEN** with a leading violet foil tile + shield-check mark. Full chrome uses **`VaultCredentialChrome`**
  * from the hub (`clipVariant="horizontal"`) — same rim, conic, chamfer spark, frosted face, sheen, foot strip +
  * sweep, and hover drop-shadow as **My blocks** tiles. `vaultChrome={false}` = tile + type only (e.g. inside `NavVaultShell`).
  */
@@ -345,7 +345,7 @@ export default function StormChainWordmark({
     >
       <StormWordmarkOBlock isDark={isDark} isHero={isLarge} isDisplay={isDisplay} />
       <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
-        ZKNIGHT
+        PROVVEN
       </WordmarkLetterGroup>
     </div>
   )
@@ -353,7 +353,7 @@ export default function StormChainWordmark({
   if (!vaultChrome) {
     return (
       <div className={cn('inline-flex leading-none', typeStyles, className)}>
-        <span className='sr-only'>ZKnight</span>
+        <span className='sr-only'>Provven</span>
         {stormMarkRow}
       </div>
     )
@@ -361,7 +361,7 @@ export default function StormChainWordmark({
 
   return (
     <div className={cn('inline-flex leading-none', typeStyles, className)}>
-      <span className='sr-only'>ZKnight</span>
+      <span className='sr-only'>Provven</span>
       <VaultCredentialChrome
         isDark={isDark}
         glowColor={tileColors.glowColor}

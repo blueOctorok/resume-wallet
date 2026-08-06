@@ -128,7 +128,7 @@ export default function ApplicantKanban({
         method: 'POST',
         headers: { 'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ requestType, documentType, message: 'Requested via ZKnight Hiring Pipeline' }),
+        body: JSON.stringify({ requestType, documentType, message: 'Requested via Provven Hiring Pipeline' }),
       })
 
       if (res.status === 409) {

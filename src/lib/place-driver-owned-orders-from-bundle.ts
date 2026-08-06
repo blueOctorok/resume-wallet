@@ -195,7 +195,7 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
       candidateUserId: driverUserId,
       notificationTitle: 'Candidate ordered portable MVR + PSP',
       notificationBody: `${driverEmail ?? 'Your candidate'} submitted driver-owned MVR and PSP orders. Track progress in Talent Search or Applicants.`,
-      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://zknight.io'}/?employer=applicants`,
+      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://provven.com'}/?employer=applicants`,
       notificationData: { requestId, driverOwned: true },
     }).catch((err) => {
       console.error('[DRIVER-OWNED RETRY] employer notify failed:', err)

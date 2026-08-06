@@ -16,7 +16,7 @@ const NOT_FOUND = (
       fontFamily: 'system-ui, sans-serif',
     }}
   >
-    ZKnight — Career Card not found
+    Provven — Career Card not found
   </div>
 )
 

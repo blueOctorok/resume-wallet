@@ -529,7 +529,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
                     )}
                   >
                     <Zap className='h-2.5 w-2.5' />
-                    ZKnight
+                    Provven
                   </span>
                 )}
               </div>

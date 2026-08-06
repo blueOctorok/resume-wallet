@@ -150,7 +150,7 @@ export default function PublicApplicationPage() {
                 {application.driver_name}
               </h1>
               <p className='text-gray-600 dark:text-gray-400'>
-                CDL Driver Application via ZKnight
+                CDL Driver Application via Provven
               </p>
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function PublicApplicationPage() {
                 isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
               }`}
             >
-              ZKnight
+              Provven
             </span>
           </p>
           <p

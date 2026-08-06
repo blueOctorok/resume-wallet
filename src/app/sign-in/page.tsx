@@ -193,7 +193,7 @@ function SignInForm() {
         <Card variant='elevated' className='w-full p-6 sm:p-8'>
           <div className='mb-6 text-center'>
             <h1 className='text-xl font-semibold text-gray-900 dark:text-gray-100'>
-              Sign in to ZKnight
+              Sign in to Provven
             </h1>
             <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
               Build your verified career card

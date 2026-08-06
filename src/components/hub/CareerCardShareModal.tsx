@@ -34,9 +34,9 @@ function profileUrlFromToken(token: string): string {
 
 function linkedInCaption(fullUrl: string): string {
   return (
-    `I built my ZKnight Career Card — verified credentials employers can trust, not a PDF dump.\n\n` +
+    `I built my Provven Career Card — verified credentials employers can trust, not a PDF dump.\n\n` +
     `${fullUrl}\n\n` +
-    `Create yours free at https://zknight.io`
+    `Create yours free at https://provven.com`
   )
 }
 
@@ -131,8 +131,8 @@ export default function CareerCardShareModal({
         title='Share your career card'
         subtitle={
           displayName?.trim()
-            ? `Send people to ${displayName.trim()}'s live card on ZKnight — not a job-board upload.`
-            : 'Send people to your live card on ZKnight — not a job-board upload.'
+            ? `Send people to ${displayName.trim()}'s live card on Provven — not a job-board upload.`
+            : 'Send people to your live card on Provven — not a job-board upload.'
         }
         onClose={onClose}
         variant='block'

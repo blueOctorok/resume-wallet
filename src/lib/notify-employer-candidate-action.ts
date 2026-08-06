@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createNotification } from '@/lib/create-notification'
 import { sendEmployerCandidateActionCompleteEmail } from '@/lib/send-admin-notification'
 
-const appBase = () => (process.env.NEXT_PUBLIC_APP_URL || 'https://zknight.io').replace(/\/$/, '')
+const appBase = () => (process.env.NEXT_PUBLIC_APP_URL || 'https://provven.com').replace(/\/$/, '')
 
 export type EmployerCandidateActionKind =
   | 'screening_consent'

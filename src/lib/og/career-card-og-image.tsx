@@ -249,7 +249,7 @@ export function buildCareerCardOgElement(
   const headline =
     card.occupation ||
     card.professionalSummary?.slice(0, 120) ||
-    'Verified by ZKnight career card'
+    'Verified by Provven career card'
 
   if (variant === 'signature') {
     return (
@@ -304,14 +304,14 @@ export function buildCareerCardOgElement(
             <span style={{ fontSize: 14, color: muted, maxWidth: 360 }}>{headline}</span>
             <span style={{ fontSize: 12, color: teal, fontWeight: 600 }}>
               {verifiedCount > 0
-                ? `${verifiedCount} verified credential${verifiedCount === 1 ? '' : 's'} · ZKnight Career Card`
-                : 'ZKnight Career Card'}
+                ? `${verifiedCount} verified credential${verifiedCount === 1 ? '' : 's'} · Provven Career Card`
+                : 'Provven Career Card'}
             </span>
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <ScoreRing score={card.careerCardScore} />
-          <span style={{ fontSize: 11, color: muted, fontWeight: 700, letterSpacing: 2 }}>ZKNIGHT</span>
+          <span style={{ fontSize: 11, color: muted, fontWeight: 700, letterSpacing: 2 }}>PROVVEN</span>
         </div>
       </div>
     )
@@ -326,7 +326,7 @@ export function buildCareerCardOgElement(
     bodyLinesRaw.length > 0
       ? bodyLinesRaw
       : [
-          'Open your full ZKnight Career Card for verified credentials, resume, GitHub, portfolio, and more — everything in one shareable link.',
+          'Open your full Provven Career Card for verified credentials, resume, GitHub, portfolio, and more — everything in one shareable link.',
         ]
 
   return (
@@ -442,7 +442,7 @@ export function buildCareerCardOgElement(
           <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', letterSpacing: 3, textTransform: 'uppercase' }}>
             Blocks on card
           </span>
-          <SectionPills labels={sectionLabels.length ? sectionLabels : ['Build your card on ZKnight']} />
+          <SectionPills labels={sectionLabels.length ? sectionLabels : ['Build your card on Provven']} />
         </div>
       </div>
 
@@ -458,9 +458,9 @@ export function buildCareerCardOgElement(
         }}
       >
         <span style={{ fontSize: 14, color: muted, fontWeight: 600 }}>
-          zknight.io · Verified by ZKnight Career Card
+          provven.com · Verified by Provven Career Card
         </span>
-        <span style={{ fontSize: 20, fontWeight: 800, color: teal, letterSpacing: 4 }}>ZKNIGHT</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: teal, letterSpacing: 4 }}>PROVVEN</span>
       </div>
     </div>
   )

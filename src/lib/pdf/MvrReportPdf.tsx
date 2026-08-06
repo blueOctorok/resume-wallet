@@ -143,12 +143,12 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
   const showPersonalCharacteristics = hasDmvPersonalCharacteristics(pc)
 
   return (
-    <StormPdfDocument title={`ZKnight MVR — ${meta.candidateName}`}>
+    <StormPdfDocument title={`Provven MVR — ${meta.candidateName}`}>
       <StormPdfPage>
         <StormPdfHeader
           reportLabel="Motor Vehicle Report"
           reportTitle={subjectName}
-          reportSubtitle={`ZKnight Order ${meta.stormOrderId.slice(0, 8)} · Generated ${formatTimestamp(meta.generatedAtIso)}`}
+          reportSubtitle={`Provven Order ${meta.stormOrderId.slice(0, 8)} · Generated ${formatTimestamp(meta.generatedAtIso)}`}
         />
 
         {/* Cover summary */}

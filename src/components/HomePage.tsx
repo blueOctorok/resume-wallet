@@ -88,7 +88,7 @@ function BuildModeMockup({ isDark }: { isDark: boolean }) {
                 : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
             )}
           >
-            <Zap className='h-2.5 w-2.5' /> ZKnight
+            <Zap className='h-2.5 w-2.5' /> Provven
           </span>
           <span className={cn('text-[10px] uppercase tracking-wider', muted)}>Job</span>
         </div>
@@ -181,7 +181,7 @@ function HeroCareerCardMockup({ isDark }: { isDark: boolean }) {
     { label: 'DOT application', verified: true },
     { label: 'MVR — clean record', verified: true },
     { label: 'Employment history', verified: true },
-    { label: 'ZKnight Resume', verified: false },
+    { label: 'Provven Resume', verified: false },
   ]
 
   return (
@@ -485,7 +485,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
 
                 <div data-reveal className='reveal-item'>
                   <p className={cn('text-base leading-relaxed sm:text-lg', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                    ZKnight starts with the role you actually want, then guides you to build only what that job needs. Your verified career card grows in real time on the right while the job stays anchored on the left, and you graduate when you&rsquo;re ready to apply.
+                    Provven starts with the role you actually want, then guides you to build only what that job needs. Your verified career card grows in real time on the right while the job stays anchored on the left, and you graduate when you&rsquo;re ready to apply.
                   </p>
 
                   <ol className='mt-8 space-y-6'>
@@ -495,7 +495,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                         title: 'The job goes on the left.',
                         body: (
                           <>
-                            Pick any open role from a blended feed &mdash; ZKnight employers first, aggregated listings underneath. ZKnight reads the requirements and reverse-engineers exactly what you&rsquo;ll need to stand out.
+                            Pick any open role from a blended feed &mdash; Provven employers first, aggregated listings underneath. Provven reads the requirements and reverse-engineers exactly what you&rsquo;ll need to stand out.
                           </>
                         ),
                       },

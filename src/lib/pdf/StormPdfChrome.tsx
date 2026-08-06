@@ -278,7 +278,7 @@ export function StormPdfFooter({
           <Text style={stormPdfStyles.verifiedChip}>VERIFIED ON-CHAIN</Text>
         ) : null}
         <Text style={stormPdfStyles.footerLine}>
-          ZKnight Order {orderId}
+          Provven Order {orderId}
           {vendorReference ? ` · Vendor ref ${vendorReference}` : ''}
         </Text>
         {verifiedExplorerUrl ? (
@@ -296,7 +296,7 @@ export function StormPdfFooter({
             `Page ${pageNumber} of ${totalPages}`
           }
         />
-        <Text style={stormPdfStyles.footerLine}>zknight.io</Text>
+        <Text style={stormPdfStyles.footerLine}>provven.com</Text>
       </View>
     </View>
   )
@@ -309,7 +309,7 @@ export interface StormPdfDocumentProps {
 
 export function StormPdfDocument({ title, children }: StormPdfDocumentProps) {
   return (
-    <Document title={title} author="ZKnight">
+    <Document title={title} author="Provven">
       {children}
     </Document>
   )

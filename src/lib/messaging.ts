@@ -6,8 +6,8 @@
  *
  * Env:
  *   PINGRAM_API_KEY      — required for sends
- *   PINGRAM_FROM_EMAIL   — default: zknight@verify.zknight.io
- *   PINGRAM_FROM_NAME    — default: ZKnight
+ *   PINGRAM_FROM_EMAIL   — default: provven@verify.provven.com
+ *   PINGRAM_FROM_NAME    — default: Provven
  */
 
 import { Pingram } from 'pingram'
@@ -37,8 +37,8 @@ export type SendSmsParams = {
   message: string
 }
 
-const FROM_EMAIL = process.env.PINGRAM_FROM_EMAIL ?? 'zknight@verify.zknight.io'
-const FROM_NAME = process.env.PINGRAM_FROM_NAME ?? 'ZKnight'
+const FROM_EMAIL = process.env.PINGRAM_FROM_EMAIL ?? 'provven@verify.provven.com'
+const FROM_NAME = process.env.PINGRAM_FROM_NAME ?? 'Provven'
 
 let client: Pingram | null | undefined
 

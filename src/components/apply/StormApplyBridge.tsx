@@ -277,7 +277,7 @@ export default function StormApplyBridge({
     <>
       <Modal onClose={onClose} maxWidth="max-w-2xl" panelShape="block">
         <ModalHeader
-          title="Apply with ZKnight"
+          title="Apply with Provven"
           subtitle={`${job.title} at ${job.company}`}
           onClose={onClose}
           variant="block"

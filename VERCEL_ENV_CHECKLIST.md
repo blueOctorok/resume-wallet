@@ -7,7 +7,7 @@ Copy these from your `.env.local` file to Vercel.
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_APP_URL=               # Production: https://zknight.io (no trailing slash)
+NEXT_PUBLIC_APP_URL=               # Production: https://provven.com (no trailing slash)
 ```
 
 ## Private Variables (Backend only — DO NOT prefix with NEXT_PUBLIC)
@@ -19,12 +19,12 @@ ADMIN_EMAILS=                      # Comma-separated admin emails (replaces ADMI
 ADMIN_API_KEY=                     # Legacy admin routes (reset-wallet, etc.)
 CRON_SECRET=                       # Reconcile-screenings cron
 PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — email + SMS
-PINGRAM_FROM_EMAIL=                # e.g. zknight@verify.zknight.io — MUST be a Pingram-verified domain
-PINGRAM_FROM_NAME=ZKnight          # Display name on outbound email
-# SMS: same PINGRAM_API_KEY. Paid plan ($20/mo) + ZKnight A2P 10DLC required for US production texts.
-# No extra SMS env vars. Start A2P in Pingram dashboard (EIN, zknight.io, sample msgs with STOP).
+PINGRAM_FROM_EMAIL=                # e.g. provven@verify.provven.com — MUST be a Pingram-verified domain
+PINGRAM_FROM_NAME=Provven          # Display name on outbound email
+# SMS: same PINGRAM_API_KEY. Paid plan ($20/mo) + Provven A2P 10DLC required for US production texts.
+# No extra SMS env vars. Start A2P in Pingram dashboard (EIN, provven.com, sample msgs with STOP).
 ADMIN_NOTIFICATION_EMAILS=         # Comma-separated ops alert recipients
-GITHUB_CLIENT_ID=                  # GitHub OAuth app (callback: https://zknight.io/api/github/callback)
+GITHUB_CLIENT_ID=                  # GitHub OAuth app (callback: https://provven.com/api/github/callback)
 GITHUB_CLIENT_SECRET=
 ACCIO_ACCOUNT=
 ACCIO_USERNAME=
@@ -79,26 +79,26 @@ PINATA_API_SECRET
 DYNAMIC_API_TOKEN
 ```
 
-## Domain cutover — stormchain.ai → zknight.io (2026-07-02)
+## Domain cutover — zknight.io → provven.com (2026-08-06)
 
-Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop auth/email/webhooks from silently breaking.
+Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop auth/email/webhooks from silently breaking. (Prior domains `stormchain.ai` / `zknight.io` can stay as Vercel redirects.)
 
-1. **Vercel → Project → Settings → Domains → Add** `zknight.io` and `www.zknight.io`.
-   - Set `zknight.io` as **Primary**; make `www` **redirect to** the apex (or vice-versa — pick one canonical host).
+1. **Vercel → Project → Settings → Domains → Add** `provven.com` and `www.provven.com`.
+   - Set `provven.com` as **Primary**; make `www` **redirect to** the apex (or vice-versa — pick one canonical host).
    - Vercel shows the exact DNS records to create.
-2. **Namecheap → Domain List → zknight.io → Advanced DNS.** Add what Vercel shows, typically:
+2. **Namecheap → Domain List → provven.com → Advanced DNS.** Add what Vercel shows, typically:
    - `A` record — Host `@` → `76.76.21.21`
    - `CNAME` — Host `www` → `cname.vercel-dns.com`
    - (Alternative: switch Namecheap to Vercel's nameservers — simpler but hands all DNS to Vercel.)
    - Wait for propagation; Vercel auto-issues the SSL cert once records resolve.
-3. **Vercel → Settings → Environment Variables → `NEXT_PUBLIC_APP_URL`** = `https://zknight.io` (Production). This one var drives email links, Accio webhooks, share URLs, and the GitHub OAuth redirect. Then **redeploy** (env changes need a fresh build).
+3. **Vercel → Settings → Environment Variables → `NEXT_PUBLIC_APP_URL`** = `https://provven.com` (Production). This one var drives email links, Accio webhooks, share URLs, and the GitHub OAuth redirect. Then **redeploy** (env changes need a fresh build).
 4. **Supabase → Authentication → URL Configuration** (critical — magic-link/Google sign-in break otherwise):
-   - **Site URL** → `https://zknight.io`
-   - **Redirect URLs** allow-list → add `https://zknight.io/**` (keep `http://localhost:3000/**` for dev). Remove the stormchain.ai entries once cut over.
-5. **Pingram → Domains → verify `verify.zknight.io`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME`. Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
-6. **Pingram SMS / A2P 10DLC (Outreach Text):** On the paid plan, start **A2P 10DLC** for brand **ZKnight** (legal name, EIN, address, website `https://zknight.io`, privacy/terms, sample messages matching invite SMS + STOP). No Namecheap DNS for SMS. Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
-7. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://zknight.io/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
-8. **Keep stormchain.ai (optional):** leave it on the Vercel project as a domain that **redirects to** zknight.io so old links/emails don't 404.
+   - **Site URL** → `https://provven.com`
+   - **Redirect URLs** allow-list → add `https://provven.com/**` (keep `http://localhost:3000/**` for dev). Remove old `zknight.io` / `stormchain.ai` entries once cut over.
+5. **Pingram → Domains → verify `verify.provven.com`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME`. Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
+6. **Pingram SMS / A2P 10DLC (Outreach Text):** On the paid plan, start **A2P 10DLC** for brand **Provven** (legal name, EIN, address, website `https://provven.com`, privacy/terms, sample messages matching invite SMS + STOP). No Namecheap DNS for SMS. Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
+7. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://provven.com/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
+8. **Keep zknight.io / stormchain.ai (optional):** leave them on the Vercel project as domains that **redirect to** provven.com so old links/emails don't 404.
 
 > Google sign-in runs through Supabase's `/auth/v1/callback`, so the Google Cloud console redirect URI does **not** change — only the Supabase Site URL (step 4) matters.
 

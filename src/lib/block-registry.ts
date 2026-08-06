@@ -162,16 +162,16 @@ export const BLOCK_CATEGORIES: BlockCategory[] = [
 // ── Block Definitions ─────────────────────────────────────────────────────────
 //
 // DOT Application is the drivers-wedge core block (always installed, pinned first).
-// ZKnight Resume is an optional artifact (upload / generated from DOT).
+// Provven Resume is an optional artifact (upload / generated from DOT).
 // Legacy resume ids remain for existing installs; all are hidden from the picker.
 
 export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   // ── General ────────────────────────────────────────────────────────────────
   {
     id: 'storm-resume',
-    label: 'ZKnight Resume',
+    label: 'Provven Resume',
     description:
-      'Upload your own file or build a ZKnight-style resume — Professional, Driver, or Developer paths in one place.',
+      'Upload your own file or build a Provven-style resume — Professional, Driver, or Developer paths in one place.',
     icon: 'Sparkles',
     categoryId: 'general',
     suggestedFor: [
@@ -318,7 +318,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     id: 'driver-screening-consent',
     label: 'Screening consent',
     description:
-      'Sign FCRA background check disclosure, FMCSA PSP authorization, and CDLIS written consent in one flow for employers who use ZKnight screening.',
+      'Sign FCRA background check disclosure, FMCSA PSP authorization, and CDLIS written consent in one flow for employers who use Provven screening.',
     icon: 'ShieldCheck',
     categoryId: 'drivers',
     suggestedFor: ['driver', 'cdl', 'mvr', 'psp', 'screening', 'background check', 'fmcsa', 'trucking'],

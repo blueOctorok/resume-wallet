@@ -50,6 +50,9 @@ export type MidnightProofArtifact = {
   proofId: string
   /** metadata until P3.4-B in-circuit issuer signature — gates Midnight marketing copy. */
   provenanceTier?: AttestationProvenanceTier
+  /** Preprod/mainnet DUST fee raw units (from tx.fees) — ops only, not shown in UI. */
+  paidFees?: string
+  estimatedFees?: string
 }
 
 export type ProofArtifact =

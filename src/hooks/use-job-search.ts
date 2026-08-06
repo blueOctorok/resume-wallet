@@ -168,7 +168,7 @@ export function useJobSearch(opts: UseJobSearchOptions): UseJobSearchResult {
           if (keywords) params.set('keywords', keywords)
           if (location) params.set('location', location)
           const res = await fetch(`/api/jobs/search?${params}`, { signal: controller.signal })
-          if (!res.ok) throw new Error('Failed to fetch ZKnight jobs')
+          if (!res.ok) throw new Error('Failed to fetch Provven jobs')
           const data = await res.json()
           if (!data.success) throw new Error(data.error || 'Failed to load jobs')
           const results = ((data.results as Record<string, unknown>[]) ?? []).map(

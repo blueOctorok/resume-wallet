@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       firstName: n.firstName,
       middleName,
       lastName: n.lastName,
-      email: email || `admin-order-${orderNumber}@zknight.io`,
+      email: email || `admin-order-${orderNumber}@provven.com`,
       phone,
       ssn: n.ssn,
       dob: n.dob,

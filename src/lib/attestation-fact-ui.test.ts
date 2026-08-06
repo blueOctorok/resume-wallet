@@ -10,13 +10,13 @@ import {
 describe('attestation-fact-ui', () => {
   it('formatVerifiedByStormLine combines date and CRA citation', () => {
     const line = formatVerifiedByStormLine('2026-06-01T12:00:00.000Z', 'accio', 'order-99')
-    expect(line).toMatch(/^Verified by ZKnight on /)
+    expect(line).toMatch(/^Verified by Provven on /)
     expect(line).toContain('Derived from Accio pull order-99')
     expect(line).not.toMatch(/on-chain|(?<![Zz][Kk]night)\bZK\b|Midnight/i)
   })
 
   it('formatAttestationProvenance defaults to Verified by Storm', () => {
-    expect(formatAttestationProvenance(null, null)).toBe('Verified by ZKnight')
+    expect(formatAttestationProvenance(null, null)).toBe('Verified by Provven')
   })
 
   it('gates Midnight copy until issuer_signed', () => {
@@ -28,7 +28,7 @@ describe('attestation-fact-ui', () => {
       provenanceTier: 'metadata',
       txHash: 'tx-1',
     })
-    expect(metadata).toMatch(/^Verified by ZKnight on /)
+    expect(metadata).toMatch(/^Verified by Provven on /)
     expect(metadata).not.toMatch(/Midnight/i)
 
     const issuerSigned = formatAttestationVerificationLine({

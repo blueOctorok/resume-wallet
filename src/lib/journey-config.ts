@@ -36,7 +36,7 @@ export const JOURNEY_STEPS: JourneyConfig = {
   driver: {
     firstLogin: {
       id: 'driver.firstLogin',
-      title: 'Welcome to ZKnight!',
+      title: 'Welcome to Provven!',
       message: 'Your driver career starts here. Upload a resume or fill out your DOT application to get started.',
       icon: 'Truck',
       nextStep: {
@@ -111,7 +111,7 @@ export const JOURNEY_STEPS: JourneyConfig = {
   employer: {
     firstLogin: {
       id: 'employer.firstLogin',
-      title: 'Welcome to ZKnight!',
+      title: 'Welcome to Provven!',
       message: 'Start by setting up your company profile. This helps drivers learn about your company.',
       icon: 'Building',
       nextStep: {
@@ -176,7 +176,7 @@ export const JOURNEY_STEPS: JourneyConfig = {
   developer: {
     firstLogin: {
       id: 'developer.firstLogin',
-      title: 'Welcome to ZKnight!',
+      title: 'Welcome to Provven!',
       message: 'Showcase your skills by adding portfolio projects or building your tech resume.',
       icon: 'Code',
       nextStep: {
