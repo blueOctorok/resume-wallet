@@ -33,6 +33,8 @@ const config: Config = {
       },
       fontFamily: {
         quicksand: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],
+        /** Landing-page display serif (Fraunces via next/font) — `font-display` */
+        display: ['var(--font-fraunces)', 'Georgia', 'ui-serif', 'serif'],
       },
     },
   },

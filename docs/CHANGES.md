@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **New marketing landing page — `src/components/landing/`** (2026-08-06)
+
+Replaced `src/components/HomePage.tsx` with a ground-up Provven landing page built around the selective-disclosure moat. The core visual is **`DisclosureCard`** — a Career Card split by a violet "selective disclosure" seam: verified facts lit above (teal), private source data redacted below. The disclosure section flips the same card between "Employer view" and "Your vault" (the page's one interactive moment).
+
+| Piece | Detail |
+|---|---|
+| `landing/LandingPage.tsx` | Composition + scroll reveal; same props contract as old HomePage (`isAuthenticated`, `onGetStarted`, `onBrowseJobs?`) |
+| Sections | Hero → Problem → Career Card → Selective Disclosure → How It Works → Employers (`#employers`) → Built for Trust (Midnight/ZK) → Final CTA |
+| `landing-shared.tsx` | `InkBand` (theme-independent deep-ink plane for hero/disclosure/trust), `SectionHeader`, `LandingContainer` |
+| Typography | Added **Fraunces** display serif via `next/font` (`--font-fraunces` → Tailwind `font-display`), per brand boards |
+| Wiring | `DriverShell` lazy-imports `landing/LandingPage`; old `HomePage.tsx` deleted; dead `VaultMarketingTile`/`VaultShowcase` removed from `HubBlockVault.tsx` |
+| Dev preview | `/landing-preview` renders the page while signed in (dev-only — `notFound()` in production) |
+| Language guardrails | Verification claims restricted to third-party facts; Midnight/ZK framed present-continuous ("built on", "designed for"); no wallet/token language |
+| Verified | Browser pass on light + dark themes and 390px mobile (fixed a `DisclosureCard` min-content overflow); hidden crossfade values are `aria-hidden` |
+
+See `src/components/landing/README.md` for fonts + how to swap the card mock for a product screenshot.
+
+---
+
 ## **Rebrand — ZKnight → Provven / provven.com** (2026-08-06)
 
 Product renamed from **ZKnight / zknight.io** to **Provven / provven.com**.

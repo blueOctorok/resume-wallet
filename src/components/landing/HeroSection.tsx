@@ -1,0 +1,150 @@
+'use client'
+
+/**
+ * Hero — one composition: brand, headline, one supporting line, CTA group,
+ * and the DisclosureCard as the dominant visual on a full-bleed ink plane.
+ *
+ * Entrance animation is pure CSS (`lp-rise` classes defined in LandingPage)
+ * with staggered delays; `motion-reduce` disables it entirely.
+ */
+
+import { ArrowRight, Building2 } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
+import DisclosureCard from './DisclosureCard'
+import { InkBand, LandingContainer } from './landing-shared'
+
+interface HeroSectionProps {
+  isAuthenticated: boolean
+  onGetStarted: () => void
+  onForEmployers: () => void
+  onBrowseJobs?: () => void
+}
+
+function HeroAtmosphere() {
+  return (
+    <>
+      {/* Teal bloom behind the copy */}
+      <div
+        aria-hidden
+        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.16] blur-[100px]'
+        style={{ background: 'radial-gradient(circle, #2dd4bf 0%, transparent 65%)' }}
+      />
+      {/* Violet bloom behind the card — echoes the disclosure seam */}
+      <div
+        aria-hidden
+        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-[0.13] blur-[110px]'
+        style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 65%)' }}
+      />
+      {/* Bottom vignette so the band settles before the next section */}
+      <div aria-hidden className='pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-black/40' />
+    </>
+  )
+}
+
+export default function HeroSection({
+  isAuthenticated,
+  onGetStarted,
+  onForEmployers,
+  onBrowseJobs,
+}: HeroSectionProps) {
+  const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Build your Career Card'
+
+  return (
+    <InkBand atmosphere={<HeroAtmosphere />} className='border-b border-white/[0.06]'>
+      <LandingContainer className='pb-20 pt-14 sm:pb-28 sm:pt-20 lg:pt-24'>
+        <div className='grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16'>
+          {/* Copy column */}
+          <div className='min-w-0 text-center lg:text-left'>
+            {/* Brand lockup — hero-level, per brand boards */}
+            <div className='lp-rise' style={{ animationDelay: '0ms' }}>
+              <p className='font-display text-6xl font-semibold tracking-tight text-[#f4f1ea] sm:text-7xl lg:text-[5.5rem] [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
+                Provven
+              </p>
+              <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
+                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-teal-400/50 to-teal-400/50 lg:from-teal-400/50' />
+                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-teal-300/90'>
+                  The career card you own
+                </p>
+                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-teal-400/50 to-teal-400/50' />
+              </div>
+            </div>
+
+            <h1
+              className='lp-rise mt-10 font-display text-4xl font-medium leading-[1.06] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
+              style={{ animationDelay: '120ms' }}
+            >
+              Proof,{' '}
+              <em className='bg-gradient-to-r from-teal-300 via-cyan-300 to-teal-200 bg-clip-text font-medium not-italic text-transparent'>
+                not paperwork.
+              </em>
+            </h1>
+
+            <p
+              className='lp-rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg lg:mx-0'
+              style={{ animationDelay: '220ms' }}
+            >
+              Build a Career Card once and own it for good. Facts verified by licensed
+              screeners, shared with employers on your terms &mdash; prove a clean MVR
+              without handing over the whole report.
+            </p>
+
+            <div
+              className='lp-rise mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start'
+              style={{ animationDelay: '320ms' }}
+            >
+              <Button
+                variant='primary'
+                size='lg'
+                onClick={onGetStarted}
+                className='group h-auto rounded-xl px-8 py-4 text-base shadow-lg shadow-teal-950/50'
+              >
+                {primaryLabel}
+                <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
+              </Button>
+              <Button
+                variant='secondary'
+                size='lg'
+                onClick={onForEmployers}
+                className={cn(
+                  'h-auto rounded-xl px-8 py-4 text-base',
+                  // Fixed ink plane — override theme-aware secondary styling
+                  'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.12] dark:border-white/15 dark:bg-white/[0.06] dark:hover:bg-white/[0.12]',
+                )}
+              >
+                <Building2 className='h-4 w-4' />
+                I&rsquo;m hiring
+              </Button>
+            </div>
+
+            <div className='lp-rise mt-6' style={{ animationDelay: '420ms' }}>
+              {onBrowseJobs && (
+                <button
+                  type='button'
+                  onClick={onBrowseJobs}
+                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-teal-300 hover:decoration-teal-400/50'
+                >
+                  or browse jobs without an account
+                </button>
+              )}
+              <p className='mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-600'>
+                free for candidates · no wallets, no tokens · built on Midnight
+              </p>
+            </div>
+          </div>
+
+          {/* Visual column — the product is the demo */}
+          <div className='lp-rise relative flex min-w-0 justify-center lg:justify-end' style={{ animationDelay: '260ms' }}>
+            {/* Pedestal glow under the card */}
+            <div
+              aria-hidden
+              className='pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 opacity-25 blur-3xl'
+              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(45,212,191,0.4) 0%, rgba(139,92,246,0.2) 45%, transparent 70%)' }}
+            />
+            <DisclosureCard view='shared' className='relative' />
+          </div>
+        </div>
+      </LandingContainer>
+    </InkBand>
+  )
+}

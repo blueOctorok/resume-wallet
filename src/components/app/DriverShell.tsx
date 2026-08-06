@@ -24,8 +24,8 @@ const DriverHub = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading Driver Hub...' fullScreen={false} /> }
 )
 
-const HomePage = dynamic(
-  () => import('@/components/HomePage').then((mod) => mod.default),
+const LandingPage = dynamic(
+  () => import('@/components/landing/LandingPage').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
 )
 
@@ -392,7 +392,7 @@ export default function DriverShell({
     }
 
     return (
-      <HomePage
+      <LandingPage
         isAuthenticated={false}
         onGetStarted={() => setCurrentPage('signin')}
         // If the page provides a guided-mode entry, prefer it. Falls back to
