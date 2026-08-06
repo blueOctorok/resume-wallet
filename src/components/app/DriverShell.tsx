@@ -24,10 +24,6 @@ const DriverHub = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading Driver Hub...' fullScreen={false} /> }
 )
 
-const LandingPage = dynamic(
-  () => import('@/components/landing/LandingPage').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
-)
 
 const ResumeBuilder = dynamic(
   () => import('@/components/ResumeBuilder'),
@@ -69,13 +65,6 @@ interface DriverShellProps {
   onResumeUploadEvent: (event: ResumeUploadEvent) => void
   /** Called to set the latest IPFS hash (for Stormi / form prefill) */
   onSetLatestResumeIpfsHash: (hash: string | null) => void
-  /**
-   * Guest "Browse jobs" entry. Lets unauthenticated visitors enter Guided Mode
-   * (via the page-level `showGuidedMode` flag) without forcing a sign-in.
-   * When signed in, the in-shell `currentPage='jobs'` redirect handles the
-   * same flow — this prop is wired for marketing-home guests only.
-   */
-  onBrowseGuided?: () => void
 }
 
 /**
@@ -85,11 +74,11 @@ interface DriverShellProps {
  * so the Stormi Journey Guide can track progress.
  *
  * All DOT application logic lives in <DotApplicationFlow />.
+ * Guest marketing landing lives in page.tsx → LandingPage (not here).
  */
 export default function DriverShell({
   onResumeUploadEvent,
   onSetLatestResumeIpfsHash,
-  onBrowseGuided,
 }: DriverShellProps) {
   const { theme } = useTheme()
 
@@ -324,88 +313,70 @@ export default function DriverShell({
   }
 
   // -------------------------------------------------------
-  // Default: Driver Hub (logged in driver) or Landing Page
+  // Default: Driver Hub (authenticated legacy drivers only —
+  // guest marketing lives in page.tsx → LandingPage)
   // -------------------------------------------------------
-  if (!currentPage) {
-    if (user) {
-      return (
-        <>
-          <DriverHub
-            userAddress={sessionUserId}
-            onNavigate={(page) => {
-              if (
-                page === 'resume' || page === 'dotapp' || page === 'jobs' ||
-                page === 'applications' || page === 'mvr' ||
-                page === 'career-card' || page === 'profile-setup' || page === 'messages'
-              ) {
-                setCurrentPage(page)
-              }
-            }}
-            onStartDotApp={() => {
-              resetApplicationProgress()
-              setCurrentPage('dotapp')
-            }}
-            onViewMvr={(orderId) => {
-              setSelectedMvrOrderId(orderId)
-              setIsMvrModalOpen(true)
-            }}
-            onDeleteInProgressDotApp={handleDeleteInProgressDotApp}
-            onEditResume={(resumeId) => {
-              setEditingResumeId(resumeId)
-              setResumeTab('create')
-              setCurrentPage('resume')
-            }}
-            onStartEmploymentVerification={() => {
-              dotApp.completeApplication()
-              useUIStore.getState().setShowEmploymentVerification(true)
-              setCurrentPage('dotapp')
-            }}
-          />
-
-          {/* Driver-specific modals */}
-          <MvrManagementModal
-            isOpen={isMvrManagementOpen}
-            onClose={() => setIsMvrManagementOpen(false)}
-            sessionUserId={sessionUserId}
-            onOrderNew={() => setCurrentPage('mvr')}
-            onCompleteOrder={(paymentTxHash) => {
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('pendingMvrPayment', paymentTxHash)
-              }
-              setCurrentPage('mvr')
-            }}
-            onViewMvr={(orderId) => {
-              setSelectedMvrOrderId(orderId)
-              setIsMvrModalOpen(true)
-            }}
-          />
-          <MvrViewModal
-            isOpen={isMvrModalOpen}
-            onClose={() => {
-              setIsMvrModalOpen(false)
-              setSelectedMvrOrderId(null)
-            }}
-            sessionUserId={sessionUserId}
-          />
-        </>
-      )
-    }
-
+  if (!currentPage && user) {
     return (
-      <LandingPage
-        isAuthenticated={false}
-        onGetStarted={() => setCurrentPage('signin')}
-        // If the page provides a guided-mode entry, prefer it. Falls back to
-        // the legacy currentPage='jobs' alias which DriverShell now redirects
-        // to SimpleModeShell anyway, so guests always land in Guided Mode.
-        onBrowseJobs={() => {
-          if (onBrowseGuided) {
-            onBrowseGuided()
-          } else {
-            setCurrentPage('jobs')
-          }
-        }}
-      />
+      <>
+        <DriverHub
+          userAddress={sessionUserId}
+          onNavigate={(page) => {
+            if (
+              page === 'resume' || page === 'dotapp' || page === 'jobs' ||
+              page === 'applications' || page === 'mvr' ||
+              page === 'career-card' || page === 'profile-setup' || page === 'messages'
+            ) {
+              setCurrentPage(page)
+            }
+          }}
+          onStartDotApp={() => {
+            resetApplicationProgress()
+            setCurrentPage('dotapp')
+          }}
+          onViewMvr={(orderId) => {
+            setSelectedMvrOrderId(orderId)
+            setIsMvrModalOpen(true)
+          }}
+          onDeleteInProgressDotApp={handleDeleteInProgressDotApp}
+          onEditResume={(resumeId) => {
+            setEditingResumeId(resumeId)
+            setResumeTab('create')
+            setCurrentPage('resume')
+          }}
+          onStartEmploymentVerification={() => {
+            dotApp.completeApplication()
+            useUIStore.getState().setShowEmploymentVerification(true)
+            setCurrentPage('dotapp')
+          }}
+        />
+
+        {/* Driver-specific modals */}
+        <MvrManagementModal
+          isOpen={isMvrManagementOpen}
+          onClose={() => setIsMvrManagementOpen(false)}
+          sessionUserId={sessionUserId}
+          onOrderNew={() => setCurrentPage('mvr')}
+          onCompleteOrder={(paymentTxHash) => {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('pendingMvrPayment', paymentTxHash)
+            }
+            setCurrentPage('mvr')
+          }}
+          onViewMvr={(orderId) => {
+            setSelectedMvrOrderId(orderId)
+            setIsMvrModalOpen(true)
+          }}
+        />
+        <MvrViewModal
+          isOpen={isMvrModalOpen}
+          onClose={() => {
+            setIsMvrModalOpen(false)
+            setSelectedMvrOrderId(null)
+          }}
+          sessionUserId={sessionUserId}
+        />
+      </>
     )
   }
 

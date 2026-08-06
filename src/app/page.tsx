@@ -32,9 +32,14 @@ import { JourneyModal } from '@/components/ui'
 import StormiJourneyGuide from '@/components/StormiJourneyGuide'
 
 // Invite deep-link target stashed by /onboard/[token] before it redirects to `/`.
-// sessionStorage survives the sign-in round-trip + guest-redirect hops that strip
-// the ?onboard= query param. Key must stay in sync with src/app/onboard/[token]/page.tsx.
+// sessionStorage survives the sign-in round-trip that can strip ?onboard=.
+// Key must stay in sync with src/app/onboard/[token]/page.tsx.
 const ONBOARD_TARGET_KEY = 'storm_onboard_target'
+
+const LandingPage = dynamic(
+  () => import('@/components/landing/LandingPage').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Loading…' fullScreen={false} /> }
+)
 
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
@@ -129,10 +134,9 @@ const HomeContent = () => {
     }
   }, [searchParams, referralCode, setReferralCode, router])
 
-  // Preserve the Indeed-style "browse jobs without signing in" hook now that
-  // /sign-in is the default front door: ?guided=1 drops a guest straight into
-  // Guided Mode instead of being redirected to sign-in. Runs before the
-  // session-settle window, so the guest-redirect effect never fires first.
+  // Indeed-style lazy auth: ?guided=1 drops a guest straight into Guided Mode
+  // (skip the marketing landing). Runs early so session-settle doesn't flash
+  // the landing page first.
   useEffect(() => {
     if (searchParams.get('guided') === '1') {
       setShowGuidedMode(true)
@@ -296,32 +300,31 @@ const HomeContent = () => {
   }, [userRole, isRoleLoading, sessionUserId])
 
   // -------------------------------------------------------
-  // Supabase /sign-in is the only front door.
+  // Guest front door = marketing LandingPage on `/`.
+  // Sign-in is opt-in via CTA / nav (router.push('/sign-in')), not an auto-redirect.
+  // ?guided=1 / Browse jobs still drops guests into Guided Mode without auth.
   //
-  // Unauthenticated visitors are redirected to /sign-in unless they're
-  // browsing jobs in Guided Mode (Indeed-style lazy auth).
-  //
-  // Guards against a redirect LOOP with /sign-in (a user with a live Supabase
-  // session would otherwise be bounced before the wallet-shaped `user`
-  // hydrates):
-  //   - `supabaseSessionChecked`: don't decide "guest" until Supabase's
-  //     getUser() has actually resolved.
-  //   - `!sessionUserId`: a resolved Supabase session counts as authenticated
-  //     even before `user` is hydrated.
+  // Wait for Supabase getUser() before showing the landing page so a returning
+  // session doesn't flash marketing before the hub hydrates.
   // -------------------------------------------------------
   const sessionSettled = supabaseSessionChecked
-  const awaitingGuestRedirect = !user && !sessionUserId && !showGuidedMode
+  const isGuest = !user && !sessionUserId && !showGuidedMode
+  const awaitingSessionCheck = isGuest && !sessionSettled
 
   // Supabase session resolved but the wallet-shaped `user` hasn't hydrated yet
   // (the /api/auth/sync round-trip). Cover the gap so we don't flash a blank
   // hub or the wrong shell during that brief window.
   const awaitingSessionHydration = !user && !!sessionUserId
 
+  // Nav / Guided Mode "sign in" used to set currentPage='signin' while the
+  // guest-redirect effect handled the hop. With the landing page as front
+  // door, push the real /sign-in route instead.
   useEffect(() => {
-    if (sessionSettled && awaitingGuestRedirect) {
+    if (currentPage === 'signin' && !user) {
+      setCurrentPage(null)
       router.push('/sign-in')
     }
-  }, [sessionSettled, awaitingGuestRedirect, router])
+  }, [currentPage, user, setCurrentPage, router])
 
   // -------------------------------------------------------
   // Handlers
@@ -478,11 +481,20 @@ const HomeContent = () => {
             />
           )}
 
-          {/* Guest → /sign-in handoff (T1.11c). Covers both the session-check
-              window and the moment the redirect fires, so guests never see the
-              legacy Alchemy landing flash before reaching the Supabase front door. */}
-          {(awaitingGuestRedirect || awaitingSessionHydration) && (
+          {/* Session gate — don't flash marketing over a returning session. */}
+          {(awaitingSessionCheck || awaitingSessionHydration) && (
             <LoadingScreen message='Loading…' />
+          )}
+
+          {/* ── Guest marketing landing (signed-out front door) ── */}
+          {sessionSettled && isGuest && (
+            <ErrorBoundary section='Landing'>
+              <LandingPage
+                isAuthenticated={false}
+                onGetStarted={() => router.push('/sign-in')}
+                onBrowseJobs={enterGuidedMode}
+              />
+            </ErrorBoundary>
           )}
 
           {/* ── Employer ── */}
@@ -518,17 +530,14 @@ const HomeContent = () => {
             </ErrorBoundary>
           )}
 
-          {/* ── Driver hub (legacy authenticated drivers) ──
-             Only authenticated users reach DriverShell now; unauthenticated
-             visitors are redirected to /sign-in above. */}
-          {(!showGuidedMode || !!user) &&
-            (userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
+          {/* ── Driver hub (legacy authenticated drivers only) ── */}
+          {user &&
+            (userRole === 'driver' || (!userRole && !showRoleSelection)) &&
             !isRoleLoading && (
               <ErrorBoundary section='Driver Hub'>
                 <DriverShell
                   onResumeUploadEvent={handleResumeUploadEvent}
                   onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
-                  onBrowseGuided={enterGuidedMode}
                 />
               </ErrorBoundary>
             )}

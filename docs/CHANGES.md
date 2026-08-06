@@ -14,10 +14,12 @@ Replaced `src/components/HomePage.tsx` with a ground-up Provven landing page bui
 | Sections | Hero → Problem → Career Card → Selective Disclosure → How It Works → Employers (`#employers`) → Built for Trust (Midnight/ZK) → Final CTA |
 | `landing-shared.tsx` | `InkBand` (theme-independent deep-ink plane for hero/disclosure/trust), `SectionHeader`, `LandingContainer` |
 | Typography | Added **Fraunces** display serif via `next/font` (`--font-fraunces` → Tailwind `font-display`), per brand boards |
-| Wiring | `DriverShell` lazy-imports `landing/LandingPage`; old `HomePage.tsx` deleted; dead `VaultMarketingTile`/`VaultShowcase` removed from `HubBlockVault.tsx` |
+| Wiring | **`page.tsx` renders `LandingPage` for signed-out guests on `/`** (replaces the Phase-1 auto-redirect to `/sign-in`). CTAs / nav "Sign in" → `router.push('/sign-in')`. Old `HomePage.tsx` deleted; dead marketing tiles removed from `HubBlockVault.tsx` |
 | Dev preview | `/landing-preview` renders the page while signed in (dev-only — `notFound()` in production) |
 | Language guardrails | Verification claims restricted to third-party facts; Midnight/ZK framed present-continuous ("built on", "designed for"); no wallet/token language |
 | Verified | Browser pass on light + dark themes and 390px mobile (fixed a `DisclosureCard` min-content overflow); hidden crossfade values are `aria-hidden` |
+
+**Why it looked "missing" after the first push:** guests were still auto-redirected to `/sign-in`, so the landing component never mounted on the live site. Fixed by stopping that redirect and mounting `LandingPage` as the signed-out front door.
 
 See `src/components/landing/README.md` for fonts + how to swap the card mock for a product screenshot.
 
