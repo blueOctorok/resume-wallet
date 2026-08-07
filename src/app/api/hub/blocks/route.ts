@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         .maybeSingle(),
       supabase
         .from('user_profiles')
-        .select('first_name, last_name, avatar_url, headline')
+        .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
         .eq('user_id', user.id)
         .maybeSingle(),
     ])

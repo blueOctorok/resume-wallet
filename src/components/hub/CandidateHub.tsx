@@ -1,7 +1,7 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -12,8 +12,7 @@ import Button from '@/components/ui/Button'
 import BlockPickerModal from './BlockPickerModal'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
-import HubWorkspaceCareerCard from '@/components/hub/HubWorkspaceCareerCard'
-import NavNextStep from '@/components/hub/NavNextStep'
+import BuildBoard from '@/components/hub/BuildBoard'
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
 function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
   const returnToApply = useUIModeStore((s) => s.returnToApply)
@@ -52,7 +51,6 @@ export default function CandidateHub() {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
 
-  const [refreshKey, setRefreshKey] = useState(0)
   const lastHubRefreshNonce = useRef<number | null>(null)
 
   const isLoading = useHubBlocksStore((s) => s.isLoading)
@@ -74,8 +72,10 @@ export default function CandidateHub() {
   }, [openPickerAfterHub, openPicker, setOpenPickerAfterHub])
 
   const refreshHub = useCallback(() => {
-    if (sessionUserId) fetchHubData(sessionUserId)
-    setRefreshKey((k) => k + 1)
+    if (!sessionUserId) return
+    fetchHubData(sessionUserId)
+    // Re-sync the driver hub too — the Build board's DQ statuses live there.
+    void syncDriverHubFromApi(sessionUserId)
   }, [sessionUserId, fetchHubData])
 
   useEffect(() => {
@@ -120,14 +120,9 @@ export default function CandidateHub() {
       <BlockPickerModal />
 
       <div className='mx-auto w-full max-w-3xl space-y-6'>
-        {/* The nav "Up next" chip is lg-only — on smaller screens the same
-            guidance renders here so mobile users are never without a next step. */}
-        <div className='flex justify-center lg:hidden'>
-          <NavNextStep isDark={isDark} />
-        </div>
         {sessionUserId ? <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} /> : null}
         <ReturnToApplyBanner isDark={isDark} />
-        <HubWorkspaceCareerCard refreshNonce={refreshKey} />
+        <BuildBoard />
       </div>
     </>
   )

@@ -438,11 +438,18 @@ const HomeContent = () => {
           <ProfileSetupModal
             isOpen={showProfileSetup}
             onClose={() => setShowProfileSetup(false)}
-            onComplete={(firstName?: string, lastName?: string) => {
+            onComplete={(saved) => {
               setShowProfileSetup(false)
-              if (firstName && lastName) {
-                updateUserProfile({ firstName, lastName })
-              }
+              // Patch the full identity into the hub store so the Build Profile
+              // tile flips to Done immediately (no waiting on a refetch).
+              updateUserProfile({
+                firstName: saved.firstName,
+                lastName: saved.lastName,
+                email: saved.email,
+                phone: saved.phone,
+                city: saved.city,
+                state: saved.state,
+              })
             }}
             sessionUserId={sessionUserId}
             userRole={userRole}

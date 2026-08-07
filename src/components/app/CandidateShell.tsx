@@ -35,6 +35,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'hunt-desk',
   'applications',
   'career-card',
+  'build',
   'messages',
   'inbox',
   'ask-ai',
@@ -104,7 +105,8 @@ const GitHubPage = dynamic(
  * CandidateShell — the composable hub shell for all non-employer users.
  *
  * Reads `currentPage` from UIStore and routes to the correct view.
- * Default (null) renders CandidateHub which shows the block grid.
+ * Default home is the Career Card showroom (`null` / `career-card`).
+ * Build (`build`) is the DQ board workspace.
  *
  * Each block's `pageRoute` in the registry maps to one of the cases below.
  */
@@ -262,8 +264,14 @@ export default function CandidateShell() {
     )
   }
 
-  if (currentPage === 'career-card') {
-    return <CareerCardView onBack={goBack} />
+  // Explicit Build workspace (DQ board)
+  if (currentPage === 'build') {
+    return <CandidateHub />
+  }
+
+  // Career Card is home — `null` (default after login) and `career-card` both land here
+  if (currentPage === 'career-card' || currentPage === null) {
+    return <CareerCardView onBack={() => setCurrentPage('build')} />
   }
 
   if (currentPage === 'messages') {
@@ -294,7 +302,5 @@ export default function CandidateShell() {
     )
   }
 
-  // Construct (the composable hub) is the only candidate chrome. Apply mode was
-  // removed, so we always render the hub regardless of any legacy saved preference.
-  return <CandidateHub />
+  return <CareerCardView onBack={() => setCurrentPage('build')} />
 }

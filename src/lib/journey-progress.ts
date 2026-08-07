@@ -49,13 +49,50 @@ export interface JourneyProgress {
 
 // ===== BLOCK-AWARE PROGRESS DATA =====
 
+/** Identity fields from user_profiles — what the Profile modal / Build tile track. */
+export interface IdentityProfileFields {
+  firstName?: string | null
+  lastName?: string | null
+  email?: string | null
+  phone?: string | null
+  city?: string | null
+  state?: string | null
+}
+
+/**
+ * Profile tile / journey "profile" step = identity only (name + contact + location).
+ * Deliberately NOT the hub-wide completeness % (that folds in CDL/resume/DOT/MVR
+ * and would keep the tile "In progress" forever after filling out the modal).
+ */
+export function deriveIdentityProfileStatus(
+  identity: IdentityProfileFields | null | undefined,
+): StepStatus {
+  const first = identity?.firstName?.trim() ?? ''
+  const last = identity?.lastName?.trim() ?? ''
+  const email = identity?.email?.trim() ?? ''
+  const phone = identity?.phone?.trim() ?? ''
+  const city = identity?.city?.trim() ?? ''
+  const state = identity?.state?.trim() ?? ''
+
+  const hasName = Boolean(first && last)
+  const hasContact = Boolean(email || phone)
+  const hasLocation = Boolean(city || state)
+
+  if (hasName && hasContact && hasLocation) return 'complete'
+  if (hasName || hasContact || hasLocation) return 'in_progress'
+  return 'pending'
+}
+
 /**
  * Flat bag of completion signals that the journey store assembles
  * from various stores. Each block's step resolver picks what it needs.
  */
 export interface BlockProgressData {
   isWalletConnected: boolean
+  /** Hub-wide weighted score (Stormi / legacy UI). Not used for the Profile step. */
   profileCompleteness: number
+  /** Identity fields for the Profile journey step + Build board tile. */
+  identityProfile: IdentityProfileFields | null
   /** Any resume (driver, developer, or general) */
   hasResume: boolean
   hasDriverResume: boolean
@@ -347,16 +384,15 @@ export function calculateBlockJourney(
     }
   }
 
-  // 3. Profile step — after block steps so actionable items come first
+  // 3. Profile step — identity only (name / contact / location). The old
+  //    profileCompleteness >= 80 gate wrongly required CDL + resume + DOT.
+  const identityStatus = deriveIdentityProfileStatus(data.identityProfile)
   const profileStep: JourneyStep = {
     id: 'profile',
     label: 'Complete Your Profile',
-    description: 'Fill out your name, headline, and avatar',
-    status: data.profileCompleteness >= 80
-      ? 'complete'
-      : data.profileCompleteness > 0 ? 'in_progress' : 'pending',
-    progress: data.profileCompleteness,
-    action: data.profileCompleteness < 80 ? { label: 'View Profile', target: null } : undefined,
+    description: 'Name, contact, and location',
+    status: identityStatus,
+    action: identityStatus !== 'complete' ? { label: 'View Profile', target: null } : undefined,
   }
 
   const verifiedFactsStep: JourneyStep | null =
@@ -428,10 +464,10 @@ export function calculateBlockJourney(
       target: 'block-store',
       priority: 'high',
     })
-    if (data.profileCompleteness < 80) {
+    if (identityStatus !== 'complete') {
       nextActions.push({
         label: 'Complete Profile',
-        description: `Your profile is ${data.profileCompleteness}% complete`,
+        description: 'Add your name, contact, and location',
         target: null,
         priority: 'medium',
       })
@@ -440,10 +476,10 @@ export function calculateBlockJourney(
     // Has blocks — show block-specific actions first
     nextActions.push(...blockActions)
 
-    if (data.profileCompleteness < 80) {
+    if (identityStatus !== 'complete') {
       nextActions.push({
         label: 'Complete Profile',
-        description: `Your profile is ${data.profileCompleteness}% complete`,
+        description: 'Add your name, contact, and location',
         target: null,
         priority: 'low',
       })

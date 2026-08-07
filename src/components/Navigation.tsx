@@ -52,7 +52,6 @@ import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { PageType, UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
-import NavNextStep from '@/components/hub/NavNextStep'
 import ReferralModal from '@/components/hub/ReferralModal'
 import NotificationBell from './ui/NotificationBell'
 import { getDisplayRole } from '@/lib/employer-roles'
@@ -360,9 +359,8 @@ function NavOptionsMenu({
 type CandidateHubView = 'build' | 'career-card'
 
 /**
- * Hub toggle: Build (the workspace — all editing/ordering) · Career Card
- * (the showroom — the read-only projection employers see).
- * Guidance is NOT a destination — the Up next chip carries it from every screen.
+ * Hub toggle: Build (the workspace) · Career Card (the showroom).
+ * Lives in the nav center on every breakpoint — never buried in Options/hamburger.
  * One outer box; the selected segment fills gold so the switch is unmistakable.
  */
 function CandidateViewToggle({
@@ -374,9 +372,10 @@ function CandidateViewToggle({
   onSelect: (view: CandidateHubView) => void
   isDark: boolean
 }) {
+  // Career Card first (left) — it's the default home after login
   const options: { id: CandidateHubView; label: string; icon: LucideIcon }[] = [
-    { id: 'build', label: 'Build', icon: Blocks },
     { id: 'career-card', label: 'Career Card', icon: LayoutDashboard },
+    { id: 'build', label: 'Build', icon: Blocks },
   ]
 
   return (
@@ -419,14 +418,15 @@ function CandidateViewToggle({
   )
 }
 
-// Every work page (hub, dotapp, mvr, …) belongs to Build; only the
-// showroom projection lives under Career Card.
+// Career Card is home (null / career-card). Build is the DQ board.
+// Work pages (dotapp, mvr, …) keep the Build segment selected so the
+// driver knows they're in the workshop.
 function candidateHubViewFromPage(page: PageType): CandidateHubView {
-  return page === 'career-card' ? 'career-card' : 'build'
+  return page === 'career-card' || page === null ? 'career-card' : 'build'
 }
 
 function pageFromCandidateHubView(view: CandidateHubView): PageType {
-  return view === 'career-card' ? 'career-card' : null
+  return view === 'build' ? 'build' : 'career-card'
 }
 
 /**
@@ -605,9 +605,11 @@ export default function Navigation({
     <header className='sticky top-0 z-50'>
       <div className={cn('relative border-b backdrop-blur-xl', barClass)}>
         <nav className='mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8' aria-label='Main navigation'>
-          <div className='flex h-16 items-center justify-between gap-4'>
+          {/* Relative so the candidate toggle can sit at true viewport-center
+              without being shoved by unequal left/right control widths. */}
+          <div className='relative flex h-16 items-center justify-between gap-4'>
             {/* Left — wordmark (home link) + hub menu */}
-            <div className='flex min-w-0 items-center gap-2 sm:gap-5'>
+            <div className='z-10 flex min-w-0 items-center gap-2 sm:gap-5'>
               <button
                 type='button'
                 onClick={() => handleNavigation(isAuthenticated ? 'hub' : 'home')}
@@ -618,17 +620,6 @@ export default function Navigation({
                   <ProvvenWordmark tone='auto' isDark={isDark} />
                 </h1>
               </button>
-
-              {/* Candidates: Build (workspace) ↔ Career Card (showroom) */}
-              {isAuthenticated && userRole === 'candidate' && (
-                <div className='hidden sm:block'>
-                  <CandidateViewToggle
-                    isDark={isDark}
-                    active={candidateHubViewFromPage(currentPage)}
-                    onSelect={(view) => goToPage(pageFromCandidateHubView(view))}
-                  />
-                </div>
-              )}
 
               {/* Employers + legacy roles keep the hub dropdown */}
               {isAuthenticated && userRole && userRole !== 'candidate' && (
@@ -650,15 +641,21 @@ export default function Navigation({
               {isAuthenticated && <div className='hidden min-w-0 xl:block'>{employerSnapshot}</div>}
             </div>
 
-            {/* Center — candidate "up next" preview (free real estate on wide screens) */}
+            {/* Center — Build / Career Card (true middle of the bar on every breakpoint) */}
             {isAuthenticated && userRole === 'candidate' && (
-              <div className='hidden min-w-0 flex-1 justify-center lg:flex'>
-                <NavNextStep isDark={isDark} />
+              <div className='pointer-events-none absolute inset-x-0 flex justify-center'>
+                <div className='pointer-events-auto'>
+                  <CandidateViewToggle
+                    isDark={isDark}
+                    active={candidateHubViewFromPage(currentPage)}
+                    onSelect={(view) => goToPage(pageFromCandidateHubView(view))}
+                  />
+                </div>
               </div>
             )}
 
             {/* Right — controls */}
-            <div className='flex shrink-0 items-center gap-2'>
+            <div className='z-10 flex shrink-0 items-center gap-2'>
               {!isAuthenticated && (
                 <>
                   <button
@@ -820,19 +817,6 @@ export default function Navigation({
                   {userRole === 'driver' && mvrIdentity && (
                     <div className='flex justify-center pb-1'>
                       <MvrStatusBadge sessionUserId={mvrIdentity} />
-                    </div>
-                  )}
-
-                  {userRole === 'candidate' && (
-                    <div className='flex justify-center py-1'>
-                      <CandidateViewToggle
-                        isDark={isDark}
-                        active={candidateHubViewFromPage(currentPage)}
-                        onSelect={(view) => {
-                          goToPage(pageFromCandidateHubView(view))
-                          setIsMenuOpen(false)
-                        }}
-                      />
                     </div>
                   )}
 

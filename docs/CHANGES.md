@@ -4,6 +4,49 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Drivers-only home: Career Card first, Build = DQ board** (2026-08-07)
+
+Product focus is drivers. Login lands on the **Career Card** showroom; **Build** is an explicit `build` page (nav toggle + header/footer flip from the card).
+
+| Surface | Page | Role |
+|---|---|---|
+| Career Card (home) | `null` / `career-card` | Showroom + one **Up next** CTA (`getDriverNextAction`) — profile → DOT → consent → MVR/PSP…; section taps deep-link into blocks |
+| Build | `build` | Fixed DQ board — Profile + `DQ_ITEM_DEFINITIONS` only |
+
+- Scraped non-driver tiles from `BuildBoard` (no portfolio / GitHub / general-resume rows). Block picker was already `categoryId === 'drivers'`.
+- New `src/lib/driver-next-action.ts` + Career Card CTA / Build flip in `CareerCardView`.
+- Nav: Career Card selected for home; work pages keep Build selected. Toggle order is **Career Card · Build** (home on the left).
+- Legacy developer shell routes remain for old deep-links but are out of the candidate Build surface.
+
+## **Build Profile tile: Done means identity is filled** (2026-08-07)
+
+The Build board's Profile tile stayed **In progress** even after a full name/email/phone/location save. Root cause: status came from the hub-wide `profileCompleteness >= 80` score, which also requires CDL + resume + DOT — identity alone tops out around ~30%.
+
+- New `deriveIdentityProfileStatus()` — Profile journey step + Build tile are **Done** when name + (email or phone) + (city or state) are present.
+- `/api/hub/blocks` + `HubUserProfile` now carry `email` / `phone` / `city` / `state` so the client can evaluate without a driver-hub refetch.
+- `ProfileSetupModal`: phone uses shared `PhoneInput` with HTML5 `type="tel"` + `inputMode="tel"` + `autoComplete="tel"`; candidates' Location field actually saves (was writing to a dead `location` field and never hitting the API); modal prefills from the hub store; save patches the full identity into the store so the tile flips immediately.
+
+## **Mobile nav: Build / Career Card toggle centered in the bar** (2026-08-07)
+
+The candidate view toggle was only rendered at `sm+` next to the wordmark, so on phones it lived inside the hamburger — buried with Themes / Messages / etc. It now sits in the **true center of the sticky nav on every breakpoint** (absolute `inset-x-0` so unequal logo vs. hamburger widths don't shove it), and the duplicate copy was removed from the mobile menu. Hamburger keeps Options-only chrome.
+
+## **Build is now the DQ board — "Up next" retired** (2026-08-07)
+
+Final step of the day's IA work: Build stopped being a rearrangeable career-card editor and became a **fixed, glanceable status board**, which made the entire "Up next" guidance layer redundant — the board *is* the answer to "what should I do right now?"
+
+**New: `BuildBoard` (`src/components/hub/BuildBoard.tsx`)** — the only thing the Build tab renders (inside `HubSectionPanel` + `BlockCard variant='embed'`, "Your DQ file", with an `X/Y done` chip):
+
+- **Two-column tile grid** (single column on mobile) listing everything a complete DQ file needs, automatically — the candidate arranges nothing. Order: Profile → all 11 `DQ_ITEM_DEFINITIONS` (live items in the main grid; the 6 not-yet-shipped ones in a dimmed **"Coming online"** group with dashed borders + lock icons + source chips like "Needs Key") → installed non-driver blocks (portfolio, GitHub, resume…) → a dashed **"Add a block"** tile (the picker's new entry point).
+- **Status at a glance:** each tile carries an icon + chip — Done (emerald tint), In progress, Processing ("no action needed"), Requested ("An employer asked for this — finish it first"), To do, or a locked source chip. Live DQ statuses come from the driver-hub store's `dqFile` snapshot (registry defaults as fallback for brand-new users); Profile + non-driver block statuses come from `useJourneyProgress()`.
+- **Click = start.** `DQ_ROUTES` maps each actionable DQ item to its page (`mvr`, `psp`, `dotapp`, `screening-consent`, `employment-verification`); Profile opens the profile-setup modal. Blocks whose page a DQ tile already links to are deduped (e.g. the employment-verification block vs. the DQ item). No up/down arrows, no "page 2" — one page, done.
+- Nav refresh now re-runs `syncDriverHubFromApi` too, so board statuses update with the refresh button.
+
+**Deleted (the whole guidance layer + the old workspace card):** `NavNextStep` (nav chip), `CandidateTodoModal`, `candidate-todo.ts` + store + tests, and `HubWorkspaceCareerCard` (the construct-mode career card — its `mode='construct'` in `ProjectedCareerCard` is now unreferenced; flagged as a candidate for a future cleanup pass).
+
+**Preserved by moving to the showroom (`CareerCardView`):** the two presentation features the construct card still owned — **avatar upload** (camera badge on the card photo; only remaining owner surface for it) and the **live resume packet preview** (new "Resume" header button next to Share → `ResumePreviewModal` with Download PDF / Share card / Start-Continue DOT).
+
+Mental model unchanged, surfaces simpler: **Build (the board of work) → Career Card (the showroom) → share, verified.**
+
 ## **IA settled: Career Card · DQ file, guidance stays ambient** (2026-08-07)
 
 The three-tab experiment (Career Card · DQ file · Checklist) lasted one session — the Checklist, DQ file, and career-card blocks were three framings of the same tasks. New rule: **nav destinations are things, not advice.**

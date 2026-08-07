@@ -30,6 +30,8 @@ export type PageType =
   | 'team'
   | 'company-setup'
   | 'career-card'
+  /** Driver DQ board (workspace). Career Card is the default home (`null` / `career-card`). */
+  | 'build'
   | 'profile-setup'
   | 'messages'
   | 'inbox'

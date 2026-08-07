@@ -53,6 +53,11 @@ export interface HubUserProfile {
   lastName: string
   avatarUrl: string | null
   headline: string | null
+  /** Identity contact — used by Build board Profile tile status. */
+  email: string | null
+  phone: string | null
+  city: string | null
+  state: string | null
 }
 
 interface HubBlocksState {
@@ -159,13 +164,26 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         })
       )
 
-      const rawProfile = data.profile as { first_name: string; last_name: string; avatar_url: string | null; headline?: string | null } | null
+      const rawProfile = data.profile as {
+        first_name: string
+        last_name: string
+        avatar_url: string | null
+        headline?: string | null
+        email?: string | null
+        phone?: string | null
+        city?: string | null
+        state?: string | null
+      } | null
       const userProfile: HubUserProfile | null = rawProfile
         ? {
             firstName: rawProfile.first_name ?? '',
             lastName: rawProfile.last_name ?? '',
             avatarUrl: rawProfile.avatar_url ?? null,
             headline: rawProfile.headline ?? null,
+            email: rawProfile.email ?? null,
+            phone: rawProfile.phone ?? null,
+            city: rawProfile.city ?? null,
+            state: rawProfile.state ?? null,
           }
         : null
 
@@ -381,14 +399,33 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     set((s) => ({
       userProfile: s.userProfile
         ? { ...s.userProfile, avatarUrl: url }
-        : { firstName: '', lastName: '', avatarUrl: url, headline: null },
+        : {
+            firstName: '',
+            lastName: '',
+            avatarUrl: url,
+            headline: null,
+            email: null,
+            phone: null,
+            city: null,
+            state: null,
+          },
     })),
 
   updateUserProfile: (patch) =>
     set((s) => ({
       userProfile: s.userProfile
         ? { ...s.userProfile, ...patch }
-        : { firstName: '', lastName: '', avatarUrl: null, headline: null, ...patch },
+        : {
+            firstName: '',
+            lastName: '',
+            avatarUrl: null,
+            headline: null,
+            email: null,
+            phone: null,
+            city: null,
+            state: null,
+            ...patch,
+          },
     })),
 
   // ── Edit mode ──────────────────────────────────────────────────────────────

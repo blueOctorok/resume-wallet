@@ -22,7 +22,11 @@ interface MaskedInputProps {
 export const PhoneInput = forwardRef<HTMLInputElement, MaskedInputProps>(
   ({ value, onChange, className, placeholder = '(555) 123-4567', disabled, id, name }, ref) => (
     <IMaskInput
-      mask="(000) 000-0000"
+      // HTML5 telephone input — mobile keyboards + autofill treat this as a phone field
+      type='tel'
+      inputMode='tel'
+      autoComplete='tel'
+      mask='(000) 000-0000'
       definitions={{ '0': /[0-9]/ }}
       value={value}
       unmask={false}
@@ -30,7 +34,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, MaskedInputProps>(
       placeholder={placeholder}
       disabled={disabled}
       id={id}
-      name={name}
+      name={name ?? 'phone'}
       className={className}
       inputRef={ref}
     />

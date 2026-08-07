@@ -101,6 +101,7 @@ export function useJourneyProgress(): JourneyProgress {
   // All hooks must be called unconditionally (Rules of Hooks) even if
   // the employer branch doesn't use them.
   const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
+  const userProfile = useHubBlocksStore((s) => s.userProfile)
   const hubStore = useDriverHubStore()
   const { isApplicationCompleted, currentForm } = useDotApplicationStore()
 
@@ -144,9 +145,36 @@ export function useJourneyProgress(): JourneyProgress {
   const hasDeveloperResume = resumes.some((r) => r.sourceRole === 'developer')
   const hasGeneralResume = resumes.some((r) => r.sourceRole === 'general')
 
+  // Prefer hub-blocks identity (always loaded for candidates); fall back to
+  // driver-hub profile which may still be snake_case from the API.
+  const driverProfile = hubStore.profile as Record<string, unknown> | null
+  const identityProfile = {
+    firstName:
+      userProfile?.firstName ||
+      (typeof driverProfile?.firstName === 'string' ? driverProfile.firstName : null) ||
+      (typeof driverProfile?.first_name === 'string' ? driverProfile.first_name : null),
+    lastName:
+      userProfile?.lastName ||
+      (typeof driverProfile?.lastName === 'string' ? driverProfile.lastName : null) ||
+      (typeof driverProfile?.last_name === 'string' ? driverProfile.last_name : null),
+    email:
+      userProfile?.email ||
+      (typeof driverProfile?.email === 'string' ? driverProfile.email : null),
+    phone:
+      userProfile?.phone ||
+      (typeof driverProfile?.phone === 'string' ? driverProfile.phone : null),
+    city:
+      userProfile?.city ||
+      (typeof driverProfile?.city === 'string' ? driverProfile.city : null),
+    state:
+      userProfile?.state ||
+      (typeof driverProfile?.state === 'string' ? driverProfile.state : null),
+  }
+
   const data: BlockProgressData = {
     isWalletConnected,
     profileCompleteness: hubStore.stats?.profileCompleteness ?? 0,
+    identityProfile,
     hasResume: resumes.length > 0,
     hasDriverResume,
     hasDeveloperResume,
