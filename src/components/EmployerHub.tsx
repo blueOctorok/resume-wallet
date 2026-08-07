@@ -1054,36 +1054,27 @@ function StatCard({
   highlight?: boolean
 }) {
   const isDark = isDarkTheme(theme)
-  const ink = theme === 'ink'
   return (
     <div
       className={cn(
         'relative overflow-hidden rounded-xl p-4 transition-all duration-300 border',
-        ink
-          ? 'border-zinc-600/70 bg-gradient-to-b from-zinc-900/95 to-zinc-950/95 shadow-[0_8px_28px_-14px_rgba(0,0,0,0.5)] ring-1 ring-zinc-500/[0.14] hover:border-zinc-500/45'
-          : 'border-gray-200/90 dark:border-gray-600/70 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90 shadow-[0_8px_28px_-14px_rgba(156,119,64,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)] ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08] hover:border-teal-500/25 dark:hover:border-teal-400/30',
+        'border-gray-200/90 dark:border-gray-600/70 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90 shadow-[0_8px_28px_-14px_rgba(156,119,64,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)] ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08] hover:border-teal-500/25 dark:hover:border-teal-400/30',
       )}
     >
       <div
         aria-hidden
-        className={
-          ink
-            ? 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-400/35 to-transparent'
-            : 'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/28'
-        }
+        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/28'
       />
       <div className="flex items-center gap-2 mb-2">
         <div
           className={cn(
             'p-1.5 rounded-lg ring-1',
-            ink
-              ? 'bg-gradient-to-br from-zinc-700/45 to-zinc-800/35 ring-zinc-500/30'
-              : 'bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10 ring-teal-500/20 dark:ring-teal-400/25',
+            'bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10 ring-teal-500/20 dark:ring-teal-400/25',
           )}
         >
-          <span className={ink ? 'text-zinc-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>{icon}</span>
+          <span className={isDark ? 'text-teal-400' : 'text-teal-600'}>{icon}</span>
         </div>
-        <span className={cn('text-sm font-medium', ink ? 'text-zinc-400' : isDark ? 'text-gray-400' : 'text-gray-600')}>
+        <span className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>
           {label}
         </span>
       </div>
@@ -1091,20 +1082,16 @@ function StatCard({
         className={cn(
           'text-2xl font-bold tracking-tight',
           highlight
-            ? ink
-              ? 'text-amber-200'
-              : 'text-orange-500 dark:text-orange-400'
-            : ink
-              ? 'text-zinc-50'
-              : isDark
-                ? 'text-white'
-                : 'text-gray-900',
+            ? 'text-orange-500 dark:text-orange-400'
+            : isDark
+              ? 'text-white'
+              : 'text-gray-900',
         )}
       >
         {value}
       </p>
       {subValue && (
-        <p className={cn('text-xs mt-1', ink ? 'text-zinc-500' : isDark ? 'text-gray-500' : 'text-gray-400')}>
+        <p className={cn('text-xs mt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
           {subValue}
         </p>
       )}

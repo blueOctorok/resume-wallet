@@ -97,11 +97,7 @@ export default function EmployerPathSidebar({
   const divider = (
     <div
       aria-hidden
-      className={
-        theme === 'ink'
-          ? 'h-px shrink-0 bg-gradient-to-r from-transparent via-zinc-500/35 to-transparent'
-          : 'h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
-      }
+      className='h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
     />
   )
 
@@ -134,7 +130,7 @@ export default function EmployerPathSidebar({
               type='button'
               variant='ghost'
               size='sm'
-              className={cn('!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm', navControlButtonClass(isDark, theme))}
+              className={cn('!h-8 !w-8 !p-1.5 shadow-sm backdrop-blur-sm', navControlButtonClass(isDark))}
               onClick={onRequestCollapse}
               aria-label='Collapse job path panel'
               title='Collapse job path'

@@ -1,52 +1,40 @@
 /**
  * Persisted appearance:
- * - `light` — icy colorful light
- * - `paper` — newsprint (monochrome light)
- * - `dark` — galactic void (colorful dark)
- * - `ink` — quiet dark (monochrome dark; inverse of paper)
+ * - `light` — cream parchment & gold
+ * - `dark` — ink navy & champagne gold (the seal)
  *
- * Schema v4: adds `ink`. Removed themes `sepia` / `business` still map to `light`.
+ * Schema v5: `paper` / `ink` removed (map to `light` / `dark`).
+ * Older removed themes `sepia` / `business` still map to `light`.
  */
-export type StoredTheme = 'light' | 'dark' | 'paper' | 'ink'
+export type StoredTheme = 'light' | 'dark'
 
 export const THEME_STORAGE_KEY = 'stormchain-theme'
 export const THEME_SCHEMA_KEY = 'stormchain-theme-schema'
-export const THEME_SCHEMA_VERSION = '4'
-export const LIGHT_APPEARANCE_KEY = 'stormchain-light-appearance'
-export const DARK_APPEARANCE_KEY = 'stormchain-dark-appearance'
+export const THEME_SCHEMA_VERSION = '5'
 
 export function isStoredTheme(v: string | null): v is StoredTheme {
-  return v === 'light' || v === 'dark' || v === 'paper' || v === 'ink'
+  return v === 'light' || v === 'dark'
 }
 
 /** True when Tailwind `dark:` and storm “dark chrome” paths should apply. */
 export function isDarkTheme(theme: string): boolean {
-  return theme === 'dark' || theme === 'ink'
+  return theme === 'dark'
+}
+
+/** Retired theme names → nearest surviving appearance. */
+function migrateStoredTheme(saved: string | null): StoredTheme | null {
+  if (saved === 'paper' || saved === 'sepia' || saved === 'business') return 'light'
+  if (saved === 'ink') return 'dark'
+  return isStoredTheme(saved) ? saved : null
 }
 
 /** Run on load (and in root layout inline script) before paint to avoid flash. */
 export function parseStoredTheme(): StoredTheme {
   try {
-    const schema = localStorage.getItem(THEME_SCHEMA_KEY)
     const saved = localStorage.getItem(THEME_STORAGE_KEY)
-
-    if (saved === 'sepia' || saved === 'business') {
-      persistThemeToStorage('light')
-      return 'light'
-    }
-
-    if (schema !== THEME_SCHEMA_VERSION) {
-      if (saved === 'light' || saved === 'dark' || saved === 'paper' || saved === 'ink') {
-        localStorage.setItem(THEME_SCHEMA_KEY, THEME_SCHEMA_VERSION)
-        localStorage.setItem(THEME_STORAGE_KEY, saved)
-        return saved
-      }
-      localStorage.setItem(THEME_SCHEMA_KEY, THEME_SCHEMA_VERSION)
-      localStorage.setItem(THEME_STORAGE_KEY, 'light')
-      return 'light'
-    }
-
-    if (isStoredTheme(saved)) return saved
+    const theme = migrateStoredTheme(saved) ?? 'light'
+    persistThemeToStorage(theme)
+    return theme
   } catch {
     /* ignore */
   }

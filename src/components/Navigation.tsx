@@ -20,31 +20,40 @@ import {
   Users,
   Shield,
   CheckCircle,
-  Inbox,
+  Blocks,
+  Gift,
+  LogOut,
+  Menu,
+  Settings,
+  Palette,
+  Bell,
+  Orbit,
+  Sun,
+  Check,
+  ChevronRight,
+  X,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   navControlButtonClass,
   navTextLinkClass,
   navStormiButtonClass,
-  navHubGradientRingClass,
-  navHubInnerButtonClass,
-  navHubRefreshInnerButtonClass,
-  navRowDividerClass,
   navDropdownPanelClass,
   navDropdownItemClass,
   navDropdownItemBorderClass,
 } from '@/lib/navigation-styles'
 import ThemePicker from './ThemePicker'
-import StormChainWordmark from '@/components/ui/StormChainWordmark'
-import NavVaultShell from '@/components/ui/NavVaultShell'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import Button from '@/components/ui/Button'
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
-import type { UserRole } from '@/stores/types'
+import type { PageType, UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
+import NavNextStep from '@/components/hub/NavNextStep'
+import ReferralModal from '@/components/hub/ReferralModal'
 import NotificationBell from './ui/NotificationBell'
 import { getDisplayRole } from '@/lib/employer-roles'
 
@@ -65,7 +74,8 @@ type NavPage =
 interface NavigationProps {
   isAuthenticated?: boolean
   userRole?: UserRole
-  onStatusClick?: () => void
+  /** Signs the user out (Supabase). Replaces the legacy wallet/status modal. */
+  onLogout?: () => void
   onNavigate?: (page: NavPage) => void
   /** @deprecated Use sessionUserId; kept for backwards compatibility. */
   mvrWalletAddress?: string | null
@@ -80,10 +90,354 @@ interface NavigationProps {
   onBrowseGuided?: () => void
 }
 
+const HUB_LABELS: Partial<Record<NonNullable<UserRole>, string>> = {
+  driver: 'Driver Hub',
+  employer: 'Employer Hub',
+  developer: 'Developer Hub',
+  candidate: 'My Hub',
+}
+
+function HubRoleIcon({ userRole }: { userRole: UserRole }) {
+  if (userRole === 'driver') return <Car className='w-4 h-4' />
+  if (userRole === 'employer') return <Building2 className='w-4 h-4' />
+  if (userRole === 'developer') return <Code className='w-4 h-4' />
+  return <User className='w-4 h-4' />
+}
+
+const THEME_OPTIONS: { id: Theme; label: string; description: string; Icon: LucideIcon }[] = [
+  { id: 'light', label: 'Cream', description: 'Warm parchment & gold', Icon: Sun },
+  { id: 'dark', label: 'Ink navy', description: 'Deep navy & champagne gold', Icon: Orbit },
+]
+
+/** Theme picker nested under a Themes category row — used in Options + mobile menu. */
+function ThemeCategory({
+  isDark,
+  expanded,
+  onToggle,
+}: {
+  isDark: boolean
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const { theme, setTheme } = useTheme()
+  const active = THEME_OPTIONS.find((o) => o.id === theme)
+
+  return (
+    <div>
+      <button
+        type='button'
+        role='menuitem'
+        aria-expanded={expanded}
+        onClick={onToggle}
+        className={navDropdownItemClass(isDark)}
+      >
+        <Palette className='h-4 w-4 shrink-0' aria-hidden />
+        <span className='min-w-0 flex-1 text-left'>
+          <span className='block font-medium'>Themes</span>
+          {active && (
+            <span className={cn('mt-0.5 block text-xs font-normal', isDark ? 'text-gray-500' : 'text-stone-500')}>
+              {active.label}
+            </span>
+          )}
+        </span>
+        <ChevronRight
+          className={cn('h-4 w-4 shrink-0 transition-transform', expanded && 'rotate-90')}
+          aria-hidden
+        />
+      </button>
+
+      {expanded && (
+        <div
+          role='group'
+          aria-label='Themes'
+          className={cn(isDark ? 'bg-white/[0.02]' : 'bg-stone-50/80')}
+        >
+          {THEME_OPTIONS.map((opt) => {
+            const selected = theme === opt.id
+            return (
+              <button
+                key={opt.id}
+                type='button'
+                role='menuitemradio'
+                aria-checked={selected}
+                onClick={() => setTheme(opt.id)}
+                className={cn(
+                  navDropdownItemClass(isDark),
+                  'pl-10',
+                  selected && (isDark ? 'bg-gray-900/80' : 'bg-stone-100'),
+                )}
+              >
+                <opt.Icon
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    selected ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-stone-500',
+                  )}
+                  aria-hidden
+                />
+                <span className='min-w-0 flex-1 text-left'>
+                  <span className='block font-medium'>{opt.label}</span>
+                  <span className={cn('mt-0.5 block text-xs font-normal', isDark ? 'text-gray-500' : 'text-stone-500')}>
+                    {opt.description}
+                  </span>
+                </span>
+                {selected ? (
+                  <Check className={cn('h-4 w-4 shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} aria-hidden />
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UnreadBadge({ count, isDark }: { count: number; isDark: boolean }) {
+  if (count <= 0) return null
+  return (
+    <span
+      className={cn(
+        'ml-auto flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white',
+        'bg-teal-500',
+        isDark ? 'ring-1 ring-white/10' : '',
+      )}
+    >
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
+/**
+ * Account options — Themes, Messages, Notifications, referrals, log out.
+ * Messages + Notifications live here (not as standalone nav icons) so the
+ * bar stays clean; the gear shows a badge when either has unread items.
+ */
+function NavOptionsMenu({
+  isDark,
+  onLogout,
+  sessionUserId,
+  onOpenNotifications,
+}: {
+  isDark: boolean
+  onLogout?: () => void
+  sessionUserId?: string | null
+  onOpenNotifications?: () => void
+}) {
+  const navigateToMessages = useUIStore((s) => s.navigateToMessages)
+  const { notifications, unreadCount } = useNotificationStore()
+  const unreadMessageCount = notifications.filter((n) => n.type === 'new_message' && !n.read).length
+
+  const [open, setOpen] = useState(false)
+  const [themesOpen, setThemesOpen] = useState(false)
+  const [referralOpen, setReferralOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const hasAttention = unreadCount > 0 || unreadMessageCount > 0
+
+  useEffect(() => {
+    if (!open) {
+      setThemesOpen(false)
+      return
+    }
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className='relative'>
+      <button
+        type='button'
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          'relative hidden sm:flex h-9 w-9 items-center justify-center cursor-pointer',
+          navControlButtonClass(isDark),
+        )}
+        aria-label={hasAttention ? 'Options — you have unread items' : 'Options'}
+        aria-expanded={open}
+        aria-haspopup='menu'
+        title='Options'
+      >
+        <Settings className='h-4 w-4' />
+        {hasAttention && (
+          <span
+            className={cn(
+              'absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-teal-500',
+              isDark ? 'ring-2 ring-gray-950' : 'ring-2 ring-white',
+            )}
+          />
+        )}
+      </button>
+
+      {open && (
+        <div
+          role='menu'
+          aria-label='Options'
+          className={cn(
+            'absolute right-0 top-full z-[200] mt-2 w-[min(100vw-2rem,16.5rem)] overflow-hidden rounded-xl border shadow-xl ring-1',
+            isDark
+              ? 'border-gray-600/80 bg-gray-950 ring-white/[0.04]'
+              : 'border-stone-300/90 bg-white ring-stone-900/[0.04]',
+          )}
+        >
+          <ThemeCategory
+            isDark={isDark}
+            expanded={themesOpen}
+            onToggle={() => setThemesOpen((o) => !o)}
+          />
+
+          <div className={cn('border-t', isDark ? 'border-gray-700/80' : 'border-stone-200')}>
+            <button
+              type='button'
+              role='menuitem'
+              onClick={() => {
+                setOpen(false)
+                navigateToMessages()
+              }}
+              className={navDropdownItemClass(isDark)}
+            >
+              <MessageSquare className='h-4 w-4 shrink-0' />
+              <span className='flex-1 text-left'>Messages</span>
+              <UnreadBadge count={unreadMessageCount} isDark={isDark} />
+            </button>
+            {sessionUserId && (
+              <button
+                type='button'
+                role='menuitem'
+                onClick={() => {
+                  setOpen(false)
+                  onOpenNotifications?.()
+                }}
+                className={navDropdownItemClass(isDark)}
+              >
+                <Bell className='h-4 w-4 shrink-0' />
+                <span className='flex-1 text-left'>Notifications</span>
+                <UnreadBadge count={unreadCount} isDark={isDark} />
+              </button>
+            )}
+            <button
+              type='button'
+              role='menuitem'
+              onClick={() => {
+                setOpen(false)
+                setReferralOpen(true)
+              }}
+              className={navDropdownItemClass(isDark)}
+            >
+              <Gift className='h-4 w-4 shrink-0' />
+              Refer a friend
+            </button>
+            <button
+              type='button'
+              role='menuitem'
+              onClick={() => {
+                setOpen(false)
+                onLogout?.()
+              }}
+              className={cn(navDropdownItemClass(isDark), isDark ? 'text-red-300 hover:bg-red-500/10' : 'text-red-700 hover:bg-red-50')}
+            >
+              <LogOut className='h-4 w-4 shrink-0' />
+              Log out
+            </button>
+          </div>
+        </div>
+      )}
+
+      {referralOpen && <ReferralModal onClose={() => setReferralOpen(false)} />}
+    </div>
+  )
+}
+
+type CandidateHubView = 'build' | 'career-card'
+
+/**
+ * Hub toggle: Build (the workspace — all editing/ordering) · Career Card
+ * (the showroom — the read-only projection employers see).
+ * Guidance is NOT a destination — the Up next chip carries it from every screen.
+ * One outer box; the selected segment fills gold so the switch is unmistakable.
+ */
+function CandidateViewToggle({
+  active,
+  onSelect,
+  isDark,
+}: {
+  active: CandidateHubView
+  onSelect: (view: CandidateHubView) => void
+  isDark: boolean
+}) {
+  const options: { id: CandidateHubView; label: string; icon: LucideIcon }[] = [
+    { id: 'build', label: 'Build', icon: Blocks },
+    { id: 'career-card', label: 'Career Card', icon: LayoutDashboard },
+  ]
+
+  return (
+    <div
+      role='tablist'
+      aria-label='Hub view'
+      className={cn(
+        'flex h-9 items-center rounded-full border p-0.5',
+        isDark ? 'border-white/12 bg-white/[0.04]' : 'border-stone-300/80 bg-stone-900/[0.04]',
+      )}
+    >
+      {options.map(({ id, label, icon: Icon }) => {
+        const selected = active === id
+        return (
+          <button
+            key={id}
+            type='button'
+            role='tab'
+            aria-selected={selected}
+            aria-label={label}
+            title={label}
+            onClick={() => onSelect(id)}
+            className={cn(
+              'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
+              selected
+                ? isDark
+                  ? 'bg-teal-500 text-[#0a1322] shadow-sm'
+                  : 'bg-teal-700 text-white shadow-sm'
+                : isDark
+                  ? 'text-gray-400 hover:text-gray-200'
+                  : 'text-stone-500 hover:text-stone-800',
+            )}
+          >
+            <Icon className='h-3.5 w-3.5 shrink-0' />
+            <span className='whitespace-nowrap'>{label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Every work page (hub, dotapp, mvr, …) belongs to Build; only the
+// showroom projection lives under Career Card.
+function candidateHubViewFromPage(page: PageType): CandidateHubView {
+  return page === 'career-card' ? 'career-card' : 'build'
+}
+
+function pageFromCandidateHubView(view: CandidateHubView): PageType {
+  return view === 'career-card' ? 'career-card' : null
+}
+
+/**
+ * Traditional top bar — wordmark left, controls right, mobile menu below.
+ * Heritage chrome: translucent ink-navy / cream bar with a hairline bottom
+ * border and a champagne-gold ledger line (neutral zinc on paper/ink themes).
+ */
 export default function Navigation({
   isAuthenticated = false,
   userRole,
-  onStatusClick,
+  onLogout,
   onNavigate,
   mvrWalletAddress,
   sessionUserId,
@@ -93,18 +447,27 @@ export default function Navigation({
 }: NavigationProps) {
   const mvrIdentity = sessionUserId ?? mvrWalletAddress ?? null
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  // Mobile menu has its own referral + themes triggers (desktop lives in NavOptionsMenu)
+  const [mobileReferralOpen, setMobileReferralOpen] = useState(false)
+  const [mobileThemesOpen, setMobileThemesOpen] = useState(false)
+  // Shared: Options (desktop) + hamburger (mobile) both open this panel
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
   const hubDropdownRef = useRef<HTMLDivElement>(null)
+  const notificationsAnchorRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const { navigateToMessages, requestHubRefresh, setCurrentPage } = useUIStore()
+  const currentPage = useUIStore((s) => s.currentPage)
   const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
   const employerHubRefreshing = useUIStore((s) => s.employerHubRefreshing)
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
-  const { notifications } = useNotificationStore()
+  const { notifications, unreadCount } = useNotificationStore()
   const isDark = isDarkTheme(theme)
-  const isPaperLight = !isDark && theme === 'paper'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
+  const hasNavAttention = unreadCount > 0 || unreadMessageCount > 0
+  const hubRefreshing =
+    (userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing)
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -117,246 +480,191 @@ export default function Navigation({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen)
-  }
-
   const handleNavigation = (page: NavPage) => {
     setIsMenuOpen(false)
     onNavigate?.(page)
   }
 
+  /** Nav to an in-shell page (inbox, employer shortcuts, …) and close menus */
+  const goToPage = (page: Parameters<typeof setCurrentPage>[0]) => {
+    setCurrentPage(page)
+    setIsMenuOpen(false)
+    setIsHubDropdownOpen(false)
+  }
+
+  const barClass = isDark
+    ? 'bg-[#0a1322]/85 border-white/[0.08]'
+    : 'bg-[#fbf8f1]/92 border-stone-300/70'
+
+  const wordmarkButtonLabel = isAuthenticated ? 'Go to your hub' : 'Go to home'
+
+  const hubTriggerClass = cn(
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors cursor-pointer',
+    isDark ? 'text-gray-200 hover:bg-white/[0.06]' : 'text-stone-800 hover:bg-stone-900/[0.05]',
+  )
+
+  const employerSnapshot = userRole === 'employer' && employerNavSnapshot && (
+    <div className='flex min-w-0 max-w-[16rem] flex-col text-left'>
+      <div className='flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1'>
+        <span
+          className={cn('truncate text-xs font-semibold', isDark ? 'text-gray-100' : 'text-gray-900')}
+          title={employerNavSnapshot.companyName}
+        >
+          {employerNavSnapshot.companyName}
+        </span>
+        {employerNavSnapshot.userRole && (
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+              employerNavSnapshot.userRole === 'owner'
+                ? isDark
+                  ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
+                  : 'border-purple-200 bg-purple-50 text-purple-800'
+                : employerNavSnapshot.userRole === 'admin'
+                  ? isDark
+                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
+                    : 'border-blue-200 bg-blue-50 text-blue-800'
+                  : employerNavSnapshot.userRole === 'viewer'
+                    ? isDark
+                      ? 'border-gray-500/40 bg-gray-500/15 text-gray-400'
+                      : 'border-gray-200 bg-gray-100 text-gray-700'
+                    : isDark
+                      ? 'border-teal-500/40 bg-teal-500/15 text-teal-300'
+                      : 'border-teal-200 bg-teal-50 text-teal-800',
+            )}
+          >
+            {getDisplayRole(employerNavSnapshot.userRole)}
+          </span>
+        )}
+        {employerNavSnapshot.verified && (
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+              isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-800',
+            )}
+            title='Verified company'
+          >
+            <CheckCircle className='h-2.5 w-2.5 shrink-0' aria-hidden />
+            Verified
+          </span>
+        )}
+      </div>
+      {(employerNavSnapshot.subtitle || employerNavSnapshot.memberSinceLabel) && (
+        <p
+          className='mt-0.5 truncate text-[10px] leading-tight text-gray-500'
+          title={[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel].filter(Boolean).join(' · ')}
+        >
+          {[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
+  )
+
+  const hubDropdownItems = (
+    <>
+      {/* Legacy driver/developer hubs — candidates use CandidateViewToggle instead */}
+      {userRole !== 'employer' && userRole !== 'candidate' && (
+        <button type='button' onClick={() => { handleNavigation('hub'); setIsHubDropdownOpen(false) }} className={navDropdownItemClass(isDark)}>
+          <LayoutDashboard className='w-4 h-4' />
+          Career Card
+        </button>
+      )}
+      {/* Employer shortcuts — EmployerShell reads currentPage from UIStore */}
+      {userRole === 'employer' && (
+        <>
+          <button type='button' onClick={() => { handleNavigation('hub'); setIsHubDropdownOpen(false) }} className={navDropdownItemClass(isDark)}>
+            <LayoutDashboard className='w-4 h-4' />
+            Dashboard
+          </button>
+          <button type='button' onClick={() => goToPage('talent-search')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+            <Search className='w-4 h-4' />
+            Find Talent
+          </button>
+          <button type='button' onClick={() => goToPage('post-job')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+            <Plus className='w-4 h-4' />
+            Post Job
+          </button>
+          <button type='button' onClick={() => goToPage('applicants')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+            <Users className='w-4 h-4' />
+            Applicants
+          </button>
+          <button type='button' onClick={() => goToPage('company-profile')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+            <Building2 className='w-4 h-4' />
+            Company Profile
+          </button>
+          <button type='button' onClick={() => goToPage('team')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+            <Shield className='w-4 h-4' />
+            Team
+          </button>
+        </>
+      )}
+    </>
+  )
+
   return (
-    <header
-      className='sticky top-4 z-50 px-3 sm:px-5 pointer-events-none'
-      style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
-    >
-      <NavVaultShell isDark={isDark}>
-        <nav className='relative flex w-full flex-col gap-3 sm:gap-3.5' aria-label='Main navigation'>
-            {/* Top Row: Logo and Controls */}
-            <div className='flex items-center justify-between gap-3'>
-              {/* Left side — Wallet (desktop) or Sign In */}
-              <div className='hidden sm:flex flex-shrink-0 items-center gap-2'>
-                {isAuthenticated ? (
-                  <button
-                    type='button'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onStatusClick?.()
-                    }}
-                    className={cn(
-                      'relative group flex flex-col items-center space-y-1.5 p-2.5 cursor-pointer',
-                      navControlButtonClass(isDark, theme),
-                    )}
-                    aria-label='View account status'
-                  >
-                    <div
-                      className={cn(
-                        'w-2.5 h-2.5 rounded-full',
-                        isPaperLight
-                          ? 'bg-zinc-500 shadow-[0_0_10px_rgb(63_63_70/0.35)]'
-                          : 'bg-teal-500 shadow-[0_0_10px_rgb(13_148_136/0.45)]',
-                      )}
-                    />
-                    <span className='text-[11px] font-semibold uppercase tracking-wide'>Wallet</span>
-                  </button>
-                ) : (
-                  <Button type='button' variant='primary' size='sm' onClick={() => handleNavigation('signin')}>
-                    Sign in
-                  </Button>
-                )}
-              </div>
-
-              {/* Center — stacked Storm / StormTokenMark / Chain (matches LoadingScreen + whitepaper) */}
-              <div className='pointer-events-none flex flex-1 justify-center py-1 sm:-ml-6 sm:py-1.5 lg:-ml-10'>
-                <h1 className='pointer-events-none' aria-label='Provven'>
-                  <StormChainWordmark size='nav' vaultChrome={false} />
+    <header className='sticky top-0 z-50'>
+      <div className={cn('relative border-b backdrop-blur-xl', barClass)}>
+        <nav className='mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8' aria-label='Main navigation'>
+          <div className='flex h-16 items-center justify-between gap-4'>
+            {/* Left — wordmark (home link) + hub menu */}
+            <div className='flex min-w-0 items-center gap-2 sm:gap-5'>
+              <button
+                type='button'
+                onClick={() => handleNavigation(isAuthenticated ? 'hub' : 'home')}
+                className='shrink-0 cursor-pointer transition-opacity hover:opacity-85'
+                aria-label={wordmarkButtonLabel}
+              >
+                <h1 className='text-[1.45rem] leading-none sm:text-[1.6rem]'>
+                  <ProvvenWordmark tone='auto' isDark={isDark} />
                 </h1>
-              </div>
+              </button>
 
-              {/* Right side — Desktop: Messages, Notifications, Stormi | Mobile: Hamburger only */}
-              <div className='flex-shrink-0 flex items-center gap-2'>
-                {/* Desktop-only controls */}
-                {isAuthenticated && (
-                  <button
-                    type='button'
-                    onClick={() => navigateToMessages()}
-                    aria-label={`Messages${unreadMessageCount > 0 ? ` (${unreadMessageCount} unread)` : ''}`}
-                    className={cn(
-                      'hidden sm:flex relative items-center justify-center w-9 h-9 cursor-pointer',
-                      navControlButtonClass(isDark, theme),
-                    )}
-                  >
-                    <MessageSquare className='w-4 h-4' />
-                    {unreadMessageCount > 0 && (
-                      <span
-                        className={cn(
-                          'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full border-2',
-                          isPaperLight ? 'bg-zinc-700' : 'bg-blue-500',
-                          isDark ? 'border-gray-950' : 'border-white',
-                        )}
-                      >
-                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {isAuthenticated && sessionUserId && (
-                  <div className='hidden sm:block'>
-                    <NotificationBell sessionUserId={sessionUserId} />
-                  </div>
-                )}
-
-                {isAuthenticated && onTClick && (
-                  <button
-                    type='button'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      e.preventDefault()
-                      onTClick?.()
-                    }}
-                    className={cn(
-                      'hidden md:flex relative group items-center justify-center cursor-pointer',
-                      navStormiButtonClass(isDark, theme),
-                      tHasUnread && 'animate-pulse',
-                    )}
-                    aria-label='Open AI assistant'
-                  >
-                    <span className='text-sm font-bold tracking-wide'>Assistant</span>
-                    {tHasUnread && (
-                      <span
-                        className={cn(
-                          'absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border-2 shadow-lg',
-                          isPaperLight ? 'bg-zinc-700' : 'bg-red-500',
-                          isDark ? 'border-gray-950' : 'border-white',
-                        )}
-                      />
-                    )}
-                  </button>
-                )}
-
-                {/* Hamburger — mobile only */}
-                <button
-                  type='button'
-                  onClick={toggleMenu}
-                  className={cn('relative sm:hidden p-2.5 cursor-pointer', navControlButtonClass(isDark, theme))}
-                  aria-label='Toggle menu'
-                >
-                  {/* Badge dot when there are unread items */}
-                  {isAuthenticated && (unreadMessageCount > 0 || notifications.some(n => !n.read)) && (
-                    <span
-                      className={cn(
-                        'absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 z-10',
-                        isPaperLight ? 'bg-zinc-700' : 'bg-red-500',
-                        isDark ? 'border-gray-950' : 'border-white',
-                      )}
-                    />
-                  )}
-                  <div className='w-5 h-5 flex flex-col justify-center items-center gap-1'>
-                    <div
-                      className={cn(
-                        'w-full h-0.5 transition-all duration-300',
-                        isDark ? 'bg-gray-300' : 'bg-gray-700',
-                        isMenuOpen && 'rotate-45 translate-y-1.5',
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        'w-full h-0.5 transition-all duration-300',
-                        isDark ? 'bg-gray-300' : 'bg-gray-700',
-                        isMenuOpen && 'opacity-0',
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        'w-full h-0.5 transition-all duration-300',
-                        isDark ? 'bg-gray-300' : 'bg-gray-700',
-                        isMenuOpen && '-rotate-45 -translate-y-1.5',
-                      )}
-                    />
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom Row: Navigation Links */}
-            <div
-              className={cn(
-                isMenuOpen ? 'flex' : 'hidden',
-                'sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5 pt-3 sm:pt-3.5 relative',
-                navRowDividerClass(isDark),
-              )}
-            >
-              {/* Mobile-only quick actions row */}
-              {isAuthenticated && (
-                <div
-                  className={cn(
-                    'sm:hidden w-full flex items-center justify-between gap-2 pb-2 border-b',
-                    isDark ? 'border-gray-700/80' : 'border-gray-200/80',
-                  )}
-                >
-                  {/* Wallet */}
-                  <button
-                    type='button'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onStatusClick?.()
-                      setIsMenuOpen(false)
-                    }}
-                    className={cn('flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark, theme))}
-                  >
-                    <div
-                      className={cn(
-                        'w-2.5 h-2.5 rounded-full',
-                        isPaperLight
-                          ? 'bg-zinc-500 shadow-[0_0_8px_rgb(63_63_70/0.3)]'
-                          : 'bg-teal-500 shadow-[0_0_8px_rgb(13_148_136/0.4)]',
-                      )}
-                    />
-                    <span className='text-xs font-semibold'>Wallet</span>
-                  </button>
-
-                  {/* Messages */}
-                  <button
-                    type='button'
-                    onClick={() => {
-                      navigateToMessages()
-                      setIsMenuOpen(false)
-                    }}
-                    className={cn('relative flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark, theme))}
-                  >
-                    <MessageSquare className='w-4 h-4' />
-                    <span className='text-xs font-medium'>Messages</span>
-                    {unreadMessageCount > 0 && (
-                      <span
-                        className={cn(
-                          'flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full',
-                          isPaperLight ? 'bg-zinc-700' : 'bg-blue-500',
-                        )}
-                      >
-                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Notifications */}
-                  {sessionUserId && (
-                    <NotificationBell sessionUserId={sessionUserId} />
-                  )}
+              {/* Candidates: Build (workspace) ↔ Career Card (showroom) */}
+              {isAuthenticated && userRole === 'candidate' && (
+                <div className='hidden sm:block'>
+                  <CandidateViewToggle
+                    isDark={isDark}
+                    active={candidateHubViewFromPage(currentPage)}
+                    onSelect={(view) => goToPage(pageFromCandidateHubView(view))}
+                  />
                 </div>
               )}
 
-              {/* Guest: browse like Indeed before wallet — hub stays dumb until connect */}
-              {!isAuthenticated && (
-                <div className='w-full sm:w-auto flex flex-wrap items-center justify-center gap-2'>
+              {/* Employers + legacy roles keep the hub dropdown */}
+              {isAuthenticated && userRole && userRole !== 'candidate' && (
+                <div ref={hubDropdownRef} className='relative hidden sm:block'>
                   <button
                     type='button'
-                    onClick={() => {
-                      handleNavigation('home')
-                      setIsMenuOpen(false)
-                    }}
-                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, undefined, theme))}
+                    onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
+                    className={hubTriggerClass}
+                    aria-expanded={isHubDropdownOpen}
+                  >
+                    <HubRoleIcon userRole={userRole} />
+                    {HUB_LABELS[userRole] ?? 'My Hub'}
+                    <ChevronDown className={cn('w-4 h-4 transition-transform', isHubDropdownOpen && 'rotate-180')} />
+                  </button>
+                  {isHubDropdownOpen && <div className={navDropdownPanelClass(isDark)}>{hubDropdownItems}</div>}
+                </div>
+              )}
+
+              {isAuthenticated && <div className='hidden min-w-0 xl:block'>{employerSnapshot}</div>}
+            </div>
+
+            {/* Center — candidate "up next" preview (free real estate on wide screens) */}
+            {isAuthenticated && userRole === 'candidate' && (
+              <div className='hidden min-w-0 flex-1 justify-center lg:flex'>
+                <NavNextStep isDark={isDark} />
+              </div>
+            )}
+
+            {/* Right — controls */}
+            <div className='flex shrink-0 items-center gap-2'>
+              {!isAuthenticated && (
+                <>
+                  <button
+                    type='button'
+                    onClick={() => handleNavigation('home')}
+                    className={cn('hidden sm:flex items-center gap-2 px-3.5 py-2', navTextLinkClass(isDark))}
                   >
                     <Home className='w-4 h-4' />
                     Home
@@ -369,295 +677,287 @@ export default function Navigation({
                       onBrowseGuided?.()
                       setIsMenuOpen(false)
                     }}
-                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, 'teal', theme))}
+                    className={cn('hidden sm:flex items-center gap-2 px-3.5 py-2', navTextLinkClass(isDark, 'teal'))}
                   >
                     <Briefcase className='w-4 h-4' />
                     Browse jobs
                   </button>
+                  <Button type='button' variant='primary' size='sm' onClick={() => handleNavigation('signin')}>
+                    Sign in
+                  </Button>
+                </>
+              )}
+
+              {isAuthenticated && (
+                <>
+                  {/* Legacy driver MVR status */}
+                  {userRole === 'driver' && mvrIdentity && (
+                    <div className='hidden lg:block'>
+                      <MvrStatusBadge sessionUserId={mvrIdentity} />
+                    </div>
+                  )}
+
+                  {(userRole === 'candidate' || userRole === 'employer') && sessionUserId && (
+                    <button
+                      type='button'
+                      onClick={requestHubRefresh}
+                      disabled={hubRefreshing}
+                      className={cn(
+                        'hidden sm:flex h-9 w-9 items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-45',
+                        navControlButtonClass(isDark),
+                      )}
+                      title='Refresh hub — pull latest data'
+                      aria-label='Refresh hub — pull latest data'
+                    >
+                      {hubRefreshing ? (
+                        <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
+                      ) : (
+                        <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
+                      )}
+                    </button>
+                  )}
+
+                  {onTClick && (
+                    <button
+                      type='button'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        onTClick?.()
+                      }}
+                      className={cn(
+                        'hidden md:flex relative group items-center justify-center cursor-pointer',
+                        navStormiButtonClass(isDark),
+                        tHasUnread && 'animate-pulse',
+                      )}
+                      aria-label='Open AI assistant'
+                    >
+                      <span className='text-sm font-bold tracking-wide'>Assistant</span>
+                      {tHasUnread && (
+                        <span
+                          className={cn(
+                            'absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border-2 shadow-lg bg-red-500',
+                            isDark ? 'border-gray-950' : 'border-white',
+                          )}
+                        />
+                      )}
+                    </button>
+                  )}
+
+                  <div ref={notificationsAnchorRef} className='relative'>
+                    <NavOptionsMenu
+                      isDark={isDark}
+                      onLogout={onLogout}
+                      sessionUserId={sessionUserId}
+                      onOpenNotifications={() => setNotificationsOpen(true)}
+                    />
+                    {/* One bell instance for desktop Options + mobile menu — keeps polling alive */}
+                    {sessionUserId && (
+                      <NotificationBell
+                        sessionUserId={sessionUserId}
+                        hideTrigger
+                        open={notificationsOpen}
+                        onOpenChange={setNotificationsOpen}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Guests still get the standalone theme picker; signed-in users use Options */}
+              {!isAuthenticated && (
+                <div className='hidden sm:block'>
+                  <ThemePicker />
                 </div>
               )}
 
-              {/* MVR Status Badge - Shows status without being a button */}
-              {isAuthenticated && userRole === 'driver' && mvrIdentity && (
-                <div className='w-full sm:w-auto flex justify-center sm:justify-start'>
-                  <MvrStatusBadge sessionUserId={mvrIdentity} />
+              {/* Hamburger — mobile only */}
+              <button
+                type='button'
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className={cn('relative sm:hidden flex h-9 w-9 items-center justify-center cursor-pointer', navControlButtonClass(isDark))}
+                aria-label='Toggle menu'
+                aria-expanded={isMenuOpen}
+              >
+                {isAuthenticated && !isMenuOpen && hasNavAttention && (
+                  <span
+                    className={cn(
+                      'absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 z-10 bg-red-500',
+                      isDark ? 'border-gray-950' : 'border-white',
+                    )}
+                  />
+                )}
+                {isMenuOpen ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile menu — stacked, traditional */}
+          {isMenuOpen && (
+            <div className={cn('sm:hidden border-t py-3 space-y-1', isDark ? 'border-white/[0.08]' : 'border-stone-300/60')}>
+              {!isAuthenticated && (
+                <>
+                  <button type='button' onClick={() => handleNavigation('home')} className={cn('w-full flex items-center gap-3 px-3 py-2.5', navTextLinkClass(isDark))}>
+                    <Home className='w-4 h-4' />
+                    Home
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      onBrowseGuided?.()
+                      setIsMenuOpen(false)
+                    }}
+                    className={cn('w-full flex items-center gap-3 px-3 py-2.5', navTextLinkClass(isDark, 'teal'))}
+                  >
+                    <Briefcase className='w-4 h-4' />
+                    Browse jobs
+                  </button>
+                </>
+              )}
+
+              {isAuthenticated && (
+                <>
+                  {userRole === 'driver' && mvrIdentity && (
+                    <div className='flex justify-center pb-1'>
+                      <MvrStatusBadge sessionUserId={mvrIdentity} />
+                    </div>
+                  )}
+
+                  {userRole === 'candidate' && (
+                    <div className='flex justify-center py-1'>
+                      <CandidateViewToggle
+                        isDark={isDark}
+                        active={candidateHubViewFromPage(currentPage)}
+                        onSelect={(view) => {
+                          goToPage(pageFromCandidateHubView(view))
+                          setIsMenuOpen(false)
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Employers + legacy roles — flattened hub links */}
+                  {userRole && userRole !== 'candidate' && (
+                    <div className={cn('overflow-hidden rounded-xl border', isDark ? 'border-white/[0.08]' : 'border-stone-300/60')}>
+                      {hubDropdownItems}
+                    </div>
+                  )}
+
+                  {onTClick && (
+                    <button
+                      type='button'
+                      onClick={() => {
+                        onTClick()
+                        setIsMenuOpen(false)
+                      }}
+                      className={cn(
+                        'w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
+                        navStormiButtonClass(isDark),
+                      )}
+                    >
+                      <Sparkles className='w-4 h-4' />
+                      <span>{tHasUnread ? 'Assistant has updates' : 'Chat with assistant'}</span>
+                      {tHasUnread && <span className={'w-2 h-2 rounded-full animate-pulse bg-red-500'} />}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {!isAuthenticated && (
+                <div className='flex justify-end pt-1'>
+                  <ThemePicker />
                 </div>
               )}
 
-              {/* Mobile-only Stormi assistant access */}
-              {isAuthenticated && onTClick && (
-                <button
-                  type='button'
-                  onClick={() => {
-                    onTClick()
-                    setIsMenuOpen(false)
-                  }}
+              {isAuthenticated && (
+                <div
                   className={cn(
-                    'sm:hidden w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
-                    navStormiButtonClass(isDark, theme),
+                    'mt-2 overflow-hidden rounded-xl border',
+                    isDark ? 'border-white/[0.08]' : 'border-stone-300/60',
                   )}
                 >
-                  <Sparkles className='w-4 h-4' />
-                  <span>{tHasUnread ? 'Assistant has updates' : 'Chat with assistant'}</span>
-                  {tHasUnread && (
-                    <span
-                      className={cn(
-                        'w-2 h-2 rounded-full animate-pulse',
-                        isPaperLight ? 'bg-zinc-600' : 'bg-red-500',
-                      )}
-                    />
-                  )}
-                </button>
-              )}
-
-              {/* Hub row — flex-wrap so items flow naturally; My Hub stays centered via
-                  auto margins, and the row wraps cleanly at narrow widths instead of overlapping. */}
-              {userRole && isAuthenticated && (
-                <div className='relative z-[100] flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-3'>
-                  <div className='flex shrink-0 items-center gap-3'>
-                    {/* Hub refresh — candidates AND employers. EmployerHub listens for
-                        `hubRefreshNonce` (same store as CandidateHub) and refetches its
-                        data when this is clicked. */}
-                    {(userRole === 'candidate' || userRole === 'employer') && sessionUserId ? (
-                      <div className={cn(navHubGradientRingClass(theme), 'shrink-0')}>
-                        <button
-                          type='button'
-                          onClick={() => {
-                            requestHubRefresh()
-                            setIsMenuOpen(false)
-                          }}
-                          disabled={(userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing)}
-                          className={cn(navHubRefreshInnerButtonClass(theme), 'cursor-pointer')}
-                          title='Refresh hub — pull latest data'
-                          aria-label='Refresh hub — pull latest data'
-                        >
-                          {(userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing) ? (
-                            <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
-                          ) : (
-                            <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
-                          )}
-                        </button>
-                      </div>
-                    ) : null}
-                    {userRole === 'employer' && employerNavSnapshot && (
-                      <div className='flex min-w-0 max-w-[min(100%,12rem)] flex-col text-left sm:max-w-xs'>
-                        <div className='flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1'>
-                          <span
-                            className={cn(
-                              'truncate text-xs font-semibold',
-                              isDark ? 'text-gray-100' : 'text-gray-900',
-                            )}
-                            title={employerNavSnapshot.companyName}
-                          >
-                            {employerNavSnapshot.companyName}
-                          </span>
-                          {employerNavSnapshot.userRole && (
-                            <span
-                              className={cn(
-                                'inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
-                                employerNavSnapshot.userRole === 'owner'
-                                  ? isDark
-                                    ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
-                                    : 'border-purple-200 bg-purple-50 text-purple-800'
-                                  : employerNavSnapshot.userRole === 'admin'
-                                    ? isDark
-                                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-300'
-                                      : 'border-blue-200 bg-blue-50 text-blue-800'
-                                    : employerNavSnapshot.userRole === 'viewer'
-                                      ? isDark
-                                        ? 'border-gray-500/40 bg-gray-500/15 text-gray-400'
-                                        : 'border-gray-200 bg-gray-100 text-gray-700'
-                                      : isDark
-                                        ? 'border-teal-500/40 bg-teal-500/15 text-teal-300'
-                                        : 'border-teal-200 bg-teal-50 text-teal-800',
-                              )}
-                            >
-                              {getDisplayRole(employerNavSnapshot.userRole)}
-                            </span>
-                          )}
-                          {employerNavSnapshot.verified && (
-                            <span
-                              className={cn(
-                                'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                                isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-800',
-                              )}
-                              title='Verified company'
-                            >
-                              <CheckCircle className='h-2.5 w-2.5 shrink-0' aria-hidden />
-                              Verified
-                            </span>
-                          )}
-                        </div>
-                        {(employerNavSnapshot.subtitle || employerNavSnapshot.memberSinceLabel) && (
-                          <p
-                            className={cn(
-                              'mt-0.5 truncate text-[10px] leading-tight',
-                              isDark ? 'text-gray-500' : 'text-gray-500',
-                            )}
-                            title={[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          >
-                            {[employerNavSnapshot.subtitle, employerNavSnapshot.memberSinceLabel]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </p>
-                        )}
-                      </div>
+                  <ThemeCategory
+                    isDark={isDark}
+                    expanded={mobileThemesOpen}
+                    onToggle={() => setMobileThemesOpen((o) => !o)}
+                  />
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      navigateToMessages()
+                    }}
+                    className={cn(
+                      navDropdownItemClass(isDark),
+                      'border-t',
+                      isDark ? 'border-white/[0.08]' : 'border-stone-200',
                     )}
-                  </div>
-
-                  <div
-                    ref={hubDropdownRef}
-                    className='relative z-[110] flex shrink-0 justify-center'
                   >
-                    <div className={navHubGradientRingClass(theme)}>
-                      <button
-                        type='button'
-                        onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
-                        className={cn(navHubInnerButtonClass(theme), 'cursor-pointer')}
-                      >
-                        {userRole === 'driver' && <Car className='w-4 h-4' />}
-                        {userRole === 'employer' && <Building2 className='w-4 h-4' />}
-                        {userRole === 'developer' && <Code className='w-4 h-4' />}
-                        {userRole === 'candidate' && <User className='w-4 h-4' />}
-                        {userRole === 'driver' && 'Driver Hub'}
-                        {userRole === 'employer' && 'Employer Hub'}
-                        {userRole === 'developer' && 'Developer Hub'}
-                        {userRole === 'candidate' && 'My Hub'}
-                        <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isHubDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-
-                    {isHubDropdownOpen && (
-                      <div className={navDropdownPanelClass(isDark)}>
-                        {userRole !== 'employer' && (
-                          <>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                handleNavigation('hub')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={navDropdownItemClass(isDark)}
-                            >
-                              <LayoutDashboard className='w-4 h-4' />
-                              Career Card
-                            </button>
-                            {userRole === 'candidate' && (
-                              <>
-                                <button
-                                  type='button'
-                                  onClick={() => {
-                                    setCurrentPage('inbox')
-                                    setIsMenuOpen(false)
-                                    setIsHubDropdownOpen(false)
-                                  }}
-                                  className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                                >
-                                  <Inbox className='w-4 h-4' />
-                                  Inbox
-                                </button>
-                                <button
-                                  type='button'
-                                  onClick={() => {
-                                    setCurrentPage('ask-ai')
-                                    setIsMenuOpen(false)
-                                    setIsHubDropdownOpen(false)
-                                  }}
-                                  className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                                >
-                                  <Sparkles className='w-4 h-4' />
-                                  Ask AI
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {/* Employer-only shortcuts — these were previously a "Quick actions"
-                            row in the EmployerHub itself. Moving them into the dropdown
-                            frees up vertical space in the hub for content that actually
-                            needs to be on the page. We bypass `handleNavigation` (which
-                            only forwards a small whitelist of pages to page.tsx) and call
-                            `setCurrentPage` directly — EmployerShell reads currentPage from
-                            UIStore and renders the matching page component. */}
-                        {userRole === 'employer' && (
-                          <>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                setCurrentPage('talent-search')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                            >
-                              <Search className='w-4 h-4' />
-                              Find Talent
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                setCurrentPage('post-job')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                            >
-                              <Plus className='w-4 h-4' />
-                              Post Job
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                setCurrentPage('applicants')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                            >
-                              <Users className='w-4 h-4' />
-                              Applicants
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                setCurrentPage('company-profile')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                            >
-                              <Building2 className='w-4 h-4' />
-                              Company Profile
-                            </button>
-                            <button
-                              type='button'
-                              onClick={() => {
-                                setCurrentPage('team')
-                                setIsMenuOpen(false)
-                                setIsHubDropdownOpen(false)
-                              }}
-                              className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
-                            >
-                              <Shield className='w-4 h-4' />
-                              Team
-                            </button>
-                          </>
-                        )}
-                      </div>
+                    <MessageSquare className='h-4 w-4' />
+                    <span className='flex-1 text-left'>Messages</span>
+                    <UnreadBadge count={unreadMessageCount} isDark={isDark} />
+                  </button>
+                  {sessionUserId && (
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setIsMenuOpen(false)
+                        setNotificationsOpen(true)
+                      }}
+                      className={navDropdownItemClass(isDark)}
+                    >
+                      <Bell className='h-4 w-4' />
+                      <span className='flex-1 text-left'>Notifications</span>
+                      <UnreadBadge count={unreadCount} isDark={isDark} />
+                    </button>
+                  )}
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setIsMenuOpen(false)
+                      setMobileReferralOpen(true)
+                    }}
+                    className={cn(
+                      navDropdownItemClass(isDark),
+                      'border-t',
+                      isDark ? 'border-white/[0.08]' : 'border-stone-200',
                     )}
-                  </div>
-
-                  <div className='flex shrink-0 items-center gap-3'>
-                    <ThemePicker />
-                  </div>
+                  >
+                    <Gift className='h-4 w-4' />
+                    Refer a friend
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      onLogout?.()
+                      setIsMenuOpen(false)
+                    }}
+                    className={cn(
+                      navDropdownItemClass(isDark),
+                      'border-t',
+                      isDark ? 'border-white/[0.08] text-red-300' : 'border-stone-200 text-red-700',
+                    )}
+                  >
+                    <LogOut className='h-4 w-4' />
+                    Log out
+                  </button>
                 </div>
               )}
             </div>
+          )}
         </nav>
-      </NavVaultShell>
+
+        {/* Champagne ledger hairline under the bar */}
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent to-transparent',
+            isDark ? 'via-[#c9a86a]/45' : 'via-[#8a6d3b]/40',
+          )}
+        />
+      </div>
+
+      {mobileReferralOpen && <ReferralModal onClose={() => setMobileReferralOpen(false)} />}
     </header>
   )
 }

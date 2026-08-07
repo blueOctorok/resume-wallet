@@ -1,29 +1,7 @@
-import type { Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
-function paperLight(isDark: boolean, theme?: Theme) {
-  return !isDark && theme === 'paper'
-}
-
-/** Dark analogue of paper — monochrome `ink` theme (no teal/indigo nav chrome). */
-function quietInk(isDark: boolean, theme?: Theme) {
-  return Boolean(isDark && theme === 'ink')
-}
-
-/** Compact control chips (wallet, messages, hamburger). */
-export function navControlButtonClass(isDark: boolean, theme?: Theme) {
-  if (paperLight(isDark, theme)) {
-    return cn(
-      'rounded-lg border transition-colors duration-200',
-      'border-zinc-300/95 bg-white text-zinc-900 hover:bg-zinc-50 hover:border-zinc-400/90',
-    )
-  }
-  if (quietInk(isDark, theme)) {
-    return cn(
-      'rounded-lg border transition-colors duration-200',
-      'border-zinc-600/70 bg-zinc-900/55 text-zinc-200 hover:bg-zinc-900/90 hover:border-zinc-500/65',
-    )
-  }
+/** Compact control chips (log out, messages, hamburger). */
+export function navControlButtonClass(isDark: boolean) {
   return cn(
     'rounded-lg border transition-colors duration-200',
     isDark
@@ -33,37 +11,13 @@ export function navControlButtonClass(isDark: boolean, theme?: Theme) {
 }
 
 /** Secondary text buttons in link row. */
-export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral', theme?: Theme) {
+export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
   if (accent === 'teal') {
-    if (paperLight(isDark, theme)) {
-      return cn(
-        'rounded-lg border text-sm font-semibold transition-colors',
-        'border-zinc-400/55 bg-zinc-100/95 text-zinc-800 hover:bg-zinc-200/90 hover:border-zinc-500/45',
-      )
-    }
-    if (quietInk(isDark, theme)) {
-      return cn(
-        'rounded-lg border text-sm font-semibold transition-colors',
-        'border-zinc-500/45 bg-zinc-800/90 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-400/50',
-      )
-    }
     return cn(
       'rounded-lg border text-sm font-semibold transition-colors',
       isDark
         ? 'border-teal-500/35 bg-teal-500/[0.08] text-teal-300 hover:bg-teal-500/15 hover:border-teal-400/40'
         : 'border-teal-600/22 bg-teal-50/95 text-teal-900 hover:bg-teal-50 hover:border-teal-600/35',
-    )
-  }
-  if (paperLight(isDark, theme)) {
-    return cn(
-      'rounded-lg border text-sm font-semibold transition-colors',
-      'border-zinc-300/90 text-zinc-800 hover:bg-zinc-100',
-    )
-  }
-  if (quietInk(isDark, theme)) {
-    return cn(
-      'rounded-lg border text-sm font-semibold transition-colors',
-      'border-zinc-600/75 text-zinc-300 hover:bg-zinc-800/80',
     )
   }
   return cn(
@@ -74,20 +28,8 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral', t
   )
 }
 
-/** Stormi assistant — indigo on default light; paper uses neutral zinc for monochrome newsprint. */
-export function navStormiButtonClass(isDark: boolean, theme?: Theme) {
-  if (paperLight(isDark, theme)) {
-    return cn(
-      'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
-      'border-zinc-300/90 bg-zinc-50/98 text-zinc-800 hover:bg-zinc-100 hover:border-zinc-400/85',
-    )
-  }
-  if (quietInk(isDark, theme)) {
-    return cn(
-      'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
-      'border-zinc-600/80 bg-zinc-900/90 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-500/75',
-    )
-  }
+/** Stormi assistant button — steel (indigo remap) surface. */
+export function navStormiButtonClass(isDark: boolean) {
   return cn(
     'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
     isDark
@@ -96,85 +38,10 @@ export function navStormiButtonClass(isDark: boolean, theme?: Theme) {
   )
 }
 
-/** Hub primary CTA — teal/violet gradient ring; paper uses neutral zinc ring. */
-export function navHubGradientRingClass(theme: Theme = 'light') {
-  if (theme === 'paper' || theme === 'ink') {
-    return cn(
-      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
-      'bg-gradient-to-br from-zinc-400/48 via-zinc-300/26 to-zinc-500/40',
-      'shadow-md shadow-zinc-500/10',
-    )
-  }
-  return cn(
-    'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
-    /* Light: teal-600 → teal-500 → violet (no cyan — single green family) */
-    'bg-gradient-to-br from-teal-600/88 via-teal-500/48 to-violet-500/58',
-    'dark:from-teal-400/80 dark:via-teal-600/38 dark:to-violet-600/48',
-    'shadow-md shadow-teal-900/16 dark:shadow-black/45',
-  )
-}
-
-export function navHubInnerButtonClass(theme: Theme = 'light') {
-  if (theme === 'paper') {
-    return cn(
-      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
-      'bg-white text-zinc-900 border border-zinc-300/90',
-      'hover:bg-zinc-50 hover:border-zinc-400/85',
-      'transition-colors duration-200',
-    )
-  }
-  if (theme === 'ink') {
-    return cn(
-      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
-      'bg-zinc-900 text-zinc-100 border border-zinc-600/90',
-      'hover:bg-zinc-800 hover:border-zinc-500/85',
-      'transition-colors duration-200',
-    )
-  }
-  return cn(
-    'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
-    'bg-gray-950 text-white border border-white/[0.08]',
-    'hover:bg-gray-900 dark:hover:bg-gray-900',
-    'transition-colors duration-200',
-  )
-}
-
-/** Icon-only sibling to My Hub — same gradient ring + inner vault treatment, square control */
-export function navHubRefreshInnerButtonClass(theme: Theme = 'light') {
-  if (theme === 'paper') {
-    return cn(
-      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
-      'bg-white text-zinc-800 border border-zinc-300/90',
-      'hover:bg-zinc-50 hover:border-zinc-400/85',
-      'disabled:opacity-45 disabled:cursor-not-allowed',
-      'transition-colors duration-200',
-    )
-  }
-  if (theme === 'ink') {
-    return cn(
-      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
-      'bg-zinc-900 text-zinc-200 border border-zinc-600/90',
-      'hover:bg-zinc-800 hover:border-zinc-500/85',
-      'disabled:opacity-45 disabled:cursor-not-allowed',
-      'transition-colors duration-200',
-    )
-  }
-  return cn(
-    'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
-    'bg-gray-950 text-white border border-white/[0.08]',
-    'hover:bg-gray-900 dark:hover:bg-gray-900',
-    'disabled:opacity-45 disabled:cursor-not-allowed',
-    'transition-colors duration-200',
-  )
-}
-
-export function navRowDividerClass(isDark: boolean) {
-  return cn('border-t', isDark ? 'border-gray-700/90' : 'border-gray-200/90')
-}
-
+/** Dropdown panel anchored under its trigger (traditional left-aligned menu). */
 export function navDropdownPanelClass(isDark: boolean) {
   return cn(
-    'absolute top-full left-1/2 -translate-x-1/2 min-w-[220px] mt-2 rounded-xl shadow-xl overflow-hidden z-[200] border',
+    'absolute top-full left-0 min-w-[220px] mt-2 rounded-xl shadow-xl overflow-hidden z-[200] border',
     isDark
       ? 'bg-gray-950 border-gray-600/80 ring-1 ring-white/[0.04]'
       : 'bg-white border-gray-200/90 ring-1 ring-gray-900/[0.04]',

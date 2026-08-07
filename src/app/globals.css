@@ -18,12 +18,13 @@
 [data-theme='dark'] {
   color-scheme: dark;
   /*
-   * Storm shell — same language as LoadingScreen + StormTokenMark:
-   * deep charcoal/navy void, teal + violet bloom, glass panels with teal rim.
+   * Heritage ink shell — same ink-NAVY plane as the landing page (#0a1322
+   * family, not charcoal-black): deep navy void, champagne gold + steel bloom,
+   * glass panels with gold rim.
    */
-  --storm-void: #040608;
-  --storm-deep: #080c11;
-  --storm-surface: #0f1419;
+  --storm-void: #060b15;
+  --storm-deep: #0a1322;
+  --storm-surface: #111e33;
   --storm-body-gradient: linear-gradient(
     165deg,
     var(--storm-surface) 0%,
@@ -34,75 +35,34 @@
   --storm-violet-soft: rgba(95,122,158, 0.08);
   --storm-panel-bg: linear-gradient(
     165deg,
-    rgba(22, 28, 38, 0.94) 0%,
-    rgba(12, 16, 24, 0.92) 55%,
-    rgba(8, 11, 16, 0.96) 100%
+    rgba(23, 33, 52, 0.94) 0%,
+    rgba(13, 20, 34, 0.92) 55%,
+    rgba(8, 13, 24, 0.96) 100%
   );
   --storm-panel-border: rgba(148, 163, 184, 0.22);
   --storm-panel-glow: 0 0 48px -12px rgba(205,168,104, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
-  --surface-card: #151922;
-  --surface-elevated: #10151e;
+  --surface-card: #141e31;
+  --surface-elevated: #0f1728;
   --border-subtle: #3d4a5c;
-  --text-primary: #f4f4f5;
+  --text-primary: #f4f1ea;
   --text-secondary: #a8b0bc;
-}
-
-/*
- * Ink = quiet dark (inverse of paper): zinc/grey void — no teal/violet blooms.
- * Tailwind `dark:` applies via `[data-theme="ink"]` in tailwind.config.ts.
- */
-[data-theme='ink'] {
-  color-scheme: dark;
-  --storm-void: #050506;
-  --storm-deep: #09090b;
-  --storm-surface: #121214;
-  --storm-body-gradient: linear-gradient(
-    165deg,
-    var(--storm-surface) 0%,
-    var(--storm-deep) 45%,
-    var(--storm-void) 100%
-  );
-  --storm-teal-soft: rgb(24 24 27 / 0.06);
-  --storm-violet-soft: rgb(24 24 27 / 0.04);
-  --storm-panel-bg: linear-gradient(
-    165deg,
-    rgb(24 24 27 / 0.96) 0%,
-    rgb(18 18 20 / 0.94) 52%,
-    rgb(12 12 14 / 0.97) 100%
-  );
-  --storm-panel-border: rgb(63 63 70 / 0.35);
-  --storm-panel-glow:
-    0 1px 0 rgb(255 255 255 / 0.04),
-    0 18px 44px -18px rgb(0 0 0 / 0.55),
-    inset 0 1px 0 rgb(255 255 255 / 0.03);
-  --surface-card: #18181b;
-  --surface-elevated: #0f0f11;
-  --border-subtle: #3f3f46;
-  --text-primary: #fafafa;
-  /* Brighter than galactic slate-400 — body copy on zinc panels was washing out */
-  --text-secondary: #d4d4d8;
-  --storm-accent: #71717a;
-  --storm-accent-rgb: 113 113 122;
-  --storm-accent-mid: #a1a1aa;
-  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.06);
-  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.09);
-  --storm-violet-bloom: rgb(113 113 122 / 0.04);
 }
 
 [data-theme='light'] {
   color-scheme: light;
   /*
-   * Icy vault light — panels sit on a cooler, deeper slate-air canvas (not flat white) so
-   * teal/violet blooms, grain, and rim glows stay visible; edges read as frost, not bleach.
+   * Heritage cream light — panels sit on warm parchment (landing-page cream
+   * family, stone neutrals) so gold blooms, grain, and rim glows stay visible;
+   * edges read as paper stock, not frost.
    */
-  --surface-card: #f8fafc;
-  --surface-elevated: #f1f5f9;
-  --border-subtle: #94a3b8;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --surface-card: #fbf9f4;
+  --surface-elevated: #f4f0e7;
+  --border-subtle: #a8a29e;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
   /*
-   * Single accent hue (teal-600 family) — matches STORM wordmark cloud + LoadingScreen card ring.
+   * Single accent hue (champagne gold family) — matches the landing seal.
    * Slightly stronger blooms on light so accents survive the brighter canvas.
    */
   --storm-accent: #9c7740;
@@ -111,36 +71,12 @@
   --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.1);
   --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.135);
   --storm-violet-bloom: rgb(54 69 89 / 0.09);
-  /* Cyan-tinted specular — avoids pure white blow-out that hides texture behind vault shells */
+  /* Warm cream specular — avoids pure white blow-out that hides texture behind vault shells */
   --storm-light-specular: linear-gradient(
     125deg,
-    rgb(224 242 242 / 0.38) 0%,
+    rgb(247 243 234 / 0.42) 0%,
     rgb(255 255 255 / 0.22) 26%,
     transparent 52%
-  );
-}
-
-/*
- * Paper = newsprint: soft white / zinc grey only — no brand teal or warm sepia.
- */
-[data-theme='paper'] {
-  color-scheme: light;
-  --surface-card: #fafafa;
-  --surface-elevated: #f4f4f5;
-  --border-subtle: #d4d4d8;
-  --text-primary: #27272a;
-  --text-secondary: #52525b;
-  --storm-accent: #52525b;
-  --storm-accent-rgb: 82 82 91;
-  --storm-accent-mid: #71717a;
-  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.035);
-  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.05);
-  --storm-violet-bloom: rgb(113 113 122 / 0.025);
-  --storm-light-specular: linear-gradient(
-    125deg,
-    rgb(255 255 255 / 0.55) 0%,
-    rgb(244 244 245 / 0.28) 38%,
-    transparent 56%
   );
 }
 
@@ -157,7 +93,6 @@ body {
     color 0.3s ease;
 }
 
-
 /* Dark mode — LoadingScreen-matched void + soft teal/violet blooms (same as full-page loader) */
 [data-theme='dark'] body {
   background:
@@ -167,16 +102,9 @@ body {
   color: var(--text-primary);
 }
 
-[data-theme='ink'] body {
-  background:
-    radial-gradient(ellipse min(92vw, 38rem) min(92vw, 38rem) at 50% 12%, rgb(39 39 42 / 0.22), transparent 58%),
-    var(--storm-body-gradient);
-  color: var(--text-primary);
-}
-
 /*
- * Light canvas — icy depth: deeper blue-slate base + visible blooms + bottom cool vignette
- * so vault grain and teal rims don’t disappear into #fff.
+ * Light canvas — heritage parchment: warm cream base + gold blooms + bottom stone vignette
+ * so vault grain and gold rims don’t disappear into #fff.
  */
 [data-theme='light'] body {
   background:
@@ -184,33 +112,24 @@ body {
     radial-gradient(ellipse min(88vw, 36rem) min(88vw, 36rem) at 50% 10%, var(--storm-teal-bloom-strong), transparent 56%),
     radial-gradient(ellipse min(72vw, 28rem) min(72vw, 28rem) at 6% 88%, rgb(var(--storm-accent-rgb) / 0.055), transparent 50%),
     radial-gradient(ellipse min(70vw, 26rem) min(70vw, 26rem) at 98% 96%, var(--storm-violet-bloom), transparent 50%),
-    radial-gradient(ellipse 130% 70% at 50% 108%, rgb(15 23 42 / 0.055), transparent 42%),
-    linear-gradient(168deg, #b9c9d9 0%, #c9d6e4 32%, #d8e3ee 58%, #e6eef6 100%);
-  color: var(--text-primary);
-}
-
-/* Paper canvas — cool newsprint (grey stock, no chroma blooms) */
-[data-theme='paper'] body {
-  background:
-    var(--storm-light-specular),
-    radial-gradient(ellipse 125% 72% at 50% 0%, rgb(228 228 231 / 0.45), transparent 58%),
-    linear-gradient(178deg, #e4e4e7 0%, #ececed 30%, #f4f4f5 58%, #fafafa 100%);
+    radial-gradient(ellipse 130% 70% at 50% 108%, rgb(41 37 36 / 0.06), transparent 42%),
+    linear-gradient(168deg, #d8d0bd 0%, #e2dac8 32%, #ece5d5 58%, #f5f1e6 100%);
   color: var(--text-primary);
 }
 
 /*
- * Elevated light surfaces — frosted icy face: cyan-slate tint, double hairline (white + teal), deeper contact shadow.
+ * Elevated light surfaces — warm cream face: parchment tint, double hairline (white + gold), deeper contact shadow.
  */
 [data-theme='light'] .storm-light-panel {
   background: linear-gradient(
     180deg,
-    rgb(252 254 255 / 0.98) 0%,
-    rgb(241 248 250 / 0.94) 52%,
-    rgb(234 242 247 / 0.97) 100%
+    rgb(255 254 250 / 0.98) 0%,
+    rgb(250 246 238 / 0.94) 52%,
+    rgb(245 239 228 / 0.97) 100%
   );
   -webkit-backdrop-filter: blur(20px) saturate(1.15);
   backdrop-filter: blur(20px) saturate(1.15);
-  border: 1px solid rgb(100 116 139 / 0.38);
+  border: 1px solid rgb(120 113 108 / 0.38);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.82),
     inset 0 0 0 1px rgb(255 255 255 / 0.28),
@@ -218,264 +137,6 @@ body {
     0 1px 2px rgb(15 23 42 / 0.07),
     0 10px 36px -10px rgb(var(--storm-accent-rgb) / 0.16),
     0 22px 56px -16px rgb(15 51 73 / 0.14);
-}
-
-/* Paper panels — white stock, neutral shadow */
-[data-theme='paper'] .storm-light-panel {
-  background: linear-gradient(
-    180deg,
-    rgb(255 255 255 / 0.995) 0%,
-    rgb(250 250 250 / 0.98) 50%,
-    rgb(244 244 245 / 0.99) 100%
-  );
-  -webkit-backdrop-filter: blur(14px) saturate(0.88);
-  backdrop-filter: blur(14px) saturate(0.88);
-  border: 1px solid rgb(212 212 216 / 0.55);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.9),
-    inset 0 0 0 1px rgb(255 255 255 / 0.2),
-    0 1px 2px rgb(24 24 27 / 0.04),
-    0 10px 28px -10px rgb(24 24 27 / 0.06),
-    0 18px 44px -14px rgb(63 63 70 / 0.07);
-}
-
-/*
- * Paper: mute high-chroma Tailwind utilities (most UI still uses teal/violet classes).
- * Primary actions use `Button` + muted fill; this catches links, badges, borders.
- */
-[data-theme='paper'] .text-teal-300,
-[data-theme='paper'] .text-teal-400,
-[data-theme='paper'] .text-teal-500,
-[data-theme='paper'] .text-teal-600,
-[data-theme='paper'] .text-teal-700,
-[data-theme='paper'] .text-teal-800 {
-  color: rgb(63 63 70) !important;
-}
-[data-theme='paper'] .text-cyan-500,
-[data-theme='paper'] .text-cyan-600,
-[data-theme='paper'] .text-cyan-700 {
-  color: rgb(82 82 91) !important;
-}
-[data-theme='paper'] .text-emerald-600,
-[data-theme='paper'] .text-emerald-700,
-[data-theme='paper'] .text-emerald-800 {
-  color: rgb(68 68 76) !important;
-}
-[data-theme='paper'] .border-teal-200,
-[data-theme='paper'] .border-teal-300,
-[data-theme='paper'] .border-teal-500,
-[data-theme='paper'] .border-teal-600 {
-  border-color: rgb(212 212 216) !important;
-}
-[data-theme='paper'] .bg-teal-50,
-[data-theme='paper'] .bg-teal-100 {
-  background-color: rgb(244 244 245) !important;
-}
-[data-theme='paper'] .bg-teal-500\/20,
-[data-theme='paper'] .bg-teal-500\/10 {
-  background-color: rgb(228 228 231 / 0.55) !important;
-}
-[data-theme='paper'] .ring-teal-500,
-[data-theme='paper'] .ring-teal-400 {
-  --tw-ring-color: rgb(161 161 170) !important;
-}
-[data-theme='paper'] .text-violet-600,
-[data-theme='paper'] .text-violet-700,
-[data-theme='paper'] .text-indigo-600,
-[data-theme='paper'] .text-indigo-700 {
-  color: rgb(63 63 70) !important;
-}
-
-/*
- * Ink: same idea as paper — most components still ship teal/violet utility classes;
- * remap to zinc on dark so the UI stays monochrome without rewriting every block.
- */
-[data-theme='ink'] .text-teal-300,
-[data-theme='ink'] .text-teal-400 {
-  color: rgb(212 212 216) !important;
-}
-[data-theme='ink'] .text-teal-500,
-[data-theme='ink'] .text-teal-600,
-[data-theme='ink'] .text-teal-700,
-[data-theme='ink'] .text-teal-800 {
-  color: rgb(228 228 231) !important;
-}
-[data-theme='ink'] .text-cyan-500,
-[data-theme='ink'] .text-cyan-600,
-[data-theme='ink'] .text-cyan-700 {
-  color: rgb(212 212 216) !important;
-}
-[data-theme='ink'] .text-emerald-600,
-[data-theme='ink'] .text-emerald-700,
-[data-theme='ink'] .text-emerald-800 {
-  color: rgb(200 200 204) !important;
-}
-[data-theme='ink'] .border-teal-200,
-[data-theme='ink'] .border-teal-300,
-[data-theme='ink'] .border-teal-500,
-[data-theme='ink'] .border-teal-600 {
-  border-color: rgb(63 63 70) !important;
-}
-[data-theme='ink'] .bg-teal-50,
-[data-theme='ink'] .bg-teal-100 {
-  background-color: rgb(39 39 42 / 0.65) !important;
-}
-[data-theme='ink'] .bg-teal-500\/20,
-[data-theme='ink'] .bg-teal-500\/10 {
-  background-color: rgb(63 63 70 / 0.35) !important;
-}
-[data-theme='ink'] .ring-teal-500,
-[data-theme='ink'] .ring-teal-400 {
-  --tw-ring-color: rgb(113 113 122) !important;
-}
-[data-theme='ink'] .text-violet-600,
-[data-theme='ink'] .text-violet-700,
-[data-theme='ink'] .text-indigo-600,
-[data-theme='ink'] .text-indigo-700,
-[data-theme='ink'] .text-indigo-300,
-[data-theme='ink'] .text-violet-300,
-[data-theme='ink'] .text-violet-400 {
-  color: rgb(212 212 216) !important;
-}
-
-/*
- * Ink — legibility: many blocks use light-mode `text-slate-*` / `text-gray-*` without `dark:`.
- * When those sit on dark vault glass they go muddy; lift toward zinc-200–50.
- */
-[data-theme='ink'] .text-slate-900,
-[data-theme='ink'] .text-gray-900 {
-  color: rgb(250 250 250) !important;
-}
-[data-theme='ink'] .text-slate-800,
-[data-theme='ink'] .text-gray-800 {
-  color: rgb(244 244 245) !important;
-}
-[data-theme='ink'] .text-slate-700,
-[data-theme='ink'] .text-gray-700 {
-  color: rgb(228 228 231) !important;
-}
-[data-theme='ink'] .text-slate-600,
-[data-theme='ink'] .text-gray-600 {
-  color: rgb(212 212 216) !important;
-}
-[data-theme='ink'] .text-slate-500,
-[data-theme='ink'] .text-gray-500 {
-  color: rgb(180 180 186) !important;
-}
-
-/*
- * DOT Form 3 legal acknowledgement paper — always light + dark text under Quiet Ink.
- * (Nested reminder used .bg-gray-100 + .text-gray-900 → white-on-white after ink remaps.)
- */
-[data-theme='ink'] .dot-legal-paper {
-  color-scheme: light;
-  background-color: #ffffff !important;
-  color: #1f2937 !important;
-  border-color: #d1d5db !important;
-}
-[data-theme='ink'] .dot-legal-paper.bg-white {
-  background-color: #ffffff !important;
-}
-
-/*
- * Printable / export documents that must stay true light paper under Quiet Ink.
- * Ink remaps bare `.bg-white` → zinc (below); opt out with `.resume-packet-paper`.
- */
-[data-theme='ink'] .resume-packet-paper {
-  color-scheme: light;
-  background-color: #ffffff !important;
-  color: #1c1917 !important;
-}
-[data-theme='ink'] .resume-packet-paper.bg-white,
-[data-theme='ink'] .resume-packet-paper .bg-white {
-  background-color: #ffffff !important;
-}
-[data-theme='ink'] .resume-packet-paper .bg-stone-50 {
-  background-color: #fafaf9 !important;
-}
-[data-theme='ink'] .resume-packet-paper .border-stone-200 {
-  border-color: #e7e5e4 !important;
-}
-[data-theme='ink'] .resume-packet-paper .border-stone-300 {
-  border-color: #d6d3d1 !important;
-}
-[data-theme='ink'] .resume-packet-paper .border-stone-900 {
-  border-color: #1c1917 !important;
-}
-[data-theme='ink'] .resume-packet-paper .ring-stone-200 {
-  --tw-ring-color: #e7e5e4 !important;
-}
-[data-theme='ink'] .resume-packet-paper .bg-emerald-500 {
-  background-color: #10b981 !important;
-}
-[data-theme='ink'] .resume-packet-paper .text-emerald-600 {
-  color: #059669 !important;
-}
-[data-theme='ink'] .resume-packet-mat {
-  background-color: #f5f5f4 !important; /* stone-100 desk under the page */
-}
-
-/*
- * Ink — surfaces: force common “paper” Tailwind fills to zinc so embeds aren’t bright slabs.
- * (Career card sections, pickers, and legacy `bg-white` without a `dark:` pair.)
- */
-[data-theme='ink'] .bg-white {
-  background-color: rgb(24 24 27 / 0.94) !important;
-}
-[data-theme='ink'] .bg-white\/40,
-[data-theme='ink'] .bg-white\/60,
-[data-theme='ink'] .bg-white\/70,
-[data-theme='ink'] .bg-white\/80,
-[data-theme='ink'] .bg-white\/85,
-[data-theme='ink'] .bg-white\/90,
-[data-theme='ink'] .bg-white\/95 {
-  background-color: rgb(39 39 42 / 0.88) !important;
-}
-[data-theme='ink'] .bg-slate-50,
-[data-theme='ink'] .bg-slate-50\/80,
-[data-theme='ink'] .bg-slate-50\/90,
-[data-theme='ink'] .bg-slate-50\/98,
-[data-theme='ink'] .bg-slate-100,
-[data-theme='ink'] .bg-gray-50,
-[data-theme='ink'] .bg-gray-50\/50,
-[data-theme='ink'] .bg-gray-50\/80,
-[data-theme='ink'] .bg-zinc-50 {
-  background-color: rgb(39 39 42 / 0.82) !important;
-}
-[data-theme='ink'] .hover\:bg-slate-50:hover,
-[data-theme='ink'] .hover\:bg-slate-100:hover,
-[data-theme='ink'] .hover\:bg-gray-50:hover,
-[data-theme='ink'] .hover\:bg-gray-100:hover {
-  background-color: rgb(63 63 70 / 0.55) !important;
-}
-[data-theme='ink'] .border-slate-100,
-[data-theme='ink'] .border-slate-200,
-[data-theme='ink'] .border-slate-300,
-[data-theme='ink'] .border-gray-100,
-[data-theme='ink'] .border-gray-200,
-[data-theme='ink'] .border-gray-300 {
-  border-color: rgb(63 63 70 / 0.75) !important;
-}
-[data-theme='ink'] .ring-slate-200,
-[data-theme='ink'] .ring-gray-900\/\[0\.04\] {
-  --tw-ring-color: rgb(82 82 91 / 0.45) !important;
-}
-
-/* If anything still mounts `.storm-light-panel` under ink, give it a dark face (loader / edge cases). */
-[data-theme='ink'] .storm-light-panel {
-  background: linear-gradient(
-    180deg,
-    rgb(39 39 42 / 0.96) 0%,
-    rgb(30 30 33 / 0.98) 52%,
-    rgb(24 24 27 / 0.99) 100%
-  );
-  -webkit-backdrop-filter: blur(16px) saturate(0.85);
-  backdrop-filter: blur(16px) saturate(0.85);
-  border: 1px solid rgb(63 63 70 / 0.45);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.04),
-    0 1px 2px rgb(0 0 0 / 0.35),
-    0 12px 36px -12px rgb(0 0 0 / 0.45);
 }
 
 /* Global cursor-pointer for all clickable elements */
@@ -546,12 +207,6 @@ button:disabled,
  * Pair with rounded-2xl + backdrop-blur-xl + ring-1 ring-teal-400/15 in components.
  */
 [data-theme='dark'] .storm-glass-panel {
-  background: var(--storm-panel-bg);
-  border: 1px solid var(--storm-panel-border);
-  box-shadow: var(--storm-panel-glow);
-}
-
-[data-theme='ink'] .storm-glass-panel {
   background: var(--storm-panel-bg);
   border: 1px solid var(--storm-panel-border);
   box-shadow: var(--storm-panel-glow);
@@ -696,91 +351,7 @@ button:disabled,
   background: rgb(205 168 104 / 0.65);
 }
 
-[data-theme='ink'] .resume-steps-scrollbar {
-  scrollbar-color: rgb(113 113 122 / 0.45) transparent;
-}
-
-[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar {
-  height: 8px;
-}
-
-[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 10px;
-}
-
-[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    90deg,
-    rgb(113 113 122 / 0.35) 0%,
-    rgb(161 161 170 / 0.5) 50%,
-    rgb(113 113 122 / 0.35) 100%
-  );
-  border-radius: 10px;
-  border: 1px solid rgb(82 82 91 / 0.35);
-  transition: all 0.3s ease;
-}
-
-[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    90deg,
-    rgb(161 161 170 / 0.45) 0%,
-    rgb(212 212 216 / 0.55) 50%,
-    rgb(161 161 170 / 0.45) 100%
-  );
-  border-color: rgb(113 113 122 / 0.45);
-}
-
-[data-theme='ink'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
-  background: rgb(161 161 170 / 0.55);
-}
-
-/* Light + paper — step indicator scrollbars (accent from CSS vars) */
-[data-theme='light'] .resume-steps-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar {
-  scrollbar-color: rgb(var(--storm-accent-rgb) / 0.35) transparent;
-}
-
-[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar {
-  height: 8px; /* Horizontal scrollbar height */
-}
-
-[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-track,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 10px;
-}
-
-[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    90deg,
-    rgb(var(--storm-accent-rgb) / 0.28) 0%,
-    rgb(var(--storm-accent-rgb) / 0.45) 50%,
-    rgb(var(--storm-accent-rgb) / 0.28) 100%
-  );
-  border-radius: 10px;
-  border: 1px solid rgb(var(--storm-accent-rgb) / 0.2);
-  transition: all 0.3s ease;
-}
-
-[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    90deg,
-    rgb(var(--storm-accent-rgb) / 0.38) 0%,
-    rgb(var(--storm-accent-rgb) / 0.58) 50%,
-    rgb(var(--storm-accent-rgb) / 0.38) 100%
-  );
-  border-color: rgb(var(--storm-accent-rgb) / 0.35);
-  box-shadow: 0 0 8px rgb(var(--storm-accent-rgb) / 0.22);
-}
-
-[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
-  background: rgb(var(--storm-accent-rgb) / 0.55);
-}
+/* Light — step indicator scrollbars (accent from CSS vars) */
 
 /* Theme-aware scrollbar */
 ::-webkit-scrollbar {
@@ -801,26 +372,9 @@ button:disabled,
   background: #3d4d62;
 }
 
-[data-theme='ink'] ::-webkit-scrollbar-track {
-  background: #0c0c0e;
-}
-
-[data-theme='ink'] ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 6px;
-}
-
-[data-theme='ink'] ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-
-/* Light + paper scrollbars */
+/* Light scrollbars */
 [data-theme='light'] ::-webkit-scrollbar-track {
   background: #cbd5e1;
-}
-
-[data-theme='paper'] ::-webkit-scrollbar-track {
-  background: #e4e4e7;
 }
 
 [data-theme='light'] ::-webkit-scrollbar-thumb {
@@ -828,17 +382,8 @@ button:disabled,
   border-radius: 6px;
 }
 
-[data-theme='paper'] ::-webkit-scrollbar-thumb {
-  background: #a1a1aa;
-  border-radius: 6px;
-}
-
 [data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
-}
-
-[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
-  background: #71717a;
 }
 
 /* ===== BRAND CUSTOMIZATIONS ===== */
@@ -885,23 +430,6 @@ button:disabled,
   --akui-active: #9c7740;
 }
 
-[data-theme='paper'] {
-  --akui-btn-primary: #52525b;
-  --akui-btn-secondary: #e4e4e7;
-  --akui-btn-auth: #fafafa;
-  --akui-fg-primary: #27272a;
-  --akui-fg-secondary: #52525b;
-  --akui-fg-tertiary: #71717a;
-  --akui-fg-invert: #fafafa;
-  --akui-fg-accent-brand: #3f3f46;
-  --akui-fg-disabled: #a1a1aa;
-  --akui-bg-surface-default: #fafafa;
-  --akui-bg-surface-subtle: #f4f4f5;
-  --akui-bg-surface-inset: #e4e4e7;
-  --akui-static: #d4d4d8;
-  --akui-active: #52525b;
-}
-
 [data-theme='dark'] {
   --akui-btn-primary: #cda868;
   --akui-btn-secondary: #334155;
@@ -919,90 +447,9 @@ button:disabled,
   --akui-active: #cda868;
 }
 
-[data-theme='ink'] {
-  --akui-btn-primary: #a1a1aa;
-  --akui-btn-secondary: #3f3f46;
-  --akui-btn-auth: rgb(24 24 27 / 0.94);
-  --akui-fg-primary: #fafafa;
-  --akui-fg-secondary: #d4d4d8;
-  --akui-fg-tertiary: #a1a1aa;
-  --akui-fg-invert: #18181b;
-  --akui-fg-accent-brand: #d4d4d8;
-  --akui-fg-disabled: #71717a;
-  --akui-bg-surface-default: #18181b;
-  --akui-bg-surface-subtle: #27272a;
-  --akui-bg-surface-inset: #3f3f46;
-  --akui-static: #71717a;
-  --akui-active: #a1a1aa;
-}
-
 /* Alchemy AuthCard — headers use design tokens; !important only where Kit still leaks low contrast */
-[data-theme='light'] .akui-header-title,
-[data-theme='light'] [data-testid='header-title'],
-[data-theme='light'] .akui-header h1,
-[data-theme='light'] .akui-header h2,
-[data-theme='light'] .akui-header h3,
-[data-theme='paper'] .akui-header-title,
-[data-theme='paper'] [data-testid='header-title'],
-[data-theme='paper'] .akui-header h1,
-[data-theme='paper'] .akui-header h2,
-[data-theme='paper'] .akui-header h3 {
-  color: var(--akui-fg-primary) !important;
-}
-
-[data-theme='dark'] .akui-header-title,
-[data-theme='dark'] [data-testid='header-title'],
-[data-theme='dark'] .akui-header h1,
-[data-theme='dark'] .akui-header h2,
-[data-theme='dark'] .akui-header h3,
-[data-theme='ink'] .akui-header-title,
-[data-theme='ink'] [data-testid='header-title'],
-[data-theme='ink'] .akui-header h1,
-[data-theme='ink'] .akui-header h2,
-[data-theme='ink'] .akui-header h3 {
-  color: var(--akui-fg-primary) !important;
-}
 
 /* Footer, terms, “protected by Alchemy” — force readable contrast */
-[data-theme='light'] .akui-text-tertiary,
-[data-theme='light'] .akui-text-tertiary *,
-[data-theme='light'] .akui-footer,
-[data-theme='light'] .akui-footer *,
-[data-theme='light'] .akui-auth-footer,
-[data-theme='light'] .akui-auth-footer *,
-[data-theme='paper'] .akui-text-tertiary,
-[data-theme='paper'] .akui-text-tertiary *,
-[data-theme='paper'] .akui-footer,
-[data-theme='paper'] .akui-footer *,
-[data-theme='paper'] .akui-auth-footer,
-[data-theme='paper'] .akui-auth-footer * {
-  color: var(--akui-fg-secondary) !important;
-}
-
-[data-theme='dark'] .akui-text-tertiary,
-[data-theme='dark'] .akui-text-tertiary *,
-[data-theme='dark'] .akui-footer,
-[data-theme='dark'] .akui-footer *,
-[data-theme='dark'] .akui-auth-footer,
-[data-theme='dark'] .akui-auth-footer *,
-[data-theme='ink'] .akui-text-tertiary,
-[data-theme='ink'] .akui-text-tertiary *,
-[data-theme='ink'] .akui-footer,
-[data-theme='ink'] .akui-footer *,
-[data-theme='ink'] .akui-auth-footer,
-[data-theme='ink'] .akui-auth-footer * {
-  color: var(--akui-fg-secondary) !important;
-}
-
-[data-theme='light'] .akui-btn-primary:hover,
-[data-theme='paper'] .akui-btn-primary:hover {
-  filter: brightness(1.06);
-}
-
-[data-theme='dark'] .akui-btn-primary:hover,
-[data-theme='ink'] .akui-btn-primary:hover {
-  filter: brightness(1.08);
-}
 
 /* Mobile-specific fixes for Alchemy AuthCard */
 /* Ensure all interactive elements work properly on touch devices */

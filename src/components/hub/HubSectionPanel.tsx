@@ -3,6 +3,7 @@
 /**
  * Standard chrome for hub-style sections (Block files, Your blocks, Ask Stormi, job alerts, etc.):
  * `VaultHorizontalVaultShell` in `panel` layout with the shared padding contract.
+ * Renders the heritage panel (landing-page chrome) — clean face + gold hairline.
  *
  * Wrap **`BlockCard variant="embed"`** as the direct child — same pairing as `CandidateHub.tsx`.
  */
@@ -14,7 +15,7 @@ import { cn } from '@/lib/utils'
 export interface HubSectionPanelProps {
   isDark: boolean
   children: ReactNode
-  /** Rim / strip / glow — matches hub sections (teal = blocks, violet = Stormi, sky = job alerts, …) */
+  /** Kept for call-site compatibility — heritage chrome renders one uniform (gold) style */
   accent?: VaultAccentPreset
   /**
    * Inner padding; default matches Block Hive / Block files / Ask Stormi.

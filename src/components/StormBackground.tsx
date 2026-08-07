@@ -25,8 +25,6 @@ export default function StormBackground() {
   }, [])
 
   const isDark = isDarkTheme(theme)
-  const isInk = theme === 'ink'
-  const isPaper = theme === 'paper'
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -43,9 +41,9 @@ export default function StormBackground() {
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
-  /* Less pure-white wash than before — let body + vault grain read as icy depth */
+  /* Less pure-white wash than before — let body + vault grain read as warm parchment depth */
   const lightAtmosphere = [
-    'linear-gradient(122deg, rgba(224,242,242,0.35) 0%, rgba(255,255,255,0.2) 24%, transparent 48%)',
+    'linear-gradient(122deg, rgba(247,243,234,0.4) 0%, rgba(255,255,255,0.2) 24%, transparent 48%)',
     'linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 38%, transparent 58%)',
     'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(156,119,64,0.11), transparent 56%)',
     'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(54,69,89,0.08), transparent 54%)',
@@ -53,24 +51,8 @@ export default function StormBackground() {
     'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',
   ].join(', ')
 
-  /* Quiet dark — graphite haze only (inverse of newsprint; no teal/violet). */
-  const inkAtmosphere = [
-    'linear-gradient(165deg, rgba(0,0,0,0.2) 0%, transparent 42%)',
-    'linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, transparent 45%)',
-    'radial-gradient(ellipse 120% 70% at 50% 0%, rgba(255,255,255,0.03), transparent 55%)',
-    'radial-gradient(ellipse 90% 55% at 50% 100%, rgba(0,0,0,0.35), transparent 52%)',
-  ].join(', ')
-
-  /* Newsprint: cool grey air — no chroma */
-  const newsprintAtmosphere = [
-    'linear-gradient(125deg, rgba(255,255,255,0.42) 0%, rgba(244,244,246,0.18) 34%, transparent 54%)',
-    'linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 48%)',
-    'radial-gradient(ellipse 118% 62% at 50% 0%, rgba(228,228,231,0.2), transparent 56%)',
-    'radial-gradient(ellipse 88% 52% at 50% 100%, rgba(82,82,91,0.03), transparent 52%)',
-  ].join(', ')
-
   const particleOptions = useMemo((): ISourceOptions => {
-    const bubbleColor = isInk ? '#71717a' : isDark ? '#5c6d82' : isPaper ? '#a1a1aa' : '#5f7a8c'
+    const bubbleColor = isDark ? '#5c6d82' : '#8a7a5f'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -85,9 +67,9 @@ export default function StormBackground() {
       retina_detect: true,
     }
 
-    const count = reduceMotion ? 14 : isInk ? 14 : isDark ? 48 : isPaper ? 14 : 44
-    const speed = reduceMotion ? 0.18 : isInk ? 0.26 : isDark ? 0.55 : isPaper ? 0.28 : 0.65
-    const opacityBase = isInk ? 0.06 : isDark ? 0.32 : isPaper ? 0.05 : 0.3
+    const count = reduceMotion ? 14 : isDark ? 48 : 44
+    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : 0.65
+    const opacityBase = isDark ? 0.32 : 0.3
 
     return {
       ...base,
@@ -124,21 +106,13 @@ export default function StormBackground() {
         },
       },
     }
-  }, [isDark, isInk, isPaper, reduceMotion])
+  }, [isDark, reduceMotion])
 
   return (
     <>
       <div
         className='fixed inset-0 pointer-events-none z-[-4]'
-        style={{
-          background: isInk
-            ? inkAtmosphere
-            : isDark
-              ? stormAtmosphere
-              : isPaper
-                ? newsprintAtmosphere
-                : lightAtmosphere,
-        }}
+        style={{ background: isDark ? stormAtmosphere : lightAtmosphere }}
         aria-hidden
       />
 
@@ -147,7 +121,7 @@ export default function StormBackground() {
         aria-hidden
       >
         {isDark ? (
-          <VaultDarkCanvasTexture mode={isInk ? 'quiet' : 'galactic'} />
+          <VaultDarkCanvasTexture />
         ) : (
           <VaultLightFrostTexture variant='canvas' />
         )}

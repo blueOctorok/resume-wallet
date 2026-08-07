@@ -52,11 +52,12 @@ const TEAL: VaultAccentLayers = {
     'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(156,119,64,0.2)) drop-shadow(0 0 72px rgba(54,69,89,0.11))',
   filterNavDark:
     'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(205,168,104,0.12))',
+  /* Heritage faces: warm cream (light) / ink-navy glass (dark) — matches landing plane */
   innerBgLight:
-    'linear-gradient(175deg, rgba(252,254,255,0.96) 0%, rgba(236,248,250,0.9) 40%, rgba(228,238,245,0.92) 72%, rgba(220,232,242,0.94) 100%)',
+    'linear-gradient(175deg, rgba(255,254,250,0.96) 0%, rgba(250,245,236,0.9) 40%, rgba(245,238,226,0.92) 72%, rgba(240,232,218,0.94) 100%)',
   innerBgDark:
-    'linear-gradient(175deg, rgba(24,30,40,0.96) 0%, rgba(10,13,18,0.98) 100%)',
-  sheenLightClassName: 'bg-gradient-to-r from-transparent via-cyan-50/45 to-transparent',
+    'linear-gradient(175deg, rgba(22,32,51,0.96) 0%, rgba(9,15,26,0.98) 100%)',
+  sheenLightClassName: 'bg-gradient-to-r from-transparent via-[#f4ecd9]/50 to-transparent',
 }
 
 const SKY: VaultAccentLayers = {
@@ -205,58 +206,4 @@ const PRESETS: Record<VaultAccentPreset, VaultAccentLayers> = {
 
 export function getVaultAccentLayers(preset: VaultAccentPreset): VaultAccentLayers {
   return PRESETS[preset] ?? TEAL
-}
-
-/** Grey newsprint hub shell — no teal/violet; cool neutral ink on stock. */
-export const PAPER_NEWSPRINT_VAULT_SHELL: VaultAccentLayers = {
-  rimLight:
-    'linear-gradient(135deg, rgba(148,148,156,0.22) 0%, rgba(252,252,252,0.55) 42%, transparent 62%, rgba(120,120,128,0.14) 100%)',
-  rimDark: TEAL.rimDark,
-  stripLight: 'linear-gradient(90deg, transparent, rgba(100,116,128,0.18), transparent)',
-  stripDark: TEAL.stripDark,
-  conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(100,116,128,0.08) 90deg, transparent 220deg, rgba(90,98,108,0.05) 300deg, transparent 360deg)',
-  conicDark: TEAL.conicDark,
-  chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(110,118,128,0.18) 0%, transparent 72%)',
-  chamferDark: TEAL.chamferDark,
-  sweepLight: 'linear-gradient(to right, transparent, rgba(100,108,118,0.1), transparent)',
-  sweepDark: TEAL.sweepDark,
-  filterPanelLight:
-    'drop-shadow(0 10px 26px rgba(15,23,42,0.05)) drop-shadow(0 2px 8px rgba(15,23,42,0.03))',
-  filterPanelDark: TEAL.filterPanelDark,
-  filterNavLight:
-    'drop-shadow(0 12px 28px rgba(15,23,42,0.06)) drop-shadow(0 2px 10px rgba(15,23,42,0.035))',
-  filterNavDark: TEAL.filterNavDark,
-  innerBgLight:
-    'linear-gradient(175deg, rgba(252,252,252,0.995) 0%, rgba(244,244,246,0.98) 38%, rgba(236,236,240,0.97) 72%, rgba(230,230,234,0.98) 100%)',
-  innerBgDark: TEAL.innerBgDark,
-  sheenLightClassName: 'bg-gradient-to-r from-transparent via-zinc-200/25 to-transparent',
-}
-
-/** Quiet dark — zinc graphite vault chrome, no teal/violet (`data-theme='ink'`). */
-export const INK_QUIET_VAULT_SHELL: VaultAccentLayers = {
-  ...PAPER_NEWSPRINT_VAULT_SHELL,
-  rimDark:
-    'linear-gradient(135deg, rgba(82,82,91,0.32) 0%, rgba(39,39,42,0.75) 50%, rgba(24,24,27,0.95) 100%)',
-  stripDark: 'linear-gradient(90deg, transparent, rgba(113,113,122,0.28), transparent)',
-  conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(113,113,122,0.14) 42deg, transparent 200deg, rgba(82,82,91,0.12) 300deg, transparent 360deg)',
-  chamferDark:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(161,161,170,0.15) 0%, transparent 72%)',
-  sweepDark: 'linear-gradient(to right, transparent, rgba(113,113,122,0.18), transparent)',
-  filterPanelDark:
-    'drop-shadow(0 10px 26px rgba(0,0,0,0.48)) drop-shadow(0 2px 10px rgba(0,0,0,0.32))',
-  filterNavDark: 'drop-shadow(0 12px 30px rgba(0,0,0,0.5))',
-  innerBgDark:
-    'linear-gradient(175deg, rgba(30,30,34,0.97) 0%, rgba(18,18,22,0.98) 48%, rgba(12,12,15,0.99) 100%)',
-}
-
-export function getVaultAccentLayersForTheme(
-  preset: VaultAccentPreset,
-  theme: string,
-): VaultAccentLayers {
-  if (theme === 'paper') return PAPER_NEWSPRINT_VAULT_SHELL
-  if (theme === 'ink') return INK_QUIET_VAULT_SHELL
-  return getVaultAccentLayers(preset)
 }

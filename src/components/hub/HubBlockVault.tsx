@@ -4,7 +4,6 @@
  * Storm "vault credential" tiles — chamfered silhouette, gradient rim, twin-ring sigil, foot strip.
  * Used by CandidateHub (sortable) and StormChainWordmark.
  */
-import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { VAULT_CLIP, VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
 import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
@@ -63,61 +62,37 @@ export function VaultCredentialChrome({
   onMouseEnter,
   onMouseLeave,
 }: VaultCredentialChromeProps) {
-  const { theme } = useTheme()
-  const isPaperLight = !isDark && theme === 'paper'
-  const isInkDark = isDark && theme === 'ink'
   const clip = clipVariant === 'horizontal' ? VAULT_CLIP_HORIZONTAL : VAULT_CLIP
   const showSigil = showSigilProp ?? clipVariant !== 'horizontal'
 
-  /** Paper / Quiet ink: tame rims; galactic dark keeps block glow + violet conic. */
-  const routeGlow = isPaperLight
-    ? 'rgba(113,113,122,0.32)'
-    : isInkDark
-      ? 'rgba(161,161,170,0.3)'
-      : glowColor
+  const routeGlow = glowColor
 
   const rimBg = hasRoute
-    ? `linear-gradient(135deg, ${routeGlow} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : isPaperLight ? 'rgba(63,63,70,0.05)' : 'rgba(30,58,90,0.08)'} 100%)`
+    ? `linear-gradient(135deg, ${routeGlow} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(30,58,90,0.08)'} 100%)`
     : isDark
       ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))'
-      : isPaperLight
-        ? 'linear-gradient(135deg, rgba(180,180,186,0.3), rgba(252,252,252,0.92))'
-        : 'linear-gradient(135deg, rgba(100,116,139,0.42), rgba(236,245,248,0.92))'
+      : 'linear-gradient(135deg, rgba(100,116,139,0.42), rgba(236,245,248,0.92))'
 
   const stripBg = hasRoute
     ? `linear-gradient(90deg, transparent 0%, ${routeGlow} 42%, ${routeGlow} 58%, transparent 100%)`
     : isDark
       ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)'
-      : isPaperLight
-        ? 'linear-gradient(90deg, transparent, rgba(120,120,128,0.16), transparent)'
-        : 'linear-gradient(90deg, transparent, rgba(156,119,64,0.35), rgba(54,69,89,0.22), transparent)'
+      : 'linear-gradient(90deg, transparent, rgba(156,119,64,0.35), rgba(54,69,89,0.22), transparent)'
 
   const sigilBorder = hasRoute
     ? routeGlow
     : isDark
       ? 'rgba(255,255,255,0.22)'
-      : isPaperLight
-        ? 'rgba(113,113,122,0.4)'
-        : 'rgba(51,65,85,0.55)'
+      : 'rgba(51,65,85,0.55)'
 
   /** Brighter accent for sweep / spark (rim color is often low-alpha rgba). */
   const accentVivid = hasRoute
-    ? isPaperLight
-      ? 'rgba(100,100,108,0.28)'
-      : isInkDark
-        ? 'rgba(180,180,186,0.32)'
-        : glowColor.replace(/[\d.]+\)$/, '0.45)')
+    ? glowColor.replace(/[\d.]+\)$/, '0.45)')
     : isDark
-      ? isInkDark
-        ? 'rgba(161,161,170,0.28)'
-        : 'rgba(205,168,104,0.35)'
-      : isPaperLight
-        ? 'rgba(120,120,128,0.18)'
-        : 'rgba(156,119,64,0.48)'
+      ? 'rgba(205,168,104,0.35)'
+      : 'rgba(156,119,64,0.48)'
 
-  const conicDarkBg = isInkDark
-    ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${routeGlow} 52deg, rgba(113,113,122,0.12) 108deg, transparent 198deg, ${routeGlow} 268deg, transparent 360deg)`
-    : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(95,122,158,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
+  const conicDarkBg = `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(95,122,158,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
 
   return (
     <div
@@ -147,17 +122,13 @@ export function VaultCredentialChrome({
             'vault-conic-slow pointer-events-none absolute -inset-[35%] z-0 motion-reduce:opacity-0',
             isDark
               ? 'mix-blend-plus-lighter opacity-[0.2]'
-              : isPaperLight
-                ? 'mix-blend-multiply opacity-[0.09]'
-                : 'mix-blend-multiply opacity-[0.18]',
+              : 'mix-blend-multiply opacity-[0.18]',
           )}
           style={{
             clipPath: clip,
             background: isDark
               ? conicDarkBg
-              : isPaperLight
-                ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${routeGlow} 52deg, rgba(100,100,108,0.06) 108deg, transparent 198deg, ${routeGlow} 268deg, transparent 360deg)`
-                : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(63,82,108,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
+              : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(63,82,108,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
           }}
         />
       )}
@@ -176,13 +147,9 @@ export function VaultCredentialChrome({
         aria-hidden
         className={cn(
           'absolute inset-[2px] z-0 overflow-hidden dark:shadow-[inset_0_0_28px_rgba(0,0,0,0.35)]',
-          isInkDark
-            ? 'bg-gradient-to-b from-zinc-900/96 via-zinc-950/98 to-[rgb(9,9,11)] ring-1 ring-white/[0.06] shadow-[inset_0_0_22px_rgba(0,0,0,0.42)]'
-            : isDark
-              ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
-              : isPaperLight
-                ? 'bg-gradient-to-b from-[#fcfcfc]/98 via-[#f4f4f5]/96 to-[#e4e4e7]/95 backdrop-blur-md backdrop-saturate-[0.88] shadow-[inset_0_0_0_1px_rgba(113,113,122,0.1),inset_0_0_38px_rgba(24,24,27,0.03),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-zinc-400/32'
-                : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(156,119,64,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
+          isDark
+            ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
+            : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(156,119,64,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
         )}
         style={{ clipPath: clip }}
       >
@@ -196,13 +163,7 @@ export function VaultCredentialChrome({
           <VaultLightFrostTexture variant='tile' />
         )}
 
-        {!isDark && isPaperLight && (
-          <div
-            aria-hidden
-            className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/52 via-zinc-200/14 to-transparent opacity-38'
-          />
-        )}
-        {!isDark && !isPaperLight && (
+        {!isDark && (
           <div
             aria-hidden
             className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/72 via-cyan-100/22 to-transparent opacity-62'
@@ -215,9 +176,7 @@ export function VaultCredentialChrome({
             'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
             isDark
               ? 'w-[40%] bg-gradient-to-r from-transparent via-white/12 to-transparent'
-              : isPaperLight
-                ? 'w-[54%] bg-gradient-to-r from-transparent via-zinc-200/14 to-transparent opacity-65 mix-blend-multiply'
-                : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent opacity-88 mix-blend-multiply',
+              : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent opacity-88 mix-blend-multiply',
           )}
         />
 
@@ -246,13 +205,9 @@ export function VaultCredentialChrome({
             <div
               className={cn(
                 'vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-2/5 opacity-85',
-                isInkDark
-                  ? 'bg-gradient-to-r from-transparent via-zinc-400/20 to-transparent'
-                  : isDark
-                    ? 'bg-gradient-to-r from-transparent via-teal-200/25 to-transparent'
-                    : isPaperLight
-                      ? 'bg-gradient-to-r from-transparent via-zinc-400/22 to-transparent'
-                      : 'bg-gradient-to-r from-transparent via-teal-600/34 to-transparent',
+                isDark
+                  ? 'bg-gradient-to-r from-transparent via-teal-200/25 to-transparent'
+                  : 'bg-gradient-to-r from-transparent via-teal-600/34 to-transparent',
               )}
             />
           )}

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import { X, CheckCircle, Clock, AlertCircle, type LucideIcon } from 'lucide-react'
-import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import Card from './Card'
 
@@ -84,8 +83,6 @@ function BlockCardChrome({
   /** Inside vault shell — no left accent bar (vault already frames the block) + roomier padding */
   embed = false,
 }: Omit<BlockCardProps, 'variant' | 'className'> & { embed?: boolean }) {
-  const { theme } = useTheme()
-  const ink = theme === 'ink'
   const statusInfo = status ? statusConfig[status] : null
   const StatusIcon = statusInfo?.icon
 
@@ -95,29 +92,17 @@ function BlockCardChrome({
         <>
           <div
             aria-hidden
-            className={
-              ink
-                ? 'pointer-events-none absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-zinc-500/55 via-zinc-400/40 to-zinc-600/50'
-                : 'pointer-events-none absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-teal-500/80 via-cyan-500/50 to-violet-500/60 dark:from-teal-400/70 dark:via-teal-500/40 dark:to-violet-500/50'
-            }
+            className='pointer-events-none absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-teal-500/80 via-cyan-500/50 to-violet-500/60 dark:from-teal-400/70 dark:via-teal-500/40 dark:to-violet-500/50'
           />
           <div
             aria-hidden
             className='pointer-events-none absolute left-2 top-3 flex gap-0.5 opacity-30 dark:opacity-25'
           >
             <span
-              className={
-                ink
-                  ? 'h-1.5 w-1.5 rounded-full border border-zinc-500/80'
-                  : 'h-1.5 w-1.5 rounded-full border border-teal-600/70 dark:border-teal-400/60'
-              }
+              className='h-1.5 w-1.5 rounded-full border border-teal-600/70 dark:border-teal-400/60'
             />
             <span
-              className={
-                ink
-                  ? 'h-1.5 w-1.5 rounded-full border border-zinc-500/60'
-                  : 'h-1.5 w-1.5 rounded-full border border-teal-600/50 dark:border-teal-400/40'
-              }
+              className='h-1.5 w-1.5 rounded-full border border-teal-600/50 dark:border-teal-400/40'
             />
           </div>
         </>
@@ -133,23 +118,20 @@ function BlockCardChrome({
       >
         <div className='flex min-w-0 w-full flex-1 items-center gap-3 sm:w-auto'>
           <div
-            className={
-              ink
-                ? 'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-600/35 via-zinc-500/22 to-zinc-700/30 shadow-inner shadow-black/20 ring-1 ring-zinc-500/35 overflow-hidden'
-                : 'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30 overflow-hidden'
-            }
+            className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30 overflow-hidden'
           >
             {headerIconSlot != null ? (
               headerIconSlot
             ) : Icon != null ? (
               <Icon
-                className={cn('h-5 w-5', ink ? 'text-zinc-100' : 'text-teal-600 dark:text-teal-400')}
+                className={'h-5 w-5 text-teal-600 dark:text-teal-400'}
               />
             ) : null}
           </div>
 
           <div className='min-w-0 flex-1'>
-            <h3 className='text-sm font-semibold tracking-tight text-slate-900 dark:text-white break-words sm:truncate'>
+            {/* font-display (Fraunces serif) — heritage brand voice on section titles */}
+            <h3 className='font-display text-[0.95rem] font-semibold tracking-tight text-stone-900 dark:text-[#f4f1ea] break-words sm:truncate'>
               {title}
             </h3>
             {description && (
@@ -166,7 +148,7 @@ function BlockCardChrome({
             <span
               className={cn(
                 'flex items-center gap-1 text-xs font-medium',
-                ink ? 'text-zinc-400' : statusInfo.classes,
+                statusInfo.classes,
               )}
             >
               <StatusIcon className='w-3.5 h-3.5' />

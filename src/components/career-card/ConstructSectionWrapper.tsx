@@ -1,16 +1,16 @@
 'use client'
 
 /**
- * Construct mode: mini vault tile + career card section + inline block actions.
- * Mirrors Block Picker row chrome; actions reuse former “Block files” behavior.
+ * Construct mode: block illustration tile + career card section + inline block actions.
+ * Heritage chrome — clean hairline tile and champagne-gold eyebrow label, matching
+ * the landing page panels (the old chamfered vault tile + accent strip is retired).
  */
 
 import { useState, useCallback } from 'react'
 import { Eye, Loader2, Pencil, ShieldCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
-import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
-import { getBlockColor, getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
+import { getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import { getBlockIllustration } from '@/components/hub/BlockIllustrations'
 import type { HubDocument } from '@/lib/hub-document-types'
 import { hubScreeningStatusLabel } from '@/lib/hub-document-types'
@@ -51,13 +51,9 @@ export default function ConstructSectionWrapper({
   const installedBlocks = useInstalledBlocks()
   const [removeModalOpen, setRemoveModalOpen] = useState(false)
 
-  const colors = getBlockColor(blockType)
   const Illustration = getBlockIllustration(blockType)
-  const accentClass = isDark ? colors.iconText.dark : colors.iconText.light
-  const defaultLight =
-    'drop-shadow(0 4px 12px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(156,119,64,0.14))'
-  const defaultDark = 'drop-shadow(0 3px 14px rgba(0,0,0,0.4))'
-  const vaultFilter = isDark ? defaultDark : defaultLight
+  // Champagne gold across every block — heritage chrome doesn't do per-block colors
+  const accentClass = isDark ? 'text-[#cda868]' : 'text-[#8a6d3b]'
 
   const ghostBtn = isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200'
   const tealBtn = isDark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
@@ -94,41 +90,29 @@ export default function ConstructSectionWrapper({
     <div
       className={cn(
         'relative overflow-hidden rounded-xl border p-3 sm:p-4',
-        isDark ? 'border-gray-700/80 bg-gray-900/30' : 'border-slate-200 bg-white/80',
+        isDark ? 'border-white/[0.08] bg-white/[0.02]' : 'border-stone-300/60 bg-white/75',
       )}
     >
-      {/* Accent strip — ties the vault tile to the content column */}
-      <span
-        aria-hidden
-        className={cn(
-          'absolute inset-y-0 left-0 w-0.5 sm:w-1',
-          colors.badgeColor,
-          'opacity-70',
-        )}
-      />
-
-      <div className='flex gap-3 sm:gap-4 pl-1 sm:pl-1.5'>
-        <div className='relative mt-0.5 h-[4.25rem] w-[4.25rem] shrink-0 sm:h-[4.75rem] sm:w-[4.75rem]'>
-          <VaultCredentialChrome
-            isDark={isDark}
-            glowColor={colors.glowColor}
-            hasRoute
-            className='h-full min-h-[4.25rem] sm:min-h-[4.75rem]'
-            style={{ filter: vaultFilter }}
-          >
-            <div className='flex h-full scale-[0.82] items-center justify-center p-1 sm:scale-[0.88]'>
-              <Illustration accentText={accentClass} isDark={isDark} />
-            </div>
-          </VaultCredentialChrome>
+      <div className='flex gap-3 sm:gap-4'>
+        <div
+          className={cn(
+            'relative mt-0.5 flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center overflow-hidden rounded-xl border sm:h-[4.75rem] sm:w-[4.75rem]',
+            isDark ? 'border-white/[0.1] bg-white/[0.04]' : 'border-stone-300/70 bg-[#fbf8f1]',
+          )}
+        >
+          <div className='flex h-full scale-[0.82] items-center justify-center p-1 sm:scale-[0.88]'>
+            <Illustration accentText={accentClass} isDark={isDark} />
+          </div>
         </div>
 
         <div className='min-w-0 flex-1 space-y-2.5'>
           <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
             <div className='flex min-w-0 flex-wrap items-center gap-2'>
+              {/* Uniform champagne eyebrow — gold is the only accent, like the landing page */}
               <p
                 className={cn(
                   'text-[11px] font-bold uppercase tracking-[0.12em]',
-                  isDark ? colors.iconText.dark : colors.iconText.light,
+                  isDark ? 'text-[#cda868]' : 'text-[#8a6d3b]',
                 )}
               >
                 {getBlockDefinition(blockType)?.label ?? blockType}

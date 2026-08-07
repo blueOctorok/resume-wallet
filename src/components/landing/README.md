@@ -34,7 +34,7 @@ The landing page pioneered the heritage palette; it is now the **site-wide brand
 ## Brand marks
 
 - **`ProvvenWordmark`** (`src/components/ui/ProvvenWordmark.tsx`) — serif wordmark; the `vv` pair is the brand symbol: a **solid gold v** (Provven's seal) with a **ghost v** (base color at ~65%, the fact) laid on top, pulled in −0.38em and dipping below the baseline. Hero, final CTA, footer.
-- **The double-V is also the favicon** (`public/favicon.svg` + `src/app/favicon.ico`) — exact Fraunces glyph outlines on a navy tile. Regenerate with `node scripts/generate-favicon.mjs` after any change to the mark.
+- **The double-V is also the favicon** (`public/favicon.svg` + `src/app/favicon.ico`) and ships as standalone SVGs in `public/brand/`. Canonical component: `src/components/ui/ProvvenMark.tsx`; full spec + regeneration: `docs/BRAND.md` (`node scripts/generate-brand-assets.mjs`).
 - **`SealDivider`** (`landing-shared.tsx`) — hairline rule with a centered gold diamond; opens the final CTA and the footer.
 
 ## Fonts

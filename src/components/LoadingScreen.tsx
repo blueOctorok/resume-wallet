@@ -24,7 +24,6 @@ export default function LoadingScreen({
 }: LoadingScreenProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const isInk = theme === 'ink'
 
   const orbit = (
     <StormTokenMark
@@ -55,9 +54,7 @@ export default function LoadingScreen({
           <div
             className={cn(
               'loading-bar-sweep h-full w-[42%] rounded-full bg-gradient-to-r from-transparent to-transparent',
-              isInk
-                ? 'via-zinc-500/75 dark:via-zinc-400/70'
-                : 'via-teal-600/88 dark:via-teal-300/85',
+              'via-teal-600/88 dark:via-teal-300/85',
             )}
           />
         </div>
@@ -74,7 +71,7 @@ export default function LoadingScreen({
           <p
             className={cn(
               'storm-wordmark-font pt-3 text-[0.65rem] font-semibold tracking-[0.14em]',
-              isInk ? 'text-zinc-500/90 dark:text-zinc-400/70' : 'text-teal-700/70 dark:text-teal-400/45',
+              'text-teal-700/70 dark:text-teal-400/45',
             )}
           >
             PROVVEN
@@ -108,14 +105,14 @@ export default function LoadingScreen({
           <div
             className={cn(
               'absolute top-[18%] left-1/2 h-[min(85vw,36rem)] w-[min(85vw,36rem)] -translate-x-1/2 rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isInk ? 'bg-zinc-500/[0.07]' : isDark ? 'bg-teal-400/[0.09]' : 'bg-[rgb(13_148_136/0.1)]',
+              isDark ? 'bg-teal-400/[0.09]' : 'bg-[rgb(13_148_136/0.1)]',
             )}
             style={{ animationDuration: '3.2s' }}
           />
           <div
             className={cn(
               'absolute bottom-[-5%] right-[-8%] h-[min(70vw,26rem)] w-[min(70vw,26rem)] rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isInk ? 'bg-zinc-600/[0.06]' : isDark ? 'bg-violet-500/[0.085]' : 'bg-[rgb(124_58_237/0.08)]',
+              isDark ? 'bg-violet-500/[0.085]' : 'bg-[rgb(124_58_237/0.08)]',
             )}
             style={{ animationDuration: '4s', animationDelay: '0.4s' }}
           />
@@ -126,7 +123,7 @@ export default function LoadingScreen({
             className={cn(
               'rounded-2xl p-8 sm:p-10 backdrop-blur-xl',
               isDark
-                ? cn('storm-glass-panel ring-1', isInk ? 'ring-zinc-500/[0.22]' : 'ring-teal-400/[0.16]')
+                ? 'storm-glass-panel ring-1 ring-teal-400/[0.16]'
                 : 'storm-light-panel',
             )}
           >
@@ -153,7 +150,7 @@ export default function LoadingScreen({
             className={cn(
             'w-full max-w-sm rounded-2xl px-8 py-10 backdrop-blur-xl',
             isDark
-              ? cn('storm-glass-panel ring-1', isInk ? 'ring-zinc-500/[0.2]' : 'ring-teal-400/[0.14]')
+              ? 'storm-glass-panel ring-1 ring-teal-400/[0.14]'
               : 'storm-light-panel',
           )}
         >

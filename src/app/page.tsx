@@ -7,7 +7,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import StormBackground from '@/components/StormBackground'
-import UserStatusModal from '@/components/UserStatusModal'
 import LoadingScreen from '@/components/LoadingScreen'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
 import type { ResumeUploadEvent } from '@/types/assistant'
@@ -80,7 +79,6 @@ const HomeContent = () => {
   const uiStore = useUIStore()
   const {
     currentPage, setCurrentPage,
-    isModalOpen, setIsModalOpen,
     driverJourneyState,
     setLatestResumeIpfsHash,
     handleResumeUploadEvent,
@@ -377,9 +375,6 @@ const HomeContent = () => {
     [sessionUserId]
   )
 
-  const openModal = useCallback(() => setIsModalOpen(true), [])
-  const closeModal = useCallback(() => setIsModalOpen(false), [])
-
   // -------------------------------------------------------
   // Render
   // -------------------------------------------------------
@@ -391,7 +386,10 @@ const HomeContent = () => {
       setPrimerSeen={() => {}}
       notifyResumeUploadEvent={handleResumeUploadEvent}
     >
-      <div className='min-h-screen overflow-x-hidden relative'>
+      {/* overflow-x-clip (not -hidden): hidden creates a scroll container on the
+          ancestor, which silently breaks the nav's position:sticky. clip just
+          crops paint without changing scroll behavior. */}
+      <div className='min-h-screen overflow-x-clip relative'>
         <StormBackground />
 
         {/* Global Navigation — hidden on the guest marketing landing so the
@@ -401,7 +399,7 @@ const HomeContent = () => {
           <Navigation
             isAuthenticated={!!user}
             userRole={userRole}
-            onStatusClick={openModal}
+            onLogout={handleLogout}
             onNavigate={(page) => {
               // 'jobs' removed: navigation's "Browse jobs" guest button now flips into
               // Guided Mode via `onBrowseGuided` rather than navigating to a 'jobs' page.
@@ -419,19 +417,6 @@ const HomeContent = () => {
             sessionUserId={sessionUserId ?? null}
           />
         )}
-
-        {/* User Status Modal */}
-        <UserStatusModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          onLogout={handleLogout}
-          user={{
-            email: user?.email as string | undefined,
-            userId: sessionUserId ?? undefined,
-            chain: user?.chain as string | undefined,
-          }}
-          userRole={userRole}
-        />
 
         {/* Role Selection Modal — z-[80] to sit above nav (z-50) */}
         {user && !isRoleLoading && !isSettingRole && (showRoleSelection || userRole === null) && (

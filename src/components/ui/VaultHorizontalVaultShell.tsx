@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * Horizontal vault credential (chamfer top-right) — shared by nav rail and wide panels
- * (e.g. hub profile header). Decorative clip stays behind content; children stay unclipped.
+ * Heritage panel — shared chrome for wide hub panels (career card, DQ progress,
+ * referrals, employer sections). Mirrors the landing page's panel language:
+ * clean rounded face, hairline border, champagne-gold top hairline, soft depth.
+ * (Replaces the old chamfered "vault credential" chrome — DEC: hub containers
+ * must read like the homepage, not like tech blocks.)
  */
 import { cn } from '@/lib/utils'
-import { VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
-import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
-import { getVaultAccentLayersForTheme, type VaultAccentPreset } from '@/lib/vault-accent-presets'
-import { useTheme } from '@/contexts/ThemeContext'
+import type { VaultAccentPreset } from '@/lib/vault-accent-presets'
 
 export type VaultHorizontalLayout = 'nav' | 'panel'
 
@@ -18,9 +18,13 @@ export interface VaultHorizontalVaultShellProps {
   className?: string
   /** Padding around content (nav vs profile header) */
   contentClassName?: string
-  /** `nav` = centered max width + stronger outer glow; `panel` = full width hub header */
+  /** `nav` = centered max width; `panel` = full width hub section */
   layout?: VaultHorizontalLayout
-  /** Rim, strip, conic, and glow tuned per hub section (default matches profile/nav teal) */
+  /**
+   * Kept for API compatibility with existing call sites. The heritage chrome
+   * is deliberately uniform (gold is the only accent, like the landing page),
+   * so the preset no longer changes the rendering.
+   */
   accent?: VaultAccentPreset
 }
 
@@ -30,111 +34,30 @@ export default function VaultHorizontalVaultShell({
   className,
   contentClassName,
   layout = 'panel',
-  accent = 'teal',
 }: VaultHorizontalVaultShellProps) {
-  const { theme } = useTheme()
-  const clip = { clipPath: VAULT_CLIP_HORIZONTAL }
   const isNav = layout === 'nav'
-  const frostVariant = isNav ? 'bar' : 'tile'
-  const A = getVaultAccentLayersForTheme(accent, theme)
-  const isPaperShell = theme === 'paper' && !isDark
 
-  const innerBg = isDark ? A.innerBgDark : A.innerBgLight
+  const face = isDark
+    ? 'border-white/[0.1] bg-white/[0.035] ring-1 ring-[#c9a86a]/15 shadow-xl shadow-black/40 backdrop-blur-md'
+    : 'border-stone-400/45 bg-gradient-to-b from-[#fffdf8] via-[#fbf7ee] to-[#f6efe2] ring-1 ring-[#8a6d3b]/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(41,37,36,0.06),0_16px_40px_-18px_rgba(41,37,36,0.18)]'
 
-  const outerFilter = isNav
-    ? isDark
-      ? A.filterNavDark
-      : A.filterNavLight
-    : isDark
-      ? A.filterPanelDark
-      : A.filterPanelLight
+  const hairline = isDark ? 'via-[#c9a86a]/40' : 'via-[#8a6d3b]/35'
 
   return (
     <div
       className={cn(
-        'relative w-full overflow-visible pointer-events-auto',
+        'relative w-full overflow-hidden rounded-2xl border',
+        face,
         isNav && 'mx-auto max-w-3xl',
         className,
       )}
-      style={{ filter: outerFilter }}
     >
-      <div className='pointer-events-none absolute inset-0 z-0 overflow-hidden' style={clip}>
-        <span
-          aria-hidden
-          className='absolute inset-0'
-          style={{ ...clip, background: isDark ? A.rimDark : A.rimLight }}
-        />
-
-        <span
-          aria-hidden
-          className={cn(
-            'vault-conic-slow absolute -inset-[20%] motion-reduce:opacity-0',
-            isDark ? 'mix-blend-plus-lighter opacity-[0.16]' : 'mix-blend-multiply opacity-[0.17]',
-          )}
-          style={{
-            ...clip,
-            background: isDark ? A.conicDark : A.conicLight,
-          }}
-        />
-
-        <span
-          aria-hidden
-          className='absolute right-0 top-0 z-[2] h-6 w-12 max-w-[20%] translate-x-px -translate-y-px sm:h-7 sm:w-14'
-          style={{
-            background: isDark ? A.chamferDark : A.chamferLight,
-            filter: 'blur(3px)',
-          }}
-        />
-
-        <div
-          aria-hidden
-          className={cn(
-            'absolute inset-[2px] overflow-hidden',
-            'shadow-[inset_0_0_22px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_26px_rgba(0,0,0,0.38)]',
-            isDark
-              ? 'backdrop-blur-xl ring-1 ring-white/[0.06]'
-              : isPaperShell
-                ? 'backdrop-blur-xl backdrop-saturate-[0.88] shadow-[inset_0_0_0_1px_rgba(113,113,122,0.1),inset_0_0_36px_rgba(24,24,27,0.028),inset_0_1px_0_rgba(255,255,255,0.78)] ring-1 ring-zinc-400/28'
-                : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(156,119,64,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
-          )}
-          style={{ ...clip, background: innerBg }}
-        >
-          {isDark ? (
-            <span className='pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.055)_1px,transparent_1.5px)] [background-size:6px_6px] opacity-100' />
-          ) : (
-            <VaultLightFrostTexture variant={frostVariant} />
-          )}
-          {!isDark && isPaperShell && (
-            <span className='pointer-events-none absolute -left-[6%] top-0 h-[48%] w-[44%] rotate-[11deg] bg-gradient-to-br from-white/55 via-zinc-100/18 to-transparent opacity-42' />
-          )}
-          {!isDark && !isPaperShell && (
-            <span className='pointer-events-none absolute -left-[6%] top-0 h-[48%] w-[44%] rotate-[11deg] bg-gradient-to-br from-white/75 via-cyan-50/25 to-transparent opacity-60' />
-          )}
-          <span
-            className={cn(
-              'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
-              isDark
-                ? 'w-[40%] bg-gradient-to-r from-transparent via-white/[0.07] to-transparent'
-                : cn(
-                    A.sheenLightClassName,
-                    'mix-blend-multiply',
-                    isNav ? 'w-[58%] opacity-90' : 'w-[52%] opacity-86',
-                  ),
-            )}
-          />
-          <div aria-hidden className='absolute bottom-0 left-0 right-0 z-[1] h-[3px] overflow-hidden'>
-            <span className='absolute inset-0' style={{ background: isDark ? A.stripDark : A.stripLight }} />
-            <span
-              className='vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-[30%] opacity-90'
-              style={{
-                background: isDark ? A.sweepDark : A.sweepLight,
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className={cn('relative z-[4]', contentClassName)}>{children}</div>
+      {/* Gold ledger hairline — the landing panels' signature top edge */}
+      <span
+        aria-hidden
+        className={cn('pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent', hairline)}
+      />
+      <div className={cn('relative', contentClassName)}>{children}</div>
     </div>
   )
 }

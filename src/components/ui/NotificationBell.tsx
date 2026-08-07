@@ -4,13 +4,21 @@ import { isDarkTheme } from '@/lib/theme-storage'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles, CalendarClock } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
-import { useTheme, type Theme } from '@/contexts/ThemeContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
 
 interface NotificationBellProps {
   sessionUserId: string
+  /**
+   * Controlled open — used when the panel is triggered from Options instead of
+   * the standalone bell button. When set, `onOpenChange` must also be provided.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** Hide the nav bell trigger (panel still renders when open). */
+  hideTrigger?: boolean
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -37,10 +45,7 @@ const TYPE_COLOR: Record<string, string> = {
   job_match:               'bg-sky-500/20 text-sky-400',
 }
 
-const TYPE_COLOR_PAPER = 'bg-zinc-200/90 text-zinc-700'
-
-function typeChipClass(type: string, isDark: boolean, appTheme: Theme) {
-  if (!isDark && appTheme === 'paper') return TYPE_COLOR_PAPER
+function typeChipClass(type: string) {
   return TYPE_COLOR[type] ?? 'bg-gray-500/20 text-gray-400'
 }
 
@@ -55,8 +60,20 @@ function timeAgo(dateString: string): string {
   return `${days}d ago`
 }
 
-export default function NotificationBell({ sessionUserId }: NotificationBellProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export default function NotificationBell({
+  sessionUserId,
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
+}: NotificationBellProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const isOpen = isControlled ? openProp : uncontrolledOpen
+  const setIsOpen = (next: boolean) => {
+    if (isControlled) onOpenChange?.(next)
+    else setUncontrolledOpen(next)
+  }
+
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const { notifications, unreadCount, loading, fetchNotifications, markRead, markAllRead } =
@@ -90,6 +107,7 @@ export default function NotificationBell({ sessionUserId }: NotificationBellProp
 
   // Close dropdown on outside click
   useEffect(() => {
+    if (!isOpen) return
     const handleClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsOpen(false)
@@ -97,11 +115,7 @@ export default function NotificationBell({ sessionUserId }: NotificationBellProp
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const handleOpen = () => {
-    setIsOpen((prev) => !prev)
-  }
+  }, [isOpen])
 
   const handleNotificationClick = (n: AppNotification) => {
     if (!n.read) markRead(n.id, sessionUserId)
@@ -119,26 +133,124 @@ export default function NotificationBell({ sessionUserId }: NotificationBellProp
 
   const { navigateToMessages } = useUIStore()
   const isDark = isDarkTheme(theme)
-  const isPaperLight = !isDark && theme === 'paper'
+
+  const panel = isOpen ? (
+    <div
+      ref={hideTrigger ? dropdownRef : undefined}
+      className={cn(
+        'absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl z-[200]',
+        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200',
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-between border-b px-4 py-3',
+          isDark ? 'border-gray-700' : 'border-gray-100',
+        )}
+      >
+        <span className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+          Notifications
+        </span>
+        <div className='flex items-center gap-2'>
+          {unreadCount > 0 && (
+            <button
+              type='button'
+              onClick={() => markAllRead(sessionUserId)}
+              className={cn(
+                'flex cursor-pointer items-center gap-1 text-xs font-medium transition-colors',
+                isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700',
+              )}
+              title='Mark all as read'
+            >
+              <CheckCheck className='h-3.5 w-3.5' />
+              Mark all read
+            </button>
+          )}
+          <button
+            type='button'
+            onClick={() => setIsOpen(false)}
+            className={cn(
+              'cursor-pointer rounded p-0.5',
+              isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600',
+            )}
+          >
+            <X className='h-3.5 w-3.5' />
+          </button>
+        </div>
+      </div>
+
+      <div className='max-h-[360px] overflow-y-auto'>
+        {loading && notifications.length === 0 ? (
+          <div className={cn('px-4 py-8 text-center text-sm', isDark ? 'text-gray-500' : 'text-gray-400')}>
+            Loading…
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className={cn('px-4 py-8 text-center', isDark ? 'text-gray-500' : 'text-gray-400')}>
+            <Bell className='mx-auto mb-2 h-8 w-8 opacity-30' />
+            <p className='text-sm'>No notifications yet</p>
+          </div>
+        ) : (
+          notifications.map((n) => (
+            <button
+              key={n.id}
+              type='button'
+              onClick={() => handleNotificationClick(n)}
+              className={cn(
+                'flex w-full cursor-pointer gap-3 border-b px-4 py-3 text-left transition-colors',
+                isDark
+                  ? `border-gray-800 hover:bg-gray-800 ${!n.read ? 'bg-gray-800/60' : ''}`
+                  : `border-gray-50 hover:bg-gray-50 ${!n.read ? 'bg-teal-50/60' : ''}`,
+              )}
+            >
+              <div
+                className={cn(
+                  'mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg',
+                  typeChipClass(n.type),
+                )}
+              >
+                {TYPE_ICON[n.type] ?? <Bell className='h-4 w-4' />}
+              </div>
+              <div className='min-w-0 flex-1'>
+                <div className='flex items-start justify-between gap-2'>
+                  <p className={cn('truncate text-xs font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                    {n.title}
+                  </p>
+                  {!n.read && <span className='mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-500' />}
+                </div>
+                <p className={cn('mt-0.5 line-clamp-2 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                  {n.body}
+                </p>
+                <p className={cn('mt-1 text-[10px]', isDark ? 'text-gray-600' : 'text-gray-400')}>
+                  {timeAgo(n.created_at)}
+                </p>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  ) : null
+
+  // Options-owned trigger: panel anchors to the parent Options `relative` root.
+  // Still mount (hooks above) when closed so polling keeps running.
+  if (hideTrigger) return panel
 
   return (
     <div ref={dropdownRef} className='relative'>
-      {/* Bell button */}
       <button
         type='button'
-        onClick={handleOpen}
+        onClick={() => setIsOpen(!isOpen)}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         className={cn(
-          'relative flex items-center justify-center w-9 h-9 cursor-pointer',
-          navControlButtonClass(isDark, theme),
+          'relative flex h-9 w-9 cursor-pointer items-center justify-center',
+          navControlButtonClass(isDark),
         )}
       >
-        <Bell className='w-4 h-4' />
+        <Bell className='h-4 w-4' />
         {unreadCount > 0 && (
           <span
             className={cn(
-              'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full border-2',
-              isPaperLight ? 'bg-zinc-700' : 'bg-teal-500',
+              'absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 bg-teal-500 px-1 text-[10px] font-bold text-white',
               isDark ? 'border-gray-950' : 'border-white',
             )}
           >
@@ -146,111 +258,7 @@ export default function NotificationBell({ sessionUserId }: NotificationBellProp
           </span>
         )}
       </button>
-
-      {/* Dropdown */}
-      {isOpen && (
-        <div
-          className={`absolute right-0 top-full mt-2 w-80 rounded-xl shadow-2xl border overflow-hidden z-[200] ${
-            isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-          }`}
-        >
-          {/* Header */}
-          <div className={`flex items-center justify-between px-4 py-3 border-b ${
-            isDark ? 'border-gray-700' : 'border-gray-100'
-          }`}>
-            <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Notifications
-            </span>
-            <div className='flex items-center gap-2'>
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => markAllRead(sessionUserId)}
-                  className={`flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer ${
-                    isDark
-                      ? 'text-teal-400 hover:text-teal-300'
-                      : isPaperLight
-                        ? 'text-zinc-600 hover:text-zinc-900'
-                        : 'text-teal-600 hover:text-teal-700'
-                  }`}
-                  title='Mark all as read'
-                >
-                  <CheckCheck className='w-3.5 h-3.5' />
-                  Mark all read
-                </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className={`p-0.5 rounded cursor-pointer ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                <X className='w-3.5 h-3.5' />
-              </button>
-            </div>
-          </div>
-
-          {/* List */}
-          <div className='max-h-[360px] overflow-y-auto'>
-            {loading && notifications.length === 0 ? (
-              <div className={`px-4 py-8 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                Loading…
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className={`px-4 py-8 text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                <Bell className='w-8 h-8 mx-auto mb-2 opacity-30' />
-                <p className='text-sm'>No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleNotificationClick(n)}
-                  className={`w-full text-left px-4 py-3 flex gap-3 border-b transition-colors cursor-pointer ${
-                    isDark
-                      ? `border-gray-800 hover:bg-gray-800 ${!n.read ? 'bg-gray-800/60' : ''}`
-                      : isPaperLight
-                        ? `border-zinc-100 hover:bg-zinc-50 ${!n.read ? 'bg-zinc-100/80' : ''}`
-                        : `border-gray-50 hover:bg-gray-50 ${!n.read ? 'bg-teal-50/60' : ''}`
-                  }`}
-                >
-                  {/* Type icon */}
-                  <div
-                    className={`flex-shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center ${typeChipClass(
-                      n.type,
-                      isDark,
-                      theme,
-                    )}`}
-                  >
-                    {TYPE_ICON[n.type] ?? <Bell className='w-4 h-4' />}
-                  </div>
-
-                  {/* Content */}
-                  <div className='flex-1 min-w-0'>
-                    <div className='flex items-start justify-between gap-2'>
-                      <p className={`text-xs font-semibold truncate ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {n.title}
-                      </p>
-                      {!n.read && (
-                        <span
-                          className={`flex-shrink-0 w-1.5 h-1.5 mt-1 rounded-full ${
-                            isPaperLight ? 'bg-zinc-500' : 'bg-teal-500'
-                          }`}
-                        />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {n.body}
-                    </p>
-                    <p className={`text-[10px] mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                      {timeAgo(n.created_at)}
-                    </p>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      {panel}
     </div>
   )
 }

@@ -111,27 +111,12 @@ export default function RootLayout({
                 try {
                   var SK = 'stormchain-theme';
                   var SCHEMA = 'stormchain-theme-schema';
-                  var VER = '4';
-                  var schema = localStorage.getItem(SCHEMA);
+                  var VER = '5';
                   var saved = localStorage.getItem(SK);
-                  var t = 'light';
-                  if (saved === 'sepia' || saved === 'business') {
-                    localStorage.setItem(SCHEMA, VER);
-                    localStorage.setItem(SK, 'light');
-                    t = 'light';
-                  } else if (schema !== VER) {
-                    if (saved === 'light' || saved === 'dark' || saved === 'paper' || saved === 'ink') {
-                      localStorage.setItem(SCHEMA, VER);
-                      localStorage.setItem(SK, saved);
-                      t = saved;
-                    } else {
-                      localStorage.setItem(SCHEMA, VER);
-                      localStorage.setItem(SK, 'light');
-                      t = 'light';
-                    }
-                  } else if (saved === 'light' || saved === 'dark' || saved === 'paper' || saved === 'ink') {
-                    t = saved;
-                  }
+                  // v5: paper/ink retired -> light/dark; older sepia/business -> light
+                  var t = saved === 'dark' || saved === 'ink' ? 'dark' : 'light';
+                  localStorage.setItem(SCHEMA, VER);
+                  localStorage.setItem(SK, t);
                   document.documentElement.setAttribute('data-theme', t);
                 } catch (e) {
                   document.documentElement.setAttribute('data-theme', 'light');

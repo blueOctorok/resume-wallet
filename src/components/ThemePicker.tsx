@@ -3,33 +3,19 @@
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Check, ChevronDown, Contrast, FileText, Orbit, Sun } from 'lucide-react'
+import { Check, ChevronDown, Orbit, Sun } from 'lucide-react'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass, navDropdownItemBorderClass, navDropdownItemClass } from '@/lib/navigation-styles'
 
 const OPTIONS: { id: Theme; label: string; description: string; Icon: LucideIcon }[] = [
-  { id: 'light', label: 'Icy light', description: 'Cool slate vault (default)', Icon: Sun },
-  { id: 'paper', label: 'Paper', description: 'Newsprint grey — calm, low contrast, print-like', Icon: FileText },
-  { id: 'dark', label: 'Galactic void', description: 'Teal & violet storm — colorful dark', Icon: Orbit },
-  { id: 'ink', label: 'Quiet ink', description: 'Monochrome night — soft greys, minimal color', Icon: Contrast },
+  { id: 'light', label: 'Cream', description: 'Warm parchment & gold (default)', Icon: Sun },
+  { id: 'dark', label: 'Ink navy', description: 'Deep navy & champagne gold — the seal', Icon: Orbit },
 ]
 
-function activeThemeIcon(theme: Theme) {
-  if (theme === 'ink') return Contrast
-  if (theme === 'dark') return Orbit
-  if (theme === 'paper') return FileText
-  return Sun
-}
-
-/** Selected-row icon/check: teal for icy / galactic; zinc for paper / quiet ink. */
-function rowAccent(isDarkPicker: boolean, selected: boolean, appTheme: Theme) {
+function rowAccent(isDarkPicker: boolean, selected: boolean) {
   if (!selected) return isDarkPicker ? 'text-gray-400' : 'text-stone-500'
-  if (appTheme === 'paper' || appTheme === 'ink') {
-    return isDarkPicker ? 'text-zinc-300' : 'text-zinc-700'
-  }
-  if (isDarkPicker) return 'text-teal-400'
-  return 'text-teal-600'
+  return isDarkPicker ? 'text-teal-400' : 'text-teal-600'
 }
 
 export default function ThemePicker() {
@@ -37,7 +23,7 @@ export default function ThemePicker() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const isDark = isDarkTheme(theme)
-  const ActiveIcon = activeThemeIcon(theme)
+  const ActiveIcon = isDark ? Orbit : Sun
 
   useEffect(() => {
     if (!open) return
@@ -70,7 +56,7 @@ export default function ThemePicker() {
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'relative flex cursor-pointer items-center gap-1.5 rounded-lg p-2.5 pr-2',
-          navControlButtonClass(isDark, theme),
+          navControlButtonClass(isDark),
         )}
         aria-expanded={open}
         aria-haspopup='listbox'
@@ -104,7 +90,7 @@ export default function ThemePicker() {
           </p>
           {OPTIONS.map((opt, i) => {
             const selected = theme === opt.id
-            const accent = rowAccent(isDark, selected, theme)
+            const accent = rowAccent(isDark, selected)
             return (
               <button
                 key={opt.id}

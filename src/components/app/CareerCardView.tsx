@@ -2,40 +2,38 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, Share2, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore } from '@/stores'
-import { useHubBlocksStore } from '@/stores/hub-blocks-store'
-import { getBlockDefinition } from '@/lib/block-registry'
+import { useAuthStore } from '@/stores'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import Button from '@/components/ui/Button'
+import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
+import DisclosurePreferencesModal from '@/components/hub/DisclosurePreferencesModal'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
-import type { PageType } from '@/stores/types'
 
 interface CareerCardViewProps {
   onBack: () => void
 }
 
 /**
- * CareerCardView — self-view wrapper that fetches the projected career card
- * and passes it to the ProjectedCareerCard renderer.
- *
- * Replaces the old DriverCareerCardSection. Uses the new /api/career-card
- * endpoint which builds sections from hub blocks.
+ * CareerCardView — the SHOWROOM. A read-only projection of exactly what
+ * employers see, plus Share. All editing lives in Build (the hub workspace):
+ * no edit callbacks are passed, so ProjectedCareerCard renders zero work
+ * affordances here.
  */
 export default function CareerCardView({ onBack }: CareerCardViewProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
-  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
 
   const [data, setData] = useState<CardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [disclosureOpen, setDisclosureOpen] = useState(false)
 
   const fetchCard = useCallback(async (silent = false) => {
     if (!sessionUserId) return
@@ -67,18 +65,11 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
     return () => window.removeEventListener('focus', handleFocus)
   }, [fetchCard])
 
-  const handleNavigateToBlock = useCallback((blockType: string) => {
-    const def = getBlockDefinition(blockType)
-    if (def?.pageRoute) {
-      setCurrentPage(def.pageRoute as PageType)
-    }
-  }, [setCurrentPage])
-
   if (loading) {
     return (
       <div className='max-w-2xl mx-auto'>
         <div className='mb-6'>
-          <BackToHubButton onClick={onBack} />
+          <BackToHubButton onClick={onBack} label='Back to Build' />
         </div>
         <div className='flex items-center justify-center py-20'>
           <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-gray-400' : 'text-gray-500')} />
@@ -91,7 +82,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
     return (
       <div className='max-w-2xl mx-auto'>
         <div className='mb-6'>
-          <BackToHubButton onClick={onBack} />
+          <BackToHubButton onClick={onBack} label='Back to Build' />
         </div>
         <div className={cn(
           'rounded-xl border p-6 text-center',
@@ -104,7 +95,8 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
           <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-gray-500')}>
             {error}
           </p>
-          <Button variant='secondary' size='sm' onClick={fetchCard}>
+          {/* Wrap so the click event isn't passed as fetchCard's `silent` flag */}
+          <Button variant='secondary' size='sm' onClick={() => fetchCard()}>
             Try Again
           </Button>
         </div>
@@ -114,43 +106,64 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
 
   return (
     <div className='max-w-2xl mx-auto'>
-      <div className='flex items-center justify-between mb-6'>
-        <BackToHubButton onClick={onBack} />
-        <button
-          onClick={() => fetchCard(true)}
-          disabled={isRefreshing}
-          title='Refresh career card'
-          className={cn(
-            'p-1.5 rounded-lg transition-all',
-            isRefreshing ? 'opacity-50 cursor-not-allowed' : '',
-            isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-          )}
-        >
-          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-        </button>
+      <div className='flex items-center justify-between gap-3 mb-6'>
+        <BackToHubButton onClick={onBack} label='Back to Build' />
+        <div className='flex items-center gap-2'>
+          <button
+            onClick={() => fetchCard(true)}
+            disabled={isRefreshing}
+            title='Refresh career card'
+            className={cn(
+              'p-1.5 rounded-lg transition-all',
+              isRefreshing ? 'opacity-50 cursor-not-allowed' : '',
+              isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+            )}
+          >
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          </button>
+          <Button variant='primary' size='sm' onClick={() => setShareOpen(true)}>
+            <Share2 className='w-3.5 h-3.5' />
+            Share
+          </Button>
+        </div>
       </div>
 
-      {/* Explanation banner */}
+      {/* Showroom framing — the "view as employer" moment */}
       <div className={cn(
-        'rounded-xl border p-4 mb-6',
+        'flex items-start gap-3 rounded-xl border p-4 mb-6',
         isDark ? 'bg-teal-500/10 border-teal-500/20' : 'bg-teal-50 border-teal-100'
       )}>
-        <p className={cn('text-sm font-medium', isDark ? 'text-teal-300' : 'text-teal-800')}>
-          This is your Career Card
-        </p>
-        <p className={cn('text-xs mt-1', isDark ? 'text-teal-400/70' : 'text-teal-600')}>
-          Employers see this when searching for candidates. It reflects the features on your career card.
-        </p>
+        <Eye className={cn('w-4 h-4 shrink-0 mt-0.5', isDark ? 'text-teal-300' : 'text-teal-800')} />
+        <div>
+          <p className={cn('text-sm font-medium', isDark ? 'text-teal-300' : 'text-teal-800')}>
+            This is what employers see
+          </p>
+          <p className={cn('text-xs mt-1', isDark ? 'text-teal-400/70' : 'text-teal-600')}>
+            A read-only preview of your card, exactly as it appears in talent search.
+            To change anything, head back to Build.
+          </p>
+        </div>
       </div>
 
-      <ProjectedCareerCard
-        data={data}
-        mode='self'
-        onNavigateToBlock={handleNavigateToBlock}
-        onAddBlock={openPicker}
-        sessionUserId={sessionUserId ?? undefined}
-        onAvatarUploadSuccess={() => void fetchCard(true)}
-      />
+      <ProjectedCareerCard data={data} mode='self' sessionUserId={sessionUserId ?? undefined} />
+
+      {sessionUserId && (
+        <>
+          <CareerCardShareModal
+            isOpen={shareOpen}
+            onClose={() => setShareOpen(false)}
+            sessionUserId={sessionUserId}
+            displayName={data.name?.trim() || undefined}
+            onShareUpdated={() => void fetchCard(true)}
+            onManagePrivacy={() => setDisclosureOpen(true)}
+          />
+          <DisclosurePreferencesModal
+            isOpen={disclosureOpen}
+            onClose={() => setDisclosureOpen(false)}
+            zIndex={1200}
+          />
+        </>
+      )}
     </div>
   )
 }

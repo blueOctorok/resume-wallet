@@ -4,6 +4,191 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **IA settled: Career Card · DQ file, guidance stays ambient** (2026-08-07)
+
+The three-tab experiment (Career Card · DQ file · Checklist) lasted one session — the Checklist, DQ file, and career-card blocks were three framings of the same tasks. New rule: **nav destinations are things, not advice.**
+
+| Concept | Home |
+|---|---|
+| The work (MVR, PSP, consent, DOT app) | **DQ file** tab — leads with the one primary CTA from the candidate-todo builder ("Invited by {Company}" context + gold button), then the full DQ item grid |
+| The output (career card → ZK-proof resume) | **Career Card** tab |
+| The guidance ("what now?") | **Up next chip** in nav center — ambient from every screen, never a destination |
+
+Details: Checklist tab + `checklist` page type removed; `CandidateUpNextPage` + `CandidateTodoPanel` deleted (the builder `candidate-todo.ts`, store, tests, and `NavNextStep` chip all survive — they now feed the chip + DQ header). The toggle hides entirely for candidates with **no driver blocks** ("DQ file" is trucking vocabulary; the chip still guides them). DQ progress strip removed from under the career card earlier this session (`DriverDqProgressPanel` deleted).
+
+Mental model: **build your DQ file → it powers your Career Card → share it anywhere, verified.**
+
+## **Workspace / showroom split: Build · Career Card** (2026-08-07, same session)
+
+Follow-up to the IA settlement above — the Career Card tab was still the *editor* (order/remove/reorder buttons everywhere), so "what employers see" never had a surface. The toggle is now:
+
+| Tab | Renders | Nature |
+|---|---|---|
+| **Build** (default, left) | `CandidateHub` — the construct card with all block work, plus the DQ file as a collapsible strip (`HubDqFileSection`), plus the Up-next CTA on `<lg` screens (nav chip is `lg`-only) | The workspace — every edit/order action lives here |
+| **Career Card** (right) | `CareerCardView` — read-only `ProjectedCareerCard` (no edit callbacks passed, so zero work affordances render), "This is what employers see" banner, **Share** button + share/privacy modals | The showroom — the Hinge-style "view as others see you" moment |
+
+**Refinement (same session):** Build is now *only* the career card — the DQ file strip and the Refer-a-friend card were both cut from below it.
+
+- **Up next chip → checklist modal.** Clicking the nav chip no longer jumps straight to the task; it opens `CandidateTodoModal` with the next step as the big button at top and every other item listed below, each clickable. Guidance without a forced path. Two rows have no page route and open hub modals instead: `profile` → profile setup, `add-block` → block picker.
+- **Refer a friend → Options menu.** `ReferralModal` (self-contained: fetch + `Modal` chrome) opens from the nav Options menu on desktop and the hamburger menu on mobile. `HubAccountSection` + `ReferralBanner` deleted — account chrome doesn't belong in the career-building workspace.
+- **Options gear + Themes category.** Options trigger is a gear (`Settings`) instead of three dots. Themes live under an expandable **Themes** row (shows the active theme name when collapsed; Cream / Ink navy selectable when expanded) — same pattern on mobile.
+- **Messages + Notifications → Options.** Standalone nav icons removed. Both are menu items under Options (and the mobile hamburger options block); Notifications opens the existing panel via a controlled `NotificationBell` (`hideTrigger` + `open`/`onOpenChange`). Gear shows a teal attention dot when either has unread.
+- `HubDqFileSection` deleted; the DQ tasks reach the candidate through the checklist modal (DOT app, consent, MVR, PSP are already rows in the to-do builder).
+
+Details: `dq-file` page type + `CandidateDqFilePage` removed (lasted hours — the standalone DQ page was itself redundant with the workspace). `HubDqFileSection` restores the progressive-disclosure pattern: collapsed one-line summary ("X of Y on file · travels with you across employers"), auto-expands when an employer request is pending (`status === 'requested'` → "Employer waiting" chip), user toggle overrides. Toggle now shows for **all** candidates (Build/Career Card is universal vocabulary; DQ remains driver-gated inside Build). `CareerCardShareModal` + `DisclosurePreferencesModal` moved into the showroom where sharing belongs.
+
+---
+
+## **Nav Log out → Options menu (theme + log out)** (2026-08-07)
+
+The bare "Log out" chip is replaced with an **Options** (`⋯`) control for signed-in users. The menu holds Appearance (Cream / Ink navy) and Log out. Standalone `ThemePicker` remains for guests only. Mobile hamburger mirrors the same Appearance + Log out block.
+
+---
+
+## **Career Card / Up next become a segmented toggle** (2026-08-07)
+
+With only two hub views, the separate icon tabs are now one rounded **segmented control**: selected segment fills champagne gold (dark text on dark theme / cream text on light), the other stays muted so the toggle is obvious. Same control in the mobile menu. Selecting a segment still switches the shell screen (`null` ↔ `up-next`).
+
+---
+
+## **Candidate nav tabs trimmed to Career Card + Up next** (2026-08-07)
+
+Inbox and Ask AI removed from the candidate tab strip (desktop) and the mobile flattened hub links. Routes still exist in `CandidateShell` if something deep-links there later; they’re just not in the nav.
+
+---
+
+## **Candidate nav becomes tabs; Up next tracker gets its own screen** (2026-08-07)
+
+Follow-up to the tracker: it no longer sits on top of the career card. The candidate nav is now a flat tab strip and the tracker is a top-level screen.
+
+| Piece | Detail |
+|---|---|
+| **"My Hub" dropdown removed (candidates)** | Replaced with icon tabs: **Career Card** (hub) + **Up next**. Active tab gets a gold pill + `aria-current='page'`; labels show from `xl:` (icon-only below, with `title`/`aria-label`). Employers + legacy driver/developer keep their dropdown |
+| **`up-next` page** | New `PageType`, `CandidateShell` route case, and `CandidateUpNextPage` (thin `max-w-3xl` wrapper around `CandidateTodoPanel`). Panel removed from `CandidateHub` — career card is first again |
+| **Center chip unchanged** | "Up next: {primary}" still deep-links straight to the task |
+| **Mobile menu** | Flattened candidate links gain an "Up next" row |
+
+Verified in-browser: tab switching both ways, active states, tracker on its own screen. `tsc` errors in `CandidateShell` are pre-existing (`user={user}` vs `SessionUser` on resume blocks — wallet-era typing, untouched).
+
+---
+
+## **Candidate "Up next" tracker — hub panel + nav preview** (2026-08-07)
+
+One place that answers *"what should I do right now?"* for signed-in candidates. Not a journey engine — a short checklist (≤7 rows) with exactly one primary CTA, derived entirely from data already on the client.
+
+| Piece | Detail |
+|---|---|
+| **`src/lib/candidate-todo.ts`** | Pure builder: folds `JourneyProgress` (block-inferred journey) + the newest pending employer request into `{ invitedBy, items, primary }`. Statuses: To do / In progress / Waiting / Done. Never surfaces wallet/referral/find-jobs rows. MVR/PSP orders in flight become honest **Waiting** rows ("MVR processing"), never fake work |
+| **Invited context wins** | A pending `candidate_request` pins **"Finish {requestLabel} for {Company}"** to the top as the primary CTA (deep link from the block registry's `pageRoute`). If the candidate already finished their side, the row flips to **"Waiting on {Company}"** and the primary falls to the next real task. The journey twin is deduped so the task never appears twice |
+| **`src/stores/candidate-todo-store.ts`** | Tiny Zustand store for the one server signal no other store had — the newest pending request (`GET /api/candidate/requests`, fetched once per session). `useCandidateTodo()` combines it with `useJourneyProgress()` + installed blocks |
+| **`CandidateTodoPanel`** | Hub panel (existing `HubSectionPanel` + `BlockCard variant='embed'` chrome): "Up next" title, "Invited by {Company}" context line when relevant, one gold primary button, tappable checklist rows with status chips. All-done state = win copy + "Share your Career Card" nudge. Zero-block users get "Add your first block" (opens the picker) — never an empty hub |
+| **`NavNextStep`** | Nav-center preview chip (`lg:` and up, candidates only): "Up next: {primary}" — one click jumps straight to the page. Hidden when nothing is actionable |
+| **Placement** | Panel sits above the career card in `CandidateHub`; chip fills the free nav-center real estate |
+| **Tests** | `src/lib/candidate-todo.test.ts` (vitest, 6 passing) locks the success criteria: invited driver always sees "Finish screening consent for Pace Drivers" first; organic zero-block user always gets one obvious step |
+
+Verified in-browser (light + dark): panel renders with correct statuses, row click deep-links to the MVR form, nav chip deep-links to the DOT app, done rows disabled. Supabase MCP is read-only so the invited path was verified via unit tests instead of seeded data.
+
+---
+
+## **Paper & Quiet ink themes removed — two appearances only** (2026-08-07)
+
+The neutral monochrome themes (`paper` newsprint light, `ink` quiet dark) are retired. With the heritage rebrand, gold IS the brand — the "no-chroma" escape hatches diluted it and doubled the styling surface of every component. The app now has exactly two appearances: **Cream** (`light`) and **Ink navy** (`dark`).
+
+| Piece | Detail |
+|---|---|
+| **`theme-storage.ts`** | `StoredTheme` narrowed to `'light' \| 'dark'`; schema bumped to **v5** with migration `paper → light`, `ink → dark` (plus legacy `sepia`/`business → light`). Users on retired themes land on the nearest survivor with no flash |
+| **Pre-paint script (`layout.tsx`)** | Collapsed to the same v5 migration: `dark`/`ink` → dark, everything else → light |
+| **`ThemeContext`** | Light/dark "appearance key" machinery (`LIGHT_APPEARANCE_KEY`, `DARK_APPEARANCE_KEY`, `toggleTheme`, `isLightAppearance`) deleted — with two themes there's nothing to remember. Context is now just `{ theme, setTheme }` |
+| **`ThemePicker`** | Two options (Cream / Ink navy); per-theme icon + zinc row-accent logic removed |
+| **Component branches removed** | Every `theme === 'paper'` / `'ink'` fork deleted: `Navigation` (bar class, badge colors, neutral hairline gate), `VaultHorizontalVaultShell`, `Button` (paper/ink variant tables), `Card`, `StormBackground` (ink/newsprint atmospheres + bubble tuning), `VaultLightFrostTexture` (newsprint tone + `tone` prop), `VaultDarkCanvasTexture` (`quiet` mode + `mode` prop), `HubBlockVault`, `BlockCard`, `LoadingScreen`, `NotificationBell`, `PathGuidance`, `MiniEmployerHiringCard`, `EmployerPathSidebar`, `EmployerHub` stat cards |
+| **`navigation-styles.ts`** | Paper/ink class forks removed; helper signatures simplified (`navControlButtonClass(isDark)` etc.) — all call sites updated |
+| **`vault-accent-presets.ts`** | `PAPER_NEWSPRINT_VAULT_SHELL`, `INK_QUIET_VAULT_SHELL`, `getVaultAccentLayersForTheme` deleted (no callers remained) |
+| **`globals.css`** | 73 `[data-theme='paper']` / `[data-theme='ink']` rule blocks deleted (~370 lines: variable sets, teal/violet→zinc utility remaps, scrollbars, `.resume-packet-paper` opt-outs) |
+| **`tailwind.config.ts`** | `darkMode` selector list drops `[data-theme="ink"]` |
+
+Note: `ProvvenMark` / `ProvvenWordmark`'s `tone='ink'` prop is unrelated (it means "fixed ink-navy plane rendering") and is unchanged. Also fixed in passing: `CareerCardView`'s retry button passed the click event into `fetchCard(silent?)`, silently making the retry a background refresh.
+
+Verified in-browser: picker shows two options; a stored `ink` theme reloads as `dark` (schema 5) and `paper` as `light`; both appearances render clean; `tsc` clean for all touched files.
+
+---
+
+## **DQ progress collapses to a summary strip** (2026-08-07)
+
+First approved piece of the "hub progressive disclosure" flow (career card is the screen; everything else appears when relevant). `DriverDqProgressPanel` no longer renders the full checklist by default — it's a one-line strip: icon tile, "Your DQ progress · X of Y complete", gold progress bar, chevron. Click to expand the full `DqFileSection`. **Auto-expands when any DQ item is `requested`** (a pending employer request — the moment the checklist is actionable) with an amber "Employer request" chip; a manual toggle always wins over the smart default (`userToggled ?? hasPendingRequest`). Verified in-browser: collapsed strip, expand/collapse, aria-expanded.
+
+Deferred (proposed, not yet approved): single next-best-action Stormi card, career card Preview/Edit toggle, moving referrals out of the main column.
+
+---
+
+## **Nav actually sticks; Wallet button → Log out** (2026-08-07)
+
+| Piece | Detail |
+|---|---|
+| **Sticky nav fixed** | The bar was `sticky top-0` but never stuck: the page root in `page.tsx` had `overflow-x-hidden`, and any non-`visible` overflow on an ancestor turns it into the sticky element's scroll box — killing viewport stickiness. Changed to `overflow-x-clip`, which crops paint without creating a scroll container. Verified stuck mid-scroll |
+| **Wallet → Log out** | The nav "Wallet" chip (glow dot + WALLET) was a Base-era fossil that opened `UserStatusModal` — itself already gutted to email/role/sign-out at T1.12. Nav now has a direct **Log out** button (desktop + mobile menu) wired to `handleLogout`; guests keep the gold **Sign in** CTA. `UserStatusModal.tsx` deleted; `Navigation`'s `onStatusClick` prop renamed `onLogout`; page.tsx modal state/imports removed |
+
+---
+
+## **Hub containers + nav rebuilt in the landing style** (2026-08-07)
+
+Follow-up to "Candidate hub joins the heritage brand": the theme swap wasn't enough — the hub's containers still carried the techy "vault block" chrome (chamfer clip-path, rotating conic, accent strips, glowing credential tiles) and the nav was a floating two-row vault rail. Both are replaced with the landing page's panel language and a traditional top bar.
+
+| Piece | Detail |
+|---|---|
+| **`VaultHorizontalVaultShell` rewritten** | Same props/API (so `HubSectionPanel`, career card, employer panels all inherit for free), completely new rendering: `rounded-2xl` hairline-border face with a champagne-gold top hairline — navy glass on dark (`bg-white/[0.035]` + gold ring, like the sign-in credential panel), cream gradient stock on light. Chamfer clip, conic sweep, accent strip, sheen, frost texture all removed. The `accent` prop is kept for API compatibility but ignored — gold is the only accent, like the landing page |
+| **`Navigation.tsx` rebuilt as a traditional bar** | Full-width sticky `top-0` bar (h-16, `max-w-7xl` inner): Provven wordmark left (now a home/hub link), My Hub dropdown beside it, controls right (refresh, messages, bell, Assistant, wallet, theme picker), gold ledger hairline under the bar. Mobile: hamburger (`Menu`/`X` icons) opens a stacked menu with quick actions + flattened hub links. Replaces the floating vault shell + centered-wordmark two-row layout. All behavior preserved (guest links, employer snapshot + shortcuts, legacy driver MVR badge, unread badges) |
+| **`navigation-styles.ts` cleanup** | `navHubGradientRingClass` / `navHubInnerButtonClass` / `navHubRefreshInnerButtonClass` / `navRowDividerClass` deleted (only the old nav used them); dropdown panel now anchors left under its trigger |
+| **`ConstructSectionWrapper` de-blocked** | Career card sections drop the colored left accent strip and chamfered `VaultCredentialChrome` tile — now a plain hairline `rounded-xl` illustration tile; per-block colored eyebrow labels and illustration accents unified to champagne gold (`#cda868` dark / `#8a6d3b` light) |
+
+Verified in-browser (cream + ink-navy): bar, dropdown, career card sections, DQ progress, referrals. `paper`/`ink` themes stay neutral (zinc hairlines, no gold).
+
+---
+
+## **Candidate hub joins the heritage brand** (2026-08-07)
+
+The app shell (canvas, nav, panels) now matches the landing page + sign-in: ink-navy plane, cream parchment, champagne gold, Fraunces serif. These are theme-level changes, so every authenticated surface (hub, employer, admin) inherits them.
+
+| Piece | Detail |
+|---|---|
+| **Dark theme = ink navy** | `globals.css` `[data-theme='dark']`: void/deep/surface shifted from charcoal-black (`#040608/#080c11/#0f1419`) to the landing navy family (`#060b15/#0a1322/#111e33`); panel gradient + `--surface-card/elevated` follow; `--text-primary` is brand cream `#f4f1ea`. Gold/steel blooms were already in place |
+| **Light theme = cream parchment** | `[data-theme='light']`: body gradient icy blue-slate → warm cream ramp (`#d8d0bd → #f5f1e6`); cyan specular → cream; surfaces/borders/text moved to stone (`#fbf9f4`, `#a8a29e`, `#1c1917`); `.storm-light-panel` cream face with stone border. `StormBackground` light atmosphere + bubble color warmed to match |
+| **Nav wordmark = Fraunces Provven** | `Navigation.tsx` swaps Orbitron `StormChainWordmark` for `ProvvenWordmark` (`tone='auto'`), sized 1.6–2.1rem — the same mark as landing hero + sign-in |
+| **Serif section titles** | `BlockCard` `h3` titles now `font-display` (Fraunces) with stone/cream text — every hub panel header carries the brand voice |
+| **Vault panel faces** | `vault-accent-presets.ts` TEAL (default) inner faces: light → warm cream gradient (was cyan-white), dark → ink-navy glass; sheen cream instead of cyan |
+| **Theme picker copy** | "Icy light / Cool slate vault" → "Cream / Warm parchment & gold"; "Galactic void / Teal & violet storm" → "Ink navy / Deep navy & champagne gold" |
+
+Verified in-browser on the live hub (career card, DQ progress, referrals) in both cream light and ink-navy dark. `paper` / `ink` (quiet mono) themes intentionally unchanged.
+
+---
+
+## **Sign-in screen matches landing heritage brand** (2026-08-07)
+
+`/sign-in` was still on the old `StormBackground` + Orbitron `StormChainWordmark` + theme-aware `Card` stack. It now shares the landing front door.
+
+| Piece | Detail |
+|---|---|
+| **`SignInScreen.tsx`** (new) | `src/components/auth/SignInScreen.tsx` — auth logic unchanged (Google OAuth + email OTP); chrome restyled |
+| **`sign-in/page.tsx`** | Thin Suspense wrapper only (routing shell) |
+| **Visual** | Fixed `InkBand` navy plane + gold/cool blooms, `ProvvenWordmark` + `SealDivider`, glass credential panel with gold hairline/ring, champagne `GOLD_CTA` primary, ink-styled inputs, gold “browse jobs” link |
+
+---
+
+## **Double-V mark captured as a reusable brand system** (2026-08-07)
+
+The finalized double-V now lives in one canonical place so it can be dropped anywhere — app UI, emails, OG images, decks — without re-deriving the geometry.
+
+| Piece | Detail |
+|---|---|
+| **`ProvvenMark.tsx`** (new) | `src/components/ui/ProvvenMark.tsx` — the canonical React component: just the vv pair (solid gold seal v + ghost v), `tone='ink' \| 'auto'` + `isDark`, sized via font-size (all offsets in em). Standalone use passes `label='Provven'` for a11y; inside a wordmark it stays decorative |
+| **`ProvvenWordmark` refactored** | Now composes `ProvvenMark` instead of duplicating the vv spans — one source of truth for geometry/colors in React |
+| **Standalone SVG assets** (new) | `public/brand/provven-mark.svg` (transparent, gold + cream ghost, for navy/dark), `provven-mark-light.svg` (bronze + stone ghost, for cream/light), `provven-mark-tile.svg` (navy tile + gold ring, app-icon style). Real Fraunces glyph outlines — no webfont dependency |
+| **Generator renamed** | `scripts/generate-favicon.mjs` → `scripts/generate-brand-assets.mjs`; now emits the three brand SVGs plus `public/favicon.svg` + `src/app/favicon.ico` in one run |
+| **`docs/BRAND.md`** (new) | The written spec: exact geometry table (0.045em rise, −0.38em overlap, 0.07em dip, opacities per surface), asset map, regeneration steps, usage rules (never mirror the pair, no restyling the glyphs, tile for mid-tone backgrounds) |
+
+Verified in-browser that the refactored wordmark renders pixel-identical to the inline version.
+
+---
+
 ## **Double-V is the brand symbol + favicon; wax seal removed** (2026-08-07)
 
 The interlocked double-V from the wordmark is now the official brand symbol. The SVG wax-seal experiment (`ProvvenSeal`) was cut — the hero watermark and footer stamp are removed and the component deleted.
@@ -12,7 +197,7 @@ The interlocked double-V from the wordmark is now the official brand symbol. The
 |---|---|
 | **Seal removed** | `ProvvenSeal.tsx` deleted; hero wordmark and landing footer render clean (footer = diamond divider + wordmark + small print) |
 | **Favicon = the double-V** | `public/favicon.svg` (replaces the old teal/violet storm-cloud mark) + `src/app/favicon.ico` (16/32/48 PNG-in-ICO). Navy gradient tile, hairline gold ring, and the **exact Fraunces 600 glyph outlines** of the wordmark pair |
-| **How it's generated** | `scripts/generate-favicon.mjs` (kept in repo — re-run after any change to the mark's colors/geometry; needs network for Google Fonts): fetch Fraunces 600 WOFF → **satori** renders the lockup and converts text to vector paths → **sharp** trims to find the content bbox → compose the tile SVG with a nested cropped `<svg viewBox>` → sharp rasterizes 16/32/48 PNGs → hand-packed ICO header |
+| **How it's generated** | `scripts/generate-brand-assets.mjs` (formerly `generate-favicon.mjs`; kept in repo — re-run after any change to the mark's colors/geometry; needs network for Google Fonts): fetch Fraunces 600 WOFF → **satori** renders the lockup and converts text to vector paths → **sharp** trims to find the content bbox → compose the tile SVG with a nested cropped `<svg viewBox>` → sharp rasterizes 16/32/48 PNGs → hand-packed ICO header |
 | **Final V treatment** (same day, after review) | The pair is **seal + ghost**: the first v is **solid gold** (`#cda868` on ink/dark; bronze `#6b5024` on cream) raised 0.045em above the baseline, and the second v is a **ghost** (base letter color at ~65%; 55% on cream) pulled to **−0.38em** on top of it, dipping 0.07em below the baseline — the pair cascades diagonally as its own symbol, with "en" padded ml-0.01em after it. (Tried hollow-outline gold first; solid won — the outline read thin at wordmark sizes. Ghost started at 50% but was too transparent.) Nav (Orbitron): same treatment, −0.2em, ghost at 60–65%, EN at ml-0.04em. Favicon mirrors both (ghost at 75% for 16px legibility) |
 
 `layout.tsx` metadata already pointed at `/favicon.svg` — no code change needed there.

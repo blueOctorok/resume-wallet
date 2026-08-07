@@ -2,10 +2,9 @@
 
 /**
  * Full-viewport dark canvas — same vocabulary as vault tile faces: dual-phase grid,
- * optional teal/violet blooms (`galactic`), or neutral graphite only (`quiet` / ink theme).
+ * champagne/steel blooms over ink navy.
  */
-export default function VaultDarkCanvasTexture({ mode = 'galactic' }: { mode?: 'galactic' | 'quiet' }) {
-  const quiet = mode === 'quiet'
+export default function VaultDarkCanvasTexture() {
   return (
     <>
       <span
@@ -24,28 +23,18 @@ export default function VaultDarkCanvasTexture({ mode = 'galactic' }: { mode?: '
             'repeating-linear-gradient(178deg, transparent 0px, transparent 5px, rgba(255,255,255,0.028) 5px, rgba(255,255,255,0.028) 6px)',
         }}
       />
-      {!quiet && (
-        <>
-          <span
-            aria-hidden
-            className='pointer-events-none absolute inset-0'
-            style={{
-              background:
-                'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(205,168,104,0.09) 0%, transparent 58%)',
-            }}
-          />
-          <span
-            aria-hidden
-            className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_42%_at_96%_92%,rgba(95,122,158,0.1)_0%,transparent_52%)]'
-          />
-        </>
-      )}
-      {quiet && (
-        <span
-          aria-hidden
-          className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_12%,rgba(255,255,255,0.04)_0%,transparent_55%)]'
-        />
-      )}
+      <span
+        aria-hidden
+        className='pointer-events-none absolute inset-0'
+        style={{
+          background:
+            'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(205,168,104,0.09) 0%, transparent 58%)',
+        }}
+      />
+      <span
+        aria-hidden
+        className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_42%_at_96%_92%,rgba(95,122,158,0.1)_0%,transparent_52%)]'
+      />
       <span
         aria-hidden
         className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_110%_90%_at_50%_50%,transparent_20%,rgba(0,0,0,0.42)_100%)] opacity-50 mix-blend-multiply'
