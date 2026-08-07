@@ -37,9 +37,9 @@ export default function StormBackground() {
   }, [])
 
   const stormAtmosphere = `
-      radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(45,212,191,0.07), transparent 58%),
-      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(45,212,191,0.06), transparent 58%),
-      radial-gradient(ellipse 72% 48% at 100% 100%, rgba(139,92,246,0.065), transparent 55%),
+      radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(205,168,104,0.07), transparent 58%),
+      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(205,168,104,0.06), transparent 58%),
+      radial-gradient(ellipse 72% 48% at 100% 100%, rgba(95,122,158,0.065), transparent 55%),
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
@@ -47,8 +47,8 @@ export default function StormBackground() {
   const lightAtmosphere = [
     'linear-gradient(122deg, rgba(224,242,242,0.35) 0%, rgba(255,255,255,0.2) 24%, transparent 48%)',
     'linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 38%, transparent 58%)',
-    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(13,148,136,0.11), transparent 56%)',
-    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(91,33,182,0.08), transparent 54%)',
+    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(156,119,64,0.11), transparent 56%)',
+    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(54,69,89,0.08), transparent 54%)',
     'radial-gradient(ellipse 58% 44% at 6% 90%, rgba(30,58,90,0.06), transparent 52%)',
     'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',
   ].join(', ')

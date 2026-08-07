@@ -9,7 +9,7 @@
 import { ArrowRight, BadgeCheck, FileText, Gauge, IdCard, ShieldCheck } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
-import { headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
+import { GOLD_CTA, headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
 
 const POINTS = [
   {
@@ -34,11 +34,11 @@ function RequestMock({ isDark }: { isDark: boolean }) {
         'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold',
         active
           ? isDark
-            ? 'border-teal-400/40 bg-teal-500/15 text-teal-200'
-            : 'border-teal-300 bg-teal-50 text-teal-800'
+            ? 'border-[#c9a86a]/40 bg-[#c9a86a]/15 text-[#e6cf9f]'
+            : 'border-[#c9a86a]/60 bg-[#f5eeda] text-[#5d4a1e]'
           : isDark
             ? 'border-white/10 bg-white/[0.03] text-gray-400'
-            : 'border-slate-200 bg-white text-slate-500',
+            : 'border-stone-200 bg-white text-stone-500',
       )}
     >
       {icon}
@@ -50,10 +50,10 @@ function RequestMock({ isDark }: { isDark: boolean }) {
     <div
       className={cn(
         'rounded-2xl border p-5 shadow-lg',
-        isDark ? 'border-white/10 bg-gray-900/70' : 'border-slate-200 bg-white/90',
+        isDark ? 'border-white/10 bg-gray-900/70' : 'border-stone-200 bg-white/90',
       )}
     >
-      <p className={cn('text-[10px] font-semibold uppercase tracking-[0.2em]', isDark ? 'text-gray-500' : 'text-slate-400')}>
+      <p className={cn('text-[10px] font-semibold uppercase tracking-[0.2em]', isDark ? 'text-gray-500' : 'text-stone-400')}>
         Request from Marcus Reed
       </p>
       <div className='mt-3 flex flex-wrap gap-2'>
@@ -64,15 +64,15 @@ function RequestMock({ isDark }: { isDark: boolean }) {
       <div
         className={cn(
           'mt-4 flex items-center gap-2.5 rounded-lg px-3 py-2.5',
-          isDark ? 'bg-teal-500/[0.08] ring-1 ring-inset ring-teal-400/20' : 'bg-teal-50 ring-1 ring-inset ring-teal-200',
+          isDark ? 'bg-[#c9a86a]/[0.08] ring-1 ring-inset ring-[#c9a86a]/25' : 'bg-[#f5eeda] ring-1 ring-inset ring-[#c9a86a]/40',
         )}
       >
-        <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-teal-300' : 'text-teal-700')} />
+        <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-[#d4be93]' : 'text-[#8a6d3b]')} />
         <div className='min-w-0'>
-          <p className={cn('text-xs font-semibold', isDark ? 'text-teal-100' : 'text-teal-900')}>
+          <p className={cn('text-xs font-semibold', isDark ? 'text-[#e6cf9f]' : 'text-[#5d4a1e]')}>
             Clean MVR — 36 months · verified
           </p>
-          <p className={cn('text-[10px]', isDark ? 'text-teal-300/70' : 'text-teal-700/80')}>
+          <p className={cn('text-[10px]', isDark ? 'text-[#d4be93]/70' : 'text-[#8a6d3b]/85')}>
             Fact shared by candidate · ready to review
           </p>
         </div>
@@ -94,7 +94,7 @@ export default function EmployersSection({ isDark, onGetStarted }: EmployersSect
   return (
     <section
       id='employers'
-      className={cn('scroll-mt-24 border-y py-20 sm:py-28', isDark ? 'border-gray-800 bg-white/[0.015]' : 'border-slate-200 bg-slate-100/60')}
+      className={cn('scroll-mt-24 border-y py-20 sm:py-28', isDark ? 'border-gray-800 bg-white/[0.015]' : 'border-stone-200 bg-[#eee8da]/60')}
     >
       <LandingContainer>
         <div className='grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20'>
@@ -110,7 +110,7 @@ export default function EmployersSection({ isDark, onGetStarted }: EmployersSect
             <ul className='reveal-item mt-8 space-y-5' style={{ transitionDelay: '140ms' }}>
               {POINTS.map((point) => (
                 <li key={point.title} className='flex gap-3.5'>
-                  <BadgeCheck className={cn('mt-0.5 h-5 w-5 shrink-0', isDark ? 'text-teal-300' : 'text-teal-700')} />
+                  <BadgeCheck className={cn('mt-0.5 h-5 w-5 shrink-0', isDark ? 'text-[#d4be93]' : 'text-[#8a6d3b]')} />
                   <div>
                     <h3 className={cn('text-[15px] font-semibold', headingText(isDark))}>{point.title}</h3>
                     <p className={cn('mt-1 text-sm leading-relaxed', mutedText(isDark))}>{point.body}</p>
@@ -120,7 +120,7 @@ export default function EmployersSection({ isDark, onGetStarted }: EmployersSect
             </ul>
 
             <div className='reveal-item mt-9' style={{ transitionDelay: '260ms' }}>
-              <Button variant='primary' size='lg' onClick={onGetStarted} className='group h-auto rounded-xl px-7 py-3.5'>
+              <Button variant='primary' size='lg' onClick={onGetStarted} className={cn('group h-auto rounded-xl px-7 py-3.5', GOLD_CTA)}>
                 I&rsquo;m hiring &mdash; get started
                 <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
               </Button>

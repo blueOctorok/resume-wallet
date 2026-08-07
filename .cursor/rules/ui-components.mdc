@@ -6,6 +6,20 @@ alwaysApply: true
 
 # UI Component Standards
 
+## Brand Palette — Heritage Gold (2026-08-07) — READ FIRST
+
+Provven's brand is **ink-navy + cream + champagne gold** ("the seal"). Teal and violet are permanently retired. The Tailwind scales are **remapped at the theme level** in `tailwind.config.ts`:
+
+- `teal-*` / `cyan-*` classes render the **gold** scale (brand accent, verified, CTAs)
+- `violet-*` / `purple-*` classes render the **steel** scale (muted navy-blue; Stormi/AI surfaces)
+
+Rules:
+
+1. **Keep writing `teal-*` / `violet-*` classes in new code** — they ARE the accent/AI tokens and render gold/steel. Do not invent new arbitrary gold hexes in app UI.
+2. **NEVER add raw teal/violet hex or rgb values** (`#14b8a6`, `rgba(45,212,191,…)`, `#8b5cf6`, etc.) in inline styles, CSS, emails, PDFs, or OG images. Use the gold scale values from `tailwind.config.ts` (gold-500 `#b8904d`, gold-400 `#cda868`, …) or steel.
+3. The accent *semantics* below (teal = default, violet = Stormi, etc.) still hold — they just render as gold/steel now.
+4. The marketing landing page (`src/components/landing/`) uses its own champagne tones (`#c9a86a` / `#d4be93` / `#8a6d3b`) — documented in `landing-shared.tsx`.
+
 ## Back Navigation — Always Use `BackToHubButton`
 
 Any button that navigates back to the hub or a parent view MUST use `BackToHubButton`.

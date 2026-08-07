@@ -476,7 +476,7 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
     iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
     borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
-    glowColor:   'rgba(20,184,166,0.18)',
+    glowColor:   'rgba(184,144,77,0.18)',
     badgeColor:  'bg-teal-500',
   },
   'driver-resume': {
@@ -560,7 +560,7 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     iconBg:      { dark: 'bg-violet-500/15',   light: 'bg-violet-50' },
     iconText:    { dark: 'text-violet-400',     light: 'text-violet-700' },
     borderHover: { dark: 'border-violet-500/40', light: 'border-violet-400/50' },
-    glowColor:   'rgba(139,92,246,0.15)',
+    glowColor:   'rgba(95,122,158,0.15)',
     badgeColor:  'bg-violet-500',
   },
 }
@@ -570,7 +570,7 @@ const DEFAULT_BLOCK_COLOR: BlockColorSet = {
   iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
   iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
   borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
-  glowColor:   'rgba(20,184,166,0.15)',
+  glowColor:   'rgba(184,144,77,0.15)',
   badgeColor:  'bg-teal-500',
 }
 

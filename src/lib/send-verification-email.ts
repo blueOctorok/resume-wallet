@@ -53,7 +53,7 @@ export async function sendVerificationEmail(
       Please click the button below to confirm or correct this information.
       The link is valid for <strong>30 days</strong>.
     </p>
-    ${infoBox(`<p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
+    ${infoBox(`<p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
       <strong>You are not required to respond.</strong> If you choose not to respond, the
       verification request will simply expire. Your response is kept confidential.
     </p>`)}

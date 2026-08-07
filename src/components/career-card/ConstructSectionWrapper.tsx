@@ -55,7 +55,7 @@ export default function ConstructSectionWrapper({
   const Illustration = getBlockIllustration(blockType)
   const accentClass = isDark ? colors.iconText.dark : colors.iconText.light
   const defaultLight =
-    'drop-shadow(0 4px 12px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(13,148,136,0.14))'
+    'drop-shadow(0 4px 12px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(156,119,64,0.14))'
   const defaultDark = 'drop-shadow(0 3px 14px rgba(0,0,0,0.4))'
   const vaultFilter = isDark ? defaultDark : defaultLight
 

@@ -51,21 +51,21 @@ function BlockChip({
   const styles =
     state === 'verified'
       ? isDark
-        ? 'border-teal-400/25 bg-teal-500/[0.08] text-teal-100'
-        : 'border-teal-300/70 bg-teal-50/80 text-teal-900'
+        ? 'border-[#c9a86a]/30 bg-[#c9a86a]/[0.08] text-[#e6cf9f]'
+        : 'border-[#c9a86a]/50 bg-[#f5eeda] text-[#5d4a1e]'
       : state === 'added'
         ? isDark
           ? 'border-white/10 bg-white/[0.04] text-gray-200'
-          : 'border-slate-200 bg-white text-slate-800 shadow-sm'
+          : 'border-stone-200 bg-white text-stone-800 shadow-sm'
         : isDark
           ? 'border-dashed border-white/15 bg-transparent text-gray-500'
-          : 'border-dashed border-slate-300 bg-transparent text-slate-400'
+          : 'border-dashed border-stone-300 bg-transparent text-stone-400'
 
   return (
     <div className={cn(base, styles)} style={{ transitionDelay: `${delay}ms` }}>
       <Icon className='h-4 w-4 shrink-0' />
       <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {state === 'verified' && <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-teal-300' : 'text-teal-700')} />}
+      {state === 'verified' && <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-[#d4be93]' : 'text-[#8a6d3b]')} />}
       {state === 'suggested' && <span className='shrink-0 text-[10px] font-semibold uppercase tracking-wide'>add</span>}
     </div>
   )
@@ -73,7 +73,7 @@ function BlockChip({
 
 export default function CareerCardSection({ isDark }: { isDark: boolean }) {
   return (
-    <section className={cn('py-20 sm:py-28', isDark ? 'bg-white/[0.015]' : 'bg-slate-100/60')}>
+    <section className={cn('py-20 sm:py-28', isDark ? 'bg-white/[0.015]' : 'bg-[#eee8da]/60')}>
       <LandingContainer>
         <div className='grid items-center gap-12 lg:grid-cols-2 lg:gap-20'>
           <div data-reveal>

@@ -43,9 +43,7 @@ function ViewToggle({ view, onChange }: { view: DisclosureView; onChange: (v: Di
             className={cn(
               'rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-300',
               active
-                ? opt.id === 'shared'
-                  ? 'bg-teal-500/20 text-teal-200 ring-1 ring-teal-400/40'
-                  : 'bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30'
+                ? 'bg-[#c9a86a]/20 text-[#e6cf9f] ring-1 ring-[#c9a86a]/45'
                 : 'text-slate-500 hover:text-slate-300',
             )}
           >
@@ -67,7 +65,7 @@ export default function DisclosureSection() {
         <div
           aria-hidden
           className='pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[52rem] -translate-x-1/2 -translate-y-1/2 opacity-[0.12] blur-[110px]'
-          style={{ background: 'radial-gradient(ellipse, #8b5cf6 0%, #2dd4bf 55%, transparent 75%)' }}
+          style={{ background: 'radial-gradient(ellipse, #c9a86a 0%, #3d5a8f 55%, transparent 75%)' }}
         />
       }
     >
@@ -89,8 +87,8 @@ export default function DisclosureSection() {
             <p className={cn('reveal-item mt-6 text-base leading-relaxed sm:text-lg', INK.body)} style={{ transitionDelay: '100ms' }}>
               This is the part no job board can do. An employer needs to know your record is
               clean &mdash; they don&rsquo;t need your date of birth, your address, or the
-              full report to know it. Provven separates the <em className='not-italic text-teal-300'>fact</em> from
-              the <em className='not-italic text-violet-300'>file</em>, so you can share one without surrendering the other.
+              full report to know it. Provven separates the <em className='not-italic text-[#d4be93]'>fact</em> from
+              the <em className='not-italic text-[#d4be93]'>file</em>, so you can share one without surrendering the other.
             </p>
 
             <ul className='reveal-item mt-8 space-y-3' style={{ transitionDelay: '200ms' }}>
@@ -100,7 +98,7 @@ export default function DisclosureSection() {
                     className={cn(
                       'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1',
                       row.shared
-                        ? 'bg-teal-500/15 text-teal-300 ring-teal-400/30'
+                        ? 'bg-[#c9a86a]/15 text-[#d4be93] ring-[#c9a86a]/35'
                         : 'bg-white/[0.04] text-slate-500 ring-white/10',
                     )}
                   >
@@ -110,7 +108,7 @@ export default function DisclosureSection() {
                     {row.text}
                     <span className='ml-2 font-mono text-[9px] font-semibold uppercase tracking-wider'>
                       {row.shared ? (
-                        <span className='text-teal-400/80'>shared</span>
+                        <span className='text-[#d4be93]/80'>shared</span>
                       ) : (
                         <span className='text-slate-600'>never leaves</span>
                       )}

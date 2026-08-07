@@ -87,7 +87,7 @@ function normalizeSvgsForHtml2Canvas(pdfRoot: Element) {
     let stroke = 'rgb(55, 65, 81)'
     if (inHeader) stroke = 'rgb(255, 255, 255)'
     else if (inGreenCallout || /\btext-green-(600|800)\b/.test(cls)) stroke = 'rgb(22, 101, 52)'
-    else if (/\btext-teal-/.test(cls) || Boolean(svg.closest('[class*="text-teal-"]'))) stroke = 'rgb(13, 148, 136)'
+    else if (/\btext-teal-/.test(cls) || Boolean(svg.closest('[class*="text-teal-"]'))) stroke = 'rgb(156,119,64)'
     else if (/\btext-red-/.test(cls) || Boolean(svg.closest('[class*="text-red-"]'))) stroke = 'rgb(220, 38, 38)'
 
     svg.removeAttribute('class')
@@ -457,7 +457,7 @@ export default function BackgroundCheckDisclosure({
               cursor: default !important;
             }
             [data-bgcheck-pdf-root] > div:first-child {
-              background: #0d9488 !important;
+              background: #9c7740 !important;
               color: #ffffff !important;
             }
             [data-bgcheck-pdf-root] > div:first-child * {
@@ -482,11 +482,11 @@ export default function BackgroundCheckDisclosure({
             }
             [data-bgcheck-pdf-root] .text-teal-600,
             [data-bgcheck-pdf-root] .text-teal-700 {
-              color: #0f766e !important;
+              color: #7d5e33 !important;
             }
             [data-bgcheck-pdf-root] .bg-teal-600,
             [data-bgcheck-pdf-root] .rounded-full.bg-teal-600 {
-              background-color: #0d9488 !important;
+              background-color: #9c7740 !important;
               color: #ffffff !important;
             }
             [data-bgcheck-pdf-root] .text-gray-900,

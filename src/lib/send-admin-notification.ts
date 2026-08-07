@@ -145,7 +145,7 @@ export async function sendCandidateRequestNotification(
       <strong>${companyName}</strong> is interested in your profile and has sent a new request.
     </p>
     ${infoBox(`
-      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f766e;">${requestLabel}</p>
+      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#7d5e33;">${requestLabel}</p>
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${actionText}</p>
       ${message && requestType !== 'custom' ? `<p style="margin:10px 0 0;font-size:13px;font-style:italic;color:#64748b;">"${message}"</p>` : ''}
     `)}
@@ -192,7 +192,7 @@ const STATUS_CONFIG: Record<string, {
     subject: 'Employer reached out',
     heading: "They've marked you as contacted",
     body: "The employer has moved your application forward and marked you as contacted. Check Provven for messages or follow up in your usual channels.",
-    accentColor: '#0d9488',
+    accentColor: '#9c7740',
   },
 }
 

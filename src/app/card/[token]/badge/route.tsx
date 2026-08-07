@@ -27,8 +27,8 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
 <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" role="img" aria-label="Provven Career Card">
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#0f766e"/>
-      <stop offset="100%" style="stop-color:#14b8a6"/>
+      <stop offset="0%" style="stop-color:#7d5e33"/>
+      <stop offset="100%" style="stop-color:#b8904d"/>
     </linearGradient>
   </defs>
   <rect width="${split}" height="${h}" fill="#1e293b"/>

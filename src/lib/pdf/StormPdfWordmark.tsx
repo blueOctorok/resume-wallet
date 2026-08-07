@@ -11,7 +11,7 @@ import { Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer'
 // Duplicated from StormPdfChrome tokens — avoids a circular import (chrome → wordmark).
 const INK = '#0f172a'
 const MUTED = '#475569'
-const TEAL = '#0d9488'
+const TEAL = '#9c7740'
 
 /** Lucide ShieldCheck paths (24×24 viewBox) — same icon as the web wordmark. */
 const SHIELD_CHECK_PATHS = [
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     height: 13,
     marginRight: 3,
     borderWidth: 1.4,
-    borderColor: '#7c3aed',
+    borderColor: '#4c6485',
     borderRadius: 2,
     alignItems: 'center',
     justifyContent: 'center',

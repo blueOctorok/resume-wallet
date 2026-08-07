@@ -45,7 +45,7 @@ export async function sendTeamInviteEmail(
       ${detailRow('Expires', expiresFormatted)}
     `)}
     ${infoBox(`
-      <p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
+      <p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
         <strong>What happens next?</strong><br>
         Click the button below and sign in with your wallet. You'll automatically be added to ${companyName}'s team with ${roleDisplay} access.
       </p>

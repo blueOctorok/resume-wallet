@@ -24,7 +24,7 @@ interface StormChainWordmarkProps {
 
 /** Same drop-shadow stack as hub `BlockTile` (installed blocks). */
 const STORM_WORDMARK_TILE_SHADOW_LIGHT =
-  'drop-shadow(0 6px 18px rgba(15,23,42,0.12)) drop-shadow(0 0 28px rgba(13,148,136,0.2)) drop-shadow(0 0 48px rgba(91,33,182,0.1))'
+  'drop-shadow(0 6px 18px rgba(15,23,42,0.12)) drop-shadow(0 0 28px rgba(156,119,64,0.2)) drop-shadow(0 0 48px rgba(54,69,89,0.1))'
 const STORM_WORDMARK_TILE_SHADOW_DARK = 'drop-shadow(0 4px 18px rgba(0,0,0,0.45))'
 
 type DropletSpec = {
@@ -51,7 +51,7 @@ function WordmarkDroplet({
         'pointer-events-none absolute rounded-full',
         spec.opacityClass,
         isDark
-          ? 'mix-blend-plus-lighter [box-shadow:inset_0_-2px_3px_rgba(0,0,0,0.55),inset_0_2px_2px_rgba(45,212,191,0.35)]'
+          ? 'mix-blend-plus-lighter [box-shadow:inset_0_-2px_3px_rgba(0,0,0,0.55),inset_0_2px_2px_rgba(205,168,104,0.35)]'
           : 'mix-blend-multiply [box-shadow:inset_0_-2px_4px_rgba(15,23,42,0.14),inset_0_2px_3px_rgba(255,255,255,0.92)]',
       )}
       style={{
@@ -61,8 +61,8 @@ function WordmarkDroplet({
         height: spec.h,
         transform: `rotate(${spec.rotate})`,
         background: isDark
-          ? 'radial-gradient(ellipse 72% 78% at 30% 26%, rgba(240,255,255,0.92) 0%, rgba(94,234,212,0.45) 18%, rgba(45,212,191,0.22) 45%, rgba(13,148,136,0.12) 62%, rgba(0,0,0,0.5) 90%, transparent 100%)'
-          : 'radial-gradient(ellipse 76% 82% at 27% 23%, rgba(255,255,255,1) 0%, rgba(224,242,254,0.85) 10%, rgba(45,212,191,0.38) 38%, rgba(13,148,136,0.26) 58%, rgba(15,23,42,0.14) 88%, transparent 100%)',
+          ? 'radial-gradient(ellipse 72% 78% at 30% 26%, rgba(240,255,255,0.92) 0%, rgba(217,192,140,0.45) 18%, rgba(205,168,104,0.22) 45%, rgba(156,119,64,0.12) 62%, rgba(0,0,0,0.5) 90%, transparent 100%)'
+          : 'radial-gradient(ellipse 76% 82% at 27% 23%, rgba(255,255,255,1) 0%, rgba(224,242,254,0.85) 10%, rgba(205,168,104,0.38) 38%, rgba(156,119,64,0.26) 58%, rgba(15,23,42,0.14) 88%, transparent 100%)',
       }}
     />
   )
@@ -127,18 +127,20 @@ function WordmarkLetterGroup({
   children: ReactNode
 }) {
   if (isDark) {
-    return <span className='select-none uppercase'>{children}</span>
+    return <span className='select-none whitespace-nowrap uppercase'>{children}</span>
   }
   return (
     <span
       className={cn(
-        'select-none uppercase bg-gradient-to-b from-slate-950 via-slate-800 to-slate-900 bg-clip-text text-transparent',
+        // whitespace-nowrap: the staggered-V inline-blocks create a line-break
+        // opportunity mid-word — never let PROVVEN wrap
+        'select-none whitespace-nowrap uppercase bg-gradient-to-b from-slate-950 via-slate-800 to-slate-900 bg-clip-text text-transparent',
         isHero && 'from-slate-950 via-slate-800 to-slate-950',
       )}
       style={{
         filter: isHero
-          ? 'drop-shadow(0 1px 0 rgb(255 255 255 / 0.5)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.06)) drop-shadow(0 1px 2px rgb(13 148 136 / 0.06))'
-          : 'drop-shadow(0 1px 0 rgb(255 255 255 / 0.45)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.05)) drop-shadow(0 0 1px rgb(13 148 136 / 0.05))',
+          ? 'drop-shadow(0 1px 0 rgb(255 255 255 / 0.5)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.06)) drop-shadow(0 1px 2px rgb(156 119 64 / 0.06))'
+          : 'drop-shadow(0 1px 0 rgb(255 255 255 / 0.45)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.05)) drop-shadow(0 0 1px rgb(156 119 64 / 0.05))',
       }}
     >
       {children}
@@ -162,7 +164,7 @@ function StormWordmarkOBlock({
   const stroke = isDisplay ? 2.35 : isHero ? 2.15 : 1.95
 
   const iconFilterLight =
-    'drop-shadow(0 1px 0 rgb(255 255 255 / 0.65)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.08)) drop-shadow(0 0 2px rgb(13 148 136 / 0.55)) drop-shadow(0 0 5px rgb(13 148 136 / 0.42)) drop-shadow(0 0 9px rgb(45 212 191 / 0.28))'
+    'drop-shadow(0 1px 0 rgb(255 255 255 / 0.65)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.08)) drop-shadow(0 0 2px rgb(156 119 64 / 0.55)) drop-shadow(0 0 5px rgb(156 119 64 / 0.42)) drop-shadow(0 0 9px rgb(205 168 104 / 0.28))'
 
   return (
     <span className='relative inline-flex shrink-0 items-center justify-center' aria-hidden>
@@ -180,7 +182,7 @@ function StormWordmarkOBlock({
           'relative z-[1] inline-flex h-[1cap] min-h-[0.82em] w-[1cap] min-w-[0.82em] overflow-hidden',
           'rounded-[2px] sm:rounded-[3px]',
           isDark
-            ? 'border-2 border-violet-400/90 shadow-[0_0_10px_rgba(167,139,250,0.55),0_0_18px_rgba(139,92,246,0.38),0_0_24px_rgba(167,139,250,0.18)]'
+            ? 'border-2 border-violet-400/90 shadow-[0_0_10px_rgba(127,151,184,0.55),0_0_18px_rgba(95,122,158,0.38),0_0_24px_rgba(127,151,184,0.18)]'
             : cn(
                 'border-2 border-violet-600/70 ring-1 ring-inset ring-violet-400/35 ring-offset-0',
                 'shadow-[inset_0_1px_0_rgb(255_255_255_/_0.9),inset_0_-1px_0_rgb(15_23_42_/_0.06),inset_0_0_16px_rgb(109_40_217_/_0.12),inset_0_0_0_1px_rgb(109_40_217_/_0.26),0_2px_4px_rgb(15_23_42_/_0.07)]',
@@ -213,8 +215,8 @@ function StormWordmarkOBlock({
             )}
             style={{
               background: isDark
-                ? 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(45,212,191,0.4) 46deg, rgba(167,139,250,0.28) 108deg, transparent 198deg, rgba(45,212,191,0.32) 276deg, transparent 360deg)'
-                : 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(13,148,136,0.26) 46deg, rgba(109,40,217,0.16) 108deg, transparent 198deg, rgba(13,148,136,0.22) 276deg, transparent 360deg)',
+                ? 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(205,168,104,0.4) 46deg, rgba(127,151,184,0.28) 108deg, transparent 198deg, rgba(205,168,104,0.32) 276deg, transparent 360deg)'
+                : 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(156,119,64,0.26) 46deg, rgba(63,82,108,0.16) 108deg, transparent 198deg, rgba(156,119,64,0.22) 276deg, transparent 360deg)',
             }}
           />
           {isDark ? (
@@ -245,8 +247,8 @@ function StormWordmarkOBlock({
             className='pointer-events-none absolute right-0 top-0 z-[1] h-[38%] w-[38%] max-h-[11px] max-w-[11px] translate-x-px -translate-y-px sm:max-h-[13px] sm:max-w-[13px]'
             style={{
               background: isDark
-                ? 'radial-gradient(circle at 82% 18%, rgba(45,212,191,0.5) 0%, rgba(167,139,250,0.12) 42%, transparent 68%)'
-                : 'radial-gradient(circle at 82% 18%, rgba(13,148,136,0.38) 0%, rgba(45,212,191,0.18) 38%, rgba(109,40,217,0.12) 52%, transparent 72%)',
+                ? 'radial-gradient(circle at 82% 18%, rgba(205,168,104,0.5) 0%, rgba(127,151,184,0.12) 42%, transparent 68%)'
+                : 'radial-gradient(circle at 82% 18%, rgba(156,119,64,0.38) 0%, rgba(205,168,104,0.18) 38%, rgba(63,82,108,0.12) 52%, transparent 72%)',
               filter: isDark ? 'blur(2px)' : 'blur(1.25px)',
             }}
           />
@@ -255,8 +257,8 @@ function StormWordmarkOBlock({
             className='pointer-events-none absolute bottom-0 left-0 right-0 h-px sm:h-[2px]'
             style={{
               background: isDark
-                ? 'linear-gradient(90deg, transparent 0%, rgba(45,212,191,0.4) 38%, rgba(167,139,250,0.35) 62%, transparent 100%)'
-                : 'linear-gradient(90deg, transparent 0%, rgba(13,148,136,0.48) 38%, rgba(109,40,217,0.36) 62%, transparent 100%)',
+                ? 'linear-gradient(90deg, transparent 0%, rgba(205,168,104,0.4) 38%, rgba(127,151,184,0.35) 62%, transparent 100%)'
+                : 'linear-gradient(90deg, transparent 0%, rgba(156,119,64,0.48) 38%, rgba(63,82,108,0.36) 62%, transparent 100%)',
             }}
           />
 
@@ -268,7 +270,7 @@ function StormWordmarkOBlock({
                 'min-h-0 min-w-0 shrink-0 origin-center scale-[1.14] sm:scale-[1.12]',
                 'h-full w-full',
                 isDark
-                  ? 'text-teal-300 drop-shadow-[0_0_4px_rgba(45,212,191,0.95),0_0_9px_rgba(45,212,191,0.55),0_0_14px_rgba(94,234,212,0.22)]'
+                  ? 'text-teal-300 drop-shadow-[0_0_4px_rgba(205,168,104,0.95),0_0_9px_rgba(205,168,104,0.55),0_0_14px_rgba(217,192,140,0.22)]'
                   : 'text-teal-700',
               )}
               strokeWidth={stroke}
@@ -345,7 +347,27 @@ export default function StormChainWordmark({
     >
       <StormWordmarkOBlock isDark={isDark} isHero={isLarge} isDisplay={isDisplay} />
       <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
-        PROVVEN
+        PRO
+        {/* Double-V brand mark: solid gold V rides high, ghost V is laid on
+            top dipping below the baseline. Explicit colors also neutralize
+            the light-mode bg-clip gradient on these spans. */}
+        <span
+          className={cn(
+            'relative inline-block -translate-y-[0.035em]',
+            isDark ? 'text-[#cda868]' : 'text-[#6b5024]',
+          )}
+        >
+          V
+        </span>
+        <span
+          className={cn(
+            'relative inline-block -ml-[0.2em] translate-y-[0.045em]',
+            isDark ? 'text-slate-200/65' : 'text-slate-800/60',
+          )}
+        >
+          V
+        </span>
+        <span className='ml-[0.04em]'>EN</span>
       </WordmarkLetterGroup>
     </div>
   )

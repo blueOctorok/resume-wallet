@@ -99,8 +99,8 @@ export default function VaultLightFrostTexture({
       ? 'rgba(63,63,70,0.04)'
       : 'rgba(63,63,70,0.055)'
     : isCanvas
-      ? 'rgba(13,148,136,0.065)'
-      : 'rgba(13,148,136,0.1)'
+      ? 'rgba(156,119,64,0.065)'
+      : 'rgba(156,119,64,0.1)'
 
   const grainDotA = isNewsprint ? 'rgba(82,82,91,0.035)' : 'rgba(51,85,110,0.055)'
   const grainDotB = isNewsprint ? 'rgba(82,82,91,0.022)' : 'rgba(51,85,110,0.04)'

@@ -4,6 +4,69 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Double-V is the brand symbol + favicon; wax seal removed** (2026-08-07)
+
+The interlocked double-V from the wordmark is now the official brand symbol. The SVG wax-seal experiment (`ProvvenSeal`) was cut — the hero watermark and footer stamp are removed and the component deleted.
+
+| Piece | Detail |
+|---|---|
+| **Seal removed** | `ProvvenSeal.tsx` deleted; hero wordmark and landing footer render clean (footer = diamond divider + wordmark + small print) |
+| **Favicon = the double-V** | `public/favicon.svg` (replaces the old teal/violet storm-cloud mark) + `src/app/favicon.ico` (16/32/48 PNG-in-ICO). Navy gradient tile, hairline gold ring, and the **exact Fraunces 600 glyph outlines** of the wordmark pair |
+| **How it's generated** | `scripts/generate-favicon.mjs` (kept in repo — re-run after any change to the mark's colors/geometry; needs network for Google Fonts): fetch Fraunces 600 WOFF → **satori** renders the lockup and converts text to vector paths → **sharp** trims to find the content bbox → compose the tile SVG with a nested cropped `<svg viewBox>` → sharp rasterizes 16/32/48 PNGs → hand-packed ICO header |
+| **Final V treatment** (same day, after review) | The pair is **seal + ghost**: the first v is **solid gold** (`#cda868` on ink/dark; bronze `#6b5024` on cream) raised 0.045em above the baseline, and the second v is a **ghost** (base letter color at ~65%; 55% on cream) pulled to **−0.38em** on top of it, dipping 0.07em below the baseline — the pair cascades diagonally as its own symbol, with "en" padded ml-0.01em after it. (Tried hollow-outline gold first; solid won — the outline read thin at wordmark sizes. Ghost started at 50% but was too transparent.) Nav (Orbitron): same treatment, −0.2em, ghost at 60–65%, EN at ml-0.04em. Favicon mirrors both (ghost at 75% for 16px legibility) |
+
+`layout.tsx` metadata already pointed at `/favicon.svg` — no code change needed there.
+
+---
+
+## **Wax-seal brand mark + two-tone double-V** (2026-08-07)
+
+Follow-up on the wordmark: the tight gold `vv` was fusing into a W, and the brand needed its promised symbol. The wax seal is the symbol — a seal proves a letter is authentic without opening it, which is exactly what a ZK proof does for a credential.
+
+| Piece | Detail |
+|---|---|
+| **Staggered, interlocked V's** | Per brand reference (wax-seal monogram photo): in `ProvvenWordmark` (serif) and `StormChainWordmark` (Orbitron nav), the **first V sits on the baseline** (aligned with the preceding o), the **second overlaps it hard** (−0.3em serif — its top-left serif rides on top of the first v's right stroke, with "en" pulled in −0.05em to keep the word tight; −0.14em nav) and **dips below the baseline** like a descender, in **light gold → deep gold** two-tone (`#e6cf9f` → `#b8904d` on ink/dark; deeper bronzes on cream). The crossing strokes are the mark — never reads as a W |
+| **`ProvvenSeal`** (`src/components/ui/ProvvenSeal.tsx`) | SVG wax-seal mark, `aria-hidden` decorative. **`solid`**: wax disc with an irregular scalloped spill edge (12 varied bumps), brighter medallion insert, ornament band of alternating diamonds + beads, and the staggered VV debossed with a **crackle texture** (`feTurbulence` → alpha threshold → `feComposite in`, clipped inside the glyphs + medallion face). **`watermark`**: gold line-art rings + ornament band + staggered VV, for behind-text placement on ink |
+| **Placement** | Hero: watermark seal pressed over the right end of the wordmark (rotated, ~0.38 opacity), anchored to an inline-block wrapper so it tracks the word at every breakpoint. Footer: solid seal closes the page above the wordmark — the letter ends with its wax stamp |
+| **Wrap fix** | The staggered-V `inline-block` spans create a mid-word line-break opportunity; both wordmarks now force `whitespace-nowrap` (caught on `/sign-in` where PROVVEN wrapped to "PROVV / EN") |
+
+**Verified:** desktop hero, footer (natural + enlarged seal inspection), sign-in nav wordmark, and 390px mobile (no horizontal overflow — `InkBand`'s `overflow-hidden` clips the seal's overhang).
+
+---
+
+## **Site-wide heritage rebrand — gold/steel replace teal/violet + Provven double-V wordmark** (2026-08-07)
+
+The heritage palette proven on the landing page is now the **entire product's** color scheme. Teal and violet are retired everywhere — app UI, emails, PDFs, OG images, loading screens.
+
+| Piece | Detail |
+|---|---|
+| **Theme remap** (`tailwind.config.ts`) | `teal-*`/`cyan-*` scales remapped to a **champagne gold** scale (50–950); `violet-*`/`purple-*` remapped to a **steel** (muted navy-blue) scale. All ~2,400 existing class usages across 170+ files rebrand instantly, and future `teal-*` classes render gold by definition — **teal cannot creep back** |
+| **Hex codemod** | One-shot script swapped 194 hardcoded teal/violet hex + rgb values in 30 files (globals.css storm accents/scrollbars/glows, `vault-accent-presets.ts`, `StormBackground`, `StormChainWordmark`, emails, PDFs, OG image, card badge, `block-registry` glow colors). Script deleted after running |
+| **`ProvvenWordmark`** (`src/components/ui/ProvvenWordmark.tsx`) | Serif brand wordmark where the **double-V is the mark** — two verifications (issuer checks the fact, Provven seals it), kerned tight in gold so it reads as a ligature. Used on landing hero, final CTA, footer. `aria-label='Provven'` keeps screen readers reading one word |
+| **Nav wordmark** | `StormChainWordmark` (Orbitron PROVVEN) renders its **VV pair in gold** in both themes |
+| **`SealDivider`** (`landing-shared.tsx`) | Heritage ornament: hairline rule with a centered gold diamond. Opens the final CTA and closes the page (new landing footer: seal divider + wordmark + small print) |
+| **Rules updated** | `.cursor/rules/ui-components.mdc` now leads with the palette contract: keep writing `teal-*`/`violet-*` (they are the tokens), never add raw teal/violet hexes |
+
+**Verified:** landing preview (hero, vault toggle, trust, footer) + sign-in page (gold loading screen, gold VV nav wordmark, gold primary button) in the browser.
+
+---
+
+## **Landing page palette — heritage-trust direction** (2026-08-07)
+
+Recolored the landing page from the in-app tech palette (teal + violet) to a **heritage "institution" palette: ink-navy + cream + champagne gold**. Rationale: the landing page's decisive audience is employers who must trust ZK-verified facts — it should read like a financial institution, not a startup. **The in-app UI keeps teal/violet**; this divergence is deliberate (marketing brand vs product UI) and contained to `src/components/landing/`.
+
+| Change | Detail |
+|---|---|
+| Ink bands | `#070b10` (blue-black) → **`#0a1322` deep ink-navy** (`InkBand`); `DisclosureCard` base gradient + atmosphere blooms match (gold + muted blue, no teal/violet radials) |
+| Light sections | Landing root gets a **warm cream base (`#f7f4ed`)** in light mode (dark keeps the storm gradient); alternating bands use `#eee8da`; light-mode neutrals swapped `slate` → **`stone`** |
+| One accent: gold "seal" | Teal + violet fully removed from the landing page. Champagne gold (`#c9a86a` fills/lines, `#d4be93` text on navy, `#8a6d3b` bronze on cream) marks brand moments, verified facts, the disclosure seam, eyebrows, and step numerals. Verification recast as a **gold seal** (notary semantics), not a glowing highlight |
+| Gold CTA | `GOLD_CTA` export in `landing-shared.tsx` overrides `Button`'s teal primary via twMerge — deep-navy label on gold, identical in both themes |
+| Neutral redaction | Redaction bars and "never leaves" states are neutral slate — hidden things carry no accent |
+
+Guardrails documented in `landing-shared.tsx` header + `src/components/landing/README.md` ("Palette" section). Verified in the browser via `/landing-preview` (hero, career-card chips, vault toggle, employer mock, trust pillars).
+
+---
+
 ## **New marketing landing page — `src/components/landing/`** (2026-08-06)
 
 Replaced `src/components/HomePage.tsx` with a ground-up Provven landing page built around the selective-disclosure moat. The core visual is **`DisclosureCard`** — a Career Card split by a violet "selective disclosure" seam: verified facts lit above (teal), private source data redacted below. The disclosure section flips the same card between "Employer view" and "Your vault" (the page's one interactive moment).

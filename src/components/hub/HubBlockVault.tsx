@@ -90,7 +90,7 @@ export function VaultCredentialChrome({
       ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)'
       : isPaperLight
         ? 'linear-gradient(90deg, transparent, rgba(120,120,128,0.16), transparent)'
-        : 'linear-gradient(90deg, transparent, rgba(13,148,136,0.35), rgba(91,33,182,0.22), transparent)'
+        : 'linear-gradient(90deg, transparent, rgba(156,119,64,0.35), rgba(54,69,89,0.22), transparent)'
 
   const sigilBorder = hasRoute
     ? routeGlow
@@ -110,14 +110,14 @@ export function VaultCredentialChrome({
     : isDark
       ? isInkDark
         ? 'rgba(161,161,170,0.28)'
-        : 'rgba(45,212,191,0.35)'
+        : 'rgba(205,168,104,0.35)'
       : isPaperLight
         ? 'rgba(120,120,128,0.18)'
-        : 'rgba(13,148,136,0.48)'
+        : 'rgba(156,119,64,0.48)'
 
   const conicDarkBg = isInkDark
     ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${routeGlow} 52deg, rgba(113,113,122,0.12) 108deg, transparent 198deg, ${routeGlow} 268deg, transparent 360deg)`
-    : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(139,92,246,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
+    : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(95,122,158,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
 
   return (
     <div
@@ -157,7 +157,7 @@ export function VaultCredentialChrome({
               ? conicDarkBg
               : isPaperLight
                 ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${routeGlow} 52deg, rgba(100,100,108,0.06) 108deg, transparent 198deg, ${routeGlow} 268deg, transparent 360deg)`
-                : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(109,40,217,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
+                : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(63,82,108,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
           }}
         />
       )}
@@ -182,7 +182,7 @@ export function VaultCredentialChrome({
               ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
               : isPaperLight
                 ? 'bg-gradient-to-b from-[#fcfcfc]/98 via-[#f4f4f5]/96 to-[#e4e4e7]/95 backdrop-blur-md backdrop-saturate-[0.88] shadow-[inset_0_0_0_1px_rgba(113,113,122,0.1),inset_0_0_38px_rgba(24,24,27,0.03),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-zinc-400/32'
-                : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
+                : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(156,119,64,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
         )}
         style={{ clipPath: clip }}
       >

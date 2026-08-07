@@ -30,8 +30,8 @@
     var(--storm-deep) 45%,
     var(--storm-void) 100%
   );
-  --storm-teal-soft: rgba(45, 212, 191, 0.1);
-  --storm-violet-soft: rgba(139, 92, 246, 0.08);
+  --storm-teal-soft: rgba(205,168,104, 0.1);
+  --storm-violet-soft: rgba(95,122,158, 0.08);
   --storm-panel-bg: linear-gradient(
     165deg,
     rgba(22, 28, 38, 0.94) 0%,
@@ -39,7 +39,7 @@
     rgba(8, 11, 16, 0.96) 100%
   );
   --storm-panel-border: rgba(148, 163, 184, 0.22);
-  --storm-panel-glow: 0 0 48px -12px rgba(45, 212, 191, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
+  --storm-panel-glow: 0 0 48px -12px rgba(205,168,104, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --surface-card: #151922;
   --surface-elevated: #10151e;
@@ -105,12 +105,12 @@
    * Single accent hue (teal-600 family) — matches STORM wordmark cloud + LoadingScreen card ring.
    * Slightly stronger blooms on light so accents survive the brighter canvas.
    */
-  --storm-accent: #0d9488;
-  --storm-accent-rgb: 13 148 136;
-  --storm-accent-mid: #14b8a6;
+  --storm-accent: #9c7740;
+  --storm-accent-rgb: 156 119 64;
+  --storm-accent-mid: #b8904d;
   --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.1);
   --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.135);
-  --storm-violet-bloom: rgb(91 33 182 / 0.09);
+  --storm-violet-bloom: rgb(54 69 89 / 0.09);
   /* Cyan-tinted specular — avoids pure white blow-out that hides texture behind vault shells */
   --storm-light-specular: linear-gradient(
     125deg,
@@ -657,7 +657,7 @@ button:disabled,
 
 /* Dark mode scrollbar for step indicators */
 [data-theme='dark'] .resume-steps-scrollbar {
-  scrollbar-color: rgb(45 212 191 / 0.35) transparent;
+  scrollbar-color: rgb(205 168 104 / 0.35) transparent;
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar {
@@ -672,28 +672,28 @@ button:disabled,
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(
     90deg,
-    rgb(45 212 191 / 0.35) 0%,
-    rgb(45 212 191 / 0.55) 50%,
-    rgb(45 212 191 / 0.35) 100%
+    rgb(205 168 104 / 0.35) 0%,
+    rgb(205 168 104 / 0.55) 50%,
+    rgb(205 168 104 / 0.35) 100%
   );
   border-radius: 10px;
-  border: 1px solid rgb(45 212 191 / 0.2);
+  border: 1px solid rgb(205 168 104 / 0.2);
   transition: all 0.3s ease;
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     90deg,
-    rgb(45 212 191 / 0.45) 0%,
-    rgb(45 212 191 / 0.7) 50%,
-    rgb(45 212 191 / 0.45) 100%
+    rgb(205 168 104 / 0.45) 0%,
+    rgb(205 168 104 / 0.7) 50%,
+    rgb(205 168 104 / 0.45) 100%
   );
-  border-color: rgb(45 212 191 / 0.35);
-  box-shadow: 0 0 8px rgb(45 212 191 / 0.25);
+  border-color: rgb(205 168 104 / 0.35);
+  box-shadow: 0 0 8px rgb(205 168 104 / 0.25);
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
-  background: rgb(45 212 191 / 0.65);
+  background: rgb(205 168 104 / 0.65);
 }
 
 [data-theme='ink'] .resume-steps-scrollbar {
@@ -856,10 +856,10 @@ button:disabled,
 /* Ensure our brand colors are available */
 :root {
   /* Legacy names — teal family (matches --storm-accent); avoid sage/mint in new UI */
-  --brand-sage: #0f766e;
-  --brand-sage-dark: #134e4a;
-  --brand-sage-light: #5eead4;
-  --brand-mint: #0d9488;
+  --brand-sage: #7d5e33;
+  --brand-sage-dark: #533d22;
+  --brand-sage-light: #d9c08c;
+  --brand-mint: #9c7740;
   --brand-cream: #fef5ed;
 }
 
@@ -869,20 +869,20 @@ button:disabled,
  * sage/mint Account Kit preset that caused cream-on-white and ghost buttons.
  */
 [data-theme='light'] {
-  --akui-btn-primary: #0d9488;
+  --akui-btn-primary: #9c7740;
   --akui-btn-secondary: #e8eef4;
   --akui-btn-auth: #f8fafc;
   --akui-fg-primary: #0f172a;
   --akui-fg-secondary: #475569;
   --akui-fg-tertiary: #64748b;
   --akui-fg-invert: #ffffff;
-  --akui-fg-accent-brand: #0f766e;
+  --akui-fg-accent-brand: #7d5e33;
   --akui-fg-disabled: #94a3b8;
   --akui-bg-surface-default: #f8fafc;
   --akui-bg-surface-subtle: #f1f5f9;
   --akui-bg-surface-inset: #e8eef4;
   --akui-static: #cbd5e1;
-  --akui-active: #0d9488;
+  --akui-active: #9c7740;
 }
 
 [data-theme='paper'] {
@@ -903,20 +903,20 @@ button:disabled,
 }
 
 [data-theme='dark'] {
-  --akui-btn-primary: #2dd4bf;
+  --akui-btn-primary: #cda868;
   --akui-btn-secondary: #334155;
   --akui-btn-auth: rgba(30, 41, 59, 0.92);
   --akui-fg-primary: #f1f5f9;
   --akui-fg-secondary: #cbd5e1;
   --akui-fg-tertiary: #94a3b8;
   --akui-fg-invert: #0f172a;
-  --akui-fg-accent-brand: #5eead4;
+  --akui-fg-accent-brand: #d9c08c;
   --akui-fg-disabled: #64748b;
   --akui-bg-surface-default: #0f172a;
   --akui-bg-surface-subtle: #1e293b;
   --akui-bg-surface-inset: #334155;
   --akui-static: #64748b;
-  --akui-active: #2dd4bf;
+  --akui-active: #cda868;
 }
 
 [data-theme='ink'] {
@@ -1167,9 +1167,9 @@ button:disabled,
    block becomes a real card section. Subtle scale + glow so the user sees the
    payoff for completing the block. */
 @keyframes card-settle {
-  0%   { transform: scale(0.985); opacity: 0; box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.0); }
-  40%  { transform: scale(1.01);  opacity: 1; box-shadow: 0 0 18px 4px rgba(20, 184, 166, 0.35); }
-  100% { transform: scale(1);     opacity: 1; box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.0); }
+  0%   { transform: scale(0.985); opacity: 0; box-shadow: 0 0 0 0 rgba(184,144,77, 0.0); }
+  40%  { transform: scale(1.01);  opacity: 1; box-shadow: 0 0 18px 4px rgba(184,144,77, 0.35); }
+  100% { transform: scale(1);     opacity: 1; box-shadow: 0 0 0 0 rgba(184,144,77, 0.0); }
 }
 
 .animate-card-settle {
@@ -1179,8 +1179,8 @@ button:disabled,
 /* Ghost section breathing — softly pulses dashed border + shadow to draw the
    eye without nagging. Loops forever; intentionally low contrast. */
 @keyframes ghost-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.0); }
-  50%      { box-shadow: 0 0 16px 2px rgba(20, 184, 166, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184,144,77, 0.0); }
+  50%      { box-shadow: 0 0 16px 2px rgba(184,144,77, 0.18); }
 }
 
 .animate-ghost-pulse {

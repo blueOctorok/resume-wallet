@@ -6,8 +6,9 @@
 
 import { ArrowRight, Building2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
-import { headingText, mutedText, LandingContainer } from './landing-shared'
+import { GOLD_CTA, headingText, mutedText, LandingContainer, SealDivider } from './landing-shared'
 
 interface FinalCtaSectionProps {
   isDark: boolean
@@ -28,13 +29,9 @@ export default function FinalCtaSection({
     <section className='py-24 sm:py-32'>
       <LandingContainer className='max-w-3xl text-center'>
         <div data-reveal>
-          <p
-            className={cn(
-              'reveal-item mb-4 text-[11px] font-semibold uppercase tracking-[0.32em]',
-              isDark ? 'text-teal-300/90' : 'text-teal-700',
-            )}
-          >
-            Provven
+          <SealDivider isDark={isDark} className='reveal-item mx-auto mb-6 max-w-xs' />
+          <p className='reveal-item mb-4 text-2xl sm:text-3xl'>
+            <ProvvenWordmark tone='auto' isDark={isDark} />
           </p>
           <h2
             className={cn(
@@ -62,7 +59,7 @@ export default function FinalCtaSection({
               variant='primary'
               size='lg'
               onClick={onGetStarted}
-              className='group h-auto rounded-xl px-8 py-4 text-base shadow-lg'
+              className={cn('group h-auto rounded-xl px-8 py-4 text-base', GOLD_CTA)}
             >
               {primaryLabel}
               <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />

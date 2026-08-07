@@ -27,7 +27,7 @@ export default function Card({ variant = 'default', className, children, ...prop
             'shadow-[0_1px_2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.75)]',
             theme === 'ink'
               ? 'dark:shadow-[0_0_28px_-14px_rgba(0,0,0,0.5)]'
-              : 'dark:shadow-[0_0_32px_-14px_rgba(45,212,191,0.08)]',
+              : 'dark:shadow-[0_0_32px_-14px_rgba(205,168,104,0.08)]',
             'backdrop-blur-none dark:backdrop-blur-md',
           ),
         variant === 'elevated' &&

@@ -185,7 +185,7 @@ const EMPLOYER_TILE_COLORS: Record<
     iconText: { dark: 'text-slate-300', light: 'text-slate-600' },
   },
   'employer-dot-screening': {
-    glowColor: 'rgba(20,184,166,0.20)',
+    glowColor: 'rgba(184,144,77,0.20)',
     iconText: { dark: 'text-teal-400', light: 'text-teal-600' },
   },
   'employer-employment-verification': {
@@ -1061,7 +1061,7 @@ function StatCard({
         'relative overflow-hidden rounded-xl p-4 transition-all duration-300 border',
         ink
           ? 'border-zinc-600/70 bg-gradient-to-b from-zinc-900/95 to-zinc-950/95 shadow-[0_8px_28px_-14px_rgba(0,0,0,0.5)] ring-1 ring-zinc-500/[0.14] hover:border-zinc-500/45'
-          : 'border-gray-200/90 dark:border-gray-600/70 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90 shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)] ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08] hover:border-teal-500/25 dark:hover:border-teal-400/30',
+          : 'border-gray-200/90 dark:border-gray-600/70 bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90 shadow-[0_8px_28px_-14px_rgba(156,119,64,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)] ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08] hover:border-teal-500/25 dark:hover:border-teal-400/30',
       )}
     >
       <div

@@ -41,7 +41,7 @@ export default function ProblemSection({ isDark }: { isDark: boolean }) {
         <div
           className={cn(
             'mt-14 grid gap-10 border-t pt-10 sm:grid-cols-3 sm:gap-8',
-            isDark ? 'border-gray-800' : 'border-slate-200',
+            isDark ? 'border-gray-800' : 'border-stone-200',
           )}
           data-reveal
         >
@@ -52,11 +52,11 @@ export default function ProblemSection({ isDark }: { isDark: boolean }) {
                 key={item.title}
                 className={cn(
                   'reveal-item sm:px-6 sm:first:pl-0 sm:last:pr-0',
-                  i > 0 && (isDark ? 'sm:border-l sm:border-gray-800' : 'sm:border-l sm:border-slate-200'),
+                  i > 0 && (isDark ? 'sm:border-l sm:border-gray-800' : 'sm:border-l sm:border-stone-200'),
                 )}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                <Icon className={cn('h-5 w-5', isDark ? 'text-teal-300/80' : 'text-teal-700')} />
+                <Icon className={cn('h-5 w-5', isDark ? 'text-[#d4be93]/80' : 'text-[#8a6d3b]')} />
                 <h3 className={cn('mt-4 font-display text-xl font-medium tracking-tight', headingText(isDark))}>
                   {item.title}
                 </h3>

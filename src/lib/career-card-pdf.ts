@@ -6,7 +6,7 @@ import QRCode from 'qrcode'
 import { jsPDF } from 'jspdf'
 import type { ProjectedCareerCard } from '@/types/career-card'
 
-const TEAL: [number, number, number] = [20, 184, 166]
+const TEAL: [number, number, number] = [184,144,77]
 const SLATE: [number, number, number] = [15, 23, 42]
 const MUTED: [number, number, number] = [100, 116, 139]
 
@@ -20,7 +20,7 @@ export async function buildCareerCardPdfBuffer(
   const margin = 14
   let y = margin
 
-  const qrDataUrl = await QRCode.toDataURL(publicCardUrl, { margin: 1, width: 160, color: { dark: '#0d9488', light: '#ffffff' } })
+  const qrDataUrl = await QRCode.toDataURL(publicCardUrl, { margin: 1, width: 160, color: { dark: '#9c7740', light: '#ffffff' } })
 
   // ── Page 1: branded card summary ───────────────────────────────────────
   pdf.setFillColor(...SLATE)

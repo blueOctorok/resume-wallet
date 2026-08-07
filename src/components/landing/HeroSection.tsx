@@ -10,9 +10,10 @@
 
 import { ArrowRight, Building2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
 import DisclosureCard from './DisclosureCard'
-import { InkBand, LandingContainer } from './landing-shared'
+import { GOLD_CTA, InkBand, LandingContainer } from './landing-shared'
 
 interface HeroSectionProps {
   isAuthenticated: boolean
@@ -24,17 +25,17 @@ interface HeroSectionProps {
 function HeroAtmosphere() {
   return (
     <>
-      {/* Teal bloom behind the copy */}
+      {/* Warm gold bloom behind the copy — candlelight on navy */}
       <div
         aria-hidden
-        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.16] blur-[100px]'
-        style={{ background: 'radial-gradient(circle, #2dd4bf 0%, transparent 65%)' }}
+        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.12] blur-[100px]'
+        style={{ background: 'radial-gradient(circle, #c9a86a 0%, transparent 65%)' }}
       />
-      {/* Violet bloom behind the card — echoes the disclosure seam */}
+      {/* Cool blue bloom behind the card — depth without brand chroma */}
       <div
         aria-hidden
-        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-[0.13] blur-[110px]'
-        style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 65%)' }}
+        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-[0.14] blur-[110px]'
+        style={{ background: 'radial-gradient(circle, #3d5a8f 0%, transparent 65%)' }}
       />
       {/* Bottom vignette so the band settles before the next section */}
       <div aria-hidden className='pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-black/40' />
@@ -58,15 +59,15 @@ export default function HeroSection({
           <div className='min-w-0 text-center lg:text-left'>
             {/* Brand lockup — hero-level, per brand boards */}
             <div className='lp-rise' style={{ animationDelay: '0ms' }}>
-              <p className='font-display text-6xl font-semibold tracking-tight text-[#f4f1ea] sm:text-7xl lg:text-[5.5rem] [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
-                Provven
+              <p className='text-6xl sm:text-7xl lg:text-[5.5rem] [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
+                <ProvvenWordmark tone='ink' />
               </p>
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
-                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-teal-400/50 to-teal-400/50 lg:from-teal-400/50' />
-                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-teal-300/90'>
+                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c9a86a]/55 to-[#c9a86a]/55 lg:from-[#c9a86a]/55' />
+                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#d4be93]'>
                   The career card you own
                 </p>
-                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-teal-400/50 to-teal-400/50' />
+                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c9a86a]/55 to-[#c9a86a]/55' />
               </div>
             </div>
 
@@ -75,9 +76,7 @@ export default function HeroSection({
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}
-              <em className='bg-gradient-to-r from-teal-300 via-cyan-300 to-teal-200 bg-clip-text font-medium not-italic text-transparent'>
-                not paperwork.
-              </em>
+              <em className='font-medium not-italic text-[#d4be93]'>not paperwork.</em>
             </h1>
 
             <p
@@ -97,7 +96,7 @@ export default function HeroSection({
                 variant='primary'
                 size='lg'
                 onClick={onGetStarted}
-                className='group h-auto rounded-xl px-8 py-4 text-base shadow-lg shadow-teal-950/50'
+                className={cn('group h-auto rounded-xl px-8 py-4 text-base', GOLD_CTA)}
               >
                 {primaryLabel}
                 <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
@@ -122,7 +121,7 @@ export default function HeroSection({
                 <button
                   type='button'
                   onClick={onBrowseJobs}
-                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-teal-300 hover:decoration-teal-400/50'
+                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#d4be93] hover:decoration-[#c9a86a]/50'
                 >
                   or browse jobs without an account
                 </button>
@@ -139,7 +138,7 @@ export default function HeroSection({
             <div
               aria-hidden
               className='pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 opacity-25 blur-3xl'
-              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(45,212,191,0.4) 0%, rgba(139,92,246,0.2) 45%, transparent 70%)' }}
+              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(205,168,104,0.4) 0%, rgba(95,122,158,0.2) 45%, transparent 70%)' }}
             />
             <DisclosureCard view='shared' className='relative' />
           </div>

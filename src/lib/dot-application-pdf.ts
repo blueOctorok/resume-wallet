@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf'
 
 // Colors
 const COLORS = {
-  primary: [13, 148, 136] as [number, number, number], // teal-600
+  primary: [156,119,64] as [number, number, number], // teal-600
   dark: [17, 24, 39] as [number, number, number], // gray-900
   text: [55, 65, 81] as [number, number, number], // gray-700
   light: [107, 114, 128] as [number, number, number], // gray-500

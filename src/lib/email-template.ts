@@ -32,11 +32,11 @@ export interface EmailTemplateOptions {
   accentColor?: string
 }
 
-const TEAL = '#0d9488'
-const TEAL_DARK = '#0f766e'
-const TEAL_LIGHT = '#14b8a6'
+const TEAL = '#9c7740'
+const TEAL_DARK = '#7d5e33'
+const TEAL_LIGHT = '#b8904d'
 const TEAL_BG = '#f0fdfa'
-const TEAL_BORDER = '#99f6e4'
+const TEAL_BORDER = '#e8d9b5'
 
 export function buildEmail(opts: EmailTemplateOptions): string {
   const {
@@ -111,7 +111,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="background:linear-gradient(135deg,${TEAL_DARK} 0%,${TEAL} 60%,${TEAL_LIGHT} 100%);padding:32px 40px;">
-                  <p style="margin:0 0 4px;color:#99f6e4;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">${headerEyebrow}</p>
+                  <p style="margin:0 0 4px;color:#e8d9b5;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">${headerEyebrow}</p>
                   <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;line-height:1.25;">${headerTitle}</h1>
                 </td>
               </tr>

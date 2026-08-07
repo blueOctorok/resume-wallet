@@ -95,7 +95,7 @@ export default function VaultHorizontalVaultShell({
               ? 'backdrop-blur-xl ring-1 ring-white/[0.06]'
               : isPaperShell
                 ? 'backdrop-blur-xl backdrop-saturate-[0.88] shadow-[inset_0_0_0_1px_rgba(113,113,122,0.1),inset_0_0_36px_rgba(24,24,27,0.028),inset_0_1px_0_rgba(255,255,255,0.78)] ring-1 ring-zinc-400/28'
-                : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
+                : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(156,119,64,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
           )}
           style={{ ...clip, background: innerBg }}
         >

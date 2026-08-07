@@ -8,7 +8,7 @@ import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 
 // Color scheme
 const COLORS = {
-  primary: [13, 148, 136] as [number, number, number], // teal-600 — vault accent
+  primary: [156,119,64] as [number, number, number], // teal-600 — vault accent
   dark: [17, 24, 39] as [number, number, number], // Gray-900
   text: [55, 65, 81] as [number, number, number], // Gray-700
   light: [107, 114, 128] as [number, number, number], // Gray-500

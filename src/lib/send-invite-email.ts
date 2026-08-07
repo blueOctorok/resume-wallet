@@ -90,14 +90,14 @@ export async function sendInviteEmail(
 
   const checklistHtml = content.checklist
     .map(item => `<p style="margin:0 0 8px;font-size:14px;color:#374151;padding-left:20px;position:relative;">
-      <span style="position:absolute;left:0;color:#0d9488;">✓</span> ${item}
+      <span style="position:absolute;left:0;color:#9c7740;">✓</span> ${item}
     </p>`)
     .join('')
 
   const customMessageHtml = welcomeMessage
     ? infoBox(`
-        <p style="margin:0 0 4px;font-size:14px;font-style:italic;color:#134e4a;">"${welcomeMessage}"</p>
-        <p style="margin:0;font-size:12px;color:#5eead4;">— ${companyName}</p>
+        <p style="margin:0 0 4px;font-size:14px;font-style:italic;color:#533d22;">"${welcomeMessage}"</p>
+        <p style="margin:0;font-size:12px;color:#d9c08c;">— ${companyName}</p>
       `)
     : ''
 
@@ -109,7 +109,7 @@ export async function sendInviteEmail(
       ${checklistHtml}
       <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">⏱ ${content.timeEstimate}</p>
     </div>
-    ${infoBox(`<p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
+    ${infoBox(`<p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
       <strong>🔒 Your data is secure.</strong><br>
       Provven uses blockchain verification to protect your credentials. Only ${companyName} will have access to your application.
     </p>`)}

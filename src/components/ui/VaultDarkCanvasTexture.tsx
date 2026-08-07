@@ -31,12 +31,12 @@ export default function VaultDarkCanvasTexture({ mode = 'galactic' }: { mode?: '
             className='pointer-events-none absolute inset-0'
             style={{
               background:
-                'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(45,212,191,0.09) 0%, transparent 58%)',
+                'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(205,168,104,0.09) 0%, transparent 58%)',
             }}
           />
           <span
             aria-hidden
-            className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_42%_at_96%_92%,rgba(139,92,246,0.1)_0%,transparent_52%)]'
+            className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_42%_at_96%_92%,rgba(95,122,158,0.1)_0%,transparent_52%)]'
           />
         </>
       )}

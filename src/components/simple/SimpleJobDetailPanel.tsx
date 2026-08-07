@@ -331,7 +331,7 @@ export default function SimpleJobDetailPanel({ userAddress }: SimpleJobDetailPan
               className={cn(
                 'w-full transition-all',
                 applyReady
-                  ? 'shadow-[0_0_20px_-4px_rgba(20,184,166,0.55)]'
+                  ? 'shadow-[0_0_20px_-4px_rgba(184,144,77,0.55)]'
                   : 'opacity-60',
               )}
               disabled={!applyReady}
@@ -352,7 +352,7 @@ export default function SimpleJobDetailPanel({ userAddress }: SimpleJobDetailPan
             size='sm'
             className={cn(
               'flex-1 transition-all',
-              applyReady && 'shadow-[0_0_20px_-4px_rgba(20,184,166,0.45)]',
+              applyReady && 'shadow-[0_0_20px_-4px_rgba(184,144,77,0.45)]',
             )}
             onClick={() => setApplyOpen(true)}
           >

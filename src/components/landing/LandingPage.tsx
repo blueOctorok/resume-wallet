@@ -14,6 +14,8 @@
 import { useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { isDarkTheme } from '@/lib/theme-storage'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
+import { LandingContainer, SealDivider, mutedText } from './landing-shared'
 import HeroSection from './HeroSection'
 import ProblemSection from './ProblemSection'
 import CareerCardSection from './CareerCardSection'
@@ -72,7 +74,9 @@ export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJob
   }
 
   return (
-    <div ref={revealRef} className='relative z-10'>
+    // Light mode gets its own warm-cream base so non-ink sections sit on paper
+    // (not the app's cool slate canvas); dark mode keeps the storm gradient.
+    <div ref={revealRef} className={`relative z-10 ${isDark ? '' : 'bg-[#f7f4ed]'}`}>
       <HeroSection
         isAuthenticated={isAuthenticated}
         onGetStarted={onGetStarted}
@@ -91,6 +95,21 @@ export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJob
         onGetStarted={onGetStarted}
         onForEmployers={scrollToEmployers}
       />
+
+      {/* Footer — the page closes on the seal */}
+      <footer className='pb-10'>
+        <LandingContainer>
+          <SealDivider isDark={isDark} className='mb-6' />
+          <div className='flex flex-col items-center gap-2 text-center'>
+            <p className='text-lg'>
+              <ProvvenWordmark tone='auto' isDark={isDark} />
+            </p>
+            <p className={`text-[11px] ${mutedText(isDark)}`}>
+              © {new Date().getFullYear()} Provven · The career card you own · Built on Midnight
+            </p>
+          </div>
+        </LandingContainer>
+      </footer>
 
       {/* Motion: hero entrance + scroll reveals. Both honor prefers-reduced-motion. */}
       <style jsx global>{`

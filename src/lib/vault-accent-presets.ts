@@ -27,31 +27,31 @@ export interface VaultAccentLayers {
 
 const TEAL: VaultAccentLayers = {
   rimLight:
-    'linear-gradient(135deg, rgba(13,148,136,0.42) 0%, rgba(45,212,191,0.16) 20%, transparent 50%, rgba(91,33,182,0.16) 100%)',
+    'linear-gradient(135deg, rgba(156,119,64,0.42) 0%, rgba(205,168,104,0.16) 20%, transparent 50%, rgba(54,69,89,0.16) 100%)',
   rimDark:
-    'linear-gradient(135deg, rgba(45,212,191,0.36) 0%, transparent 50%, rgba(167,139,246,0.2) 100%)',
+    'linear-gradient(135deg, rgba(205,168,104,0.36) 0%, transparent 50%, rgba(127,151,184,0.2) 100%)',
   stripLight:
-    'linear-gradient(90deg, transparent, rgba(13,148,136,0.52), rgba(91,33,182,0.28), transparent)',
+    'linear-gradient(90deg, transparent, rgba(156,119,64,0.52), rgba(54,69,89,0.28), transparent)',
   stripDark:
-    'linear-gradient(90deg, transparent, rgba(45,212,191,0.38), rgba(139,92,246,0.26), transparent)',
+    'linear-gradient(90deg, transparent, rgba(205,168,104,0.38), rgba(95,122,158,0.26), transparent)',
   conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(13,148,136,0.38) 42deg, rgba(91,33,182,0.18) 100deg, transparent 220deg, rgba(15,118,110,0.28) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(156,119,64,0.38) 42deg, rgba(54,69,89,0.18) 100deg, transparent 220deg, rgba(125,94,51,0.28) 300deg, transparent 360deg)',
   conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(45,212,191,0.28) 42deg, rgba(139,92,246,0.16) 100deg, transparent 220deg, rgba(45,212,191,0.2) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(205,168,104,0.28) 42deg, rgba(95,122,158,0.16) 100deg, transparent 220deg, rgba(205,168,104,0.2) 300deg, transparent 360deg)',
   chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(13,148,136,0.48) 0%, rgba(45,212,191,0.2) 48%, transparent 72%)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(156,119,64,0.48) 0%, rgba(205,168,104,0.2) 48%, transparent 72%)',
   chamferDark:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(45,212,191,0.48) 0%, transparent 70%)',
-  sweepLight: 'linear-gradient(to right, transparent, rgba(13,148,136,0.36), transparent)',
-  sweepDark: 'linear-gradient(to right, transparent, rgba(45,212,191,0.22), transparent)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(205,168,104,0.48) 0%, transparent 70%)',
+  sweepLight: 'linear-gradient(to right, transparent, rgba(156,119,64,0.36), transparent)',
+  sweepDark: 'linear-gradient(to right, transparent, rgba(205,168,104,0.22), transparent)',
   filterPanelLight:
-    'drop-shadow(0 12px 32px rgba(15,23,42,0.11)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 40px rgba(13,148,136,0.22)) drop-shadow(0 0 60px rgba(91,33,182,0.12))',
+    'drop-shadow(0 12px 32px rgba(15,23,42,0.11)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 40px rgba(156,119,64,0.22)) drop-shadow(0 0 60px rgba(54,69,89,0.12))',
   filterPanelDark:
-    'drop-shadow(0 10px 32px rgba(0,0,0,0.42)) drop-shadow(0 0 32px rgba(45,212,191,0.14)) drop-shadow(0 0 48px rgba(139,92,246,0.1))',
+    'drop-shadow(0 10px 32px rgba(0,0,0,0.42)) drop-shadow(0 0 32px rgba(205,168,104,0.14)) drop-shadow(0 0 48px rgba(95,122,158,0.1))',
   filterNavLight:
-    'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(13,148,136,0.2)) drop-shadow(0 0 72px rgba(91,33,182,0.11))',
+    'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(156,119,64,0.2)) drop-shadow(0 0 72px rgba(54,69,89,0.11))',
   filterNavDark:
-    'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(45,212,191,0.12))',
+    'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(205,168,104,0.12))',
   innerBgLight:
     'linear-gradient(175deg, rgba(252,254,255,0.96) 0%, rgba(236,248,250,0.9) 40%, rgba(228,238,245,0.92) 72%, rgba(220,232,242,0.94) 100%)',
   innerBgDark:
@@ -95,31 +95,31 @@ const SKY: VaultAccentLayers = {
 
 const VIOLET: VaultAccentLayers = {
   rimLight:
-    'linear-gradient(135deg, rgba(139,92,246,0.42) 0%, rgba(192,132,252,0.2) 22%, transparent 48%, rgba(217,70,239,0.18) 100%)',
+    'linear-gradient(135deg, rgba(95,122,158,0.42) 0%, rgba(170,187,210,0.2) 22%, transparent 48%, rgba(127,151,184,0.18) 100%)',
   rimDark:
-    'linear-gradient(135deg, rgba(167,139,250,0.4) 0%, rgba(192,132,252,0.15) 40%, transparent 52%, rgba(244,114,182,0.18) 100%)',
+    'linear-gradient(135deg, rgba(127,151,184,0.4) 0%, rgba(170,187,210,0.15) 40%, transparent 52%, rgba(244,114,182,0.18) 100%)',
   stripLight:
-    'linear-gradient(90deg, transparent, rgba(139,92,246,0.5), rgba(217,70,239,0.32), rgba(192,132,252,0.28), transparent)',
+    'linear-gradient(90deg, transparent, rgba(95,122,158,0.5), rgba(127,151,184,0.32), rgba(170,187,210,0.28), transparent)',
   stripDark:
-    'linear-gradient(90deg, transparent, rgba(167,139,250,0.4), rgba(244,114,182,0.25), transparent)',
+    'linear-gradient(90deg, transparent, rgba(127,151,184,0.4), rgba(244,114,182,0.25), transparent)',
   conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(139,92,246,0.38) 42deg, rgba(217,70,239,0.22) 100deg, transparent 220deg, rgba(192,132,252,0.3) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(95,122,158,0.38) 42deg, rgba(127,151,184,0.22) 100deg, transparent 220deg, rgba(170,187,210,0.3) 300deg, transparent 360deg)',
   conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(167,139,250,0.3) 42deg, rgba(244,114,182,0.2) 100deg, transparent 220deg, rgba(192,132,252,0.22) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(127,151,184,0.3) 42deg, rgba(244,114,182,0.2) 100deg, transparent 220deg, rgba(170,187,210,0.22) 300deg, transparent 360deg)',
   chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(139,92,246,0.52) 0%, rgba(217,70,239,0.22) 45%, transparent 72%)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(95,122,158,0.52) 0%, rgba(127,151,184,0.22) 45%, transparent 72%)',
   chamferDark:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(192,132,252,0.42) 0%, transparent 70%)',
-  sweepLight: 'linear-gradient(to right, transparent, rgba(139,92,246,0.4), transparent)',
-  sweepDark: 'linear-gradient(to right, transparent, rgba(192,132,252,0.26), transparent)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(170,187,210,0.42) 0%, transparent 70%)',
+  sweepLight: 'linear-gradient(to right, transparent, rgba(95,122,158,0.4), transparent)',
+  sweepDark: 'linear-gradient(to right, transparent, rgba(170,187,210,0.26), transparent)',
   filterPanelLight:
-    'drop-shadow(0 12px 32px rgba(15,23,42,0.1)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 44px rgba(139,92,246,0.22)) drop-shadow(0 0 58px rgba(217,70,239,0.12))',
+    'drop-shadow(0 12px 32px rgba(15,23,42,0.1)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 44px rgba(95,122,158,0.22)) drop-shadow(0 0 58px rgba(127,151,184,0.12))',
   filterPanelDark:
-    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 38px rgba(167,139,250,0.16)) drop-shadow(0 0 52px rgba(217,70,239,0.1))',
+    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 38px rgba(127,151,184,0.16)) drop-shadow(0 0 52px rgba(127,151,184,0.1))',
   filterNavLight:
-    'drop-shadow(0 14px 36px rgba(15,23,42,0.11)) drop-shadow(0 0 48px rgba(139,92,246,0.2)) drop-shadow(0 0 70px rgba(217,70,239,0.1))',
+    'drop-shadow(0 14px 36px rgba(15,23,42,0.11)) drop-shadow(0 0 48px rgba(95,122,158,0.2)) drop-shadow(0 0 70px rgba(127,151,184,0.1))',
   filterNavDark:
-    'drop-shadow(0 12px 36px rgba(0,0,0,0.48)) drop-shadow(0 0 34px rgba(167,139,250,0.14))',
+    'drop-shadow(0 12px 36px rgba(0,0,0,0.48)) drop-shadow(0 0 34px rgba(127,151,184,0.14))',
   innerBgLight:
     'linear-gradient(175deg, rgba(252,254,255,0.97) 0%, rgba(245,243,255,0.9) 40%, rgba(250,245,255,0.92) 72%, rgba(253,242,248,0.88) 100%)',
   innerBgDark:
@@ -131,15 +131,15 @@ const INDIGO: VaultAccentLayers = {
   rimLight:
     'linear-gradient(135deg, rgba(79,70,229,0.42) 0%, rgba(99,102,241,0.2) 22%, transparent 48%, rgba(14,165,233,0.2) 100%)',
   rimDark:
-    'linear-gradient(135deg, rgba(129,140,248,0.38) 0%, rgba(99,102,241,0.14) 38%, transparent 52%, rgba(45,212,191,0.16) 100%)',
+    'linear-gradient(135deg, rgba(129,140,248,0.38) 0%, rgba(99,102,241,0.14) 38%, transparent 52%, rgba(205,168,104,0.16) 100%)',
   stripLight:
     'linear-gradient(90deg, transparent, rgba(79,70,229,0.52), rgba(99,102,241,0.35), rgba(14,165,233,0.22), transparent)',
   stripDark:
-    'linear-gradient(90deg, transparent, rgba(129,140,248,0.38), rgba(45,212,191,0.22), transparent)',
+    'linear-gradient(90deg, transparent, rgba(129,140,248,0.38), rgba(205,168,104,0.22), transparent)',
   conicLight:
     'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(79,70,229,0.38) 42deg, rgba(14,165,233,0.2) 100deg, transparent 220deg, rgba(99,102,241,0.3) 300deg, transparent 360deg)',
   conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(129,140,248,0.28) 42deg, rgba(45,212,191,0.18) 100deg, transparent 220deg, rgba(99,102,241,0.22) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(129,140,248,0.28) 42deg, rgba(205,168,104,0.18) 100deg, transparent 220deg, rgba(99,102,241,0.22) 300deg, transparent 360deg)',
   chamferLight:
     'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(79,70,229,0.5) 0%, rgba(99,102,241,0.22) 45%, transparent 72%)',
   chamferDark:
@@ -149,7 +149,7 @@ const INDIGO: VaultAccentLayers = {
   filterPanelLight:
     'drop-shadow(0 12px 32px rgba(15,23,42,0.1)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 42px rgba(79,70,229,0.22)) drop-shadow(0 0 56px rgba(14,165,233,0.12))',
   filterPanelDark:
-    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 36px rgba(129,140,248,0.16)) drop-shadow(0 0 48px rgba(45,212,191,0.08))',
+    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 36px rgba(129,140,248,0.16)) drop-shadow(0 0 48px rgba(205,168,104,0.08))',
   filterNavLight:
     'drop-shadow(0 14px 36px rgba(15,23,42,0.11)) drop-shadow(0 0 46px rgba(79,70,229,0.2)) drop-shadow(0 0 64px rgba(14,165,233,0.1))',
   filterNavDark:
@@ -163,17 +163,17 @@ const INDIGO: VaultAccentLayers = {
 
 const AMBER: VaultAccentLayers = {
   rimLight:
-    'linear-gradient(135deg, rgba(245,158,11,0.48) 0%, rgba(251,191,36,0.24) 20%, transparent 48%, rgba(13,148,136,0.22) 100%)',
+    'linear-gradient(135deg, rgba(245,158,11,0.48) 0%, rgba(251,191,36,0.24) 20%, transparent 48%, rgba(156,119,64,0.22) 100%)',
   rimDark:
-    'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(245,158,11,0.18) 38%, transparent 52%, rgba(45,212,191,0.18) 100%)',
+    'linear-gradient(135deg, rgba(251,191,36,0.35) 0%, rgba(245,158,11,0.18) 38%, transparent 52%, rgba(205,168,104,0.18) 100%)',
   stripLight:
-    'linear-gradient(90deg, transparent, rgba(245,158,11,0.55), rgba(251,191,36,0.38), rgba(13,148,136,0.28), transparent)',
+    'linear-gradient(90deg, transparent, rgba(245,158,11,0.55), rgba(251,191,36,0.38), rgba(156,119,64,0.28), transparent)',
   stripDark:
-    'linear-gradient(90deg, transparent, rgba(251,191,36,0.38), rgba(45,212,191,0.22), transparent)',
+    'linear-gradient(90deg, transparent, rgba(251,191,36,0.38), rgba(205,168,104,0.22), transparent)',
   conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(245,158,11,0.4) 42deg, rgba(13,148,136,0.2) 100deg, transparent 220deg, rgba(251,191,36,0.32) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(245,158,11,0.4) 42deg, rgba(156,119,64,0.2) 100deg, transparent 220deg, rgba(251,191,36,0.32) 300deg, transparent 360deg)',
   conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(251,191,36,0.28) 42deg, rgba(45,212,191,0.18) 100deg, transparent 220deg, rgba(245,158,11,0.22) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(251,191,36,0.28) 42deg, rgba(205,168,104,0.18) 100deg, transparent 220deg, rgba(245,158,11,0.22) 300deg, transparent 360deg)',
   chamferLight:
     'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(245,158,11,0.55) 0%, rgba(251,191,36,0.28) 45%, transparent 72%)',
   chamferDark:
@@ -181,11 +181,11 @@ const AMBER: VaultAccentLayers = {
   sweepLight: 'linear-gradient(to right, transparent, rgba(217,119,6,0.4), transparent)',
   sweepDark: 'linear-gradient(to right, transparent, rgba(251,191,36,0.26), transparent)',
   filterPanelLight:
-    'drop-shadow(0 12px 32px rgba(15,23,42,0.1)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 44px rgba(245,158,11,0.2)) drop-shadow(0 0 52px rgba(13,148,136,0.12))',
+    'drop-shadow(0 12px 32px rgba(15,23,42,0.1)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 44px rgba(245,158,11,0.2)) drop-shadow(0 0 52px rgba(156,119,64,0.12))',
   filterPanelDark:
-    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 38px rgba(251,191,36,0.14)) drop-shadow(0 0 48px rgba(45,212,191,0.08))',
+    'drop-shadow(0 10px 32px rgba(0,0,0,0.45)) drop-shadow(0 0 38px rgba(251,191,36,0.14)) drop-shadow(0 0 48px rgba(205,168,104,0.08))',
   filterNavLight:
-    'drop-shadow(0 14px 36px rgba(15,23,42,0.11)) drop-shadow(0 0 48px rgba(245,158,11,0.18)) drop-shadow(0 0 60px rgba(13,148,136,0.1))',
+    'drop-shadow(0 14px 36px rgba(15,23,42,0.11)) drop-shadow(0 0 48px rgba(245,158,11,0.18)) drop-shadow(0 0 60px rgba(156,119,64,0.1))',
   filterNavDark:
     'drop-shadow(0 12px 36px rgba(0,0,0,0.48)) drop-shadow(0 0 32px rgba(251,191,36,0.12))',
   innerBgLight:
