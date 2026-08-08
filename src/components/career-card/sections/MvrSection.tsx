@@ -143,25 +143,32 @@ export default function MvrSection({
           )}
         </div>
       ) : isComplete && data.results ? (
-        <div className='grid grid-cols-3 gap-3'>
-          <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
-            <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</p>
-            <p className={cn('text-sm font-semibold', isDark ? 'text-green-400' : 'text-green-600')}>
-              {data.results.licenseStatus || 'Valid'}
-            </p>
+        <div className='space-y-2'>
+          <div className='grid grid-cols-3 gap-3'>
+            <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
+              <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</p>
+              <p className={cn('text-sm font-semibold', isDark ? 'text-green-400' : 'text-green-600')}>
+                {data.results.licenseStatus || 'Valid'}
+              </p>
+            </div>
+            <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
+              <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Points</p>
+              <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                {data.results.totalPoints}
+              </p>
+            </div>
+            <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
+              <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Violations</p>
+              <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                {data.results.violationCount}
+              </p>
+            </div>
           </div>
-          <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
-            <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Points</p>
-            <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              {data.results.totalPoints}
-            </p>
-          </div>
-          <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
-            <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Violations</p>
-            <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              {data.results.violationCount}
-            </p>
-          </div>
+          {/* Provenance — Storm is the candidate's agent; attestations cite the originating CRA */}
+          <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            Derived from MVR pulled by Accio{dateStr ? ` · ${dateStr}` : ''}
+            {data.licenseState ? ` · ${data.licenseState}` : ''}
+          </p>
         </div>
       ) : hasOrder ? (
         <div className='flex items-center gap-3'>

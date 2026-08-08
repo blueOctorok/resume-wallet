@@ -19,6 +19,7 @@ import type {
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import CareerCardDynamicSections from '@/components/career-card/CareerCardDynamicSections'
+import VerifiedFactsStrip from '@/components/career-card/VerifiedFactsStrip'
 import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData, ScreeningConsentData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
@@ -227,7 +228,12 @@ export default function ProjectedCareerCard({
       : employerList.slice(0, MAX_TRUST_STRIP_ITEMS)
 
   return (
-    <VaultHorizontalVaultShell isDark={isDark} layout='nav' contentClassName='relative overflow-hidden'>
+    <VaultHorizontalVaultShell
+      isDark={isDark}
+      layout='nav'
+      contentClassName='relative overflow-hidden'
+      className={cn(!isCareerCardOwnerMode(mode) && 'animate-card-entrance')}
+    >
       {/* ── Profile header (no hero gradient — stays on vault face so block sections read as one surface) ── */}
       <div className='px-6 sm:px-8 pt-6 sm:pt-7 pb-5 relative z-[1]'>
           {/*
@@ -339,7 +345,11 @@ export default function ProjectedCareerCard({
               </div>
             )}
             <div className='flex-1 min-w-0 pt-0.5 flex items-start gap-3'>
-              <CareerCardStrengthRing score={data.careerCardScore ?? 0} isDark={isDark} />
+              {/* Strength ring is a builder metric — owner modes only. Showing
+                  "55/100" to an employer labels the card incomplete. */}
+              {isCareerCardOwnerMode(mode) && (
+                <CareerCardStrengthRing score={data.careerCardScore ?? 0} isDark={isDark} />
+              )}
               <div className='min-w-0 flex-1'>
               <p
                 className={cn(
@@ -362,7 +372,7 @@ export default function ProjectedCareerCard({
                 >
                   <h1
                     className={cn(
-                      'text-xl sm:text-2xl font-bold tracking-tight truncate',
+                      'font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
                       isDark ? 'text-white' : 'text-gray-900',
                     )}
                   >
@@ -379,7 +389,7 @@ export default function ProjectedCareerCard({
               ) : (
                 <h1
                   className={cn(
-                    'text-xl sm:text-2xl font-bold tracking-tight truncate',
+                    'font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
                     isDark ? 'text-white' : 'text-gray-900',
                   )}
                 >
@@ -391,9 +401,11 @@ export default function ProjectedCareerCard({
                   {data.occupation}
                 </p>
               )}
-              <p className={cn('text-[10px] mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                Card strength
-              </p>
+              {isCareerCardOwnerMode(mode) && (
+                <p className={cn('text-[10px] mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                  Card strength
+                </p>
+              )}
               </div>
             </div>
           </div>
@@ -439,6 +451,10 @@ export default function ProjectedCareerCard({
               {data.professionalSummary}
             </p>
           )}
+
+          {/* Verified facts — issuer-derived only (provenance gate); renders
+              nothing when there's nothing honestly verifiable */}
+          <VerifiedFactsStrip data={data} isDark={isDark} />
 
           {/* Employer-confirmed employment — trust signal for shared / public card */}
           {employerCount > 0 && (

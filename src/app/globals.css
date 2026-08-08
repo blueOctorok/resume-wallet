@@ -634,9 +634,36 @@ button:disabled,
   animation: ghost-pulse 2.4s ease-in-out infinite;
 }
 
+/* Career card entrance — employer/public views only. One quiet settle on
+   load; no loops. The card is a credential, not a landing page. */
+@keyframes card-entrance {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-card-entrance {
+  animation: card-entrance 240ms ease-out;
+}
+
+/* One-shot gold sheen across the verified-facts strip on first render.
+   Base opacity 0 so the overlay is invisible whenever the animation doesn't
+   run (reduced motion) or after it finishes. */
+@keyframes facts-strip-sheen {
+  0%   { transform: translateX(-160%) skewX(-14deg); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateX(420%) skewX(-14deg); opacity: 0; }
+}
+
+.facts-strip-sheen {
+  opacity: 0;
+  animation: facts-strip-sheen 1100ms ease-out 400ms 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-card-settle,
-  .animate-ghost-pulse {
+  .animate-ghost-pulse,
+  .animate-card-entrance,
+  .facts-strip-sheen {
     animation: none !important;
   }
   .card-flip-inner {

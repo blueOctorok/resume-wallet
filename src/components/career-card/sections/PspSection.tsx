@@ -142,11 +142,11 @@ export default function PspSection({
               </>
             )}
           </p>
-          {(data.licenseState || dateStr) && (
-            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-              {[data.licenseState, dateStr && `Ordered ${dateStr}`].filter(Boolean).join(' · ')}
-            </p>
-          )}
+          {/* Provenance — Storm is the candidate's agent; attestations cite the originating CRA */}
+          <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            Derived from FMCSA PSP pulled by Accio{dateStr ? ` · ${dateStr}` : ''}
+            {data.licenseState ? ` · ${data.licenseState}` : ''}
+          </p>
         </div>
       ) : hasOrder ? (
         <div className="flex items-center gap-3">

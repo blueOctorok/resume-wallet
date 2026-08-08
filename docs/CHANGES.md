@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Career card credential pass — document, not dashboard** (2026-08-07)
+
+Design review verdict: the heritage shell was impressive but the contents read like app UI. Fix direction: **fancy the way a passport is fancy** — typography, provenance, seals — not motion. Changes:
+
+- **Verified facts strip** (`career-card/VerifiedFactsStrip.tsx`) — new block under the header summary: gold `BadgeCheck` seals + fact + issuer/date line ("Clean MVR — Accio · Jun 12, 2026"). **Provenance gate enforced** (DEC-2026-05-014): only MVR, PSP, and employer-confirmed employment appear; self-reported data (CDL, resume, skills) never earns a seal, and the strip renders nothing when nothing is honestly verifiable. Outcome copy is honest: clean outcomes say "Clean MVR"; hits say "MVR on file" (no claim).
+- **Serif identity** — candidate name is now `font-display` (Fraunces, already loaded globally) at `text-2xl/3xl`, tipping the card from dashboard-widget to document.
+- **Strength ring is owner-only** — it's a builder metric; showing "55/100" to an employer labels the candidate incomplete. Gated on `isCareerCardOwnerMode`.
+- **CRA citations on sections** — MVR/PSP complete states print "Derived from MVR pulled by Accio · {date}" per the candidate-agent posture (DEC-2026-05-011).
+- **Exactly two animations, both one-shot** — `card-entrance` (240ms settle, employer/public modes only) and `facts-strip-sheen` (single gold sheen pass over the strip, base `opacity: 0` so reduced-motion users never see the overlay). Tilt/parallax/looping motion deliberately rejected: employers skim in seconds and the card is a credential, not a landing page.
+
 ## **Success green is now heritage forest — emerald was off-palette** (2026-08-07)
 
 "Done" confirmations looked fine in dark mode and slightly medical in light mode. Root cause: **`emerald` was the one scale that never got heritage-ified.** `teal`/`cyan` → gold and `violet`/`purple` → steel were remapped in `tailwind.config.ts`, but every success state stayed raw Tailwind emerald.
