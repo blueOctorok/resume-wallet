@@ -518,7 +518,7 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     iconBg:      { dark: 'bg-emerald-500/15',   light: 'bg-emerald-50' },
     iconText:    { dark: 'text-emerald-400',     light: 'text-emerald-600' },
     borderHover: { dark: 'border-emerald-500/40', light: 'border-emerald-400/50' },
-    glowColor:   'rgba(16,185,129,0.15)',
+    glowColor:   'rgba(74,124,98,0.15)',
     badgeColor:  'bg-emerald-500',
   },
   'developer-resume': {

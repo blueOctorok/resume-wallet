@@ -1,8 +1,7 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import Image from 'next/image'
-import { cn } from '@/lib/utils'
+import { LifeBuoy } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import {
@@ -19,14 +18,15 @@ import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import StormiContextModal from '@/components/hub/StormiContextModal'
 
 /**
- * Stormi / Ask AI — formerly the hub right rail.
- * Reachable from My Hub → Ask AI.
+ * Help — the answer surface for a driver who's stuck.
+ * Reached from the nav Help button. Deliberately unbranded: no assistant name
+ * or persona, because the promise is "get unstuck", not "meet our AI".
  */
 export default function CandidateAskAiPage() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
-  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const navigateToHub = useUIStore((s) => s.navigateToHub)
 
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
   const setStormiAutoWelcomeCandidateDone = useHubBlocksStore((s) => s.setStormiAutoWelcomeCandidateDone)
@@ -40,22 +40,14 @@ export default function CandidateAskAiPage() {
     <>
       {isStormiContextModalOpen && <StormiContextModal />}
       <div className='mx-auto w-full max-w-2xl space-y-4'>
-        <BackToHubButton onClick={() => setCurrentPage('hub')} />
+        <BackToHubButton onClick={navigateToHub} label='Back to Career Card' />
         <div id='stormi-hub-panel' className='scroll-mt-24'>
           <HubSectionPanel isDark={isDark} accent='violet'>
             <BlockCard
               variant='embed'
-              headerIconSlot={
-                <Image
-                  src='/ava-robot.png'
-                  alt=''
-                  width={36}
-                  height={36}
-                  className={cn('object-contain', !isDark && 'invert')}
-                />
-              }
-              title='Ask AI'
-              description='Ranked jobs, interview practice, and talking points from your Career Card — you choose every apply.'
+              icon={LifeBuoy}
+              title='Help'
+              description="Ask anything about your DQ file — what a form means, what a carrier needs, or what to do next."
             >
               <StormiChatPanel
                 mode='candidate'

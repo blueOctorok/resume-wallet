@@ -33,9 +33,10 @@ export const STORM_COLORS = {
   border: '#e2e8f0', // slate-200
   borderStrong: '#cbd5e1', // slate-300
   rowAlt: '#f8fafc', // slate-50
-  // Outcome chips
-  emerald: '#059669',
-  emeraldBg: '#ecfdf5',
+  // Outcome chips — heritage forest, matching the `emerald` remap in
+  // tailwind.config.ts (PDFs bypass Tailwind, so the values live here too).
+  emerald: '#3a6650',
+  emeraldBg: '#f2f7f4',
   amber: '#b45309',
   amberBg: '#fef3c7',
   rose: '#be123c',

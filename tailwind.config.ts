@@ -10,11 +10,12 @@ import type { Config } from 'tailwindcss'
  *
  *   teal-*, cyan-*        → gold scale (brand accent, verified, CTAs)
  *   violet-*, purple-*    → steel scale (muted navy-blue; Stormi/AI surfaces)
+ *   emerald-*, green-*    → forest scale (success / "done" confirmations)
  *
  * So `bg-teal-600` renders champagne gold everywhere, and any future
  * `teal-*` class CANNOT reintroduce teal — it renders gold by definition.
- * When writing NEW code, still write `teal-*`/`violet-*` classes (they are
- * the accent/AI tokens); a future codemod may rename them to gold/steel.
+ * When writing NEW code, still write `teal-*`/`violet-*`/`emerald-*` classes
+ * (they are the accent/AI/success tokens); a future codemod may rename them.
  */
 const gold = {
   50: '#faf6ee',
@@ -28,6 +29,34 @@ const gold = {
   800: '#654b29',
   900: '#533d22',
   950: '#2f2212',
+} as const
+
+/**
+ * Success / "done". Raw Tailwind emerald was the one scale that never got
+ * heritage-ified, and it showed in LIGHT mode: `emerald-100` (#d1fae5) is a
+ * cool mint (hue ~155°) sitting on warm cream (#fef5ed) beside champagne gold
+ * (hue ~35°) — two pastels at the same lightness with opposite temperature,
+ * which reads muddy/medical. Dark mode never had the problem because a 15%
+ * tint over ink navy neutralizes almost all of the hue.
+ *
+ * Fix: bottle/forest green instead of mint. Navy + gold + deep green is a
+ * classic heraldic pairing (banknotes, wax seals). The light steps (50–200)
+ * are deliberately LOW-CHROMA sage so a filled chip reads as a soft neutral
+ * against cream rather than a block of mint; 600–800 are sober enough to
+ * carry text, and 300–400 stay luminous enough to read on ink navy.
+ */
+const forest = {
+  50: '#f2f7f4',
+  100: '#e2ece6',
+  200: '#c4d8cc',
+  300: '#94b8a4',
+  400: '#6b9a82',
+  500: '#4a7c62',
+  600: '#3a6650',
+  700: '#2d5140',
+  800: '#234033',
+  900: '#1a3027',
+  950: '#0f1c17',
 } as const
 
 const steel = {
@@ -59,6 +88,8 @@ const config: Config = {
         cyan: gold,
         violet: steel,
         purple: steel,
+        emerald: forest,
+        green: forest,
 
         // Brand colors - Theme-aware palette
         /** @deprecated legacy classnames — now maps to heritage gold */

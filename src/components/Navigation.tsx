@@ -9,7 +9,7 @@ import {
   Car,
   Code,
   Building2,
-  Sparkles,
+  HelpCircle,
   MessageSquare,
   User,
   Home,
@@ -38,7 +38,6 @@ import { cn } from '@/lib/utils'
 import {
   navControlButtonClass,
   navTextLinkClass,
-  navStormiButtonClass,
   navDropdownPanelClass,
   navDropdownItemClass,
   navDropdownItemBorderClass,
@@ -79,8 +78,6 @@ interface NavigationProps {
   /** @deprecated Use sessionUserId; kept for backwards compatibility. */
   mvrWalletAddress?: string | null
   sessionUserId?: string | null
-  tHasUnread?: boolean
-  onTClick?: () => void
   /**
    * Guests' "Browse jobs" button calls this instead of navigating to a route.
    * page.tsx flips a `showGuidedMode` flag and renders `SimpleModeShell` for
@@ -441,8 +438,6 @@ export default function Navigation({
   onNavigate,
   mvrWalletAddress,
   sessionUserId,
-  tHasUnread = false,
-  onTClick,
   onBrowseGuided,
 }: NavigationProps) {
   const mvrIdentity = sessionUserId ?? mvrWalletAddress ?? null
@@ -714,30 +709,20 @@ export default function Navigation({
                     </button>
                   )}
 
-                  {onTClick && (
+                  {/* Help — `ask-ai` only routes inside CandidateShell, so it's
+                      candidate-only rather than a dead-end for other roles. */}
+                  {userRole === 'candidate' && (
                     <button
                       type='button'
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        onTClick?.()
-                      }}
+                      onClick={() => goToPage('ask-ai')}
                       className={cn(
-                        'hidden md:flex relative group items-center justify-center cursor-pointer',
-                        navStormiButtonClass(isDark),
-                        tHasUnread && 'animate-pulse',
+                        'hidden sm:flex h-9 items-center gap-1.5 px-3 text-sm font-medium cursor-pointer',
+                        navControlButtonClass(isDark),
                       )}
-                      aria-label='Open AI assistant'
+                      title='Help — ask a question or find out what to do next'
                     >
-                      <span className='text-sm font-bold tracking-wide'>Assistant</span>
-                      {tHasUnread && (
-                        <span
-                          className={cn(
-                            'absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border-2 shadow-lg bg-red-500',
-                            isDark ? 'border-gray-950' : 'border-white',
-                          )}
-                        />
-                      )}
+                      <HelpCircle className='h-4 w-4 shrink-0' aria-hidden />
+                      Help
                     </button>
                   )}
 
@@ -827,21 +812,14 @@ export default function Navigation({
                     </div>
                   )}
 
-                  {onTClick && (
+                  {userRole === 'candidate' && (
                     <button
                       type='button'
-                      onClick={() => {
-                        onTClick()
-                        setIsMenuOpen(false)
-                      }}
-                      className={cn(
-                        'w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
-                        navStormiButtonClass(isDark),
-                      )}
+                      onClick={() => goToPage('ask-ai')}
+                      className={cn('w-full flex items-center gap-3 px-3 py-2.5', navTextLinkClass(isDark))}
                     >
-                      <Sparkles className='w-4 h-4' />
-                      <span>{tHasUnread ? 'Assistant has updates' : 'Chat with assistant'}</span>
-                      {tHasUnread && <span className={'w-2 h-2 rounded-full animate-pulse bg-red-500'} />}
+                      <HelpCircle className='w-4 h-4' />
+                      Help
                     </button>
                   )}
                 </>

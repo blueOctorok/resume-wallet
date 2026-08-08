@@ -4,6 +4,33 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Success green is now heritage forest — emerald was off-palette** (2026-08-07)
+
+"Done" confirmations looked fine in dark mode and slightly medical in light mode. Root cause: **`emerald` was the one scale that never got heritage-ified.** `teal`/`cyan` → gold and `violet`/`purple` → steel were remapped in `tailwind.config.ts`, but every success state stayed raw Tailwind emerald.
+
+Why it split by mode:
+
+| Mode | What rendered | Why |
+|---|---|---|
+| Light | `bg-emerald-100` (#d1fae5) + `text-emerald-800` on cream (#fef5ed) beside gold chips (#f4ecd9) | Cream/champagne are **warm** (hue ~35°), mint is **cool** (~155°). Two pastels at the same lightness with opposite temperature reads muddy. |
+| Dark | `bg-emerald-500/15` over ink navy → resolves to ~**#0b2c30** | The substrate neutralizes nearly all the hue, so it reads as a quiet tint. Dark mode was never broken. |
+
+- **New `forest` scale + `emerald: forest`, `green: forest` remap** — same one-file pattern as gold/steel, so ~40 files of `emerald-*` / `green-*` classes got corrected without edits. Bottle/forest green (navy + gold + deep green is a classic heraldic pairing); steps **50–200 are deliberately low-chroma sage** so a filled chip reads as soft neutral on cream, 600–800 carry text, 300–400 stay luminous on ink navy.
+- **Gold was explicitly rejected for "done."** In-progress is already gold and waiting/attention is amber — a third warm state would kill the Build board's at-a-glance scannability.
+- Build board `done` chip is now **outlined** (`ring-1 ring-emerald-200`) matching the `in-progress` chip, since a grid of filled chips is where an off-neutral tint reads loudest.
+- **Raw hex values that bypass Tailwind updated to match:** `StormPdfChrome.tsx` (`emerald`/`emeraldBg`), `driver-resume-packet-pdf.ts` (`greenDot`), `block-registry.ts` (`driver-cdl-credentials.glowColor`). Verified compiled CSS contains the forest values and **zero** remaining `#d1fae5` / `#ecfdf5` / `#10b981` / `#065f46`.
+
+## **Help button in nav — the AI was unreachable** (2026-08-07)
+
+The Anthropic-backed chat (`StormiChatPanel`) and its page (`CandidateAskAiPage`, `ask-ai`) were fully built but **had no entry point**. Root cause: the nav's "Assistant" button was gated on an `onTClick` prop that `page.tsx` never passed, and the only other path was `HubExploreLinks` → `HubSidebar` → the `StormiJourneyGuide` drawer, which opens **only via Cmd+/** — both the nav chip and hub right rail that used to trigger it were deleted in earlier IA passes. A driver could not reach the AI at all without a hidden keyboard shortcut.
+
+- **Nav Help button** (desktop `sm+` + mobile menu), `userRole === 'candidate'` only — `ask-ai` only routes inside `CandidateShell`, so other roles get no button instead of a dead-end route. Self-wired via the existing `goToPage` helper, so **no new prop plumbing through `page.tsx`**.
+- **Deliberately unbranded.** No assistant name, persona, or robot avatar: neutral `HelpCircle` in the same `navControlButtonClass` chrome as Refresh/Options. The promise is "get unstuck", not "meet our AI". Page retitled **Help** with a `LifeBuoy` icon and DQ-framed description ("what a form means, what a carrier needs, what to do next").
+- Back button went to `'hub'`, which isn't in `CANDIDATE_SHELL_PAGES` and bounced through the unknown-page redirect. Now `navigateToHub()` with a "Back to Career Card" label.
+- Removed dead `onTClick` / `tHasUnread` props + the now-unused `navStormiButtonClass` import.
+
+**Open question flagged, not yet done:** DQ answers are regulation-adjacent, so `ava-context.ts` should keep help replies descriptive ("carriers generally require…") rather than advisory ("you don't need one") — same honesty posture as the attestation guardrails.
+
 ## **Drivers-only home: Career Card first, Build = DQ board** (2026-08-07)
 
 Product focus is drivers. Login lands on the **Career Card** showroom; **Build** is an explicit `build` page (nav toggle + header/footer flip from the card).

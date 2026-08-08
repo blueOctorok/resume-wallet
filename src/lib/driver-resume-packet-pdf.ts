@@ -41,7 +41,7 @@ export async function generateDriverResumePacketPDF(
   const textMid: [number, number, number] = [87, 83, 78]
   const textMuted: [number, number, number] = [120, 113, 108]
   const linkAmber: [number, number, number] = [146, 64, 14]
-  const greenDot: [number, number, number] = [16, 185, 129]
+  const greenDot: [number, number, number] = [74, 124, 98]
   const rule: [number, number, number] = [214, 211, 209]
 
   const qrTop = await qrPngDataUrl(packet.verifyUrl, 128)

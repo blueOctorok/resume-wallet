@@ -57,7 +57,9 @@ const DQ_ROUTES: Partial<Record<DqItemId, PageType>> = {
 }
 
 const CHIP_CLASSES: Record<TileStatus, string> = {
-  done: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
+  // Outlined like `in-progress` rather than a solid fill — a grid of filled
+  // chips is the spot where an off-neutral tint reads loudest against cream.
+  done: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/25',
   'in-progress':
     'bg-teal-50 text-teal-800 ring-1 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/25',
   waiting: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200',
