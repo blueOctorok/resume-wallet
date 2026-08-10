@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **P3.8 — Hosted Midnight proof server (Fly)** (2026-08-10)
+
+Unblocks prod Midnight proves without Key’s crypto signature. JWT remains the default backend until a hosted smoke passes.
+
+| Piece | Detail |
+|---|---|
+| `midnight/proof-server/` | Dockerfile (official `proof-server:8.0.3` + nginx Basic-auth), `fly.toml`, README |
+| `npm run midnight:proof-server:deploy` | Creates Fly app, sets secrets, deploys |
+| `MIDNIGHT_ENV.md` | Cutover checklist — set Fly URL on Vercel; flip `ATTESTATION_BACKEND=midnight` only after smoke |
+| `midnight/runtime` auth URL rewrite | Strip `user:pass@` → `Authorization` (undici rejects credentialed URLs) |
+| Preferred env shape | `MIDNIGHT_PROOF_SERVER_URL` (origin) + `USER`/`PASSWORD` — legacy URL form still accepted; unit tests in `proof-server-url.test.ts` |
+
+**Human step:** `fly auth login` then `npm run midnight:proof-server:deploy`. Does **not** enable “Proven on Midnight” marketing (still P3.4-B / Key).
+
+**Scale (same day):** First deploy hit personal-org caps (`shared-cpu-2x` / 4 GB). After billing unlock, `fly.toml` bumped to **`performance-2x` / 8 GB** to match local Docker prover RAM.
+
+**Hosted smoke (same day):** Fly `/health` OK; midnight-js `/check`+`/prove` reached nginx (node-fetch / cross-fetch accepts `user:pass@host`), but the wallet SDK’s Effect/`undici` path rejected credentialed URLs as `Transport error`. Fix: `proof-server-url.ts` strips userinfo → clean origin + `Authorization` (fetch shim + `httpClientProofProvider` headers). Auth front door is **nginx** (replaced fragile Python proxy).
+
+---
+
 ## **Security: Next.js 15.5.7 → 15.5.23** (2026-08-10)
 
 Patch-level bump on the 15.5 Maintenance LTS branch to pick up the [July 2026 security release](https://nextjs.org/blog/july-2026-security-release) (nine CVEs fixed in 15.5.21: SSRF in rewrites/Server Actions, middleware bypass, Server Action DoS, cache confusion, image-optimizer DoS). No API changes; production build verified (149 routes).

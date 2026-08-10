@@ -1,0 +1,48 @@
+# Provven Midnight proof server — Fly.io
+#
+# Deploy (from repo root):
+#   npm run midnight:proof-server:deploy
+#
+# Requires: flyctl logged in, app created once (`fly apps create …`).
+# Secrets: MIDNIGHT_PROOF_SERVER_USER, MIDNIGHT_PROOF_SERVER_PASSWORD
+
+app = "provven-midnight-proof"
+primary_region = "iad"
+
+# Fly caps stop timeout at 5m on this org tier.
+kill_signal = "SIGTERM"
+kill_timeout = "300s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+# One machine only — personal orgs + cost; HA not needed for a single prover.
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 8
+    soft_limit = 4
+
+  [http_service.http_options]
+    # Long-lived prove HTTP calls from the wallet SDK
+    idle_timeout = 600
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "120s"
+    method = "GET"
+    path = "/health"
+
+# Billing unlocked larger guests — match local Docker 8GB prover target.
+[[vm]]
+  size = "performance-2x"
+  memory = "8192"

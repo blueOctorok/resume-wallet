@@ -17,6 +17,8 @@
     "midnight:proof-server:down": "docker compose -f midnight/docker-compose.yml down",
     "midnight:proof-server:logs": "docker compose -f midnight/docker-compose.yml logs -f proof-server",
     "midnight:proof-server:health": "bash scripts/midnight-proof-server-health.sh",
+    "midnight:proof-server:deploy": "bash scripts/midnight-proof-server-deploy.sh",
+    "midnight:proof-server:build": "docker build -t provven-midnight-proof:local midnight/proof-server",
     "midnight:compile": "compact compile compact/mvr-clean-36/mvr-clean-36.compact midnight/runtime/managed/mvr-clean-36 && compact compile compact/cdl-class-a/cdl-class-a.compact midnight/runtime/managed/cdl-class-a && compact compile compact/previous-employer-verified/previous-employer-verified.compact midnight/runtime/managed/previous-employer-verified",
     "midnight:supersede-pace-tests": "npx tsx scripts/supersede-pace-test-attestations.ts",
     "midnight:wallet:status": "NODE_OPTIONS='--max-old-space-size=16384' npm run wallet:status --prefix midnight/runtime",

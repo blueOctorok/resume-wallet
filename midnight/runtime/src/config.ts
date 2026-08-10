@@ -7,6 +7,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  installProofServerAuthFetch,
+  resolveProofServerEndpoint,
+} from './proof-server-url.js'
+
 const runtimeDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(runtimeDir, '../../..')
 
@@ -22,10 +27,21 @@ const rawIndexerWs =
   process.env.MIDNIGHT_INDEXER_WS_URL?.trim() ||
   'wss://indexer.preprod.midnight.network/api/v4/graphql/ws'
 
+const proofServerEndpoint = resolveProofServerEndpoint({
+  url: process.env.MIDNIGHT_PROOF_SERVER_URL?.trim() || 'http://127.0.0.1:6300',
+  user: process.env.MIDNIGHT_PROOF_SERVER_USER?.trim(),
+  password: process.env.MIDNIGHT_PROOF_SERVER_PASSWORD?.trim(),
+})
+// undici rejects userinfo in URLs — install Authorization injection before
+// WalletFacade / Effect HttpClient touch the proof server.
+installProofServerAuthFetch(proofServerEndpoint)
+
 export const MIDNIGHT_CONFIG = {
   network: process.env.MIDNIGHT_NETWORK?.trim() || 'preprod',
-  proofServer:
-    process.env.MIDNIGHT_PROOF_SERVER_URL?.trim() || 'http://127.0.0.1:6300',
+  /** Clean origin (no user:pass) — safe for undici + cross-fetch. */
+  proofServer: proofServerEndpoint.url,
+  /** Basic auth when password set (separate env or legacy user:pass@host URL). */
+  proofServerAuthorization: proofServerEndpoint.authorization,
   nodeRpc:
     process.env.MIDNIGHT_NODE_RPC_URL?.trim() ||
     'https://rpc.preprod.midnight.network',

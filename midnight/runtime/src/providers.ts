@@ -66,6 +66,9 @@ export async function createMidnightProviders(
     proofProvider: httpClientProofProvider(
       MIDNIGHT_CONFIG.proofServer,
       zkConfigProvider,
+      MIDNIGHT_CONFIG.proofServerAuthorization
+        ? { headers: { Authorization: MIDNIGHT_CONFIG.proofServerAuthorization } }
+        : undefined,
     ),
     walletProvider,
     midnightProvider: walletProvider,

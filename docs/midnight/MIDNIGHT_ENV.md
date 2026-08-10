@@ -9,7 +9,9 @@ Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midni
 | Variable | Required | Example (Preprod) | Notes |
 |---|---|---|---|
 | `MIDNIGHT_NETWORK` | yes (P3.3+) | `preprod` | `preprod` for testnet work; mainnet later |
-| `MIDNIGHT_PROOF_SERVER_URL` | yes | `http://127.0.0.1:6300` | Local Docker proof server (`npm run midnight:proof-server:up`) |
+| `MIDNIGHT_PROOF_SERVER_URL` | yes | `http://127.0.0.1:6300` or `https://….fly.dev` | Local Docker **or** hosted Fly origin (no userinfo — see auth rows) |
+| `MIDNIGHT_PROOF_SERVER_USER` | hosted | `prove` | Basic-auth user for Fly nginx |
+| `MIDNIGHT_PROOF_SERVER_PASSWORD` | hosted | (secret) | Basic-auth password — prefer this over `user:pass@` in the URL (undici rejects credentialed URLs) |
 | `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.preprod.midnight.network` | Public Preprod node RPC |
 | `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v4/graphql` | GraphQL indexer v4 (Preprod matrix) |
 | `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | Real-time indexer events |
@@ -45,15 +47,37 @@ npm run midnight:proof-server:down
 
 Default image: `midnightntwrk/proof-server:8.0.3` on port `6300` (do not remap container port — remap host port in `midnight/docker-compose.yml` if 6300 is taken).
 
-### Production (later)
+### Production — hosted proof server (Fly)
 
 | Surface | Where |
 |---|---|
-| Proof server | Managed Docker on Cloud Run / Render / Fly (same image) |
-| Wallet mnemonic | Platform secret (`MIDNIGHT_WALLET_MNEMONIC`) |
-| RPC / indexer | Public Preprod endpoints or Blockfrost with `project_id` |
+| Proof server | **Fly.io** app `provven-midnight-proof` (`midnight/proof-server/`) — always-on 8 GB, Basic auth |
+| Wallet mnemonic | Vercel secret `MIDNIGHT_WALLET_MNEMONIC` (server-only) |
+| RPC / indexer | Public Preprod (or mainnet when ready) |
 
-Vercel hosts the Next.js app only; proof generation stays in the sidecar container (proof server does not open outbound connections — wallet SDK in the app talks to it over HTTP).
+Vercel hosts the Next.js app only. The wallet SDK calls the proof server over HTTPS; the proof server does not open outbound connections.
+
+```bash
+npm run midnight:proof-server:deploy   # flyctl login required (human)
+npm run midnight:proof-server:health   # with MIDNIGHT_PROOF_SERVER_URL set to the Fly URL
+```
+
+**Cutover checklist (JWT stays default until step 3 passes):**
+
+1. `fly auth login` → `npm run midnight:proof-server:deploy` — save the printed Basic-auth password.
+2. Set Vercel secrets (preferred — password not in the URL):  
+   `MIDNIGHT_PROOF_SERVER_URL=https://provven-midnight-proof.fly.dev`  
+   `MIDNIGHT_PROOF_SERVER_USER=prove`  
+   `MIDNIGHT_PROOF_SERVER_PASSWORD=<from deploy>`  
+   (Legacy `https://prove:pass@host` still works; runtime strips userinfo.)
+3. Smoke from a machine with the wallet secrets:  
+   `ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --user <uuid>`
+4. Only after a green smoke: set Vercel `ATTESTATION_BACKEND=midnight` and redeploy.  
+   Until then leave `ATTESTATION_BACKEND` **unset** (signed-JWT).
+5. Mainnet NIGHT sizing: re-run `midnight:cost-benchmark` on mainnet when ready — Preprod fees are not usable for capacity planning.
+6. **Do not wait on Key** for steps 1–4. Key unlocks 🟢 / “Proven on Midnight” copy (P3.4-B), not hosting.
+
+Details: `midnight/proof-server/README.md`.
 
 ## Cursor IDE — Compact syntax + Midnight MCP
 
