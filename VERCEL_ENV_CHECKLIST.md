@@ -95,7 +95,12 @@ Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop a
 4. **Supabase → Authentication → URL Configuration** (critical — magic-link/Google sign-in break otherwise):
    - **Site URL** → `https://provven.com`
    - **Redirect URLs** allow-list → add `https://provven.com/**` (keep `http://localhost:3000/**` for dev). Remove old `zknight.io` / `stormchain.ai` entries once cut over.
-5. **Pingram → Domains → verify `verify.provven.com`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME`. Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
+5. **Pingram → Domains → verify `verify.provven.com`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set:
+   - `PINGRAM_FROM_EMAIL` = `provven@verify.provven.com`
+   - `PINGRAM_FROM_NAME` = `Provven`
+   If these still say `zknight@verify.zknight.io` / `ZKnight`, **every transactional email will still show the old brand** even though app code defaults to Provven (env overrides the default).
+   Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
+   **Supabase Auth emails are a separate path** — magic-link / confirm / reset subjects and the From header live in **Supabase → Authentication → Email Templates** + **SMTP settings**, not in this repo. Update From to `Provven <provven@verify.provven.com>` and replace any "ZKnight" / "zknight.io" copy in those templates.
 6. **Pingram SMS / A2P 10DLC (Outreach Text):** On the paid plan, start **A2P 10DLC** for brand **Provven** (legal name, EIN, address, website `https://provven.com`, privacy/terms, sample messages matching invite SMS + STOP). No Namecheap DNS for SMS. Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
 7. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://provven.com/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
 8. **Keep zknight.io / stormchain.ai (optional):** leave them on the Vercel project as domains that **redirect to** provven.com so old links/emails don't 404.

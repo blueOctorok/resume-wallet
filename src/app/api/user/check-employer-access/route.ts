@@ -187,7 +187,7 @@ export async function POST(request: Request) {
     // No access found
     return NextResponse.json({
       hasAccess: false,
-      message: 'Employer access requires an invitation. Contact your company admin or support@stormchain.com',
+      message: 'Employer access requires an invitation. Contact your company admin or support@provven.com',
     })
 
   } catch (error) {

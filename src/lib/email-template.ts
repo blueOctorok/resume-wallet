@@ -1,11 +1,11 @@
 /**
- * Shared Storm email template builder.
+ * Shared Provven email template builder.
  *
  * Every outgoing email uses this function so they all have the same:
- *   - Logo badge (Storm, teal pill)
- *   - Teal gradient header band with title + subtitle
+ *   - Logo badge (Provven, gold pill)
+ *   - Gold gradient header band with title + subtitle
  *   - White card body with consistent typography
- *   - Teal CTA button
+ *   - Gold CTA button
  *   - Consistent footer
  *
  * Callers only supply the content — never the chrome.
@@ -16,7 +16,7 @@ export interface EmailTemplateOptions {
   preheader?: string
   /** Bold text in the teal gradient header */
   headerTitle: string
-  /** Smaller text above the title (e.g. company name, "Storm Notification") */
+  /** Smaller text above the title (e.g. company name, "Provven Notification") */
   headerEyebrow?: string
   /** First line of body (e.g. "Hi Leon,") */
   greeting?: string

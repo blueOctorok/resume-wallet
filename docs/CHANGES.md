@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Brand leftovers — emails still saying ZKnight** (2026-08-10)
+
+Repo audit after reports that outbound mail still showed ZKnight / zknight.io.
+
+**Code status:** App email helpers already brand correctly — `email-template.ts` badge/footer say Provven; `messaging.ts` defaults are `provven@verify.provven.com` / `Provven`; invite/SMS copy uses Provven. Grep of `src/**/*.{ts,tsx}` found **zero** remaining `zknight` / `ZKnight` strings. Two API error strings still said `support@stormchain.com` → updated to `support@provven.com`.
+
+**Why emails can still say ZKnight:** production env / Auth SMTP override the code defaults.
+
+| Source | What to check |
+|---|---|
+| Vercel env | `PINGRAM_FROM_EMAIL` / `PINGRAM_FROM_NAME` must be `provven@verify.provven.com` / `Provven` (env wins over code defaults) |
+| Vercel env | `NEXT_PUBLIC_APP_URL=https://provven.com` (CTA links) |
+| Pingram | Domain `verify.provven.com` verified; old `verify.zknight.io` can stay as redirect only |
+| **Supabase Auth** | Site URL + SMTP From + **Email Templates** — magic-link / confirm / reset are **not** rendered by this repo. Update From to `Provven <provven@verify.provven.com>` and scrub ZKnight copy in those templates |
+
+Ops notes added under step 5 of `VERCEL_ENV_CHECKLIST.md`. Local `.env.local` already has Provven Pingram from-values.
+
+Left intentionally as code identifiers (not user-facing brand): `StormChainWordmark`, `isStormChain`, `stormchain_invite_token`, `stormchain-theme`, file names, job source enum.
+
 ## **Career card credential pass — document, not dashboard** (2026-08-07)
 
 Design review verdict: the heritage shell was impressive but the contents read like app UI. Fix direction: **fancy the way a passport is fancy** — typography, provenance, seals — not motion. Changes:

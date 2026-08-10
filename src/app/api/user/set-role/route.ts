@@ -234,7 +234,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error: 'Employer access requires an invitation',
-            details: 'Contact your company admin or support@stormchain.com to get access.',
+            details: 'Contact your company admin or support@provven.com to get access.',
             code: 'NO_EMPLOYER_ACCESS',
           },
           { status: 403 }
