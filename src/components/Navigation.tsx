@@ -231,7 +231,7 @@ function NavOptionsMenu({
           role='menu'
           aria-label='Options'
           className={cn(
-            'absolute right-0 top-full z-[200] mt-2 w-[min(100vw-2rem,16.5rem)] overflow-hidden rounded-xl border shadow-xl ring-1',
+            'absolute right-0 top-full z-[200] mt-2 w-[min(100vw-2rem,16.5rem)] overflow-hidden rounded-xl border shadow-xl ring-1 animate-menu-pop origin-top-right',
             isDark
               ? 'border-gray-600/80 bg-gray-950 ring-white/[0.04]'
               : 'border-stone-300/90 bg-white ring-stone-900/[0.04]',
@@ -701,7 +701,7 @@ export default function Navigation({
 
           {/* Mobile menu — stacked, traditional */}
           {isMenuOpen && (
-            <div className={cn('sm:hidden border-t py-3 space-y-1', isDark ? 'border-white/[0.08]' : 'border-stone-300/60')}>
+            <div className={cn('sm:hidden border-t py-3 space-y-1 animate-menu-drop', isDark ? 'border-white/[0.08]' : 'border-stone-300/60')}>
               {!isAuthenticated && (
                 <>
                   <button type='button' onClick={() => handleNavigation('home')} className={cn('w-full flex items-center gap-3 px-3 py-2.5', navTextLinkClass(isDark))}>

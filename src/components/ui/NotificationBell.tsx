@@ -138,7 +138,7 @@ export default function NotificationBell({
     <div
       ref={hideTrigger ? dropdownRef : undefined}
       className={cn(
-        'absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl z-[200]',
+        'absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-xl border shadow-2xl z-[200] animate-menu-pop origin-top-right',
         isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200',
       )}
     >

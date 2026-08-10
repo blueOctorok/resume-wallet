@@ -100,7 +100,7 @@ export default function Modal({
     >
       {/* Backdrop — depth + cool tint (reads premium vs flat gray) */}
       <div
-        className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/65 to-teal-950/40 backdrop-blur-md dark:from-black/80 dark:via-slate-950/70 dark:to-teal-950/30"
+        className="absolute inset-0 animate-backdrop-in bg-gradient-to-b from-slate-950/75 via-slate-950/65 to-teal-950/40 backdrop-blur-md dark:from-black/80 dark:via-slate-950/70 dark:to-teal-950/30"
         onClick={disableBackdropClose ? undefined : onClose}
         aria-hidden="true"
       />
@@ -111,7 +111,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full max-h-[90vh] overflow-y-auto overflow-x-hidden scrollbar-none',
+          'relative w-full max-h-[90vh] overflow-y-auto overflow-x-hidden scrollbar-none animate-modal-in',
           panelShape === 'block'
             ? cn(
                 'rounded-xl border shadow-xl ring-1 ring-teal-500/20 dark:ring-teal-500/25',

@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Motion kit — menus, modals, and page switches no longer snap** (2026-08-10)
+
+App-wide entrance transitions; previously every panel mounted with zero motion. CSS-only (no animation library), all under ~200ms, all disabled under `prefers-reduced-motion`.
+
+- **`globals.css` motion kit** — five shared keyframes/utilities: `animate-menu-pop` (dropdowns; pair with `origin-top-left/right`), `animate-menu-drop` (mobile menu), `animate-modal-in` + `animate-backdrop-in` (dialogs), `animate-view-fade` (page switches). Plus `html { scroll-behavior: smooth }` for anchor/programmatic scrolls (reduced-motion opts out).
+- **`Modal.tsx`** — backdrop fades in, panel rises + scales in. One edit upgrades every dialog in the app (block picker, share, previews…).
+- **Dropdowns** — `navDropdownPanelClass` (hub dropdown), the Options menu, and `NotificationBell` panel all pop in from their anchor corner. Mobile menu slides down.
+- **`CandidateShell` view transitions** — the route branch chain moved into an inner `renderPage()` wrapped once by `<div key={currentPage ?? 'career-card'} className='animate-view-fade'>`. Page components remount on navigation anyway, so the keyed wrapper re-runs the mount animation on every page switch — a route transition with no key hacks on the shell itself (shell state/hub fetch untouched). `null` and `'career-card'` share a key so home ↔ career-card doesn't double-animate.
+- **Entrances only, by design** — these panels are conditionally rendered; CSS can't animate a node React has already removed. Exit animations would need mount/unmount state management for marginal payoff.
+
 ## **Nav: drop refresh; Light/Dark toggle beside Options** (2026-08-10)
 
 - Removed the hub refresh control (unreliable / unused by drivers).

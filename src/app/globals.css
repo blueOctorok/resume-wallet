@@ -645,6 +645,49 @@ button:disabled,
   animation: card-entrance 240ms ease-out;
 }
 
+/* ── Motion kit — shared entrance animations ─────────────────────────────
+   Entrances only: these elements are conditionally rendered, and CSS can't
+   animate an exit on a node React has already removed. Durations stay under
+   ~200ms so the UI feels fluid, never laggy. All no-op under reduced motion. */
+
+/* Dropdown/popover panels (Options, hub dropdown, notifications) */
+@keyframes menu-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-menu-pop {
+  animation: menu-pop 140ms ease-out;
+  /* pair with origin-top-left / origin-top-right at the call site */
+}
+
+/* Mobile menu — slides down from under the bar */
+@keyframes menu-drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-menu-drop { animation: menu-drop 180ms ease-out; }
+
+/* Modal panel + backdrop */
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-modal-in { animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-backdrop-in { animation: backdrop-in 180ms ease-out; }
+
+/* Page/view switch — page components remount on navigation, so a mount
+   animation doubles as a route transition with no key/remount tricks. */
+@keyframes view-fade {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-view-fade { animation: view-fade 200ms ease-out; }
+
 /* One-shot gold sheen across the verified-facts strip on first render.
    Base opacity 0 so the overlay is invisible whenever the animation doesn't
    run (reduced motion) or after it finishes. */
@@ -663,12 +706,25 @@ button:disabled,
   .animate-card-settle,
   .animate-ghost-pulse,
   .animate-card-entrance,
-  .facts-strip-sheen {
+  .facts-strip-sheen,
+  .animate-menu-pop,
+  .animate-menu-drop,
+  .animate-modal-in,
+  .animate-backdrop-in,
+  .animate-view-fade {
     animation: none !important;
   }
   .card-flip-inner {
     transition: none !important;
   }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* In-page anchor scrolling glides instead of jumping (reduced-motion opts out above) */
+html {
+  scroll-behavior: smooth;
 }
 
 /* Career card multi-page flip (Apply / employer / public) */

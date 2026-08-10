@@ -41,7 +41,7 @@ export function navStormiButtonClass(isDark: boolean) {
 /** Dropdown panel anchored under its trigger (traditional left-aligned menu). */
 export function navDropdownPanelClass(isDark: boolean) {
   return cn(
-    'absolute top-full left-0 min-w-[220px] mt-2 rounded-xl shadow-xl overflow-hidden z-[200] border',
+    'absolute top-full left-0 min-w-[220px] mt-2 rounded-xl shadow-xl overflow-hidden z-[200] border animate-menu-pop origin-top-left',
     isDark
       ? 'bg-gray-950 border-gray-600/80 ring-1 ring-white/[0.04]'
       : 'bg-white border-gray-200/90 ring-1 ring-gray-900/[0.04]',

@@ -11,7 +11,10 @@ import CandidateHub from '@/components/hub/CandidateHub'
 import CandidateInboxPage from '@/components/hub/CandidateInboxPage'
 import CandidateAskAiPage from '@/components/hub/CandidateAskAiPage'
 import { useAuthStore, useUIStore } from '@/stores'
-import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
+import {
+  useHubBlocksStore,
+  useNeedsOnboarding,
+} from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
 import HubOnboardingForm from '@/components/hub/HubOnboardingForm'
 
@@ -41,64 +44,123 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'ask-ai',
 ]
 
-const ResumeBuilder = dynamic(
-  () => import('@/components/ResumeBuilder'),
-  { ssr: false, loading: () => <LoadingScreen message='Loading resume builder...' fullScreen={false} /> }
-)
+const ResumeBuilder = dynamic(() => import('@/components/ResumeBuilder'), {
+  ssr: false,
+  loading: () => (
+    <LoadingScreen message='Loading resume builder...' fullScreen={false} />
+  ),
+})
 
 const DeveloperResumeBlock = dynamic(
   () => import('@/components/blocks/DeveloperResumeBlock'),
-  { ssr: false, loading: () => <LoadingScreen message='Loading developer resume…' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading developer resume…' fullScreen={false} />
+    ),
+  },
 )
 
 const GeneralResumeBlock = dynamic(
   () => import('@/components/blocks/GeneralResumeBlock'),
-  { ssr: false, loading: () => <LoadingScreen message='Loading resume builder…' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading resume builder…' fullScreen={false} />
+    ),
+  },
 )
 
 const StormResumeBlock = dynamic(
   () => import('@/components/blocks/StormResumeBlock'),
-  { ssr: false, loading: () => <LoadingScreen message='Loading STORM Resume…' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading STORM Resume…' fullScreen={false} />
+    ),
+  },
 )
 
 const EmploymentVerificationBlock = dynamic(
   () => import('@/components/blocks/EmploymentVerificationBlock'),
-  { ssr: false, loading: () => <LoadingScreen message='Loading…' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message='Loading…' fullScreen={false} />,
+  },
 )
 
 const MyApplications = dynamic(
   () => import('@/components/MyApplications').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading applications...' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading applications...' fullScreen={false} />
+    ),
+  },
 )
 
 const CandidateHuntDesk = dynamic(
   () => import('@/components/CandidateHuntDesk').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Opening Hunt Desk...' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Opening Hunt Desk...' fullScreen={false} />
+    ),
+  },
 )
 
 const MvrOrderForm = dynamic(
   () => import('@/components/MvrOrderForm').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading MVR order form...' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading MVR order form...' fullScreen={false} />
+    ),
+  },
 )
 
 const PspOrderForm = dynamic(
   () => import('@/components/PspOrderForm').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading PSP order form...' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading PSP order form...' fullScreen={false} />
+    ),
+  },
 )
 
 const ScreeningConsentBlock = dynamic(
-  () => import('@/components/blocks/ScreeningConsentBlock').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading screening consent…' fullScreen={false} /> }
+  () =>
+    import('@/components/blocks/ScreeningConsentBlock').then(
+      (mod) => mod.default,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading screening consent…' fullScreen={false} />
+    ),
+  },
 )
 
 const PortfolioPage = dynamic(
-  () => import('@/components/developer/PortfolioPage').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading portfolio...' fullScreen={false} /> }
+  () =>
+    import('@/components/developer/PortfolioPage').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading portfolio...' fullScreen={false} />
+    ),
+  },
 )
 
 const GitHubPage = dynamic(
   () => import('@/components/developer/GitHubPage').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading GitHub...' fullScreen={false} /> }
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading GitHub...' fullScreen={false} />
+    ),
+  },
 )
 
 /**
@@ -112,8 +174,14 @@ const GitHubPage = dynamic(
  */
 export default function CandidateShell() {
   const { user, sessionUserId } = useAuthStore()
-  const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
-    useUIStore()
+  const {
+    currentPage,
+    setCurrentPage,
+    navigateToHub,
+    initialThreadId,
+    editingResumeId,
+    setEditingResumeId,
+  } = useUIStore()
   const needsOnboarding = useNeedsOnboarding()
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
 
@@ -153,154 +221,174 @@ export default function CandidateShell() {
     return null
   }
 
-  if (currentPage === 'profile-setup') {
-    return (
-      <ProfileSetup
-        role='candidate'
-        sessionUserId={sessionUserId ?? ''}
-        onComplete={goBack}
-      />
-    )
-  }
+  /*
+   View-switch transition: the keyed wrapper remounts when currentPage changes,
+   which re-runs the mount animation — a route transition with no animation
+   library. `?? 'career-card'` keeps null (home) and 'career-card' on the SAME
+   key so toggling between them doesn't double-remount the Career Card.
+  */
+  return (
+    <div key={currentPage ?? 'career-card'} className='animate-view-fade'>
+      {renderPage()}
+    </div>
+  )
 
-  if (currentPage === 'dotapp') {
-    return (
-      <DotApplicationFlow
-        sessionUserId={sessionUserId ?? ''}
-        userAddress={sessionUserId}
-        onBack={goBack}
-      />
-    )
-  }
+  function renderPage() {
+    if (currentPage === 'profile-setup') {
+      return (
+        <ProfileSetup
+          role='candidate'
+          sessionUserId={sessionUserId ?? ''}
+          onComplete={goBack}
+        />
+      )
+    }
 
-  if (currentPage === 'resume') {
-    return (
-      <div className='max-w-4xl mx-auto space-y-6'>
-        <ResumeBuilder
+    if (currentPage === 'dotapp') {
+      return (
+        <DotApplicationFlow
+          sessionUserId={sessionUserId ?? ''}
+          userAddress={sessionUserId}
+          onBack={goBack}
+        />
+      )
+    }
+
+    if (currentPage === 'resume') {
+      return (
+        <div className='max-w-4xl mx-auto space-y-6'>
+          <ResumeBuilder
+            user={user}
+            onBack={goBack}
+            existingResumeId={editingResumeId}
+            onSave={() => goBack()}
+          />
+        </div>
+      )
+    }
+
+    if (currentPage === 'storm-resume') {
+      return <StormResumeBlock user={user} onBack={goBack} />
+    }
+
+    if (currentPage === 'developer-resume') {
+      return (
+        <DeveloperResumeBlock
           user={user}
           onBack={goBack}
           existingResumeId={editingResumeId}
-          onSave={() => goBack()}
+          onSave={goBack}
         />
-      </div>
-    )
-  }
+      )
+    }
 
-  if (currentPage === 'storm-resume') {
-    return <StormResumeBlock user={user} onBack={goBack} />
-  }
+    if (currentPage === 'general-resume') {
+      return (
+        <GeneralResumeBlock
+          user={user}
+          onBack={goBack}
+          existingResumeId={editingResumeId}
+          onSave={goBack}
+        />
+      )
+    }
 
-  if (currentPage === 'developer-resume') {
-    return (
-      <DeveloperResumeBlock
-        user={user}
-        onBack={goBack}
-        existingResumeId={editingResumeId}
-        onSave={goBack}
-      />
-    )
-  }
+    if (currentPage === 'employment-verification') {
+      return <EmploymentVerificationBlock />
+    }
 
-  if (currentPage === 'general-resume') {
-    return (
-      <GeneralResumeBlock
-        user={user}
-        onBack={goBack}
-        existingResumeId={editingResumeId}
-        onSave={goBack}
-      />
-    )
-  }
+    if (currentPage === 'mvr') {
+      return (
+        <div className='max-w-2xl mx-auto'>
+          <MvrOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
+        </div>
+      )
+    }
 
-  if (currentPage === 'employment-verification') {
-    return <EmploymentVerificationBlock />
-  }
+    if (currentPage === 'psp') {
+      return (
+        <div className='max-w-2xl mx-auto'>
+          <PspOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
+        </div>
+      )
+    }
 
-  if (currentPage === 'mvr') {
-    return (
-      <div className='max-w-2xl mx-auto'>
-        <MvrOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
-      </div>
-    )
-  }
+    if (currentPage === 'screening-consent') {
+      return (
+        <div className='max-w-2xl mx-auto'>
+          <ScreeningConsentBlock
+            userAddress={sessionUserId ?? ''}
+            onBack={goBack}
+          />
+        </div>
+      )
+    }
 
-  if (currentPage === 'psp') {
-    return (
-      <div className='max-w-2xl mx-auto'>
-        <PspOrderForm userAddress={sessionUserId ?? ''} onBack={goBack} />
-      </div>
-    )
-  }
+    if (currentPage === 'portfolio') {
+      return <PortfolioPage userAddress={sessionUserId ?? ''} onBack={goBack} />
+    }
 
-  if (currentPage === 'screening-consent') {
-    return (
-      <div className='max-w-2xl mx-auto'>
-        <ScreeningConsentBlock userAddress={sessionUserId ?? ''} onBack={goBack} />
-      </div>
-    )
-  }
+    if (currentPage === 'github') {
+      return <GitHubPage userAddress={sessionUserId ?? ''} onBack={goBack} />
+    }
 
-  if (currentPage === 'portfolio') {
-    return <PortfolioPage userAddress={sessionUserId ?? ''} onBack={goBack} />
-  }
+    if (currentPage === 'hunt-desk') {
+      return (
+        <div className='relative z-0'>
+          <CandidateHuntDesk
+            onBack={goBack}
+            userAddress={sessionUserId ?? null}
+          />
+        </div>
+      )
+    }
 
-  if (currentPage === 'github') {
-    return <GitHubPage userAddress={sessionUserId ?? ''} onBack={goBack} />
-  }
+    if (currentPage === 'applications') {
+      return (
+        <div className='max-w-7xl mx-auto relative z-0'>
+          <MyApplications onBack={goBack} userAddress={sessionUserId ?? null} />
+        </div>
+      )
+    }
 
-  if (currentPage === 'hunt-desk') {
-    return (
-      <div className='relative z-0'>
-        <CandidateHuntDesk onBack={goBack} userAddress={sessionUserId ?? null} />
-      </div>
-    )
-  }
+    // Explicit Build workspace (DQ board)
+    if (currentPage === 'build') {
+      return <CandidateHub />
+    }
 
-  if (currentPage === 'applications') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        <MyApplications onBack={goBack} userAddress={sessionUserId ?? null} />
-      </div>
-    )
-  }
+    // Career Card is home — `null` (default after login) and `career-card` both land here
+    if (currentPage === 'career-card' || currentPage === null) {
+      return <CareerCardView onBack={() => setCurrentPage('build')} />
+    }
 
-  // Explicit Build workspace (DQ board)
-  if (currentPage === 'build') {
-    return <CandidateHub />
-  }
+    if (currentPage === 'messages') {
+      return (
+        <div className='max-w-2xl mx-auto'>
+          <MessageInbox
+            sessionUserId={sessionUserId ?? ''}
+            onBack={goBack}
+            initialThreadId={initialThreadId}
+          />
+        </div>
+      )
+    }
 
-  // Career Card is home — `null` (default after login) and `career-card` both land here
-  if (currentPage === 'career-card' || currentPage === null) {
+    if (currentPage === 'inbox') {
+      return (
+        <div className='max-w-7xl mx-auto relative z-0'>
+          <CandidateInboxPage />
+        </div>
+      )
+    }
+
+    if (currentPage === 'ask-ai') {
+      return (
+        <div className='max-w-7xl mx-auto relative z-0'>
+          <CandidateAskAiPage />
+        </div>
+      )
+    }
+
     return <CareerCardView onBack={() => setCurrentPage('build')} />
   }
-
-  if (currentPage === 'messages') {
-    return (
-      <div className='max-w-2xl mx-auto'>
-        <MessageInbox
-          sessionUserId={sessionUserId ?? ''}
-          onBack={goBack}
-          initialThreadId={initialThreadId}
-        />
-      </div>
-    )
-  }
-
-  if (currentPage === 'inbox') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        <CandidateInboxPage />
-      </div>
-    )
-  }
-
-  if (currentPage === 'ask-ai') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        <CandidateAskAiPage />
-      </div>
-    )
-  }
-
-  return <CareerCardView onBack={() => setCurrentPage('build')} />
 }
