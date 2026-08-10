@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from 'react'
 import {
   LayoutDashboard,
   ChevronDown,
-  RefreshCw,
   Car,
   Code,
   Building2,
@@ -14,7 +13,6 @@ import {
   User,
   Home,
   Briefcase,
-  Loader2,
   Search,
   Plus,
   Users,
@@ -25,12 +23,9 @@ import {
   LogOut,
   Menu,
   Settings,
-  Palette,
   Bell,
   Orbit,
   Sun,
-  Check,
-  ChevronRight,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -42,12 +37,10 @@ import {
   navDropdownItemClass,
   navDropdownItemBorderClass,
 } from '@/lib/navigation-styles'
-import ThemePicker from './ThemePicker'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import Button from '@/components/ui/Button'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
-import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { PageType, UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
@@ -100,90 +93,53 @@ function HubRoleIcon({ userRole }: { userRole: UserRole }) {
   return <User className='w-4 h-4' />
 }
 
-const THEME_OPTIONS: { id: Theme; label: string; description: string; Icon: LucideIcon }[] = [
-  { id: 'light', label: 'Cream', description: 'Warm parchment & gold', Icon: Sun },
-  { id: 'dark', label: 'Ink navy', description: 'Deep navy & champagne gold', Icon: Orbit },
-]
-
-/** Theme picker nested under a Themes category row — used in Options + mobile menu. */
-function ThemeCategory({
-  isDark,
-  expanded,
-  onToggle,
-}: {
-  isDark: boolean
-  expanded: boolean
-  onToggle: () => void
-}) {
+/**
+ * Light / Dark toggle — same segmented chrome as Career Card · Build.
+ * Lives between Help and Options so appearance isn't buried in a menu.
+ */
+function ThemeModeToggle({ isDark }: { isDark: boolean }) {
   const { theme, setTheme } = useTheme()
-  const active = THEME_OPTIONS.find((o) => o.id === theme)
+  const options: { id: Theme; label: string; icon: LucideIcon }[] = [
+    { id: 'light', label: 'Light', icon: Sun },
+    { id: 'dark', label: 'Dark', icon: Orbit },
+  ]
 
   return (
-    <div>
-      <button
-        type='button'
-        role='menuitem'
-        aria-expanded={expanded}
-        onClick={onToggle}
-        className={navDropdownItemClass(isDark)}
-      >
-        <Palette className='h-4 w-4 shrink-0' aria-hidden />
-        <span className='min-w-0 flex-1 text-left'>
-          <span className='block font-medium'>Themes</span>
-          {active && (
-            <span className={cn('mt-0.5 block text-xs font-normal', isDark ? 'text-gray-500' : 'text-stone-500')}>
-              {active.label}
-            </span>
-          )}
-        </span>
-        <ChevronRight
-          className={cn('h-4 w-4 shrink-0 transition-transform', expanded && 'rotate-90')}
-          aria-hidden
-        />
-      </button>
-
-      {expanded && (
-        <div
-          role='group'
-          aria-label='Themes'
-          className={cn(isDark ? 'bg-white/[0.02]' : 'bg-stone-50/80')}
-        >
-          {THEME_OPTIONS.map((opt) => {
-            const selected = theme === opt.id
-            return (
-              <button
-                key={opt.id}
-                type='button'
-                role='menuitemradio'
-                aria-checked={selected}
-                onClick={() => setTheme(opt.id)}
-                className={cn(
-                  navDropdownItemClass(isDark),
-                  'pl-10',
-                  selected && (isDark ? 'bg-gray-900/80' : 'bg-stone-100'),
-                )}
-              >
-                <opt.Icon
-                  className={cn(
-                    'h-4 w-4 shrink-0',
-                    selected ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-stone-500',
-                  )}
-                  aria-hidden
-                />
-                <span className='min-w-0 flex-1 text-left'>
-                  <span className='block font-medium'>{opt.label}</span>
-                  <span className={cn('mt-0.5 block text-xs font-normal', isDark ? 'text-gray-500' : 'text-stone-500')}>
-                    {opt.description}
-                  </span>
-                </span>
-                {selected ? (
-                  <Check className={cn('h-4 w-4 shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} aria-hidden />
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
+    <div
+      role='tablist'
+      aria-label='Appearance'
+      className={cn(
+        'flex h-9 items-center rounded-full border p-0.5',
+        isDark ? 'border-white/12 bg-white/[0.04]' : 'border-stone-300/80 bg-stone-900/[0.04]',
       )}
+    >
+      {options.map(({ id, label, icon: Icon }) => {
+        const selected = theme === id
+        return (
+          <button
+            key={id}
+            type='button'
+            role='tab'
+            aria-selected={selected}
+            aria-label={label}
+            title={label}
+            onClick={() => setTheme(id)}
+            className={cn(
+              'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
+              selected
+                ? isDark
+                  ? 'bg-teal-500 text-[#0a1322] shadow-sm'
+                  : 'bg-teal-700 text-white shadow-sm'
+                : isDark
+                  ? 'text-gray-400 hover:text-gray-200'
+                  : 'text-stone-500 hover:text-stone-800',
+            )}
+          >
+            <Icon className='h-3.5 w-3.5 shrink-0' aria-hidden />
+            <span className='whitespace-nowrap'>{label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -204,9 +160,9 @@ function UnreadBadge({ count, isDark }: { count: number; isDark: boolean }) {
 }
 
 /**
- * Account options — Themes, Messages, Notifications, referrals, log out.
- * Messages + Notifications live here (not as standalone nav icons) so the
- * bar stays clean; the gear shows a badge when either has unread items.
+ * Account options — Messages, Notifications, referrals, log out.
+ * Appearance lives on the Light/Dark toggle next to this menu (not buried here).
+ * The gear shows a badge when Messages or Notifications have unread items.
  */
 function NavOptionsMenu({
   isDark,
@@ -224,17 +180,13 @@ function NavOptionsMenu({
   const unreadMessageCount = notifications.filter((n) => n.type === 'new_message' && !n.read).length
 
   const [open, setOpen] = useState(false)
-  const [themesOpen, setThemesOpen] = useState(false)
   const [referralOpen, setReferralOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const hasAttention = unreadCount > 0 || unreadMessageCount > 0
 
   useEffect(() => {
-    if (!open) {
-      setThemesOpen(false)
-      return
-    }
+    if (!open) return
     const onDoc = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
@@ -285,13 +237,7 @@ function NavOptionsMenu({
               : 'border-stone-300/90 bg-white ring-stone-900/[0.04]',
           )}
         >
-          <ThemeCategory
-            isDark={isDark}
-            expanded={themesOpen}
-            onToggle={() => setThemesOpen((o) => !o)}
-          />
-
-          <div className={cn('border-t', isDark ? 'border-gray-700/80' : 'border-stone-200')}>
+          <div>
             <button
               type='button'
               role='menuitem'
@@ -442,27 +388,22 @@ export default function Navigation({
 }: NavigationProps) {
   const mvrIdentity = sessionUserId ?? mvrWalletAddress ?? null
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  // Mobile menu has its own referral + themes triggers (desktop lives in NavOptionsMenu)
+  // Mobile menu has its own referral trigger (theme toggle is always in the bar / menu chrome)
   const [mobileReferralOpen, setMobileReferralOpen] = useState(false)
-  const [mobileThemesOpen, setMobileThemesOpen] = useState(false)
   // Shared: Options (desktop) + hamburger (mobile) both open this panel
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
   const hubDropdownRef = useRef<HTMLDivElement>(null)
   const notificationsAnchorRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
-  const { navigateToMessages, requestHubRefresh, setCurrentPage } = useUIStore()
+  const { navigateToMessages, setCurrentPage } = useUIStore()
   const currentPage = useUIStore((s) => s.currentPage)
   const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
-  const employerHubRefreshing = useUIStore((s) => s.employerHubRefreshing)
-  const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications, unreadCount } = useNotificationStore()
   const isDark = isDarkTheme(theme)
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
   const hasNavAttention = unreadCount > 0 || unreadMessageCount > 0
-  const hubRefreshing =
-    (userRole === 'candidate' && hubBlocksLoading) || (userRole === 'employer' && employerHubRefreshing)
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -689,26 +630,6 @@ export default function Navigation({
                     </div>
                   )}
 
-                  {(userRole === 'candidate' || userRole === 'employer') && sessionUserId && (
-                    <button
-                      type='button'
-                      onClick={requestHubRefresh}
-                      disabled={hubRefreshing}
-                      className={cn(
-                        'hidden sm:flex h-9 w-9 items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-45',
-                        navControlButtonClass(isDark),
-                      )}
-                      title='Refresh hub — pull latest data'
-                      aria-label='Refresh hub — pull latest data'
-                    >
-                      {hubRefreshing ? (
-                        <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
-                      ) : (
-                        <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
-                      )}
-                    </button>
-                  )}
-
                   {/* Help — `ask-ai` only routes inside CandidateShell, so it's
                       candidate-only rather than a dead-end for other roles. */}
                   {userRole === 'candidate' && (
@@ -725,6 +646,10 @@ export default function Navigation({
                       Help
                     </button>
                   )}
+
+                  <div className='hidden sm:block'>
+                    <ThemeModeToggle isDark={isDark} />
+                  </div>
 
                   <div ref={notificationsAnchorRef} className='relative'>
                     <NavOptionsMenu
@@ -746,10 +671,10 @@ export default function Navigation({
                 </>
               )}
 
-              {/* Guests still get the standalone theme picker; signed-in users use Options */}
+              {/* Guests: same Light/Dark toggle as signed-in (was a nested ThemePicker) */}
               {!isAuthenticated && (
                 <div className='hidden sm:block'>
-                  <ThemePicker />
+                  <ThemeModeToggle isDark={isDark} />
                 </div>
               )}
 
@@ -825,35 +750,24 @@ export default function Navigation({
                 </>
               )}
 
-              {!isAuthenticated && (
-                <div className='flex justify-end pt-1'>
-                  <ThemePicker />
-                </div>
-              )}
+              <div className='flex justify-center py-2'>
+                <ThemeModeToggle isDark={isDark} />
+              </div>
 
               {isAuthenticated && (
                 <div
                   className={cn(
-                    'mt-2 overflow-hidden rounded-xl border',
+                    'mt-1 overflow-hidden rounded-xl border',
                     isDark ? 'border-white/[0.08]' : 'border-stone-300/60',
                   )}
                 >
-                  <ThemeCategory
-                    isDark={isDark}
-                    expanded={mobileThemesOpen}
-                    onToggle={() => setMobileThemesOpen((o) => !o)}
-                  />
                   <button
                     type='button'
                     onClick={() => {
                       setIsMenuOpen(false)
                       navigateToMessages()
                     }}
-                    className={cn(
-                      navDropdownItemClass(isDark),
-                      'border-t',
-                      isDark ? 'border-white/[0.08]' : 'border-stone-200',
-                    )}
+                    className={navDropdownItemClass(isDark)}
                   >
                     <MessageSquare className='h-4 w-4' />
                     <span className='flex-1 text-left'>Messages</span>

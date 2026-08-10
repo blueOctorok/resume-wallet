@@ -4,6 +4,13 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Nav: drop refresh; Light/Dark toggle beside Options** (2026-08-10)
+
+- Removed the hub refresh control (unreliable / unused by drivers).
+- Pulled Themes out of Options (and the mobile Themes accordion).
+- New `ThemeModeToggle` — same segmented chrome as Career Card · Build — sits between Help and Options (desktop) and at the top of the mobile menu. Labels: Light / Dark.
+- Deleted unused `ThemePicker.tsx` (guests use the same toggle).
+
 ## **Brand leftovers — emails still saying ZKnight** (2026-08-10)
 
 Repo audit after reports that outbound mail still showed ZKnight / zknight.io.
