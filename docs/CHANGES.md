@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Security: Next.js 15.5.7 → 15.5.23** (2026-08-10)
+
+Patch-level bump on the 15.5 Maintenance LTS branch to pick up the [July 2026 security release](https://nextjs.org/blog/july-2026-security-release) (nine CVEs fixed in 15.5.21: SSRF in rewrites/Server Actions, middleware bypass, Server Action DoS, cache confusion, image-optimizer DoS). No API changes; production build verified (149 routes).
+
+**Deliberately NOT done:** Next 16 (16.3.0) — major-version migration, no urgency while 15.5 receives security patches. Revisit when planning allows.
+
+**Known remaining (production deps, from `npm audit --omit=dev`):** `axios`, `dompurify`, `fast-xml-parser` (critical — used for Accio XML), `nanoid` all have non-breaking fixes available via `npm audit fix`. `postcss`/`sharp` advisories are pinned inside Next itself and only clear with Next 16 — accepted for now.
+
 ## **Motion kit — menus, modals, and page switches no longer snap** (2026-08-10)
 
 App-wide entrance transitions; previously every panel mounted with zero motion. CSS-only (no animation library), all under ~200ms, all disabled under `prefers-reduced-motion`.

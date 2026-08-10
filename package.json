@@ -51,7 +51,7 @@
     "jwks-rsa": "^3.2.0",
     "lucide-react": "^0.540.0",
     "nanoid": "^5.1.6",
-    "next": "15.5.7",
+    "next": "^15.5.23",
     "pdf-parse": "^2.4.5",
     "pingram": "^1.0.16",
     "qrcode": "^1.5.4",
