@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { deleteAuthUser } from '@/lib/delete-auth-user'
 
 /**
  * DELETE /api/admin/companies/[id]/members/[memberId]
@@ -88,6 +89,15 @@ export async function DELETE(
       if (userDeleteError) {
         console.error('[ADMIN MEMBERS] Error deleting user:', userDeleteError)
         // Don't fail - membership is removed, user is locked out
+      } else {
+        // Revoke Auth sessions so leftover cookies can't recreate public.users
+        const authDelete = await deleteAuthUser(supabase, targetUserId)
+        if (!authDelete.ok) {
+          console.error(
+            `[ADMIN MEMBERS] public.users removed but auth delete failed for ${targetUserId}:`,
+            authDelete.error
+          )
+        }
       }
 
       console.log(`[ADMIN MEMBERS] Full delete: removed user ${targetUserId} from platform`)

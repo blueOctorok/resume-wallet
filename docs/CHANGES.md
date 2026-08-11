@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin user delete also revokes Supabase Auth sessions** (2026-08-11)
+
+Deleting a candidate from central admin only removed `public.users`. Their browser cookies still authenticated against `auth.users`, and `/api/auth/sync` → `ensureUserRow` quietly recreated the app row — so a "deleted" tester came back into the hub asking for a name.
+
+- New `deleteAuthUser()` helper (`auth.admin.deleteUser`) after the public row is gone
+- Wired into `/api/admin/users/[id]` DELETE, company-member full delete, and `reset-wallet`
+- Client `use-supabase-auth-sync`: if `getUser()` fails with a leftover local session (or sync returns 401), clear cookies with `signOut({ scope: 'local' })`
+
+**Already-zombie browsers:** delete that user once more from admin after deploy (or remove them under Supabase → Authentication → Users), then revisit the site — cookies should clear.
+
+---
+
 ## **Remove "Let's build your hub" first-login screen** (2026-08-11)
 
 Driver-only product no longer needs the multi-role occupation/intent questionnaire. New candidates land on the Career Card (and optional name/contact `ProfileSetupModal`) instead of being blocked behind `HubOnboardingForm`.

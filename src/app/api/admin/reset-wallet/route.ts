@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { deleteAuthUser } from '@/lib/delete-auth-user'
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY
 
 function unauthorized(message: string) {
@@ -91,6 +92,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const authDelete = await deleteAuthUser(supabase, userId)
+    if (!authDelete.ok) {
+      console.error('❌ [reset-wallet] Auth delete failed:', authDelete.error)
+    }
+
     return NextResponse.json({
       success: true,
       sessionUserId,
@@ -98,6 +104,7 @@ export async function POST(request: NextRequest) {
         resumes: true,
         driverApplications: true,
         user: true,
+        auth: authDelete.ok,
       },
       message: 'All wallet-specific application data removed.',
     })

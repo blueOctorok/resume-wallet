@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
+import { deleteAuthUser } from '@/lib/delete-auth-user'
 import {
   getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation,
   getDevGithub, getDevPortfolio, getDevProfile,
@@ -227,7 +228,7 @@ export async function DELETE(
     // Admin who approved/rejected employer access requests — common when wiping an admin test account
     await supabase.from('employer_access_requests').update({ reviewed_by: null }).eq('reviewed_by', id)
 
-    // 8. Delete the user
+    // 8. Delete the public.users row
     const { error: deleteError } = await supabase
       .from('users')
       .delete()
@@ -246,13 +247,32 @@ export async function DELETE(
       )
     }
 
+    // 9. Delete auth.users + revoke sessions. Without this, browser cookies keep
+    // working and /api/auth/sync recreates public.users via ensureUserRow.
+    const authDelete = await deleteAuthUser(supabase, id)
+    if (!authDelete.ok) {
+      console.error(
+        `[ADMIN USER DELETE] public.users removed but auth delete failed for ${id}:`,
+        authDelete.error
+      )
+      return NextResponse.json(
+        {
+          success: true,
+          warning:
+            'App data deleted, but the Auth login could not be revoked. Sign them out manually or retry auth delete.',
+          details: authDelete.error,
+        },
+        { status: 200 }
+      )
+    }
+
     console.log(
-      `[ADMIN] User deleted: ${user.wallet_address} by admin: ${auth.email}`
+      `[ADMIN] User deleted (app + auth): ${user.email ?? user.wallet_address} by admin: ${auth.email}`
     )
 
     return NextResponse.json({
       success: true,
-      message: `User ${user.wallet_address} and all associated data deleted`,
+      message: `User ${user.email ?? user.wallet_address} and all associated data deleted`,
     })
   } catch (error) {
     console.error('[ADMIN USER DELETE] Unexpected error:', error)
