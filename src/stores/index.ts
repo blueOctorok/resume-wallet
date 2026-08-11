@@ -77,7 +77,6 @@ export {
   useHubBlocksStore,
   useInstalledBlocks,
   useIsPickerOpen,
-  useNeedsOnboarding,
   useHubOnboarding,
   useAvailableBlocks,
   useWalkthroughDismissed,

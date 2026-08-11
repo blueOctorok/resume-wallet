@@ -74,8 +74,6 @@ interface HubBlocksState {
   isEditMode: boolean
   fetchError: string | null
 
-  /** Whether the mandatory onboarding form needs to be shown */
-  needsOnboarding: boolean
   /** "Tell Stormi more about you" modal open state */
   isStormiContextModalOpen: boolean
 }
@@ -142,7 +140,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   isPickerOpen: false,
   isEditMode: false,
   fetchError: null,
-  needsOnboarding: false,
   isStormiContextModalOpen: false,
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
@@ -191,7 +188,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         installedBlocks,
         onboarding: normalizeOnboarding(data.onboarding ?? null),
         userProfile,
-        needsOnboarding: !data.onboarding,
         avaAutoWelcomeCandidateDone: Boolean(data.avaAutoWelcomeCandidateDone),
         walkthroughDismissed: Boolean(data.walkthroughDismissed),
         isLoading: false,
@@ -378,7 +374,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
       set({
         onboarding: normalizeOnboarding(onboarding),
-        needsOnboarding: false,
       })
     } catch (err) {
       console.error('[HubBlocksStore] completeOnboarding failed:', err)
@@ -448,8 +443,6 @@ export const useIsPickerOpen = () =>
 export const useIsEditMode = () =>
   useHubBlocksStore((s) => s.isEditMode)
 
-export const useNeedsOnboarding = () =>
-  useHubBlocksStore((s) => s.needsOnboarding)
 
 export const useHubOnboarding = () =>
   useHubBlocksStore((s) => s.onboarding)

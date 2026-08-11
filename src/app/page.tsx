@@ -14,7 +14,7 @@ import {
   useAuthStore,
   useUIStore,
 } from '@/stores'
-import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
+import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
 import { createClient as createSupabaseBrowserClient } from '@/utils/supabase/client'
 import type { PageType } from '@/stores'
@@ -109,9 +109,6 @@ const HomeContent = () => {
     checkAndShowProfileSetup,
   } = authStore
 
-  // Gate ProfileSetupModal so it never overlaps with HubOnboardingForm —
-  // two simultaneous modals corrupt the shared openModalCount scroll-lock counter.
-  const needsOnboarding = useNeedsOnboarding()
   const updateUserProfile = useHubBlocksStore((s) => s.updateUserProfile)
 
   // -------------------------------------------------------
@@ -372,11 +369,8 @@ const HomeContent = () => {
           />
         )}
 
-        {/* Profile Setup Modal — for first-time users to add name/contact.
-            Gated on !needsOnboarding so this never renders at the same time as HubOnboardingForm —
-            two simultaneous portaled Modals corrupt the shared openModalCount scroll-lock counter,
-            leaving body overflow:hidden after the first one unmounts. */}
-        {user && sessionUserId && !needsOnboarding && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
+        {/* Profile Setup Modal — name/contact for first-time users */}
+        {user && sessionUserId && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
           <ProfileSetupModal
             isOpen={showProfileSetup}
             onClose={() => setShowProfileSetup(false)}

@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Remove "Let's build your hub" first-login screen** (2026-08-11)
+
+Driver-only product no longer needs the multi-role occupation/intent questionnaire. New candidates land on the Career Card (and optional name/contact `ProfileSetupModal`) instead of being blocked behind `HubOnboardingForm`.
+
+- Deleted `HubOnboardingForm.tsx`; removed the `needsOnboarding` gate from `CandidateShell` and `page.tsx`
+- Dropped `needsOnboarding` / `useNeedsOnboarding` from the hub store
+- Kept `/api/hub/onboarding` + `StormiContextModal` so optional "tell Stormi more" context can still be saved later
+
+---
+
 ## **Employer access hardening — invite-only accounts, real role gates, PII minimization** (2026-08-11)
 
 Pace sent driver invites; three drivers (Henry Barber, Kyle Evans, Richard Garry) followed them into the **employer** signup door and claimed to be company owners. Nobody actually got into Pace's account — the guard held, and the production audit came back clean (Pace has exactly four active members, all verified `@pacedrivers.com`). But the fact that a driver could *reach* that door, on a platform that pulls state and federal records, is the incident. Full plan and audit queries: `docs/midnight/DECISION_LOG.md` DEC-2026-08-001 / 002 / 003.

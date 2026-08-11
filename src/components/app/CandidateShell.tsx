@@ -11,12 +11,8 @@ import CandidateHub from '@/components/hub/CandidateHub'
 import CandidateInboxPage from '@/components/hub/CandidateInboxPage'
 import CandidateAskAiPage from '@/components/hub/CandidateAskAiPage'
 import { useAuthStore, useUIStore } from '@/stores'
-import {
-  useHubBlocksStore,
-  useNeedsOnboarding,
-} from '@/stores/hub-blocks-store'
+import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
-import HubOnboardingForm from '@/components/hub/HubOnboardingForm'
 
 /** Routes this shell renders — anything else is reset to hub in an effect (never during render). */
 const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
@@ -182,7 +178,6 @@ export default function CandidateShell() {
     editingResumeId,
     setEditingResumeId,
   } = useUIStore()
-  const needsOnboarding = useNeedsOnboarding()
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
 
   // Hub data must be fetched here (not in CandidateHub) so that both
@@ -210,12 +205,6 @@ export default function CandidateShell() {
     setEditingResumeId(undefined)
     navigateToHub()
   }, [navigateToHub, setEditingResumeId])
-
-  // Onboarding form renders as a portal (Modal), so it works in any mode.
-  // Must live here (not CandidateHub) so it shows for Simple-mode users too.
-  if (needsOnboarding) {
-    return <HubOnboardingForm />
-  }
 
   if (unknownCandidatePage) {
     return null

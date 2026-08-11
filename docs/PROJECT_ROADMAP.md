@@ -261,7 +261,7 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 | **Remove My Files hub section** | ✅ Done | `CandidateHub` slimmer column; prefs `hubBlockFilesExpanded` removed. |
 | **Apply ↔ Construct transitions** | ✅ Done | `selfSectionNav`, `returnToApply`, `openPickerAfterHub`, `ReturnToApplyBanner`. |
 | **PDF UI removal** | ✅ Done | Modals + `ResumeSection` + legacy `DriverHub` preview; optional `onDownload` on driver modal. |
-| **Onboarding + initial mode fix** | ✅ Done | `fetchHubData` + `HubOnboardingForm` lifted to `CandidateShell` so both Apply and Construct modes get hub data + onboarding. |
+| **Onboarding + initial mode fix** | ✅ Done | `fetchHubData` in `CandidateShell`. Mandatory `HubOnboardingForm` removed 2026-08-11 (driver-only — new users go to Career Card + optional name setup). |
 | **Construct UX polish** | ✅ Done | Mobile tab bar hidden on desktop (CSS specificity fix); block removal via `removeBlock` in `ConstructSectionWrapper` (replaces artifact-level delete); persistent "Add block" dashed button at card bottom. |
 | **Card pagination + reorder + Stormi** | ✅ Done | `config.cardPage` + `PATCH /api/hub/blocks/[id]/config`; per-page lens; `CareerCardDynamicSections` (Construct DnD + page breaks; Apply/employer/public flip + dots + swipe); `computeReorderSuggestion` in Apply Stormi strip. |
 
