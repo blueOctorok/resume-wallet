@@ -87,7 +87,7 @@ export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJob
       <CareerCardSection isDark={isDark} />
       <DisclosureSection />
       <HowItWorksSection isDark={isDark} />
-      <EmployersSection isDark={isDark} onGetStarted={onGetStarted} />
+      <EmployersSection isDark={isDark} />
       <TrustSection />
       <FinalCtaSection
         isDark={isDark}

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   Clock,
   AlertTriangle,
-  CheckCircle,
+  Archive,
   CheckCircle2,
   XCircle,
   UserPlus,
@@ -65,6 +65,23 @@ export default function AccessRequestsTab({
 
   return (
     <div className='p-6'>
+      {/* Archive notice */}
+      <div className={`mb-6 rounded-xl border p-4 flex items-start gap-3 ${
+        isDarkTheme(theme)
+          ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+          : 'bg-amber-50 border-amber-200 text-amber-900'
+      }`}>
+        <Archive className='w-5 h-5 shrink-0 mt-0.5' />
+        <div className='text-sm'>
+          <p className='font-semibold'>Archive — these requests can no longer grant access</p>
+          <p className={`mt-1 ${isDarkTheme(theme) ? 'text-amber-200/80' : 'text-amber-800'}`}>
+            Self-serve employer signup was removed in August 2026. Employer accounts are created
+            in the Companies tab, where you name the company and its designated owner. These rows
+            are kept as history.
+          </p>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className='flex flex-wrap gap-2 mb-6'>
         <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
@@ -229,81 +246,9 @@ export default function AccessRequestsTab({
                   </p>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — history only. Approve/reject were removed with the
+                    self-serve signup flow; these rows can no longer grant access. */}
                 <div className='flex gap-2 flex-shrink-0 items-center'>
-                  {(req.status === 'pending' || req.status === 'flagged') && (
-                    <>
-                      <button
-                        onClick={async () => {
-                          const isJoin = req.ai_reason?.toLowerCase().includes('already exists')
-                          const msg = isJoin
-                            ? `Approve ${req.name} to join the existing "${req.company_name}" team as a recruiter?`
-                            : `Approve and create company "${req.company_name}" with ${req.name} as owner?`
-                          if (!confirm(msg)) return
-
-                          setProcessingRequestId(req.id)
-                          try {
-                            const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'x-wallet-address': sessionUserId || '',
-                              },
-                              body: JSON.stringify({ action: 'approve' }),
-                            })
-                            if (res.ok) {
-                              fetchData()
-                            }
-                          } catch (err) {
-                            console.error('Failed to approve:', err)
-                          } finally {
-                            setProcessingRequestId(null)
-                          }
-                        }}
-                        disabled={processingRequestId === req.id}
-                        className='px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1'
-                      >
-                        {processingRequestId === req.id ? (
-                          <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                          <CheckCircle className='w-4 h-4' />
-                        )}
-                        {req.ai_reason?.toLowerCase().includes('already exists') ? 'Approve & Join Team' : 'Approve'}
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (!confirm('Reject this request?')) return
-                          setProcessingRequestId(req.id)
-                          try {
-                            const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'x-wallet-address': sessionUserId || '',
-                              },
-                              body: JSON.stringify({ action: 'reject' }),
-                            })
-                            if (res.ok) {
-                              fetchData()
-                            }
-                          } catch (err) {
-                            console.error('Failed to reject:', err)
-                          } finally {
-                            setProcessingRequestId(null)
-                          }
-                        }}
-                        disabled={processingRequestId === req.id}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                          isDarkTheme(theme)
-                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        } disabled:opacity-50`}
-                      >
-                        <XCircle className='w-4 h-4' />
-                        Reject
-                      </button>
-                    </>
-                  )}
                   <button
                     onClick={async () => {
                       if (!confirm(`Remove this ${req.status} request from the list? This only removes the record; it does not change the company or user.`)) return

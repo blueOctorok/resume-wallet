@@ -6,6 +6,8 @@ import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recr
 import { isInviteStatus } from '@/components/employer/outreach/types'
 import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
 import { normalizeToE164 } from '@/lib/phone-e164'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import crypto from 'crypto'
 
 const RECRUITER_NOTES_MAX = 8000
@@ -69,36 +71,30 @@ function mapInviteToClient(invite: InviteDbRow, baseUrl: string) {
 async function getEmployerContext(
   supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
   employerUserId: string
-): Promise<{ companyId?: string; userId?: string; companyName?: string; error?: string; status?: number }> {
-  const { data: membership } = await supabase
-    .from('company_members')
-    .select('company_id, role')
-    .eq('user_id', employerUserId)
-    .eq('is_active', true)
-    .single()
-
-  let companyId = membership?.company_id || null
-
-  if (!companyId) {
-    const { data: legacyCompany } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('employer_user_id', employerUserId)
-      .single()
-
-    companyId = legacyCompany?.id || null
-  }
-
-  if (!companyId) return { error: 'No company found. Set up your company first.', status: 403 }
+): Promise<{
+  companyId?: string
+  userId?: string
+  companyName?: string
+  companyRole?: string
+  error?: string
+  status?: number
+}> {
+  const access = await getEmployerCompanyAccess(supabase, employerUserId)
+  if (!access) return { error: 'No company found. Set up your company first.', status: 403 }
 
   // Get company name for invite context
   const { data: company } = await supabase
     .from('companies')
     .select('company_name')
-    .eq('id', companyId)
+    .eq('id', access.companyId)
     .single()
 
-  return { companyId, userId: employerUserId, companyName: company?.company_name }
+  return {
+    companyId: access.companyId,
+    userId: employerUserId,
+    companyName: company?.company_name,
+    companyRole: access.companyRole,
+  }
 }
 
 /**
@@ -614,6 +610,13 @@ export async function DELETE(request: NextRequest) {
 
     if (ctx.error) {
       return NextResponse.json({ error: ctx.error }, { status: ctx.status })
+    }
+
+    if (!can(ctx.companyRole, 'manageCandidates')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('manageCandidates') },
+        { status: 403 }
+      )
     }
 
     const id = new URL(request.url).searchParams.get('id')

@@ -1,47 +1,60 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { can } from '@/lib/employer-permissions'
 
 export interface EmployerCompanyAccess {
   employerUserId: string
   companyId: string
+  /** Always concrete — never undefined, so a caller can't be bypassed by a missing role. */
   companyRole: string
   canManageEmployerBlocks: boolean
 }
 
 /**
- * Resolves the employer's primary company + membership role from wallet.
- * Legacy rows use companies.employer_user_id as implicit owner.
+ * Resolves the caller's company and membership role.
+ *
+ * Two fixes over the previous version:
+ *   - It looked the caller up by `wallet_address` despite the parameter being a
+ *     session user id, so any member created after the Supabase auth cutover
+ *     (no wallet) resolved to null and was locked out.
+ *   - `canManageEmployerBlocks` was hardcoded `true`, so the "owner/admin only"
+ *     comments on the hub-block routes enforced nothing.
  */
 export async function getEmployerCompanyAccess(
   supabase: SupabaseClient,
   sessionUserId: string,
 ): Promise<EmployerCompanyAccess | null> {
-  const normalized = sessionUserId.toLowerCase().trim()
-
   const { data: user, error: userErr } = await supabase
     .from('users')
     .select('id')
-    .ilike('wallet_address', normalized)
+    .eq('id', sessionUserId)
     .maybeSingle()
 
   if (userErr || !user) return null
 
-  const { data: membership } = await supabase
+  // Prefer an accepted membership; an unaccepted invite row is not access.
+  const { data: memberships } = await supabase
     .from('company_members')
-    .select('company_id, role')
+    .select('company_id, role, accepted_at')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .maybeSingle()
+    .not('accepted_at', 'is', null)
+    .order('accepted_at', { ascending: true })
+    .limit(1)
+
+  const membership = memberships?.[0]
 
   if (membership?.company_id) {
-    const r = membership.role ?? 'recruiter'
+    const companyRole = membership.role || 'recruiter'
     return {
       employerUserId: user.id,
       companyId: membership.company_id,
-      companyRole: r,
-      canManageEmployerBlocks: true,
+      companyRole,
+      canManageEmployerBlocks: can(companyRole, 'manageCompany'),
     }
   }
 
+  // Legacy rows predate company_members and use companies.employer_user_id as
+  // an implicit owner link.
   const { data: legacy } = await supabase
     .from('companies')
     .select('id')
@@ -53,7 +66,7 @@ export async function getEmployerCompanyAccess(
       employerUserId: user.id,
       companyId: legacy.id,
       companyRole: 'owner',
-      canManageEmployerBlocks: true,
+      canManageEmployerBlocks: can('owner', 'manageCompany'),
     }
   }
 

@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
+import { capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * DELETE /api/employer/hub/blocks/[id] — uninstall row by id (owner/admin only).
@@ -24,17 +25,12 @@ export async function DELETE(
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: authUser } = await supabase
-      .from('users')
-      .select('wallet_address')
-      .eq('id', userId)
-      .maybeSingle()
-    if (!authUser?.wallet_address) {
-      return NextResponse.json({ error: 'Only active company members can remove blocks' }, { status: 403 })
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
-    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
-    if (!access?.canManageEmployerBlocks) {
-      return NextResponse.json({ error: 'Only active company members can remove blocks' }, { status: 403 })
+    if (!access.canManageEmployerBlocks) {
+      return NextResponse.json({ error: capabilityDeniedMessage('manageCompany') }, { status: 403 })
     }
 
     const { data: row, error: fetchErr } = await supabase

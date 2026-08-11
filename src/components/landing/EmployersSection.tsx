@@ -87,10 +87,27 @@ function RequestMock({ isDark }: { isDark: boolean }) {
 
 interface EmployersSectionProps {
   isDark: boolean
-  onGetStarted: () => void
 }
 
-export default function EmployersSection({ isDark, onGetStarted }: EmployersSectionProps) {
+/**
+ * Employer accounts are provisioned by Provven, so this CTA opens a conversation
+ * rather than a signup. It used to share `onGetStarted` with the candidate CTA,
+ * which routed to /sign-in — meaning a hiring manager clicking "I'm hiring" was
+ * silently onboarded as a candidate.
+ *
+ * That conversation IS the credentialing step: an employer account can order an
+ * MVR against a state DMV and a PSP against FMCSA, so DPPA and FCRA make a
+ * self-serve form hard to defend as "reasonable procedures".
+ */
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL || 'hello@provven.com'
+
+const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+  'Hiring on Provven'
+)}&body=${encodeURIComponent(
+  `Company:\nDOT number:\nYour name and role:\nWhat you're hiring for:\n\nWe'll get back to you to set up your account.`
+)}`
+
+export default function EmployersSection({ isDark }: EmployersSectionProps) {
   return (
     <section
       id='employers'
@@ -120,10 +137,19 @@ export default function EmployersSection({ isDark, onGetStarted }: EmployersSect
             </ul>
 
             <div className='reveal-item mt-9' style={{ transitionDelay: '260ms' }}>
-              <Button variant='primary' size='lg' onClick={onGetStarted} className={cn('group h-auto rounded-xl px-7 py-3.5', GOLD_CTA)}>
-                I&rsquo;m hiring &mdash; get started
+              <Button
+                variant='primary'
+                size='lg'
+                onClick={() => { window.location.href = MAILTO }}
+                className={cn('group h-auto rounded-xl px-7 py-3.5', GOLD_CTA)}
+              >
+                I&rsquo;m hiring &mdash; talk to us
                 <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
               </Button>
+              <p className={cn('mt-3 text-sm', mutedText(isDark))}>
+                Employer accounts are set up by our team — we verify the carrier before anyone can
+                order an MVR or PSP.
+              </p>
             </div>
           </div>
 

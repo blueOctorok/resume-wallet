@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 // Roles that can manage team members
-const TEAM_ADMIN_ROLES = ['owner', 'admin']
 
 // All valid roles for company members
 const VALID_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer', 'viewer']
@@ -44,38 +45,16 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user's company membership
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let companyId = membership?.company_id
-    let userRole = membership?.role
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner'
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if user can manage team
-    if (!TEAM_ADMIN_ROLES.includes(userRole || '')) {
-      return NextResponse.json(
-        { error: 'You do not have permission to manage team members' },
-        { status: 403 }
-      )
+    const companyId = access.companyId
+    const userRole = access.companyRole
+
+    if (!can(userRole, 'manageTeam')) {
+      return NextResponse.json({ error: capabilityDeniedMessage('manageTeam') }, { status: 403 })
     }
 
     // Get the target member
@@ -219,38 +198,16 @@ export async function DELETE(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user's company membership
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let companyId = membership?.company_id
-    let userRole = membership?.role
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner'
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if user can manage team
-    if (!TEAM_ADMIN_ROLES.includes(userRole || '')) {
-      return NextResponse.json(
-        { error: 'You do not have permission to remove team members' },
-        { status: 403 }
-      )
+    const companyId = access.companyId
+    const userRole = access.companyRole
+
+    if (!can(userRole, 'manageTeam')) {
+      return NextResponse.json({ error: capabilityDeniedMessage('manageTeam') }, { status: 403 })
     }
 
     // Get the target member

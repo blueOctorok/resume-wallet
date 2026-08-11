@@ -9,6 +9,7 @@ import {
 } from '@/lib/driver-owned-screening'
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import { resolveCompanyDqForCandidate } from '@/lib/dq-file-load'
+import { stripTier3FromFormData } from '@/lib/employer-pii'
 import type { MvrData, PspData } from '@/types/career-card'
 
 /**
@@ -281,10 +282,16 @@ export async function GET(
       existingApplication,
       hasBgcheckConsent: !!bgcheckConsent,
       bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
-      bgcheckConsentFormData: bgcheckConsent?.form_data || null,
+      // Prefills the legacy MVR/PSP order form. Stripped of Tier 3 so a signed
+      // consent can't be used as a lookup for the driver's DOB and home address.
+      bgcheckConsentFormData: stripTier3FromFormData(
+        bgcheckConsent?.form_data as Record<string, unknown> | null
+      ),
       hasPspFmcsaConsent: !!pspFmcsaConsent,
       pspFmcsaConsentSignedAt: pspFmcsaConsent?.signed_at || null,
-      pspFmcsaConsentFormData: pspFmcsaConsent?.form_data || null,
+      pspFmcsaConsentFormData: stripTier3FromFormData(
+        pspFmcsaConsent?.form_data as Record<string, unknown> | null
+      ),
       screeningConsentBundleId: latestScreeningBundle?.id ?? null,
       hasActiveDriverOwnedMvr: driverOwnedFlags.hasActiveDriverOwnedMvr,
       hasActiveDriverOwnedPsp: driverOwnedFlags.hasActiveDriverOwnedPsp,

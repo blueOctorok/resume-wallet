@@ -87,6 +87,87 @@ export async function sendNewCompanyNotification(
   return { ok: true }
 }
 
+// ─── Employer: Owner Provisioning Invite ──────────────────────────────────────
+
+export interface EmployerOwnerInviteParams {
+  companyName: string
+  /** The designated owner address. Must be the same value stored on the company row. */
+  ownerEmail: string
+  dotNumber?: string | null
+  /** Domains their team must use, or [] for a company with no corporate domain. */
+  allowedEmailDomains?: string[]
+}
+
+/**
+ * Tells a designated owner their company is ready to claim.
+ *
+ * This is the only invitation into an employer account. There is no link or
+ * token to steal: the owner signs in with THIS address and the server matches
+ * the verified session email against companies.designated_owner_email. An email
+ * forwarded to someone else grants nothing.
+ */
+export async function sendEmployerOwnerInvite(
+  params: EmployerOwnerInviteParams
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isMessagingConfigured()) {
+    console.warn('[EMPLOYER OWNER INVITE] PINGRAM_API_KEY not set, skipping send')
+    return { ok: false, error: 'Email not configured' }
+  }
+
+  const { companyName, ownerEmail, dotNumber, allowedEmailDomains } = params
+
+  const domainNote =
+    allowedEmailDomains && allowedEmailDomains.length > 0
+      ? `<p style="margin:0;font-size:14px;color:#334155;">Your team members must sign up with an email on ${allowedEmailDomains
+          .map((d) => `<strong>@${d}</strong>`)
+          .join(' or ')}.</p>`
+      : ''
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      Provven has set up an employer account for <strong>${companyName}</strong> and named you its owner.
+    </p>
+    ${detailsBox(`
+      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Your Company</p>
+      ${detailRow('Company', companyName)}
+      ${detailRow('Owner', ownerEmail)}
+      ${dotNumber ? detailRow('DOT Number', dotNumber) : ''}
+    `)}
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      Sign in with <strong>${ownerEmail}</strong> to finish setting up your company profile. Your
+      access is tied to that address — there is nothing to activate and no password to create.
+    </p>
+    ${infoBox(`
+      <p style="margin:0 0 8px;font-size:14px;color:#334155;"><strong>Once you are in, you can invite your team.</strong></p>
+      ${domainNote}
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: `Your Provven employer account for ${companyName} is ready`,
+    headerEyebrow: companyName,
+    headerTitle: 'Your employer account is ready',
+    bodyHtml,
+    ctaLabel: 'Sign in to Provven',
+    ctaUrl: `${APP_URL}/sign-in`,
+    footerNote: `Sent to ${ownerEmail} because Provven set up an employer account for ${companyName}. If you weren't expecting this, you can ignore it — no access is granted until you sign in with this address.`,
+  })
+
+  console.log(`[EMPLOYER OWNER INVITE] Sending owner invite for "${companyName}" to ${ownerEmail}`)
+  const result = await sendEmail({
+    type: 'employer_owner_invite',
+    to: [ownerEmail],
+    subject: `Your Provven employer account for ${companyName} is ready`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[EMPLOYER OWNER INVITE] Send failed:', result.error)
+    return { ok: false, error: result.error }
+  }
+  console.log('[EMPLOYER OWNER INVITE] Sent. Pingram id:', result.id)
+  return { ok: true }
+}
+
 // ─── Candidate: Employer Request ──────────────────────────────────────────────
 
 const REQUEST_TYPE_LABELS: Record<string, string | ((p: CandidateRequestNotificationParams) => string)> = {

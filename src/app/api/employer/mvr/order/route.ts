@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
-import { companyCanOrderMvr, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
+import {
+  companyCanOrderMvr,
+  companyHasScreeningConsentBlock,
+  getEmployerCompanyAccess,
+} from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -96,28 +101,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get company (supports both company_members and legacy employer_user_id)
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
-
-    let companyId = membership?.company_id || null
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-      companyId = legacyCompany?.id || null
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
+    if (!can(access.companyRole, 'orderScreenings')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('orderScreenings') },
+        { status: 403 }
+      )
+    }
+    const companyId = access.companyId
 
     if (await companyHasScreeningConsentBlock(supabase, companyId)) {
       return NextResponse.json(

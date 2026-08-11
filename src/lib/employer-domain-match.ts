@@ -1,92 +1,166 @@
 /**
- * Decide whether a requester's work email domain is allowed to auto-join an existing company.
+ * Single source of truth for employer email-domain policy.
  *
- * Exact match against the company's stored email is ideal, but many company rows were created
- * with a personal email or empty `email` / `designated_owner_email`. In those cases we still
- * allow instant join when the domain's first label clearly matches the company name
- * (e.g. "Pace Drivers" + @pacedrivers.com).
+ * Three divergent public-domain lists used to live in this file, in
+ * /api/employer/team, and in AccessRequestsTab, so the same address was judged
+ * differently depending on the path (@proton.me and @googlemail.com blocked by
+ * one and allowed by another; @gmx.com, @zoho.com and @yandex.com the reverse).
+ * Everything now imports from here.
+ *
+ * The company's boundary is `companies.allowed_email_domains`, set deliberately
+ * by an admin at creation. It used to be inferred from `companies.email` — a
+ * contact field doubling as a security field, which silently disappeared when a
+ * company's founding owner happened to sign up with Gmail.
  */
 
-const PUBLIC_EMAIL_DOMAINS = new Set([
+/**
+ * Consumer inboxes. A company can never be identified by one of these, so they
+ * are rejected for team invites unless the company is explicitly domainless.
+ */
+export const PUBLIC_EMAIL_DOMAINS: ReadonlySet<string> = new Set([
   'gmail.com',
+  'googlemail.com',
   'yahoo.com',
+  'ymail.com',
+  'rocketmail.com',
   'hotmail.com',
   'outlook.com',
-  'icloud.com',
-  'aol.com',
-  'protonmail.com',
-  'proton.me',
   'live.com',
   'msn.com',
+  'aol.com',
+  'icloud.com',
   'me.com',
-  'googlemail.com',
+  'mac.com',
+  'protonmail.com',
+  'proton.me',
+  'pm.me',
+  'mail.com',
+  'gmx.com',
+  'gmx.net',
+  'zoho.com',
+  'yandex.com',
+  'inbox.com',
+  'fastmail.com',
+  'hey.com',
+  'tutanota.com',
 ])
 
-export function normalizeCompanyNameSlug(companyName: string): string {
-  return companyName.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function domainFromEmail(email: string | null | undefined): string {
+/** Lowercased host portion of an email, or '' when absent/malformed. */
+export function domainFromEmail(email: string | null | undefined): string {
   if (!email?.includes('@')) return ''
   return email.split('@')[1]?.toLowerCase().trim() ?? ''
 }
 
-/**
- * True if the company record's email uses a consumer domain (or is missing), so we may use
- * name↔domain slug matching instead of relying only on exact domain equality.
- */
-export function companyEmailDomainIsWeak(companyRecordEmail: string | null | undefined): boolean {
-  const d = domainFromEmail(companyRecordEmail ?? '')
-  return !d || PUBLIC_EMAIL_DOMAINS.has(d)
-}
-
-/**
- * Requester must not use a public inbox for auto-join.
- */
 export function isPublicEmailDomain(domain: string | null | undefined): boolean {
   if (!domain) return true
   return PUBLIC_EMAIL_DOMAINS.has(domain.toLowerCase().trim())
 }
 
-/**
- * First label of host (e.g. pacedrivers.com -> pacedrivers).
- */
-function registrableStyleLabel(emailDomain: string): string {
-  return emailDomain.toLowerCase().split('.')[0] ?? ''
+export function isPublicEmailAddress(email: string | null | undefined): boolean {
+  return isPublicEmailDomain(domainFromEmail(email))
+}
+
+/** Normalize admin input ("@Pace Drivers.com ", "https://pacedrivers.com") to a bare host. */
+export function normalizeDomainInput(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^@/, '')
+    .replace(/\/.*$/, '')
+    .replace(/\s+/g, '')
+}
+
+export function parseAllowedDomainsInput(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[,\s]+/)
+        .map(normalizeDomainInput)
+        .filter((d) => d.includes('.'))
+    )
+  )
+}
+
+export interface CompanyDomainCheck {
+  /** From companies.allowed_email_domains. null = never configured, [] = deliberately domainless. */
+  allowedDomains: string[] | null | undefined
+  email: string
+  companyName: string
+  /** companies.email / designated_owner_email — legacy fallback for rows predating the column. */
+  legacyCompanyEmail?: string | null
+}
+
+export interface DomainCheckResult {
+  allowed: boolean
+  /** Present only when `allowed` is false. Flat rather than a discriminated union
+   *  because the project compiles with `strict: false`, where narrowing on a
+   *  literal boolean doesn't work. */
+  error?: string
+  details?: string
 }
 
 /**
- * Slug match with guardrails: short names only get equality, not substring tricks.
+ * Whether an address may be invited onto a company.
+ *
+ * Three states, deliberately distinguishable:
+ *   - a non-empty list  → the address must be on it
+ *   - `[]`              → domainless by admin decision; the owner vouches for
+ *                         each member, and this is the ONLY case where a
+ *                         consumer inbox is acceptable
+ *   - `null`            → never configured (legacy row). Public domains are
+ *                         blocked and we fall back to matching the company's
+ *                         contact email, which is the old behaviour.
  */
-function slugAlignsWithDomainRoot(companyName: string, emailDomain: string): boolean {
-  const slug = normalizeCompanyNameSlug(companyName)
-  const root = registrableStyleLabel(emailDomain)
-  if (!slug || !root || slug.length < 3 || root.length < 3) return false
-  if (root === slug) return true
-  const minLen = Math.min(root.length, slug.length)
-  // Avoid "acme" ⊂ "acmeevil" style bypasses for tiny slugs
-  if (minLen >= 6 && (root.includes(slug) || slug.includes(root))) return true
-  return false
-}
+export function checkEmailAgainstCompanyDomains({
+  allowedDomains,
+  email,
+  companyName,
+  legacyCompanyEmail,
+}: CompanyDomainCheck): DomainCheckResult {
+  const inviteDomain = domainFromEmail(email)
 
-/**
- * Returns true when the requester should auto-join the existing company without admin review.
- */
-export function emailDomainAllowsEmployerJoin(
-  companyName: string,
-  requesterEmailDomain: string | null | undefined,
-  companyRecordEmail: string | null | undefined,
-): boolean {
-  const rd = requesterEmailDomain?.toLowerCase().trim() ?? ''
-  if (!rd || isPublicEmailDomain(rd)) return false
-
-  const companyDomain = domainFromEmail(companyRecordEmail ?? '')
-  if (companyDomain && rd === companyDomain) return true
-
-  if (!companyEmailDomainIsWeak(companyRecordEmail)) {
-    // Company has a non-public domain on file that didn't match — do not infer from name
-    return false
+  if (!inviteDomain) {
+    return {
+      allowed: false,
+      error: 'A valid email address is required',
+      details: 'Enter a full address, for example name@yourcompany.com.',
+    }
   }
 
-  return slugAlignsWithDomainRoot(companyName, rd)
+  // Explicitly domainless — the admin chose this, so consumer inboxes are fine.
+  if (Array.isArray(allowedDomains) && allowedDomains.length === 0) {
+    return { allowed: true }
+  }
+
+  if (isPublicEmailDomain(inviteDomain)) {
+    return {
+      allowed: false,
+      error: 'Personal email addresses are not allowed for team members',
+      details: `Use a company email address (e.g. name@yourcompany.com). If ${companyName} has no company domain, a Provven admin can mark it domainless.`,
+    }
+  }
+
+  if (Array.isArray(allowedDomains) && allowedDomains.length > 0) {
+    if (allowedDomains.includes(inviteDomain)) return { allowed: true }
+    return {
+      allowed: false,
+      error: `Team members must use a ${companyName} email address`,
+      details: `Allowed ${allowedDomains.length === 1 ? 'domain' : 'domains'}: ${allowedDomains
+        .map((d) => `@${d}`)
+        .join(', ')}.`,
+    }
+  }
+
+  // Legacy row with no configured domain.
+  const legacyDomain = domainFromEmail(legacyCompanyEmail)
+  if (legacyDomain && !isPublicEmailDomain(legacyDomain) && inviteDomain !== legacyDomain) {
+    return {
+      allowed: false,
+      error: `Team members must use a company email address (@${legacyDomain})`,
+      details: `${companyName} requires team members to have a @${legacyDomain} email address.`,
+    }
+  }
+
+  return { allowed: true }
 }

@@ -4,6 +4,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { getInstallableEmployerBlockDefinitions, getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
+import { capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * GET /api/employer/hub/blocks — installed employer blocks + permission flag
@@ -16,15 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: authUser } = await supabase
-      .from('users')
-      .select('wallet_address')
-      .eq('id', userId)
-      .maybeSingle()
-    if (!authUser?.wallet_address) {
-      return NextResponse.json({ error: 'No company access' }, { status: 403 })
-    }
-    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
+    const access = await getEmployerCompanyAccess(supabase, userId)
     if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
@@ -81,17 +74,17 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: authUser } = await supabase
-      .from('users')
-      .select('wallet_address')
-      .eq('id', userId)
-      .maybeSingle()
-    if (!authUser?.wallet_address) {
-      return NextResponse.json({ error: 'Only active company members can install blocks' }, { status: 403 })
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
-    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
-    if (!access?.canManageEmployerBlocks) {
-      return NextResponse.json({ error: 'Only active company members can install blocks' }, { status: 403 })
+    // canManageEmployerBlocks was hardcoded true until 2026-08-11, so this
+    // owner/admin restriction is newly real rather than newly written.
+    if (!access.canManageEmployerBlocks) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('manageCompany') },
+        { status: 403 }
+      )
     }
 
     const { count } = await supabase

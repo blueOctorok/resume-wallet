@@ -160,12 +160,22 @@ export default function OnboardPage() {
           router.push(destination)
         } else {
           // ── General flow ────────────────────────────────────────────────
+          // An invite from a company is by definition a candidate invite. Set the
+          // role explicitly at the point of intent rather than relying on the
+          // server-side default, which is what let invited drivers reach the
+          // employer signup door.
+          await fetch('/api/user/set-role', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: 'candidate' }),
+          })
+
           // Mark invite as in_progress
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
           }).catch(() => {})
 
-          // Land on role selection → empty hub → onboarding form (existing flow)
+          // Land on the hub → onboarding form
           router.push('/')
         }
       } catch (err) {

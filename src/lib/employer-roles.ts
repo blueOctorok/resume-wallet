@@ -11,8 +11,13 @@ export const DB_ROLE_ADMIN = 'admin'
 export const DB_ROLE_MEMBER = 'recruiter' // used when inviting "Team member"; other legacy values map to same label
 export const DB_ROLE_VIEWER = 'viewer'
 
-/** Roles that can manage team (invite, remove, change role) */
-export const TEAM_ADMIN_ROLES = ['owner', 'admin'] as const
+/**
+ * Roles that can manage team (invite, remove, change role).
+ * Re-exported from the permission helper so the list exists in exactly one place —
+ * this constant used to be declared here and then re-declared inside each team
+ * route, which is how the routes drifted apart from it.
+ */
+export { TEAM_ADMIN_ROLES } from '@/lib/employer-permissions'
 
 /** Roles we allow when inviting (no owner - that's by claim only) */
 export const INVITEABLE_ROLES = [

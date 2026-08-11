@@ -4,6 +4,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { reconcilePendingScreeningsForCompany } from '@/lib/reconcile-pending-screenings'
 import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * POST /api/employer/screenings/reconcile
@@ -29,6 +30,15 @@ export async function POST(request: NextRequest) {
     const ctx = await resolveEmployerCompanyForWallet(supabase, userId)
     if (!ctx) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    // Reconcile imports MVR/PSP results from Accio, so it lands Tier 2 data in
+    // the company's account — same gate as placing the order.
+    if (!can(ctx.companyRole, 'orderScreenings')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('orderScreenings') },
+        { status: 403 }
+      )
     }
 
     let body: { orderId?: string; kind?: 'mvr' | 'psp'; staleMinutes?: number } = {}

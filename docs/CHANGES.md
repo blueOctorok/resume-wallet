@@ -4,6 +4,44 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer access hardening — invite-only accounts, real role gates, PII minimization** (2026-08-11)
+
+Pace sent driver invites; three drivers (Henry Barber, Kyle Evans, Richard Garry) followed them into the **employer** signup door and claimed to be company owners. Nobody actually got into Pace's account — the guard held, and the production audit came back clean (Pace has exactly four active members, all verified `@pacedrivers.com`). But the fact that a driver could *reach* that door, on a platform that pulls state and federal records, is the incident. Full plan and audit queries: `docs/midnight/DECISION_LOG.md` DEC-2026-08-001 / 002 / 003.
+
+**The chain that made it serious.** `set-role` wrote `users.role='employer'` *before* the authorization check and never rolled it back, so a request rejected with 403 still left a permanent employer role. `talent/[userId]/dot-app` then authorized on nothing but `users.role === 'employer'` and returned raw `application_data`. A visibly-failed request therefore yielded a read on any driver's SSN and DOB. Both halves are gone.
+
+### Employer accounts are now provisioned, not requested
+
+| Removed | Replaced by |
+|---|---|
+| `RoleSelectionModal` + `showRoleSelection`/`isSettingRole` store state | Role is **derived server-side** in `/api/auth/sync` via `resolve-employer-link.ts`, from the verified session email. The client has no way to assert its own role. |
+| `role: 'employer'` branch of `/api/user/set-role` | Route accepts `candidate` only |
+| `/api/employer/access-request`, `ava-employer-eval.ts`, `/api/user/check-employer-access` | `/api/admin/companies` — a human names the company and its owner, and the owner gets a **token-less** invite (access is keyed to the address, so a forwarded email grants nothing) |
+| Landing page "I'm hiring — get started" → signup | `mailto:` lead capture |
+| Domain inferred from `companies.email`, a contact field doing security work | `companies.allowed_email_domains text[]`: a list = allowlist, `[]` = deliberately domainless, `null` = legacy row. Editable **only** by Storm admin — letting an owner add `gmail.com` would reopen the hole. |
+
+Three divergent public-domain lists (this file, `/api/employer/team`, `AccessRequestsTab`) judged the same address differently — `@proton.me` blocked by one and allowed by another, `@gmx.com` the reverse. All collapsed into `employer-domain-match.ts`.
+
+### Roles that actually gate something
+
+New `src/lib/employer-permissions.ts` — `manageCompany`, `manageTeam`, `orderScreenings`, `viewScreeningResults`, `manageCandidates` — applied to `mvr/order`, `psp/order`, `screenings/order`, `screenings/reconcile`, `hub/blocks` POST + DELETE, `jobs/[id]`, `applications/[id]`, `candidate-data/[candidateId]` DELETE, `invites` DELETE, `screenings/consent/[bundleId]`, and `team` GET (which listed every member's email to any member, including a `viewer`).
+
+`employer-company-access.ts` had two bugs that made those gates impossible: `canManageEmployerBlocks` was hardcoded `true`, and the parameter named `sessionUserId` was queried against `wallet_address`, so every member created after the Supabase auth cutover resolved to null. `employer-talent-auth.ts` is now a thin alias over it rather than a second, role-less implementation. Same class of bug in `applicants` PATCH: `if (userRole && !allowed.includes(userRole))` skipped the check entirely when the role was absent — now it asks whether the role *is* permitted.
+
+**One deliberate deviation from the plan:** `orderScreenings` includes `recruiter`. The plan scoped it to owner/admin/hr_manager, but recruiters placed **573 of 575** screening orders ever made, and the team invite UI creates every "Team member" as `recruiter` — so the narrower list would have halted Pace's screening operation on deploy and blocked each future hire. The gate still excludes `interviewer` and `viewer`.
+
+### Tier 3 identifiers stop reaching the browser
+
+Three tiers: **Tier 1** the driver's own projection (never role-gated — it's the product), **Tier 2** paid CRA artifacts (role-gated + scoped to the company that paid), **Tier 3** raw identifiers (returned to no employer at any role; they exist to be decrypted server-side for a consented order).
+
+- `talent/[userId]/dot-app` — company-membership auth, `redact-dot-app.ts` strips SSN/DOB/street (city/state/zip and dates stay: 49 CFR 391.21 asks a carrier to review the address *timeline*, not the house number), and each view is logged to `career_card_views` so the driver sees who opened their DQ file. The preview says fields are withheld rather than rendering blanks that read like an incomplete application.
+- Consent `form_data` stripped only `ssn`, leaving DOB and street address — the pair that turns a signed consent into an identity kit. Now `employer-pii.ts`, shared by `screenings/consent/[bundleId]` and `talent/[userId]` (which shipped the same raw blob as order-form prefill).
+- `dq-monitor/[userId]` checked only that you belonged to *a* company, so any member of any company could pull any candidate's email and phone by guessing a user id. Now gated on `loadEngagedCandidateIds` — the same set the roster is built from, so the UI is unaffected.
+
+**Not changed:** `share_settings.showContact` is a *public share page* control — `contactMode: 'employer'` bypasses it by design, and all 855 users have it false. Applying it to employer surfaces would have diverged from the career card and hidden contact info for every candidate.
+
+---
+
 ## **P3.8 — Hosted Midnight proof server (Fly)** (2026-08-10)
 
 Unblocks prod Midnight proves without Key’s crypto signature. JWT remains the default backend until a hosted smoke passes.

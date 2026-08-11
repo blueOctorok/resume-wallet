@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * DELETE /api/employer/jobs/[id]
@@ -25,29 +27,17 @@ export async function DELETE(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get employer's company (via membership or legacy)
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
-
-    let companyId = membership?.company_id || null
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-
-      companyId = legacyCompany?.id || null
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
+    if (!can(access.companyRole, 'manageCandidates')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('manageCandidates') },
+        { status: 403 }
+      )
+    }
+    const companyId = access.companyId
 
     // Verify the job belongs to this company
     const { data: job } = await supabase
@@ -118,29 +108,17 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get employer's company
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
-
-    let companyId = membership?.company_id || null
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-
-      companyId = legacyCompany?.id || null
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
+    if (!can(access.companyRole, 'manageCandidates')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('manageCandidates') },
+        { status: 403 }
+      )
+    }
+    const companyId = access.companyId
 
     // Verify ownership
     const { data: job } = await supabase

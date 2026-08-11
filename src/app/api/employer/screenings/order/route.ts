@@ -11,6 +11,7 @@ import { getLatestScreeningConsentBundle } from '@/lib/screening-consent-bundle'
 import { decryptScreeningSsn } from '@/lib/screening-consent-crypto'
 import { placeScreeningOrder } from '@/lib/place-screening-order'
 import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * POST /api/employer/screenings/order
@@ -73,17 +74,21 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const { data: authUser } = await supabase
-      .from('users')
-      .select('wallet_address')
-      .eq('id', userId)
-      .maybeSingle()
-    if (!authUser?.wallet_address) {
-      return NextResponse.json({ error: 'No company access' }, { status: 403 })
-    }
-    const access = await getEmployerCompanyAccess(supabase, authUser.wallet_address)
+    // Resolve straight from the session user id. The old wallet_address hop
+    // locked out every member created after the Supabase auth cutover, since
+    // those accounts never had a wallet.
+    const access = await getEmployerCompanyAccess(supabase, userId)
     if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    // Spends money and decrypts a stored SSN server-side — the sharpest thing an
+    // employer account can do, so it is the narrowest role gate.
+    if (!can(access.companyRole, 'orderScreenings')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('orderScreenings') },
+        { status: 403 }
+      )
     }
 
     if (!(await companyHasScreeningConsentBlock(supabase, access.companyId))) {

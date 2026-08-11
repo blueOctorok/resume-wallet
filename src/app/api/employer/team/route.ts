@@ -3,9 +3,9 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { randomUUID } from 'crypto'
 import { sendTeamInviteEmail } from '@/lib/send-team-invite-email'
-
-// Roles that can manage team members
-const TEAM_ADMIN_ROLES = ['owner', 'admin']
+import { checkEmailAgainstCompanyDomains } from '@/lib/employer-domain-match'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 // All valid roles for company members
 const VALID_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer', 'viewer']
@@ -25,31 +25,18 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user's company membership
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    // Fall back to legacy check
-    let companyId = membership?.company_id
-    let userRole = membership?.role
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner' // Legacy single-owner is always owner
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    if (!companyId) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    const companyId = access.companyId
+    const userRole = access.companyRole
+
+    // The docblock has always said owner/admin; nothing enforced it, so every
+    // member — down to a viewer — could enumerate the company roster with emails.
+    if (!can(userRole, 'manageTeam')) {
+      return NextResponse.json({ error: capabilityDeniedMessage('manageTeam') }, { status: 403 })
     }
 
     // Get all team members (use user_id FK so PostgREST knows which users relation we want)
@@ -132,7 +119,7 @@ export async function GET(request: NextRequest) {
       success: true,
       members: processedMembers,
       currentUserRole: userRole,
-      canManageTeam: TEAM_ADMIN_ROLES.includes(userRole || ''),
+      canManageTeam: can(userRole, 'manageTeam'),
       stats: {
         total: processedMembers.filter(m => m.isActive).length,
         pending: processedMembers.filter(m => m.isPending).length,
@@ -199,36 +186,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get user's company membership and verify they can manage team
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let companyId = membership?.company_id
-    let userRole = membership?.role
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', userId)
-        .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner'
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if user can manage team
-    if (!TEAM_ADMIN_ROLES.includes(userRole || '')) {
+    const companyId = access.companyId
+
+    if (!can(access.companyRole, 'manageTeam')) {
       return NextResponse.json(
-        { error: 'You do not have permission to invite team members' },
+        { error: capabilityDeniedMessage('manageTeam') },
         { status: 403 }
       )
     }
@@ -236,7 +203,7 @@ export async function POST(request: NextRequest) {
     // Get company details for domain validation
     const { data: company } = await supabase
       .from('companies')
-      .select('company_name, email, designated_owner_email')
+      .select('company_name, email, designated_owner_email, allowed_email_domains')
       .eq('id', companyId)
       .single()
 
@@ -244,44 +211,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Validate email domain - ALWAYS block public domains for employer team members
-    const inviteDomain = email.split('@')[1]?.toLowerCase()
-    
-    // List of public email domains that should never be allowed for employers
-    const publicDomains = [
-      'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
-      'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
-      'live.com', 'msn.com', 'me.com', 'inbox.com', 'gmx.com'
-    ]
+    // The company's declared domain policy is the boundary. This used to be a
+    // local 15-entry public-domain list plus a derivation from companies.email,
+    // which silently skipped enforcement whenever the company's contact address
+    // was itself a consumer inbox.
+    const domainCheck = checkEmailAgainstCompanyDomains({
+      allowedDomains: company.allowed_email_domains,
+      email,
+      companyName: company.company_name,
+      legacyCompanyEmail: company.email || company.designated_owner_email,
+    })
 
-    // Always block public email domains
-    if (publicDomains.includes(inviteDomain)) {
+    if (!domainCheck.allowed) {
       return NextResponse.json(
-        { 
-          error: 'Personal email addresses are not allowed for team members',
-          details: 'Please use a company email address (e.g., name@yourcompany.com)'
-        },
+        { error: domainCheck.error, details: domainCheck.details },
         { status: 400 }
       )
-    }
-
-    // If company has a business email, require invites to match that domain
-    const companyEmail = company.email || company.designated_owner_email
-    if (companyEmail) {
-      const companyDomain = companyEmail.split('@')[1]?.toLowerCase()
-      
-      // Only enforce domain match if company uses a business domain (not a public one)
-      if (companyDomain && !publicDomains.includes(companyDomain)) {
-        if (inviteDomain !== companyDomain) {
-          return NextResponse.json(
-            { 
-              error: `Team members must use a company email address (@${companyDomain})`,
-              details: `${company.company_name} requires team members to have a @${companyDomain} email address.`
-            },
-            { status: 400 }
-          )
-        }
-      }
     }
 
     // Check if user with this email already exists

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { companyCanOrderPsp, companyHasScreeningConsentBlock } from '@/lib/employer-company-access'
+import {
+  companyCanOrderPsp,
+  companyHasScreeningConsentBlock,
+  getEmployerCompanyAccess,
+} from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import {
   buildAccioPspOrderXml,
   generateOrderNumber,
@@ -87,26 +92,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', employerUserId)
-      .eq('is_active', true)
-      .single()
-
-    let companyId = membership?.company_id || null
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', employerUserId)
-        .single()
-      companyId = legacyCompany?.id || null
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, employerUserId)
+    if (!access) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
+    if (!can(access.companyRole, 'orderScreenings')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('orderScreenings') },
+        { status: 403 }
+      )
+    }
+    const companyId = access.companyId
 
     if (await companyHasScreeningConsentBlock(supabase, companyId)) {
       return NextResponse.json(

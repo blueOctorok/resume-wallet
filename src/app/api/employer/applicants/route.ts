@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 const APPLICATION_PIPELINE_STATUSES = ['submitted', 'contacted', 'archived'] as const
 
@@ -320,43 +322,23 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const user = { id: userId }
-
-    // Check company_members for team-based access with appropriate role
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let companyId = membership?.company_id
-    const userRole = membership?.role
-
-    // Fall back to legacy employer_user_id check
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', user.id)
-        .single()
-      
-      companyId = legacyCompany?.id
-    }
-
-    if (!companyId) {
+    const access = await getEmployerCompanyAccess(supabase, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if user has permission to update applications
-    // Requires owner, admin, hr_manager, hiring_manager, or recruiter role
-    const canUpdateRoles = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter']
-    if (userRole && !canUpdateRoles.includes(userRole)) {
+    // The old check read `if (userRole && !allowed.includes(userRole))`, so an
+    // absent role — a legacy owner row, or a membership with a null role — skipped
+    // the gate entirely. The helper now always returns a concrete role, and this
+    // asks whether the role IS permitted rather than whether it is forbidden.
+    if (!can(access.companyRole, 'manageCandidates')) {
       return NextResponse.json(
-        { error: 'You do not have permission to update applications' },
+        { error: capabilityDeniedMessage('manageCandidates') },
         { status: 403 },
       )
     }
+
+    const companyId = access.companyId
 
     // Verify application belongs to this company
     const { data: application } = await supabase

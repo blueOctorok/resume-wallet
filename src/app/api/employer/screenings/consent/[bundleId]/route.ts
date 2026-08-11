@@ -2,20 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
+import { stripTier3FromFormData } from '@/lib/employer-pii'
 
 export const dynamic = 'force-dynamic'
 
-/** Remove SSN from any form payload before it leaves the server. */
-function stripSsnFromFormData(formData: Record<string, unknown> | null | undefined): Record<string, string> {
-  if (!formData || typeof formData !== 'object') return {}
-  const { ssn: _omit, ...rest } = formData
-  const out: Record<string, string> = {}
-  for (const [key, value] of Object.entries(rest)) {
-    if (value == null) continue
-    out[key] = typeof value === 'string' ? value : String(value)
-  }
-  return out
-}
+// Previously stripped `ssn` only, which left DOB and street address in the
+// response — the pair that turns a signed consent into an identity kit.
 
 /**
  * GET /api/employer/screenings/consent/[bundleId]
@@ -42,6 +35,16 @@ export async function GET(
     const ctx = await resolveEmployerCompanyForWallet(supabase, userId)
     if (!ctx) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    // A signed consent package is a Tier 2 artifact: it names the driver, the CRA,
+    // and what they authorized. Company scoping alone let an interviewer or viewer
+    // read it.
+    if (!can(ctx.companyRole, 'viewScreeningResults')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('viewScreeningResults') },
+        { status: 403 }
+      )
     }
 
     const { data: bundle, error: bundleError } = await supabase
@@ -89,7 +92,7 @@ export async function GET(
           signedName: (bg.signed_name as string) ?? '',
           signedAt: (bg.signed_at as string) ?? '',
           companyName: (bg.company_name as string) || 'Unknown Company',
-          formData: stripSsnFromFormData(bg.form_data as Record<string, unknown>),
+          formData: stripTier3FromFormData(bg.form_data as Record<string, unknown>),
         }
       }
     }
@@ -114,7 +117,7 @@ export async function GET(
           signedName: (pspRow.signed_name as string) ?? '',
           signedAt: (pspRow.signed_at as string) ?? '',
           companyName: (pspRow.company_name as string) || 'Unknown Company',
-          formData: stripSsnFromFormData(pspRow.form_data as Record<string, unknown>),
+          formData: stripTier3FromFormData(pspRow.form_data as Record<string, unknown>),
           formVersion: (pspRow.form_version as string | null) ?? null,
         }
       }
@@ -126,7 +129,7 @@ export async function GET(
         ? {
             signedName: (bundle.cdlis_signed_name as string | null) ?? null,
             signedAt: (bundle.cdlis_signed_at as string | null) ?? null,
-            formData: stripSsnFromFormData(cdlisFormRaw),
+            formData: stripTier3FromFormData(cdlisFormRaw),
           }
         : null
 

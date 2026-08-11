@@ -26,8 +26,6 @@ interface AuthState {
   supabaseSessionChecked: boolean
   userRole: UserRole
   isRoleLoading: boolean
-  showRoleSelection: boolean
-  isSettingRole: boolean
   companyName: string | null
   showProfileSetup: boolean
   referralCode: string | null
@@ -41,8 +39,6 @@ interface AuthActions {
   setSupabaseSessionChecked: (checked: boolean) => void
   setUserRole: (role: UserRole) => void
   setIsRoleLoading: (loading: boolean) => void
-  setShowRoleSelection: (show: boolean) => void
-  setIsSettingRole: (setting: boolean) => void
   setCompanyName: (name: string | null) => void
   setShowProfileSetup: (show: boolean) => void
   checkAndShowProfileSetup: (sessionUserId: string, userRole: UserRole) => Promise<void>
@@ -60,8 +56,6 @@ const initialState: AuthState = {
   supabaseSessionChecked: false,
   userRole: null,
   isRoleLoading: true,
-  showRoleSelection: false,
-  isSettingRole: false,
   companyName: null,
   showProfileSetup: false,
   referralCode: null,
@@ -88,8 +82,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
       setUserRole: (role) => set({ userRole: role }),
       setIsRoleLoading: (loading) => set({ isRoleLoading: loading }),
-      setShowRoleSelection: (show) => set({ showRoleSelection: show }),
-      setIsSettingRole: (setting) => set({ isSettingRole: setting }),
       setCompanyName: (name) => set({ companyName: name }),
 
       setShowProfileSetup: (show) => set({ showProfileSetup: show }),
@@ -143,8 +135,6 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           userRole: role,
           companyName: companyName ?? null,
           isRoleLoading: false,
-          showRoleSelection: false,
-          isSettingRole: false,
         })
       },
     }),

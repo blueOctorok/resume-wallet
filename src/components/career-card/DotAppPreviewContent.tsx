@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle, Clock, ShieldCheck, PenLine } from 'lucide-react'
+import { CheckCircle, Clock, ShieldCheck, PenLine, EyeOff } from 'lucide-react'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 import type {
   DotFieldPath,
@@ -17,6 +17,8 @@ export interface DotAppPreviewData {
   form3: DotForm3Data | null
   isComplete: boolean
   createdAt: string
+  /** Field paths the API withheld. Empty for the driver's own view. */
+  redactedFields?: readonly string[]
 }
 
 type FieldTone = 'verified' | 'self' | null
@@ -202,6 +204,22 @@ export default function DotAppPreviewContent({
             Amber = self-certified by driver
           </span>
         </div>
+        {data.redactedFields && data.redactedFields.length > 0 && (
+          // Say the fields are withheld rather than letting them render as blanks,
+          // which reads like an incomplete application instead of a policy.
+          <p
+            className={cn(
+              'flex items-start gap-1.5 text-[11px]',
+              isDark ? 'text-gray-400' : 'text-gray-500',
+            )}
+          >
+            <EyeOff className='mt-0.5 h-3 w-3 shrink-0' aria-hidden />
+            <span>
+              SSN, date of birth, and street address are withheld. Provven decrypts them only
+              to place a screening the driver has authorized.
+            </span>
+          </p>
+        )}
       </div>
 
       {/* ── Form 1: Personal / License / Medical ── */}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { requireAdmin } from '@/lib/admin-auth'
+import { sendEmployerOwnerInvite } from '@/lib/send-admin-notification'
+import { domainFromEmail, isPublicEmailDomain, normalizeDomainInput } from '@/lib/employer-domain-match'
 
 /**
  * GET /api/admin/companies
@@ -11,6 +14,9 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'all'
     const search = searchParams.get('search')
@@ -150,22 +156,32 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/companies
- * 
- * Creates a new company (admin pre-onboarding).
+ *
+ * Creates a new company. This is the ONLY way an employer account comes into
+ * existence — self-serve signup and the AI-reviewed access-request queue were
+ * both removed. The designated owner gets the role automatically the first time
+ * they sign in with this address (see resolveEmployerLink).
+ *
  * Body:
  *   - companyName: Required
- *   - dotNumber: Optional
- *   - designatedOwnerEmail: Required - who will be the owner
- *   - status: 'pending' | 'active' (default: 'active' for pre-created)
+ *   - designatedOwnerEmail: Required — who will own the company
+ *   - allowedEmailDomains: Required — string[] of domains their team must use.
+ *     An empty array means "domainless, the owner vouches for each member" and
+ *     must be a deliberate choice, never an accidental default.
+ *   - dotNumber / mcNumber / status / adminNotes / email / phone / city / state: Optional
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const body = await request.json()
     const { 
       companyName, 
       dotNumber, 
       mcNumber,
       designatedOwnerEmail, 
+      allowedEmailDomains,
       status = 'active',
       adminNotes,
       email,
@@ -177,6 +193,46 @@ export async function POST(request: NextRequest) {
     if (!companyName || !designatedOwnerEmail) {
       return NextResponse.json(
         { error: 'companyName and designatedOwnerEmail are required' },
+        { status: 400 }
+      )
+    }
+
+    // Required, and an empty array is a valid (audited) answer — but it has to be
+    // an answer. `null`/absent would create a company with no enforceable boundary,
+    // which is the defect this column exists to remove.
+    if (!Array.isArray(allowedEmailDomains)) {
+      return NextResponse.json(
+        {
+          error: 'allowedEmailDomains is required',
+          details:
+            'Provide the domains this company\'s team must use (e.g. ["pacedrivers.com"]), or an empty array to mark the company domainless.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const normalizedDomains = Array.from(
+      new Set(allowedEmailDomains.map((d: string) => normalizeDomainInput(String(d))).filter(Boolean))
+    )
+
+    const publicDomain = normalizedDomains.find((d) => isPublicEmailDomain(d))
+    if (publicDomain) {
+      return NextResponse.json(
+        {
+          error: `"${publicDomain}" is a personal email provider and cannot be a company domain`,
+          details: 'Leave the list empty instead to mark this company domainless.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const ownerDomain = domainFromEmail(designatedOwnerEmail)
+    if (normalizedDomains.length > 0 && !normalizedDomains.includes(ownerDomain)) {
+      return NextResponse.json(
+        {
+          error: `The designated owner's email (@${ownerDomain || '?'}) is not on the allowed domain list`,
+          details: `Add @${ownerDomain} to the list, or correct the owner's address. Otherwise they will not be able to invite their own team.`,
+        },
         { status: 400 }
       )
     }
@@ -247,6 +303,7 @@ export async function POST(request: NextRequest) {
         dot_number: dotNumber || null,
         mc_number: mcNumber || null,
         designated_owner_email: designatedOwnerEmail.toLowerCase(),
+        allowed_email_domains: normalizedDomains,
         employer_user_id: employerUserId, // May be null if user hasn't signed up yet
         status: status,
         approved_at: status === 'active' ? new Date().toISOString() : null,
@@ -288,7 +345,22 @@ export async function POST(request: NextRequest) {
         .eq('id', employerUserId)
     }
 
+    // Tell the owner their account is ready. There is no token in this email —
+    // access is granted by signing in with the designated address, so forwarding
+    // it gives nobody anything. Non-blocking: the company exists either way and
+    // the claim works whenever they next sign in.
+    const inviteResult = await sendEmployerOwnerInvite({
+      companyName,
+      ownerEmail: designatedOwnerEmail.toLowerCase(),
+      dotNumber: dotNumber || null,
+      allowedEmailDomains: normalizedDomains,
+    })
+    if (!inviteResult.ok) {
+      console.error('[ADMIN COMPANIES] Owner invite email failed:', inviteResult.error)
+    }
+
     return NextResponse.json({
+      ownerInviteSent: inviteResult.ok,
       success: true,
       message: 'Company created successfully',
       company: {

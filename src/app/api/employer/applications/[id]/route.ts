@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
  * DELETE /api/employer/applications/[id]
@@ -54,21 +55,30 @@ export async function DELETE(
       .eq('is_active', true)
       .single()
 
-    let hasAccess = !!membership
+    // Membership is checked against the company that owns THIS job, so a member
+    // of another company can't reach it regardless of role.
+    let companyRole: string | null = membership ? membership.role || 'recruiter' : null
 
-    if (!hasAccess) {
+    if (!companyRole) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
         .eq('id', companyId)
         .eq('employer_user_id', userId)
         .single()
-      hasAccess = !!legacyCompany
+      if (legacyCompany) companyRole = 'owner'
     }
 
-    if (!hasAccess) {
+    if (!companyRole) {
       return NextResponse.json(
         { error: 'You do not have access to this application' },
+        { status: 403 }
+      )
+    }
+
+    if (!can(companyRole, 'manageCandidates')) {
+      return NextResponse.json(
+        { error: capabilityDeniedMessage('manageCandidates') },
         { status: 403 }
       )
     }

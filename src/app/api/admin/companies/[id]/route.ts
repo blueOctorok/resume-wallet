@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { requireAdmin } from '@/lib/admin-auth'
+import { isPublicEmailDomain, normalizeDomainInput } from '@/lib/employer-domain-match'
 
 /**
  * GET /api/admin/companies/[id]
@@ -11,6 +13,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const { id } = await params
 
     if (!id) {
@@ -229,13 +234,21 @@ export async function GET(
  *   - Approve: { action: 'approve' }
  *   - Suspend: { action: 'suspend', reason: '...' }
  *   - Reactivate: { action: 'reactivate' }
- *   - Update fields: { companyName, adminNotes, etc. }
+ *   - Update fields: { companyName, adminNotes, allowedEmailDomains, etc. }
+ *
+ * `allowedEmailDomains` is editable here and NOT on any employer-facing route.
+ * It is the boundary that decides who can join a company, so letting an owner
+ * widen it (by adding gmail.com, say) would reopen exactly the hole the
+ * invite-only rework closed. Changing it is a provisioning decision.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const { id } = await params
     const body = await request.json()
     const { action, reason, adminUserId, ...updateFields } = body
@@ -409,7 +422,8 @@ export async function PATCH(
       'company_name', 'dot_number', 'mc_number', 'description',
       'email', 'phone', 'website', 'address_street', 'address_city',
       'address_state', 'address_zip', 'company_size', 'industry_type',
-      'verified', 'admin_notes', 'designated_owner_email', 'onboarding_completed'
+      'verified', 'admin_notes', 'designated_owner_email', 'onboarding_completed',
+      'allowed_email_domains'
     ]
 
     const updateData: Record<string, unknown> = {}
@@ -417,6 +431,7 @@ export async function PATCH(
     // Map camelCase to snake_case
     const fieldMap: Record<string, string> = {
       companyName: 'company_name',
+      allowedEmailDomains: 'allowed_email_domains',
       dotNumber: 'dot_number',
       mcNumber: 'mc_number',
       adminNotes: 'admin_notes',
@@ -435,6 +450,34 @@ export async function PATCH(
       if (allowedFields.includes(dbField) && value !== undefined) {
         updateData[dbField] = value
       }
+    }
+
+    // Domain policy is the company's security boundary, so it gets the same
+    // validation on edit that it gets at creation: normalized, and never a
+    // consumer inbox. `[]` stays permitted — that is the deliberate "this company
+    // has no corporate domain" state.
+    if ('allowed_email_domains' in updateData) {
+      const raw = updateData.allowed_email_domains
+      if (!Array.isArray(raw)) {
+        return NextResponse.json(
+          { error: 'allowedEmailDomains must be an array (use [] for a domainless company)' },
+          { status: 400 }
+        )
+      }
+      const normalized = Array.from(
+        new Set(raw.map((d) => normalizeDomainInput(String(d))).filter(Boolean))
+      )
+      const publicDomain = normalized.find((d) => isPublicEmailDomain(d))
+      if (publicDomain) {
+        return NextResponse.json(
+          {
+            error: `@${publicDomain} is a personal email provider and cannot be a company domain`,
+            details: 'Mark the company domainless with [] if it genuinely has no corporate domain.',
+          },
+          { status: 400 }
+        )
+      }
+      updateData.allowed_email_domains = normalized
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -481,6 +524,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
     const { id } = await params
 
     if (!id) {

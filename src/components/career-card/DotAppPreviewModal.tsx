@@ -95,7 +95,9 @@ export default function DotAppPreviewModal({
         subtitle='Your completed driver qualification file'
         onClose={onClose}
       />
-      {!loading && !fetchError && previewData?.id && sessionUserId && (
+      {/* Owner-only: the export route is scoped to the application's own user, so
+          showing this to an employer just produces a 404. */}
+      {!loading && !fetchError && previewData?.id && sessionUserId === userId && (
         <div
           className={cn(
             'flex items-center gap-2 px-4 py-3 border-b',

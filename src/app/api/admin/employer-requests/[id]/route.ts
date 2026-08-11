@@ -3,251 +3,21 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 
 /**
- * PATCH /api/admin/employer-requests/[id]
- * 
- * Approve or reject an employer access request.
- * Body:
- *   - action: 'approve' | 'reject'
- *   - rejectionReason: string (optional, for rejections)
+ * Employer access requests are now HISTORY ONLY.
+ *
+ * The PATCH approve/reject handler was removed along with the self-serve
+ * signup flow it served. Approving used to mint an employer account straight
+ * from a form submission — creating a company with the requester as owner, or
+ * silently adding them to an existing company as a recruiter when the name
+ * fuzzy-matched. Employer accounts now come exclusively from
+ * /api/admin/companies, where a human names the company and its designated
+ * owner.
+ *
+ * The rows stay queryable: they are the evidence trail for the August 2026
+ * access review. DELETE remains for purging genuine junk.
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const auth = await requireAdmin(request)
-    if (!auth.authorized) return auth.error!
 
-    const { id } = await params
-    const body = await request.json()
-    const { action, rejectionReason } = body
-
-    if (!action || !['approve', 'reject'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be "approve" or "reject"' },
-        { status: 400 }
-      )
-    }
-
-    const supabase = await getAdminSupabaseClient()
-
-    // The reviewer is the authenticated admin (auth.users.id = users.id).
-    const reviewerId = auth.userId
-
-    // Get the request
-    const { data: accessRequest, error: fetchError } = await supabase
-      .from('employer_access_requests')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (fetchError || !accessRequest) {
-      return NextResponse.json({ error: 'Request not found' }, { status: 404 })
-    }
-
-    // Admin can approve/reject pending or flagged requests
-    if (!['pending', 'flagged'].includes(accessRequest.status)) {
-      return NextResponse.json(
-        { error: `Request already ${accessRequest.status}` },
-        { status: 409 }
-      )
-    }
-
-    // Handle rejection
-    if (action === 'reject') {
-      const { error: updateError } = await supabase
-        .from('employer_access_requests')
-        .update({
-          status: 'rejected',
-          rejection_reason: rejectionReason || null,
-          reviewed_by: reviewerId,
-          reviewed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-
-      if (updateError) {
-        console.error('[ADMIN REQUESTS] Reject error:', updateError)
-        return NextResponse.json(
-          { error: 'Failed to reject request' },
-          { status: 500 }
-        )
-      }
-
-      console.log(`[ADMIN REQUESTS] Rejected: ${accessRequest.company_name} (${accessRequest.email})`)
-
-      return NextResponse.json({
-        success: true,
-        message: 'Request rejected',
-      })
-    }
-
-    // Handle approval
-    // 1. Get or create user
-    let { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', accessRequest.wallet_address)
-      .maybeSingle()
-
-    if (!user) {
-      const { data: newUser, error: createUserError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: accessRequest.wallet_address.toLowerCase(),
-          email: accessRequest.email,
-          role: 'employer',
-        })
-        .select('id')
-        .single()
-
-      if (createUserError) {
-        console.error('[ADMIN REQUESTS] Create user error:', createUserError)
-        return NextResponse.json(
-          { error: 'Failed to create user account' },
-          { status: 500 }
-        )
-      }
-      user = newUser
-    } else {
-      await supabase
-        .from('users')
-        .update({
-          role: 'employer',
-          email: accessRequest.email || undefined,
-        })
-        .eq('id', user.id)
-    }
-
-    // Write identity to user_profiles
-    if (accessRequest.name) {
-      const nameParts = accessRequest.name.trim().split(/\s+/)
-      await supabase.from('user_profiles').upsert(
-        { user_id: user.id, first_name: nameParts[0] || null, last_name: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null, display_name: accessRequest.name },
-        { onConflict: 'user_id' }
-      )
-    }
-
-    // 2. Check if the company already exists (e.g. flagged "join existing company" requests)
-    const { data: existingCompany } = await supabase
-      .from('companies')
-      .select('id, company_name')
-      .ilike('company_name', accessRequest.company_name)
-      .maybeSingle()
-
-    let companyId: string
-    let companyName: string
-    let joinedExisting = false
-
-    if (existingCompany) {
-      // Company exists — add user as a team member (recruiter), not a second owner
-      companyId = existingCompany.id
-      companyName = existingCompany.company_name
-      joinedExisting = true
-
-      const { error: memberError } = await supabase
-        .from('company_members')
-        .insert({
-          company_id: companyId,
-          user_id: user.id,
-          role: 'recruiter',
-          invite_email: accessRequest.email,
-          accepted_at: new Date().toISOString(),
-          is_active: true,
-        })
-
-      if (memberError) {
-        console.error('[ADMIN REQUESTS] Add member to existing company error:', memberError)
-        return NextResponse.json(
-          { error: 'Failed to add user to existing company' },
-          { status: 500 }
-        )
-      }
-
-      console.log(`[ADMIN REQUESTS] Approved (joined existing): ${accessRequest.name} -> ${companyName}`)
-    } else {
-      // No existing company — create one and make requester the owner
-      const { data: newCompany, error: createCompanyError } = await supabase
-        .from('companies')
-        .insert({
-          company_name: accessRequest.company_name,
-          employer_user_id: user.id,
-          designated_owner_email: accessRequest.email,
-          status: 'active',
-          approved_at: new Date().toISOString(),
-          approved_by: reviewerId,
-          onboarding_completed: false,
-        })
-        .select('id')
-        .single()
-
-      if (createCompanyError) {
-        console.error('[ADMIN REQUESTS] Create company error:', createCompanyError)
-        return NextResponse.json(
-          { error: 'Failed to create company' },
-          { status: 500 }
-        )
-      }
-
-      companyId = newCompany.id
-      companyName = accessRequest.company_name
-
-      const { error: memberError } = await supabase
-        .from('company_members')
-        .insert({
-          company_id: companyId,
-          user_id: user.id,
-          role: 'owner',
-          invite_email: accessRequest.email,
-          accepted_at: new Date().toISOString(),
-          is_active: true,
-        })
-
-      if (memberError) {
-        console.error('[ADMIN REQUESTS] Create member error:', memberError)
-      }
-
-      console.log(`[ADMIN REQUESTS] Approved (new company): ${companyName} -> Company ID: ${companyId}`)
-    }
-
-    // 3. Update the request as approved
-    const { error: updateError } = await supabase
-      .from('employer_access_requests')
-      .update({
-        status: 'approved',
-        reviewed_by: reviewerId,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (updateError) {
-      console.error('[ADMIN REQUESTS] Update request error:', updateError)
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: joinedExisting
-        ? `${accessRequest.name} has been added to ${companyName}`
-        : `${companyName} has been approved`,
-      company: { id: companyId, name: companyName },
-      joinedExisting,
-    })
-
-  } catch (error) {
-    console.error('[ADMIN REQUESTS] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * DELETE /api/admin/employer-requests/[id]
- * 
- * Delete a request (any status).
- */
+/** DELETE /api/admin/employer-requests/[id] — remove a historical request row. */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -257,32 +27,18 @@ export async function DELETE(
     if (!auth.authorized) return auth.error!
 
     const { id } = await params
-
     const supabase = await getAdminSupabaseClient()
 
-    const { error } = await supabase
-      .from('employer_access_requests')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('employer_access_requests').delete().eq('id', id)
 
     if (error) {
       console.error('[ADMIN REQUESTS] Delete error:', error)
-      return NextResponse.json(
-        { error: 'Failed to delete request' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to delete request' }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Request deleted',
-    })
-
+    return NextResponse.json({ success: true, message: 'Request deleted' })
   } catch (error) {
     console.error('[ADMIN REQUESTS] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

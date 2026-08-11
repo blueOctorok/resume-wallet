@@ -6,6 +6,143 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-08-003 — Employer capabilities are role-gated; raw identifiers are gated by nobody's role
+
+**Date:** 2026-08-11
+**Status:** Accepted — implemented same day
+**Decided by:** Owner
+
+### Context
+
+Company membership was the *only* question every employer route asked. `company_members.role` was written at invite time, displayed in the UI, and then never consulted for anything — a `viewer` could order a $30 MVR, uninstall the company's hub blocks, delete job postings, and enumerate the roster with emails.
+
+Two bugs in `employer-company-access.ts` made a role check impossible even where a route wanted one:
+
+- `canManageEmployerBlocks` was hardcoded `true`, so the "owner/admin only" comments on the hub-block routes documented an intention that no code implemented.
+- The parameter was named `sessionUserId` but queried `wallet_address`, so every member created after the Supabase auth cutover resolved to `null`. The helper failed *closed* here, which is why this went unnoticed — it locked legitimate members out rather than letting strangers in.
+
+A third variant appeared in `applicants` PATCH: `if (userRole && !allowed.includes(userRole))`. An absent role — a legacy owner row, or a membership with a null `role` — skipped the check entirely. A guard phrased as "is this role forbidden?" fails open on absence; "is this role permitted?" does not.
+
+### Decision
+
+**1. Five capabilities in `src/lib/employer-permissions.ts`,** not per-route role arrays:
+
+| Capability | Roles |
+|---|---|
+| `manageCompany` (hub blocks, settings) | owner, admin |
+| `manageTeam` | owner, admin |
+| `orderScreenings` (money + SSN decrypt) | owner, admin, hr_manager, **recruiter** |
+| `viewScreeningResults` (Tier 2) | owner, admin, hr_manager, hiring_manager, recruiter |
+| `manageCandidates` | owner, admin, hr_manager, hiring_manager, recruiter |
+
+`interviewer` and `viewer` hold no capability: Tier 1 and non-sensitive applicant reads only.
+
+**2. `recruiter` is in `orderScreenings`, deviating from the plan,** which scoped it to owner/admin/hr_manager. Production says recruiters placed **573 of the 575** screening orders ever made, and the invite UI creates every "Team member" as `recruiter`. The plan's list would have halted the design partner's screening operation on deploy *and* blocked every future hire, with no remedy but manual role surgery. Preferring the plan here would have been preferring a document to the system it describes.
+
+**3. Three data tiers, and only the middle one is about roles:**
+
+- **Tier 1** — the driver's own career-card projection. Never role-gated; it is the product, and the driver's `share_settings` already govern it.
+- **Tier 2** — paid CRA artifacts (MVR/PSP results, signed consents, DL numbers). Role-gated *and* scoped to the company that paid.
+- **Tier 3** — raw identifiers (SSN, DOB, street address). Returned to no employer at any role. They exist to be decrypted server-side for a screening the driver authorized.
+
+Tier 3 is a redaction rule, not a permission — there is no role that unlocks it, so no future role change can leak it.
+
+**4. Domain policy is a provisioning decision.** `companies.allowed_email_domains` is editable through `/api/admin/companies/[id]` only. An owner able to add `gmail.com` to their own allowlist would reopen precisely the hole DEC-2026-08-001 closed.
+
+### Consequences
+
+- `employer-talent-auth.ts` became a thin alias over `getEmployerCompanyAccess` instead of a second, role-less resolver. `TEAM_ADMIN_ROLES` now re-exports from the permission helper rather than being re-declared in each team route.
+- `team` GET returns 403 to non-admins where it previously listed every member's email. Recruiters lose the team page; this is intended.
+- `dq-monitor/[userId]` is scoped to `loadEngagedCandidateIds`. Belonging to *a* company previously let any member pull any candidate's email and phone by guessing a user id.
+- **Rejected:** applying `share_settings.showContact` to employer surfaces, which the plan proposed for `dq-monitor`. It is a *public share page* control that `contactMode: 'employer'` bypasses by design, and all 855 users have it false — honoring it would have diverged from the career card and hidden contact info for every candidate rather than minimizing anything.
+
+### Related
+
+- DEC-2026-08-001 (admin-provisioned accounts), DEC-2026-08-002 (client-supplied role), DEC-2026-05-011 (Storm is not a CRA), `docs/CHANGES.md` 2026-08-11
+
+---
+
+## DEC-2026-08-002 — A client-supplied role is never an authorization input
+
+**Date:** 2026-08-11
+**Status:** Accepted — implemented same day
+**Decided by:** Owner
+
+### Context
+
+`POST /api/user/set-role` accepted `{"role":"employer"}` from the browser and wrote `users.role` at line 70, ~160 lines *before* the company/invite authorization check that could reject the request at line 230. There was no rollback. A user saw "Employer access requires an invitation" and a 403, while the database recorded them as an employer permanently.
+
+That mattered because `GET /api/employer/talent/[userId]/dot-app` authorized on `users.role === 'employer'` alone, with no company scoping. The two defects composed into a chain where a **visibly rejected** request yielded a permanent capability to read any driver's full DOT application, SSN and DOB included.
+
+The audit query (`role = 'employer'` with no membership and no owned company) returned **0 rows** — the chain was reachable in code but never walked, because the five drivers who reached the employer door went through the access-request form, which never calls `set-role`.
+
+### Decision
+
+1. **The client can no longer name its own role.** `set-role` accepts `'candidate'` only; the employer branch, `EMPLOYER_WHITELIST_WALLETS`, and the `'Provven Dev'` auto-create are deleted.
+2. **Role is derived server-side from the verified session email** in `/api/auth/sync` via `resolveEmployerLink`. The email comes from `supabase.auth.getUser()`, which cannot be spoofed the way a request body can — the flaw in the deleted `check-employer-access`, which read the email from `request.body`.
+3. **A role write never precedes its authorization check.** Where both must exist in one handler, the write goes last.
+4. **`users.role` is not an authorization primitive for data access.** Employer routes authorize on active company membership.
+
+### Consequences
+
+- `RoleSelectionModal` and the whole role-switching concept are gone; role is a property of how the account was provisioned.
+- The `isUserEmployerLinked` guard is kept (contrary to the original plan) to stop an employer self-downgrading to candidate: `resolveEmployerLink` only fills an *empty* role, so a downgrade would not self-repair.
+
+### Related
+
+- DEC-2026-08-001 (admin-provisioned employer accounts), `docs/CHANGES.md` 2026-08-11
+
+---
+
+## DEC-2026-08-001 — Employer accounts are admin-provisioned only: no self-serve, no role selection
+
+**Date:** 2026-08-11
+**Status:** Accepted — implemented same day
+**Decided by:** Owner
+
+### Context
+
+Pace sent outreach invites to drivers. The general branch of `/onboard/[token]` set no role, so invited drivers landed on `RoleSelectionModal`, which offered "Employer" as a coequal choice. Three of them (Richard Garry, Kyle Evans, Henry Barber) claimed to be the company owner. None gained access — the domain guard held, and all five flagged requesters remained `role = 'candidate'` with zero memberships — but the funnel pointed candidates at the employer door by default.
+
+Two competing doors existed into a company. `POST /api/employer/team` was strict (no public domains, must match the company domain, token + email verification). `POST /api/employer/access-request` was loose: an AI plausibility score over an unverified typed email with fuzzy company-name matching. The AI scored a driver claiming "Company Owner" at 0.55 and a real Pace employee at 0.55 — it could not distinguish them. `/api/employer/company` was a third door running the same eval.
+
+### Decision
+
+**Every employer account originates from a central-admin-created company.** There is no self-serve employer signup of any kind.
+
+- Deleted: `access-request`, `ava-employer-eval.ts`, `check-employer-access`, the admin approve path, and the create/auto-join branches of `employer/company` (now onboarding-completion only).
+- `AccessRequestsTab` becomes read-only history — the rows are this incident's evidence trail.
+- The landing page's "I'm hiring" CTA goes to **lead capture**, not signup. An "apply for employer access" queue an admin approves is just the deleted door with extra steps.
+- `companies.allowed_email_domains` makes the team boundary a **declared** admin decision rather than one derived from `companies.email` (a contact field that was doubling as a security field, and that silently disabled enforcement whenever the founding owner used a consumer inbox).
+
+### Why not the Indeed pattern
+
+Indeed's employer account is **inbound-only**: post a job, receive applications from people who chose to apply. A fraudulent account gets spam reach, bounded by candidate action.
+
+A Provven employer account is **outbound procurement**. It can order an MVR against a state DMV and a PSP against FMCSA about a specific person, and that order decrypts a stored SSN server-side. Nobody has to act for it to happen. **DPPA (18 U.S.C. §2721)** makes obtaining a DMV record without a permissible use a civil and criminal matter, and **FCRA §607(a)** requires a CRA to verify a prospective user's identity and certified purpose before furnishing a report. Self-serve signup with an AI plausibility score would be hard to defend as "reasonable procedures" under either.
+
+The right comparison class is the screening incumbents — HireRight, Checkr, Sterling, DriverFacts, Tenstreet. None self-serve; all credential. Admin provisioning is that process minus the paperwork automation.
+
+### Open item — Accio end-user credentialing flow-down
+
+Provven is **not** the CRA; Accio is, and that posture does not change (DEC-2026-05-011). But Accio's §607(a) obligation flows down contractually to Provven as the channel. **The agreement is not in this repo and has not been read.** Someone must check the Accio / Key Background end-user agreement for a downstream end-user credentialing clause and answer:
+
+- Does it require Provven to credential each end-user company (signed certification, business verification, DOT validation) before they can order?
+- Does it require a per-order permissible-purpose certification, and is our consent bundle sufficient evidence?
+- Does it impose audit, retention, or re-certification obligations on the channel?
+
+Admin provisioning is very likely *more* than the contract requires, so this is a documentation gap rather than a compliance gap — but until it is read, that is an assumption. Overlaps with open question 5 in `docs/midnight/DATA_OWNERSHIP_FCRA_MEMO.md`.
+
+### The seam for later (not now)
+
+Tier 1 (career card projections, talent search, job posting) is the Indeed-like half — driver-controlled, no government data, and the only part that could ever justify self-serve. Tier 2 (MVR/PSP orders) is the CRA-like half and never can. A later design could allow self-serve job posting while gating screening behind company-level credentialing: `orderScreenings` is already a distinct capability, so it would gain a second dimension (company credentialed **and** member holds the role). Out of scope — it needs two-tier company states and the current customer count does not justify it.
+
+### Related
+
+- DEC-2026-08-002 (client-supplied role), DEC-2026-05-011 (candidate-agent posture), `docs/CHANGES.md` 2026-08-11
+
+---
+
 ## DEC-2026-07-002 — All consent-bundle screening pulls are driver-owned; ownership follows the signed consent, never the click or the payment
 
 **Date:** 2026-07-20

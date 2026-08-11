@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
-import { evaluateEmployerRequest } from '@/lib/ava-employer-eval'
 
 /**
  * POST /api/employer/company
  *
- * Called once by the company owner during onboarding.
- * Creates the company record + owner membership, then marks onboarding complete.
- * Also upserts user_profiles with the owner's name.
+ * Completes onboarding for a company a Provven admin already created. The owner
+ * fills in address/phone/contact details; the company row itself must already
+ * exist with them as `designated_owner_email` or `employer_user_id`.
  *
- * If the company was pre-created by an admin (onboarding_completed = false),
- * this updates the existing record instead of inserting a new one.
+ * This route used to be a second self-serve signup door: it ran the same AI
+ * plausibility eval as the deleted access-request route, auto-joined the caller
+ * to any company whose name fuzzy-matched when their email domain looked close
+ * enough, created brand-new companies, and queued flagged access requests. All
+ * of that is gone. Employer accounts originate from /api/admin/companies only,
+ * and the role is granted by resolveEmployerLink from the verified session email.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,16 +25,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: authUser } = await supabase
+    const { data: user } = await supabase
       .from('users')
-      .select('id, email, wallet_address')
+      .select('id, email')
       .eq('id', userId)
       .maybeSingle()
 
-    if (!authUser) {
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    const legacyWalletAddress = authUser.wallet_address
 
     const body = await request.json()
     const {
@@ -54,408 +55,97 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
-    const trimmedCompanyName = companyName.trim()
-    const emailDomain = email.split('@')[1]?.toLowerCase() ?? null
-
-    // ── Stormi gate (same eval as access-request) — fuzzy duplicate + legitimacy before DB writes ──
-    const { data: companiesForEval } = await supabase
+    // The company must already exist and belong to this user — either claimed
+    // already, or pre-created by an admin who named them designated owner.
+    // Matching on the users table email (which mirrors the verified auth email),
+    // never an address typed into this form.
+    const { data: ownedCompany } = await supabase
       .from('companies')
-      .select('company_name')
-      .limit(200)
-    const existingCompanyNamesForEval = (companiesForEval ?? []).map(c => c.company_name).filter(Boolean)
-
-    const evalResult = await evaluateEmployerRequest(
-      {
-        requesterName: fullName,
-        companyName: trimmedCompanyName,
-        description:
-          'Company profile setup — authorized representative completing Provven employer onboarding (owner, HR, or authorized signatory).',
-        emailDomain,
-      },
-      existingCompanyNamesForEval,
-    )
-
-    console.log(
-      `[EMPLOYER COMPANY SETUP] Stormi verdict for "${trimmedCompanyName}": ${evalResult.decision} (${evalResult.confidence}) — ${evalResult.reason} | existingMatch: ${evalResult.existingMatch ?? 'none'}`,
-    )
-
-    if (evalResult.decision === 'block') {
-      return NextResponse.json({ error: evalResult.reason }, { status: 400 })
-    }
-
-    /** Queue admin review without requiring a users row (mirrors access-request flagged inserts). */
-    async function insertStormiFlaggedAccessRequest(description: string, aiReason: string) {
-      const { data: existingPending } = await supabase
-        .from('employer_access_requests')
-        .select('id')
-        .ilike('wallet_address', legacyWalletAddress ?? '')
-        .in('status', ['pending', 'flagged'])
-        .maybeSingle()
-      if (existingPending) return
-      const payload = {
-        wallet_address: legacyWalletAddress?.toLowerCase() ?? '',
-        email: email.toLowerCase(),
-        name: fullName,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        company_name: trimmedCompanyName,
-        description,
-        status: 'flagged' as const,
-        ai_decision: 'flag' as const,
-        ai_reason: aiReason,
-        ai_confidence: evalResult.confidence,
-      }
-      const { error: insErr } = await supabase.from('employer_access_requests').insert(payload)
-      if (insErr) {
-        console.error('[EMPLOYER COMPANY SETUP] employer_access_requests insert:', insErr)
-        if (insErr.message?.includes('first_name') || insErr.message?.includes('last_name') || insErr.code === '42703') {
-          const { first_name: _fn, last_name: _ln, ...fallback } = payload
-          const { error: retryErr } = await supabase.from('employer_access_requests').insert(fallback)
-          if (retryErr) console.error('[EMPLOYER COMPANY SETUP] employer_access_requests retry:', retryErr)
-        }
-      }
-    }
-
-    // Fuzzy duplicate: join if domain verifies, else flag (same rules as POST /api/employer/access-request)
-    if (evalResult.existingMatch && evalResult.decision !== 'block') {
-      const { data: matchedCompany } = await supabase
-        .from('companies')
-        .select('id, company_name, email, designated_owner_email')
-        .ilike('company_name', evalResult.existingMatch)
-        .maybeSingle()
-
-      if (matchedCompany) {
-        const companyEmail = matchedCompany.email || matchedCompany.designated_owner_email
-        const domainAllowsJoin = emailDomainAllowsEmployerJoin(
-          matchedCompany.company_name,
-          emailDomain,
-          companyEmail,
-        )
-
-        if (domainAllowsJoin) {
-          const { data: existingUserJoin, error: userJoinErr } = await supabase
-            .from('users')
-            .select('id, email')
-            .eq('id', userId)
-            .maybeSingle()
-
-          if (userJoinErr) {
-            console.error('[EMPLOYER COMPANY SETUP] User lookup error (join path):', userJoinErr)
-            return NextResponse.json({ error: userJoinErr.message || 'Failed to look up user' }, { status: 500 })
-          }
-
-          if (!existingUserJoin) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
-          }
-          const userJoin = existingUserJoin
-          await supabase.from('users').update({ role: 'employer', email: email.toLowerCase() }).eq('id', userJoin.id)
-
-          await supabase.from('user_profiles').upsert(
-            {
-              user_id: userJoin.id,
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-              email: email.toLowerCase(),
-              phone: phone || undefined,
-            },
-            { onConflict: 'user_id' },
-          )
-
-          const { data: alreadyMember } = await supabase
-            .from('company_members')
-            .select('id')
-            .eq('user_id', userJoin.id)
-            .eq('company_id', matchedCompany.id)
-            .maybeSingle()
-
-          if (!alreadyMember) {
-            const { error: joinErr } = await supabase.from('company_members').insert({
-              company_id: matchedCompany.id,
-              user_id: userJoin.id,
-              role: 'recruiter',
-              invite_email: email.toLowerCase(),
-              accepted_at: new Date().toISOString(),
-              is_active: true,
-            })
-            if (joinErr) {
-              console.error('[EMPLOYER COMPANY SETUP] Join existing company error (Stormi match):', joinErr)
-              return NextResponse.json(
-                { error: 'Could not add you to this company. Try again or contact support.' },
-                { status: 500 },
-              )
-            }
-          }
-
-          console.log(
-            `[EMPLOYER COMPANY SETUP] Stormi auto-joined: ${fullName} -> ${matchedCompany.company_name} (@${emailDomain})`,
-          )
-
-          return NextResponse.json({
-            success: true,
-            companyId: matchedCompany.id,
-            joinedExisting: true,
-            companyWalletAddress: null,
-          })
-        }
-
-        const onFileDomain =
-          companyEmail?.includes('@') === true
-            ? (companyEmail.split('@')[1]?.toLowerCase() ?? 'none')
-            : 'none on file'
-
-        await insertStormiFlaggedAccessRequest(
-          `Company "${matchedCompany.company_name}" already exists on Provven. Requester could not be auto-verified (on-file domain: ${onFileDomain}).`,
-          `Company "${matchedCompany.company_name}" already exists. Requester @${emailDomain ?? 'unknown'} could not be auto-verified (on-file domain: ${onFileDomain}).`,
-        )
-
-        return NextResponse.json({
-          success: true,
-          reviewRequired: true,
-          message: `${matchedCompany.company_name} already exists on Provven. Your request to join has been submitted for review.`,
-          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added.`,
-        })
-      }
-
-      await insertStormiFlaggedAccessRequest(
-        'Company onboarding: Stormi indicated an existing company match but no matching row was found. Submitted for review.',
-        evalResult.reason,
-      )
-
-      return NextResponse.json({
-        success: true,
-        reviewRequired: true,
-        message: 'Your company request needs a quick review before you can continue.',
-        reviewNote: evalResult.reason,
-      })
-    }
-
-    if (evalResult.decision === 'flag') {
-      await insertStormiFlaggedAccessRequest(
-        'Company profile onboarding: Stormi flagged this request for human review (company name or legitimacy).',
-        evalResult.reason,
-      )
-      return NextResponse.json({
-        success: true,
-        reviewRequired: true,
-        message:
-          'Your request was not auto-approved. A team member will review it—you do not have employer access until then.',
-        reviewNote: evalResult.reason,
-      })
-    }
-
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('id', userId)
+      .select('id')
+      .eq('employer_user_id', user.id)
       .maybeSingle()
 
-    if (userError) {
-      console.error('[EMPLOYER COMPANY SETUP] User lookup error:', userError)
-      return NextResponse.json({ error: userError.message || 'Failed to look up user' }, { status: 500 })
+    const { data: preCreatedCompany } = user.email
+      ? await supabase
+          .from('companies')
+          .select('id')
+          .ilike('designated_owner_email', user.email)
+          .is('employer_user_id', null)
+          .maybeSingle()
+      : { data: null }
+
+    const company = ownedCompany ?? preCreatedCompany
+
+    if (!company) {
+      console.warn(`[EMPLOYER COMPANY SETUP] No company for user ${user.id} — rejecting setup`)
+      return NextResponse.json(
+        {
+          error: 'No company is associated with this account',
+          details:
+            'Employer accounts are set up by Provven. Contact us if you expected access to a company here.',
+        },
+        { status: 403 }
+      )
     }
 
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const { error: updateError } = await supabase
+      .from('companies')
+      .update({
+        company_name: companyName.trim(),
+        address_street: addressStreet,
+        address_city: addressCity,
+        address_state: addressState,
+        address_zip: addressZip,
+        phone,
+        email,
+        employer_user_id: user.id,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', company.id)
+
+    if (updateError) {
+      console.error('[EMPLOYER COMPANY SETUP] Update company error:', updateError)
+      return NextResponse.json(
+        { error: updateError.message || 'Failed to update company' },
+        { status: 500 }
+      )
     }
-    const user = existingUser
-    await supabase.from('users').update({ email: email || undefined }).eq('id', user.id)
 
-    // Write identity to user_profiles
-    const nameParts = fullName.split(/\s+/)
-    await supabase.from('user_profiles').upsert(
-      { user_id: user.id, first_name: nameParts[0] || null, last_name: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null, display_name: fullName, email: email || undefined },
-      { onConflict: 'user_id' }
-    )
-
-    // Upsert user_profiles so the hub header displays the correct name
     await supabase.from('user_profiles').upsert(
       {
         user_id: user.id,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        display_name: `${firstName.trim()} ${lastName.trim()}`,
         email: email || undefined,
         phone: phone || undefined,
       },
       { onConflict: 'user_id' }
     )
 
-    // Duplicate company name (case-insensitive). Another owner already has this name.
-    // Most users hit this from Company onboarding after a failed access-request left role=employer
-    // with no company — they never went through Stormi eval, so central admin had no row. We either
-    // auto-join (domain + name rules), or enqueue employer_access_requests for admin review.
-    const { data: dupRows } = await supabase
-      .from('companies')
-      .select('id, employer_user_id, company_name, email, designated_owner_email')
-      .ilike('company_name', trimmedCompanyName)
-      .limit(1)
-
-    const duplicateCompany = dupRows?.[0]
-
-    if (duplicateCompany && duplicateCompany.employer_user_id !== user.id) {
-      const requesterDomain = email.split('@')[1]?.toLowerCase() ?? null
-      const companyContact = duplicateCompany.email || duplicateCompany.designated_owner_email
-
-      if (emailDomainAllowsEmployerJoin(duplicateCompany.company_name, requesterDomain, companyContact)) {
-        await supabase
-          .from('users')
-          .update({ role: 'employer', email: email.toLowerCase() })
-          .eq('id', user.id)
-
-        const { data: alreadyMember } = await supabase
-          .from('company_members')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('company_id', duplicateCompany.id)
-          .maybeSingle()
-
-        if (!alreadyMember) {
-          const { error: joinErr } = await supabase.from('company_members').insert({
-            company_id: duplicateCompany.id,
-            user_id: user.id,
-            role: 'recruiter',
-            invite_email: email.toLowerCase(),
-            accepted_at: new Date().toISOString(),
-            is_active: true,
-          })
-          if (joinErr) {
-            console.error('[EMPLOYER COMPANY SETUP] Join existing company error:', joinErr)
-            return NextResponse.json(
-              { error: 'Could not add you to this company. Try again or contact support.' },
-              { status: 500 }
-            )
-          }
-        }
-
-        console.log(
-          `[EMPLOYER COMPANY SETUP] Auto-joined user ${user.id} to existing "${duplicateCompany.company_name}" (onboarding form)`
-        )
-
-        return NextResponse.json({
-          success: true,
-          companyId: duplicateCompany.id,
-          joinedExisting: true,
-          companyWalletAddress: null,
-        })
-      }
-
-      const { data: existingPending } = await supabase
-        .from('employer_access_requests')
-        .select('id')
-        .ilike('wallet_address', legacyWalletAddress ?? '')
-        .in('status', ['pending', 'flagged'])
-        .maybeSingle()
-
-      if (!existingPending) {
-        const { error: insErr } = await supabase.from('employer_access_requests').insert({
-          wallet_address: legacyWalletAddress?.toLowerCase() ?? '',
-          email: email.toLowerCase(),
-          name: fullName,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          company_name: trimmedCompanyName,
-          description:
-            'Submitted from company onboarding: name matches an existing company. Awaiting admin approval to join the team.',
-          status: 'flagged',
-          ai_decision: 'flag',
-          ai_reason:
-            'Onboarding duplicate: user completed company setup form for an existing company name; automatic domain join did not apply.',
-          ai_confidence: null,
-        })
-        if (insErr) {
-          console.error('[EMPLOYER COMPANY SETUP] employer_access_requests insert:', insErr)
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        reviewRequired: true,
-        message:
-          `${trimmedCompanyName} is already on Provven. We submitted your details to Provven admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
-      })
-    }
-
-    // Check for a pre-created company (admin set up a company with designated_owner_email)
-    const { data: existingByEmail } = await supabase
-      .from('companies')
-      .select('id, onboarding_completed')
-      .ilike('designated_owner_email', user.email ?? '')
-      .maybeSingle()
-
-    const { data: existingByUserId } = await supabase
-      .from('companies')
-      .select('id, onboarding_completed')
-      .eq('employer_user_id', user.id)
-      .maybeSingle()
-
-    const existingCompany = existingByEmail ?? existingByUserId
-
-    const companyFields = {
-      company_name: companyName,
-      address_street: addressStreet,
-      address_city: addressCity,
-      address_state: addressState,
-      address_zip: addressZip,
-      phone,
-      email,
-      onboarding_completed: true,
-      updated_at: new Date().toISOString(),
-    }
-
-    let companyId: string
-
-    if (existingCompany) {
-      const { error: updateError } = await supabase
-        .from('companies')
-        .update(companyFields)
-        .eq('id', existingCompany.id)
-
-      if (updateError) {
-        console.error('[EMPLOYER COMPANY SETUP] Update company error:', updateError)
-        return NextResponse.json({ error: updateError.message || 'Failed to update company' }, { status: 500 })
-      }
-      companyId = existingCompany.id
-    } else {
-      const { data: newCompany, error: insertError } = await supabase
-        .from('companies')
-        .insert({
-          ...companyFields,
-          employer_user_id: user.id,
-        })
-        .select('id')
-        .single()
-
-      if (insertError || !newCompany) {
-        console.error('[EMPLOYER COMPANY SETUP] Insert company error:', insertError)
-        return NextResponse.json({ error: insertError?.message || 'Failed to create company' }, { status: 500 })
-      }
-      companyId = newCompany.id
-    }
-
-    // Ensure the owner has a company_members row
-    const { error: memberError } = await supabase
-      .from('company_members')
-      .upsert(
-        {
-          company_id: companyId,
-          user_id: user.id,
-          role: 'owner',
-          is_active: true,
-          accepted_at: new Date().toISOString(),
-        },
-        { onConflict: 'company_id,user_id' }
-      )
+    const { error: memberError } = await supabase.from('company_members').upsert(
+      {
+        company_id: company.id,
+        user_id: user.id,
+        role: 'owner',
+        is_active: true,
+        accepted_at: new Date().toISOString(),
+      },
+      { onConflict: 'company_id,user_id' }
+    )
 
     if (memberError) {
       console.error('[EMPLOYER COMPANY SETUP] Company member upsert error:', memberError)
-      return NextResponse.json({ error: memberError.message || 'Failed to link owner to company' }, { status: 500 })
+      return NextResponse.json(
+        { error: memberError.message || 'Failed to link owner to company' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({
-      success: true,
-      companyId,
-      companyWalletAddress: null,
-    })
+    console.log(`[EMPLOYER COMPANY SETUP] User ${user.id} completed onboarding for company ${company.id}`)
+
+    return NextResponse.json({ success: true, companyId: company.id })
   } catch (error) {
     console.error('[EMPLOYER COMPANY SETUP] Unexpected error:', error)
     const message = error instanceof Error ? error.message : 'Internal server error'

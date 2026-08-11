@@ -40,11 +40,6 @@ const LandingPage = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading…' fullScreen={false} /> }
 )
 
-const RoleSelectionModal = dynamic(
-  () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
-)
-
 const ProfileSetupModal = dynamic(
   () => import('@/components/ProfileSetupModal').then((mod) => mod.default),
   { ssr: false }
@@ -69,8 +64,6 @@ const HomeContent = () => {
     supabaseSessionChecked,
     userRole, setUserRole,
     isRoleLoading, setIsRoleLoading,
-    showRoleSelection, setShowRoleSelection,
-    isSettingRole, setIsSettingRole,
     companyName,
     setCompanyName,
     referralCode, setReferralCode,
@@ -149,12 +142,10 @@ const HomeContent = () => {
     if (!sessionUserId) {
       setUserRole(null)
       setIsRoleLoading(false)
-      setShowRoleSelection(false)
       return
     }
 
     setUserRole(null)
-    setShowRoleSelection(false)
     setIsRoleLoading(true)
 
     const fetchRole = async () => {
@@ -173,15 +164,14 @@ const HomeContent = () => {
                 ? role
                 : null
             setUserRole(validRole)
-            // Keep role modal company name in sync with backend; clear when not employer so stale "My Company" doesn't show
+            // Keep the nav company name in sync with backend; clear when not employer
+            // so a stale "My Company" doesn't show.
             if (validRole === 'employer' && data.profile.company) {
               setCompanyName((data.profile.company as { company_name?: string }).company_name ?? null)
             } else {
               setCompanyName(null)
             }
-            if (!validRole) setShowRoleSelection(true)
-            else {
-              setShowRoleSelection(false)
+            if (validRole) {
               // Don't bounce to the hub when an invite deep-link is pending — the
               // onboard effect routes to the target block once role is known.
               // Resetting here races that effect and was dropping invited
@@ -196,15 +186,12 @@ const HomeContent = () => {
             }
           } else {
             setUserRole(null)
-            setShowRoleSelection(true)
           }
         } else {
           setUserRole(null)
-          setShowRoleSelection(true)
         }
       } catch {
         setUserRole(null)
-        setShowRoleSelection(true)
       } finally {
         setIsRoleLoading(false)
       }
@@ -342,39 +329,6 @@ const HomeContent = () => {
     setUser(null)
   }, [setUser])
 
-  const handleRoleSelection = useCallback(
-    async (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => {
-      if (!sessionUserId) return
-      setIsSettingRole(true)
-      try {
-        const res = await fetch('/api/user/set-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            role,
-            ...(role === 'employer' && companyName && { companyName, dotNumber }),
-            ...(referralCode && { referralCode }),
-          }),
-        })
-        if (res.ok) {
-          setReferralCode(null) // consumed
-          setUserRole(role)
-          setShowRoleSelection(false)
-          setCurrentPage(null)
-        } else {
-          const err = await res.json().catch(() => ({} as { error?: string; details?: string }))
-          const msg = err.details ? `${err.error || 'Request failed'}\n\n${err.details}` : `Failed to set role: ${err.error || res.statusText}. Please try again.`
-          alert(msg)
-        }
-      } catch {
-        alert('An error occurred. Please try again.')
-      } finally {
-        setIsSettingRole(false)
-      }
-    },
-    [sessionUserId]
-  )
-
   // -------------------------------------------------------
   // Render
   // -------------------------------------------------------
@@ -415,18 +369,6 @@ const HomeContent = () => {
             onBrowseGuided={enterGuidedMode}
             mvrWalletAddress={sessionUserId || null}
             sessionUserId={sessionUserId ?? null}
-          />
-        )}
-
-        {/* Role Selection Modal — z-[80] to sit above nav (z-50) */}
-        {user && !isRoleLoading && !isSettingRole && (showRoleSelection || userRole === null) && (
-          <RoleSelectionModal
-            onSelectRole={handleRoleSelection}
-            isLoading={isSettingRole}
-            userEmail={user?.email}
-            sessionUserId={sessionUserId}
-            existingRole={userRole}
-            existingCompanyName={companyName}
           />
         )}
 
@@ -490,11 +432,7 @@ const HomeContent = () => {
           >
 
             {/* Role loading overlay */}
-            {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
-              <LoadingScreen
-                message={isSettingRole ? 'Switching roles...' : 'Loading your dashboard...'}
-              />
-            )}
+            {user && isRoleLoading && <LoadingScreen message='Loading your dashboard...' />}
 
             {/* ── Employer ── */}
             {user && userRole === 'employer' && !isRoleLoading && (
@@ -531,7 +469,7 @@ const HomeContent = () => {
 
             {/* ── Driver hub (legacy authenticated drivers only) ── */}
             {user &&
-              (userRole === 'driver' || (!userRole && !showRoleSelection)) &&
+              (userRole === 'driver' || !userRole) &&
               !isRoleLoading && (
                 <ErrorBoundary section='Driver Hub'>
                   <DriverShell
