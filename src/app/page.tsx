@@ -19,10 +19,9 @@ import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
 import { createClient as createSupabaseBrowserClient } from '@/utils/supabase/client'
 import type { PageType } from '@/stores'
 
-// Shell components — each role gets its own shell
-import DriverShell from '@/components/app/DriverShell'
+// Shell components — employer vs candidate only.
+// DriverShell / DeveloperShell are frozen leftovers and must not be mounted from `/`.
 import EmployerShell from '@/components/app/EmployerShell'
-import DeveloperShell from '@/components/app/DeveloperShell'
 import CandidateShell from '@/components/app/CandidateShell'
 // Guests browsing jobs land in this shell (Indeed-style lazy auth).
 import SimpleModeShell from '@/components/simple/SimpleModeShell'
@@ -77,8 +76,11 @@ const HomeContent = () => {
     handleResumeUploadEvent,
   } = uiStore
 
+  const isCandidateSurface =
+    userRole === 'candidate' || userRole === 'driver' || userRole === 'developer'
+
   useCandidateShellHistory(
-    !!user && userRole === 'candidate' && !isRoleLoading,
+    !!user && isCandidateSurface && !isRoleLoading,
     currentPage,
   )
 
@@ -142,7 +144,9 @@ const HomeContent = () => {
       return
     }
 
-    setUserRole(null)
+    // Don't clear userRole here — /api/auth/sync may already have set it.
+    // Nulling first raced sync and briefly (or stuck) mounted the legacy DriverShell
+    // via the old `!userRole` fallthrough.
     setIsRoleLoading(true)
 
     const fetchRole = async () => {
@@ -160,7 +164,7 @@ const HomeContent = () => {
               role === 'driver' || role === 'employer' || role === 'developer' || role === 'candidate'
                 ? role
                 : null
-            setUserRole(validRole)
+            if (validRole) setUserRole(validRole)
             // Keep the nav company name in sync with backend; clear when not employer
             // so a stale "My Company" doesn't show.
             if (validRole === 'employer' && data.profile.company) {
@@ -181,14 +185,10 @@ const HomeContent = () => {
                 setCurrentPage(null)
               }
             }
-          } else {
-            setUserRole(null)
           }
-        } else {
-          setUserRole(null)
         }
       } catch {
-        setUserRole(null)
+        // Keep whatever role sync already set
       } finally {
         setIsRoleLoading(false)
       }
@@ -435,43 +435,30 @@ const HomeContent = () => {
               </ErrorBoundary>
             )}
 
-            {/* ── Developer ── */}
-            {user && userRole === 'developer' && !isRoleLoading && (
-              <ErrorBoundary section='Developer Hub'>
-                <DeveloperShell userAddress={sessionUserId} />
-              </ErrorBoundary>
-            )}
-
-            {/* ── Candidate (composable hub) ── */}
-            {user && userRole === 'candidate' && !isRoleLoading && (
+            {/* ── Candidate hub ──
+                `driver` / `developer` are legacy role labels only — both use
+                CandidateShell. DriverShell and DeveloperShell are not mounted. */}
+            {user && isCandidateSurface && !isRoleLoading && (
               <ErrorBoundary section='Candidate Hub'>
                 <CandidateShell />
               </ErrorBoundary>
             )}
 
+            {/* Role still unknown after fetch — wait, don't guess a shell */}
+            {user && !userRole && !isRoleLoading && (
+              <LoadingScreen message='Finishing sign-in…' />
+            )}
+
             {/*
-             Guest Guided Mode — rendered BEFORE the DriverShell branch so a
-             visitor who hits "Browse jobs" goes straight into SimpleModeShell
-             with no wallet. SimpleCardPanel detects sessionUserId=null and
-             renders the sign-in teaser; the rail and job detail work as-is.
+             Guest Guided Mode — visitor who hits "Browse jobs" goes straight
+             into SimpleModeShell with no session. SimpleCardPanel detects
+             sessionUserId=null and renders the sign-in teaser.
             */}
             {!user && showGuidedMode && !isRoleLoading && (
               <ErrorBoundary section='Guided Mode'>
                 <SimpleModeShell />
               </ErrorBoundary>
             )}
-
-            {/* ── Driver hub (legacy authenticated drivers only) ── */}
-            {user &&
-              (userRole === 'driver' || !userRole) &&
-              !isRoleLoading && (
-                <ErrorBoundary section='Driver Hub'>
-                  <DriverShell
-                    onResumeUploadEvent={handleResumeUploadEvent}
-                    onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
-                  />
-                </ErrorBoundary>
-              )}
           </div>
         )}
       </div>

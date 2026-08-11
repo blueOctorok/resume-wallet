@@ -3,12 +3,14 @@
 import { useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
+import type { UserRole } from '@/stores/types'
 
 /**
  * Bridges Supabase Auth session → auth store (D3.4 session-only).
  *
- * Ordering: /api/auth/sync (ensureUserRow) runs once per session before the
- * role fetch, so public.users exists before profile/role APIs run.
+ * Ordering: /api/auth/sync (ensureUserRow + role resolve) runs once per session
+ * and writes role into the store BEFORE page.tsx's profile fetch finishes —
+ * so we never briefly mount a shell based on a null role.
  *
  * If Auth deleted the user (admin wipe) but the browser still has cookies,
  * getUser() fails — we signOut() so local storage/cookies clear instead of
@@ -17,6 +19,7 @@ import { useAuthStore } from '@/stores/auth-store'
 export function useSupabaseAuthSync() {
   const setSessionUserId = useAuthStore((s) => s.setSessionUserId)
   const setUser = useAuthStore((s) => s.setUser)
+  const setUserRole = useAuthStore((s) => s.setUserRole)
   const setSupabaseSessionChecked = useAuthStore((s) => s.setSupabaseSessionChecked)
   const syncedFor = useRef<string | null>(null)
 
@@ -27,6 +30,7 @@ export function useSupabaseAuthSync() {
     const clearLocalSession = async (wipeCookies: boolean) => {
       syncedFor.current = null
       setSessionUserId(null)
+      setUserRole(null)
       if (useAuthStore.getState().user?.method === 'supabase') setUser(null)
       // Only wipe storage when we know Auth rejected a stale session. Calling
       // signOut on every anonymous page load is unnecessary and can re-enter
@@ -38,6 +42,17 @@ export function useSupabaseAuthSync() {
           // ignore — already signed out
         }
       }
+    }
+
+    const applyRoleFromSync = (role: unknown) => {
+      const valid: UserRole =
+        role === 'driver' ||
+        role === 'employer' ||
+        role === 'developer' ||
+        role === 'candidate'
+          ? role
+          : null
+      if (valid) setUserRole(valid)
     }
 
     const onSession = async (sessionUserId: string | null, email?: string | null) => {
@@ -59,8 +74,12 @@ export function useSupabaseAuthSync() {
             await clearLocalSession(true)
             return
           }
+          if (res.ok) {
+            const data = (await res.json()) as { role?: string | null }
+            applyRoleFromSync(data.role)
+          }
         } catch {
-          // Non-fatal — row likely exists; role fetch will retry
+          // Non-fatal — page.tsx profile fetch is a backup
         }
       }
 
@@ -94,5 +113,5 @@ export function useSupabaseAuthSync() {
       active = false
       sub.subscription.unsubscribe()
     }
-  }, [setSessionUserId, setUser, setSupabaseSessionChecked])
+  }, [setSessionUserId, setUser, setUserRole, setSupabaseSessionChecked])
 }

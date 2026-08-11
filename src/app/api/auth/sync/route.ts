@@ -33,11 +33,23 @@ export async function POST() {
 
     // Role is DERIVED, never requested. A user with no role yet is resolved from
     // the verified session email: linked to a company (admin-provisioned owner or
-    // an invited teammate) means employer, everything else means candidate. This
-    // is what replaced the candidate/employer selection modal — the client no
-    // longer has any way to assert its own role.
+    // an invited teammate) means employer, everything else means candidate.
+    //
+    // Legacy `driver` / `developer` labels are rewritten to `candidate` — those
+    // shells are frozen and must not keep anyone on a dead UI.
     let role = (row.role as string | null) ?? null
-    if (!role) {
+    if (role === 'driver' || role === 'developer') {
+      const { error: coerceError } = await admin
+        .from('users')
+        .update({ role: 'candidate' })
+        .eq('id', row.id)
+      if (coerceError) {
+        console.error('[AUTH SYNC] Failed to coerce legacy role:', coerceError)
+      } else {
+        console.log(`[AUTH SYNC] Coerced legacy role "${role}" → candidate for ${row.id}`)
+        role = 'candidate'
+      }
+    } else if (!role) {
       role = await resolveRoleForNewUser(admin, row.id, user.email)
       const { error: roleError } = await admin.from('users').update({ role }).eq('id', row.id)
       if (roleError) {

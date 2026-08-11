@@ -44,8 +44,10 @@ interface DeveloperShellProps {
 }
 
 /**
+ * @deprecated Frozen legacy shell — not mounted from `page.tsx` (2026-08-11).
+ * Product is driver-only via CandidateShell. Do not wire this back into routing.
+ *
  * DeveloperShell - Contains all developer-role pages and routing.
- * Reads currentPage from UIStore; no page state props needed.
  */
 export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
   const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()

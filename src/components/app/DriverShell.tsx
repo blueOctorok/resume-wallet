@@ -68,13 +68,11 @@ interface DriverShellProps {
 }
 
 /**
+ * @deprecated Frozen legacy shell — not mounted from `page.tsx` (2026-08-11).
+ * All drivers use CandidateShell. Kept only so old imports/docs don't break
+ * mid-refactor; do not wire this back into routing.
+ *
  * DriverShell - All driver-role pages and routing in one component.
- *
- * Reads navigation state from UIStore. Updates driver journey state in UIStore
- * so the Stormi Journey Guide can track progress.
- *
- * All DOT application logic lives in <DotApplicationFlow />.
- * Guest marketing landing lives in page.tsx → LandingPage (not here).
  */
 export default function DriverShell({
   onResumeUploadEvent,

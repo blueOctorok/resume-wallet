@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Legacy shell cleanup — DriverShell / DeveloperShell unmounted** (2026-08-11)
+
+Year of product evolution left frozen role shells that could still mount. Production had **0** `driver` / `developer` users, but `DeveloperShell` was still wired and `!userRole` had been falling into `DriverShell`.
+
+- `page.tsx` mounts only `EmployerShell` + `CandidateShell` (`candidate` | legacy `driver` | legacy `developer`)
+- `/api/auth/sync` coerces `driver`/`developer` → `candidate` on login
+- Nav hub label is "My Hub" for all candidate-surface roles
+- Migration `105_coerce_legacy_roles_to_candidate.sql` (repo); prod null-role rows coerced via service role (`henrybarberclt1966@…`, `landcastler@…` → candidate). Auth sync also coerces on next login.
+- `DriverShell.tsx` / `DeveloperShell.tsx` marked `@deprecated` — files kept for a later deletion PR, not mounted
+
+---
+
+## **Stop mounting legacy DriverShell on fresh logins** (2026-08-11)
+
+Not a cache: `page.tsx` still shipped the old `DriverHub` via `DriverShell` when `userRole === 'driver'` **or** `!userRole`. After the role-selection modal was removed, a login whose `/api/user/profile` fetch finished before `/api/auth/sync` set `candidate` had `userRole = null` and fell through into that legacy UI ("Candidate's Driver Hub", 15% bar, Coming Soon rewards).
+
+- `candidate` **and** legacy `driver` → `CandidateShell` only; DriverShell no longer mounted from `/`
+- Auth sync writes `role` into the store from its response so shell choice can't race a null role
+- Role fetch no longer clears `userRole` to `null` at the start of the request
+
+---
+
 ## **Admin user delete also revokes Supabase Auth sessions** (2026-08-11)
 
 Deleting a candidate from central admin only removed `public.users`. Their browser cookies still authenticated against `auth.users`, and `/api/auth/sync` → `ensureUserRow` quietly recreated the app row — so a "deleted" tester came back into the hub asking for a name.

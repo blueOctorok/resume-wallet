@@ -5,8 +5,6 @@ import { useState, useRef, useEffect } from 'react'
 import {
   LayoutDashboard,
   ChevronDown,
-  Car,
-  Code,
   Building2,
   HelpCircle,
   MessageSquare,
@@ -80,16 +78,16 @@ interface NavigationProps {
 }
 
 const HUB_LABELS: Partial<Record<NonNullable<UserRole>, string>> = {
-  driver: 'Driver Hub',
+  // Legacy driver/developer labels share the candidate surface
+  driver: 'My Hub',
   employer: 'Employer Hub',
-  developer: 'Developer Hub',
+  developer: 'My Hub',
   candidate: 'My Hub',
 }
 
 function HubRoleIcon({ userRole }: { userRole: UserRole }) {
-  if (userRole === 'driver') return <Car className='w-4 h-4' />
   if (userRole === 'employer') return <Building2 className='w-4 h-4' />
-  if (userRole === 'developer') return <Code className='w-4 h-4' />
+  // Candidate surface (includes legacy driver/developer roles)
   return <User className='w-4 h-4' />
 }
 
