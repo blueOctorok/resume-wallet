@@ -16,6 +16,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { checkEmailAgainstCompanyDomains } from '@/lib/employer-domain-match'
+import { isCandidateSurfaceRole } from '@/lib/employer-account-guard'
 
 export type ResolvedRole = 'employer' | 'candidate'
 
@@ -82,6 +83,22 @@ export async function resolveEmployerLink(
   // Everything below is keyed on the verified email.
   const email = verifiedEmail?.trim().toLowerCase()
   if (!email) return NONE
+
+  // A candidate login must never claim a company or accept a team invite.
+  // Admin create also blocks designating an existing candidate email as owner;
+  // this is the runtime backstop if a company row was linked another way.
+  const { data: selfRow } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (isCandidateSurfaceRole(selfRow?.role)) {
+    console.warn(
+      `[RESOLVE EMPLOYER LINK] Refusing employer claim/invite for candidate account ${userId} (${email})`
+    )
+    return NONE
+  }
 
   // ── 3. Pre-created company awaiting its designated owner ───────────────────
   // This is the admin provisioning path: /api/admin/companies creates the company

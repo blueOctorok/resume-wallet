@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import {
+  CANDIDATE_CANNOT_BECOME_EMPLOYER,
+  isCandidateSurfaceRole,
+} from '@/lib/employer-account-guard'
 
 /**
  * POST /api/employer/team/accept-invite
@@ -29,12 +33,23 @@ export async function POST(request: NextRequest) {
 
     const { data: user } = await supabase
       .from('users')
-      .select('id, email, wallet_address')
+      .select('id, email, wallet_address, role')
       .eq('id', userId)
       .single()
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    if (isCandidateSurfaceRole(user.role)) {
+      return NextResponse.json(
+        {
+          error: CANDIDATE_CANNOT_BECOME_EMPLOYER,
+          details: 'Sign in with a different email that is not already a candidate account.',
+          code: 'CANDIDATE_EMAIL_IN_USE',
+        },
+        { status: 403 }
+      )
     }
 
     // Find the pending invite

@@ -7,7 +7,7 @@ export default function LandingPreviewClient() {
   return (
     <LandingPage
       isAuthenticated={false}
-      onGetStarted={() => alert('CTA: Build your Career Card (routes to sign-in on the real page)')}
+      onLogIn={() => alert('CTA: Log in → /sign-in')}
       onBrowseJobs={() => alert('CTA: Browse jobs (opens Guided Mode on the real page)')}
     />
   )

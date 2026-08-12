@@ -27,8 +27,8 @@ import FinalCtaSection from './FinalCtaSection'
 
 interface LandingPageProps {
   isAuthenticated: boolean
-  /** Primary CTA — sign-in / hub */
-  onGetStarted: () => void
+  /** One front door — /sign-in; role routes to candidate or employer hub */
+  onLogIn: () => void
   /** Guest: open public Guided Mode (no account required to browse) */
   onBrowseJobs?: () => void
 }
@@ -64,7 +64,11 @@ function useScrollReveal() {
   return containerRef
 }
 
-export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJobs }: LandingPageProps) {
+export default function LandingPage({
+  isAuthenticated,
+  onLogIn,
+  onBrowseJobs,
+}: LandingPageProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const revealRef = useScrollReveal()
@@ -79,7 +83,7 @@ export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJob
     <div ref={revealRef} className={`relative z-10 ${isDark ? '' : 'bg-[#f7f4ed]'}`}>
       <HeroSection
         isAuthenticated={isAuthenticated}
-        onGetStarted={onGetStarted}
+        onLogIn={onLogIn}
         onForEmployers={scrollToEmployers}
         onBrowseJobs={onBrowseJobs}
       />
@@ -87,12 +91,12 @@ export default function LandingPage({ isAuthenticated, onGetStarted, onBrowseJob
       <CareerCardSection isDark={isDark} />
       <DisclosureSection />
       <HowItWorksSection isDark={isDark} />
-      <EmployersSection isDark={isDark} />
+      <EmployersSection isDark={isDark} onLogIn={onLogIn} />
       <TrustSection />
       <FinalCtaSection
         isDark={isDark}
         isAuthenticated={isAuthenticated}
-        onGetStarted={onGetStarted}
+        onLogIn={onLogIn}
         onForEmployers={scrollToEmployers}
       />
 

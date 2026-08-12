@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Landing: Log in (one door)** (2026-08-12)
+
+Replaced candidate-biased “Build your Career Card” with a single **Log in** CTA. Same `/sign-in` for candidates and employers; `page.tsx` routes by role after auth. **I’m hiring** stays mailto/scroll for new carriers; employers section keeps **Already on Provven? Log in**. No separate signup flow — OTP still creates Auth users on first email when needed.
+
+---
+
+## **Block candidate → employer on the same login** (2026-08-11)
+
+Admin company create used to quietly flip an existing candidate row to `employer` when the designated-owner email already had a driver account. Team-invite accept could do the same. That is how one email ended up on the wrong product surface.
+
+- `employer-account-guard`: `isCandidateSurfaceRole` / shared error copy
+- `/api/admin/companies` POST → **409** if owner email is already `candidate` / legacy `driver` / `developer`
+- `resolveEmployerLink` refuses claim/invite side-effects for those roles (null role still allowed so a brand-new employer signup can claim)
+- `/api/employer/team/accept-invite` → **403** for candidate accounts
+
+Rule: same person can be driver + company contact in real life; they need **two emails / Auth users**.
+
+---
+
 ## **Legacy shell cleanup — DriverShell / DeveloperShell unmounted** (2026-08-11)
 
 Year of product evolution left frozen role shells that could still mount. Production had **0** `driver` / `developer` users, but `DeveloperShell` was still wired and `!userRole` had been falling into `DriverShell`.

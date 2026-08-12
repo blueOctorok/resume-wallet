@@ -17,7 +17,8 @@ import { GOLD_CTA, InkBand, LandingContainer } from './landing-shared'
 
 interface HeroSectionProps {
   isAuthenticated: boolean
-  onGetStarted: () => void
+  /** One front door — role routes to candidate or employer hub after auth */
+  onLogIn: () => void
   onForEmployers: () => void
   onBrowseJobs?: () => void
 }
@@ -25,19 +26,16 @@ interface HeroSectionProps {
 function HeroAtmosphere() {
   return (
     <>
-      {/* Warm gold bloom behind the copy — candlelight on navy */}
       <div
         aria-hidden
         className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.12] blur-[100px]'
         style={{ background: 'radial-gradient(circle, #c9a86a 0%, transparent 65%)' }}
       />
-      {/* Cool blue bloom behind the card — depth without brand chroma */}
       <div
         aria-hidden
         className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-[0.14] blur-[110px]'
         style={{ background: 'radial-gradient(circle, #3d5a8f 0%, transparent 65%)' }}
       />
-      {/* Bottom vignette so the band settles before the next section */}
       <div aria-hidden className='pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-black/40' />
     </>
   )
@@ -45,19 +43,17 @@ function HeroAtmosphere() {
 
 export default function HeroSection({
   isAuthenticated,
-  onGetStarted,
+  onLogIn,
   onForEmployers,
   onBrowseJobs,
 }: HeroSectionProps) {
-  const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Build your Career Card'
+  const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Log in'
 
   return (
     <InkBand atmosphere={<HeroAtmosphere />} className='border-b border-white/[0.06]'>
       <LandingContainer className='pb-20 pt-14 sm:pb-28 sm:pt-20 lg:pt-24'>
         <div className='grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16'>
-          {/* Copy column */}
           <div className='min-w-0 text-center lg:text-left'>
-            {/* Brand lockup — hero-level, per brand boards */}
             <div className='lp-rise' style={{ animationDelay: '0ms' }}>
               <p className='text-6xl sm:text-7xl lg:text-[5.5rem] [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
                 <ProvvenWordmark tone='ink' />
@@ -95,7 +91,7 @@ export default function HeroSection({
               <Button
                 variant='primary'
                 size='lg'
-                onClick={onGetStarted}
+                onClick={onLogIn}
                 className={cn('group h-auto rounded-xl px-8 py-4 text-base', GOLD_CTA)}
               >
                 {primaryLabel}
@@ -107,7 +103,6 @@ export default function HeroSection({
                 onClick={onForEmployers}
                 className={cn(
                   'h-auto rounded-xl px-8 py-4 text-base',
-                  // Fixed ink plane — override theme-aware secondary styling
                   'border-white/15 bg-white/[0.06] text-slate-200 hover:bg-white/[0.12] dark:border-white/15 dark:bg-white/[0.06] dark:hover:bg-white/[0.12]',
                 )}
               >
@@ -132,9 +127,7 @@ export default function HeroSection({
             </div>
           </div>
 
-          {/* Visual column — the product is the demo */}
           <div className='lp-rise relative flex min-w-0 justify-center lg:justify-end' style={{ animationDelay: '260ms' }}>
-            {/* Pedestal glow under the card */}
             <div
               aria-hidden
               className='pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 opacity-25 blur-3xl'

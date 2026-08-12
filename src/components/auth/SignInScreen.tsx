@@ -58,6 +58,7 @@ function SignInAtmosphere() {
 
 /**
  * Passwordless sign-in: Google + email OTP code only (no passwords).
+ * One door for candidates and employers — role routing happens after auth.
  *
  * Visual chrome mirrors the landing hero — fixed ink-navy plane, Provven
  * wordmark, champagne gold CTAs — so the front door matches the brand.
@@ -139,8 +140,8 @@ export default function SignInScreen() {
     try {
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        // shouldCreateUser makes this double as sign-up for new emails.
-        // emailRedirectTo covers users who click the link instead of typing the code.
+        // shouldCreateUser: first-time emails get an Auth user (candidate hub by
+        // default). Employer accounts are provisioned separately and already exist.
         options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(next) },
       })
       if (otpError) {
@@ -226,10 +227,10 @@ export default function SignInScreen() {
 
           <div className='mb-6 text-center'>
             <h1 className='font-display text-2xl font-medium tracking-tight text-[#f4f1ea]'>
-              Sign in
+              Log in
             </h1>
             <p className='mt-2 text-sm leading-relaxed text-slate-400'>
-              Build your verified career card
+              Candidates and employers use the same door
             </p>
             {prefillEmail ? (
               <p className='mt-3 text-xs text-[#d4be93]/90'>

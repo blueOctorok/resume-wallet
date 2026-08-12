@@ -87,17 +87,16 @@ function RequestMock({ isDark }: { isDark: boolean }) {
 
 interface EmployersSectionProps {
   isDark: boolean
+  /** Existing members — /sign-in?intent=login (not self-serve signup) */
+  onLogIn: () => void
 }
 
 /**
- * Employer accounts are provisioned by Provven, so this CTA opens a conversation
- * rather than a signup. It used to share `onGetStarted` with the candidate CTA,
- * which routed to /sign-in — meaning a hiring manager clicking "I'm hiring" was
- * silently onboarded as a candidate.
+ * New employer accounts are provisioned by Provven (mailto) — not self-serve signup.
+ * Existing members use Employer login → /sign-in; role routing lands them in EmployerShell.
  *
- * That conversation IS the credentialing step: an employer account can order an
- * MVR against a state DMV and a PSP against FMCSA, so DPPA and FCRA make a
- * self-serve form hard to defend as "reasonable procedures".
+ * DPPA / FCRA: an employer account can order MVR/PSP, so "reasonable procedures"
+ * mean we verify the carrier before anyone can order.
  */
 const CONTACT_EMAIL = process.env.NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL || 'hello@provven.com'
 
@@ -107,7 +106,7 @@ const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
   `Company:\nDOT number:\nYour name and role:\nWhat you're hiring for:\n\nWe'll get back to you to set up your account.`
 )}`
 
-export default function EmployersSection({ isDark }: EmployersSectionProps) {
+export default function EmployersSection({ isDark, onLogIn }: EmployersSectionProps) {
   return (
     <section
       id='employers'
@@ -150,6 +149,18 @@ export default function EmployersSection({ isDark }: EmployersSectionProps) {
                 Employer accounts are set up by our team — we verify the carrier before anyone can
                 order an MVR or PSP.
               </p>
+              <button
+                type='button'
+                onClick={onLogIn}
+                className={cn(
+                  'mt-4 text-sm font-medium underline underline-offset-4 transition-colors',
+                  isDark
+                    ? 'text-[#d4be93] decoration-[#c9a86a]/40 hover:decoration-[#c9a86a]/80'
+                    : 'text-[#8a6d3b] decoration-[#c9a86a]/50 hover:decoration-[#8a6d3b]',
+                )}
+              >
+                Already on Provven? Log in
+              </button>
             </div>
           </div>
 

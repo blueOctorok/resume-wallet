@@ -13,17 +13,17 @@ import { GOLD_CTA, headingText, mutedText, LandingContainer, SealDivider } from 
 interface FinalCtaSectionProps {
   isDark: boolean
   isAuthenticated: boolean
-  onGetStarted: () => void
+  onLogIn: () => void
   onForEmployers: () => void
 }
 
 export default function FinalCtaSection({
   isDark,
   isAuthenticated,
-  onGetStarted,
+  onLogIn,
   onForEmployers,
 }: FinalCtaSectionProps) {
-  const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Build your Career Card'
+  const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Log in'
 
   return (
     <section className='py-24 sm:py-32'>
@@ -58,7 +58,7 @@ export default function FinalCtaSection({
             <Button
               variant='primary'
               size='lg'
-              onClick={onGetStarted}
+              onClick={onLogIn}
               className={cn('group h-auto rounded-xl px-8 py-4 text-base', GOLD_CTA)}
             >
               {primaryLabel}

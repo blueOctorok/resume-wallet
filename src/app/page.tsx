@@ -410,7 +410,7 @@ const HomeContent = () => {
           <ErrorBoundary section='Landing'>
             <LandingPage
               isAuthenticated={false}
-              onGetStarted={() => router.push('/sign-in')}
+              onLogIn={() => router.push('/sign-in')}
               onBrowseJobs={enterGuidedMode}
             />
           </ErrorBoundary>

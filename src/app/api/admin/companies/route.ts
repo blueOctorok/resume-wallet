@@ -3,6 +3,10 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { sendEmployerOwnerInvite } from '@/lib/send-admin-notification'
 import { domainFromEmail, isPublicEmailDomain, normalizeDomainInput } from '@/lib/employer-domain-match'
+import {
+  CANDIDATE_CANNOT_BECOME_EMPLOYER,
+  isCandidateSurfaceRole,
+} from '@/lib/employer-account-guard'
 
 /**
  * GET /api/admin/companies
@@ -272,12 +276,25 @@ export async function POST(request: NextRequest) {
     // Check if user with this email already exists and has a company
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('id, role')
       .ilike('email', designatedOwnerEmail)
       .maybeSingle()
 
     let employerUserId = null
     if (existingUser) {
+      // Candidate accounts stay candidates. The owner must use a separate email
+      // (corporate address for a real carrier; a second Gmail for a domainless test).
+      if (isCandidateSurfaceRole(existingUser.role)) {
+        return NextResponse.json(
+          {
+            error: CANDIDATE_CANNOT_BECOME_EMPLOYER,
+            details: `An account already exists for ${designatedOwnerEmail.toLowerCase()} as a candidate. Pick a different owner email.`,
+            code: 'CANDIDATE_EMAIL_IN_USE',
+          },
+          { status: 409 }
+        )
+      }
+
       // Check if they already own a company
       const { data: existingCompany } = await supabase
         .from('companies')
