@@ -8,6 +8,10 @@ const runtimeDir = path.dirname(fileURLToPath(import.meta.url))
 export type MidnightShippedFactType =
   | 'mvr_clean_36_months'
   | 'cdl_class_a'
+  | 'cdl_class'
+  | 'cdl_endorsements'
+  | 'cdl_restrictions'
+  | 'med_cert_valid'
   | 'previous_employer_verified'
 
 export interface MidnightCircuitConfig {
@@ -19,6 +23,10 @@ export interface MidnightCircuitConfig {
   callMethod:
     | 'proveCleanMvr'
     | 'proveCdlClassA'
+    | 'proveCdlClass'
+    | 'proveCdlEndorsements'
+    | 'proveCdlRestrictions'
+    | 'proveMedCertValid'
     | 'provePreviousEmployerVerified'
 }
 
@@ -38,6 +46,38 @@ export const MIDNIGHT_CIRCUIT_CONFIGS: Record<MidnightShippedFactType, MidnightC
     envVar: 'MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A',
     deploymentKey: 'cdl_class_a',
     callMethod: 'proveCdlClassA',
+  },
+  cdl_class: {
+    factType: 'cdl_class',
+    contractName: 'cdl-class',
+    managedDir: path.join(runtimeDir, '..', 'managed', 'cdl-class'),
+    envVar: 'MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS',
+    deploymentKey: 'cdl_class',
+    callMethod: 'proveCdlClass',
+  },
+  cdl_endorsements: {
+    factType: 'cdl_endorsements',
+    contractName: 'cdl-endorsements',
+    managedDir: path.join(runtimeDir, '..', 'managed', 'cdl-endorsements'),
+    envVar: 'MIDNIGHT_CONTRACT_ADDRESS_CDL_ENDORSEMENTS',
+    deploymentKey: 'cdl_endorsements',
+    callMethod: 'proveCdlEndorsements',
+  },
+  cdl_restrictions: {
+    factType: 'cdl_restrictions',
+    contractName: 'cdl-restrictions',
+    managedDir: path.join(runtimeDir, '..', 'managed', 'cdl-restrictions'),
+    envVar: 'MIDNIGHT_CONTRACT_ADDRESS_CDL_RESTRICTIONS',
+    deploymentKey: 'cdl_restrictions',
+    callMethod: 'proveCdlRestrictions',
+  },
+  med_cert_valid: {
+    factType: 'med_cert_valid',
+    contractName: 'med-cert-valid',
+    managedDir: path.join(runtimeDir, '..', 'managed', 'med-cert-valid'),
+    envVar: 'MIDNIGHT_CONTRACT_ADDRESS_MED_CERT',
+    deploymentKey: 'med_cert_valid',
+    callMethod: 'proveMedCertValid',
   },
   previous_employer_verified: {
     factType: 'previous_employer_verified',
@@ -63,7 +103,6 @@ export function resolveContractAddressForFact(factType: MidnightShippedFactType)
     const raw = JSON.parse(fs.readFileSync(DEPLOYMENT_JSON_PATH, 'utf8')) as DeploymentJson
     const fromMap = raw.contracts?.[factType]?.trim()
     if (fromMap) return fromMap
-    // Backward compat — legacy single-address deployment is the MVR contract.
     if (factType === 'mvr_clean_36_months' && raw.contractAddress?.trim()) {
       return raw.contractAddress.trim()
     }

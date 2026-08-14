@@ -140,7 +140,7 @@ Revised 2026-05-30 (DEC-2026-05-016): the chain is now part of the **public narr
 
 ### Guardrails when you DO say "blockchain / on-chain / verified" (moat integrity — never loosen)
 - **Provenance gate:** only **issuer-signed / third-party facts** (MVR, PSP, employment verification, future CDLIS) may carry a "verified / tamper-proof / on-chain" claim. **Self-reported data (resume, DOT app, skills, education) is NEVER "blockchain-verified."** See DEC-2026-05-014 + `PROJECT_ROADMAP.md` blockchain policy.
-- **Honesty about phase:** narrate the architecture/vision ("built on Midnight", "designed for selective disclosure") — but don't claim a *specific* fact is *live* ZK-proven on-chain before Phase 3 ships. Present-continuous vision copy is fine; per-fact "proven on Midnight right now" is not, until the proof is real (DEC-2026-05-004).
+- **Honesty about phase:** narrate the architecture/vision ("built on Midnight", "designed for selective disclosure"). Per-fact **Proven on Midnight** is allowed only when that fact's Compact circuit actually ran (`midnight_zk` + `predicateEnforced`, or `issuer_signed`) **and** the line still cites the CRA (Accio / DKIM domain). Do **not** say "trust the math, not Storm" until P3.4-B issuer-sig. Dummy boolean reuse is not a per-fact claim (DEC-2026-05-004).
 - **Interaction stays invisible:** never ask a user to touch a wallet, seed phrase, gas, signing, or a token. The chain is something users *read about*, never operate.
 
 ### Discouraged (brand taste, not a moat rule)

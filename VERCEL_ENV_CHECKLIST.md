@@ -37,7 +37,7 @@ SCREENING_CONSENT_ENCRYPTION_KEY=  # FCRA consent bundle encryption
 INTERNAL_API_SECRET=               # Server-to-server (referrals, etc.)
 ATTESTATION_JWT_PRIVATE_KEY=        # Phase 2: HS256 secret for signed attestations (32+ chars)
 ATTESTATION_ISSUER=storm           # JWT iss claim (optional; default storm)
-# ATTESTATION_BACKEND=             # Optional; omit for signed JWT (Phase 2). midnight = Phase 3 only.
+ATTESTATION_BACKEND=midnight      # Production flipped 2026-08-13 (Preprod). Omit on Preview to stay JWT.
 # MIDNIGHT_* — Phase 3 (see docs/midnight)
 # STRIPE_* — add when Stripe Checkout ships
 ```

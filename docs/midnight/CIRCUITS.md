@@ -164,12 +164,31 @@ export circuit proveCleanMvr(
 
 ---
 
-### `previous-employer-verified` — status 🟡 (P3.5 — Preprod proven 2026-08-06; issuer sig pending)
+### Billboard MVR fields — status 🟡 predicate-enforced (dedicated circuits; issuer-sig pending)
 
-- **Fact:** `previous_employer_verified` — prior employer confirmed employment (EVR).
+Active career-card facts. Each has its **own Compact contract**. The circuit asserts the disclosed value equals the witness — you cannot prove Class B with a Class A witness (or an endorsement mask the MVR does not have).
+
+| Fact | Circuit | Predicate |
+|---|---|---|
+| `cdl_class` | `cdl-class` / `proveCdlClass` | witness ASCII class code == public `disclosedClass` (A–Z) |
+| `cdl_endorsements` | `cdl-endorsements` / `proveCdlEndorsements` | witness bitmask == public mask, mask > 0 |
+| `cdl_restrictions` | `cdl-restrictions` / `proveCdlRestrictions` | witness bitmask == public mask (0 = none) |
+| `med_cert_valid` | `med-cert-valid` / `proveMedCertValid` | witness YYYYMMDD == public expiration, expiration ≥ asOfDate |
+
+- **Public inputs:** disclosed value + `asOfDate` + pull nullifier + commitment.
+- **Honesty:** predicate is real on Midnight. Provenance is still Storm’s Accio parse (`provenanceTier: metadata`). Copy is **Proven on Midnight · derived from Accio pull …** when `predicateEnforced: true`. Not “trust the math, not Storm” until P3.4-B issuer-sig.
+- **Deploy:** `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS`, `_CDL_ENDORSEMENTS`, `_CDL_RESTRICTIONS`, `_MED_CERT`.
+- **Legacy:** `cdl_class_a` / `mvr_clean_36_months` stay on their original contracts for old rows.
+
+---
+
+### `previous-employer-verified` — status 🟡 (P3.5 — Preprod proven 2026-08-06; DKIM gate 2026-08-13)
+
+- **Fact:** `previous_employer_verified` — prior employer confirmed employment (in-house EV outreach, not Accio EV).
 - **Witness (private):** `employerVerified(): Boolean` — true when EVR row has `verified_at`.
 - **Public inputs:** `asOfDate` (from `verified_at`), `pullNullifier` (EVR request id), `commitment`.
 - **Constraints:** assert verified; nullifier ledger prevents double-prove.
+- **DKIM (Midnight only):** inbound Pingram `EMAIL_INBOUND` with raw RFC822 → `mailauth` DKIM pass + domain aligned with the invited mailbox. Form/token replies stay **Verified by Provven**. Midnight `proveFact` throws without `dkim_valid`.
 - **Deployed:** Preprod `4ef51b672f29b80ee5c39c53c176e3a1de63040722a392ddd03a6a53fc049859`.
 - **Smoke:** tx `002f59e5…4f302b`, attestation `6237e4c6-…` (2026-08-06).
 

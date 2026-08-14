@@ -7,19 +7,44 @@ import {
   getEmploymentVerificationForAttestation,
   type MvrAttestationContext,
 } from '@/lib/block-data'
+import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 import type { MvrViolation } from '@/types/driver-profile'
+import {
+  classLetterToCode,
+  endorsementMaskFromCodes,
+  expirationToYmd,
+  restrictionMaskFromCodes,
+} from '@/lib/mvr-field-predicate'
 
 const ACCIO_CRA = 'accio'
 const PRIOR_EMPLOYER_CRA = 'prior_employer'
+const DKIM_CRA = 'dkim'
 const MVR_ATTESTATION_TTL_MS = 365 * 24 * 60 * 60 * 1000
 const EMPLOYMENT_ATTESTATION_TTL_MS = 90 * 24 * 60 * 60 * 1000
 const MONTHS_36 = 36
 
-/** Facts shipped in P2.3 — all third-party provenance. */
+/** Facts that can be attested. Legacy example facts stay resolvable for existing rows. */
 export type ShippedFactType =
   | 'mvr_clean_36_months'
   | 'cdl_class_a'
+  | 'cdl_class'
+  | 'cdl_endorsements'
+  | 'cdl_restrictions'
+  | 'med_cert_valid'
   | 'previous_employer_verified'
+
+/** New card facts — Midnight proves these (not the Class-A / clean-36 examples). */
+export const ACTIVE_CARD_FACTS: readonly ShippedFactType[] = [
+  'cdl_class',
+  'cdl_endorsements',
+  'cdl_restrictions',
+  'med_cert_valid',
+  'previous_employer_verified',
+]
+
+export function mvrFieldPullId(accioOrderNumber: string, factType: ShippedFactType): string {
+  return `${accioOrderNumber}:${factType}`
+}
 
 export interface ProveContext {
   candidateUserId: string
@@ -98,13 +123,13 @@ function requireCompletedMvr(ctx: MvrAttestationContext): void {
   }
 }
 
-/** Extract single-letter CDL class from Accio license_class text (e.g. "A - CDL COMBINATION"). */
+/** Extract license class token from Accio text (A/B/C plus other DMV class letters). */
 export function normalizeAccioCdlClass(licenseClass: string | null): string | null {
   if (!licenseClass?.trim()) return null
   const upper = licenseClass.trim().toUpperCase()
-  const letterMatch = upper.match(/^([ABC])\b/)
+  const letterMatch = upper.match(/^([A-Z])\b/)
   if (letterMatch) return letterMatch[1]
-  const classMatch = upper.match(/\bCLASS\s*([ABC])\b/)
+  const classMatch = upper.match(/\bCLASS\s*([A-Z0-9]+)\b/)
   return classMatch ? classMatch[1] : null
 }
 
@@ -173,6 +198,88 @@ async function proveCdlClassA(ctx: ProveContext): Promise<FactResult> {
   }
 }
 
+async function requireCompletedMvrCtx(ctx: ProveContext): Promise<MvrAttestationContext> {
+  const mvrCtx = await getMvrAttestationContext(ctx.supabase, ctx.candidateUserId)
+  if (!mvrCtx) {
+    throw new AttestationError('No driver-owned completed MVR on file')
+  }
+  requireCompletedMvr(mvrCtx)
+  return mvrCtx
+}
+
+async function proveCdlClass(ctx: ProveContext): Promise<FactResult> {
+  const mvrCtx = await requireCompletedMvrCtx(ctx)
+  const normalized = normalizeAccioCdlClass(mvrCtx.licenseClass)
+  if (!normalized) {
+    throw new AttestationError('DMV MVR does not include a license class — cannot attest')
+  }
+  return {
+    factSummary: `License class ${normalized} (DMV via Accio MVR)`,
+    disclosedFields: { class: normalized, classCode: classLetterToCode(normalized) },
+    expiresAt: mvrCtx.mvr.expires_at ?? attestationExpiresAt(MVR_ATTESTATION_TTL_MS),
+    validUntil: mvrCtx.mvr.expires_at ?? undefined,
+    sourceCra: ACCIO_CRA,
+    sourcePullId: mvrFieldPullId(mvrCtx.accioOrderNumber, 'cdl_class'),
+  }
+}
+
+async function proveCdlEndorsements(ctx: ProveContext): Promise<FactResult> {
+  const mvrCtx = await requireCompletedMvrCtx(ctx)
+  const raw = (mvrCtx.endorsements ?? []).map((e) => e.trim()).filter(Boolean)
+  if (raw.length === 0) {
+    throw new AttestationError('DMV MVR does not list endorsements — cannot attest')
+  }
+  const joined = raw.join(', ')
+  return {
+    factSummary: `CDL endorsements: ${joined}`,
+    disclosedFields: { endorsements: joined, mask: endorsementMaskFromCodes(raw) },
+    expiresAt: mvrCtx.mvr.expires_at ?? attestationExpiresAt(MVR_ATTESTATION_TTL_MS),
+    validUntil: mvrCtx.mvr.expires_at ?? undefined,
+    sourceCra: ACCIO_CRA,
+    sourcePullId: mvrFieldPullId(mvrCtx.accioOrderNumber, 'cdl_endorsements'),
+  }
+}
+
+async function proveCdlRestrictions(ctx: ProveContext): Promise<FactResult> {
+  const mvrCtx = await requireCompletedMvrCtx(ctx)
+  const raw = (mvrCtx.restrictions ?? []).map((e) => e.trim()).filter(Boolean)
+  const label = raw.length > 0 ? raw.join(', ') : 'none'
+  return {
+    factSummary:
+      raw.length > 0
+        ? `CDL restrictions: ${label}`
+        : 'No CDL restrictions on DMV MVR',
+    disclosedFields: { restrictions: label, mask: restrictionMaskFromCodes(raw) },
+    expiresAt: mvrCtx.mvr.expires_at ?? attestationExpiresAt(MVR_ATTESTATION_TTL_MS),
+    validUntil: mvrCtx.mvr.expires_at ?? undefined,
+    sourceCra: ACCIO_CRA,
+    sourcePullId: mvrFieldPullId(mvrCtx.accioOrderNumber, 'cdl_restrictions'),
+  }
+}
+
+async function proveMedCertValid(ctx: ProveContext): Promise<FactResult> {
+  const mvrCtx = await requireCompletedMvrCtx(ctx)
+  if (!hasValidMedicalCert(mvrCtx.medicalCertStatus, mvrCtx.medicalCertExpiration)) {
+    throw new AttestationError('DMV MVR does not show a current medical certificate')
+  }
+  const expiration = (mvrCtx.medicalCertExpiration ?? '').trim()
+  const expirationYmd = expirationToYmd(expiration)
+  return {
+    factSummary: expiration
+      ? `Medical certificate on file — expires ${expiration}`
+      : 'Medical certificate on file (DMV via Accio MVR)',
+    disclosedFields: {
+      status: mvrCtx.medicalCertStatus ?? 'on_file',
+      ...(expiration ? { expiration } : {}),
+      ...(expirationYmd ? { expirationYmd } : {}),
+    },
+    expiresAt: mvrCtx.mvr.expires_at ?? attestationExpiresAt(MVR_ATTESTATION_TTL_MS),
+    validUntil: mvrCtx.mvr.expires_at ?? undefined,
+    sourceCra: ACCIO_CRA,
+    sourcePullId: mvrFieldPullId(mvrCtx.accioOrderNumber, 'med_cert_valid'),
+  }
+}
+
 async function provePreviousEmployerVerified(ctx: ProveContext): Promise<FactResult> {
   const employmentId =
     typeof ctx.parameters?.employmentId === 'string' ? ctx.parameters.employmentId : undefined
@@ -199,6 +306,8 @@ async function provePreviousEmployerVerified(ctx: ProveContext): Promise<FactRes
 
   const endLabel = row.claimed_end_date ?? 'present'
   const dateRange = `${row.claimed_start_date} – ${endLabel}`
+  const dkimDomain = row.dkimDomain?.trim() || null
+  const sourceCra = row.dkimValid && dkimDomain ? DKIM_CRA : PRIOR_EMPLOYER_CRA
 
   return {
     factSummary: `Prior employment verified — ${row.previous_employer_name}`,
@@ -206,9 +315,10 @@ async function provePreviousEmployerVerified(ctx: ProveContext): Promise<FactRes
       employerName: row.previous_employer_name,
       dateRange,
       responseDate: row.verified_at.slice(0, 10),
+      ...(dkimDomain ? { dkimDomain } : {}),
     },
     expiresAt: attestationExpiresAt(EMPLOYMENT_ATTESTATION_TTL_MS),
-    sourceCra: PRIOR_EMPLOYER_CRA,
+    sourceCra,
     sourcePullId: row.id,
   }
 }
@@ -230,10 +340,42 @@ const SHIPPED_FACTS: Record<ShippedFactType, FactDefinition> = {
     source: 'third_party',
     proveImpl: proveCdlClassA,
   },
+  cdl_class: {
+    factType: 'cdl_class',
+    label: 'License class',
+    description: 'License class on the driver-owned Accio MVR',
+    category: 'license',
+    source: 'third_party',
+    proveImpl: proveCdlClass,
+  },
+  cdl_endorsements: {
+    factType: 'cdl_endorsements',
+    label: 'CDL endorsements',
+    description: 'Endorsements listed on the driver-owned Accio MVR',
+    category: 'license',
+    source: 'third_party',
+    proveImpl: proveCdlEndorsements,
+  },
+  cdl_restrictions: {
+    factType: 'cdl_restrictions',
+    label: 'CDL restrictions',
+    description: 'Restrictions listed on the driver-owned Accio MVR',
+    category: 'license',
+    source: 'third_party',
+    proveImpl: proveCdlRestrictions,
+  },
+  med_cert_valid: {
+    factType: 'med_cert_valid',
+    label: 'Medical certificate',
+    description: 'DOT medical certificate on the driver-owned Accio MVR',
+    category: 'compliance',
+    source: 'third_party',
+    proveImpl: proveMedCertValid,
+  },
   previous_employer_verified: {
     factType: 'previous_employer_verified',
     label: 'Prior employer verified',
-    description: 'A previous employer confirmed employment dates and role',
+    description: 'Previous employer confirmed employment (DKIM-signed reply when proving on Midnight)',
     category: 'employment',
     source: 'third_party',
     proveImpl: provePreviousEmployerVerified,
@@ -247,7 +389,7 @@ export function getFactDefinition(factType: FactType): FactDefinition | undefine
 }
 
 export function listShippedFacts(): FactDefinition[] {
-  return Object.values(FACT_REGISTRY)
+  return ACTIVE_CARD_FACTS.map((id) => FACT_REGISTRY[id])
 }
 
 /**

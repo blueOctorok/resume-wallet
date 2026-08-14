@@ -1,0 +1,28 @@
+// CDL endorsements on the driver-owned Accio MVR.
+// Bitmask must match the public disclosed mask and be non-zero.
+// Bit table (LSB=0): H N T P S X W M — see src/lib/mvr-field-predicate.ts
+// Provenance signature (P3.4-B) still pending.
+
+pragma language_version >= 0.16 && <= 0.31;
+
+import CompactStandardLibrary;
+
+witness endorsementMask(): Uint<32>;
+
+export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
+
+export circuit proveCdlEndorsements(
+  disclosedMask: Uint<32>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
+  commitment: Opaque<"string">
+): Boolean {
+  assert(endorsementMask() == disclosedMask, "endorsement mask mismatch");
+  assert(disclosedMask > 0, "no endorsements");
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
+  factCommitment = disclose(commitment);
+  return disclose(true);
+}

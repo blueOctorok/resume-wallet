@@ -5,7 +5,7 @@ import {
   VerificationRequestRow,
   rowToVerificationRequest,
 } from '@/types/employment-verification'
-import { sendVerificationEmail } from '@/lib/send-verification-email'
+import { sendVerificationEmailAndTrack } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { getDevProfile } from '@/lib/block-data'
 
@@ -172,15 +172,19 @@ export async function POST(request: NextRequest) {
       console.warn('[DEVELOPER VERIFICATION] No verification_token – skipping send')
     } else {
       const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
-      const emailResult = await sendVerificationEmail({
-        to: contactEmail,
-        verificationLink,
-        previousEmployerName: employment.companyName ?? '',
-        claimedPosition: employment.position ?? '',
-        claimedCompanyName: employment.companyName ?? '',
-        claimedStartDate: claimedStartDate ?? undefined,
-        claimedEndDate: claimedEndDate ?? null,
-      })
+      const emailResult = await sendVerificationEmailAndTrack(
+        supabase,
+        String((newRequest as { id: string }).id),
+        {
+          to: contactEmail,
+          verificationLink,
+          previousEmployerName: employment.companyName ?? '',
+          claimedPosition: employment.position ?? '',
+          claimedCompanyName: employment.companyName ?? '',
+          claimedStartDate: claimedStartDate ?? undefined,
+          claimedEndDate: claimedEndDate ?? null,
+        },
+      )
       if (!emailResult.ok) {
         console.warn('[DEVELOPER VERIFICATION] Email send failed:', emailResult.error)
       }

@@ -32,6 +32,20 @@ import {
   createEmptyCdlClassAWitness,
 } from './cdl-class-a-witness.js'
 import {
+  createCdlClassCircuitWitness,
+  createEmptyCdlClassWitness,
+} from './cdl-class-witness.js'
+import {
+  createCdlEndorsementCircuitWitness,
+  createCdlRestrictionCircuitWitness,
+  createEmptyCdlEndorsementWitness,
+  createEmptyCdlRestrictionWitness,
+} from './cdl-mask-witness.js'
+import {
+  createMedCertCircuitWitness,
+  createEmptyMedCertWitness,
+} from './med-cert-witness.js'
+import {
   createPreviousEmployerVerifiedCircuitWitness,
   createEmptyPreviousEmployerVerifiedWitness,
 } from './previous-employer-verified-witness.js'
@@ -53,9 +67,24 @@ export interface MvrOnChainProveInput extends SharedOnChainProveInput {
   violationSlots: MvrCleanViolationSlot[]
 }
 
-export interface CdlOnChainProveInput extends SharedOnChainProveInput {
+export interface CdlClassAOnChainProveInput extends SharedOnChainProveInput {
   factType: 'cdl_class_a'
   holdsClassA: boolean
+}
+
+export interface CdlClassOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'cdl_class'
+  classCode: number
+}
+
+export interface CdlMaskOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'cdl_endorsements' | 'cdl_restrictions'
+  mask: number
+}
+
+export interface MedCertOnChainProveInput extends SharedOnChainProveInput {
+  factType: 'med_cert_valid'
+  expirationYmd: number
 }
 
 export interface EmployerVerifiedOnChainProveInput extends SharedOnChainProveInput {
@@ -65,7 +94,10 @@ export interface EmployerVerifiedOnChainProveInput extends SharedOnChainProveInp
 
 export type OnChainProveInput =
   | MvrOnChainProveInput
-  | CdlOnChainProveInput
+  | CdlClassAOnChainProveInput
+  | CdlClassOnChainProveInput
+  | CdlMaskOnChainProveInput
+  | MedCertOnChainProveInput
   | EmployerVerifiedOnChainProveInput
 
 export interface OnChainProveResult {
@@ -79,6 +111,7 @@ export interface OnChainProveResult {
   /** DUST spent on this prove (from FinalizedTxData.fees) — use for capacity planning. */
   paidFees: string
   estimatedFees: string
+  predicateEnforced: boolean
 }
 
 function logProgress(message: string): void {
@@ -168,6 +201,14 @@ function emptyWitnessForFact(factType: MidnightShippedFactType): unknown {
       )
     case 'cdl_class_a':
       return createEmptyCdlClassAWitness()
+    case 'cdl_class':
+      return createEmptyCdlClassWitness()
+    case 'cdl_endorsements':
+      return createEmptyCdlEndorsementWitness()
+    case 'cdl_restrictions':
+      return createEmptyCdlRestrictionWitness()
+    case 'med_cert_valid':
+      return createEmptyMedCertWitness()
     case 'previous_employer_verified':
       return createEmptyPreviousEmployerVerifiedWitness()
   }
@@ -221,9 +262,17 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
     const witnesses =
       input.factType === 'mvr_clean_36_months'
         ? createMvrCleanCircuitWitness(input.violationSlots)
-        : input.factType === 'cdl_class_a'
-          ? createCdlClassACircuitWitness(input.holdsClassA)
-          : createPreviousEmployerVerifiedCircuitWitness(input.employerVerified)
+        : input.factType === 'previous_employer_verified'
+          ? createPreviousEmployerVerifiedCircuitWitness(input.employerVerified)
+          : input.factType === 'cdl_class_a'
+            ? createCdlClassACircuitWitness(input.holdsClassA)
+            : input.factType === 'cdl_class'
+              ? createCdlClassCircuitWitness(input.classCode)
+              : input.factType === 'cdl_endorsements'
+                ? createCdlEndorsementCircuitWitness(input.mask)
+                : input.factType === 'cdl_restrictions'
+                  ? createCdlRestrictionCircuitWitness(input.mask)
+                  : createMedCertCircuitWitness(input.expirationYmd)
 
     logProgress(`Loading compiled contract + providers (${input.factType})...`)
     const { compiledContract } = await loadCompiledContractForFact(input.factType, witnesses)
@@ -248,10 +297,38 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
           pullNullifier,
           commitment,
         )
+      } else if (input.factType === 'previous_employer_verified') {
+        tx = await contract.callTx.provePreviousEmployerVerified(
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
       } else if (input.factType === 'cdl_class_a') {
         tx = await contract.callTx.proveCdlClassA(asOfDate, pullNullifier, commitment)
+      } else if (input.factType === 'cdl_class') {
+        tx = await contract.callTx.proveCdlClass(
+          BigInt(input.classCode),
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
+      } else if (input.factType === 'cdl_endorsements') {
+        tx = await contract.callTx.proveCdlEndorsements(
+          BigInt(input.mask),
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
+      } else if (input.factType === 'cdl_restrictions') {
+        tx = await contract.callTx.proveCdlRestrictions(
+          BigInt(input.mask),
+          asOfDate,
+          pullNullifier,
+          commitment,
+        )
       } else {
-        tx = await contract.callTx.provePreviousEmployerVerified(
+        tx = await contract.callTx.proveMedCertValid(
+          BigInt(input.expirationYmd),
           asOfDate,
           pullNullifier,
           commitment,
@@ -285,9 +362,17 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
       predicateVersion:
         input.factType === 'mvr_clean_36_months'
           ? 'v1-any-violation-in-window'
-          : input.factType === 'cdl_class_a'
-            ? 'v1-class-a-from-mvr'
-            : 'v1-evr-verified',
+          : input.factType === 'previous_employer_verified'
+            ? 'v1-evr-dkim'
+            : input.factType === 'cdl_class_a'
+              ? 'v1-cdl-class-a-boolean'
+              : `v1-mvr-field-${input.factType}`,
+      predicateEnforced:
+        input.factType === 'cdl_class' ||
+        input.factType === 'cdl_endorsements' ||
+        input.factType === 'cdl_restrictions' ||
+        input.factType === 'med_cert_valid' ||
+        input.factType === 'mvr_clean_36_months',
     }
   } finally {
     await walletCtx.wallet.stop()

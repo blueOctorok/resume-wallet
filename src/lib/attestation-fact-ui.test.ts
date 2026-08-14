@@ -19,7 +19,7 @@ describe('attestation-fact-ui', () => {
     expect(formatAttestationProvenance(null, null)).toBe('Verified by Provven')
   })
 
-  it('gates Midnight copy until issuer_signed', () => {
+  it('gates dummy Midnight copy until issuer_signed or predicateEnforced', () => {
     const metadata = formatAttestationVerificationLine({
       issuedAt: '2026-06-01T12:00:00.000Z',
       sourceCra: 'accio',
@@ -30,6 +30,17 @@ describe('attestation-fact-ui', () => {
     })
     expect(metadata).toMatch(/^Verified by Provven on /)
     expect(metadata).not.toMatch(/Midnight/i)
+
+    const predicate = formatAttestationVerificationLine({
+      issuedAt: '2026-06-01T12:00:00.000Z',
+      sourceCra: 'accio',
+      sourcePullId: 'order-99',
+      proofKind: 'midnight_zk',
+      provenanceTier: 'metadata',
+      predicateEnforced: true,
+    })
+    expect(predicate).toMatch(/^Proven on Midnight on /)
+    expect(predicate).toContain('Accio')
 
     const issuerSigned = formatAttestationVerificationLine({
       issuedAt: '2026-06-01T12:00:00.000Z',

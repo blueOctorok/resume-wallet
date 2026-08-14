@@ -2,7 +2,8 @@
  * DOT issuer badges → attestation honesty tier (P3.7 follow-on).
  *
  * Provenance first: no matching attestation → Accio / prior-employer issuer copy.
- * Midnight copy only when proof.kind === 'midnight_zk' AND provenanceTier === 'issuer_signed'.
+ * Midnight copy when proof.kind === 'midnight_zk' AND
+ * (issuer_signed OR predicateEnforced).
  */
 
 import {
@@ -28,6 +29,7 @@ export interface AttestationBadgeSummary {
   issuedAt: string
   txHash?: string | null
   proofId?: string | null
+  predicateEnforced?: boolean
 }
 
 export type DotBadgeHonestyTier = 'issuer_only' | 'storm_jwt' | 'midnight_zk'
@@ -37,10 +39,15 @@ export interface DotBadgeResult {
   tier: DotBadgeHonestyTier
 }
 
+function midnightClaim(att: AttestationBadgeSummary): boolean {
+  return (
+    att.proofKind === 'midnight_zk' &&
+    (att.provenanceTier === 'issuer_signed' || att.predicateEnforced === true)
+  )
+}
+
 function tierFromAttestation(att: AttestationBadgeSummary): DotBadgeHonestyTier {
-  if (att.proofKind === 'midnight_zk' && att.provenanceTier === 'issuer_signed') {
-    return 'midnight_zk'
-  }
+  if (midnightClaim(att)) return 'midnight_zk'
   if (att.proofKind === 'midnight_zk' || att.proofKind === 'signed_jwt') {
     return 'storm_jwt'
   }
@@ -56,6 +63,7 @@ function textFromAttestation(att: AttestationBadgeSummary): string {
     provenanceTier: att.provenanceTier,
     txHash: att.txHash,
     proofId: att.proofId,
+    predicateEnforced: att.predicateEnforced,
   })
 }
 
@@ -67,7 +75,8 @@ function pullIdsMatch(
   if (!pull) return false
   return candidates.some((c) => {
     const v = String(c || '').trim()
-    return v.length > 0 && v === pull
+    if (!v) return false
+    return pull === v || pull.startsWith(`${v}:`)
   })
 }
 
@@ -82,7 +91,16 @@ export function matchMvrAttestation(
     accioOrderNumber?: string | null
   },
 ): AttestationBadgeSummary | null {
-  const mvr = attestations.filter((a) => a.factType === 'mvr_clean_36_months')
+  const mvr = attestations.filter((a) =>
+    [
+      'cdl_class',
+      'cdl_endorsements',
+      'cdl_restrictions',
+      'med_cert_valid',
+      'cdl_class_a',
+      'mvr_clean_36_months',
+    ].includes(String(a.factType)),
+  )
   if (mvr.length === 0) return null
 
   const matched = mvr.find((a) =>

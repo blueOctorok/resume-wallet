@@ -18,9 +18,14 @@ Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midni
 | `MIDNIGHT_PRIVATE_STATE_PASSWORD` | yes (P3.3+) | `"Str0ng!LocalOnly"` | Encrypts LevelDB contract private state on disk — server-side only |
 | `MIDNIGHT_CONTRACT_ADDRESS` | after deploy | `mn_shield-addr_…` | MVR (`mvr_clean_36_months`) — set after `npm run midnight:deploy` |
 | `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` | after deploy | `mn_shield-addr_…` | P3.5 `cdl_class_a` circuit |
+| `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS` | after deploy | `mn_shield-addr_…` | Dedicated `cdl_class` circuit |
+| `MIDNIGHT_CONTRACT_ADDRESS_CDL_ENDORSEMENTS` | after deploy | `mn_shield-addr_…` | Dedicated `cdl_endorsements` circuit |
+| `MIDNIGHT_CONTRACT_ADDRESS_CDL_RESTRICTIONS` | after deploy | `mn_shield-addr_…` | Dedicated `cdl_restrictions` circuit |
+| `MIDNIGHT_CONTRACT_ADDRESS_MED_CERT` | after deploy | `mn_shield-addr_…` | Dedicated `med_cert_valid` circuit |
 | `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER` | after deploy | `mn_shield-addr_…` | P3.5 `previous_employer_verified` circuit |
 | `MIDNIGHT_WALLET_MNEMONIC` | yes (P3.3+) | `"word1 word2 … word24"` | **Server-managed** BIP-39 seed — spaces between words, **no commas**; **double quotes required** in `.env.local` so dotenv reads all 24 words |
 | `ATTESTATION_BACKEND` | no | `signed-jwt` (default) | Set to `midnight` only when `midnight-attestation-service.ts` ships (P3.3) |
+| `PINGRAM_WEBHOOK_SECRET` | inbound EV | (secret) | Bearer / `?secret=` for `POST /api/webhooks/pingram/inbound`. Falls back to `INTERNAL_API_SECRET`. |
 
 ### Server-managed wallet (P3.2 setup)
 
@@ -72,8 +77,8 @@ npm run midnight:proof-server:health   # with MIDNIGHT_PROOF_SERVER_URL set to t
    (Legacy `https://prove:pass@host` still works; runtime strips userinfo.)
 3. Smoke from a machine with the wallet secrets:  
    `ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --user <uuid>`
-4. Only after a green smoke: set Vercel `ATTESTATION_BACKEND=midnight` and redeploy.  
-   Until then leave `ATTESTATION_BACKEND` **unset** (signed-JWT).
+4. ✅ Vercel `ATTESTATION_BACKEND=midnight` + redeploy (operator, 2026-08-13, **Preprod**).  
+   Verify still accepts leftover JWTs by `proof.kind`. Honesty copy stays gated.
 5. Mainnet NIGHT sizing: re-run `midnight:cost-benchmark` on mainnet when ready — Preprod fees are not usable for capacity planning.
 6. **Do not wait on Key** for steps 1–4. Key unlocks 🟢 / “Proven on Midnight” copy (P3.4-B), not hosting.
 
@@ -129,9 +134,9 @@ Authoritative fee = `tx.public.fees.paidFees` (SPECK; 1 DUST = 10¹⁵ SPECK). W
 
 Dev wallet today: **5000 tNIGHT** → **25_000 tDUST** tank cap (matches Lace `N / 25,000`).
 
-Deploy one or all: `npm run midnight:deploy -- [--fact cdl_class_a]`. Env vars: `MIDNIGHT_CONTRACT_ADDRESS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A`, `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER`.
+Deploy one or all: `npm run midnight:deploy -- [--fact cdl_class]`. Env vars: `MIDNIGHT_CONTRACT_ADDRESS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_ENDORSEMENTS`, `MIDNIGHT_CONTRACT_ADDRESS_CDL_RESTRICTIONS`, `MIDNIGHT_CONTRACT_ADDRESS_MED_CERT`, `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER`.
 
-Compile all: `npm run midnight:compile`. Prove CLI: `npm run midnight:prove-fact -- --user <uuid> [--fact cdl_class_a|previous_employer_verified]`.
+Compile all: `npm run midnight:compile`. Prove CLI: `npm run midnight:prove-fact -- --user <uuid> [--fact cdl_class|cdl_endorsements|cdl_restrictions|med_cert_valid|previous_employer_verified]`.
 
 ## Related docs
 

@@ -1,4 +1,4 @@
-import { Car, ShieldCheck, Building2, type LucideIcon } from 'lucide-react'
+import { Car, ShieldCheck, Building2, BadgeCheck, Ban, IdCard, type LucideIcon } from 'lucide-react'
 import type { ShippedFactType } from '@/lib/fact-registry'
 import type {
   AttestationProvenanceTier,
@@ -6,10 +6,10 @@ import type {
   ProofArtifact,
 } from '@/lib/attestation-service'
 
-/** Carrier-visible labels + icons for shipped third-party facts (P2.3). */
+/** Carrier-visible labels + icons for shipped third-party facts. */
 export const FACT_TYPE_UI: Record<
   ShippedFactType,
-  { label: string; icon: LucideIcon; category: 'driving' | 'license' | 'employment' }
+  { label: string; icon: LucideIcon; category: 'driving' | 'license' | 'employment' | 'compliance' }
 > = {
   mvr_clean_36_months: {
     label: 'Clean MVR (36 months)',
@@ -21,6 +21,26 @@ export const FACT_TYPE_UI: Record<
     icon: Car,
     category: 'license',
   },
+  cdl_class: {
+    label: 'License class',
+    icon: IdCard,
+    category: 'license',
+  },
+  cdl_endorsements: {
+    label: 'CDL endorsements',
+    icon: BadgeCheck,
+    category: 'license',
+  },
+  cdl_restrictions: {
+    label: 'CDL restrictions',
+    icon: Ban,
+    category: 'license',
+  },
+  med_cert_valid: {
+    label: 'Medical certificate',
+    icon: ShieldCheck,
+    category: 'compliance',
+  },
   previous_employer_verified: {
     label: 'Prior employer verified',
     icon: Building2,
@@ -31,6 +51,7 @@ export const FACT_TYPE_UI: Record<
 const CRA_LABELS: Record<string, string> = {
   accio: 'Accio',
   prior_employer: 'prior employer verification',
+  dkim: 'DKIM-signed employer email',
 }
 
 /** Phase-2 provenance line — CRA citation without claiming on-chain proof (DEC-2026-05-011). */
@@ -88,16 +109,21 @@ export interface AttestationDisplayInput {
   provenanceTier?: AttestationProvenanceTier
   txHash?: string | null
   proofId?: string | null
+  predicateEnforced?: boolean
 }
 
 /**
- * Single honesty helper for carrier UI, verify surfaces, and Stormi context.
- * Midnight marketing copy only when proof is midnight_zk AND issuer_signed (P3.4-B).
+ * Headline verification line.
+ * "Proven on Midnight" when the circuit actually enforced this fact (or issuer-signed).
+ * Always cites the CRA — never "trust the math, not Storm" until P3.4-B.
  */
 export function formatAttestationVerificationLine(input: AttestationDisplayInput): string {
   const stormLine = formatVerifiedByStormLine(input.issuedAt, input.sourceCra, input.sourcePullId)
+  const midnightOk =
+    input.proofKind === 'midnight_zk' &&
+    (input.provenanceTier === 'issuer_signed' || input.predicateEnforced)
 
-  if (input.proofKind === 'midnight_zk' && input.provenanceTier === 'issuer_signed') {
+  if (midnightOk) {
     return `Proven on Midnight on ${formatAttestationIssuedDate(input.issuedAt)} · ${formatAttestationProvenance(input.sourceCra, input.sourcePullId)}`
   }
 
@@ -113,7 +139,11 @@ export function formatAttestationVerifyDetails(input: AttestationDisplayInput): 
     lines.push(`Proof id: ${input.proofId.trim()}`)
   }
   if (input.provenanceTier !== 'issuer_signed') {
-    lines.push('Predicate proof submitted — issuer signature pending (P3.4-B)')
+    lines.push(
+      input.predicateEnforced
+        ? 'Predicate enforced in-circuit — issuer signature pending (P3.4-B)'
+        : 'Predicate proof submitted — issuer signature pending (P3.4-B)',
+    )
   }
   return lines
 }
@@ -133,6 +163,7 @@ export function attestationDisplayFromProof(
     provenanceTier: provenanceTierFromProof(proof),
     txHash: midnight?.txHash ?? null,
     proofId: midnight?.proofId ?? null,
+    predicateEnforced: midnight?.predicateEnforced === true,
   }
 }
 

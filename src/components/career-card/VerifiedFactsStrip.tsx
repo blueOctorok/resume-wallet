@@ -44,6 +44,14 @@ function withDate(issuer: string, iso: string | null | undefined): string {
 }
 
 export function deriveVerifiedFacts(data: CardData): VerifiedFact[] {
+  if (data.attestedFacts && data.attestedFacts.length > 0) {
+    return data.attestedFacts.map((f) => ({
+      id: f.id,
+      label: f.label,
+      provenance: f.provenance,
+    }))
+  }
+
   const facts: VerifiedFact[] = []
 
   const mvrSection = data.sections.find(

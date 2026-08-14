@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AttestationError } from '@/lib/attestation-service'
 import {
+  ACTIVE_CARD_FACTS,
   enforceProvenanceGate,
+  listShippedFacts,
   normalizeAccioCdlClass,
   resolveAttestationFact,
   type FactDefinition,
@@ -80,6 +82,10 @@ function completedMvrCtx(overrides?: Partial<MvrAttestationContext>): MvrAttesta
     orderStatus: 'completed',
     completedAt: '2026-06-01T12:00:00.000Z',
     licenseClass: 'A - CDL COMBINATION',
+    endorsements: [],
+    restrictions: [],
+    medicalCertStatus: null,
+    medicalCertExpiration: null,
     isDriverOwned: true,
     ...overrides,
   }
@@ -179,6 +185,128 @@ describe('fact-registry', () => {
     })
   })
 
+  describe('listShippedFacts', () => {
+    it('returns billboard card facts, not the Class-A / clean-36 examples', () => {
+      const ids = listShippedFacts().map((d) => d.factType)
+      expect(ids).toEqual([...ACTIVE_CARD_FACTS])
+      expect(ids).not.toContain('mvr_clean_36_months')
+      expect(ids).not.toContain('cdl_class_a')
+    })
+  })
+
+  describe('cdl_class', () => {
+    it('attests any license class from the MVR with a unique pull id', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({ licenseClass: 'B - CDL SINGLE' }),
+      )
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'cdl_class',
+      })
+
+      expect(resolved.disclosedFields).toEqual({ class: 'B', classCode: 66 })
+      expect(resolved.sourcePullId).toBe(`${ACCIO_ORDER}:cdl_class`)
+      assertNoPii(resolved.disclosedFields)
+    })
+
+    it('throws when the MVR has no class', async () => {
+      getMvrAttestationContext.mockResolvedValue(completedMvrCtx({ licenseClass: null }))
+      await expect(
+        resolveAttestationFact({ candidateUserId: CANDIDATE_ID, factType: 'cdl_class' }),
+      ).rejects.toThrow(/license class/i)
+    })
+  })
+
+  describe('cdl_endorsements', () => {
+    it('attests endorsements listed on the MVR', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({ endorsements: ['H', 'N'] }),
+      )
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'cdl_endorsements',
+      })
+
+      expect(resolved.disclosedFields).toEqual({ endorsements: 'H, N', mask: 3 })
+      expect(resolved.sourcePullId).toBe(`${ACCIO_ORDER}:cdl_endorsements`)
+    })
+
+    it('throws when the MVR lists none', async () => {
+      getMvrAttestationContext.mockResolvedValue(completedMvrCtx({ endorsements: [] }))
+      await expect(
+        resolveAttestationFact({
+          candidateUserId: CANDIDATE_ID,
+          factType: 'cdl_endorsements',
+        }),
+      ).rejects.toThrow(/endorsements/i)
+    })
+  })
+
+  describe('cdl_restrictions', () => {
+    it('attests none when the MVR lists no restrictions', async () => {
+      getMvrAttestationContext.mockResolvedValue(completedMvrCtx({ restrictions: [] }))
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'cdl_restrictions',
+      })
+
+      expect(resolved.disclosedFields).toEqual({ restrictions: 'none', mask: 0 })
+      expect(resolved.sourcePullId).toBe(`${ACCIO_ORDER}:cdl_restrictions`)
+    })
+
+    it('attests listed restrictions', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({ restrictions: ['L', 'Z'] }),
+      )
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'cdl_restrictions',
+      })
+
+      expect(resolved.disclosedFields).toEqual({ restrictions: 'L, Z', mask: (1 << 7) | (1 << 14) })
+    })
+  })
+
+  describe('med_cert_valid', () => {
+    it('attests a current medical certificate', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({
+          medicalCertStatus: 'Certified',
+          medicalCertExpiration: '2027-06-01',
+        }),
+      )
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'med_cert_valid',
+      })
+
+      expect(resolved.disclosedFields).toEqual({
+        status: 'Certified',
+        expiration: '2027-06-01',
+        expirationYmd: 20270601,
+      })
+      expect(resolved.sourcePullId).toBe(`${ACCIO_ORDER}:med_cert_valid`)
+      assertNoPii(resolved.disclosedFields)
+    })
+
+    it('throws when the MVR has no current med cert', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({ medicalCertStatus: null, medicalCertExpiration: null }),
+      )
+      await expect(
+        resolveAttestationFact({
+          candidateUserId: CANDIDATE_ID,
+          factType: 'med_cert_valid',
+        }),
+      ).rejects.toThrow(/medical certificate/i)
+    })
+  })
+
   describe('previous_employer_verified', () => {
     it('attests with minimal employer disclosure fields', async () => {
       getEmploymentVerificationForAttestation.mockResolvedValue({
@@ -190,6 +318,8 @@ describe('fact-registry', () => {
         claimed_end_date: '2024-08-15',
         verified_at: '2026-05-20T14:00:00.000Z',
         status: 'VERIFIED',
+        dkimValid: false,
+        dkimDomain: null,
       })
 
       const resolved = await resolveAttestationFact({
@@ -206,6 +336,30 @@ describe('fact-registry', () => {
       assertNoPii(resolved.disclosedFields)
       expect(resolved.sourceCra).toBe('prior_employer')
       expect(resolved.sourcePullId).toBe('evr-99')
+    })
+
+    it('cites DKIM when the inbound reply passed domain-aligned DKIM', async () => {
+      getEmploymentVerificationForAttestation.mockResolvedValue({
+        id: 'evr-100',
+        employment_id: 'emp-1',
+        previous_employer_name: 'Acme Trucking',
+        claimed_position: 'OTR Driver',
+        claimed_start_date: '2022-03-01',
+        claimed_end_date: '2024-08-15',
+        verified_at: '2026-05-20T14:00:00.000Z',
+        status: 'VERIFIED',
+        dkimValid: true,
+        dkimDomain: 'acmetrucking.com',
+      })
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'previous_employer_verified',
+        parameters: { employmentId: 'emp-1' },
+      })
+
+      expect(resolved.sourceCra).toBe('dkim')
+      expect(resolved.disclosedFields.dkimDomain).toBe('acmetrucking.com')
     })
 
     it('throws when no verified employment row exists', async () => {

@@ -7,6 +7,10 @@ export type FactType =
   | 'mvr_clean_36_months'
   | 'mvr_no_dui_ever'
   | 'cdl_class_a'
+  | 'cdl_class'
+  | 'cdl_endorsements'
+  | 'cdl_restrictions'
+  | 'med_cert_valid'
   | 'cdl_endorsement_hazmat'
   | 'cdl_valid_through'
   | 'dot_application_complete'
@@ -48,8 +52,13 @@ export type MidnightProofArtifact = {
   kind: 'midnight_zk'
   txHash: string
   proofId: string
-  /** metadata until P3.4-B in-circuit issuer signature — gates Midnight marketing copy. */
+  /** metadata until P3.4-B in-circuit issuer signature. */
   provenanceTier?: AttestationProvenanceTier
+  /**
+   * True when Compact asserts this fact's predicate (class code, mask, date).
+   * Enables "Proven on Midnight · Accio" copy without claiming issuer-signed bytes.
+   */
+  predicateEnforced?: boolean
   /** Preprod/mainnet DUST fee raw units (from tx.fees) — ops only, not shown in UI. */
   paidFees?: string
   estimatedFees?: string

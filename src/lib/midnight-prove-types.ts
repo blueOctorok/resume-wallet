@@ -17,9 +17,24 @@ export interface MidnightMvrOnChainProveInput extends MidnightOnChainProveBase {
   violationSlots: MvrCleanViolationSlot[]
 }
 
-export interface MidnightCdlOnChainProveInput extends MidnightOnChainProveBase {
+export interface MidnightCdlClassAOnChainProveInput extends MidnightOnChainProveBase {
   factType: 'cdl_class_a'
   holdsClassA: boolean
+}
+
+export interface MidnightCdlClassOnChainProveInput extends MidnightOnChainProveBase {
+  factType: 'cdl_class'
+  classCode: number
+}
+
+export interface MidnightCdlMaskOnChainProveInput extends MidnightOnChainProveBase {
+  factType: 'cdl_endorsements' | 'cdl_restrictions'
+  mask: number
+}
+
+export interface MidnightMedCertOnChainProveInput extends MidnightOnChainProveBase {
+  factType: 'med_cert_valid'
+  expirationYmd: number
 }
 
 export interface MidnightEmployerVerifiedOnChainProveInput extends MidnightOnChainProveBase {
@@ -29,7 +44,10 @@ export interface MidnightEmployerVerifiedOnChainProveInput extends MidnightOnCha
 
 export type MidnightOnChainProveInput =
   | MidnightMvrOnChainProveInput
-  | MidnightCdlOnChainProveInput
+  | MidnightCdlClassAOnChainProveInput
+  | MidnightCdlClassOnChainProveInput
+  | MidnightCdlMaskOnChainProveInput
+  | MidnightMedCertOnChainProveInput
   | MidnightEmployerVerifiedOnChainProveInput
 
 export interface MidnightOnChainProveResult {
@@ -40,7 +58,8 @@ export interface MidnightOnChainProveResult {
   predicateVersion?: string
   pullNullifier?: string
   asOfDateYmd?: number
-  /** DUST raw units from FinalizedTxData.fees — ops / NIGHT capacity planning. */
+  /** True when Compact enforces this fact's predicate (not a dummy boolean). */
+  predicateEnforced?: boolean
   paidFees?: string
   estimatedFees?: string
 }

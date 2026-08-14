@@ -51,6 +51,22 @@ describe('matchMvrAttestation', () => {
     expect(hit?.sourcePullId).toBe('ACC-9')
   })
 
+  it('matches order:factType pull ids to the Accio order prefix', () => {
+    const hit = matchMvrAttestation(
+      [
+        {
+          factType: 'cdl_class',
+          proofKind: 'signed_jwt',
+          sourceCra: 'accio',
+          sourcePullId: 'ACC-9:cdl_class',
+          issuedAt: '2026-07-01T12:00:00.000Z',
+        },
+      ],
+      { orderId: null, accioOrderNumber: 'ACC-9' },
+    )
+    expect(hit?.sourcePullId).toBe('ACC-9:cdl_class')
+  })
+
   it('matches by orderId', () => {
     const hit = matchMvrAttestation([jwtMvr('ord-uuid')], {
       orderId: 'ord-uuid',
@@ -118,7 +134,25 @@ describe('resolveMvrFieldDotBadge', () => {
     expect(r.text).not.toMatch(/Proven on Midnight/i)
   })
 
-  it('uses Proven on Midnight only for issuer_signed midnight_zk', () => {
+  it('uses Proven on Midnight for predicate-enforced midnight_zk (still cites Accio)', () => {
+    const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [
+      {
+        factType: 'cdl_class',
+        proofKind: 'midnight_zk',
+        provenanceTier: 'metadata',
+        predicateEnforced: true,
+        sourceCra: 'accio',
+        sourcePullId: 'ACC-1:cdl_class',
+        issuedAt: '2026-07-01T12:00:00.000Z',
+        txHash: 'tx-abc',
+      },
+    ])
+    expect(r.tier).toBe('midnight_zk')
+    expect(r.text).toMatch(/^Proven on Midnight on /)
+    expect(r.text).toContain('Accio')
+  })
+
+  it('uses Proven on Midnight for issuer_signed midnight_zk', () => {
     const r = resolveMvrFieldDotBadge(entry('ord-1', 'ACC-1'), [midnightMvrIssuerSigned('ACC-1')])
     expect(r.tier).toBe('midnight_zk')
     expect(r.text).toMatch(/^Proven on Midnight on /)

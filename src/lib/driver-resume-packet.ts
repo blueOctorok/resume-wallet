@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
+import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
 import { getAppBaseUrl } from '@/lib/app-url'
 import type { ResumeBuilderData } from '@/lib/profile-mapper'
 
@@ -181,6 +182,7 @@ export interface BuildPacketInput {
   pspResultOutcome?: string | null
   /** DOT Form 2 accidents array length when known */
   dotAccidentCount?: number | null
+  attestedChips?: DriverResumeProofChip[]
   hasDotApp: boolean
 }
 
@@ -205,20 +207,28 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   const endorsements = Array.isArray(cdl.endorsements) ? cdl.endorsements : []
   const { labels: otherEndorsements, hasHazmat, hasTanker } = normalizeEndorsements(endorsements)
 
-  const proofChips: DriverResumeProofChip[] = []
-  if (cdlClass) {
+  const attestedIds = new Set((input.attestedChips ?? []).map((c) => c.id))
+  const proofChips: DriverResumeProofChip[] = [...(input.attestedChips ?? [])]
+  const hasAttestedClass = attestedIds.has('cdl_class') || attestedIds.has('cdl_class_a')
+  if (
+    cdlClass &&
+    !hasAttestedClass &&
+    !proofChips.some((c) => c.id === 'cdl-class' || c.id.startsWith('cdl_class'))
+  ) {
     proofChips.push({ id: 'cdl-class', label: `CDL Class ${cdlClass}` })
   }
-  if (hasHazmat && hasTanker) {
-    proofChips.push({ id: 'endorsements-ht', label: 'Hazmat + Tanker' })
-  } else if (hasHazmat) {
-    proofChips.push({ id: 'endorsements-h', label: 'Hazmat' })
-  } else if (hasTanker) {
-    proofChips.push({ id: 'endorsements-n', label: 'Tanker' })
+  if (!attestedIds.has('cdl_endorsements')) {
+    if (hasHazmat && hasTanker) {
+      proofChips.push({ id: 'endorsements-ht', label: 'Hazmat + Tanker' })
+    } else if (hasHazmat) {
+      proofChips.push({ id: 'endorsements-h', label: 'Hazmat' })
+    } else if (hasTanker) {
+      proofChips.push({ id: 'endorsements-n', label: 'Tanker' })
+    }
   }
 
   const medOk = hasValidMedicalCert(input.medicalCertStatus, input.medicalCertExpiration)
-  if (medOk) {
+  if (medOk && !attestedIds.has('med_cert_valid')) {
     proofChips.push({ id: 'med-card', label: 'Med card current' })
   }
 
@@ -336,7 +346,7 @@ export async function assembleDriverResumePacket(
 ): Promise<DriverResumePacket> {
   const shareToken = await ensureShareToken(supabase, userId)
 
-  const [{ data: mvrExtra }, { data: pspOrder }] = await Promise.all([
+  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts] = await Promise.all([
     supabase
       .from('mvr_results')
       .select(
@@ -355,6 +365,7 @@ export async function assembleDriverResumePacket(
       .order('completed_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    loadCardAttestedFacts(supabase, userId),
   ])
 
   const accidents = opts.applicationData?.form2?.accidents
@@ -374,5 +385,6 @@ export async function assembleDriverResumePacket(
     pspResultOutcome: pspOrder?.result_outcome ?? null,
     dotAccidentCount,
     hasDotApp: opts.hasDotApp,
+    attestedChips: attestedFacts.map((f) => ({ id: f.factType, label: f.label })),
   })
 }

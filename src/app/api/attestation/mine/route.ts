@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
         issuedAt: row.issued_at as string,
         txHash: midnight.txHash,
         proofId: midnight.proofId,
+        predicateEnforced: midnight.predicateEnforced,
       }
     })
 

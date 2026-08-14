@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { persistPingramTrackingId } from '@/lib/evr-inbound'
 import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
 import { isMessagingConfigured, sendEmail } from './messaging'
 
@@ -16,7 +18,7 @@ export interface SendVerificationEmailParams {
  */
 export async function sendVerificationEmail(
   params: SendVerificationEmailParams
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; id?: string }> {
   if (!isMessagingConfigured()) {
     console.warn('[VERIFICATION EMAIL] PINGRAM_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
@@ -50,7 +52,8 @@ export async function sendVerificationEmail(
       ${dateRange ? detailRow('Dates', dateRange) : ''}
     `)}
     <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
-      Please click the button below to confirm or correct this information.
+      Please click the button below to confirm or correct this information, or
+      <strong>reply to this email</strong> with YES if the dates are correct.
       The link is valid for <strong>30 days</strong>.
     </p>
     ${infoBox(`<p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
@@ -85,5 +88,18 @@ export async function sendVerificationEmail(
   }
 
   console.log('[VERIFICATION EMAIL] Sent successfully. Pingram id:', result.id)
-  return { ok: true }
+  return { ok: true, id: result.id }
+}
+
+/** Send the EV invite and stash Pingram's tracking id for DKIM inbound matching. */
+export async function sendVerificationEmailAndTrack(
+  supabase: SupabaseClient,
+  requestId: string,
+  params: SendVerificationEmailParams,
+): Promise<{ ok: boolean; error?: string; id?: string }> {
+  const result = await sendVerificationEmail(params)
+  if (result.ok && result.id) {
+    await persistPingramTrackingId(supabase, requestId, result.id)
+  }
+  return result
 }

@@ -219,6 +219,10 @@ export interface MvrAttestationContext {
   orderStatus: string
   completedAt: string | null
   licenseClass: string | null
+  endorsements: string[]
+  restrictions: string[]
+  medicalCertStatus: string | null
+  medicalCertExpiration: string | null
   /** True when the source pull is driver-owned (ordered_by_company_id IS NULL). */
   isDriverOwned: true
 }
@@ -305,9 +309,18 @@ export async function getMvrAttestationContext(
 
   const { data: result } = await supabase
     .from('mvr_results')
-    .select('id, license_class, violations, accidents, total_points, violation_count, license_status')
+    .select(
+      'id, license_class, violations, accidents, total_points, violation_count, license_status, cdl_endorsements, cdl_restrictions, medical_cert_status, medical_cert_expiration',
+    )
     .eq('mvr_order_id', order.id)
     .maybeSingle()
+
+  const endorsements = Array.isArray(result?.cdl_endorsements)
+    ? (result.cdl_endorsements as string[])
+    : []
+  const restrictions = Array.isArray(result?.cdl_restrictions)
+    ? (result.cdl_restrictions as string[])
+    : []
 
   return {
     mvr: attestationMvrRowFromOrder(userId, order, blockMvr, result as {
@@ -324,6 +337,10 @@ export async function getMvrAttestationContext(
     orderStatus: order.status,
     completedAt: order.completed_at,
     licenseClass: result?.license_class ?? null,
+    endorsements,
+    restrictions,
+    medicalCertStatus: (result?.medical_cert_status as string | null) ?? null,
+    medicalCertExpiration: (result?.medical_cert_expiration as string | null) ?? null,
     isDriverOwned: true,
   }
 }
@@ -338,6 +355,8 @@ export interface EmploymentVerificationAttestationRow {
   claimed_end_date: string | null
   verified_at: string | null
   status: string
+  dkimValid: boolean
+  dkimDomain: string | null
 }
 
 export async function getEmploymentVerificationForAttestation(
@@ -348,7 +367,7 @@ export async function getEmploymentVerificationForAttestation(
   let query = supabase
     .from('employment_verification_requests')
     .select(
-      'id, employment_id, previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, status',
+      'id, employment_id, previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, status, dkim_valid, dkim_domain',
     )
     .eq('driver_id', userId)
     .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
@@ -360,7 +379,19 @@ export async function getEmploymentVerificationForAttestation(
   }
 
   const { data } = await query.order('verified_at', { ascending: false }).limit(1).maybeSingle()
-  return data as EmploymentVerificationAttestationRow | null
+  if (!data) return null
+  return {
+    id: data.id as string,
+    employment_id: data.employment_id as string,
+    previous_employer_name: data.previous_employer_name as string,
+    claimed_position: data.claimed_position as string,
+    claimed_start_date: String(data.claimed_start_date ?? ''),
+    claimed_end_date: data.claimed_end_date != null ? String(data.claimed_end_date) : null,
+    verified_at: data.verified_at != null ? String(data.verified_at) : null,
+    status: String(data.status ?? ''),
+    dkimValid: Boolean(data.dkim_valid),
+    dkimDomain: (data.dkim_domain as string | null) ?? null,
+  }
 }
 
 export async function getPspData(supabase: SupabaseClient, userId: string): Promise<PspRow | null> {

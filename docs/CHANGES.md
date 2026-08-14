@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Dedicated MVR-field Compact circuits** (2026-08-13)
+
+Billboard facts (`cdl_class`, `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`) no longer reuse the Class-A boolean circuit. Each has its own Compact contract that asserts the disclosed value equals the witness (ASCII class, endorsement/restriction bitmask, med-cert YYYYMMDD ≥ asOf). New proves set `predicateEnforced: true` so UI can say **Proven on Midnight · derived from Accio** — still not issuer-signed (P3.4-B).
+
+**Ops:** `npm run midnight:compile` then `npm run midnight:deploy -- --fact cdl_class` (repeat for `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`). Set the four `MIDNIGHT_CONTRACT_ADDRESS_*` env vars on Vercel. Smoke with `midnight:prove-fact -- --fact cdl_class`.
+
+---
+
+## **Billboard MVR facts + DKIM employment verification** (2026-08-13)
+
+Replaced the Class-A / clean-36 *example* facts on the career card and resume with Accio MVR field proofs: **license class, endorsements, restrictions, medical certificate**. Existing JWT/Midnight rows for the old types still verify; Midnight prove + `listShippedFacts()` + the Verified strip now use `ACTIVE_CARD_FACTS`.
+
+Employment verification stays in-house (no Accio EV). Employers can reply to the invite email; Pingram inbound + `mailauth` DKIM (only when raw RFC822 is present) stamps `dkim_valid`. Form-path replies stay “Verified by Provven.” Midnight EV prove requires DKIM. Copy never says “Proven on Midnight” until P3.4-B.
+
+**Ops:** apply migration `106_evr_dkim_inbound.sql`. Set `PINGRAM_WEBHOOK_SECRET` (or reuse `INTERNAL_API_SECRET`) on Vercel for `POST /api/webhooks/pingram/inbound`. Prove via `npm run midnight:prove-fact -- --user <uuid> --fact cdl_class` (default is now `cdl_class`).
+
+---
+
+## **P3.8 — Vercel Midnight cutover (Preprod)** (2026-08-13)
+
+Operator set Production `MIDNIGHT_*` + `ATTESTATION_BACKEND=midnight` and redeployed. Fly proof server health is green. New proves use Midnight; **verify follows `proof.kind`** so existing signed-JWT attestations still badge (the env flag only chooses how *new* proofs are made). UI copy stays “Verified by Storm” until P3.4-B. First in-app prove may still 504 on Vercel — CLI `midnight:prove-fact` is the reliable smoke.
+
+---
+
+## **Landing: hiring mailto → Pace inbox** (2026-08-12)
+
+“I’m hiring” mailto default was `hello@provven.com` (inbox not set up). Default is now `s.blaha@pacedrivers.com`. Override still available via `NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL`. CTA is a real `<a href=mailto>` (not `window.location`) and the address is visible for copy — WSL/Linux often has no mail handler so `location.href = mailto` looked like a dead click.
+
+---
+
 ## **Landing: Log in (one door)** (2026-08-12)
 
 Replaced candidate-biased “Build your Career Card” with a single **Log in** CTA. Same `/sign-in` for candidates and employers; `page.tsx` routes by role after auth. **I’m hiring** stays mailto/scroll for new carriers; employers section keeps **Already on Provven? Log in**. No separate signup flow — OTP still creates Auth users on first email when needed.

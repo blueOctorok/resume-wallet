@@ -28,6 +28,7 @@ import type {
   ScreeningConsentData,
   OnChainCredential,
 } from '@/types/career-card'
+import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
 
 /** @deprecated Empty resume heroes are no longer shown — resume appears only with a real artifact. */
 export const EMPTY_STORM_RESUME_CARD: ResumeData = {
@@ -239,14 +240,17 @@ export async function buildProjectedCareerCard(
     )
   }
 
-  const { data: evrRows } = await supabase
-    .from('employment_verification_requests')
-    .select(
-      'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at',
-    )
-    .eq('driver_id', userId)
-    .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
-    .order('verified_at', { ascending: false })
+  const [{ data: evrRows }, attestedFacts] = await Promise.all([
+    supabase
+      .from('employment_verification_requests')
+      .select(
+        'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at',
+      )
+      .eq('driver_id', userId)
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+      .order('verified_at', { ascending: false }),
+    loadCardAttestedFacts(supabase, userId),
+  ])
 
   const employerConfirmations = (evrRows ?? []).map((row) => ({
     companyName: String(row.previous_employer_name ?? 'Employer'),
@@ -373,6 +377,7 @@ export async function buildProjectedCareerCard(
     onChainCredentialCount: signals.onChainCredentialCount,
     onChainCredentials: signals.onChainCredentials,
     careerCardScore: signals.careerCardScore,
+    attestedFacts,
     activeLens: lensRow
       ? { id: lensRow.id, name: lensRow.name, isDefault: lensRow.is_default }
       : undefined,

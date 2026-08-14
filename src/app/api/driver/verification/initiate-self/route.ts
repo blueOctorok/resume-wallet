@@ -4,7 +4,7 @@ import {
   VerificationRequestRow,
   rowToVerificationRequest,
 } from '@/types/employment-verification'
-import { sendVerificationEmail } from '@/lib/send-verification-email'
+import { sendVerificationEmailAndTrack } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { getDriverEmployment } from '@/lib/block-data'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
@@ -166,15 +166,19 @@ export async function POST(request: NextRequest) {
     const token = (newRequest as { verification_token?: string }).verification_token
     if (contactEmail && token) {
       const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
-      const emailResult = await sendVerificationEmail({
-        to: contactEmail,
-        verificationLink,
-        previousEmployerName: employment.companyName ?? '',
-        claimedPosition: employment.position ?? '',
-        claimedCompanyName: employment.companyName ?? '',
-        claimedStartDate: employment.startDate ?? undefined,
-        claimedEndDate: employment.endDate ?? null,
-      })
+      const emailResult = await sendVerificationEmailAndTrack(
+        supabase,
+        String((newRequest as { id: string }).id),
+        {
+          to: contactEmail,
+          verificationLink,
+          previousEmployerName: employment.companyName ?? '',
+          claimedPosition: employment.position ?? '',
+          claimedCompanyName: employment.companyName ?? '',
+          claimedStartDate: employment.startDate ?? undefined,
+          claimedEndDate: employment.endDate ?? null,
+        },
+      )
       if (!emailResult.ok) {
         console.warn('[DRIVER VERIFICATION] Email send failed:', emailResult.error)
       }

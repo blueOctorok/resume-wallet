@@ -7,7 +7,6 @@
  */
 
 import { ArrowRight, BadgeCheck, FileText, Gauge, IdCard, ShieldCheck } from 'lucide-react'
-import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { GOLD_CTA, headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
 
@@ -98,7 +97,9 @@ interface EmployersSectionProps {
  * DPPA / FCRA: an employer account can order MVR/PSP, so "reasonable procedures"
  * mean we verify the carrier before anyone can order.
  */
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL || 'hello@provven.com'
+// Hiring leads go to Pace ops (not a brand inbox — those aren't set up yet).
+const CONTACT_EMAIL =
+  process.env.NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL || 's.blaha@pacedrivers.com'
 
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
   'Hiring on Provven'
@@ -136,18 +137,30 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
             </ul>
 
             <div className='reveal-item mt-9' style={{ transitionDelay: '260ms' }}>
-              <Button
-                variant='primary'
-                size='lg'
-                onClick={() => { window.location.href = MAILTO }}
-                className={cn('group h-auto rounded-xl px-7 py-3.5', GOLD_CTA)}
+              {/* Real <a href=mailto> — window.location mailto often does nothing on WSL/Linux */}
+              <a
+                href={MAILTO}
+                className={cn(
+                  'group inline-flex h-auto items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold transition-all duration-200',
+                  GOLD_CTA,
+                )}
               >
                 I&rsquo;m hiring &mdash; talk to us
                 <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
-              </Button>
+              </a>
               <p className={cn('mt-3 text-sm', mutedText(isDark))}>
-                Employer accounts are set up by our team — we verify the carrier before anyone can
-                order an MVR or PSP.
+                Email{' '}
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className={cn(
+                    'font-medium underline underline-offset-2',
+                    isDark ? 'text-[#d4be93]' : 'text-[#8a6d3b]',
+                  )}
+                >
+                  {CONTACT_EMAIL}
+                </a>
+                {' '}
+                — we verify the carrier before anyone can order an MVR or PSP.
               </p>
               <button
                 type='button'

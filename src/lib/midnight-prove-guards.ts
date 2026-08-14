@@ -52,7 +52,10 @@ export function assertMvrPullMatchesLatest(
   latestAccioOrderNumber: string,
   materialPullId: string,
 ): void {
-  if (latestAccioOrderNumber.trim() !== materialPullId.trim()) {
+  const latest = latestAccioOrderNumber.trim()
+  const pull = materialPullId.trim()
+  const matches = pull === latest || pull.startsWith(`${latest}:`)
+  if (!matches) {
     throw new AttestationError(
       'Only the latest completed driver-owned MVR can be attested — order a fresh pull or wait for completion',
     )

@@ -10,19 +10,20 @@ export function proofKindFromArtifact(artifact: unknown): string {
 
 export function midnightFieldsFromArtifact(artifact: unknown): Pick<
   AttestationBadgeSummary,
-  'txHash' | 'proofId' | 'provenanceTier'
+  'txHash' | 'proofId' | 'provenanceTier' | 'predicateEnforced'
 > {
   if (!artifact || typeof artifact !== 'object') {
-    return { txHash: null, proofId: null, provenanceTier: 'metadata' }
+    return { txHash: null, proofId: null, provenanceTier: 'metadata', predicateEnforced: false }
   }
   const proof = artifact as ProofArtifact
   if (proof.kind !== 'midnight_zk') {
-    return { txHash: null, proofId: null, provenanceTier: 'metadata' }
+    return { txHash: null, proofId: null, provenanceTier: 'metadata', predicateEnforced: false }
   }
   const midnight = proof as MidnightProofArtifact
   return {
     txHash: midnight.txHash ?? null,
     proofId: midnight.proofId ?? null,
     provenanceTier: provenanceTierFromProof(proof),
+    predicateEnforced: midnight.predicateEnforced === true,
   }
 }

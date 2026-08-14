@@ -12,7 +12,7 @@ The Foundation Reset's first arc is **complete**: Phase 1 (Web2 cleanup), Web3 d
 |---|---|---|
 | **Auth swap (Alchemy → Supabase)** | Email/Google passwordless login; ~115 API routes off `x-wallet-address`; admin gated by `ADMIN_EMAILS`. | ✅ **DONE & live** |
 | **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | ✅ **DONE (D1–D5)** |
-| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (✓ clean MVR, ✓ Class A with hazmat) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | ✅ **SHIPPED (P2.1–P2.7)** |
+| **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (license class, endorsements, restrictions, med cert, prior employer) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | ✅ **SHIPPED (P2.1–P2.7)** |
 | **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active track — go-to-market driven (DEC-2026-06-001)** |
 | **Payments (Stripe)** | Greenfield Checkout (one-time) + Subscriptions, added **when a paying non-Pace customer exists**. *Not* a USDC→Stripe conversion — USDC is being deleted in demolition, so there's nothing to migrate. | ⏸ **Deferred** |
 

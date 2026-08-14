@@ -61,9 +61,9 @@ export default function TrustSection() {
           data-reveal
         >
           <span className='reveal-item inline-block'>
-            prove(<span className='text-[#d4be93]'>mvr_clean_36mo</span>) → <span className='text-[#d4be93]'>valid ✓</span>
+            prove(<span className='text-[#d4be93]'>cdl_class</span>) → <span className='text-[#d4be93]'>valid ✓</span>
             <span className='mx-2 text-slate-700'>·</span>
-            document attached: <span className='text-slate-300'>none</span>
+            prove(<span className='text-[#d4be93]'>med_cert</span>) → <span className='text-[#d4be93]'>valid ✓</span>
           </span>
         </p>
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env npx tsx
 /**
- * P3.3+ — Prove a shipped fact on Preprod + persist attestation row.
+ * Prove a shipped card fact on Preprod + persist the attestation row.
  *
  * Usage:
  *   npm run midnight:prove-fact -- --user <candidate-uuid>
- *   npm run midnight:prove-fact -- --user <uuid> --fact cdl_class_a
+ *   npm run midnight:prove-fact -- --user <uuid> --fact cdl_class
  *   npm run midnight:prove-fact -- --user <uuid> --fact previous_employer_verified --employment-id <uuid>
  */
 import { config } from 'dotenv'
@@ -16,19 +16,15 @@ if (typeof globalThis.WebSocket === 'undefined') {
 }
 
 import type { FactType } from '@/lib/attestation-service'
-import { resolveAttestationFact, type ShippedFactType } from '@/lib/fact-registry'
+import { ACTIVE_CARD_FACTS, resolveAttestationFact, type ShippedFactType } from '@/lib/fact-registry'
 import { createMidnightAttestationService } from '@/lib/midnight-attestation-service'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-const SHIPPED: ShippedFactType[] = [
-  'mvr_clean_36_months',
-  'cdl_class_a',
-  'previous_employer_verified',
-]
+const SHIPPED: ShippedFactType[] = [...ACTIVE_CARD_FACTS]
 
 function parseArgs(argv: string[]) {
   let userId = ''
-  let factType: ShippedFactType = 'mvr_clean_36_months'
+  let factType: ShippedFactType = 'cdl_class'
   let employmentId = ''
   let verificationRequestId = ''
   let asJson = false
@@ -44,7 +40,7 @@ function parseArgs(argv: string[]) {
 
   if (!userId) {
     throw new Error(
-      'Usage: midnight:prove-fact -- --user <candidate-uuid> [--fact mvr_clean_36_months|cdl_class_a|previous_employer_verified] [--json]',
+      `Usage: midnight:prove-fact -- --user <candidate-uuid> [--fact ${SHIPPED.join('|')}] [--json]`,
     )
   }
 

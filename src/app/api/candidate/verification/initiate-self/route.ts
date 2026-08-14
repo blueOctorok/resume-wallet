@@ -5,7 +5,7 @@ import {
   VerificationRequestRow,
   rowToVerificationRequest,
 } from '@/types/employment-verification'
-import { sendVerificationEmail } from '@/lib/send-verification-email'
+import { sendVerificationEmailAndTrack } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
 import {
   applicantTypeForSource,
@@ -168,15 +168,19 @@ export async function POST(request: NextRequest) {
       console.warn('[CANDIDATE VERIFICATION] No verification_token – skipping send')
     } else {
       const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
-      const emailResult = await sendVerificationEmail({
-        to: contactEmail,
-        verificationLink,
-        previousEmployerName: row.companyName ?? '',
-        claimedPosition: row.position ?? '',
-        claimedCompanyName: row.companyName ?? '',
-        claimedStartDate: claimedStartDate ?? undefined,
-        claimedEndDate: claimedEndDate ?? null,
-      })
+      const emailResult = await sendVerificationEmailAndTrack(
+        supabase,
+        String((newRequest as { id: string }).id),
+        {
+          to: contactEmail,
+          verificationLink,
+          previousEmployerName: row.companyName ?? '',
+          claimedPosition: row.position ?? '',
+          claimedCompanyName: row.companyName ?? '',
+          claimedStartDate: claimedStartDate ?? undefined,
+          claimedEndDate: claimedEndDate ?? null,
+        },
+      )
       if (!emailResult.ok) {
         console.warn('[CANDIDATE VERIFICATION] Email send failed:', emailResult.error)
       }

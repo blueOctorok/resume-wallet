@@ -1,0 +1,27 @@
+// CDL restrictions on the driver-owned Accio MVR (mask 0 = none).
+// Bitmask must match the public disclosed mask.
+// Bit table (LSB=0): B C D E F G K L M N O P V X Z — see src/lib/mvr-field-predicate.ts
+// Provenance signature (P3.4-B) still pending.
+
+pragma language_version >= 0.16 && <= 0.31;
+
+import CompactStandardLibrary;
+
+witness restrictionMask(): Uint<32>;
+
+export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
+
+export circuit proveCdlRestrictions(
+  disclosedMask: Uint<32>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
+  commitment: Opaque<"string">
+): Boolean {
+  assert(restrictionMask() == disclosedMask, "restriction mask mismatch");
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
+  factCommitment = disclose(commitment);
+  return disclose(true);
+}

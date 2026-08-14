@@ -1,0 +1,28 @@
+// DOT medical certificate on the driver-owned Accio MVR.
+// Witness expiration (YYYYMMDD) must equal the public value and be >= asOfDate.
+// Provenance signature (P3.4-B) still pending.
+
+pragma language_version >= 0.16 && <= 0.31;
+
+import CompactStandardLibrary;
+
+witness medCertExpirationYmd(): Uint<32>;
+
+export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
+
+export circuit proveMedCertValid(
+  disclosedExpirationYmd: Uint<32>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
+  commitment: Opaque<"string">
+): Boolean {
+  assert(medCertExpirationYmd() == disclosedExpirationYmd, "expiration mismatch");
+  assert(disclosedExpirationYmd > 0, "expiration required");
+  assert(disclosedExpirationYmd >= asOfDate, "medical certificate expired as of pull");
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
+  factCommitment = disclose(commitment);
+  return disclose(true);
+}

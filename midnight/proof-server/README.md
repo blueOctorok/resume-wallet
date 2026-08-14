@@ -46,6 +46,8 @@ npm run midnight:proof-server:health   # uses MIDNIGHT_PROOF_SERVER_URL from .en
 3. Keep **`ATTESTATION_BACKEND` unset** (JWT default) until that smoke is boring-reliable  
 4. Only then set `ATTESTATION_BACKEND=midnight` on Vercel  
 
+**Status (2026-08-13):** Production flipped to `midnight` (Preprod). Verify still accepts leftover JWTs by `proof.kind`.  
+
 **Note:** cold wallet sync can still take minutes and may exceed Vercel serverless limits. Hosted proof server unblocks the prover HTTP piece; if API-route proves time out, run proves from a persistent worker/CLI first.
 
 ## Local image build (optional)

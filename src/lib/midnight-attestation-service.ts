@@ -1,16 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { assertDisclosureAllowsProve } from '@/lib/disclosure-preferences'
-import { normalizeAccioCdlClass, resolveAttestationFact } from '@/lib/fact-registry'
+import { resolveAttestationFact, ACTIVE_CARD_FACTS, type ShippedFactType } from '@/lib/fact-registry'
 import {
   getEmploymentVerificationForAttestation,
   getMvrAttestationContext,
 } from '@/lib/block-data'
+import { computeAsOfDateYmd } from '@/lib/mvr-clean-predicate'
 import {
-  assertMvrCleanPredicatePasses,
-  buildMvrCleanWitnessPayload,
-  computeAsOfDateYmd,
-} from '@/lib/mvr-clean-predicate'
+  classLetterToCode,
+  endorsementMaskFromCodes,
+  expirationToYmd,
+  restrictionMaskFromCodes,
+} from '@/lib/mvr-field-predicate'
 import {
   proveFactOnMidnight,
   type MidnightOnChainProveInput,
@@ -27,7 +29,6 @@ import type {
 } from '@/lib/attestation-service'
 import { AttestationError } from '@/lib/attestation-service'
 import { supersedePriorAttestations } from '@/lib/attestation-supersede'
-import type { ShippedFactType } from '@/lib/fact-registry'
 import {
   assertMvrPullMatchesLatest,
   assertNoActiveAttestationForPull,
@@ -39,11 +40,7 @@ export interface MidnightAttestationServiceConfig {
   proveOnChain?: (input: MidnightOnChainProveInput) => Promise<MidnightOnChainProveResult>
 }
 
-const MIDNIGHT_SHIPPED_FACTS: ReadonlySet<ShippedFactType> = new Set([
-  'mvr_clean_36_months',
-  'cdl_class_a',
-  'previous_employer_verified',
-])
+const MIDNIGHT_SHIPPED_FACTS: ReadonlySet<ShippedFactType> = new Set(ACTIVE_CARD_FACTS)
 
 function rowToAttestation(row: {
   id: string
@@ -88,6 +85,7 @@ function buildMidnightProof(onChain: MidnightOnChainProveResult): MidnightProofA
     ...(onChain.estimatedFees !== undefined
       ? { estimatedFees: onChain.estimatedFees }
       : {}),
+    ...(onChain.predicateEnforced ? { predicateEnforced: true } : {}),
   }
 }
 
@@ -109,7 +107,13 @@ async function buildOnChainInput(
     audienceId: input.audienceId,
   })
 
-  if (factType === 'mvr_clean_36_months' || factType === 'cdl_class_a') {
+  if (
+    factType === 'cdl_class' ||
+    factType === 'cdl_endorsements' ||
+    factType === 'cdl_restrictions' ||
+    factType === 'med_cert_valid' ||
+    factType === 'cdl_class_a'
+  ) {
     const mvrCtx = await getMvrAttestationContext(supabase, input.candidateUserId)
     if (!mvrCtx) {
       throw new AttestationError('No driver-owned completed MVR on file — cannot build predicate witness')
@@ -119,40 +123,73 @@ async function buildOnChainInput(
 
     const anchor = mvrAnchorDate(mvrCtx.completedAt, mvrCtx.mvr.last_ordered_at)
     const asOfDateYmd = computeAsOfDateYmd(anchor)
-
-    if (factType === 'mvr_clean_36_months') {
-      const witnessPayload = buildMvrCleanWitnessPayload({
-        anchor,
-        violations: mvrCtx.mvr.violations ?? [],
-      })
-      assertMvrCleanPredicatePasses(witnessPayload)
-
-      return {
-        candidateUserId: input.candidateUserId,
-        factType,
-        sourceCra: material.sourceCra,
-        sourcePullId: material.sourcePullId,
-        asOfDateYmd,
-        disclosedFields: material.disclosedFields,
-        windowStartYmd: witnessPayload.window.windowStartYmd,
-        windowEndYmd: witnessPayload.window.windowEndYmd,
-        violationSlots: witnessPayload.slots,
-      }
-    }
-
-    const holdsClassA = normalizeAccioCdlClass(mvrCtx.licenseClass) === 'A'
-    if (!holdsClassA) {
-      throw new AttestationError('DMV MVR does not show Class A CDL — cannot prove on Midnight')
-    }
-
-    return {
+    const base = {
       candidateUserId: input.candidateUserId,
-      factType,
       sourceCra: material.sourceCra,
       sourcePullId: material.sourcePullId,
       asOfDateYmd,
       disclosedFields: material.disclosedFields,
-      holdsClassA: true,
+    }
+
+    if (factType === 'cdl_class_a') {
+      return { ...base, factType: 'cdl_class_a', holdsClassA: true }
+    }
+
+    try {
+      if (factType === 'cdl_class') {
+      const letter = String(material.disclosedFields.class ?? '')
+      const classCode =
+        typeof material.disclosedFields.classCode === 'number'
+          ? material.disclosedFields.classCode
+          : classLetterToCode(letter)
+      return { ...base, factType: 'cdl_class', classCode }
+    }
+
+    if (factType === 'cdl_endorsements') {
+      const mask =
+        typeof material.disclosedFields.mask === 'number'
+          ? material.disclosedFields.mask
+          : endorsementMaskFromCodes(
+              String(material.disclosedFields.endorsements ?? '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
+            )
+      return { ...base, factType: 'cdl_endorsements', mask }
+    }
+
+    if (factType === 'cdl_restrictions') {
+      const raw = String(material.disclosedFields.restrictions ?? '')
+      const mask =
+        typeof material.disclosedFields.mask === 'number'
+          ? material.disclosedFields.mask
+          : restrictionMaskFromCodes(
+              !raw || raw.toLowerCase() === 'none'
+                ? []
+                : raw.split(',').map((s) => s.trim()).filter(Boolean),
+            )
+      return { ...base, factType: 'cdl_restrictions', mask }
+    }
+
+    const expirationYmd =
+      typeof material.disclosedFields.expirationYmd === 'number'
+        ? material.disclosedFields.expirationYmd
+        : expirationToYmd(
+            typeof material.disclosedFields.expiration === 'string'
+              ? material.disclosedFields.expiration
+              : null,
+          )
+    if (!expirationYmd) {
+      throw new AttestationError(
+        'Midnight med-cert proof requires a parseable expiration date on the Accio MVR',
+      )
+    }
+    return { ...base, factType: 'med_cert_valid', expirationYmd }
+    } catch (err) {
+      if (err instanceof AttestationError) throw err
+      throw new AttestationError(
+        err instanceof Error ? err.message : 'Failed to encode MVR field for Midnight',
+      )
     }
   }
 
@@ -170,6 +207,12 @@ async function buildOnChainInput(
 
   if (!evrRow?.verified_at) {
     throw new AttestationError('No verified prior-employer response on file')
+  }
+
+  if (!evrRow.dkimValid) {
+    throw new AttestationError(
+      'Midnight EV proof requires a DKIM-valid inbound reply from the invited employer domain — form responses stay Verified by Provven only',
+    )
   }
 
   const verifiedAt = new Date(evrRow.verified_at)

@@ -203,6 +203,14 @@ export interface EmployerConfirmation {
 
 // ── Projected card ───────────────────────────────────────────────────────────
 
+/** Attestation row projected onto the career card Verified strip */
+export interface CardAttestedFact {
+  id: string
+  factType: string
+  label: string
+  provenance: string
+}
+
 export interface ProjectedCareerCard {
   userId: string
   name: string
@@ -244,6 +252,8 @@ export interface ProjectedCareerCard {
    * Omitted for self/public; never merged into candidate-owned projection.
    */
   employerCompanyPsp?: PspData | null
+  /** Attestations for the Verified strip — from `attestations`, not block_*. */
+  attestedFacts?: CardAttestedFact[]
   /**
    * The lens used to project this card. Always present in self/public views;
    * the default "Full profile" lens is returned when no specific one is

@@ -812,7 +812,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ✅ Code + Preprod smokes (2026-08-06) |
 | **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ✅ Gate shipped (copy dark until P3.4-B) |
 | **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
-| **P3.8** | **Hosted proof server (Fly)** — so Vercel can reach a prover without local Docker; JWT stays default until Vercel flip | ✅ Fly live + hosted prove smoke 2026-08-10 — Vercel `ATTESTATION_BACKEND` still unset |
+| **P3.8** | **Hosted proof server (Fly)** — so Vercel can reach a prover without local Docker; JWT stays default until Vercel flip | ✅ Fly live + hosted smoke 2026-08-10 · **Vercel `ATTESTATION_BACKEND=midnight` flipped 2026-08-13 (Preprod)** |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
 
@@ -1241,9 +1241,9 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 | | |
 |---|---|
-| Status | ✅ **Fly live + hosted smoke 2026-08-10** — `performance-2x`/8 GB nginx auth; prove tx `007d378a…480cd3` (attestation `151f432f-…`). **Remaining 👤:** Vercel `MIDNIGHT_PROOF_SERVER_URL` + flip `ATTESTATION_BACKEND=midnight` |
+| Status | ✅ **Fly live + hosted smoke 2026-08-10** — `performance-2x`/8 GB nginx auth; prove tx `007d378a…480cd3`. **Vercel flip 2026-08-13:** `ATTESTATION_BACKEND=midnight` (Preprod; honesty copy still gated) |
 | Pre-conditions | P3.2 ✅ (same Docker image); Fly account with billing |
-| Pace risk | None — ops only; JWT stays default until Vercel flip |
+| Pace risk | None — ops only. New proves are Midnight; leftover JWTs still verify by `proof.kind`. |
 
 **Goal:** Vercel (and any non-WSL machine) can reach a managed proof server over HTTPS. Does **not** flip “Proven on Midnight” (P3.4-B) and does **not** require Key.
 
@@ -1252,8 +1252,8 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 1. ✅ `fly auth login` + `npm run midnight:proof-server:deploy` → `provven-midnight-proof`
 2. ✅ `.env.local` — clean URL + `MIDNIGHT_PROOF_SERVER_USER` / `PASSWORD` (legacy `user:pass@host` still accepted)
 3. ✅ Smoke (2026-08-10): hosted prove `mvr_clean_36_months` → `kind=midnight_zk`, tx `007d378a8f45b56dc0c857234ab572e106ba01486649abdb7e1091f440a1480cd3`
-4. 👤 Set Vercel the same three vars. Keep **`ATTESTATION_BACKEND` unset** until you intentionally cut over.
-5. 👤 Only then: Vercel `ATTESTATION_BACKEND=midnight` + redeploy.
+4. ✅ Set Vercel the same three vars (operator, 2026-08-13).
+5. ✅ Vercel `ATTESTATION_BACKEND=midnight` + redeploy (operator, 2026-08-13). **Still Preprod.** First in-app prove via `/api/attestation/prove` may 504 (no `maxDuration`; wallet sync). CLI `midnight:prove-fact` remains the reliable smoke. Verify dispatches by `proof.kind` so leftover JWTs still badge.
 
 **Gotcha:** Node undici rejects `https://user:pass@host` (“Transport error”). Prefer split env; runtime still rewrites legacy URLs (`proof-server-url.ts`).
 
@@ -1433,6 +1433,9 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-08-13 | **Dedicated MVR-field circuits** | Grok | uncommitted | Four Compact contracts (`cdl-class`, `cdl-endorsements`, `cdl-restrictions`, `med-cert-valid`) assert disclosed value == witness. `predicateEnforced` unlocks **Proven on Midnight · Accio** copy (not issuer-signed). **Ops:** compile → deploy four facts → set `MIDNIGHT_CONTRACT_ADDRESS_*`. |
+| 2026-08-13 | **Billboard MVR facts + DKIM EV** | Grok | uncommitted | Replaced card/resume example facts with `cdl_class`, `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`. Pingram inbound + DKIM; Midnight EV requires `dkim_valid`. |
+| 2026-08-13 | **P3.8 Vercel Midnight cutover** | Grok | uncommitted | Operator set Production Midnight env + `ATTESTATION_BACKEND=midnight` and redeployed. Fly `/health` 200. Registry now verifies by `proof.kind` so JWT rows don't go invalid. **Next:** prod prove smoke (`midnight:prove-fact` or POST `/api/attestation/prove`); add `maxDuration` if Vercel 504s. Honesty copy still dark (P3.4-B). |
 | 2026-08-10 | **P3.8 hosted prove smoke ✅** | Composer | uncommitted | Fly `provven-midnight-proof` (`performance-2x`/8 GB, nginx Basic-auth). Fixed undici credentialed-URL `Transport error` via `proof-server-url.ts`. Smoke: user `c48a8816-…`, tx `007d378a…480cd3`, attestation `151f432f-…`, `kind=midnight_zk`. **Next 👤:** Vercel `MIDNIGHT_PROOF_SERVER_URL`; leave `ATTESTATION_BACKEND` unset until cutover. Key still not required for hosting. |
 | 2026-08-10 | **P3.8 hosted proof server** | Composer | uncommitted | Fly package in `midnight/proof-server/` (auth proxy + 8GB always-on). Local Docker image build + `/health` 200 verified. **Human:** `fly auth login` → deploy → smoke → Vercel flip. |
 | 2026-08-06 | **Preprod cost benchmark** | Composer | uncommitted | Built `midnight:cost-benchmark` + fee capture from `FinalizedTxData.fees`. CDL `paidFees=1` (~35s); EVR `paidFees=1` (~36s). Wallet ΔtDust=0 (tank regenerates). **Finding:** Preprod fees are not economically meaningful — prod NIGHT sizing needs mainnet fee schedule × DUST model (5 DUST/NIGHT, ~1wk refill). |

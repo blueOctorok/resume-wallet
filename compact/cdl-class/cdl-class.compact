@@ -1,0 +1,28 @@
+// License class on the driver-owned Accio MVR.
+// Witness class code must equal the public disclosed code (ASCII A–Z).
+// Provenance signature (P3.4-B) still pending — bytes come from Storm's Accio parse.
+
+pragma language_version >= 0.16 && <= 0.31;
+
+import CompactStandardLibrary;
+
+witness licenseClassCode(): Uint<8>;
+
+export ledger factCommitment: Opaque<"string">;
+export ledger usedPullNullifiers: Map<Opaque<"string">, Boolean>;
+
+export circuit proveCdlClass(
+  disclosedClass: Uint<8>,
+  asOfDate: Uint<32>,
+  pullNullifier: Opaque<"string">,
+  commitment: Opaque<"string">
+): Boolean {
+  assert(licenseClassCode() == disclosedClass, "class code mismatch");
+  assert(disclosedClass >= 65, "class below A");
+  assert(disclosedClass <= 90, "class above Z");
+  assert(asOfDate > 0, "asOfDate required");
+  assert(!usedPullNullifiers.member(disclose(pullNullifier)), "pull already proven");
+  usedPullNullifiers.insert(disclose(pullNullifier), true);
+  factCommitment = disclose(commitment);
+  return disclose(true);
+}
