@@ -55,8 +55,8 @@ export default function HeroSection({
         <div className='grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16'>
           <div className='min-w-0 text-center lg:text-left'>
             <div className='lp-rise' style={{ animationDelay: '0ms' }}>
-              <p className='text-6xl sm:text-7xl lg:text-[5.5rem] [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
-                <ProvvenWordmark tone='ink' />
+              <p className='max-w-full text-[clamp(2.15rem,11vw,5.5rem)] leading-none [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
+                <ProvvenWordmark tone='ink' className='max-w-full tracking-[0.04em] sm:tracking-[0.08em]' />
               </p>
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
                 <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c99700]/55 to-[#c99700]/55 lg:from-[#c99700]/55' />
@@ -68,7 +68,7 @@ export default function HeroSection({
             </div>
 
             <h1
-              className='lp-rise mt-10 text-4xl font-semibold leading-[1.08] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
+              className='lp-rise mt-10 text-[1.85rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}

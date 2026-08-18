@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Mobile: hero + nav lockup overflow** (2026-08-18)
+
+PROVVEN + shield is wider than the old serif mark. Hero wordmark now `clamp()`s to the viewport; nav lockup is smaller on phones; hub toggle hides “Career Card” / “Build” labels below `sm` so it no longer overlaps the wordmark.
+
+---
+
 ## **DisclosureCard uses the Provven mark** (2026-08-18)
 
 Landing mock “Verified by Provven” badge + fact rows use `ProvvenMark` (the shield SVG) instead of Lucide `ShieldCheck`.

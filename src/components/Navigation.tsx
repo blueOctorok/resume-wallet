@@ -351,7 +351,8 @@ function CandidateViewToggle({
             )}
           >
             <Icon className='h-3.5 w-3.5 shrink-0' />
-            <span className='whitespace-nowrap'>{label}</span>
+            {/* Labels eat the wordmark on a phone; icons + aria-label stay. */}
+            <span className='hidden whitespace-nowrap sm:inline'>{label}</span>
           </button>
         )
       })}
@@ -547,11 +548,15 @@ export default function Navigation({
               <button
                 type='button'
                 onClick={() => handleNavigation(isAuthenticated ? 'hub' : 'home')}
-                className='shrink-0 cursor-pointer transition-opacity hover:opacity-85'
+                className='min-w-0 cursor-pointer transition-opacity hover:opacity-85'
                 aria-label={wordmarkButtonLabel}
               >
-                <h1 className='text-[1.45rem] leading-none sm:text-[1.6rem]'>
-                  <ProvvenWordmark tone='auto' isDark={isDark} />
+                <h1 className='text-[1.05rem] leading-none sm:text-[1.6rem]'>
+                  <ProvvenWordmark
+                    tone='auto'
+                    isDark={isDark}
+                    className='tracking-[0.04em] sm:tracking-[0.08em]'
+                  />
                 </h1>
               </button>
 
