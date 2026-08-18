@@ -38,6 +38,16 @@ export function headingText(isDark: boolean) {
 }
 
 /**
+ * Opaque fill for non-ink sections. Do not use /opacity tints here —
+ * InkBand blurs escape `overflow-hidden` on iOS and the fixed StormBackground
+ * would show through, so the page reads as one navy slab on phones.
+ */
+export function paperBand(isDark: boolean, tint = false) {
+  if (isDark) return tint ? 'bg-[#153154]' : 'bg-[#12263f]'
+  return tint ? 'bg-[#eee8da]' : 'bg-[#f7f4ed]'
+}
+
+/**
  * Gold primary CTA — overrides Button's teal primary via twMerge.
  * Deep-navy label on champagne gold; identical in both themes on purpose
  * (the CTA is a brand object, not a theme surface).
@@ -130,7 +140,10 @@ interface InkBandProps {
  */
 export function InkBand({ children, className, atmosphere, id }: InkBandProps) {
   return (
-    <section id={id} className={cn('relative isolate overflow-hidden bg-[#0c2340]', className)}>
+    <section
+      id={id}
+      className={cn('relative isolate overflow-hidden bg-[#0c2340] [clip-path:inset(0)]', className)}
+    >
       {/* Ledger grid — horizontal record lines, barely-there */}
       <div
         aria-hidden

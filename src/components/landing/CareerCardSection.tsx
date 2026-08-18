@@ -18,7 +18,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
+import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
 type BlockState = 'verified' | 'added' | 'suggested'
 
@@ -73,7 +73,7 @@ function BlockChip({
 
 export default function CareerCardSection({ isDark }: { isDark: boolean }) {
   return (
-    <section className={cn('py-20 sm:py-28', isDark ? 'bg-white/[0.015]' : 'bg-[#eee8da]/60')}>
+    <section className={cn('py-20 sm:py-28', paperBand(isDark, true))}>
       <LandingContainer>
         <div className='grid items-center gap-12 lg:grid-cols-2 lg:gap-20'>
           <div data-reveal>

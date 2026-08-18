@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Landing paper bands opaque on mobile** (2026-08-18)
+
+Non-ink sections used no fill or `/60` cream, so navy `InkBand` blurs (iOS ignores `overflow-hidden` on filtered layers) and the fixed canvas showed through — the page read as one navy slab on phones. Each paper section now has an opaque `paperBand()` fill; ink bands also `clip-path: inset(0)`.
+
+---
+
 ## **Mobile: hero + nav lockup overflow** (2026-08-18)
 
 PROVVEN + shield is wider than the old serif mark. Hero wordmark now `clamp()`s to the viewport; nav lockup is smaller on phones; hub toggle hides “Career Card” / “Build” labels below `sm` so it no longer overlaps the wordmark.

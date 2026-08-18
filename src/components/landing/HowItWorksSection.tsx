@@ -6,7 +6,7 @@
  */
 
 import { cn } from '@/lib/utils'
-import { headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
+import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
 const STEPS = [
   {
@@ -28,7 +28,7 @@ const STEPS = [
 
 export default function HowItWorksSection({ isDark }: { isDark: boolean }) {
   return (
-    <section className='py-20 sm:py-28'>
+    <section className={cn('py-20 sm:py-28', paperBand(isDark))}>
       <LandingContainer>
         <SectionHeader
           eyebrow='How it works'

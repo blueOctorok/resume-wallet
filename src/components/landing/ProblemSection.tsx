@@ -7,7 +7,7 @@
 
 import { FileWarning, Inbox, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
+import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
 const PROBLEMS = [
   {
@@ -29,7 +29,7 @@ const PROBLEMS = [
 
 export default function ProblemSection({ isDark }: { isDark: boolean }) {
   return (
-    <section className='py-20 sm:py-28'>
+    <section className={cn('py-20 sm:py-28', paperBand(isDark))}>
       <LandingContainer>
         <SectionHeader
           eyebrow='The problem'

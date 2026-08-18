@@ -8,7 +8,7 @@
 
 import { ArrowRight, BadgeCheck, FileText, Gauge, IdCard, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { GOLD_CTA, headingText, mutedText, LandingContainer, SectionHeader } from './landing-shared'
+import { GOLD_CTA, headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
 const POINTS = [
   {
@@ -111,7 +111,11 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
   return (
     <section
       id='employers'
-      className={cn('scroll-mt-24 border-y py-20 sm:py-28', isDark ? 'border-gray-800 bg-white/[0.015]' : 'border-stone-200 bg-[#eee8da]/60')}
+      className={cn(
+        'scroll-mt-24 border-y py-20 sm:py-28',
+        isDark ? 'border-gray-800' : 'border-stone-200',
+        paperBand(isDark, true),
+      )}
     >
       <LandingContainer>
         <div className='grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20'>

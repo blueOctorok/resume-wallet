@@ -8,7 +8,7 @@ import { ArrowRight, Building2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
-import { GOLD_CTA, headingText, mutedText, LandingContainer, SealDivider } from './landing-shared'
+import { GOLD_CTA, headingText, mutedText, paperBand, LandingContainer, SealDivider } from './landing-shared'
 
 interface FinalCtaSectionProps {
   isDark: boolean
@@ -26,7 +26,7 @@ export default function FinalCtaSection({
   const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Log in'
 
   return (
-    <section className='py-24 sm:py-32'>
+    <section className={cn('py-24 sm:py-32', paperBand(isDark))}>
       <LandingContainer className='max-w-3xl text-center'>
         <div data-reveal>
           <SealDivider isDark={isDark} className='reveal-item mx-auto mb-6 max-w-xs' />
