@@ -1,8 +1,7 @@
 /**
  * Premium “DOT packet” resume model — layout matching docs/midnight/example_resume.png.
  *
- * Green-dot chips are issuer-backed / structured claims ready for Phase 3 ZK.
- * Label as Provven-verified — never “proven on Midnight” until proofs are live.
+ * Resume chips stay quiet. Midnight wording lives on the career card (DEC-2026-08-004).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -22,6 +21,8 @@ export interface PacketMvrSummary {
 export interface DriverResumeProofChip {
   id: string
   label: string
+  /** True when this chip came from an attestation row — still no Midnight copy here. */
+  attested?: boolean
 }
 
 export interface DriverResumeExperienceRow {
@@ -322,7 +323,9 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     qrLabelTop: 'DOT application packet',
     footerTitle: 'Full career card on Provven',
     footerBody:
-      'Open the link (or scan the QR with a phone). Driver-controlled Candidate Card — proved claims + attestation metadata. Does not include raw MVR/PSP.',
+      (input.attestedChips ?? []).length > 0
+        ? 'Scan for the career card — verified credentials live there. This PDF does not include raw MVR/PSP.'
+        : 'Open the link (or scan the QR). Driver-controlled career card. Does not include raw MVR/PSP.',
     thinStateHint: thin
       ? 'Start your DOT application to fill this packet — credentials and experience appear as you go.'
       : null,
@@ -385,6 +388,10 @@ export async function assembleDriverResumePacket(
     pspResultOutcome: pspOrder?.result_outcome ?? null,
     dotAccidentCount,
     hasDotApp: opts.hasDotApp,
-    attestedChips: attestedFacts.map((f) => ({ id: f.factType, label: f.label })),
+    attestedChips: attestedFacts.map((f) => ({
+      id: f.factType,
+      label: f.label,
+      attested: true,
+    })),
   })
 }

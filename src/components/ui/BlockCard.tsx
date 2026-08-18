@@ -130,7 +130,7 @@ function BlockCardChrome({
           </div>
 
           <div className='min-w-0 flex-1'>
-            {/* font-display (Fraunces serif) — heritage brand voice on section titles */}
+            {/* font-display → Montserrat (same family as body; weight does the hierarchy) */}
             <h3 className='font-display text-[0.95rem] font-semibold tracking-tight text-stone-900 dark:text-[#f4f1ea] break-words sm:truncate'>
               {title}
             </h3>

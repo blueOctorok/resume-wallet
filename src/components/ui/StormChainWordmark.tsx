@@ -354,7 +354,7 @@ export default function StormChainWordmark({
         <span
           className={cn(
             'relative inline-block -translate-y-[0.035em]',
-            isDark ? 'text-[#cda868]' : 'text-[#6b5024]',
+            isDark ? 'text-[#c99700]' : 'text-[#0c2340]',
           )}
         >
           V

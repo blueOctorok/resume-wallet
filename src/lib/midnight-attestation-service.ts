@@ -79,7 +79,7 @@ function buildMidnightProof(onChain: MidnightOnChainProveResult): MidnightProofA
     kind: 'midnight_zk',
     txHash: onChain.txHash,
     proofId: onChain.proofId,
-    // P3.4-B flips to issuer_signed — until then UI stays on Storm+CRA copy.
+    // Key does not sign report bytes (DEC-2026-08-004). Predicate + Accio cite is the claim.
     provenanceTier: 'metadata',
     ...(onChain.paidFees !== undefined ? { paidFees: onChain.paidFees } : {}),
     ...(onChain.estimatedFees !== undefined

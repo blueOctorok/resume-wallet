@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blue Star mark · Notre Dame colors</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --nd-navy: #0c2340;
+        --nd-gold: #c99700;
+        --nd-metal: #ae9142;
+        --cream: #f7f4ed;
+        --ink-text: #f4f1ea;
+        --muted: #b8b0a2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--nd-navy);
+        color: var(--ink-text);
+        font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+      }
+      main { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; }
+      h1 { margin: 0 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+      .lede { margin: 0 0 28px; max-width: 40rem; color: var(--muted); font-size: 15px; line-height: 1.5; }
+      .swatches { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px; }
+      .swatch {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 10px 6px 6px;
+        border: 1px solid rgba(201, 151, 0, 0.25);
+        border-radius: 999px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .dot { width: 18px; height: 18px; border-radius: 50%; }
+      .dot.navy { background: var(--nd-navy); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2); }
+      .dot.gold { background: var(--nd-gold); }
+      .dot.metal { background: var(--nd-metal); }
+      .dot.cream { background: var(--cream); }
+      .dot.ember { background: #f15a2b; opacity: 0.35; }
+      h2 {
+        margin: 48px 0 16px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--nd-gold);
+      }
+      .row { display: grid; gap: 18px; }
+      .row.three { grid-template-columns: 1fr 1.2fr 1fr; }
+      .row.two { grid-template-columns: 1fr 1fr; }
+      @media (max-width: 760px) {
+        .row.three, .row.two { grid-template-columns: 1fr; }
+      }
+      figure {
+        margin: 0;
+        padding: 28px 22px 20px;
+        border: 1px solid rgba(201, 151, 0, 0.22);
+        border-radius: 16px;
+        text-align: center;
+      }
+      figure.cream { background: var(--cream); color: var(--nd-navy); }
+      .stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        min-height: 168px;
+      }
+      .stage.stack { flex-direction: column; gap: 14px; }
+      .mark { width: 92px; height: auto; display: block; }
+      .mark.lg { width: 120px; }
+      .word {
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        font-size: 34px;
+        line-height: 1;
+      }
+      .navy-word { color: var(--ink-text); }
+      .cream .navy-word { color: var(--nd-navy); }
+      .label {
+        margin-top: 14px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--nd-gold);
+      }
+      figure.cream .label { color: #8a6d3b; }
+      .cap { margin: 6px 0 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+      figure.cream .cap { color: #6b6256; }
+      .sizes { display: flex; flex-wrap: wrap; gap: 28px 36px; align-items: end; }
+      .size { text-align: center; }
+      .size img { display: block; margin: 0 auto 8px; }
+      .size span { font-size: 11px; color: var(--muted); }
+      .hero {
+        padding: 48px 36px;
+        border: 1px solid rgba(201, 151, 0, 0.22);
+        border-radius: 16px;
+      }
+      .hero-lockup { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+      .hero h3 {
+        margin: 0;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+      .hero h3 em { font-style: normal; color: var(--nd-gold); }
+      .hero p { margin: 14px 0 22px; max-width: 28rem; color: var(--muted); line-height: 1.5; }
+      .cta {
+        display: inline-block;
+        padding: 10px 18px;
+        background: var(--nd-gold);
+        color: var(--nd-navy);
+        font-weight: 700;
+        font-size: 14px;
+        border-radius: 8px;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Blue Star mark · Notre Dame colors</h1>
+      <p class="lede">
+        Their shield + check, not our overlapping Fraunces V. Hot Embers is out.
+        Navy is ND Blue. Gold is Dome Gold — the ND metal, not champagne and not orange.
+      </p>
+      <div class="swatches">
+        <div class="swatch"><span class="dot navy"></span> ND Blue #0C2340</div>
+        <div class="swatch"><span class="dot gold"></span> Dome Gold #C99700</div>
+        <div class="swatch"><span class="dot metal"></span> Metallic #AE9142</div>
+        <div class="swatch"><span class="dot cream"></span> Cream</div>
+        <div class="swatch"><span class="dot ember"></span> Embers — unused</div>
+      </div>
+
+      <h2>Lockups</h2>
+      <div class="row three">
+        <figure>
+          <div class="stage">
+            <img class="mark lg" src="./bluestar-mark-nd-from-art.png" alt="Blue Star mark in ND gold" />
+          </div>
+          <div class="label">Mark</div>
+          <p class="cap">Their geometry. Recolored only.</p>
+        </figure>
+        <figure>
+          <div class="stage">
+            <img class="mark" src="./bluestar-mark-nd-from-art.png" alt="" />
+            <p class="word navy-word">PROVVEN</p>
+          </div>
+          <div class="label">Horizontal</div>
+          <p class="cap">Gold seal, cream word. Hiring-familiar lockup.</p>
+        </figure>
+        <figure>
+          <div class="stage stack">
+            <img class="mark" src="./bluestar-mark-nd-from-art.png" alt="" />
+            <p class="word navy-word">PROVVEN</p>
+          </div>
+          <div class="label">Stacked</div>
+          <p class="cap">Splash, merch, email header.</p>
+        </figure>
+      </div>
+
+      <h2>Reverse — cream</h2>
+      <div class="row two">
+        <figure class="cream">
+          <div class="stage">
+            <img class="mark lg" src="./bluestar-mark-navy-from-art.png" alt="Navy mark on cream" />
+          </div>
+          <div class="label">Mark · light</div>
+          <p class="cap">Navy on cream. Same as ND on a white jersey.</p>
+        </figure>
+        <figure class="cream">
+          <div class="stage">
+            <img class="mark" src="./bluestar-mark-navy-from-art.png" alt="" />
+            <p class="word navy-word">PROVVEN</p>
+          </div>
+          <div class="label">Horizontal · light</div>
+          <p class="cap">Business card / light UI.</p>
+        </figure>
+      </div>
+
+      <h2>At favicon size</h2>
+      <div class="sizes">
+        <div class="size">
+          <img src="./bluestar-mark-nd-from-art.png" width="64" height="68" alt="" />
+          <span>64</span>
+        </div>
+        <div class="size">
+          <img src="./bluestar-mark-nd-from-art.png" width="32" height="34" alt="" />
+          <span>32</span>
+        </div>
+        <div class="size">
+          <img src="./bluestar-mark-nd-from-art.png" width="16" height="17" alt="" />
+          <span>16</span>
+        </div>
+      </div>
+
+      <h2>On a hiring front door</h2>
+      <div class="hero">
+        <div class="hero-lockup">
+          <img class="mark" src="./bluestar-mark-nd-from-art.png" width="44" height="47" alt="" />
+          <p class="word navy-word" style="font-size: 22px">PROVVEN</p>
+        </div>
+        <h3>A simpler way to get hired.<br /><em>Proof comes with it.</em></h3>
+        <p>Looks like a job platform at the door. The shield is the trust signal — gold, not orange.</p>
+        <span class="cta">Log in</span>
+      </div>
+    </main>
+  </body>
+</html>

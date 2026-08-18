@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * How it works — three steps with oversized display-serif numerals.
- * Editorial layout, no card chrome: numeral, rule, title, copy.
+ * How it works — three steps with oversized numerals.
+ * No card chrome: numeral, rule, title, copy.
  */
 
 import { cn } from '@/lib/utils'
@@ -42,14 +42,14 @@ export default function HowItWorksSection({ isDark }: { isDark: boolean }) {
             <div key={step.n} className='reveal-item' style={{ transitionDelay: `${i * 140}ms` }}>
               <p
                 className={cn(
-                  'font-display text-6xl font-light italic leading-none tracking-tight sm:text-7xl',
-                  isDark ? 'text-[#d4be93]/25' : 'text-[#8a6d3b]/25',
+                  'font-display text-6xl font-light leading-none tracking-tight sm:text-7xl',
+                  isDark ? 'text-[#d4b44a]/25' : 'text-[#8a6700]/25',
                 )}
                 aria-hidden
               >
                 {step.n}
               </p>
-              <div className={cn('mt-4 h-px w-12', isDark ? 'bg-[#c9a86a]/45' : 'bg-[#8a6d3b]/40')} />
+              <div className={cn('mt-4 h-px w-12', isDark ? 'bg-[#c99700]/45' : 'bg-[#8a6700]/40')} />
               <h3 className={cn('mt-4 font-display text-2xl font-medium tracking-tight', headingText(isDark))}>
                 {step.title}
               </h3>

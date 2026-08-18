@@ -22,25 +22,24 @@ One section = one job. `LandingPage.tsx` is composition only.
 
 **Ink bands** (hero, disclosure, trust) are deliberately theme-independent — always the deep-ink plane, in light and dark themes. Everything else is theme-aware via `isDark`.
 
-## Palette (heritage-trust direction, 2026-08-07)
+## Palette (ND Blue + Dome Gold, 2026-08-18)
 
-The landing page pioneered the heritage palette; it is now the **site-wide brand** (Tailwind's teal/violet scales are remapped to gold/steel in `tailwind.config.ts`). **No teal or violet anywhere.**
+Site-wide brand (Tailwind `teal-*` remaps to Dome Gold). **No teal, violet, or Hot Embers.**
 
-- **Ink bands** are deep ink-navy (`#0a1322`), not blue-black — navy is the institutional trust hue.
-- **Light sections** sit on warm cream (`#f7f4ed` page base, `#eee8da` alternating bands) with **stone** neutrals — never cool `slate` on light. Dark mode is unchanged.
-- **One accent: champagne gold — the "seal."** It marks brand moments, verified facts, the disclosure seam, and primary CTAs (`GOLD_CTA` in `landing-shared.tsx`). Three tones only: `#c9a86a` (lines/borders/fills), `#d4be93` (text on navy, `#e6cf9f` bright), `#8a6d3b` (deep bronze text on cream).
-- Redaction bars and "never leaves" states are **neutral slate** — hidden things carry no accent.
+- **Ink bands** are ND Blue (`#0c2340`).
+- **Light sections** sit on warm cream (`#f7f4ed`) with stone neutrals.
+- **One accent: Dome Gold `#c99700`.** Verified facts, disclosure seam, CTAs. Text on navy: `#d4b44a`. Text on cream: `#8a6700`.
+- Redaction bars stay **neutral slate**.
 
 ## Brand marks
 
-- **`ProvvenWordmark`** (`src/components/ui/ProvvenWordmark.tsx`) — serif wordmark; the `vv` pair is the brand symbol: a **solid gold v** (Provven's seal) with a **ghost v** (base color at ~65%, the fact) laid on top, pulled in −0.38em and dipping below the baseline. Hero, final CTA, footer.
-- **The double-V is also the favicon** (`public/favicon.svg` + `src/app/favicon.ico`) and ships as standalone SVGs in `public/brand/`. Canonical component: `src/components/ui/ProvvenMark.tsx`; full spec + regeneration: `docs/BRAND.md` (`node scripts/generate-brand-assets.mjs`).
-- **`SealDivider`** (`landing-shared.tsx`) — hairline rule with a centered gold diamond; opens the final CTA and the footer.
+- **`ProvvenWordmark`** — Blue Star shield + `PROVVEN` (Montserrat bold). Hero, nav, sign-in, footer.
+- **`ProvvenMark`** — shield alone. Gold on navy, ND Blue on cream. Favicon + `public/brand/`. Spec: `docs/BRAND.md`.
+- **`SealDivider`** — hairline + gold diamond.
 
 ## Fonts
 
-- **Fraunces** (display serif) — brand + headlines. Loaded in `src/app/layout.tsx` via `next/font` as `--font-fraunces`, exposed as Tailwind `font-display` (`tailwind.config.ts`).
-- **Montserrat** — body copy (app default).
+- **Montserrat** — body, lockup, and headlines (`font-display` → `--font-montserrat`).
 - Monospace (`font-mono`) — "technical proof" moments: sharing strip, verified tags, the `prove(mvr_clean_36mo)` line.
 
 ## Swapping the Career Card mock for a real screenshot

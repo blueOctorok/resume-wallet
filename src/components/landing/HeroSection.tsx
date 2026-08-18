@@ -29,7 +29,7 @@ function HeroAtmosphere() {
       <div
         aria-hidden
         className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.12] blur-[100px]'
-        style={{ background: 'radial-gradient(circle, #c9a86a 0%, transparent 65%)' }}
+        style={{ background: 'radial-gradient(circle, #c99700 0%, transparent 65%)' }}
       />
       <div
         aria-hidden
@@ -59,20 +59,20 @@ export default function HeroSection({
                 <ProvvenWordmark tone='ink' />
               </p>
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
-                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c9a86a]/55 to-[#c9a86a]/55 lg:from-[#c9a86a]/55' />
-                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#d4be93]'>
+                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c99700]/55 to-[#c99700]/55 lg:from-[#c99700]/55' />
+                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#d4b44a]'>
                   The career card you own
                 </p>
-                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c9a86a]/55 to-[#c9a86a]/55' />
+                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c99700]/55 to-[#c99700]/55' />
               </div>
             </div>
 
             <h1
-              className='lp-rise mt-10 font-display text-4xl font-medium leading-[1.06] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
+              className='lp-rise mt-10 text-4xl font-semibold leading-[1.08] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}
-              <em className='font-medium not-italic text-[#d4be93]'>not paperwork.</em>
+              <em className='font-semibold not-italic text-[#d4b44a]'>not paperwork.</em>
             </h1>
 
             <p
@@ -116,7 +116,7 @@ export default function HeroSection({
                 <button
                   type='button'
                   onClick={onBrowseJobs}
-                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#d4be93] hover:decoration-[#c9a86a]/50'
+                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#d4b44a] hover:decoration-[#c99700]/50'
                 >
                   or browse jobs without an account
                 </button>

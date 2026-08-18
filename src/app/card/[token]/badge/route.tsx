@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#7d5e33"/>
-      <stop offset="100%" style="stop-color:#b8904d"/>
+      <stop offset="100%" style="stop-color:#c99700"/>
     </linearGradient>
   </defs>
   <rect width="${split}" height="${h}" fill="#1e293b"/>

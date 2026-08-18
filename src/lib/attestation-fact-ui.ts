@@ -114,8 +114,8 @@ export interface AttestationDisplayInput {
 
 /**
  * Headline verification line.
- * "Proven on Midnight" when the circuit actually enforced this fact (or issuer-signed).
- * Always cites the CRA — never "trust the math, not Storm" until P3.4-B.
+ * "Proven on Midnight" when the circuit actually enforced this fact (DEC-2026-08-004).
+ * Always cites the CRA. Never "trust the math, not Storm" — provenance is still our Accio parse.
  */
 export function formatAttestationVerificationLine(input: AttestationDisplayInput): string {
   const stormLine = formatVerifiedByStormLine(input.issuedAt, input.sourceCra, input.sourcePullId)
@@ -130,20 +130,13 @@ export function formatAttestationVerificationLine(input: AttestationDisplayInput
   return stormLine
 }
 
-/** Technical details for verify UI — tx/proof id without "trust the math" until issuer_signed. */
+/** Technical details for verify UI — tx/proof id. Do not advertise a Key signature we will not get. */
 export function formatAttestationVerifyDetails(input: AttestationDisplayInput): string[] {
   if (input.proofKind !== 'midnight_zk') return []
   const lines: string[] = []
   if (input.txHash?.trim()) lines.push(`Midnight transaction: ${input.txHash.trim()}`)
   if (input.proofId?.trim() && input.proofId.trim() !== input.txHash?.trim()) {
     lines.push(`Proof id: ${input.proofId.trim()}`)
-  }
-  if (input.provenanceTier !== 'issuer_signed') {
-    lines.push(
-      input.predicateEnforced
-        ? 'Predicate enforced in-circuit — issuer signature pending (P3.4-B)'
-        : 'Predicate proof submitted — issuer signature pending (P3.4-B)',
-    )
   }
   return lines
 }

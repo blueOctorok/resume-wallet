@@ -33,9 +33,9 @@ const CALLBACK_ERRORS: Record<string, string> = {
 /** Ink-plane inputs — cream text on translucent navy, gold focus ring */
 const INK_INPUT =
   'bg-white/[0.04] border-white/12 text-[#f4f1ea] placeholder:text-slate-500 ' +
-  'focus:border-[#c9a86a]/55 focus:ring-[#c9a86a]/35 ' +
+  'focus:border-[#c99700]/55 focus:ring-[#c99700]/35 ' +
   'dark:bg-white/[0.04] dark:border-white/12 dark:text-[#f4f1ea] dark:placeholder:text-slate-500 ' +
-  'dark:focus:border-[#c9a86a]/55 dark:focus:ring-[#c9a86a]/35'
+  'dark:focus:border-[#c99700]/55 dark:focus:ring-[#c99700]/35'
 
 const INK_LABEL = 'mb-1.5 block text-sm font-medium text-slate-300'
 
@@ -45,7 +45,7 @@ function SignInAtmosphere() {
       <div
         aria-hidden
         className='pointer-events-none absolute -left-32 top-[-6rem] h-[28rem] w-[28rem] rounded-full opacity-[0.12] blur-[100px]'
-        style={{ background: 'radial-gradient(circle, #c9a86a 0%, transparent 65%)' }}
+        style={{ background: 'radial-gradient(circle, #c99700 0%, transparent 65%)' }}
       />
       <div
         aria-hidden
@@ -217,12 +217,12 @@ export default function SignInScreen() {
         <div
           className={cn(
             'relative w-full overflow-hidden rounded-2xl border border-white/[0.1] bg-white/[0.035] p-6 shadow-2xl shadow-black/40 backdrop-blur-md sm:p-8',
-            'ring-1 ring-[#c9a86a]/15',
+            'ring-1 ring-[#c99700]/15',
           )}
         >
           <div
             aria-hidden
-            className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#c9a86a]/40 to-transparent'
+            className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#c99700]/40 to-transparent'
           />
 
           <div className='mb-6 text-center'>
@@ -233,7 +233,7 @@ export default function SignInScreen() {
               Candidates and employers use the same door
             </p>
             {prefillEmail ? (
-              <p className='mt-3 text-xs text-[#d4be93]/90'>
+              <p className='mt-3 text-xs text-[#d4b44a]/90'>
                 Use the email your invite was sent to, then we&apos;ll email you a code.
               </p>
             ) : null}
@@ -250,7 +250,7 @@ export default function SignInScreen() {
 
           {info ? (
             <div
-              className='mb-4 rounded-xl border border-[#c9a86a]/30 bg-[#c9a86a]/10 px-4 py-3 text-sm text-[#e6cf9f]'
+              className='mb-4 rounded-xl border border-[#c99700]/30 bg-[#c99700]/10 px-4 py-3 text-sm text-[#e0c56a]'
               role='status'
             >
               {info}
@@ -305,7 +305,7 @@ export default function SignInScreen() {
                   size='sm'
                   isLoading={isSendingCode}
                   onClick={() => handleSendCode({ preventDefault: () => {} } as React.FormEvent)}
-                  className='text-[#d4be93] hover:text-[#e6cf9f] dark:text-[#d4be93] dark:hover:text-[#e6cf9f]'
+                  className='text-[#d4b44a] hover:text-[#e0c56a] dark:text-[#d4b44a] dark:hover:text-[#e0c56a]'
                 >
                   Resend code
                 </Button>
@@ -359,9 +359,9 @@ export default function SignInScreen() {
                 variant='secondary'
                 className={cn(
                   'w-full rounded-xl border-white/15 bg-white/[0.04] text-[#f4f1ea]',
-                  'hover:border-[#c9a86a]/40 hover:bg-white/[0.08]',
+                  'hover:border-[#c99700]/40 hover:bg-white/[0.08]',
                   'dark:border-white/15 dark:bg-white/[0.04] dark:text-[#f4f1ea]',
-                  'dark:hover:border-[#c9a86a]/40 dark:hover:bg-white/[0.08]',
+                  'dark:hover:border-[#c99700]/40 dark:hover:bg-white/[0.08]',
                 )}
                 isLoading={isGoogleLoading}
                 onClick={handleGoogleSignIn}
@@ -375,7 +375,7 @@ export default function SignInScreen() {
         <p className='mt-8 text-center text-sm text-slate-400'>
           <Link
             href='/?guided=1'
-            className='font-medium text-[#d4be93] transition-colors hover:text-[#e6cf9f]'
+            className='font-medium text-[#d4b44a] transition-colors hover:text-[#e0c56a]'
           >
             Just browsing? Explore jobs first
           </Link>

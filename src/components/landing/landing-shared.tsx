@@ -12,20 +12,16 @@
  * - Everything outside ink bands is theme-aware via `isDark` ternaries,
  *   matching the rest of the app.
  *
- * Palette (heritage-trust direction, per brand boards):
- * - Ink bands are deep ink-NAVY (not blue-black) — navy is the institutional
- *   trust hue for logistics/finance.
- * - Light sections sit on warm cream with stone neutrals (not cool slate) —
- *   matches the Fraunces serif + paper-cream INK heading already in use.
- * - ONE accent: champagne gold — the "seal". It marks brand moments, verified
- *   facts, and the disclosure seam. This is now the SITE-WIDE brand (the
- *   Tailwind teal/violet scales are remapped to gold/steel in
- *   tailwind.config.ts); the landing page pioneered it.
+ * Palette (ND Blue + Dome Gold, Blue Star mark):
+ * - Ink bands are ND Blue `#0c2340`.
+ * - Light sections sit on warm cream with stone neutrals.
+ * - ONE accent: Dome Gold `#c99700`. Marks brand moments, verified facts,
+ *   the disclosure seam, and primary CTAs.
  *
  * Gold values (keep consistent — three tones, nothing else):
- * - `#c9a86a` — lines, borders, fills (usually at /15–/60 opacity)
- * - `#d4be93` — accent text on ink-navy · `#e6cf9f` bright variant
- * - `#8a6d3b` — accent text on cream (deep bronze, AA on #f7f4ed)
+ * - `#c99700` — lines, borders, fills (usually at /15–/60 opacity)
+ * - `#d4b44a` — accent text on navy · `#e0c56a` bright variant
+ * - `#8a6700` — accent text on cream (AA on #f7f4ed)
  */
 
 import type { ReactNode } from 'react'
@@ -47,7 +43,7 @@ export function headingText(isDark: boolean) {
  * (the CTA is a brand object, not a theme surface).
  */
 export const GOLD_CTA =
-  'bg-[#c9a86a] text-[#141c30] shadow-lg shadow-black/25 hover:bg-[#d4b87e] dark:bg-[#c9a86a] dark:text-[#141c30] dark:hover:bg-[#d4b87e]'
+  'bg-[#c99700] text-[#0c2340] shadow-lg shadow-black/25 hover:bg-[#d4a810] dark:bg-[#c99700] dark:text-[#0c2340] dark:hover:bg-[#d4a810]'
 
 /** Fixed palette for ink bands (never changes with theme) */
 export const INK = {
@@ -79,10 +75,10 @@ export function SectionHeader({
   className,
 }: SectionHeaderProps) {
   const eyebrowColor = onInk
-    ? 'text-[#d4be93]/90'
+    ? 'text-[#d4b44a]/90'
     : isDark
-      ? 'text-[#d4be93]/90'
-      : 'text-[#8a6d3b]'
+      ? 'text-[#d4b44a]/90'
+      : 'text-[#8a6700]'
   const titleColor = onInk ? INK.heading : headingText(isDark)
   const ledeColor = onInk ? INK.body : mutedText(isDark)
 
@@ -134,7 +130,7 @@ interface InkBandProps {
  */
 export function InkBand({ children, className, atmosphere, id }: InkBandProps) {
   return (
-    <section id={id} className={cn('relative isolate overflow-hidden bg-[#0a1322]', className)}>
+    <section id={id} className={cn('relative isolate overflow-hidden bg-[#0c2340]', className)}>
       {/* Ledger grid — horizontal record lines, barely-there */}
       <div
         aria-hidden
@@ -168,8 +164,8 @@ interface SealDividerProps {
  * not between every block (scarcity keeps it meaningful).
  */
 export function SealDivider({ onInk = false, isDark = false, className }: SealDividerProps) {
-  const goldLine = onInk || isDark ? 'to-[#c9a86a]/50' : 'to-[#8a6d3b]/45'
-  const goldDiamond = onInk || isDark ? 'bg-[#c9a86a]/85' : 'bg-[#8a6d3b]/80'
+  const goldLine = onInk || isDark ? 'to-[#c99700]/50' : 'to-[#8a6700]/45'
+  const goldDiamond = onInk || isDark ? 'bg-[#c99700]/85' : 'bg-[#8a6700]/80'
 
   return (
     <div className={cn('flex items-center', className)} aria-hidden>

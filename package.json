@@ -26,6 +26,7 @@
     "midnight:register-dust": "NODE_OPTIONS='--max-old-space-size=16384' npm run register-dust --prefix midnight/runtime",
     "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime --",
     "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts",
+    "midnight:prove-batch": "npx tsx scripts/midnight-prove-batch.ts",
     "midnight:cost-benchmark": "npx tsx scripts/midnight-cost-benchmark.ts"
   },
   "dependencies": {

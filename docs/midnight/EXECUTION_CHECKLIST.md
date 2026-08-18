@@ -808,9 +808,9 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.1** | WSL2 + Ubuntu + `.wslconfig` + Compact compiler + Cursor-in-WSL smoke test | ✅ Done · 2026-06-09 · WSL Ubuntu-24.04, repo `~/dev/resume-wallet`, compact 0.5.1 + compiler **0.31.0** (needed `unzip` for `compact update`) |
 | **P3.2** | Proof server spike (Docker) + server-managed Midnight wallet | ✅ Done · 2026-06-10 · preflight all green |
 | **P3.3** | One-fact testnet slice (`mvr_clean_36_months`) via `midnight-attestation-service.ts` — **anchor only 🟡** | ✅ Done · 2026-06-17 · contract `6c3f0ea8…fea49cf` deployed to Preprod; first ZK attestation proven (tx `0024edbc…0e265a`, attestation `6bc932c7…7d4ad4`) |
-| **P3.4** | **Real predicate proof for `mvr-clean-36` (anchor 🟡 → real 🟢)** — predicate + provenance. **Mandatory** (delivers the moat; CIRCUITS.md). **P3.4-A ✅**; 🟢 provenance **pending Key/Accio signing (P3.4-B)** | 🟡 |
+| **P3.4** | **Real predicate proof** — P3.4-A ✅. **P3.4-B Key issuer-sig dropped** (DEC-2026-08-004). Shipping bar = predicate + Accio citation. | ✅ |
 | **P3.5** | Broaden fact registry + circuits — replicate the **real** predicate pattern across shipped facts | ✅ Code + Preprod smokes (2026-08-06) |
-| **P3.6** | Honesty gate: per-fact "proven on Midnight" only when proof runs (DEC-2026-05-004) | ✅ Gate shipped (copy dark until P3.4-B) |
+| **P3.6** | Honesty gate: "Proven on Midnight" when the circuit ran + CRA cite (DEC-2026-08-004) | ✅ |
 | **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
 | **P3.8** | **Hosted proof server (Fly)** — so Vercel can reach a prover without local Docker; JWT stays default until Vercel flip | ✅ Fly live + hosted smoke 2026-08-10 · **Vercel `ATTESTATION_BACKEND=midnight` flipped 2026-08-13 (Preprod)** |
 
@@ -1032,16 +1032,16 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | Pre-conditions | P3.3 ✅ |
 | Pace risk | Low — additive circuit work; no screening pipeline changes |
 
-**Why mandatory:** P3.3 shipped a *commitment anchor* — no `witness`, no `assert`; the "clean" boolean is still computed **off-chain** in `fact-registry.ts`. That does **not** deliver the moat (DEC-2026-06-002): a verifier still trusts Storm's DB, not the math. The "proven on Midnight" per-fact claim (P3.6) and any foundation conversation require **≥1 genuine predicate proof with cold-trustless provenance (🟢)**. Full design: `CIRCUITS.md` → `mvr-clean-36 (target)`.
+**Why it mattered:** P3.3 shipped a *commitment anchor* — no `witness`, no `assert`. P3.4-A put the predicate in-circuit. That is the shipping proof (DEC-2026-08-004). Cold-trustless issuer-sig (old P3.4-B) is dropped — Key will not sign.
 
 **Two tracks — do not wait idle on Key:**
 
 | Track | What | Status | Blocks 🟢? |
 |---|---|---|---|
-| **P3.4-A Predicate** | Witness + violation-loop circuit + negative tests + wire prove pipeline | ✅ **Smoke verified Preprod** | No — delivers real ZK math over private MVR data |
-| **P3.4-B Provenance** | In-circuit `verifySignature(craPublicKey, record.bytes, craSignature())` | ⏸ **Pending Key/Accio** | Yes — cold-trustless verification requires issuer signing |
+| **P3.4-A Predicate** | Witness + violation-loop circuit + negative tests + wire prove pipeline | ✅ **Smoke verified Preprod** | No — this *is* the shipping proof |
+| **P3.4-B Provenance** | In-circuit `verifySignature` over Key-signed report bytes | ❌ **Dropped 2026-08-18** (DEC-2026-08-004) | No — Key will not sign; stay on Accio as CRA |
 
-**Interim honesty status (P3.4-A without P3.4-B):** predicate proof + metadata citation (`source_cra='accio'`, `source_pull_id`, order #, pull date). Label: **"Verified by Storm — sourced from Key/Accio order #X"**. Not 🟢. Do **not** attach per-fact "proven on Midnight / trust the math not Storm" until P3.4-B lands (DEC-2026-05-004).
+**Shipping honesty (DEC-2026-08-004):** predicate proof + metadata citation (`source_cra='accio'`, `source_pull_id`, order #, pull date). Label: **"Proven on Midnight · derived from Accio pull …"** when `predicateEnforced`. Do **not** say "trust the math, not Storm." Key remains the MVR/PSP CRA.
 
 ---
 
@@ -1049,8 +1049,8 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 | | |
 |---|---|
-| Status | 🟡 **Local research ✅ · vendor review pending** |
-| Owner | Sam → Lana (Key Background), CC Ryan (Accio) |
+| Status | ❌ **Closed 2026-08-18** — Key will not sign (cost/roadmap). Research stands; vendor ask is over (DEC-2026-08-004). |
+| Owner | — |
 
 **Local research (done 2026-06-18):** Inspected **339** stored `mvr_orders.result_xml` payloads in Supabase + repo fixtures.
 
@@ -1165,11 +1165,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 
 **ZK facts as the pre-screen tier (the "middle ground"):** ZK facts = cheap/instant/candidate-controlled verified yes/no answers a carrier checks *when simply interested*; the full **DQ file** = the consented, regulated, paid pull *when serious about hiring*. The ZK layer raises conversion + avoids wasted pulls — it **does not replace** the FMCSA-required file (49 CFR 391.51), and freshness pushes a fresh consented pull at hire anyway → **complementary, not cannibalistic**. Never disintermediate the CRA (DEC-2026-06-004 §5).
 
-**Decision flow when Key/Accio responds:**
-1. **Yes, signed artifact** → Option 1. Record pubkey source + signed-byte format → P3.4-B build → flip 🟡→🟢. zkTLS stays R&D for non-signing issuers.
-2. **No — data-agreement** → Options 2 (zkTLS) + 3 (source-pull) become primary. Log in `DECISION_LOG.md`. Storm-attested (4) is the interim shipping state.
-3. **No — roadmap/priority** → keep nudging; ship Option 4 interim; run zkTLS spike so we're not waiting idle.
-4. **Silence > ~60 days** → treat as soft no; start zkTLS spike regardless.
+**Decision (closed 2026-08-18):** Key said **no — cost/roadmap**. We are **not** switching CRAs and **not** starting zkTLS unless separately asked. Shipping state = Option 4 citation + real predicate (DEC-2026-08-004). Historical options table above is archive, not a to-do.
 
 **Commit (per option, when built):**
 - `feat(midnight): mvr-clean-36 issuer signature in-circuit (P3.4-B opt1)`
@@ -1245,7 +1241,7 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 | Pre-conditions | P3.2 ✅ (same Docker image); Fly account with billing |
 | Pace risk | None — ops only. New proves are Midnight; leftover JWTs still verify by `proof.kind`. |
 
-**Goal:** Vercel (and any non-WSL machine) can reach a managed proof server over HTTPS. Does **not** flip “Proven on Midnight” (P3.4-B) and does **not** require Key.
+**Goal:** Vercel (and any non-WSL machine) can reach a managed proof server over HTTPS. Does **not** require Key.
 
 **Do in order (human steps marked 👤):**
 
@@ -1265,8 +1261,8 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 | | |
 |---|---|
-| Status | ✅ **Gate shipped 2026-07-29** — Midnight marketing copy requires `provenanceTier === 'issuer_signed'` (default `metadata`). Flip is one line after P3.4-B. |
-| Pre-conditions | P3.4-A ✅; P3.4-B ✅ required before enabling per-fact "proven on Midnight" strings |
+| Status | ✅ **DEC-2026-08-004** — "Proven on Midnight" when `midnight_zk` + `predicateEnforced` + CRA cite. Key sig is not required. |
+| Pre-conditions | P3.4-A ✅ |
 | Pace risk | **Copy/UI only** — no screening pipeline changes |
 
 **Goal:** Carrier-facing UI may claim "proven on Midnight" **only** when `attestation.proof.kind === 'midnight_zk'` **and** `verifyAttestation()` passes. JWT-backed facts stay **"Verified by Storm"** + CRA citation (DEC-2026-05-004).
@@ -1283,14 +1279,14 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 **Commit:** `feat(midnight): per-fact honesty gate for Midnight copy (P3.6)`
 
-**Phase 3a complete when:** P3.3–P3.6 ✅ (incl. ≥1 real **🟢** predicate proof with in-circuit issuer signature — P3.4-B) → flip active marker to Phase 3b design. P3.4-A alone does not complete Phase 3a. **P3.7 (verified DQ-file assembly)** is the use-case payoff layer that *consumes* these facts — it can start its MVR→Form 1 slice on P3.4-A and broadens with P3.5; tracked as its own step, **not** a blocker for declaring the circuit slice done.
+**Phase 3a complete when:** P3.3–P3.6 ✅ with ≥1 real predicate proof (`predicateEnforced`) + CRA citation (DEC-2026-08-004). In-circuit issuer signature is **not** required. **P3.7** is the use-case payoff layer that *consumes* these facts.
 
 #### P3.7 — Verified DQ-file assembly (DOT app prefill + field lock)
 
 | | |
 |---|---|
 | Status | ✅ **Core shipped** — MVR/PSP/EVR locks + verified-% + two-tone + **DEC-2026-07-001** + legacy whole-app VERIFIED honesty pass (2026-07-14) + **DOT field badges consume attestations** (2026-07-14; Midnight copy still P3.6-gated via `proof.kind`). |
-| Pre-conditions | P3.4-A ✅ (MVR predicate — the reference slice); P3.5 broadens the fact set; **field-level provenance model** (new — stamp each DOT field with its originating fact). P3.4-B (🟢) / P3.6 gate the *wording*, not the build. |
+| Pre-conditions | P3.4-A ✅ (MVR predicate — the reference slice); P3.5 broadens the fact set; **field-level provenance model** (stamp each DOT field with its originating fact). Wording: DEC-2026-08-004. |
 | Pace risk | Medium — touches the DOT app (`DotApplicationFlow`, `driver_applications`) + career-card/employer views. Additive; **never** hard-locks a driver out of *adding* a required 391.21 disclosure. |
 
 **Why this step exists (the use case):** proofs are only worth what they *do*. The payoff is a **portable, mostly-verified DQ intake packet** — proven third-party facts (MVR/PSP/CDL/employment) auto-fill the DOT app, are badged, and are protected from silent editing. This is the object that raises carrier conversion and lets **one driver-owned pull serve many carriers** (money logic below). It is the **pre-screen packet**, NOT the regulated 49 CFR 391.51 DQ file — the carrier still runs its own consented hire-time pull (never disintermediate the CRA; DEC-2026-05-011).
@@ -1300,7 +1296,7 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
   - The surfaced % is a **real computed number** = issuer-backed fields ÷ a defined denominator (the risk-bearing DQ fields, not every text box). No vanity numbers, no rounding up.
   - **Every field carries an honest badge:** "Verified — sourced from Accio order #X, as of {date}" vs "Self-certified by driver." A carrier can always tell which is which.
   - **Self-reported fields are NEVER badged verified** (provenance gate, DEC-2026-05-014). Residency, employment gaps, acknowledgements, signature stay self-certified — that's the un-verifiable remainder, whatever its size.
-  - **Per-fact "proven on Midnight" stays gated** by P3.6 / P3.4-B. Interim wording is "Verified by Storm — sourced from {CRA} order #X."
+  - **Per-fact "Proven on Midnight"** when `midnight_zk` + `predicateEnforced` + CRA cite (DEC-2026-08-004). JWT rows stay "Verified by Provven."
 - **Why the small print is non-negotiable (legal armor, not just ethics):** this is a regulated FCRA/FMCSA context. A carrier relying on a "verified" badge that secretly covers self-reported data is a consumer-protection exposure. Honest, decomposable labeling is exactly what makes "Verified" **defensible** where a competitor's puffery isn't — here the honesty gate is a moat, not a constraint (`strategic-direction.mdc` — "Storm is not a crypto scam project"). Market the *headline*; let the *badges* carry the truth.
 
 **Field lock model (per field type):**
@@ -1433,6 +1429,10 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-08-18 | **Card seal + quiet resume** | Grok | uncommitted | Prestige Midnight tiles on career card; resume chips stay small and point at the card. Loader now passes `provenOnMidnight`. |
+| 2026-08-18 | **MVR batch prove stopped** | Grok | uncommitted | Full Preprod backfill killed. Keep smoke rows only; rerun `midnight:prove-batch` on mainnet. Dry-run numbers still valid (574 ready). |
+| 2026-08-18 | **Billboard proves live** | Grok | uncommitted | Deployed `cdl_class` `48450d4b…` / `cdl_endorsements` `47b8d0f9…` / `cdl_restrictions` `fc2ce577…` / `med_cert_valid` `3a57cc27…`. Four smokes on `f6d55342-…` all `predicateEnforced`. **Vercel:** add the four env vars. EV Midnight still needs a DKIM reply. |
+| 2026-08-18 | **P3.4-B dropped** | Grok | uncommitted | Key will not sign (cost/roadmap). DEC-2026-08-004: stay with Accio for MVR/PSP; shipping claim is predicate + CRA cite. Removed pending-P3.4-B verify copy. zkTLS stays parked. |
 | 2026-08-13 | **Dedicated MVR-field circuits** | Grok | uncommitted | Four Compact contracts (`cdl-class`, `cdl-endorsements`, `cdl-restrictions`, `med-cert-valid`) assert disclosed value == witness. `predicateEnforced` unlocks **Proven on Midnight · Accio** copy (not issuer-signed). **Ops:** compile → deploy four facts → set `MIDNIGHT_CONTRACT_ADDRESS_*`. |
 | 2026-08-13 | **Billboard MVR facts + DKIM EV** | Grok | uncommitted | Replaced card/resume example facts with `cdl_class`, `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`. Pingram inbound + DKIM; Midnight EV requires `dkim_valid`. |
 | 2026-08-13 | **P3.8 Vercel Midnight cutover** | Grok | uncommitted | Operator set Production Midnight env + `ATTESTATION_BACKEND=midnight` and redeployed. Fly `/health` 200. Registry now verifies by `proof.kind` so JWT rows don't go invalid. **Next:** prod prove smoke (`midnight:prove-fact` or POST `/api/attestation/prove`); add `maxDuration` if Vercel 504s. Honesty copy still dark (P3.4-B). |
@@ -1522,4 +1522,4 @@ Every AI session appends one entry here. Newest at top.
 - Commit messages follow the prescribed format so `git log --oneline` doubles as the migration audit trail
 - Date format: ISO `YYYY-MM-DD`
 
-**Last updated:** 2026-07-14 (P3.7 DEC-2026-07-001 + DOT honesty pass; Key still only blocks P3.4-B / P3.6 Midnight copy)
+**Last updated:** 2026-08-18 (DEC-2026-08-004 — Key issuer-sig dropped; Midnight predicate + Accio cite is the shipping bar)

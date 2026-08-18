@@ -42,6 +42,8 @@ export async function generateDriverResumePacketPDF(
   const textMuted: [number, number, number] = [120, 113, 108]
   const linkAmber: [number, number, number] = [146, 64, 14]
   const greenDot: [number, number, number] = [74, 124, 98]
+  const goldDot: [number, number, number] = [184, 144, 77]
+  const stoneDot: [number, number, number] = [168, 162, 158]
   const rule: [number, number, number] = [214, 211, 209]
 
   const qrTop = await qrPngDataUrl(packet.verifyUrl, 128)
@@ -128,7 +130,7 @@ export async function generateDriverResumePacketPDF(
       pdf.setFillColor(250, 250, 249)
       pdf.roundedRect(chipX, y, labelW, chipH, 1.5, 1.5, 'FD')
       // green dot
-      pdf.setFillColor(...greenDot)
+      pdf.setFillColor(...(chip.attested ? goldDot : stoneDot))
       pdf.circle(chipX + 3, y + chipH / 2, 0.9, 'F')
       pdf.setFont('helvetica', 'normal')
       pdf.setTextColor(...textDark)

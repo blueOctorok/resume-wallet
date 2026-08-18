@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import type { QRCodeToDataURLOptions } from 'qrcode'
 import { Check, Copy, ExternalLink } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { DriverResumePacket } from '@/lib/driver-resume-packet'
 
 const QR_OPTS: QRCodeToDataURLOptions = {
@@ -155,15 +156,20 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
         <QrBlock dataUrl={qrDataUrl} label={packet.qrLabelTop} />
       </header>
 
-      {/* Proof chips — future ZK surface */}
       {packet.proofChips.length > 0 ? (
-        <div className='mt-5 flex flex-wrap gap-2'>
+        <div className='mt-5 flex flex-wrap gap-1.5'>
           {packet.proofChips.map((chip) => (
             <span
               key={chip.id}
-              className='inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-medium text-stone-800'
+              className='inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-medium text-stone-700'
             >
-              <span className='h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500' aria-hidden />
+              <span
+                className={cn(
+                  'h-1 w-1 shrink-0 rounded-full',
+                  chip.attested ? 'bg-teal-600' : 'bg-stone-400',
+                )}
+                aria-hidden
+              />
               {chip.label}
             </span>
           ))}

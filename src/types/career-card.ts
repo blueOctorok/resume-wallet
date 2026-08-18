@@ -207,8 +207,10 @@ export interface EmployerConfirmation {
 export interface CardAttestedFact {
   id: string
   factType: string
+  /** Short, fact-first label (e.g. "Class A") */
   label: string
   provenance: string
+  provenOnMidnight: boolean
 }
 
 export interface ProjectedCareerCard {

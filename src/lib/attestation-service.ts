@@ -52,7 +52,7 @@ export type MidnightProofArtifact = {
   kind: 'midnight_zk'
   txHash: string
   proofId: string
-  /** metadata until P3.4-B in-circuit issuer signature. */
+  /** Always `metadata` in production — Key will not sign report bytes (DEC-2026-08-004). */
   provenanceTier?: AttestationProvenanceTier
   /**
    * True when Compact asserts this fact's predicate (class code, mask, date).

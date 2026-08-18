@@ -95,12 +95,12 @@ A real fact circuit usually **composes** shapes: e.g. clean-MVR = *signature che
 
 ## Part 2 — Circuit log
 
-Status legend: 🟢 real proof (predicate enforced in-circuit) · 🟡 anchor only (commitment stored, predicate off-chain) · ⬜ designed, not built
+Status legend: 🟢 shipping bar — predicate enforced in-circuit + CRA cited (DEC-2026-08-004) · 🟡 anchor / dummy reuse (predicate off-chain) · ⬜ designed, not built · ❌ dropped
 
-### `mvr-clean-36` — status 🟡 (P3.4-A predicate compiled; P3.4-B provenance pending)
+### `mvr-clean-36` — status 🟢 (P3.4-A predicate; Key sig dropped)
 
 - **Fact:** `mvr_clean_36_months` — no moving violations in the last 36 months.
-- **Source / provenance:** Accio MVR (`source_cra='accio'`, `source_pull_id`=Accio order number). **Metadata only** until P3.4-B adds in-circuit issuer signature.
+- **Source / provenance:** Accio MVR (`source_cra='accio'`, `source_pull_id`=Accio order number). Metadata citation — Key will not sign report bytes (DEC-2026-08-004).
 - **Deployed (P3.4-A predicate):** Preprod `2b7032a622c339a1494265812064df28a9e708da330be3e0a4e50856eea54cdb` (`proveCleanMvr`).
 - **First predicate proof:** tx `009847a5…3ea2cc`, attestation `167040f7…83bc` (2026-06-22).
 - **P3.3 anchor (superseded):** contract `6c3f0ea8…fea49cf` (`registerCleanMvr` only); tx `0024edbc…0e265a`, row `6bc932c7…7d4ad4` (2026-06-17).
@@ -147,13 +147,13 @@ export circuit proveCleanMvr(
 - **Freshness (P3.4-A step 4, 2026-07-29):** public `asOfDate` (YYYYMMDD from MVR `completed_at`); commitment includes `asOfDateYmd`; ledger `usedPullNullifiers` blocks replay of the same Accio order; off-chain mirror in `midnight-prove-guards.ts`.
 - **Discloses:** boolean `true` + fact commitment (SHA-256 over attestation metadata — `midnight/runtime/src/fact-commitment.ts`). Never violations or PII.
 - **Taxonomy v1:** any parseable violation date inside the window fails (mirrors `fact-registry.ts`). Full ACD disqualifying-code list is a future version bump.
-- **Not yet in-circuit:** issuer signature (P3.4-B).
+- **Not in-circuit (dropped):** issuer signature. Out of plan (DEC-2026-08-004).
 
-**Honesty status:** still 🟡 — real predicate math over private violation dates, but provenance trusts Storm/Accio metadata, not an in-circuit CRA signature. **Do NOT** attach per-fact "this MVR is ZK-proven on-chain / trust the math not Storm" until P3.4-B lands (DEC-2026-05-004). P3.6 gate ships with `provenanceTier: 'metadata'` on new proofs.
+**Honesty status:** predicate math is real; provenance is Storm’s Accio parse + order cite. Copy: **Proven on Midnight · derived from Accio**. Do **not** say "trust the math, not Storm."
 
 ---
 
-### `cdl-class-a` — status 🟡 (P3.5 — Preprod proven 2026-08-06; issuer sig pending)
+### `cdl-class-a` — status 🟡 (P3.5 — dummy boolean reuse; not a billboard claim)
 
 - **Fact:** `cdl_class_a` — holds Class A CDL per driver-owned Accio MVR.
 - **Witness (private):** `holdsClassA(): Boolean` — built from `normalizeAccioCdlClass(mvrCtx.licenseClass) === 'A'`.
@@ -164,7 +164,7 @@ export circuit proveCleanMvr(
 
 ---
 
-### Billboard MVR fields — status 🟡 predicate-enforced (dedicated circuits; issuer-sig pending)
+### Billboard MVR fields — status 🟢 (dedicated circuits; shipping bar)
 
 Active career-card facts. Each has its **own Compact contract**. The circuit asserts the disclosed value equals the witness — you cannot prove Class B with a Class A witness (or an endorsement mask the MVR does not have).
 
@@ -176,8 +176,17 @@ Active career-card facts. Each has its **own Compact contract**. The circuit ass
 | `med_cert_valid` | `med-cert-valid` / `proveMedCertValid` | witness YYYYMMDD == public expiration, expiration ≥ asOfDate |
 
 - **Public inputs:** disclosed value + `asOfDate` + pull nullifier + commitment.
-- **Honesty:** predicate is real on Midnight. Provenance is still Storm’s Accio parse (`provenanceTier: metadata`). Copy is **Proven on Midnight · derived from Accio pull …** when `predicateEnforced: true`. Not “trust the math, not Storm” until P3.4-B issuer-sig.
-- **Deploy:** `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS`, `_CDL_ENDORSEMENTS`, `_CDL_RESTRICTIONS`, `_MED_CERT`.
+- **Honesty:** predicate is real on Midnight. Provenance is Storm’s Accio parse (`provenanceTier: metadata`). Copy is **Proven on Midnight · derived from Accio pull …** when `predicateEnforced: true`. Do **not** say “trust the math, not Storm.”
+- **Deployed Preprod 2026-08-18** (smoke user `f6d55342-…`, all four `predicateEnforced`):
+
+| Fact | Address | Smoke tx |
+|---|---|---|
+| `cdl_class` | `48450d4bd0d9…91393385` | `00e19add…821129` |
+| `cdl_endorsements` | `47b8d0f99e96…24d4e8d5` | `00d01709…3c3c81` |
+| `cdl_restrictions` | `fc2ce5777313…064fb2a1` | `00725341…7b0f42` |
+| `med_cert_valid` | `3a57cc27cdb2…81dff0b8` | `00af8c62…90da0a` |
+
+- **Env:** `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS`, `_CDL_ENDORSEMENTS`, `_CDL_RESTRICTIONS`, `_MED_CERT` (local set; paste onto Vercel for in-app prove).
 - **Legacy:** `cdl_class_a` / `mvr_clean_36_months` stay on their original contracts for old rows.
 
 ---
@@ -194,7 +203,9 @@ Active career-card facts. Each has its **own Compact contract**. The circuit ass
 
 ---
 
-### `mvr-clean-36` (target 🟢) — status ⬜ blocked on P3.4-B
+### `mvr-clean-36` in-circuit issuer-sig — status ❌ dropped (DEC-2026-08-004)
+
+Historical design only. Key will not sign. Do not build this.
 
 Full cold-trustless version adds provenance to the predicate above:
 

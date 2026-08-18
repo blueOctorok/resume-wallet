@@ -17,7 +17,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useSimpleModeStore, type MobileGuidedTab } from '@/stores/simple-mode-store'
 
 const TABS: { id: MobileGuidedTab; label: string; color: string }[] = [
-  { id: 'jobs', label: 'Jobs', color: '#b8904d' },
+  { id: 'jobs', label: 'Jobs', color: '#c99700' },
   { id: 'job', label: 'Job', color: '#38bdf8' },
   { id: 'card', label: 'Card', color: '#5f7a9e' },
 ]

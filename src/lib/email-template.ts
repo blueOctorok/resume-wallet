@@ -32,11 +32,11 @@ export interface EmailTemplateOptions {
   accentColor?: string
 }
 
-const TEAL = '#9c7740'
-const TEAL_DARK = '#7d5e33'
-const TEAL_LIGHT = '#b8904d'
-const TEAL_BG = '#f0fdfa'
-const TEAL_BORDER = '#e8d9b5'
+const TEAL = '#8a6700'
+const TEAL_DARK = '#6b5000'
+const TEAL_LIGHT = '#c99700'
+const TEAL_BG = '#fbf6e6'
+const TEAL_BORDER = '#ead48a'
 
 export function buildEmail(opts: EmailTemplateOptions): string {
   const {

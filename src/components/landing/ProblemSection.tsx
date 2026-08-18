@@ -56,7 +56,7 @@ export default function ProblemSection({ isDark }: { isDark: boolean }) {
                 )}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                <Icon className={cn('h-5 w-5', isDark ? 'text-[#d4be93]/80' : 'text-[#8a6d3b]')} />
+                <Icon className={cn('h-5 w-5', isDark ? 'text-[#d4b44a]/80' : 'text-[#8a6700]')} />
                 <h3 className={cn('mt-4 font-display text-xl font-medium tracking-tight', headingText(isDark))}>
                   {item.title}
                 </h3>

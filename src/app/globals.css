@@ -18,20 +18,18 @@
 [data-theme='dark'] {
   color-scheme: dark;
   /*
-   * Heritage ink shell — same ink-NAVY plane as the landing page (#0a1322
-   * family, not charcoal-black): deep navy void, champagne gold + steel bloom,
-   * glass panels with gold rim.
+   * ND Blue shell — landing ink plane (#0c2340): navy void, Dome Gold + steel bloom.
    */
-  --storm-void: #060b15;
-  --storm-deep: #0a1322;
-  --storm-surface: #111e33;
+  --storm-void: #061525;
+  --storm-deep: #0c2340;
+  --storm-surface: #153154;
   --storm-body-gradient: linear-gradient(
     165deg,
     var(--storm-surface) 0%,
     var(--storm-deep) 45%,
     var(--storm-void) 100%
   );
-  --storm-teal-soft: rgba(205,168,104, 0.1);
+  --storm-teal-soft: rgba(201,151,0, 0.1);
   --storm-violet-soft: rgba(95,122,158, 0.08);
   --storm-panel-bg: linear-gradient(
     165deg,
@@ -40,7 +38,7 @@
     rgba(8, 13, 24, 0.96) 100%
   );
   --storm-panel-border: rgba(148, 163, 184, 0.22);
-  --storm-panel-glow: 0 0 48px -12px rgba(205,168,104, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
+  --storm-panel-glow: 0 0 48px -12px rgba(201,151,0, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --surface-card: #141e31;
   --surface-elevated: #0f1728;
@@ -62,12 +60,11 @@
   --text-primary: #1c1917;
   --text-secondary: #57534e;
   /*
-   * Single accent hue (champagne gold family) — matches the landing seal.
-   * Slightly stronger blooms on light so accents survive the brighter canvas.
+   * Single accent hue (Dome Gold) — matches the landing seal.
    */
-  --storm-accent: #9c7740;
-  --storm-accent-rgb: 156 119 64;
-  --storm-accent-mid: #b8904d;
+  --storm-accent: #8a6700;
+  --storm-accent-rgb: 201 151 0;
+  --storm-accent-mid: #c99700;
   --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.1);
   --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.135);
   --storm-violet-bloom: rgb(54 69 89 / 0.09);
@@ -431,7 +428,7 @@ button:disabled,
 }
 
 [data-theme='dark'] {
-  --akui-btn-primary: #cda868;
+  --akui-btn-primary: #c99700;
   --akui-btn-secondary: #334155;
   --akui-btn-auth: rgba(30, 41, 59, 0.92);
   --akui-fg-primary: #f1f5f9;
@@ -444,7 +441,7 @@ button:disabled,
   --akui-bg-surface-subtle: #1e293b;
   --akui-bg-surface-inset: #334155;
   --akui-static: #64748b;
-  --akui-active: #cda868;
+  --akui-active: #c99700;
 }
 
 /* Alchemy AuthCard — headers use design tokens; !important only where Kit still leaks low contrast */

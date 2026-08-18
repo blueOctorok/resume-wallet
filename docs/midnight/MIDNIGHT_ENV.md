@@ -122,6 +122,10 @@ Authoritative fee = `tx.public.fees.paidFees` (SPECK; 1 DUST = 10¹⁵ SPECK). W
 |---|---|---|---|---|---|
 | `mvr_clean_36_months` | `mvr-clean-36` | ~29s | *(re-run with fee capture; expect ~1 on Preprod)* | `00133c52…` | `fb46c572…2465e` |
 | `cdl_class_a` | `cdl-class-a` | ~35s | **1** | `0037da72…` | `39feba27…be960` |
+| `cdl_class` | `cdl-class` | ~30s | **1** | `00e19add…` | `48450d4b…3385` |
+| `cdl_endorsements` | `cdl-endorsements` | ~30s | **1** | `00d01709…` | `47b8d0f9…e8d5` |
+| `cdl_restrictions` | `cdl-restrictions` | ~30s | **1** | `00725341…` | `fc2ce577…b2a1` |
+| `med_cert_valid` | `med-cert-valid` | ~30s | **1** | `00af8c62…` | `3a57cc27…f0b8` |
 | `previous_employer_verified` | `previous-employer-verified` | ~36s | **1** | `004bcf76…` | `4ef51b67…49859` |
 
 **Preprod ≠ mainnet economics.** Fees of `1` SPECK mean Preprod is effectively free for capacity planning — do **not** size prod NIGHT from these numbers. Use them to prove the fee pipeline works; re-run on mainnet (or when Midnight publishes a realistic fee schedule) before buying/locking NIGHT.

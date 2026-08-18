@@ -15,7 +15,8 @@
  * so it needs exactly one color treatment. See landing-shared.tsx.
  */
 
-import { Lock, ShieldCheck, Eye } from 'lucide-react'
+import { Lock, Eye } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 
 export type DisclosureView = 'shared' | 'vault'
@@ -80,19 +81,19 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
       {/* Gold rim light along the top edge */}
       <div
         aria-hidden
-        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#c9a86a]/60 to-transparent'
+        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#c99700]/60 to-transparent'
       />
 
       {/* Header — identity + verification badge */}
       <div className='flex items-start gap-3 px-5 pt-5'>
-        <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2a3f66] to-[#141f38] text-sm font-bold text-[#f4f1ea] ring-2 ring-[#c9a86a]/40'>
+        <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2a3f66] to-[#141f38] text-sm font-bold text-[#f4f1ea] ring-2 ring-[#c99700]/40'>
           MR
         </div>
         <div className='min-w-0 flex-1'>
           <div className='flex flex-wrap items-center gap-2'>
             <h3 className='text-[15px] font-semibold text-white'>Marcus Reed</h3>
-            <span className='inline-flex items-center gap-1 rounded-full bg-[#c9a86a]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#d4be93] ring-1 ring-[#c9a86a]/35'>
-              <ShieldCheck className='h-2.5 w-2.5' />
+            <span className='inline-flex items-center gap-1 rounded-full bg-[#c99700]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#d4b44a] ring-1 ring-[#c99700]/35'>
+              <ProvvenMark tone='ink' className='h-3 w-auto' />
               Verified by Provven
             </span>
           </div>
@@ -105,11 +106,11 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
         <p className='font-mono text-[10px] tracking-wide text-slate-400'>
           {isShared ? (
             <>
-              <span className='text-[#d4be93]'>sharing with Pace Drivers</span> · 3 facts · 0 documents
+              <span className='text-[#d4b44a]'>sharing with Pace Drivers</span> · 3 facts · 0 documents
             </>
           ) : (
             <>
-              <span className='text-[#e6cf9f]'>your vault</span> · everything · visible only to you
+              <span className='text-[#e0c56a]'>your vault</span> · everything · visible only to you
             </>
           )}
         </p>
@@ -120,14 +121,14 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
         {VERIFIED_FACTS.map((row) => (
           <li
             key={row.fact}
-            className='flex items-center gap-2.5 rounded-lg bg-[#c9a86a]/[0.07] px-3 py-2 ring-1 ring-inset ring-[#c9a86a]/20'
+            className='flex items-center gap-2.5 rounded-lg bg-[#c99700]/[0.07] px-3 py-2 ring-1 ring-inset ring-[#c99700]/20'
           >
-            <ShieldCheck className='h-3.5 w-3.5 shrink-0 text-[#d4be93]' />
+            <ProvvenMark tone='ink' className='h-4 w-auto shrink-0' />
             <div className='min-w-0 flex-1'>
               <p className='truncate text-[13px] font-medium text-slate-100'>{row.fact}</p>
               <p className='truncate text-[10px] text-slate-500'>{row.source}</p>
             </div>
-            <span className='shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#d4be93]/90'>
+            <span className='shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#d4b44a]/90'>
               verified
             </span>
           </li>
@@ -136,12 +137,12 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
 
       {/* The seam — cryptographic boundary between shared and private */}
       <div className='relative my-4 flex items-center gap-3 px-5' aria-hidden>
-        <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c9a86a]/60 to-[#c9a86a]/60 shadow-[0_0_12px_rgba(201,168,106,0.45)]' />
-        <span className='inline-flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d4be93]/90'>
+        <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c99700]/60 to-[#c99700]/60 shadow-[0_0_12px_rgba(201,168,106,0.45)]' />
+        <span className='inline-flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d4b44a]/90'>
           <Lock className='h-3 w-3' />
           selective disclosure
         </span>
-        <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c9a86a]/60 to-[#c9a86a]/60 shadow-[0_0_12px_rgba(201,168,106,0.45)]' />
+        <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c99700]/60 to-[#c99700]/60 shadow-[0_0_12px_rgba(201,168,106,0.45)]' />
       </div>
 
       {/* Private strata — redacted when shared, revealed in the vault */}
@@ -151,13 +152,13 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
             key={row.label}
             className={cn(
               'flex items-center gap-2.5 rounded-lg px-3 py-1.5 transition-all duration-500',
-              isShared ? 'opacity-55' : 'bg-[#c9a86a]/[0.05] opacity-100 ring-1 ring-inset ring-[#c9a86a]/15',
+              isShared ? 'opacity-55' : 'bg-[#c99700]/[0.05] opacity-100 ring-1 ring-inset ring-[#c99700]/15',
             )}
           >
             {isShared ? (
               <Lock className='h-3 w-3 shrink-0 text-slate-500' />
             ) : (
-              <Eye className='h-3 w-3 shrink-0 text-[#e6cf9f]/80' />
+              <Eye className='h-3 w-3 shrink-0 text-[#e0c56a]/80' />
             )}
             <p className='w-20 shrink-0 text-[11px] text-slate-400 sm:w-[7.5rem]'>{row.label}</p>
             {/* Both value states stay mounted so the swap animates as a crossfade.
@@ -187,7 +188,7 @@ export default function DisclosureCard({ view, className }: DisclosureCardProps)
             <span
               className={cn(
                 'shrink-0 font-mono text-[8px] font-semibold uppercase tracking-wider',
-                isShared ? 'text-slate-500' : 'text-[#e6cf9f]/70',
+                isShared ? 'text-slate-500' : 'text-[#e0c56a]/70',
               )}
             >
               {isShared ? 'stays private' : 'only you'}

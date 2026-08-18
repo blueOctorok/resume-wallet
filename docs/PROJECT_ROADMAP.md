@@ -66,14 +66,14 @@ Storm is a **portable, composable DQ (Driver Qualification) file platform**. Dri
 
 ### Blockchain policy — honest usage only
 
-> **Narrative vs. claim (DEC-2026-05-016, 2026-05-30):** Provven *celebrates* blockchain / Midnight / zero-knowledge as its public credibility story (domain: `provven.com`; prior `zknight.io` / `stormchain.ai`). That loosening applies to the **narrative** only. The **per-fact claim** rules below are unchanged and iron-clad: a "verified / on-chain" badge still attaches only to issuer-signed third-party facts, never to self-reported data — and users still never touch a wallet.
+> **Narrative vs. claim (DEC-2026-05-016 + DEC-2026-08-004):** Provven *celebrates* blockchain / Midnight / zero-knowledge as its public credibility story (domain: `provven.com`). Per-fact **Proven on Midnight** attaches only to **third-party** facts whose Compact circuit actually ran, always citing the CRA (Key/Accio). Key will not sign report bytes — do not wait on issuer-sig, and do not say "trust the math, not Storm." Self-reported data never gets the badge. Users still never touch a wallet.
 
 Blockchain is an immutable timestamp ledger. It proves data existed at a time and hasn't been altered. It does NOT make data true.
 
 **Use blockchain ONLY when all three conditions are met:**
 1. Data came from a **third-party source** (not the candidate)
 2. There's a **real incentive** for someone to alter the result after the fact
-3. An employer needs to **independently verify** the result without trusting Storm
+3. A Midnight circuit actually checked the fact, and the badge cites the CRA pull (DEC-2026-08-004). We do **not** wait for Key to sign the report bytes.
 
 | Blockchain YES | Blockchain NO |
 |----------------|---------------|

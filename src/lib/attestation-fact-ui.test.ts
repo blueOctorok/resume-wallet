@@ -52,7 +52,7 @@ describe('attestation-fact-ui', () => {
     expect(issuerSigned).toMatch(/^Proven on Midnight on /)
   })
 
-  it('verify details show tx without trust-the-math until issuer_signed', () => {
+  it('verify details show tx without pending-issuer or trust-the-math copy', () => {
     const lines = formatAttestationVerifyDetails({
       issuedAt: '2026-06-01T12:00:00.000Z',
       proofKind: 'midnight_zk',
@@ -61,8 +61,7 @@ describe('attestation-fact-ui', () => {
       proofId: 'tx-abc',
     })
     expect(lines.some((l) => l.includes('tx-abc'))).toBe(true)
-    expect(lines.some((l) => l.includes('P3.4-B'))).toBe(true)
-    expect(lines.join(' ')).not.toMatch(/trust the math/i)
+    expect(lines.join(' ')).not.toMatch(/P3\.4-B|issuer signature|trust the math/i)
   })
 
   it('provenanceTierFromProof defaults midnight_zk to metadata', () => {

@@ -1,34 +1,30 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * HERITAGE BRAND PALETTE (2026-08-07) — read before touching colors.
+ * ND BRAND PALETTE (2026-08-18) — read before touching colors.
  *
- * Provven's brand is ink-navy + cream + champagne GOLD ("the seal").
- * Teal and violet are permanently retired. Rather than rewrite ~2,400
- * `teal-*` / `violet-*` class usages across 200+ files, the scales are
- * REMAPPED here at the theme level:
+ * Provven is ND Blue + cream + Dome Gold (Blue Star mark, not champagne).
+ * Teal and violet stay remapped at the theme level:
  *
- *   teal-*, cyan-*        → gold scale (brand accent, verified, CTAs)
+ *   teal-*, cyan-*        → Dome Gold scale (brand accent, verified, CTAs)
  *   violet-*, purple-*    → steel scale (muted navy-blue; Stormi/AI surfaces)
  *   emerald-*, green-*    → forest scale (success / "done" confirmations)
  *
- * So `bg-teal-600` renders champagne gold everywhere, and any future
- * `teal-*` class CANNOT reintroduce teal — it renders gold by definition.
- * When writing NEW code, still write `teal-*`/`violet-*`/`emerald-*` classes
- * (they are the accent/AI/success tokens); a future codemod may rename them.
+ * So `bg-teal-600` renders Dome Gold everywhere. Write `teal-*` / `violet-*`
+ * / `emerald-*` in new code — they are the accent/AI/success tokens.
  */
 const gold = {
-  50: '#faf6ee',
-  100: '#f4ecd9',
-  200: '#e8d9b5',
-  300: '#d9c08c',
-  400: '#cda868',
-  500: '#b8904d',
-  600: '#9c7740',
-  700: '#7d5e33',
-  800: '#654b29',
-  900: '#533d22',
-  950: '#2f2212',
+  50: '#fbf6e6',
+  100: '#f5ebc4',
+  200: '#ead48a',
+  300: '#dbb84a',
+  400: '#c99700',
+  500: '#ae8200',
+  600: '#8a6700',
+  700: '#6b5000',
+  800: '#4d3a00',
+  900: '#3a2c00',
+  950: '#211800',
 } as const
 
 /**
@@ -114,8 +110,8 @@ const config: Config = {
       },
       fontFamily: {
         quicksand: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],
-        /** Landing-page display serif (Fraunces via next/font) — `font-display` */
-        display: ['var(--font-fraunces)', 'Georgia', 'ui-serif', 'serif'],
+        /** Headlines — same family as body (`--font-montserrat`). `font-display` stays so call sites don't change. */
+        display: ['var(--font-montserrat)', 'system-ui', 'sans-serif'],
       },
     },
   },

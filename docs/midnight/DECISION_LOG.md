@@ -6,6 +6,43 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-08-004 — Drop Key/Accio issuer signature from the plan; Midnight predicate + CRA citation is the shipping honesty bar
+
+**Date:** 2026-08-18
+**Status:** Accepted
+**Decided by:** Owner
+
+### Context
+
+P3.4-B asked Key/Accio for one cryptographic signature per MVR/PSP report so Midnight could verify issuer bytes in-circuit. Outreach started 2026-06-18. On 2026-08-18 Key said they will not do it (development time / cost). They remain the CRA of record for MVR and PSP for the foreseeable future.
+
+Signing the bytes they already webhook is an afternoon of backend work. "Too expensive" is a roadmap/scoping no, not a data-agreement no. Waiting another quarter for a seal they will not ship blocks the product for a provenance tier we do not need to go to market.
+
+### Decision
+
+1. **Key stays.** Keep buying Accio MVR/PSP. Do not shop CRAs for a signing vendor. Do not treat this as a breakup.
+2. **P3.4-B is out of the plan.** No more vendor follow-ups, no in-circuit `verifySignature`, no "await Key" on Phase 3a. `provenanceTier` stays `metadata`. The unused `issuer_signed` type may remain in code; nothing waits on it.
+3. **Shipping honesty (truthy, not cold-trustless).** A fact may say **Proven on Midnight · derived from Accio/Key** when `proof.kind === 'midnight_zk'` **and** the Compact circuit actually enforced that fact (`predicateEnforced`) **and** the line cites the CRA. That is the product claim.
+4. **Still forbidden.** Self-reported data never gets a Midnight badge (DEC-2026-05-014). Dummy / boolean-reuse circuits do not get the claim. Never say **"trust the math, not Storm"** — a verifier still trusts that Storm parsed the Key report. JWT-only rows stay **Verified by Provven**.
+5. **zkTLS / DMV-direct / alt-CRA** stay optional research, not the current track. Do not start them unless separately asked.
+
+This relaxes the *issuer-sig* half of DEC-2026-05-004 / P3.6. It does not relax "the proof must actually run" or the third-party provenance gate.
+
+### Consequences
+
+- Phase 3a no longer requires a 🟢 in-circuit CRA signature.
+- Carrier UI drops "issuer signature pending (P3.4-B)".
+- Future sessions must not re-open the Key sig ask as a blocker.
+
+### Related
+
+- DEC-2026-05-004 (honesty — proof must run; issuer-sig wait superseded here)
+- DEC-2026-05-014 (third-party facts only)
+- DEC-2026-05-011 (Storm is not a CRA; Key remains CRA of record)
+- DEC-2026-06-004 (zkTLS portfolio — parked, not the plan)
+
+---
+
 ## DEC-2026-08-003 — Employer capabilities are role-gated; raw identifiers are gated by nobody's role
 
 **Date:** 2026-08-11

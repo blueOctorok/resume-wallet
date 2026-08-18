@@ -51,8 +51,8 @@ function BlockChip({
   const styles =
     state === 'verified'
       ? isDark
-        ? 'border-[#c9a86a]/30 bg-[#c9a86a]/[0.08] text-[#e6cf9f]'
-        : 'border-[#c9a86a]/50 bg-[#f5eeda] text-[#5d4a1e]'
+        ? 'border-[#c99700]/30 bg-[#c99700]/[0.08] text-[#e0c56a]'
+        : 'border-[#c99700]/50 bg-[#f5eeda] text-[#5d4a1e]'
       : state === 'added'
         ? isDark
           ? 'border-white/10 bg-white/[0.04] text-gray-200'
@@ -65,7 +65,7 @@ function BlockChip({
     <div className={cn(base, styles)} style={{ transitionDelay: `${delay}ms` }}>
       <Icon className='h-4 w-4 shrink-0' />
       <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {state === 'verified' && <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-[#d4be93]' : 'text-[#8a6d3b]')} />}
+      {state === 'verified' && <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-[#d4b44a]' : 'text-[#8a6700]')} />}
       {state === 'suggested' && <span className='shrink-0 text-[10px] font-semibold uppercase tracking-wide'>add</span>}
     </div>
   )

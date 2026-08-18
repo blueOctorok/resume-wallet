@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Fraunces, Montserrat, Orbitron } from 'next/font/google'
+import { Montserrat, Orbitron } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import MobileConsole from '@/components/MobileConsole'
@@ -17,14 +17,6 @@ const stormWordmark = Orbitron({
   variable: '--font-storm-wordmark',
   subsets: ['latin'],
   weight: '600',
-  display: 'swap',
-})
-
-/** Marketing display serif — Provven brand voice on the landing page (`font-display`) */
-const fraunces = Fraunces({
-  variable: '--font-fraunces',
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
   display: 'swap',
 })
 
@@ -139,7 +131,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${montserrat.variable} ${stormWordmark.variable} ${fraunces.variable} antialiased`}>
+      <body className={`${montserrat.variable} ${stormWordmark.variable} antialiased`}>
         <ThemeProvider>
           <SupabaseAuthSync />
           {children}

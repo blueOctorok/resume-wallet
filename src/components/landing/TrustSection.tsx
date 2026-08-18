@@ -32,7 +32,7 @@ const PILLARS = [
 ] as const
 
 /** Uniform gold seal tiles — no per-pillar color coding, by design */
-const PILLAR_ICON_STYLE = 'bg-[#c9a86a]/12 text-[#d4be93] ring-[#c9a86a]/25'
+const PILLAR_ICON_STYLE = 'bg-[#c99700]/12 text-[#d4b44a] ring-[#c99700]/25'
 
 export default function TrustSection() {
   return (
@@ -42,7 +42,7 @@ export default function TrustSection() {
         <div
           aria-hidden
           className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-[0.1] blur-[100px]'
-          style={{ background: 'radial-gradient(ellipse, #c9a86a 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse, #c99700 0%, transparent 70%)' }}
         />
       }
     >
@@ -61,9 +61,9 @@ export default function TrustSection() {
           data-reveal
         >
           <span className='reveal-item inline-block'>
-            prove(<span className='text-[#d4be93]'>cdl_class</span>) → <span className='text-[#d4be93]'>valid ✓</span>
+            prove(<span className='text-[#d4b44a]'>cdl_class</span>) → <span className='text-[#d4b44a]'>valid ✓</span>
             <span className='mx-2 text-slate-700'>·</span>
-            prove(<span className='text-[#d4be93]'>med_cert</span>) → <span className='text-[#d4be93]'>valid ✓</span>
+            prove(<span className='text-[#d4b44a]'>med_cert</span>) → <span className='text-[#d4b44a]'>valid ✓</span>
           </span>
         </p>
 

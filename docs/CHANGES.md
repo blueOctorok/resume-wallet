@@ -4,6 +4,122 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DisclosureCard uses the Provven mark** (2026-08-18)
+
+Landing mock “Verified by Provven” badge + fact rows use `ProvvenMark` (the shield SVG) instead of Lucide `ShieldCheck`.
+
+---
+
+## **Fraunces removed site-wide** (2026-08-18)
+
+`font-display` now points at Montserrat. Fraunces is no longer loaded. Landing titles, sign-in, career-card names, and `BlockCard` headers share the lockup family. How-it-works numerals dropped italic (that was the serif’s editorial trick).
+
+---
+
+## **Hero headline off Fraunces** (2026-08-18)
+
+“Proof, not paperwork.” under the PROVVEN lockup now uses Montserrat semibold, not Fraunces. The oldstyle `f` was advertising a softer serif brand that no longer matches the geometric shield + sans lockup.
+
+---
+
+## **Body type stays Montserrat** (2026-08-18)
+
+Tried Outfit as an Arboria stand-in; reverted. Body + lockup stay **Montserrat**. Headlines stay Fraunces.
+
+---
+
+## **Blue Star mark + ND colors on the live site** (2026-08-18)
+
+Replaced the Fraunces double-V with Blue Star’s shield+check, and champagne gold with Notre Dame’s pair. Hot Embers stays unused.
+
+| Piece | Now |
+|---|---|
+| Mark | Traced agency art → `public/brand/provven-mark.svg` (Dome Gold) / `-light.svg` (ND Blue) |
+| Lockup | `ProvvenMark` + **PROVVEN** (Montserrat bold) in `ProvvenWordmark` |
+| Navy | Ink bands + dark shell `#0C2340` |
+| Gold | Tailwind `teal-*` scale + landing hexes → Dome Gold `#C99700` |
+| Favicon / tile | Regenerated from the new mark |
+
+Exploration files under `public/brand/explorations/` are unchanged (reference only).
+
+---
+
+## **Brand exploration: Blue Star mark × Notre Dame colors** (2026-08-18)
+
+Mock only — not wired into the app. Entertains ditching the Fraunces double-V for Blue Star's shield+check, but **not** their palette. Hot Embers is unused. Colors are official ND: Blue `#0C2340`, Dome Gold `#C99700` (mark on navy), Metallic `#AE9142` as the quieter gold.
+
+Their mark art was pulled from the Blue Star PDF and recolored (geometry unchanged). The SVGs are a filled outline traced from that art so the check joins the crown — the hand-drawn stroke version was cutting the right side of the shield.
+
+| File | What |
+|---|---|
+| `public/brand/explorations/bluestar-nd.html` | Lockups + cream reverse + 16px + hiring hero |
+| `public/brand/explorations/bluestar-mark-nd-from-art.png` | Their mark in Dome Gold |
+| `public/brand/explorations/bluestar-mark.svg` | Vector reconstruction (ND gold) |
+
+Open at `/brand/explorations/bluestar-nd.html`.
+
+---
+
+## **Brand exploration: seal-stamp symbol** (2026-08-18)
+
+Mock only — not wired into the app. Same Fraunces double-V, contained in a circular gold-ring seal so it can be judged as a standalone logo (vs the bare mark).
+
+| File | What |
+|---|---|
+| `public/brand/explorations/provven-seal-stamp.svg` | Navy disc + double gold ring + existing mark paths |
+| `public/brand/explorations/mark-vs-stamp.html` | Side-by-side: bare mark, existing tile, stamp, plus 64/32/16 |
+
+Open at `/brand/explorations/mark-vs-stamp.html`.
+
+---
+
+## **Career card Midnight seal + quiet resume chips** (2026-08-18)
+
+Career card Verified strip is the prestige surface: Provven mark, **Proven on Midnight · derived from Accio**, gold fact tiles (`Class A`, `Doubles`, `Med · Feb 2027`). PSP / employer fallbacks still show underneath so attestations don’t hide other third-party facts.
+
+Resume stays the whisper: smaller chips, gold dot only for attested rows, stone for inferred, footer points at the card. No Midnight copy on the PDF.
+
+`loadCardAttestedFacts` now reads `proof_artifact` + `disclosed_fields` so the strip can tell a real predicate proof from an Accio-only fallback.
+
+---
+
+## **Batch-prove driver-owned MVR facts** (2026-08-18)
+
+`npm run midnight:prove-batch` walks latest driver-owned completed MVRs and proves `cdl_class` / `cdl_endorsements` / `cdl_restrictions` / `med_cert_valid`. Dry-run: **574** ready / **270** skip / **4** existing. Full Preprod backfill **stopped** — Preprod txs don't carry to mainnet, so only a handful of smokes stay; the real batch waits for mainnet. Script remains for that cutover.
+
+---
+
+## **Billboard Midnight proofs live on Preprod** (2026-08-18)
+
+Deployed the four dedicated circuits and smoke-proved them on a driver-owned Accio MVR (`predicateEnforced: true`). This is the shipping bar under DEC-2026-08-004.
+
+| Fact | Contract | Tx | Attestation |
+|---|---|---|---|
+| `cdl_class` | `48450d4b…91393385` | `00e19add…821129` | `afb1c1e4-…` |
+| `cdl_endorsements` | `47b8d0f9…24d4e8d5` | `00d01709…3c3c81` | `97f86a4a-…` |
+| `cdl_restrictions` | `fc2ce577…4fb2a1` | `00725341…7b0f42` | `f18698f4-…` |
+| `med_cert_valid` | `3a57cc27…dff0b8` | `00af8c62…90da0a` | `3241c2fc-…` |
+
+Addresses are in `.env.local`. **Vercel still needs the four `MIDNIGHT_CONTRACT_ADDRESS_*` vars** for in-app prove. EV Midnight stays blocked until a DKIM-valid employer reply exists (none in prod today).
+
+---
+
+## **Drop Key issuer-sig from the plan (DEC-2026-08-004)** (2026-08-18)
+
+Key will not deliver a cryptographic signature on MVR/PSP reports (cost/roadmap after two months). They stay the CRA. P3.4-B is out of the plan.
+
+Shipping honesty: **Proven on Midnight · derived from Accio** when the Compact circuit actually ran (`predicateEnforced`) and the line cites Key/Accio. Still never "trust the math, not Storm." Self-reported data still never gets the badge.
+
+| File | Change |
+|---|---|
+| `docs/midnight/DECISION_LOG.md` | DEC-2026-08-004 |
+| `docs/midnight/EXECUTION_CHECKLIST.md` | P3.4-B ❌ dropped; Phase 3a no longer waits on Key |
+| `docs/midnight/CIRCUITS.md` | Shipping bar = predicate + CRA cite |
+| `docs/PROJECT_ROADMAP.md` + `strategic-direction.mdc` | Honesty line matches |
+| `src/lib/attestation-fact-ui.ts` | Removed "issuer signature pending (P3.4-B)" verify copy |
+
+---
+
 ## **Dedicated MVR-field Compact circuits** (2026-08-13)
 
 Billboard facts (`cdl_class`, `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`) no longer reuse the Class-A boolean circuit. Each has its own Compact contract that asserts the disclosed value equals the witness (ASCII class, endorsement/restriction bitmask, med-cert YYYYMMDD ≥ asOf). New proves set `predicateEnforced: true` so UI can say **Proven on Midnight · derived from Accio** — still not issuer-signed (P3.4-B).
