@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DQ watcher flags are cards** (2026-08-19)
+
+Each AI note is its own paper card in a 1-col → 2-col grid. Next stays a full-width card so the primary hole is obvious. Dark mode still locked to midnight-on-cream.
+
+---
+
+## **DQ watcher stays readable in Dark mode** (2026-08-19)
+
+The watcher sits on cream paper. `dark:` type classes still fired from the app theme and painted white on cream. Paper ink only now — same rule as the career card / DOT packet.
+
+---
+
 ## **Build is the DQ workshop; Help chat is gone** (2026-08-19)
 
 Help is off the nav. Driver AI is no longer a chat page — it watches the DQ file on Build. Anthropic (Sonnet) scans profile, blocks, CDL, MVR/PSP, employment, and DQ status, then writes a brief into the board: next hole, mismatches, what’s solid. Heuristic fallback if `AVA_BRAIN` is unset. Old `/ask-ai` deep-links land on Build. (`getAdminSupabaseClient` is async — the first 500 was a missing `await`.)
