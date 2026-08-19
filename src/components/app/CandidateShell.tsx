@@ -9,7 +9,6 @@ import DotApplicationFlow from '@/components/app/DotApplicationFlow'
 import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
 import CandidateInboxPage from '@/components/hub/CandidateInboxPage'
-import CandidateAskAiPage from '@/components/hub/CandidateAskAiPage'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
@@ -370,12 +369,9 @@ export default function CandidateShell() {
       )
     }
 
+    // Old Help / chat route — AI now watches the DQ board, not a chat page.
     if (currentPage === 'ask-ai') {
-      return (
-        <div className='max-w-7xl mx-auto relative z-0'>
-          <CandidateAskAiPage />
-        </div>
-      )
+      return <CandidateHub />
     }
 
     return <CareerCardView onBack={() => setCurrentPage('build')} />

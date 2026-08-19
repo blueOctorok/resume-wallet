@@ -11,8 +11,8 @@ import { useUIModeStore } from '@/stores/ui-mode-store'
 import Button from '@/components/ui/Button'
 import BlockPickerModal from './BlockPickerModal'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
 import BuildBoard from '@/components/hub/BuildBoard'
+
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
 function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
   const returnToApply = useUIModeStore((s) => s.returnToApply)
@@ -43,7 +43,7 @@ function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
 
 /**
  * Candidate hub home — career card builder only.
- * Inbox + Ask AI live under My Hub (see CandidateInboxPage / CandidateAskAiPage).
+ * Inbox lives under My Hub. AI watches this DQ board — not a Help chat.
  */
 export default function CandidateHub() {
   const { theme } = useTheme()
@@ -120,7 +120,6 @@ export default function CandidateHub() {
       <BlockPickerModal />
 
       <div className='mx-auto w-full max-w-3xl space-y-6'>
-        {sessionUserId ? <StormiNudgeBanner isDark={isDark} sessionUserId={sessionUserId} /> : null}
         <ReturnToApplyBanner isDark={isDark} />
         <BuildBoard />
       </div>

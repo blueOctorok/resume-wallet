@@ -17,6 +17,7 @@ import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useJourneyProgress } from '@/stores/journey-store'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
+import DqCoachPanel from '@/components/hub/DqCoachPanel'
 import {
   DQ_ITEM_DEFINITIONS,
   dqSourceChipLabel,
@@ -234,7 +235,7 @@ export default function BuildBoard() {
         paper
         icon={FolderCheck}
         title='Your DQ file'
-        description='Everything a complete file needs — tap a tile to work on it.'
+        description='Put the file together. The watcher scans your card and blocks for the next hole and anything that does not match.'
         status={overallStatus}
         headerActions={
           <span className='shrink-0 rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
@@ -242,6 +243,7 @@ export default function BuildBoard() {
           </span>
         }
       >
+        <DqCoachPanel />
         <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
           {activeTiles.map((tile) => (
             <BoardTileButton key={tile.id} tile={tile} />

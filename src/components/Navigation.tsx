@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   ChevronDown,
   Building2,
-  HelpCircle,
   MessageSquare,
   User,
   Home,
@@ -93,7 +92,7 @@ function HubRoleIcon({ userRole }: { userRole: UserRole }) {
 
 /**
  * Light / Dark toggle — same segmented chrome as Career Card · Build.
- * Lives between Help and Options so appearance isn't buried in a menu.
+ * Lives between Career Card / Build and Options so appearance isn't buried in a menu.
  */
 function ThemeModeToggle({ isDark }: { isDark: boolean }) {
   const { theme, setTheme } = useTheme()
@@ -634,23 +633,6 @@ export default function Navigation({
                     </div>
                   )}
 
-                  {/* Help — `ask-ai` only routes inside CandidateShell, so it's
-                      candidate-only rather than a dead-end for other roles. */}
-                  {userRole === 'candidate' && (
-                    <button
-                      type='button'
-                      onClick={() => goToPage('ask-ai')}
-                      className={cn(
-                        'hidden sm:flex h-9 items-center gap-1.5 px-3 text-sm font-medium cursor-pointer',
-                        navControlButtonClass(isDark),
-                      )}
-                      title='Help — ask a question or find out what to do next'
-                    >
-                      <HelpCircle className='h-4 w-4 shrink-0' aria-hidden />
-                      Help
-                    </button>
-                  )}
-
                   <div className='hidden sm:block'>
                     <ThemeModeToggle isDark={isDark} />
                   </div>
@@ -741,16 +723,6 @@ export default function Navigation({
                     </div>
                   )}
 
-                  {userRole === 'candidate' && (
-                    <button
-                      type='button'
-                      onClick={() => goToPage('ask-ai')}
-                      className={cn('w-full flex items-center gap-3 px-3 py-2.5', navTextLinkClass(isDark))}
-                    >
-                      <HelpCircle className='w-4 h-4' />
-                      Help
-                    </button>
-                  )}
                 </>
               )}
 

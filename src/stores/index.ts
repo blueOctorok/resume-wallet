@@ -72,6 +72,8 @@ export {
 // Saved jobs shortlist (client persist — no auto-apply)
 export { useSavedJobsStore, type SavedJobEntry, type ShortlistLane } from './saved-jobs-store'
 
+export { useDqCoachStore } from './dq-coach-store'
+
 // Hub Blocks Store (composable hub)
 export {
   useHubBlocksStore,

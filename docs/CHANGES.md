@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Build is the DQ workshop; Help chat is gone** (2026-08-19)
+
+Help is off the nav. Driver AI is no longer a chat page — it watches the DQ file on Build. Anthropic (Sonnet) scans profile, blocks, CDL, MVR/PSP, employment, and DQ status, then writes a brief into the board: next hole, mismatches, what’s solid. Heuristic fallback if `AVA_BRAIN` is unset. Old `/ask-ai` deep-links land on Build. (`getAdminSupabaseClient` is async — the first 500 was a missing `await`.)
+
+---
+
 ## **Resume preview drops Continue DOT** (2026-08-19)
 
 The career-card resume packet toolbar is Download PDF and Share card only. DOT lives on the card / Up next, not as a third button on the preview.

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Quick navigation from the hub sidebar — jobs, applications, Stormi (job search + apply + prep).
+ * Quick navigation from the hub sidebar — jobs, applications, Build (DQ file).
  */
 
 import { Briefcase, ClipboardList, LayoutGrid, Sparkles } from 'lucide-react'
@@ -16,9 +16,9 @@ export interface HubExploreLinksProps {
 export default function HubExploreLinks({ onCloseDrawer, className }: HubExploreLinksProps) {
   const { setCurrentPage } = useUIStore()
 
-  const scrollToStormi = () => {
+  const openBuild = () => {
     onCloseDrawer?.()
-    setCurrentPage('ask-ai')
+    setCurrentPage('build')
   }
 
   return (
@@ -74,7 +74,7 @@ export default function HubExploreLinks({ onCloseDrawer, className }: HubExplore
         </button>
         <button
           type='button'
-          onClick={scrollToStormi}
+          onClick={openBuild}
           className={cn(
             'w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm font-medium transition-colors',
             'bg-gray-50 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-800',
@@ -82,7 +82,7 @@ export default function HubExploreLinks({ onCloseDrawer, className }: HubExplore
           )}
         >
           <Sparkles className='w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0' />
-          Assistant — search, apply, prep
+          Build — your DQ file
         </button>
       </div>
     </div>
