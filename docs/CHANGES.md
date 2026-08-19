@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hero stacks on iPad** (2026-08-19)
+
+Two-column hero started at `lg` (1024px) — iPad Pro portrait. The PROVVEN lockup is viewport-sized (`11vw`) so it overflowed under the career card. Side-by-side now starts at `xl` (1280+); tablet stays stacked. Lockup also shrinks in the two-column layout so it stays in its column.
+
+---
+
 ## **Ironside as a site token** (2026-08-18)
 
 `#939598` is now `ironside` in Tailwind. Used for captions, hints, and paper borders on the landing, vault shell, Build board, and career card. Body copy on paper stays `#5c6166` — the raw swatch fails contrast at paragraph size.

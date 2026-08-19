@@ -34,14 +34,18 @@ export default function HeroSection({
   return (
     <InkBand className='border-b border-white/[0.06]'>
       <LandingContainer className='pb-20 pt-14 sm:pb-28 sm:pt-20 lg:pt-24'>
-        <div className='grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16'>
-          <div className='min-w-0 text-center lg:text-left'>
+        {/*
+          Side-by-side only at xl (1280+). `lg` is 1024 — iPad Pro portrait —
+          and the lockup is viewport-sized (`11vw`) so it overflowed under the card.
+        */}
+        <div className='grid items-center gap-14 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-16'>
+          <div className='min-w-0 text-center xl:text-left'>
             <div className='lp-rise' style={{ animationDelay: '0ms' }}>
-              <p className='max-w-full text-[clamp(2.15rem,11vw,5.5rem)] leading-none [text-shadow:0_2px_24px_rgba(0,0,0,0.5)]'>
+              <p className='max-w-full overflow-hidden text-[clamp(2.15rem,11vw,5.5rem)] leading-none [text-shadow:0_2px_24px_rgba(0,0,0,0.5)] xl:text-[clamp(2.5rem,4vw,3.75rem)]'>
                 <ProvvenWordmark tone='ink' className='max-w-full tracking-[0.04em] sm:tracking-[0.08em]' />
               </p>
-              <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
-                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55 lg:from-[#f15a2b]/55' />
+              <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 xl:mx-0'>
+                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55 xl:from-[#f15a2b]/55' />
                 <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f78a5c]'>
                   The career card you own
                 </p>
@@ -50,7 +54,7 @@ export default function HeroSection({
             </div>
 
             <h1
-              className='lp-rise mt-10 text-[1.85rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-5xl lg:text-[3.4rem]'
+              className='lp-rise mt-10 text-[1.85rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-5xl xl:text-[3.4rem]'
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}
@@ -58,7 +62,7 @@ export default function HeroSection({
             </h1>
 
             <p
-              className='lp-rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg lg:mx-0'
+              className='lp-rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg xl:mx-0'
               style={{ animationDelay: '220ms' }}
             >
               Build a Career Card once and own it for good. Facts verified by licensed
@@ -67,7 +71,7 @@ export default function HeroSection({
             </p>
 
             <div
-              className='lp-rise mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start'
+              className='lp-rise mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center xl:justify-start'
               style={{ animationDelay: '320ms' }}
             >
               <Button
@@ -109,7 +113,7 @@ export default function HeroSection({
             </div>
           </div>
 
-          <div className='lp-rise relative flex min-w-0 justify-center lg:justify-end' style={{ animationDelay: '260ms' }}>
+          <div className='lp-rise relative flex min-w-0 justify-center xl:justify-end' style={{ animationDelay: '260ms' }}>
             <DisclosureCard view='shared' className='relative' />
           </div>
         </div>
