@@ -161,6 +161,45 @@ export async function buildDqCoachSnapshot(
   }
 }
 
+function parseDay(raw: string | null | undefined): Date | null {
+  if (!raw) return null
+  // Date-only strings are UTC midnight — compare calendar days, not local clock.
+  const day = raw.slice(0, 10)
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(day)
+    ? new Date(`${day}T12:00:00`)
+    : new Date(raw)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+function employmentGapFlags(
+  jobs: DqCoachSnapshot['employment'],
+): DqCoachFlag[] {
+  const dated = jobs
+    .map((j) => {
+      const start = parseDay(j.start)
+      const end = j.current ? new Date() : parseDay(j.end)
+      if (!start || !end) return null
+      return { ...j, start, end }
+    })
+    .filter((j): j is NonNullable<typeof j> => j !== null)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
+
+  const flags: DqCoachFlag[] = []
+  for (let i = 1; i < dated.length; i++) {
+    const prev = dated[i - 1]
+    const cur = dated[i]
+    const gapDays = (cur.start.getTime() - prev.end.getTime()) / 86_400_000
+    if (gapDays > 31) {
+      flags.push({
+        severity: 'info',
+        title: `Employment gap · ${prev.company || 'prior job'}`,
+        detail: `${Math.round(gapDays)} days between ${prev.company || 'a job'} and ${cur.company || 'the next role'}. DOT asks you to explain gaps.`,
+      })
+    }
+  }
+  return flags
+}
+
 export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   const flags: DqCoachFlag[] = []
   const profileState = snapshot.profile.state?.trim().toUpperCase() || null
@@ -172,15 +211,13 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       detail: `Profile lists ${profileState} but CDL is ${cdlState}. Carriers notice that.`,
     })
   }
-  if (snapshot.cdl?.expiration) {
-    const exp = new Date(snapshot.cdl.expiration)
-    if (!Number.isNaN(exp.getTime()) && exp.getTime() < Date.now()) {
-      flags.push({
-        severity: 'warn',
-        title: 'CDL looks expired',
-        detail: `Expiration on file is ${snapshot.cdl.expiration}. Update it if you've renewed.`,
-      })
-    }
+  const exp = parseDay(snapshot.cdl?.expiration ?? null)
+  if (exp && exp.getTime() < Date.now()) {
+    flags.push({
+      severity: 'warn',
+      title: 'CDL looks expired',
+      detail: `Expiration on file is ${snapshot.cdl?.expiration}. Update it if you've renewed.`,
+    })
   }
   if (!snapshot.profile.name) {
     flags.push({
@@ -189,9 +226,88 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       detail: 'Finish your profile so the career card and packet share the same name.',
     })
   }
+  if (!snapshot.profile.hasPhone || !snapshot.profile.hasEmail) {
+    flags.push({
+      severity: 'info',
+      title: 'Contact incomplete',
+      detail: [
+        !snapshot.profile.hasPhone ? 'No phone' : null,
+        !snapshot.profile.hasEmail ? 'No email' : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') + ' on the profile.',
+    })
+  }
 
-  const priority = snapshot.dqItems.find(
-    (i) => i.status === 'requested' || i.status === 'failed' || i.status === 'in_progress' || i.status === 'missing',
+  // One card per DQ hole — this is the floor. The model only adds extra wording.
+  for (const item of snapshot.dqItems) {
+    if (
+      item.status === 'complete' ||
+      item.status === 'processing' ||
+      item.status === 'coming_soon' ||
+      item.status === 'needs_gov' ||
+      item.status === 'needs_employer'
+    ) {
+      continue
+    }
+    if (item.status === 'needs_driver' || item.status === 'needs_key') {
+      flags.push({
+        severity: 'info',
+        title: `${item.label} waiting on you`,
+        detail:
+          item.status === 'needs_key'
+            ? 'A key or consent step is still open before this can complete.'
+            : 'This item needs a driver action before it can go on the card.',
+      })
+      continue
+    }
+    if (item.status === 'requested') {
+      flags.push({
+        severity: 'warn',
+        title: `${item.label} requested`,
+        detail: 'An employer asked for this — finish it before they move on.',
+      })
+      continue
+    }
+    if (item.status === 'failed') {
+      flags.push({
+        severity: 'warn',
+        title: `${item.label} failed`,
+        detail: 'The last attempt did not complete. Open it and retry.',
+      })
+      continue
+    }
+    flags.push({
+      severity: item.status === 'in_progress' ? 'info' : 'warn',
+      title:
+        item.status === 'in_progress' ? `${item.label} in progress` : `${item.label} not on file`,
+      detail:
+        item.status === 'in_progress'
+          ? 'Pick up where you left off so the career card can show it.'
+          : 'A complete DQ file includes this. Open the tile to start.',
+    })
+  }
+
+  if (snapshot.mvr && !snapshot.mvr.licenseStatus && snapshot.mvr.lastOrderedAt) {
+    flags.push({
+      severity: 'info',
+      title: 'MVR result incomplete',
+      detail: 'An order is on file but we do not have a license status yet.',
+    })
+  }
+  if (snapshot.cdl?.endorsements?.length) {
+    flags.push({
+      severity: 'info',
+      title: 'Endorsements on file',
+      detail: snapshot.cdl.endorsements.join(', ') + ' — confirm they still match your license.',
+    })
+  }
+  flags.push(...employmentGapFlags(snapshot.employment))
+
+  const priority = snapshot.dqItems.find((i) =>
+    ['requested', 'failed', 'in_progress', 'missing', 'needs_driver', 'needs_key'].includes(
+      i.status,
+    ),
   )
   const next = priority
     ? {
@@ -223,21 +339,43 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   }
 }
 
+/** Claude often wraps JSON in prose or fences — take the first object. */
+function extractJsonObject(text: string): string | null {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+  return text.slice(start, end + 1)
+}
+
+export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoachReview {
+  const seen = new Set(base.flags.map((f) => f.title.toLowerCase()))
+  const flags = [...base.flags]
+  for (const flag of extra.flags) {
+    const key = flag.title.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    flags.push(flag)
+  }
+  return {
+    watching: extra.watching || base.watching,
+    next: extra.next ?? base.next,
+    flags: flags.slice(0, 10),
+    clear: extra.clear.length > 0 ? extra.clear : base.clear,
+  }
+}
+
 export function parseDqCoachReview(text: string, fallback: DqCoachReview): DqCoachReview {
-  const trimmed = text
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/```$/u, '')
-    .trim()
+  const blob = extractJsonObject(text)
+  if (!blob) return fallback
   try {
-    const raw = JSON.parse(trimmed) as Partial<DqCoachReview>
+    const raw = JSON.parse(blob) as Partial<DqCoachReview>
     const target =
       raw.next && typeof raw.next.target === 'string' && TARGETS.has(raw.next.target)
         ? (raw.next.target as DqCoachTarget)
         : raw.next
           ? null
           : null
-    return {
+    const parsed: DqCoachReview = {
       watching:
         typeof raw.watching === 'string' && raw.watching.trim()
           ? raw.watching.trim()
@@ -253,17 +391,18 @@ export function parseDqCoachReview(text: string, fallback: DqCoachReview): DqCoa
       flags: Array.isArray(raw.flags)
         ? raw.flags
             .filter((f) => f && typeof f.title === 'string')
-            .slice(0, 6)
             .map((f) => ({
               severity: f.severity === 'warn' ? 'warn' : 'info',
               title: f.title,
               detail: typeof f.detail === 'string' ? f.detail : '',
             }))
-        : fallback.flags,
+        : [],
       clear: Array.isArray(raw.clear)
         ? raw.clear.filter((s): s is string => typeof s === 'string').slice(0, 5)
-        : fallback.clear,
+        : [],
     }
+    // Rule-based flags are the floor — the model must not erase holes it skipped.
+    return mergeDqReviews(fallback, parsed)
   } catch {
     return fallback
   }
@@ -276,13 +415,14 @@ export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot): string {
 Write a JSON object only (no markdown) with:
 - watching: one sentence on what you just checked
 - next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification
-- flags: up to 6 { severity: "warn"|"info", title, detail } — mismatches, expired creds, date gaps, employer requests
+- flags: { severity: "warn"|"info", title, detail } for every real hole or mismatch in the snapshot
 - clear: up to 4 short strings of what's solid (only if true)
 
 Rules:
 - Only third-party facts (MVR, PSP, employer confirmations) are "verified". Self-reported DOT/resume is never "proven".
 - Prefer the next actionable hole in a complete DQ file.
 - Be specific (state codes, dates, company names from the snapshot). Do not invent facts.
+- List each missing DQ item (MVR, PSP, CDLIS/consent, etc.) as its own flag. Do not collapse them into watching.
 
 Installed blocks: ${blockLabels.join(', ') || 'none'}
 Snapshot:

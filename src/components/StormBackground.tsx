@@ -41,11 +41,10 @@ export default function StormBackground() {
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
-  /* Less pure-white wash than before — let body + vault grain read as warm parchment depth */
+  /* Cool paper + steel corners — no champagne/ember bloom (reads orange on cream). */
   const lightAtmosphere = [
     'linear-gradient(122deg, rgba(247,243,234,0.4) 0%, rgba(255,255,255,0.2) 24%, transparent 48%)',
     'linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 38%, transparent 58%)',
-    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(156,119,64,0.11), transparent 56%)',
     'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(54,69,89,0.08), transparent 54%)',
     'radial-gradient(ellipse 58% 44% at 6% 90%, rgba(30,58,90,0.06), transparent 52%)',
     'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',

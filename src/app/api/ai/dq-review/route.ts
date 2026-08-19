@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
+import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
 import {
   buildDqCoachSnapshot,
   dqCoachSystemPrompt,
@@ -32,23 +32,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ review: fallback, source: 'heuristic' })
     }
 
-    const anthropic = new Anthropic({ apiKey: process.env.AVA_BRAIN })
-    const response = await anthropic.messages.create({
-      model: ANTHROPIC_MODEL_SONNET,
-      max_tokens: 700,
-      system: dqCoachSystemPrompt(snapshot),
-      messages: [{ role: 'user', content: 'Review this DQ file. JSON only.' }],
-    })
+    try {
+      const anthropic = new Anthropic({ apiKey: process.env.AVA_BRAIN })
+      const response = await anthropic.messages.create({
+        model: ANTHROPIC_MODEL_HAIKU,
+        max_tokens: 1400,
+        system: dqCoachSystemPrompt(snapshot),
+        messages: [{ role: 'user', content: 'Review this DQ file. JSON only.' }],
+      })
 
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
+      const text = response.content
+        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n')
 
-    return NextResponse.json({
-      review: parseDqCoachReview(text, fallback),
-      source: 'anthropic',
-    })
+      return NextResponse.json({
+        review: parseDqCoachReview(text, fallback),
+        source: 'anthropic',
+      })
+    } catch (err) {
+      console.error('[DQ REVIEW] Anthropic failed — heuristic floor:', err)
+      return NextResponse.json({ review: fallback, source: 'heuristic' })
+    }
   } catch (err) {
     console.error('[DQ REVIEW]', err)
     return NextResponse.json({ error: 'Could not review your DQ file' }, { status: 500 })

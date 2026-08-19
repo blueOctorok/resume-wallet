@@ -27,11 +27,12 @@ export default function VaultLightFrostTexture({
   const striae = isCanvas ? 'opacity-[0.32]' : 'opacity-[0.46]'
 
   const washClass = isCanvas
-    ? 'from-teal-100/[0.22] via-transparent to-violet-100/[0.12]'
+    ? 'from-slate-200/[0.18] via-transparent to-violet-100/[0.1]'
     : 'from-teal-100/[0.28] via-transparent to-violet-100/[0.16]'
   const depthClass = isCanvas ? 'from-white/38' : 'from-white/52'
   const bloom = isCanvas ? 'rgba(255,255,255,0.58)' : 'rgba(255,255,255,0.72)'
-  const corner = isCanvas ? 'rgba(156,119,64,0.065)' : 'rgba(156,119,64,0.1)'
+  /* Canvas: steel, not champagne — gold bloom reads as orange on the page. */
+  const corner = isCanvas ? 'rgba(54,69,89,0.055)' : 'rgba(156,119,64,0.1)'
 
   return (
     <>

@@ -105,7 +105,7 @@ body {
 }
 
 /*
- * Light canvas — cool paper + ember bloom (Blue Star).
+ * Light canvas — cool paper. Ember stays on marks / CTAs, not the page wash.
  */
 /* DOT packet — legal paper + midnight ink even when the app shell is Dark */
 .dot-app-paper {
@@ -116,8 +116,6 @@ body {
 [data-theme='light'] body {
   background:
     var(--storm-light-specular),
-    radial-gradient(ellipse min(88vw, 36rem) min(88vw, 36rem) at 50% 10%, var(--storm-teal-bloom-strong), transparent 56%),
-    radial-gradient(ellipse min(72vw, 28rem) min(72vw, 28rem) at 6% 88%, rgb(var(--storm-accent-rgb) / 0.055), transparent 50%),
     radial-gradient(ellipse min(70vw, 26rem) min(70vw, 26rem) at 98% 96%, var(--storm-violet-bloom), transparent 50%),
     radial-gradient(ellipse 130% 70% at 50% 108%, rgb(23 49 80 / 0.06), transparent 42%),
     linear-gradient(168deg, #d8d9db 0%, #e4e5e7 32%, #eef0f1 58%, #f7f8f8 100%);

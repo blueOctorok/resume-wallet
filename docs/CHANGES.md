@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Light mode drops the orange page glow** (2026-08-19)
+
+Light canvas no longer washes Hot Embers / champagne gold behind the app. Ember stays on marks and CTAs. Body + `StormBackground` keep cool paper and steel corners only.
+
+---
+
+## **DQ watcher uses Haiku** (2026-08-19)
+
+`/api/ai/dq-review` now calls `claude-haiku-4-5-20251001` instead of Sonnet 4.6. The watcher is structured JSON plus a rule floor — Haiku is enough, faster, and cheaper. Sonnet stays on chat / writing routes.
+
+---
+
+## **DQ watcher keeps a rule-based floor** (2026-08-19)
+
+After the chat teardown, the board often showed only the heuristic scan (one CDL flag) because Sonnet’s JSON either failed to parse or replaced the hole list with a short `flags` array. Deterministic checks always run first (every DQ hole, state mismatch, expired CDL, employment gaps). Anthropic may rewrite “next” and add notes — it cannot erase holes. JSON is pulled from the first `{...}` in the reply.
+
+---
+
 ## **DQ watcher flags are cards** (2026-08-19)
 
 Each AI note is its own paper card in a 1-col → 2-col grid. Next stays a full-width card so the primary hole is obvious. Dark mode still locked to midnight-on-cream.
