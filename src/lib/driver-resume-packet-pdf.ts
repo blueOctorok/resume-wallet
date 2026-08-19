@@ -12,13 +12,8 @@ const QR_FOOTER = 18
 
 async function qrPngDataUrl(verifyUrl: string, size: number): Promise<string | null> {
   try {
-    const QRCode = (await import('qrcode')).default
-    return await QRCode.toDataURL(verifyUrl, {
-      width: size * 4,
-      margin: 1,
-      color: { dark: '#111111', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
-    })
+    const { qrDataUrlWithProvvenMark } = await import('@/lib/provven-qr')
+    return await qrDataUrlWithProvvenMark(verifyUrl, size * 4)
   } catch {
     return null
   }

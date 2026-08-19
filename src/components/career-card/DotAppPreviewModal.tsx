@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, AlertCircle, Download } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import DotAppPreviewContent, { type DotAppPreviewData } from '@/components/career-card/DotAppPreviewContent'
 
 export interface DotAppPreviewModalProps {
@@ -25,7 +25,7 @@ export default function DotAppPreviewModal({
   onClose,
   userId,
   sessionUserId,
-  isDark,
+  isDark: _isDark,
   applicationId,
 }: DotAppPreviewModalProps) {
   const [previewData, setPreviewData] = useState<(DotAppPreviewData & { id?: string }) | null>(null)
@@ -88,58 +88,58 @@ export default function DotAppPreviewModal({
 
   if (!isOpen) return null
 
+  // DOT preview is a legal packet — cream paper + midnight ink, same as the form.
+  // Never follow app Dark: that paints dark type on a navy modal (unreadable).
+  const paper = true
+
   return (
-    <Modal onClose={onClose} maxWidth='max-w-2xl' zIndex={10100}>
+    <Modal
+      onClose={onClose}
+      maxWidth='max-w-3xl'
+      zIndex={10100}
+      paper={paper}
+      panelClassName='!bg-[#fbf8f1] scrollbar-none overscroll-contain max-sm:!max-h-[calc(100dvh-2rem)]'
+    >
       <ModalHeader
         title='DOT Application'
         subtitle='Your completed driver qualification file'
         onClose={onClose}
+        paper={paper}
       />
       {/* Owner-only: the export route is scoped to the application's own user, so
           showing this to an employer just produces a 404. */}
       {!loading && !fetchError && previewData?.id && sessionUserId === userId && (
-        <div
-          className={cn(
-            'flex items-center gap-2 px-4 py-3 border-b',
-            isDark ? 'border-gray-700 bg-gray-800/40' : 'border-gray-100 bg-gray-50',
-          )}
-        >
-          <button
+        <div className='flex items-center gap-2 border-b border-ironside/20 bg-[#fbf8f1] px-4 py-3 sm:px-7'>
+          <Button
             type='button'
-            onClick={downloadPdf}
-            disabled={pdfLoading}
-            className={cn(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50',
-              isDark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-600 text-white hover:bg-teal-700',
-            )}
+            variant='primary'
+            size='sm'
+            isLoading={pdfLoading}
+            onClick={() => void downloadPdf()}
+            className='gap-1.5'
           >
-            {pdfLoading ? <Loader2 className='w-4 h-4 animate-spin' /> : <Download className='w-4 h-4' />}
-            {pdfLoading ? 'Generating…' : 'Download PDF'}
-          </button>
+            <Download className='h-4 w-4' aria-hidden />
+            Download PDF
+          </Button>
         </div>
       )}
       {pdfError && (
-        <p className={cn('text-xs px-4 py-2', isDark ? 'text-red-400' : 'text-red-600')}>{pdfError}</p>
+        <p className='px-4 py-2 text-xs text-red-700'>{pdfError}</p>
       )}
-      <div className='overflow-y-auto max-h-[75vh]'>
+      <div className='dot-app-paper bg-[#fbf8f1] text-[#173150]'>
         {loading && (
           <div className='flex items-center justify-center py-16'>
-            <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-teal-400' : 'text-teal-600')} />
+            <Loader2 className='h-6 w-6 animate-spin text-[#173150]' />
           </div>
         )}
         {fetchError && (
-          <div
-            className={cn(
-              'm-6 flex items-center gap-2 p-4 rounded-xl text-sm',
-              isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600',
-            )}
-          >
-            <AlertCircle className='w-4 h-4 shrink-0' />
+          <div className='m-6 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700'>
+            <AlertCircle className='h-4 w-4 shrink-0' />
             {fetchError}
           </div>
         )}
         {!loading && !fetchError && previewData && (
-          <DotAppPreviewContent data={previewData} isDark={isDark} />
+          <DotAppPreviewContent data={previewData} isDark={false} />
         )}
       </div>
     </Modal>

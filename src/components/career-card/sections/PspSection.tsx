@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { FileWarning, Clock, Loader2, CheckCircle } from 'lucide-react'
+import { FileWarning, Clock, Loader2 } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import type { PspData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
@@ -26,7 +27,7 @@ const STATUS_DISPLAY: Record<string, { label: string; icon: 'clock' | 'loader' |
 
 function statusIcon(key: 'clock' | 'loader' | 'check') {
   if (key === 'loader') return <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
-  if (key === 'check') return <CheckCircle className="h-5 w-5 text-green-500" />
+  if (key === 'check') return <ProvvenMark className="text-xl" />
   return <Clock className="h-5 w-5 text-yellow-500" />
 }
 
@@ -64,12 +65,18 @@ export default function PspSection({
     onNavigateToOrder?.()
   }
 
+  // Employer-requested screening: consent lives on another page — hide duplicate self-order.
+  const hideOrderHeaderForEmployerScreeningPending =
+    !isComplete && !isFailed && isEmployerPendingNoOrder
+
   // Suppress the header button on failed orders — the banner provides
   // its own clearer "Re-order" CTA.
   const showSelfButton =
+    mode !== 'construct' &&
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
     !isFailed &&
+    !hideOrderHeaderForEmployerScreeningPending &&
     (isComplete
       ? Boolean(sessionUserId && data.orderId)
       : hasOrder
@@ -163,23 +170,23 @@ export default function PspSection({
           </div>
         </div>
       ) : (
-        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-          {isEmployerPendingNoOrder ? (
-            <>
-              <span className='font-medium'>{pending?.companyName}</span> requested your PSP + MVR screening. Continue
-              to complete the consent forms — then you order your own portable MVR and PSP when you submit.
-            </>
-          ) : (
-            <>
-              No PSP report ordered yet.{' '}
-              {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
-                <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
-                  Order one
-                </button>
-              )}
-            </>
-          )}
-        </p>
+        <div className='space-y-3'>
+          <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            {isEmployerPendingNoOrder ? (
+              <>
+                <span className='font-medium'>{pending?.companyName}</span> requested your PSP + MVR screening. Continue
+                to complete the consent forms — then you order your own portable MVR and PSP when you submit.
+              </>
+            ) : (
+              'No PSP report ordered yet.'
+            )}
+          </p>
+          {mode === 'self' && isEmployerPendingNoOrder && onNavigateToOrder ? (
+            <Button type='button' variant='primary' size='sm' onClick={onNavigateToOrder}>
+              Continue screening
+            </Button>
+          ) : null}
+        </div>
       )}
 
       {open && sessionUserId && (

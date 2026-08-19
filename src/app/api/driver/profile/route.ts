@@ -37,17 +37,19 @@ export async function GET(request: NextRequest) {
     // Merge identity fields from user_profiles
     const { data: up } = await supabase
       .from('user_profiles')
-      .select('first_name, last_name, email, phone, date_of_birth, address, city, state, zip_code, headline')
+      .select('first_name, last_name, display_name, email, phone, date_of_birth, city, state, zip_code, headline')
       .eq('user_id', targetUserId)
       .maybeSingle()
 
     if (up) {
-      unifiedProfile.firstName = up.first_name || ''
-      unifiedProfile.lastName = up.last_name || ''
+      const firstLast = [up.first_name, up.last_name].filter(Boolean).join(' ').trim()
+      const display = (up.display_name as string | null)?.trim() ?? ''
+      const parts = firstLast ? null : display.split(/\s+/).filter(Boolean)
+      unifiedProfile.firstName = up.first_name || parts?.[0] || ''
+      unifiedProfile.lastName = up.last_name || (parts ? parts.slice(1).join(' ') : '')
       unifiedProfile.email = up.email || ''
       unifiedProfile.phone = up.phone || ''
       unifiedProfile.dateOfBirth = up.date_of_birth || ''
-      unifiedProfile.address = up.address || ''
       unifiedProfile.city = up.city || ''
       unifiedProfile.state = up.state || ''
       unifiedProfile.zipCode = up.zip_code || ''

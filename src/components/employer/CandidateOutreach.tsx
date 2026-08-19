@@ -13,6 +13,7 @@ import { sendToStormi, OutOfCreditsError, type StormiConversationTurn } from '@/
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useUIStore } from '@/stores'
 import QRCode from 'qrcode'
+import { PROVVEN_QR_OPTS, stampProvvenMarkOnCanvas } from '@/lib/provven-qr'
 import KanbanBoard from '@/components/employer/outreach/KanbanBoard'
 import OutreachKanbanInfoModal from '@/components/employer/outreach/OutreachKanbanInfoModal'
 import OutreachFilterBar, { type FilterChipDef, type SortKey } from '@/components/employer/outreach/OutreachFilterBar'
@@ -136,13 +137,13 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
   const [copiedImage, setCopiedImage] = useState(false)
 
   useEffect(() => {
-    if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, url, {
-        width: 240,
-        margin: 2,
-        color: { dark: '#0f172a', light: '#ffffff' },
-      })
-    }
+    const canvas = canvasRef.current
+    if (!canvas) return
+    void QRCode.toCanvas(canvas, url, {
+      width: 240,
+      margin: 2,
+      ...PROVVEN_QR_OPTS,
+    }).then(() => stampProvvenMarkOnCanvas(canvas))
   }, [url])
 
   const downloadPng = () => {

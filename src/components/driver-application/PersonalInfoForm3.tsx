@@ -1,6 +1,6 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme, DOT_PAPER_CARD, DOT_PAPER_LOCKED } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal from '@/components/ui/Modal'
@@ -145,9 +145,7 @@ export default function PersonalInfoForm3({
     fcraAcknowledgement: false,
   })
 
-  const lockedInputClass = isDarkTheme(theme)
-    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
-    : 'bg-gray-100 cursor-not-allowed'
+  const lockedInputClass = DOT_PAPER_LOCKED
   const isVerifiedEmployer = (row: { _source?: string } | undefined) =>
     row?._source === 'verified'
 
@@ -2837,11 +2835,7 @@ export default function PersonalInfoForm3({
 
   return (
     <div
-      className={`max-w-4xl mx-auto relative z-10 ${
-        isDarkTheme(theme)
-          ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
-          : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
-      }`}
+      className={`max-w-4xl mx-auto relative z-10 ${DOT_PAPER_CARD}`}
     >
       {/* Header */}
       <div

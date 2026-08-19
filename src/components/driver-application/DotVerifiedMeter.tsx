@@ -30,7 +30,7 @@ export default function DotVerifiedMeter({
           'rounded-xl border px-4 py-3 text-sm',
           isDark
             ? 'border-gray-700 bg-gray-800/60 text-gray-400'
-            : 'border-gray-200 bg-gray-50 text-gray-600',
+            : 'border-ironside/25 bg-white text-[#5c6166]',
           className,
         )}
       >
@@ -42,7 +42,7 @@ export default function DotVerifiedMeter({
   const barColor = coverage.majorityVerified
     ? isDark
       ? 'bg-teal-400'
-      : 'bg-teal-600'
+      : 'bg-emerald-600'
     : isDark
       ? 'bg-amber-400'
       : 'bg-amber-500'
@@ -56,22 +56,22 @@ export default function DotVerifiedMeter({
             coverage.majorityVerified
               ? isDark
                 ? 'text-teal-300'
-                : 'text-teal-700'
+                : 'text-emerald-700'
               : isDark
                 ? 'text-amber-300'
-                : 'text-amber-700',
+                : 'text-amber-800',
           )}
         />
         <span
           className={cn(
             'text-xs font-medium',
-            isDark ? 'text-gray-200' : 'text-gray-800',
+            isDark ? 'text-gray-200' : 'text-[#173150]',
           )}
         >
           {coverage.majorityVerified ? 'Verified' : 'Partially verified'} ·{' '}
           {coverage.percent}%
         </span>
-        <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-gray-400')}>
+        <span className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-[#5c6166]')}>
           ({coverage.verifiedCount}/{coverage.totalCount} risk fields)
         </span>
       </div>
@@ -84,7 +84,7 @@ export default function DotVerifiedMeter({
         'rounded-xl border px-4 py-3',
         isDark
           ? 'border-teal-500/30 bg-teal-950/30'
-          : 'border-teal-200 bg-teal-50/80',
+          : 'border-ironside/25 bg-white',
         className,
       )}
     >
@@ -96,17 +96,17 @@ export default function DotVerifiedMeter({
               coverage.majorityVerified
                 ? isDark
                   ? 'text-teal-300'
-                  : 'text-teal-700'
+                  : 'text-emerald-700'
                 : isDark
                   ? 'text-amber-300'
-                  : 'text-amber-700',
+                  : 'text-amber-800',
             )}
           />
           <div className='min-w-0'>
             <p
               className={cn(
                 'text-sm font-semibold',
-                isDark ? 'text-gray-100' : 'text-gray-900',
+                isDark ? 'text-gray-100' : 'text-[#173150]',
               )}
             >
               {coverage.majorityVerified
@@ -122,7 +122,7 @@ export default function DotVerifiedMeter({
         <span
           className={cn(
             'text-lg font-bold tabular-nums shrink-0',
-            isDark ? 'text-teal-200' : 'text-teal-800',
+            isDark ? 'text-teal-200' : 'text-[#173150]',
           )}
         >
           {coverage.percent}%

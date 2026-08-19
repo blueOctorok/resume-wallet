@@ -1,6 +1,6 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme, DOT_PAPER_CARD } from '@/lib/dot-form-paper'
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -335,13 +335,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
   return (
     <div
-      className={`max-w-4xl mx-auto p-6 ${
-        isDarkTheme(theme)
-          ? 'bg-teal-200/20 backdrop-blur-xl'
-          : 'bg-white/80 backdrop-blur-xl'
-      } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        isDarkTheme(theme) ? 'border-teal-500' : 'border-teal-700'
-      }`}
+      className={`max-w-4xl mx-auto p-6 ${DOT_PAPER_CARD} relative z-10 border-t-4 border-[#c43d14]`}
     >
       {/* Header */}
       <div className='text-center mb-8'>

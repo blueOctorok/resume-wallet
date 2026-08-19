@@ -1,6 +1,7 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
+import { DOT_PAPER_INPUT, DOT_PAPER_LABEL } from '@/lib/dot-form-paper'
 import React from 'react'
 import { FieldError } from './ErrorDisplay'
 import { ValidationResult } from '@/lib/validation'
@@ -54,11 +55,9 @@ export const FormInput: React.FC<FormInputProps> = ({
         ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
-          : !isDarkTheme(theme)
-            ? 'border-gray-300 focus:ring-teal-500'
-            : 'border-gray-300 focus:ring-teal-500'
+          : DOT_PAPER_INPUT
     }
-    ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+    ${disabled ? 'bg-stone-100 cursor-not-allowed' : ''}
     ${className}
   `.trim()
 
@@ -66,7 +65,7 @@ export const FormInput: React.FC<FormInputProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          !isDarkTheme(theme) ? 'text-gray-700' : 'text-white'
+          DOT_PAPER_LABEL
         }`}
       >
         {label}
@@ -139,11 +138,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
-          : !isDarkTheme(theme)
-            ? 'border-gray-300 focus:ring-teal-500'
-            : 'border-gray-300 focus:ring-teal-500'
+          : DOT_PAPER_INPUT
     }
-    ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+    ${disabled ? 'bg-stone-100 cursor-not-allowed' : ''}
     ${className}
   `.trim()
 
@@ -151,7 +148,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          !isDarkTheme(theme) ? 'text-gray-700' : 'text-white'
+          DOT_PAPER_LABEL
         }`}
       >
         {label}
@@ -227,11 +224,9 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
         ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500'
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
-          : !isDarkTheme(theme)
-            ? 'border-gray-300 focus:ring-teal-500'
-            : 'border-gray-300 focus:ring-teal-500'
+          : DOT_PAPER_INPUT
     }
-    ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+    ${disabled ? 'bg-stone-100 cursor-not-allowed' : ''}
     ${className}
   `.trim()
 
@@ -239,7 +234,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          !isDarkTheme(theme) ? 'text-gray-700' : 'text-white'
+          DOT_PAPER_LABEL
         }`}
       >
         {label}
@@ -314,7 +309,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         />
         <span
           className={`ml-2 text-sm ${
-            !isDarkTheme(theme) ? 'text-gray-700' : 'text-white'
+            DOT_PAPER_LABEL
           }`}
         >
           {label}
@@ -380,7 +375,7 @@ export const FormCheckboxGroup: React.FC<FormCheckboxGroupProps> = ({
     <div className={`space-y-2 ${className}`}>
       <label
         className={`block text-sm font-medium ${
-          !isDarkTheme(theme) ? 'text-gray-700' : 'text-white'
+          DOT_PAPER_LABEL
         }`}
       >
         {label}

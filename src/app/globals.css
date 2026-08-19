@@ -107,6 +107,12 @@ body {
 /*
  * Light canvas — cool paper + ember bloom (Blue Star).
  */
+/* DOT packet — legal paper + midnight ink even when the app shell is Dark */
+.dot-app-paper {
+  color-scheme: light;
+  color: #173150;
+}
+
 [data-theme='light'] body {
   background:
     var(--storm-light-specular),

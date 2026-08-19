@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Car, Clock, Loader2, CheckCircle } from 'lucide-react'
+import { Car, Clock, Loader2 } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import type { MvrData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
@@ -26,7 +27,7 @@ const STATUS_DISPLAY: Record<string, { label: string; icon: 'clock' | 'loader' |
 
 function statusIcon(key: 'clock' | 'loader' | 'check') {
   if (key === 'loader') return <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />
-  if (key === 'check') return <CheckCircle className="h-5 w-5 text-green-500" />
+  if (key === 'check') return <ProvvenMark className="text-xl" />
   return <Clock className="h-5 w-5 text-yellow-500" />
 }
 
@@ -70,6 +71,7 @@ export default function MvrSection({
     !isComplete && !isFailed && isEmployerPendingNoOrder
 
   const showSelfButton =
+    mode !== 'construct' &&
     isCareerCardOwnerMode(mode) &&
     !data.employerPaidScreening &&
     !isFailed &&
@@ -108,16 +110,14 @@ export default function MvrSection({
           ) : null}
         </div>
         {showSelfButton && (
-          <button
+          <Button
             type='button'
+            variant={isComplete ? 'secondary' : 'primary'}
+            size='sm'
             onClick={handlePrimaryClick}
-            className={cn(
-              'text-xs px-3 py-1 rounded-lg transition-colors cursor-pointer',
-              isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
-            )}
           >
             {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -194,15 +194,10 @@ export default function MvrSection({
             </p>
           ) : (
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              No MVR ordered yet.{' '}
-              {isCareerCardOwnerMode(mode) && onNavigateToOrder && !data.employerPaidScreening && (
-                <button type="button" onClick={onNavigateToOrder} className="text-teal-500 hover:underline cursor-pointer">
-                  Order one
-                </button>
-              )}
+              No MVR ordered yet.
             </p>
           )}
-          {pending && isEmployerPendingNoOrder && isCareerCardOwnerMode(mode) && onNavigateToOrder ? (
+          {mode === 'self' && pending && isEmployerPendingNoOrder && onNavigateToOrder ? (
             <Button type='button' variant='primary' size='sm' onClick={onNavigateToOrder}>
               Continue screening
             </Button>

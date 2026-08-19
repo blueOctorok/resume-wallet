@@ -1,6 +1,7 @@
 'use client'
 
-import { Briefcase, CheckCircle } from 'lucide-react'
+import { Briefcase } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import type { WorkHistoryData, CareerCardMode } from '@/types/career-card'
 
@@ -26,8 +27,8 @@ export default function WorkHistorySection({ data, isDark }: WorkHistorySectionP
           </h3>
         </div>
         {data.verifiedCount > 0 && (
-          <span className='flex items-center gap-1 text-xs text-green-500'>
-            <CheckCircle className='w-3 h-3' /> {data.verifiedCount} verified
+          <span className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-300' : 'text-[#173150]')}>
+            <ProvvenMark className='text-sm' /> {data.verifiedCount} verified
           </span>
         )}
       </div>

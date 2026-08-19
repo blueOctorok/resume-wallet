@@ -78,6 +78,21 @@ function countFilledSections(data: ResumeBuilderData, mvr: ResumeMvrSummary | nu
   return n
 }
 
+/** Same identity rule as the career card: first+last, then display_name. */
+function resolveProfileName(up: {
+  first_name?: string | null
+  last_name?: string | null
+  display_name?: string | null
+}): { firstName: string; lastName: string } {
+  const first = up.first_name?.trim() ?? ''
+  const last = up.last_name?.trim() ?? ''
+  if (first || last) return { firstName: first, lastName: last }
+  const display = up.display_name?.trim() ?? ''
+  if (!display) return { firstName: '', lastName: '' }
+  const parts = display.split(/\s+/)
+  return { firstName: parts[0] ?? '', lastName: parts.slice(1).join(' ') }
+}
+
 function deriveStatus(opts: {
   filledSectionCount: number
   hasDotApp: boolean
@@ -98,13 +113,13 @@ export async function buildResumeProjection(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<ResumeProjection> {
-  const [blockProfile, { data: up }, { data: dotApp }, mvrRow, { data: mvrResult }, { count: resumeCount }] =
+  const [blockProfile, upResult, { data: dotApp }, mvrRow, { data: mvrResult }, { count: resumeCount }] =
     await Promise.all([
       getFullDriverProfile(supabase, userId),
       supabase
         .from('user_profiles')
         .select(
-          'first_name, last_name, email, phone, date_of_birth, address, city, state, zip_code, headline',
+          'first_name, last_name, display_name, email, phone, date_of_birth, city, state, zip_code, headline',
         )
         .eq('user_id', userId)
         .maybeSingle(),
@@ -130,6 +145,11 @@ export async function buildResumeProjection(
         .eq('user_id', userId),
     ])
 
+  if (upResult.error) {
+    console.error('[RESUME PROJECTION] user_profiles:', upResult.error.message)
+  }
+  const up = upResult.data
+
   let profile = blockProfile ?? emptyUnifiedProfile(userId)
   const hasBlockData = Boolean(blockProfile)
 
@@ -152,15 +172,15 @@ export async function buildResumeProjection(
     profile = mergeIntoProfile(profile, fromDot)
   }
 
-  // Identity from user_profiles is authoritative when present
+  // Identity from user_profiles is authoritative (same source as the career card)
   if (up) {
+    const { firstName, lastName } = resolveProfileName(up)
     profile = mergeIntoProfile(profile, {
-      firstName: up.first_name || '',
-      lastName: up.last_name || '',
+      firstName,
+      lastName,
       email: up.email || '',
       phone: up.phone || '',
       dateOfBirth: up.date_of_birth || '',
-      address: up.address || '',
       city: up.city || '',
       state: up.state || '',
       zipCode: up.zip_code || '',
@@ -231,7 +251,7 @@ export async function buildResumeProjection(
     dotAppComplete,
     filledSectionCount,
     sources: {
-      identity: Boolean(up?.first_name || up?.last_name || up?.email),
+      identity: Boolean(up?.first_name || up?.last_name || up?.display_name || up?.email),
       dotApp: hasDotApp,
       blockData: hasBlockData,
       mvr: Boolean(mvrSummary),

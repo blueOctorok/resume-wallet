@@ -9,17 +9,10 @@
  */
 
 import { useEffect, useState } from 'react'
-import type { QRCodeToDataURLOptions } from 'qrcode'
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DriverResumePacket } from '@/lib/driver-resume-packet'
-
-const QR_OPTS: QRCodeToDataURLOptions = {
-  width: 128,
-  margin: 1,
-  color: { dark: '#111111', light: '#ffffff' },
-  errorCorrectionLevel: 'M',
-}
+import { PROVVEN_QR_OPTS } from '@/lib/provven-qr'
 
 function SectionRule({ title }: { title: string }) {
   return (
@@ -44,7 +37,7 @@ function QrBlock({
   return (
     <div className='flex flex-col items-center gap-1'>
       <div
-        className={`${sizeClass} flex items-center justify-center border border-stone-900 bg-white p-0.5`}
+        className={`relative ${sizeClass} flex items-center justify-center border border-stone-900 bg-white p-0.5`}
       >
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- data URL from qrcode
@@ -52,6 +45,14 @@ function QrBlock({
         ) : (
           <span className='text-sm font-bold text-emerald-600'>ZK</span>
         )}
+        {dataUrl ? (
+          <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
+            <div className='flex h-[32%] w-[32%] items-center justify-center rounded-sm bg-white'>
+              {/* eslint-disable-next-line @next/next/no-img-element -- brand mark over QR */}
+              <img src='/brand/provven-mark.svg' alt='' className='h-[78%] w-[78%]' />
+            </div>
+          </div>
+        ) : null}
       </div>
       {label ? (
         <p className='max-w-[88px] text-center text-[9px] leading-tight text-stone-500'>{label}</p>
@@ -116,7 +117,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
     void (async () => {
       try {
         const QRCode = (await import('qrcode')).default
-        const url = await QRCode.toDataURL(packet.verifyUrl, QR_OPTS)
+        const url = await QRCode.toDataURL(packet.verifyUrl, { ...PROVVEN_QR_OPTS, width: 256 })
         if (!cancelled) setQrDataUrl(url)
       } catch {
         if (!cancelled) setQrDataUrl(null)

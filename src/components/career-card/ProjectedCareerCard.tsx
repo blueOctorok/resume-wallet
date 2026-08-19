@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, FileWarning, Pencil } from 'lucide-react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, Lock, FileWarning, Pencil } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import Avatar from '@/components/ui/Avatar'
 import AvatarUpload from '@/components/ui/AvatarUpload'
@@ -464,10 +465,7 @@ export default function ProjectedCareerCard({
                   : 'border-emerald-200 bg-emerald-50/90',
               )}
             >
-              <ShieldCheck
-                className={cn('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}
-                aria-hidden
-              />
+              <ProvvenMark className='mt-0.5 shrink-0 text-xl' />
               <div className='min-w-0 flex-1'>
                 <p className={cn('text-sm font-semibold', isDark ? 'text-emerald-100' : 'text-emerald-900')}>
                   {employerCount} employer{employerCount === 1 ? '' : 's'} confirmed employment

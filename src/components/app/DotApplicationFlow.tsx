@@ -1,6 +1,7 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -700,10 +701,8 @@ export default function DotApplicationFlow({
               onClick={() => handleFormNavigation(step.id)}
               className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
                 dotApp.currentForm === step.id
-                  ? 'bg-teal-600 text-white shadow-lg'
-                  : isDarkTheme(theme)
-                    ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+                  ? 'bg-[#173150] text-white shadow-lg'
+                  : 'border-2 border-ironside/30 bg-white text-[#173150] hover:bg-stone-50'
               }`}
             >
               <div className='text-center'>
@@ -884,9 +883,14 @@ export default function DotApplicationFlow({
         </div>
       )}
 
-      {/* Forms */}
+      {/* Forms — paper vault even when the app theme is Dark */}
       {!dotApp.showPrefillUpload && (
-        <>
+        <HubSectionPanel
+          isDark={false}
+          accent='teal'
+          className='dot-app-paper mx-auto max-w-4xl'
+          contentClassName='p-4 sm:p-5'
+        >
           {mvrPrefillStatus === 'applied' && (
             <div
               className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border ${
@@ -914,7 +918,7 @@ export default function DotApplicationFlow({
                   dotApp.form2Data as Form2WithProvenance | null,
                   dotApp.form3Data as Record<string, unknown> | null,
                 )}
-                isDark={isDarkTheme(theme)}
+                isDark={false}
               />
             </div>
           )}
@@ -939,7 +943,7 @@ export default function DotApplicationFlow({
           )}
           {renderFormStepTabs()}
           {renderFormContent()}
-        </>
+        </HubSectionPanel>
       )}
 
       {/* Profile conflict modal */}

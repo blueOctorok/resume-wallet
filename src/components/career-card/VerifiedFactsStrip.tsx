@@ -166,27 +166,20 @@ export default function VerifiedFactsStrip({ data, isDark }: { data: CardData; i
 
       <div className='relative px-4 py-3.5 sm:px-5'>
         <div className='flex items-start gap-3'>
-          {prestige ? (
-            <div
-              className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
-                isDark
-                  ? 'bg-teal-500/15 text-teal-200 ring-teal-400/30'
-                  : 'bg-teal-50 text-teal-800 ring-teal-200',
-              )}
-            >
-              <ProvvenMark tone='auto' isDark={isDark} className='text-xl' />
-            </div>
-          ) : (
-            <div
-              className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-                isDark ? 'bg-teal-500/15 text-teal-200' : 'bg-teal-50 text-teal-800',
-              )}
-            >
-              <BadgeCheck className='h-4 w-4' aria-hidden />
-            </div>
-          )}
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
+              prestige
+                ? isDark
+                  ? 'bg-teal-500/15 ring-teal-400/30'
+                  : 'bg-teal-50 ring-teal-200'
+                : isDark
+                  ? 'bg-teal-500/15 ring-teal-400/20'
+                  : 'bg-teal-50 ring-teal-200/70',
+            )}
+          >
+            <ProvvenMark className='text-xl' />
+          </div>
           <div className='min-w-0'>
             <p
               className={cn(
@@ -218,13 +211,17 @@ export default function VerifiedFactsStrip({ data, isDark }: { data: CardData; i
                       : 'border-teal-200/80 bg-white/80',
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      'mb-1.5 h-3.5 w-3.5',
-                      isDark ? 'text-teal-300' : 'text-teal-700',
-                    )}
-                    aria-hidden
-                  />
+                  {Icon === ShieldCheck || Icon === BadgeCheck ? (
+                    <ProvvenMark className='mb-1.5 text-[0.95rem]' />
+                  ) : (
+                    <Icon
+                      className={cn(
+                        'mb-1.5 h-3.5 w-3.5',
+                        isDark ? 'text-teal-300' : 'text-teal-700',
+                      )}
+                      aria-hidden
+                    />
+                  )}
                   <span
                     className={cn(
                       'block text-sm font-semibold leading-tight',
@@ -252,13 +249,17 @@ export default function VerifiedFactsStrip({ data, isDark }: { data: CardData; i
               const Icon = fact.icon
               return (
                 <li key={fact.id} className='flex items-start gap-1.5'>
-                  <Icon
-                    className={cn(
-                      'mt-0.5 h-3.5 w-3.5 shrink-0',
-                      isDark ? 'text-teal-300' : 'text-teal-700',
-                    )}
-                    aria-hidden
-                  />
+                  {Icon === ShieldCheck || Icon === BadgeCheck ? (
+                    <ProvvenMark className='mt-0.5 shrink-0 text-[0.95rem]' />
+                  ) : (
+                    <Icon
+                      className={cn(
+                        'mt-0.5 h-3.5 w-3.5 shrink-0',
+                        isDark ? 'text-teal-300' : 'text-teal-700',
+                      )}
+                      aria-hidden
+                    />
+                  )}
                   <span className='min-w-0'>
                     <span
                       className={cn(

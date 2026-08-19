@@ -4,6 +4,54 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume preview drops Continue DOT** (2026-08-19)
+
+The career-card resume packet toolbar is Download PDF and Share card only. DOT lives on the card / Up next, not as a third button on the preview.
+
+---
+
+## **Career card checks use the Provven mark** (2026-08-19)
+
+The card mixed Lucide `CheckCircle`, `ShieldCheck`, and `BadgeCheck` for “done / verified.” Those status marks now use the Hot Embers shield. Clock / spinner stay for in-progress. Category icons (CDL card, employer building) are unchanged.
+
+---
+
+## **Career card View / Order buttons share one style** (2026-08-19)
+
+MVR used a teal chip, PSP used the shared `Button`, and empty states had an underline "Order one" link. View is now `Button` secondary and Order / Continue is primary on both sections (and the construct-mode header). Employer Order MVR / Order PSP use the same pair instead of navy vs amber one-offs.
+
+---
+
+## **DOT preview layout: no inner scrollbar, spaced cards** (2026-08-19)
+
+The preview stacked a second `75vh` scroller on the modal (visible bar) and nested tinted field chips inside already-tinted accident / conviction / employment boxes. One hidden modal scroll now; each record is a single white card with a 1-col → 2-col field grid so it breathes on mobile. The legacy `CareerCard` preview (same cramped boxes + visible bar) now uses this shared modal instead of a duplicate layout.
+
+---
+
+## **DOT preview is readable paper** (2026-08-19)
+
+The career card is always paper (`isDark = false`), so the DOT preview used dark ink — but the modal still followed Dark mode and sat on navy. Midnight type on a navy panel was unreadable. The preview modal is now cream paper like the form; verified chips use forest (not gold-on-gold `teal-50` / `teal-800`).
+
+---
+
+## **DOT forms stay cream paper in Dark mode** (2026-08-19)
+
+The DOT packet is a legal form, same rule as the career card / DQ vault: cream `#fbf8f1` + midnight ink, not navy wells. Dark mode was painting Form 1–3 (and verification) as `gray-800` / white type. Surfaces, inputs, and step tabs now use the paper tokens; `color-scheme: light` keeps native date/select controls from going navy.
+
+---
+
+## **Resume packet pulls career-card name + branded QRs** (2026-08-19)
+
+The live resume selected `user_profiles.address`, a column that does not exist. PostgREST fails the whole identity query, so the packet fell back to "Your name" while the career card (which never asked for `address`) showed the real name. Same bad select lived on `GET /api/driver/profile`. Empty DOT arrays also wiped richer `block_*` employment / education / endorsements. QRs now use midnight modules, error-correction H, and the Hot Embers Provven mark in the center (Blue Star presentation).
+
+---
+
+## **Career card drops extra Build buttons** (2026-08-19)
+
+Build lives in the nav toggle and the Up next prompt only. The top-left and footer Build buttons are gone. Toolbar is Refresh (left) · Resume (center) · Share (right). Resume uses the Provven mark + midnight/cream — no ping, no generic check. Ready is midnight with cream type; draft/empty is cream paper with the embers shield.
+
+---
+
 ## **Logout no longer throws a hub fetch overlay** (2026-08-19)
 
 Signing out left a visibility refresh in flight. `/api/employer/hub` returned 401, `fetchHubData` threw, and Next's overlay treated it as a crash on the landing page. 401 is now a quiet return.

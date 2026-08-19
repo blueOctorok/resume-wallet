@@ -196,7 +196,7 @@ export default function ResumePreviewModal({
             </button>
           </div>
           
-          {/* Action buttons — packet mode: Download PDF / Share card / Continue DOT */}
+          {/* Action buttons — packet mode: Download PDF / Share card */}
           {packet ? (
             <div className="flex flex-wrap items-center gap-2">
               {onDownloadProp ? (

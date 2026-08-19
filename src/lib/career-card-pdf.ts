@@ -2,9 +2,9 @@
  * Career Card as PDF — visual “card” page + plain-text ATS page.
  * Used when candidates export for Indeed / ATS uploads.
  */
-import QRCode from 'qrcode'
 import { jsPDF } from 'jspdf'
 import type { ProjectedCareerCard } from '@/types/career-card'
+import { qrDataUrlWithProvvenMark } from '@/lib/provven-qr'
 
 const TEAL: [number, number, number] = [184,144,77]
 const SLATE: [number, number, number] = [15, 23, 42]
@@ -20,7 +20,7 @@ export async function buildCareerCardPdfBuffer(
   const margin = 14
   let y = margin
 
-  const qrDataUrl = await QRCode.toDataURL(publicCardUrl, { margin: 1, width: 160, color: { dark: '#9c7740', light: '#ffffff' } })
+  const qrDataUrl = await qrDataUrlWithProvvenMark(publicCardUrl, 320)
 
   // ── Page 1: branded card summary ───────────────────────────────────────
   pdf.setFillColor(...SLATE)

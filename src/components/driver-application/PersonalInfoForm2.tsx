@@ -1,6 +1,11 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import {
+  isDotFormDark as isDarkTheme,
+  DOT_PAPER_CARD,
+  DOT_PAPER_INPUT,
+  DOT_PAPER_LOCKED,
+} from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import SaveProgressButton from './SaveProgressButton'
@@ -92,9 +97,7 @@ export default function PersonalInfoForm2({
   const form1LicenseState = useDotApplicationStore((s) =>
     normalizeState(String(s.form1Data?.currentLicenses?.[0]?.state ?? '')),
   )
-  const lockedInputClass = isDarkTheme(theme)
-    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
-    : 'bg-gray-100 cursor-not-allowed'
+  const lockedInputClass = DOT_PAPER_LOCKED
   const isIssuerRow = (row: { _source?: string } | undefined) =>
     row?._source === 'mvr' || row?._source === 'psp'
   const issuerKindLabel = (row: { _source?: string } | undefined) =>
@@ -1158,11 +1161,7 @@ export default function PersonalInfoForm2({
     })
   }
 
-  const inputClass = `w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-    isDarkTheme(theme)
-      ? 'bg-gray-700/50 border-gray-600 text-white'
-      : 'bg-white border-gray-200 text-gray-900'
-  }`
+  const inputClass = `w-full px-4 py-3 ${DOT_PAPER_INPUT}`
 
   const renderSafetyCompliance = () => (
     <div className='space-y-10'>
@@ -1621,10 +1620,7 @@ export default function PersonalInfoForm2({
     </div>
   )
 
-  const cardClass =
-    isDarkTheme(theme)
-      ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
-      : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
+  const cardClass = DOT_PAPER_CARD
 
   return (
     <div className={`max-w-4xl mx-auto relative z-10 ${cardClass}`}>

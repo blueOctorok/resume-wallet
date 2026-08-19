@@ -438,28 +438,20 @@ export default function CareerCardModal({
               <CheckCircle className="w-3 h-3" /> Driver-ordered MVR
             </span>
           ) : (
-          <button
-            onClick={() => { setAccioOrderProduct('mvr'); setShowAccioOrderModal(true) }}
+          <Button
+            type="button"
+            variant={mvrEmployerOrderDone ? 'secondary' : 'primary'}
+            size="sm"
             disabled={!consentReady || mvrEmployerOrderDone}
             title={consentReady ? 'Order MVR' : waitTitle}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              mvrEmployerOrderDone
-                ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
-                : consentReady
-                  ? isDarkTheme(theme)
-                    ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
-                    : 'bg-[#173150] text-white hover:bg-[#1c3d62] cursor-pointer'
-                  : isDarkTheme(theme)
-                    ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
+            onClick={() => { setAccioOrderProduct('mvr'); setShowAccioOrderModal(true) }}
           >
             {mvrEmployerOrderDone ? (
-              <><CheckCircle className="w-3 h-3" /> Ordered</>
+              <><CheckCircle className="h-3.5 w-3.5" /> Ordered</>
             ) : (
-              <><CreditCard className="w-3 h-3" /> Order MVR</>
+              <><CreditCard className="h-3.5 w-3.5" /> Order</>
             )}
-          </button>
+          </Button>
           )}
         </div>
       )
@@ -489,28 +481,20 @@ export default function CareerCardModal({
               <CheckCircle className="w-3 h-3" /> Driver-ordered PSP
             </span>
           ) : (
-          <button
-            onClick={() => { setAccioOrderProduct('psp'); setShowAccioOrderModal(true) }}
+          <Button
+            type="button"
+            variant={pspEmployerOrderDone ? 'secondary' : 'primary'}
+            size="sm"
             disabled={!consentReady || pspEmployerOrderDone}
             title={consentReady ? 'Order PSP' : waitTitle}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              pspEmployerOrderDone
-                ? isDarkTheme(theme) ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
-                : consentReady
-                  ? isDarkTheme(theme)
-                    ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 cursor-pointer'
-                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 cursor-pointer'
-                  : isDarkTheme(theme)
-                    ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
+            onClick={() => { setAccioOrderProduct('psp'); setShowAccioOrderModal(true) }}
           >
             {pspEmployerOrderDone ? (
-              <><CheckCircle className="w-3 h-3" /> Ordered</>
+              <><CheckCircle className="h-3.5 w-3.5" /> Ordered</>
             ) : (
-              <><CreditCard className="w-3 h-3" /> Order PSP</>
+              <><CreditCard className="h-3.5 w-3.5" /> Order</>
             )}
-          </button>
+          </Button>
           )}
         </div>
       )
@@ -1151,15 +1135,9 @@ function ActionButton({
   }
 
   return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-[#173150] text-white hover:bg-[#1c3d62]'
-      }`}
-    >
-      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+    <Button type="button" variant="secondary" size="sm" isLoading={loading} onClick={onClick}>
+      <Send className="h-3.5 w-3.5" aria-hidden />
       {label}
-    </button>
+    </Button>
   )
 }

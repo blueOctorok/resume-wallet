@@ -146,7 +146,7 @@ export async function buildProjectedCareerCard(
   const [userProfile, onboarding] = await Promise.all([
     supabase
       .from('user_profiles')
-      .select('first_name, last_name, avatar_url, headline, email, phone, city, state, professional_summary')
+      .select('first_name, last_name, display_name, avatar_url, headline, email, phone, city, state, professional_summary')
       .eq('user_id', userId)
       .maybeSingle()
       .then((r) => r.data),
@@ -158,7 +158,10 @@ export async function buildProjectedCareerCard(
       .then((r) => r.data),
   ])
 
-  const upName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ')
+  const upName =
+    [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() ||
+    userProfile?.display_name?.trim() ||
+    ''
   const userName = upName || 'Candidate'
   const avatarUrl = userProfile?.avatar_url ?? null
 

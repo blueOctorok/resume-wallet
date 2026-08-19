@@ -183,7 +183,9 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default', pap
             : 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
           : block
             ? 'border-stone-200 bg-white backdrop-blur-sm'
-            : 'border-stone-200/90 bg-white/95 backdrop-blur-sm',
+            : paper
+              ? 'border-ironside/20 bg-[#fbf8f1]/95 backdrop-blur-sm'
+              : 'border-stone-200/90 bg-white/95 backdrop-blur-sm',
       )}
     >
       {!block ? (

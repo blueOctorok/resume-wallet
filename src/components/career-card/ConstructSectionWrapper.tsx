@@ -7,7 +7,8 @@
  */
 
 import { useState, useCallback } from 'react'
-import { Eye, Loader2, Pencil, ShieldCheck, X } from 'lucide-react'
+import { Eye, Loader2, Pencil, X } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
@@ -243,35 +244,39 @@ export default function ConstructSectionWrapper({
                 doc.editPage &&
                 doc.status !== 'complete' &&
                 !doc.employerPaidScreening && (
-                  <button
+                  <Button
                     type='button'
+                    variant='primary'
+                    size='sm'
                     onClick={() => setCurrentPage((doc.editPage as PageType) ?? 'mvr')}
-                    className={cn(btn, tealBtn)}
                   >
-                    {doc.pendingEmployerRequest ? 'Continue screening' : doc.status === 'empty' ? 'Order MVR' : 'Open'}
-                  </button>
+                    {doc.pendingEmployerRequest ? 'Continue screening' : doc.status === 'empty' ? 'Order' : 'Open'}
+                  </Button>
                 )}
               {doc?.type === 'mvr' && doc.status === 'complete' && !doc.employerPaidScreening && (
-                <button type='button' onClick={() => hub.setMvrViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
-                  <Eye className='w-3 h-3' /> View
-                </button>
+                <Button type='button' variant='secondary' size='sm' onClick={() => hub.setMvrViewOrderId(doc.id)}>
+                  <Eye className='h-3.5 w-3.5' aria-hidden />
+                  View
+                </Button>
               )}
               {doc?.type === 'psp' &&
                 doc.editPage &&
                 doc.status !== 'complete' &&
                 !doc.employerPaidScreening && (
-                  <button
+                  <Button
                     type='button'
+                    variant='primary'
+                    size='sm'
                     onClick={() => setCurrentPage((doc.editPage as PageType) ?? 'psp')}
-                    className={cn(btn, tealBtn)}
                   >
-                    {doc.pendingEmployerRequest ? 'Continue' : doc.status === 'empty' ? 'Order PSP' : 'Open'}
-                  </button>
+                    {doc.pendingEmployerRequest ? 'Continue screening' : doc.status === 'empty' ? 'Order' : 'Open'}
+                  </Button>
                 )}
               {doc?.type === 'psp' && doc.status === 'complete' && !doc.employerPaidScreening && (
-                <button type='button' onClick={() => hub.setPspViewOrderId(doc.id)} className={cn(btn, ghostBtn)}>
-                  <Eye className='w-3 h-3' /> View
-                </button>
+                <Button type='button' variant='secondary' size='sm' onClick={() => hub.setPspViewOrderId(doc.id)}>
+                  <Eye className='h-3.5 w-3.5' aria-hidden />
+                  View
+                </Button>
               )}
               {doc?.type === 'screening_consent' && doc.editPage && doc.status !== 'complete' && (
                 <button type='button' onClick={() => setCurrentPage(doc.editPage)} className={cn(btn, tealBtn)}>
@@ -293,7 +298,7 @@ export default function ConstructSectionWrapper({
                   {hub.verifying === doc.id ? (
                     <Loader2 className='w-3 h-3 animate-spin' />
                   ) : (
-                    <ShieldCheck className='w-3 h-3' />
+                    <ProvvenMark className='text-sm' />
                   )}
                   Verify
                 </button>

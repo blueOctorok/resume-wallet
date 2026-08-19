@@ -1,6 +1,6 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
 import React, { useState } from 'react'
 import { DriverApplicationData } from './types/driver-application.types'
 import {

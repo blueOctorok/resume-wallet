@@ -1,6 +1,6 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
 import React, { useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 

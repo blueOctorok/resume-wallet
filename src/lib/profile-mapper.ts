@@ -385,7 +385,8 @@ export function dotApplicationToProfile(data: DriverApplicationData): Partial<Un
  * Rules:
  * - Non-empty new values overwrite existing
  * - Empty new values don't overwrite existing (preserves data)
- * - Arrays are replaced entirely (not merged item by item)
+ * - Arrays replace only when the incoming list has items (empty DOT stubs
+ *   must not wipe richer block_* employment / education / endorsements)
  * - Nested objects are recursively merged
  */
 export function mergeIntoProfile(
@@ -403,9 +404,10 @@ export function mergeIntoProfile(
         (merged as Record<string, unknown>)[key] = value
       }
     }
-    // For arrays, always replace (we assume the source form has the complete list)
     else if (Array.isArray(value)) {
-      (merged as Record<string, unknown>)[key] = value
+      if (value.length > 0) {
+        (merged as Record<string, unknown>)[key] = value
+      }
     }
     // For objects, do a shallow merge
     else if (typeof value === 'object' && value !== null) {

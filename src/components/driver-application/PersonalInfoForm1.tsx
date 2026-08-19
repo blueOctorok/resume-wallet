@@ -1,6 +1,13 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import {
+  isDotFormDark as isDarkTheme,
+  DOT_PAPER_CARD,
+  DOT_PAPER_INPUT,
+  DOT_PAPER_LABEL,
+  DOT_PAPER_LOCKED,
+  DOT_PAPER_SECTION,
+} from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
@@ -90,9 +97,7 @@ export default function PersonalInfoForm1({
   const lockedPaths = getLockedPaths(fieldProvenance)
   const isLocked = (path: DotFieldPath) => lockedPaths.has(path)
   const lockEntry = (path: DotFieldPath) => fieldProvenance?.fields?.[path] ?? null
-  const lockedInputClass = isDarkTheme(theme)
-    ? 'bg-gray-800/80 cursor-not-allowed opacity-90'
-    : 'bg-gray-100 cursor-not-allowed'
+  const lockedInputClass = DOT_PAPER_LOCKED
   const [formData, setFormData] = useState({
     // Applicant Information
     firstName: '',
@@ -1992,20 +1997,10 @@ export default function PersonalInfoForm1({
     </div>
   )
 
-  const cardClass =
-    isDarkTheme(theme)
-      ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
-      : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
-  const sectionClass =
-    isDarkTheme(theme)
-      ? 'rounded-xl border border-gray-700/50 bg-gray-700/30 p-6'
-      : 'rounded-xl border border-gray-200 bg-gray-50/80 p-6'
-  const labelClass =
-    isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-  const inputBaseClass =
-    isDarkTheme(theme)
-      ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
-      : 'bg-white border-gray-200 text-gray-900 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
+  const cardClass = DOT_PAPER_CARD
+  const sectionClass = DOT_PAPER_SECTION
+  const labelClass = DOT_PAPER_LABEL
+  const inputBaseClass = DOT_PAPER_INPUT
 
   return (
     <div className={`max-w-4xl mx-auto relative z-10 ${cardClass}`}>

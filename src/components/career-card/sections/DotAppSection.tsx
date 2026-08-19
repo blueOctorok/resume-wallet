@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, ClipboardList, Clock, Upload } from 'lucide-react'
+import { ClipboardList, Clock, Upload } from 'lucide-react'
+import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
@@ -34,9 +35,8 @@ export default function DotAppSection({
   const isComplete = data.isComplete
   const [showPreview, setShowPreview] = useState(false)
 
-  const StatusIcon = isComplete ? CheckCircle : Clock
   const statusLabel = isComplete ? 'Complete' : isEmpty ? 'Not started' : 'In Progress'
-  const statusColor = isComplete ? 'text-green-500' : isEmpty ? 'text-teal-500' : 'text-yellow-500'
+  const statusColor = isEmpty ? 'text-teal-500' : 'text-yellow-500'
 
   const canPreview = Boolean(isComplete && userId && sessionUserId)
   const openPreview = () => setShowPreview(true)
@@ -106,7 +106,11 @@ export default function DotAppSection({
     <>
       <div className={cn('rounded-xl p-3.5 sm:p-4', isDark ? 'bg-gray-800/40' : 'bg-slate-50/80')}>
         <div className='flex items-start gap-3'>
-          <StatusIcon className={cn('mt-0.5 h-5 w-5 shrink-0', statusColor)} />
+          {isComplete ? (
+            <ProvvenMark className='mt-0.5 shrink-0 text-xl' />
+          ) : (
+            <Clock className={cn('mt-0.5 h-5 w-5 shrink-0', statusColor)} />
+          )}
           <div className='min-w-0 flex-1'>
             <div className='flex flex-wrap items-center justify-between gap-2'>
               <div>
@@ -123,32 +127,19 @@ export default function DotAppSection({
               {showAction && (
                 <div className='flex shrink-0 flex-wrap items-center gap-1.5'>
                   {!isComplete && isCareerCardOwnerMode(mode) && onAction ? (
-                    <button
-                      type='button'
-                      onClick={openPrefillUpload}
-                      className={cn(
-                        'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1',
-                        isDark
-                          ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50',
-                      )}
-                    >
-                      <Upload className='h-3 w-3' aria-hidden />
+                    <Button type='button' variant='secondary' size='sm' onClick={openPrefillUpload}>
+                      <Upload className='h-3.5 w-3.5' aria-hidden />
                       Upload resume
-                    </button>
+                    </Button>
                   ) : null}
-                  <button
+                  <Button
                     type='button'
+                    variant={isComplete ? 'secondary' : 'primary'}
+                    size='sm'
                     onClick={handleAction}
-                    className={cn(
-                      'text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
-                      isDark
-                        ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30'
-                        : 'bg-teal-50 text-teal-700 hover:bg-teal-100',
-                    )}
                   >
                     {isComplete ? 'View' : 'Continue'}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

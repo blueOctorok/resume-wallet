@@ -1,7 +1,7 @@
 'use client'
 
 import { ShieldCheck } from 'lucide-react'
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
 import { useTheme } from '@/contexts/ThemeContext'
 import type { DotFieldProvenanceEntry } from '@/lib/dot-field-provenance'
 import {

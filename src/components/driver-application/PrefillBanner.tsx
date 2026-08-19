@@ -1,6 +1,6 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
+import { isDotFormDark as isDarkTheme } from '@/lib/dot-form-paper'
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { FileText, Car, Sparkles, Loader2, CheckCircle2 } from 'lucide-react'
