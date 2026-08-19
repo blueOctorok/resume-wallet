@@ -59,15 +59,13 @@ export async function GET(
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    const { data: careerRow, error: cardError } = await supabase
+    // Invite-only / DQ-engaged drivers may not have a materialized career_cards
+    // row yet. The projected card is built from profile + hub blocks either way.
+    const { data: careerRow } = await supabase
       .from('career_cards')
       .select('*')
       .eq('user_id', userId)
-      .single()
-
-    if (cardError || !careerRow) {
-      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
-    }
+      .maybeSingle()
 
     const { data: candidate } = await supabase
       .from('users')
@@ -218,12 +216,12 @@ export async function GET(
       .maybeSingle()
 
     const completionFlags = {
-      hasResume: Boolean(careerRow.has_resume),
-      hasMvr: Boolean(careerRow.has_mvr),
-      hasPsp: Boolean((careerRow as Record<string, unknown>).has_psp),
-      hasDriverApp: Boolean(careerRow.has_driver_app),
-      hasProfile: Boolean(careerRow.has_profile),
-      hasWorkHistory: Boolean(careerRow.has_work_history),
+      hasResume: Boolean(careerRow?.has_resume),
+      hasMvr: Boolean(careerRow?.has_mvr),
+      hasPsp: Boolean((careerRow as Record<string, unknown> | null)?.has_psp),
+      hasDriverApp: Boolean(careerRow?.has_driver_app),
+      hasProfile: Boolean(careerRow?.has_profile),
+      hasWorkHistory: Boolean(careerRow?.has_work_history),
       hasScreeningConsentBundle: Boolean(latestScreeningBundle),
     }
 
@@ -300,9 +298,9 @@ export async function GET(
       completionFlags,
       dqFile,
       verifiedFacts,
-      completenessScore: careerRow.completeness_score ?? 0,
-      verifiedJobsCount: careerRow.verified_jobs_count ?? 0,
-      workHistoryCount: careerRow.work_history_count ?? 0,
+      completenessScore: careerRow?.completeness_score ?? 0,
+      verifiedJobsCount: careerRow?.verified_jobs_count ?? 0,
+      workHistoryCount: careerRow?.work_history_count ?? 0,
     })
   } catch (error) {
     console.error('[EMPLOYER TALENT] Unexpected error:', error)

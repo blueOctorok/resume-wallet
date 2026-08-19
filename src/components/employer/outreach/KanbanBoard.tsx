@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
   OUTREACH_KANBAN_COLUMNS,
@@ -15,23 +14,11 @@ import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import KanbanCard from './KanbanCard'
 import OutreachCandidateCard from './OutreachCandidateCard'
 
-const COLUMN_ACCENTS: Record<OutreachKanbanColumn, { bar: string; title: string }> = {
-  pending: {
-    bar: 'bg-amber-400',
-    title: 'text-amber-800 dark:text-amber-200',
-  },
-  viewed: {
-    bar: 'bg-blue-400',
-    title: 'text-blue-800 dark:text-blue-200',
-  },
-  in_progress: {
-    bar: 'bg-purple-400',
-    title: 'text-purple-800 dark:text-purple-200',
-  },
-  completed: {
-    bar: 'bg-emerald-500 dark:bg-emerald-400',
-    title: 'text-emerald-800 dark:text-emerald-200',
-  },
+const COLUMN_DOTS: Record<OutreachKanbanColumn, string> = {
+  pending: 'bg-amber-400',
+  viewed: 'bg-sky-400',
+  in_progress: 'bg-slate-400',
+  completed: 'bg-emerald-500',
 }
 
 export interface KanbanBoardProps {
@@ -107,7 +94,6 @@ export default function KanbanBoard({
   statusOverrideSavingId,
   onRefreshScreenings,
 }: KanbanBoardProps) {
-  const isDark = isDarkTheme(theme)
   const [activeInviteId, setActiveInviteId] = useState<string | null>(null)
 
   const activeInvite = useMemo(
@@ -142,78 +128,58 @@ export default function KanbanBoard({
     return m
   }, [invites, screeningsByUserId])
 
+  // Empty columns (usually In progress) give their width to columns that
+  // actually have people. The grid is always 100% of the panel — never a
+  // horizontal strip of fixed-width wells.
+  const visibleColumns = OUTREACH_KANBAN_COLUMNS.filter(
+    (status) => (byColumn.get(status)?.length ?? 0) > 0,
+  )
+  const colCount = visibleColumns.length
+  const gridCols =
+    colCount <= 1
+      ? 'grid-cols-1'
+      : colCount === 2
+        ? 'grid-cols-1 sm:grid-cols-2'
+        : colCount === 3
+          ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'
+
   return (
     <>
-      <div
-        className={cn(
-          'mt-4 flex gap-3 overflow-x-auto pb-3',
-          '[scrollbar-width:thin] [-ms-overflow-style:none] [&::-webkit-scrollbar]:h-1.5',
-        )}
-      >
-        {OUTREACH_KANBAN_COLUMNS.map((status) => {
+      <div className={cn('mt-4 grid min-w-0 gap-4 overflow-x-hidden', gridCols)}>
+        {visibleColumns.map((status) => {
           const columnInvites = byColumn.get(status) ?? []
-          const accent = COLUMN_ACCENTS[status]
           return (
-            <div
-              key={status}
-              className={cn(
-                'flex w-[min(100%,18rem)] shrink-0 flex-col rounded-xl border',
-                isDark
-                  ? 'border-gray-700/80 bg-gray-900/25'
-                  : 'border-gray-200 bg-gray-50/80',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex shrink-0 items-center gap-2 border-b px-3 py-2',
-                  isDark ? 'border-gray-700/70' : 'border-gray-200',
-                )}
-              >
-                <span className={cn('h-2 w-2 shrink-0 rounded-full', accent.bar)} aria-hidden />
-                <h3 className={cn('min-w-0 flex-1 text-xs font-semibold', accent.title)}>
+            <div key={status} className="flex min-w-0 flex-col">
+              <div className="flex shrink-0 items-center gap-2 border-b border-stone-200 pb-2">
+                <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', COLUMN_DOTS[status])} aria-hidden />
+                <h3 className="min-w-0 flex-1 truncate text-xs font-semibold text-[#173150]">
                   {OUTREACH_KANBAN_LABEL[status]}
                 </h3>
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
-                    isDark ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-600',
-                  )}
-                >
+                <span className="shrink-0 text-[11px] tabular-nums text-ironside">
                   {columnInvites.length}
                 </span>
               </div>
 
-              {/* Per-column scroll so the page does not grow with many cards */}
-              <div className="flex max-h-[min(55vh,26rem)] min-h-[6rem] flex-col gap-1.5 overflow-y-auto p-2 [scrollbar-width:thin]">
-                {columnInvites.length === 0 ? (
-                  <p
-                    className={cn(
-                      'rounded-lg border border-dashed px-2 py-5 text-center text-[11px]',
-                      isDark ? 'border-gray-700/60 text-gray-500' : 'border-gray-200 text-gray-500',
-                    )}
-                  >
-                    No candidates
-                  </p>
-                ) : (
-                  columnInvites.map((invite) => (
-                    <KanbanCard
-                      key={invite.id}
-                      invite={invite}
-                      files={
-                        invite.usedByUserId
-                          ? screeningsByUserId?.get(invite.usedByUserId) ?? []
-                          : []
-                      }
-                      consentBundle={
-                        invite.usedByUserId
-                          ? consentBundleByUserId?.get(invite.usedByUserId)
-                          : undefined
-                      }
-                      theme={theme}
-                      onClick={(inv) => setActiveInviteId(inv.id)}
-                    />
-                  ))
-                )}
+              <div className="scrollbar-none flex max-h-[min(55vh,28rem)] flex-col gap-1.5 overflow-y-auto overflow-x-hidden pt-2">
+                {columnInvites.map((invite) => (
+                  <KanbanCard
+                    key={invite.id}
+                    invite={invite}
+                    files={
+                      invite.usedByUserId
+                        ? screeningsByUserId?.get(invite.usedByUserId) ?? []
+                        : []
+                    }
+                    consentBundle={
+                      invite.usedByUserId
+                        ? consentBundleByUserId?.get(invite.usedByUserId)
+                        : undefined
+                    }
+                    theme={theme}
+                    onClick={(inv) => setActiveInviteId(inv.id)}
+                  />
+                ))}
               </div>
             </div>
           )

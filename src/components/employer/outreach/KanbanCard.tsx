@@ -1,11 +1,9 @@
 'use client'
 
-import { AlertTriangle, Car, FileWarning, StickyNote, Package, Users, ShieldCheck, FileCheck } from 'lucide-react'
+import { AlertTriangle, Car, FileWarning, StickyNote, ShieldCheck, FileCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import Avatar from '@/components/ui/Avatar'
 import { employerScreeningReportReady } from '@/lib/hub-document-types'
-import { getBlockDefinition } from '@/lib/block-registry'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { Invite, ScreeningRow } from './types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
@@ -33,12 +31,7 @@ interface KanbanCardProps {
  * Compact tile for status-based kanban. Column = `invite.status` (set by the
  * candidate flow), so the card has no column picker — open the modal for actions.
  */
-export default function KanbanCard({ invite, files, consentBundle, theme, onClick }: KanbanCardProps) {
-  const isDark = isDarkTheme(theme)
-
-  const blockDef = invite.targetBlockType ? getBlockDefinition(invite.targetBlockType) : null
-  const blockLabel = blockDef?.label ?? (invite.targetBlockType ? invite.targetBlockType : 'General')
-
+export default function KanbanCard({ invite, files, consentBundle, onClick }: KanbanCardProps) {
   const reportReadyFiles = files.filter((f) => employerScreeningReportReady(f.status))
   const needsReviewFiles = files.filter(
     (f) => String(f.status ?? '').toLowerCase() === 'needs_review',
@@ -70,21 +63,12 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
       type="button"
       onClick={() => onClick(invite)}
       title={attention ? attention.label : undefined}
-      className={cn(
-        'group relative w-full rounded-lg border text-left transition-colors',
-        attention
-          ? isDark
-            ? 'border-red-500/50 bg-red-950/30 hover:border-red-500 hover:bg-red-950/40'
-            : 'border-red-300 bg-red-50 hover:border-red-400 hover:bg-red-100/60'
-          : isDark
-            ? 'border-gray-700/80 bg-gray-900/50 hover:border-gray-600 hover:bg-gray-900/70'
-            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700/80 dark:bg-gray-900/40 dark:hover:border-gray-600',
-      )}
+      className="group relative min-w-0 w-full rounded-lg border border-stone-200 bg-white text-left transition-colors hover:border-ironside/50 hover:bg-stone-50"
     >
       {attention && (
         <span
           aria-label={attention.label}
-          className="pointer-events-none absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 items-center justify-center rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900"
+          className="pointer-events-none absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#c43d14] ring-2 ring-white"
         />
       )}
       <div className="flex min-w-0 items-center gap-2 px-2.5 pt-2.5">
@@ -94,35 +78,25 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
           size="xs"
         />
         <div className="min-w-0 flex-1 overflow-hidden">
-          <p
-            className={cn(
-              'truncate text-xs font-semibold leading-tight',
-              isDark ? 'text-gray-100' : 'text-gray-900',
-            )}
-          >
+          <p className="truncate text-xs font-semibold leading-tight text-[#173150]">
             {invite.candidateName || invite.candidateEmail || (
-              <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>Anonymous</span>
+              <span className="text-ironside">Anonymous</span>
             )}
           </p>
           {invite.candidateName && invite.candidateEmail && (
-            <p className={cn('truncate text-[10px] leading-tight', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            <p className="truncate text-[10px] leading-tight text-ironside">
               {invite.candidateEmail}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 px-2.5 pb-2.5 pt-1 text-[10px]">
-        <span className={cn('inline-flex shrink-0 items-center gap-0.5', isDark ? 'text-gray-500' : 'text-gray-500')}>
-          {invite.targetBlockType ? <Package className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
-          {blockLabel}
-        </span>
-        <span className={cn('shrink-0', isDark ? 'text-gray-600' : 'text-gray-400')}>·</span>
-        <span className={cn('shrink-0', isDark ? 'text-gray-500' : 'text-gray-500')}>{timeAgo(invite.createdAt)}</span>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 px-2.5 pb-2 pt-1 text-[10px] text-ironside">
+        <span className="shrink-0">{timeAgo(invite.createdAt)}</span>
 
         {needsReviewFiles.length > 0 && (
           <span
-            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 dark:text-amber-200"
+            className="inline-flex shrink-0 items-center gap-0.5 text-[#8a6d3b]"
             title="Report ready — review recommended"
           >
             <FileWarning className="h-2.5 w-2.5" />
@@ -130,13 +104,13 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
           </span>
         )}
         {completedCount > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-emerald-700">
             <ShieldCheck className="h-2.5 w-2.5" />
             {completedCount}
           </span>
         )}
         {pendingCount > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+          <span className="inline-flex shrink-0 items-center gap-0.5">
             {pendingFiles.length > 0 ? (
               pendingFiles[0].kind === 'mvr' ? (
                 <Car className="h-2.5 w-2.5" />
@@ -152,13 +126,13 @@ export default function KanbanCard({ invite, files, consentBundle, theme, onClic
 
         {hasNotes && (
           <span title="Has notes" className="shrink-0">
-            <StickyNote className="h-2.5 w-2.5 text-amber-500 dark:text-amber-400" aria-hidden />
+            <StickyNote className="h-2.5 w-2.5" aria-hidden />
           </span>
         )}
 
         {isExpiringSoon && (
-          <span className="shrink-0">
-            <AlertTriangle className="h-2.5 w-2.5 text-amber-500 dark:text-amber-400" aria-hidden />
+          <span className="shrink-0" title="Expiring soon">
+            <AlertTriangle className="h-2.5 w-2.5 text-[#8a6d3b]" />
           </span>
         )}
       </div>

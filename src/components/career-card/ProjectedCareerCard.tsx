@@ -352,7 +352,7 @@ export default function ProjectedCareerCard({
               <p
                 className={cn(
                   'text-[10px] font-semibold uppercase tracking-[0.2em] mb-0.5',
-                  isDark ? 'text-teal-300/85' : 'text-teal-800/75',
+                  isDark ? 'text-teal-300/85' : 'text-ironside',
                 )}
               >
                 Career card
@@ -371,7 +371,7 @@ export default function ProjectedCareerCard({
                   <h1
                     className={cn(
                       'font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
-                      isDark ? 'text-white' : 'text-gray-900',
+                      isDark ? 'text-white' : 'text-[#173150]',
                     )}
                   >
                     {data.name}
@@ -388,14 +388,14 @@ export default function ProjectedCareerCard({
                 <h1
                   className={cn(
                     'font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
-                    isDark ? 'text-white' : 'text-gray-900',
+                    isDark ? 'text-white' : 'text-[#173150]',
                   )}
                 >
                   {data.name}
                 </h1>
               )}
               {data.occupation && (
-                <p className={cn('text-sm font-medium mt-0.5', isDark ? 'text-teal-300' : 'text-teal-700')}>
+                <p className={cn('text-sm font-medium mt-0.5', isDark ? 'text-teal-300' : 'text-ironside')}>
                   {data.occupation}
                 </p>
               )}

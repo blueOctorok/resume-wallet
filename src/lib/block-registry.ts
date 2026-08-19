@@ -306,10 +306,13 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'dotapp',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_driver_emergency', 'block_driver_experience', 'block_education', 'block_references'],
-    employerRequestable: true,
-    requestLabel: 'DOT Application',
-    completionField: 'hasDriverApp',
-    requiredEmployerBlocks: ['employer-dot-screening'],
+    // Not employer-requestable: the DOT app is a core block auto-installed on
+    // every driver hub — it's the driver's built-in first to-do, so employers
+    // never need to invite someone to fill it out.
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    requiredEmployerBlocks: null,
     /** Drivers-wedge spine — always installed, pinned first, not pickable/removable. */
     hiddenFromBlockPicker: true,
     coreBlock: true,
@@ -415,10 +418,11 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'portfolio',
     dataTables: ['block_dev_portfolio'],
-    employerRequestable: true,
-    requestLabel: 'Portfolio',
+    // Developer outreach retired — drivers are the only supported wedge.
+    employerRequestable: false,
+    requestLabel: null,
     completionField: null,
-    requiredEmployerBlocks: ['employer-portfolio-requests'],
+    requiredEmployerBlocks: null,
   },
   {
     id: 'developer-projects',

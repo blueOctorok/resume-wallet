@@ -12,6 +12,7 @@ import {
   Clock,
   RefreshCw,
   CreditCard,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
@@ -431,7 +432,7 @@ export default function CareerCardModal({
             <span
               title={driverOwnedTitle}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
-                isDarkTheme(theme) ? 'bg-teal-500/10 text-teal-300' : 'bg-teal-50 text-teal-800'
+                isDarkTheme(theme) ? 'bg-teal-500/10 text-teal-300' : 'bg-stone-100 text-[#173150]'
               }`}
             >
               <CheckCircle className="w-3 h-3" /> Driver-ordered MVR
@@ -447,7 +448,7 @@ export default function CareerCardModal({
                 : consentReady
                   ? isDarkTheme(theme)
                     ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
-                    : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
+                    : 'bg-[#173150] text-white hover:bg-[#1c3d62] cursor-pointer'
                   : isDarkTheme(theme)
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -581,28 +582,11 @@ export default function CareerCardModal({
   // ── Modal shell ───────────────────────────────────────────────────────────
 
   const modalContent = (
-    <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={9999}>
+    <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={9999} paper>
       {/* Custom header with avatar + refresh (not using ModalHeader because of Avatar) */}
-      <div
-        className={cn(
-          'sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 border-b',
-          'backdrop-blur-md border-gray-200/90 dark:border-gray-700/80',
-          isDarkTheme(theme)
-            ? 'bg-gray-950/85'
-            : 'bg-white/90',
-        )}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-teal-400/35 to-transparent dark:via-teal-400/25"
-        />
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-stone-200/90 bg-white/95 backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0 relative">
-          <div
-            className={cn(
-              'rounded-full ring-2 ring-offset-2 shrink-0',
-              isDarkTheme(theme) ? 'ring-teal-400/40 ring-offset-gray-950' : 'ring-teal-500/30 ring-offset-white',
-            )}
-          >
+          <div className="rounded-full ring-2 ring-offset-2 shrink-0 ring-[#173150]/15 ring-offset-white">
             <Avatar
               name={card?.name || '?'}
               avatarUrl={card?.avatarUrl}
@@ -611,20 +595,10 @@ export default function CareerCardModal({
             />
           </div>
           <div className="min-w-0">
-            <p
-              className={cn(
-                'text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5',
-                isDarkTheme(theme) ? 'text-teal-400/80' : 'text-teal-700/80',
-              )}
-            >
-              Talent · Career card
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5 text-ironside">
+              Career card
             </p>
-            <h3
-              className={cn(
-                'font-bold text-lg tracking-tight truncate',
-                isDarkTheme(theme) ? 'text-white' : 'text-gray-900',
-              )}
-            >
+            <h3 className="font-bold text-lg tracking-tight truncate text-[#173150]">
               {loading ? 'Loading…' : card?.name || 'Career card'}
             </h3>
           </div>
@@ -638,27 +612,30 @@ export default function CareerCardModal({
             disabled={isRefreshing}
             title="Refresh"
             aria-label="Refresh career card"
-            className="!p-2"
+            className="!p-2 text-ironside hover:text-[#173150]"
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </Button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="shrink-0 p-1.5 rounded-lg text-ironside hover:text-[#173150] hover:bg-stone-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {/* Body */}
-      <div
-        className={cn(
-          'p-4 sm:p-6',
-          isDarkTheme(theme) ? 'bg-gray-950/40' : 'bg-slate-50/40',
-        )}
-      >
+      {/* Body — cream paper, never follows the app Dark theme */}
+      <div className="p-4 sm:p-6 bg-[#faf8f4]">
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className={`w-10 h-10 animate-spin ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
+            <Loader2 className="w-10 h-10 animate-spin text-[#173150]" />
           </div>
         )}
         {error && (
-          <div className={`p-6 rounded-xl text-center ${isDarkTheme(theme) ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+          <div className="p-6 rounded-xl text-center bg-red-50 text-red-700">
             <AlertCircle className="w-10 h-10 mx-auto mb-2" />
             <p>{error}</p>
           </div>
@@ -666,25 +643,15 @@ export default function CareerCardModal({
         {!loading && !error && card && employerExtras && (
           <>
             {requestActionNodes.length > 0 && (
-              <div
-                className={cn(
-                  'mb-4 rounded-xl border px-3 py-2.5',
-                  isDarkTheme(theme) ? 'border-gray-700/80 bg-gray-900/40' : 'border-gray-200 bg-white/80',
-                )}
-              >
-                <p
-                  className={cn(
-                    'text-[10px] font-semibold uppercase tracking-wider mb-2',
-                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500',
-                  )}
-                >
+              <div className="mb-4 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-2 text-ironside">
                   Requests
                 </p>
                 <div className="flex flex-wrap items-center gap-2">{requestActionNodes}</div>
               </div>
             )}
             <div className="mb-4">
-              <CredentialFactsPanel facts={verifiedFacts} theme={theme} />
+              <CredentialFactsPanel facts={verifiedFacts} theme="light" />
             </div>
             <ProjectedCareerCard
               data={card}
@@ -714,11 +681,12 @@ export default function CareerCardModal({
   // ── Recruit sub-modal ─────────────────────────────────────────────────────
 
   const recruitModalContent = showRecruitModal ? (
-    <Modal onClose={() => setShowRecruitModal(false)} maxWidth="max-w-md" zIndex={10001}>
+    <Modal onClose={() => setShowRecruitModal(false)} maxWidth="max-w-md" zIndex={10001} paper>
       <ModalHeader
         title="Recruit Candidate"
         subtitle={`Select a job for ${card?.name || 'this candidate'}`}
         onClose={() => setShowRecruitModal(false)}
+        paper
       />
       <div className="p-6 space-y-4">
         <div>
@@ -1187,7 +1155,7 @@ function ActionButton({
       onClick={onClick}
       disabled={loading}
       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+        isDarkTheme(theme) ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-[#173150] text-white hover:bg-[#1c3d62]'
       }`}
     >
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}

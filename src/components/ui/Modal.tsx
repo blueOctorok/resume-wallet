@@ -31,6 +31,11 @@ interface ModalProps {
    * `block` — same shell as hub block-picker / category cards: rounded-xl border, muted fill, hidden scrollbar on overflow.
    */
   panelShape?: 'default' | 'block'
+  /**
+   * Force the paper (white / midnight) panel even when the app theme is dark.
+   * Used by employer-hub dialogs that sit on a paper surface.
+   */
+  paper?: boolean
   /** Merged onto the panel div (extra utilities beyond shape defaults). */
   panelClassName?: string
 }
@@ -60,10 +65,11 @@ export default function Modal({
   disableBackdropClose = false,
   disableEscapeClose = false,
   panelShape = 'default',
+  paper = false,
   panelClassName,
 }: ModalProps) {
   const { theme } = useTheme()
-  const isDarkMode = isDarkTheme(theme)
+  const isDarkMode = !paper && isDarkTheme(theme)
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -152,26 +158,32 @@ interface ModalHeaderProps {
   onClose: () => void
   /** Match `Modal` `panelShape="block"` — header edge aligns with category-card shell. */
   variant?: 'default' | 'block'
+  /**
+   * Force the paper (white / midnight) header even when the app theme is dark.
+   * Used by employer-hub dialogs that sit on a paper panel.
+   */
+  paper?: boolean
 }
 
 /**
  * Sticky header for use inside Modal.  Handles the close button and title.
  * Use this instead of rewriting the header pattern every time.
  */
-export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: ModalHeaderProps) {
+export function ModalHeader({ title, subtitle, onClose, variant = 'default', paper = false }: ModalHeaderProps) {
   const { theme } = useTheme()
   const block = variant === 'block'
+  const dark = !paper && isDarkTheme(theme)
   return (
     <div
       className={cn(
         'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 sm:p-5 border-b',
-        isDarkTheme(theme)
+        dark
           ? block
             ? 'border-gray-700 bg-gray-900/95 backdrop-blur-sm'
             : 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
           : block
-            ? 'border-gray-200 bg-white backdrop-blur-sm'
-            : 'border-gray-200/90 bg-white/95 backdrop-blur-sm',
+            ? 'border-stone-200 bg-white backdrop-blur-sm'
+            : 'border-stone-200/90 bg-white/95 backdrop-blur-sm',
       )}
     >
       {!block ? (
@@ -184,13 +196,13 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: M
         <h3
           className={cn(
             'text-base sm:text-lg font-semibold tracking-tight',
-            isDarkTheme(theme) ? 'text-white' : 'text-gray-900',
+            dark ? 'text-white' : 'text-[#173150]',
           )}
         >
           {title}
         </h3>
         {subtitle && (
-          <p className={cn('text-sm mt-1 leading-snug', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('text-sm mt-1 leading-snug', dark ? 'text-gray-400' : 'text-ironside')}>
             {subtitle}
           </p>
         )}
@@ -201,9 +213,9 @@ export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: M
         className={cn(
           'shrink-0 p-1.5 transition-colors',
           'rounded-lg',
-          isDarkTheme(theme)
+          dark
             ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
+            : 'text-ironside hover:text-[#173150] hover:bg-stone-100',
         )}
       >
         <X className="w-5 h-5" />

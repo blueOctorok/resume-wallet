@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react'
 import { Search, X, ArrowUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import Button from '@/components/ui/Button'
 
 export type SortKey = 'newest' | 'oldest' | 'name'
@@ -65,7 +64,6 @@ const SORT_OPTIONS: Array<{ id: SortKey; label: string }> = [
  * focuses the search box (think Linear / GitHub) so power users move fast.
  */
 export default function OutreachFilterBar({
-  theme,
   search,
   onSearchChange,
   enableKeyboardShortcut = true,
@@ -85,7 +83,6 @@ export default function OutreachFilterBar({
   hasActiveFilters,
   sticky = false,
 }: OutreachFilterBarProps) {
-  const isDark = isDarkTheme(theme)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // "/" focuses the search input — but only when no other input is focused.
@@ -104,32 +101,21 @@ export default function OutreachFilterBar({
     return () => window.removeEventListener('keydown', handleKey)
   }, [enableKeyboardShortcut])
 
-  const inputCls = cn(
-    'w-full rounded-lg border pl-9 pr-9 py-2 text-sm outline-none transition-colors focus:ring-2 focus:ring-teal-500/40',
-    isDark
-      ? 'border-gray-700 bg-gray-900/60 text-white placeholder-gray-500'
-      : 'border-gray-200 bg-white text-gray-900 placeholder-gray-400 dark:border-gray-700 dark:bg-gray-900/40 dark:text-white',
-  )
+  const inputCls =
+    'w-full rounded-lg border border-stone-200 bg-white pl-9 pr-9 py-2 text-sm text-[#173150] placeholder-ironside outline-none transition-colors focus:ring-2 focus:ring-teal-500/40'
 
   return (
     <div
       className={cn(
-        'flex flex-col gap-3',
-        sticky && 'sticky top-0 z-20 -mx-4 mb-4 border-b px-4 pb-3 pt-3 backdrop-blur-md sm:-mx-5 sm:px-5',
-        sticky &&
-          (isDark
-            ? 'border-gray-700/80 bg-gray-950/85'
-            : 'border-amber-100 bg-amber-50/85 dark:border-gray-700/80 dark:bg-gray-950/80'),
+        'flex flex-col gap-2.5',
+        sticky && 'sticky top-0 z-20 -mx-4 mb-3 border-b border-stone-200 bg-white/95 px-4 pb-3 pt-2 backdrop-blur-sm sm:-mx-5 sm:px-5',
       )}
     >
       {/* Search + sort row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1 min-w-0">
           <Search
-            className={cn(
-              'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2',
-              isDark ? 'text-gray-500' : 'text-gray-400',
-            )}
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside"
             aria-hidden
           />
           <input
@@ -145,10 +131,7 @@ export default function OutreachFilterBar({
               type="button"
               onClick={() => onSearchChange('')}
               aria-label="Clear search"
-              className={cn(
-                'absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 transition-colors',
-                isDark ? 'text-gray-500 hover:bg-gray-800 hover:text-gray-300' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700',
-              )}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-ironside transition-colors hover:bg-stone-100 hover:text-[#173150]"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -158,22 +141,14 @@ export default function OutreachFilterBar({
         <div className="flex items-center gap-2 shrink-0">
           <div className="relative">
             <ArrowUpDown
-              className={cn(
-                'pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2',
-                isDark ? 'text-gray-500' : 'text-gray-400',
-              )}
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ironside"
               aria-hidden
             />
             <select
               value={sort}
               onChange={(e) => onSortChange(e.target.value as SortKey)}
               aria-label="Sort"
-              className={cn(
-                'appearance-none rounded-lg border pl-7 pr-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-teal-500/40',
-                isDark
-                  ? 'border-gray-700 bg-gray-900/60 text-gray-200'
-                  : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-200',
-              )}
+              className="appearance-none rounded-lg border border-stone-200 bg-white py-2 pl-7 pr-3 text-xs font-medium text-[#173150] outline-none focus:ring-2 focus:ring-teal-500/40"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>
@@ -195,7 +170,7 @@ export default function OutreachFilterBar({
       {statusFilters.length > 0 && (
         <FilterRow
           label={statusFilterLabel}
-          theme={theme}
+          hideLabel={statusFilterLabel === 'Status'}
           chips={statusFilters}
           selected={selectedStatuses}
           onToggle={onToggleStatus}
@@ -204,46 +179,42 @@ export default function OutreachFilterBar({
       {blockFilters.length > 0 && (
         <FilterRow
           label={blockFilterLabel}
-          theme={theme}
           chips={blockFilters}
           selected={selectedBlocks}
           onToggle={onToggleBlock}
         />
       )}
 
-      {/* Result count — confirms filters narrowed the list, prevents "where did everyone go?" */}
-      <p className={cn('text-[11px]', isDark ? 'text-gray-500' : 'text-gray-500')}>
-        Showing <span className="font-semibold">{showingCount}</span> of{' '}
-        <span className="font-semibold">{totalCount}</span>
-      </p>
+      {hasActiveFilters && (
+        <p className="text-[11px] text-ironside">
+          Showing <span className="font-semibold text-[#173150]">{showingCount}</span> of{' '}
+          <span className="font-semibold text-[#173150]">{totalCount}</span>
+        </p>
+      )}
     </div>
   )
 }
 
 function FilterRow({
   label,
-  theme,
+  hideLabel = false,
   chips,
   selected,
   onToggle,
 }: {
   label: string
-  theme: string
+  hideLabel?: boolean
   chips: FilterChipDef[]
   selected?: Set<string>
   onToggle?: (id: string) => void
 }) {
-  const isDark = isDarkTheme(theme)
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span
-        className={cn(
-          'mr-1 text-[10px] font-semibold uppercase tracking-wide',
-          isDark ? 'text-gray-500' : 'text-gray-500',
-        )}
-      >
-        {label}
-      </span>
+      {!hideLabel && (
+        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-ironside">
+          {label}
+        </span>
+      )}
       {chips.map((chip) => {
         const active = selected?.has(chip.id) ?? false
         return (
@@ -254,28 +225,13 @@ function FilterRow({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
               active
-                ? isDark
-                  ? 'border-teal-500/60 bg-teal-500/20 text-teal-200'
-                  : 'border-teal-500 bg-teal-50 text-teal-800 dark:border-teal-500/60 dark:bg-teal-500/20 dark:text-teal-200'
-                : isDark
-                  ? 'border-gray-700 bg-gray-900/60 text-gray-300 hover:border-gray-600 hover:text-gray-100'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300 dark:hover:text-gray-100',
+                ? 'border-[#173150] bg-[#173150] text-white'
+                : 'border-stone-200 bg-white text-[#173150] hover:border-ironside',
             )}
           >
             {chip.dotClass && <span className={cn('h-1.5 w-1.5 rounded-full', chip.dotClass)} aria-hidden />}
             <span>{chip.label}</span>
-            <span
-              className={cn(
-                'rounded-full px-1.5 py-0.5 text-[10px]',
-                active
-                  ? isDark
-                    ? 'bg-teal-500/30 text-teal-100'
-                    : 'bg-teal-200 text-teal-900 dark:bg-teal-500/30 dark:text-teal-100'
-                  : isDark
-                    ? 'bg-gray-800 text-gray-400'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-              )}
-            >
+            <span className={cn('tabular-nums text-[10px]', active ? 'text-white/80' : 'text-ironside')}>
               {chip.count}
             </span>
           </button>

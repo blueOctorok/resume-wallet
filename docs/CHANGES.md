@@ -4,6 +4,136 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Logout no longer throws a hub fetch overlay** (2026-08-19)
+
+Signing out left a visibility refresh in flight. `/api/employer/hub` returned 401, `fetchHubData` threw, and Next's overlay treated it as a crash on the landing page. 401 is now a quiet return.
+
+---
+
+## **Paper panels + nav chrome apply on candidate too** (2026-08-19)
+
+The Dark-mode cream (`#fbf8f1` / 92%) now lives on the shared paper vault face, so the candidate career card and Build board match the nav the same way outreach + DQ do. The Career Card / Build toggle uses white type on the embers fill (same as Light/Dark). Employer one-off cream overrides were removed.
+
+---
+
+## **Outreach + DQ match nav cream** (2026-08-19)
+
+In Dark mode the inverted nav is `#fbf8f1` at 92% — a hair darker than white paper. Candidate outreach and the DQ monitor now use that same fill so they sit in the same hue as the bar.
+
+---
+
+## **Light toggle type is white on embers** (2026-08-19)
+
+In Light mode the inverted nav made the selected Light/Dark pill `text-[#173150]` on the Hot Embers fill. That type is now white.
+
+---
+
+## **Provven mark is always Hot Embers** (2026-08-19)
+
+The shield never flips to Midnight Blue. `ProvvenMark` always loads the `#f15a2b` SVG. Wordmark type can still invert with the nav; only the symbol stays embers.
+
+---
+
+## **Nav bar is inverted vs the page** (2026-08-19)
+
+The top bar now uses the opposite heritage fill of the page: cream (`#fbf8f1`) when the app is Dark, ink-navy (`#173150`) when the app is Light. Wordmark, controls, and dropdowns follow that inverted chrome so the bar reads as a counterweight, not a second copy of the page.
+
+---
+
+## **Employer hub hides ops sections** (2026-08-19)
+
+Activity snapshot, Job postings, and Hiring pipeline stay in `EmployerHub` but are gated behind `SHOW_HUB_OPS_SECTIONS = false`. Flip that flag to bring them back — nothing was deleted.
+
+---
+
+## **DQ person click opens the career card** (2026-08-19)
+
+Clicking a driver in the DQ monitor opened a thin identity + checklist modal that followed the app Dark theme (navy wells, remapped `teal-*` gold-on-gold). It now opens the same employer `CareerCardModal` as the applicant pipeline: projected career card, verified facts, request/order actions.
+
+The modal shell is paper (white / midnight / ironside) even when the app theme is Dark — `Modal` gained a `paper` flag for the panel fill, matching `ModalHeader`. Invite-only drivers without a `career_cards` row still load; the talent API builds the projection from profile + hub blocks.
+
+| Area | Files |
+|---|---|
+| DQ click → career card | `src/components/employer/dq/DqMonitorSection.tsx`, `EmployerHub.tsx` |
+| Paper modal + close | `src/components/employer/CareerCardModal.tsx`, `src/components/ui/Modal.tsx` |
+| Facts stay paper | `src/components/employer/CredentialFactsPanel.tsx` |
+| No career_cards 404 | `src/app/api/employer/talent/[userId]/route.ts` |
+
+---
+
+## **DQ monitor is paper** (2026-08-19)
+
+The driver list sat on a white card but still followed the app Dark theme — navy search field, slate chips, `dark:` badge wash. Same treatment as outreach: midnight names, ironside captions, white search, midnight-invert chips, paper status badges (no `dark:`).
+
+---
+
+## **Outreach board fills the panel — no horizontal scroll** (2026-08-19)
+
+Kanban columns were a fixed `18rem` each, so four of them always overflowed. They now share the panel as an equal-width grid (`minmax(0, 1fr)`). Empty columns (usually In progress) hide so the rest grow. Below `xl` the board is 2-up, never a sideways strip.
+
+---
+
+## **Outreach is quieter; new invite is a modal** (2026-08-19)
+
+The create-invite form no longer expands inside the board — **New outreach** opens a paper `Modal` so the kanban stays put. The form itself is flatter (search + fields + one button, no stacked colored cards).
+
+The board was hard to read: amber/blue/purple column titles on gray boxes, a "Screening consent" chip on every card (the only invite type), a boxed tab bar, and a mystery red count. Now: underline tabs in midnight type, a readable "N ready" label, column headers in midnight with a small status dot (no gray column wells), cards that show name + time + file marks only, and filter chips that invert to midnight when selected. `ModalHeader` gained a `paper` flag so employer dialogs stay white even when the app theme is dark.
+
+| Area | Files |
+|---|---|
+| Create modal + tabs | `src/components/employer/CandidateOutreach.tsx` |
+| Column / card quieting | `src/components/employer/outreach/KanbanBoard.tsx`, `KanbanCard.tsx` |
+| Filter bar paper | `src/components/employer/outreach/OutreachFilterBar.tsx` |
+| Paper modal header | `src/components/ui/Modal.tsx` |
+
+---
+
+## **Outreach is consent-only** (2026-08-19)
+
+Screening consent is now the only outreach invite. The DOT application is a core block auto-installed on every driver hub (their built-in first to-do), so employers never invite someone to fill it out; developer outreach (Portfolio) is retired with the drivers-only wedge. `driver-dot-application` and `developer-portfolio` are `employerRequestable: false` in the registry, and the `employer-dot-screening` / `employer-portfolio-requests` employer blocks were deleted from `employer-block-registry.ts` (existing DB rows are harmless leftovers; auto-provisioning no longer seeds them).
+
+With one invite type, the create form's "Which block should they complete?" picker is gone — replaced by a static consent summary card. The board's BLOCK filter chip row hides when there's only one block type. The Pace flow reads: invite → candidate signs consent → order MVR/PSP from the invite card → driver's DOT app fills in on their own card.
+
+Side effect: the admin Companies tab's employer-block install/remove UI was removed (the list + audit trail stay read-only) — auto-provisioning would instantly undo an admin removal, so the buttons were worse than useless. `EmployerBlockPickerModal` had already been deleted.
+
+| Area | Files |
+|---|---|
+| Requestability flags | `src/lib/block-registry.ts` |
+| Employer blocks removed | `src/lib/employer-block-registry.ts` |
+| Picker → consent summary, chip gating | `src/components/employer/CandidateOutreach.tsx` |
+| Read-only admin block list | `src/components/admin/tabs/CompaniesTab.tsx` |
+
+---
+
+## **Employer blocks are preinstalled; outreach stands alone** (2026-08-19)
+
+Block management is gone from the employer hub. `GET /api/employer/hub/blocks` now auto-provisions every installable employer block for the company (idempotent — real `employer_hub_blocks` rows, so `companyCanOrderMvr`/`companyCanOrderPsp` guards keep working; seeds are audited as `storm_admin` with an auto-provision reason). The "Blocks & outreach" section, Add-block button, installed-capabilities tiles, and recent-activity list were removed; `EmployerBlockPickerModal` was deleted and the blocks store slimmed to fetch-only.
+
+Candidate outreach was simplified: it renders as its own top-level hub section with "New outreach" as a header action (the centered gradient hero CTA is gone), the search/filter bar only appears once the board has more than 5 invites, "How this board works" is a single info button beside the tabs, the block picker's "via {employer block}" chips were dropped, and the create form's panels were flattened to paper (no `dark:` wash). `DqMonitorSection` lost its `screeningCapable` prop — screening is always capable now.
+
+| Area | Files |
+|---|---|
+| Auto-provision | `src/app/api/employer/hub/blocks/route.ts` |
+| Store slimmed | `src/stores/employer-blocks-store.ts` |
+| Hub layout | `src/components/EmployerHub.tsx` |
+| Outreach simplification | `src/components/employer/CandidateOutreach.tsx` |
+| Always-capable DQ monitor | `src/components/employer/dq/DqMonitorSection.tsx` |
+| Deleted | `src/components/employer/EmployerBlockPickerModal.tsx` |
+
+---
+
+## **Employer hub `isDark` crash** (2026-08-19)
+
+Papering the hub left `isDark` references in sibling helpers (`EmptyState`, `ApplicantDetailContent`, etc.) without a local. Empty pipeline threw `isDark is not defined`. Each helper now sets `isDark = false` itself.
+
+---
+
+## **Employer hub is paper** (2026-08-19)
+
+Employer hub still followed dark theme (navy glass) after the candidate side went paper. Blocks & outreach, kanban, DQ monitor, and job postings now use the same white face + midnight type. Inner `dark:` card fills that would re-navy on a dark document theme were stripped on the outreach cards.
+
+---
+
 ## **Hero card plays selective disclosure** (2026-08-19)
 
 Landing hero card is a full product demo: facts stamp in with a verified tick, “sharing with …” types, private rows unlock one-by-one (vault), then lock and the audience deletes/retypes. The lower section’s toggle staggers the same lock/unlock so it isn’t a hard cut. Respects `prefers-reduced-motion`.

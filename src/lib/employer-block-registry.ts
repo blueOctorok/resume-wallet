@@ -1,13 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  ClipboardList,
   FileSearch,
-  Folder,
   ShieldAlert,
   ShieldCheck,
 } from 'lucide-react'
 
-export type EmployerBlockCategoryId = 'general' | 'drivers' | 'developers'
+export type EmployerBlockCategoryId = 'general' | 'drivers'
 
 export interface EmployerBlockDefinition {
   id: string
@@ -24,35 +22,16 @@ export interface EmployerBlockDefinition {
 }
 
 export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
-  // Each employer block enables exactly one candidate-side request type.
-  // 1:1 mapping keeps the outreach picker honest — install this block, get
-  // exactly this request option. No surprise developer concepts on a driver
-  // employer's hub, and vice versa.
+  // Each employer block enables exactly one candidate-side capability.
+  // All installable blocks are auto-provisioned for every company.
   //
-  // Resume is NOT here — it's a byproduct of the DOT application (core block),
-  // not an employer-requestable install.
+  // NOT here (by design):
+  //   - DOT application — a core block auto-installed on every driver hub;
+  //     employers never request it.
+  //   - Portfolio requests — developer outreach retired (drivers-only wedge).
+  //   - Resume — a byproduct of the DOT application, not a request type.
   //
-  // ── Developers ────────────────────────────────────────────────────────────
-  {
-    id: 'employer-portfolio-requests',
-    label: 'Portfolio requests',
-    description: 'Request portfolio links from developer candidates (GitHub, personal sites, deployed projects).',
-    icon: Folder,
-    categoryId: 'developers',
-    suggestedOrder: -8,
-    installable: true,
-  },
   // ── Drivers ───────────────────────────────────────────────────────────────
-  {
-    id: 'employer-dot-screening',
-    label: 'DOT application screening',
-    description: 'Request FMCSA-compliant DOT applications (Forms 1–3) from driver candidates.',
-    icon: ClipboardList,
-    categoryId: 'drivers',
-    suggestedOrder: -5,
-    installable: true,
-    complianceNote: 'Supports FMCSA driver qualification file requirements.',
-  },
   {
     id: 'employer-screening-consent',
     label: 'Screening consent collection',

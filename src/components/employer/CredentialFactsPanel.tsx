@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, ShieldCheck, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import {
@@ -14,7 +13,8 @@ import type { EmployerCredentialFact } from '@/lib/employer-credential-facts'
 
 interface CredentialFactsPanelProps {
   facts: EmployerCredentialFact[]
-  theme: string
+  /** Ignored — employer facts stay paper regardless of app theme. */
+  theme?: string
 }
 
 function FactRow({
@@ -33,7 +33,7 @@ function FactRow({
     <div
       className={cn(
         'rounded-xl border p-3',
-        isDark ? 'border-teal-500/25 bg-teal-500/5' : 'border-teal-200 bg-teal-50/60',
+        isDark ? 'border-teal-500/25 bg-teal-500/5' : 'border-stone-200 bg-white',
       )}
     >
       <div className="flex items-start gap-3">
@@ -42,29 +42,29 @@ function FactRow({
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
             isDark
               ? 'bg-teal-500/15 text-teal-200 ring-teal-400/30'
-              : 'bg-teal-100 text-teal-700 ring-teal-200',
+              : 'bg-stone-100 text-[#173150] ring-stone-200',
           )}
         >
           <Icon className="h-4 w-4" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+            <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-[#173150]')}>
               {ui?.label ?? fact.factSummary}
             </p>
             <span
               className={cn(
                 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-800',
+                isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-800',
               )}
             >
               Verified by Provven
             </span>
           </div>
-          <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-ironside')}>
             {fact.factSummary}
           </p>
-          <p className={cn('mt-1 text-[11px]', isDark ? 'text-teal-300/80' : 'text-teal-800/80')}>
+          <p className={cn('mt-1 text-[11px]', isDark ? 'text-teal-300/80' : 'text-ironside')}>
             {fact.verificationLine}
           </p>
           {detailLines.length > 0 && (
@@ -73,7 +73,7 @@ function FactRow({
               onClick={() => setExpanded((v) => !v)}
               className={cn(
                 'mt-2 inline-flex items-center gap-1 text-xs font-medium',
-                isDark ? 'text-teal-300 hover:text-teal-200' : 'text-teal-700 hover:text-teal-900',
+                isDark ? 'text-teal-300 hover:text-teal-200' : 'text-[#173150] hover:opacity-70',
               )}
             >
               {expanded ? (
@@ -109,8 +109,9 @@ function FactRow({
  * Carrier-facing verified facts — facts before PDFs (Phase 2 moat surface).
  * Renders server-verified attestations only; never reads block_* tables.
  */
-export default function CredentialFactsPanel({ facts, theme }: CredentialFactsPanelProps) {
-  const isDark = isDarkTheme(theme)
+export default function CredentialFactsPanel({ facts }: CredentialFactsPanelProps) {
+  // Employer hub is paper — never follow the app Dark theme (gold-on-gold + navy wells).
+  const isDark = false
 
   return (
     <HubSectionPanel isDark={isDark} accent="teal" contentClassName="p-0">

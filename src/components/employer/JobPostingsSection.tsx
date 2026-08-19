@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState } from 'react'
 import {
   Briefcase,
@@ -182,7 +181,7 @@ function KanbanColumn({
   togglingId: string | null
   deletingId: string | null
 }) {
-  const dark = isDarkTheme(theme)
+  const dark = false
   return (
     <div className="flex-1 min-w-0">
       {/* Column header */}
@@ -247,7 +246,7 @@ function JobCard({
   isToggling: boolean
   isDeleting: boolean
 }) {
-  const dark = isDarkTheme(theme)
+  const dark = false
   const salary = formatSalary(job.salaryMin, job.salaryMax)
 
   return (
@@ -384,7 +383,7 @@ function EditJobModal({
   onClose: () => void
   onSaved: () => void
 }) {
-  const dark = isDarkTheme(theme)
+  const dark = false
   const [form, setForm] = useState<EditForm>(() => jobToEditForm(job))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -582,7 +581,7 @@ export default function JobPostingsSection({
   isCollapsed = false,
   onToggle,
 }: JobPostingsSectionProps) {
-  const dark = isDarkTheme(theme)
+  const dark = false
 
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
@@ -630,6 +629,7 @@ export default function JobPostingsSection({
     <HubSectionPanel isDark={dark} accent="teal" className="mb-8">
       <BlockCard
         variant="embed"
+        paper
         icon={Briefcase}
         title="Job postings"
         description={`${jobs.length} total — active and closed listings.`}

@@ -1,17 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ClipboardList, Loader2, RefreshCw, Search, Users } from 'lucide-react'
+import { ClipboardList, Loader2, RefreshCw, Search } from 'lucide-react'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import { isDarkTheme } from '@/lib/theme-storage'
-import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import type { DqOverallStatus } from '@/lib/dq-file-status'
 import { DqOverallStatusBadge } from './DqStatusBadge'
-import EmployerCandidateDetail from './EmployerCandidateDetail'
+import CareerCardModal from '@/components/employer/CareerCardModal'
 
 interface MonitorCandidate {
   userId: string
@@ -47,13 +44,11 @@ function formatActivity(iso: string | null): string {
 }
 
 interface DqMonitorSectionProps {
-  /** When false, section still mounts but shows an install hint. */
-  screeningCapable: boolean
+  sessionUserId: string
 }
 
-export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+export default function DqMonitorSection({ sessionUserId }: DqMonitorSectionProps) {
+  const isDark = false
   const [candidates, setCandidates] = useState<MonitorCandidate[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -65,11 +60,6 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const load = useCallback(async (silent = false) => {
-    if (!screeningCapable) {
-      setLoading(false)
-      setCandidates([])
-      return
-    }
     if (silent) setRefreshing(true)
     else setLoading(true)
     setError(null)
@@ -84,7 +74,7 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
       setLoading(false)
       setRefreshing(false)
     }
-  }, [screeningCapable])
+  }, [])
 
   useEffect(() => {
     void load()
@@ -109,70 +99,60 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
       <HubSectionPanel isDark={isDark} accent="teal" className="mb-8">
         <BlockCard
           variant="embed"
+          paper
           icon={ClipboardList}
           title="Drivers — DQ monitor"
           description="Candidates you’re working. Click a name for their DQ file checklist."
           headerActions={
-            screeningCapable ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void load(true)}
-                disabled={refreshing || loading}
-                aria-label="Refresh DQ monitor"
-              >
-                <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-              </Button>
-            ) : undefined
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void load(true)}
+              disabled={refreshing || loading}
+              aria-label="Refresh DQ monitor"
+            >
+              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            </Button>
           }
         >
-          {!screeningCapable && (
-            <div className="rounded-xl border border-dashed border-slate-200 dark:border-gray-700 px-4 py-8 text-center">
-              <Users className="mx-auto mb-2 h-8 w-8 text-slate-400 dark:text-gray-500" />
-              <p className="text-sm text-slate-600 dark:text-gray-400">
-                Install a screening block (consent, MVR, PSP, or DOT) to monitor DQ completeness.
-              </p>
-            </div>
-          )}
-
-          {screeningCapable && loading && (
-            <div className="flex items-center justify-center gap-2 py-10 text-slate-500 dark:text-gray-400">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-10 text-ironside">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm">Loading drivers…</span>
             </div>
           )}
 
-          {screeningCapable && !loading && error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+          {!loading && error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {error}
             </div>
           )}
 
-          {screeningCapable && !loading && !error && candidates.length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-200 dark:border-gray-700 px-4 py-8 text-center">
-              <ClipboardList className="mx-auto mb-2 h-8 w-8 text-slate-400 dark:text-gray-500" />
-              <p className="text-sm font-medium text-slate-700 dark:text-gray-300">No drivers yet</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
+          {!loading && !error && candidates.length === 0 && (
+            <div className="rounded-xl border border-dashed border-stone-200 px-4 py-8 text-center">
+              <ClipboardList className="mx-auto mb-2 h-8 w-8 text-ironside" />
+              <p className="text-sm font-medium text-[#173150]">No drivers yet</p>
+              <p className="mt-1 text-xs text-ironside">
                 Invite a candidate, open talent search, or order a screening — they’ll appear here.
               </p>
             </div>
           )}
 
-          {screeningCapable && !loading && !error && candidates.length > 0 && (
+          {!loading && !error && candidates.length > 0 && (
             <div className="space-y-3">
               <div className="relative">
                 <Search
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-gray-500"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside"
                   aria-hidden
                 />
-                <Input
+                <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search drivers by name…"
-                  className="pl-9 py-2"
                   aria-label="Search drivers"
+                  className="w-full rounded-lg border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-[#173150] placeholder-ironside outline-none focus:ring-2 focus:ring-teal-500/40"
                 />
               </div>
 
@@ -185,17 +165,17 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
                       type="button"
                       onClick={() => setStatusFilter(f.id)}
                       className={cn(
-                        'rounded-md px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset transition-colors',
+                        'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
                         active
-                          ? 'bg-teal-100 text-teal-800 ring-teal-200 dark:bg-teal-500/20 dark:text-teal-200 dark:ring-teal-400/30'
-                          : 'bg-slate-50 text-slate-600 ring-slate-200 hover:bg-slate-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700',
+                          ? 'border-[#173150] bg-[#173150] text-white'
+                          : 'border-stone-200 bg-white text-[#173150] hover:border-ironside',
                       )}
                     >
                       {f.label}
                     </button>
                   )
                 })}
-                <span className="ml-auto text-[11px] text-slate-500 dark:text-gray-400">
+                <span className="ml-auto text-[11px] text-ironside">
                   {filtered.length === candidates.length
                     ? `${candidates.length} drivers`
                     : `${filtered.length} of ${candidates.length}`}
@@ -203,8 +183,8 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
               </div>
 
               {filtered.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 dark:border-gray-700 px-4 py-8 text-center">
-                  <p className="text-sm text-slate-600 dark:text-gray-400">
+                <div className="rounded-xl border border-dashed border-stone-200 px-4 py-8 text-center">
+                  <p className="text-sm text-ironside">
                     No drivers match this search / filter.
                   </p>
                   <Button
@@ -222,24 +202,15 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
                 </div>
               ) : (
                 <>
-                  <ul className="max-h-[28rem] overflow-y-auto divide-y divide-slate-200 dark:divide-gray-700/80 rounded-xl border border-slate-200/80 dark:border-gray-700/60">
+                  <ul className="max-h-[28rem] overflow-y-auto divide-y divide-stone-200 rounded-xl border border-stone-200">
                     {visible.map((c) => (
                       <li key={c.userId}>
                         <button
                           type="button"
                           onClick={() => setSelected(c)}
-                          className={cn(
-                            'flex w-full items-center gap-3 px-3 py-3 text-left transition-colors',
-                            'hover:bg-slate-50 dark:hover:bg-gray-800/60',
-                          )}
+                          className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-stone-50"
                         >
-                          <div
-                            className={cn(
-                              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
-                              'bg-teal-50 text-teal-800 ring-1 ring-teal-200',
-                              'dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/30',
-                            )}
-                          >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-sm font-semibold text-[#173150] ring-1 ring-stone-200">
                             {c.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -252,10 +223,10 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-gray-100">
+                            <p className="truncate text-sm font-semibold text-[#173150]">
                               {c.name}
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-gray-400">
+                            <p className="text-xs text-ironside">
                               {formatActivity(c.lastActivityAt)}
                             </p>
                           </div>
@@ -289,9 +260,9 @@ export default function DqMonitorSection({ screeningCapable }: DqMonitorSectionP
       </HubSectionPanel>
 
       {selected && (
-        <EmployerCandidateDetail
-          userId={selected.userId}
-          initialName={selected.name}
+        <CareerCardModal
+          candidateUserId={selected.userId}
+          sessionUserId={sessionUserId}
           onClose={() => setSelected(null)}
         />
       )}

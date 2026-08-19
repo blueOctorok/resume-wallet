@@ -12,7 +12,6 @@ import {
   FileCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import OutreachFilterBar, { type FilterChipDef, type SortKey } from './OutreachFilterBar'
@@ -49,7 +48,7 @@ interface FilesVaultProps {
  * Filtering: search by name, type chips (MVR/PSP), outcome chips (Clear/Hits/etc).
  */
 export default function FilesVault({ rows, consentBundles = [], loading, error, theme, onView, onViewConsent }: FilesVaultProps) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
 
   const [search, setSearch] = useState('')
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set())

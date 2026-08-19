@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
@@ -13,7 +12,6 @@ import type { EmployerHubContext } from '@/lib/ava-context'
 import { sendToStormi, OutOfCreditsError, type StormiConversationTurn } from '@/lib/ava-chat'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useUIStore } from '@/stores'
-import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import QRCode from 'qrcode'
 import KanbanBoard from '@/components/employer/outreach/KanbanBoard'
 import OutreachKanbanInfoModal from '@/components/employer/outreach/OutreachKanbanInfoModal'
@@ -40,19 +38,14 @@ import {
   X,
   Search,
   UserCheck,
-  UserPlus,
-  MapPin,
   Package,
-  ArrowLeft,
   ShieldCheck,
   FileCheck,
   Inbox,
   Archive as ArchiveIcon,
-  Users,
   RotateCcw,
   Download,
   Share2,
-  ChevronDown,
   Bot,
   Pencil,
   Info,
@@ -80,10 +73,6 @@ type OutreachTab = 'active' | 'vault' | 'archive'
 
 interface CandidateOutreachProps {
   sessionUserId: string
-  isCollapsed?: boolean
-  onToggle?: () => void
-  /** When true, skips the outer HubSectionPanel/BlockCard wrapper (parent provides the chrome) */
-  embedded?: boolean
   /** All MVR + PSP screenings the company has paid for (hoisted from EmployerHub) */
   screeningsRows?: ScreeningRow[]
   /** Same data, indexed by candidate user id for O(1) lookup on each card */
@@ -102,6 +91,10 @@ interface CandidateOutreachProps {
   companyId?: string | null
   companyWalletAddress?: string | null
 }
+
+// MVR/PSP are never email invites — they're paid orders placed from the edit
+// modal once the candidate's consent bundle is complete.
+const DIRECT_ORDER_ONLY_BLOCKS = new Set(['driver-psp', 'driver-mvr'])
 
 // Status visuals reused for the chip filter row. Keeping these here (not in the
 // card component) lets both Active and Archive tabs share one definition.
@@ -206,8 +199,8 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
     typeof navigator !== 'undefined' &&
     Boolean(navigator.clipboard?.write && typeof ClipboardItem !== 'undefined')
 
-  const muted = isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
-  const sub = isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600'
+  const muted = false ? 'text-gray-400' : 'text-gray-500'
+  const sub = false ? 'text-gray-500' : 'text-gray-600'
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-sm">
@@ -257,9 +250,6 @@ const EMPTY_CONSENT_BUNDLE_BY_USER_ID = new Map<string, ConsentBundleSummary>()
 
 export default function CandidateOutreach({
   sessionUserId,
-  isCollapsed = false,
-  onToggle,
-  embedded = false,
   screeningsRows = [],
   screeningsByUserId,
   screeningsLoading = false,
@@ -293,8 +283,6 @@ export default function CandidateOutreach({
   const [resendingId, setResendingId] = useState<string | null>(null)
   const [statusOverrideSavingId, setStatusOverrideSavingId] = useState<string | null>(null)
   const [showKanbanHelp, setShowKanbanHelp] = useState(false)
-
-  const [selectedBlockType, setSelectedBlockType] = useState<string | null>(null)
 
   // ── Tab + filter state (persisted) ────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<OutreachTab>('active')
@@ -386,25 +374,21 @@ export default function CandidateOutreach({
     [employerInstalledBlocks],
   )
 
-  // Only show candidate blocks the employer can actually request:
-  // must be employerRequestable AND the company must have the required employer block installed.
-  // Exclude driver-psp and driver-mvr — these are now direct-order-only (run from the edit modal
-  // after consent is collected). The only screening email invite is driver-screening-consent.
-  const DIRECT_ORDER_ONLY_BLOCKS = new Set(['driver-psp', 'driver-mvr'])
-  const blocksByCategory = useMemo(() => {
-    const map = new Map<string, typeof BLOCK_DEFINITIONS>()
-    for (const block of BLOCK_DEFINITIONS) {
-      if (!block.employerRequestable) continue
-      if (DIRECT_ORDER_ONLY_BLOCKS.has(block.id)) continue
-      if (!employerCanRequest(block, installedEmployerBlockTypes)) continue
-      const existing = map.get(block.categoryId) ?? []
-      existing.push(block)
-      map.set(block.categoryId, existing)
-    }
-    return BLOCK_CATEGORIES
-      .filter(cat => map.has(cat.id))
-      .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
-  }, [installedEmployerBlockTypes])
+  // Screening consent is the only email-invite outreach. The DOT application is
+  // a core block auto-installed on every driver hub (their built-in first
+  // to-do), and MVR/PSP are direct orders placed from the edit modal after
+  // consent is signed. Derived from the registry rather than hard-coded so the
+  // invite stays honest about what it asks for.
+  const outreachBlock = useMemo(
+    () =>
+      BLOCK_DEFINITIONS.find(
+        (b) =>
+          b.employerRequestable &&
+          !DIRECT_ORDER_ONLY_BLOCKS.has(b.id) &&
+          employerCanRequest(b, installedEmployerBlockTypes),
+      ) ?? null,
+    [installedEmployerBlockTypes],
+  )
 
   // Edit modal needs the full list including screening blocks (for direct-order UI)
   const allBlocksByCategory = useMemo(() => {
@@ -547,17 +531,17 @@ export default function CandidateOutreach({
       jobPostingId: '',
       welcomeMessage: '',
     })
-    setSelectedBlockType(null)
     setSelectedProfile(null)
     setProfileQuery('')
     setProfileResults([])
   }
 
   const handleCreate = async () => {
+    if (!outreachBlock) return
     setCreating(true)
     setError(null)
     try {
-      const targetBlockType = selectedBlockType
+      const targetBlockType = outreachBlock.id
 
       const res = await fetch('/api/employer/invites', {
         method: 'POST',
@@ -969,6 +953,9 @@ export default function CandidateOutreach({
       const k = inv.targetBlockType ?? '__general__'
       counts.set(k, (counts.get(k) ?? 0) + 1)
     }
+    // With consent-only outreach most boards have one block type — a single
+    // chip can't filter anything, so hide the row entirely.
+    if (counts.size < 2) return []
     return Array.from(counts.entries()).map(([id, count]) => ({
       id,
       label: id === '__general__' ? 'General' : getBlockDefinition(id)?.label ?? id,
@@ -1073,522 +1060,68 @@ export default function CandidateOutreach({
     })
   }, [])
 
-  const canSubmit = selectedBlockType !== null
+  const canSubmit = outreachBlock !== null
 
-  // ── Shared styling shortcuts ───────────────────────────────────────────────
-  const inputBase = `w-full px-3 py-2 rounded-lg text-sm border transition-colors outline-none focus:ring-2 focus:ring-teal-500/50 ${
-    isDarkTheme(theme)
-      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-  }`
+  const openCreateForm = () => {
+    setShowForm(true)
+    setError(null)
+    resetForm()
+  }
 
-  const label = `block text-xs font-medium mb-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`
+  const closeCreateForm = () => {
+    setShowForm(false)
+    setError(null)
+    resetForm()
+  }
 
-  // ── Outreach inner content (shared between embedded + standalone) ──────────
-  const outreachHeader = (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <Link2 className={cn('h-4 w-4', isDarkTheme(theme) ? 'text-amber-400' : 'text-amber-600')} />
-        <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800')}>
-          Candidate outreach
-        </h4>
-        {boardInvites.length > 0 && (
-          <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', isDarkTheme(theme) ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700')}>
-            {boardInvites.length} active
-          </span>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onToggle}
-          aria-expanded={!isCollapsed}
-          aria-label={isCollapsed ? 'Expand candidate outreach' : 'Collapse candidate outreach'}
-        >
-          <ChevronDown
-            className={cn(
-              'h-4 w-4 transition-transform duration-200',
-              isCollapsed && '-rotate-90',
-            )}
-          />
-        </Button>
-      </div>
-    </div>
-  )
+  // Paper inputs — this modal sits on the paper hub, so we ignore the app theme.
+  const inputBase =
+    'w-full px-3 py-2 rounded-lg text-sm border border-stone-200 bg-white text-[#173150] placeholder-ironside outline-none transition-colors focus:ring-2 focus:ring-teal-500/40'
+  const label = 'block text-xs font-medium mb-1 text-ironside'
 
   const outreachBody = (
     <>
-        {/* Create form */}
-        {!isCollapsed && showForm && (
-          <div
-            className={cn(
-              'mb-8 rounded-xl border px-4 py-5 sm:px-5 sm:py-6',
-              isDarkTheme(theme)
-                ? 'border-gray-600/80 bg-gray-900/50 shadow-sm'
-                : 'border-gray-200 bg-gray-50/90 dark:border-gray-700 dark:bg-gray-900/45',
-            )}
-          >
-            <div className="mb-5 flex items-center justify-between gap-2 border-b border-gray-200 pb-4 dark:border-gray-700/80">
-              <h4 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-white' : 'text-gray-900 dark:text-gray-100')}>
-                Create outreach link
-              </h4>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="!p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
-                onClick={() => {
-                  setShowForm(false)
-                  setError(null)
-                  resetForm()
-                }}
-                aria-label="Close form"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Block picker — employer outreach is always block-specific */}
-            <div className="mb-6">
-              <p className={label}>Which block should they complete? *</p>
-                {selectedBlockType ? (
-                  // Show selected block with a "change" button
-                  <SelectedBlockPill
-                    blockType={selectedBlockType}
-                    theme={theme}
-                    onClear={() => setSelectedBlockType(null)}
-                  />
-                ) : blocksByCategory.length === 0 ? (
-                  <div className={`rounded-xl border px-4 py-6 text-center ${
-                    isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
-                  }`}>
-                    <Package className={`w-8 h-8 mx-auto mb-2 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300'}`} />
-                    <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                      No outreach blocks available
-                    </p>
-                    <p className={`text-xs mt-1 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                      Install employer blocks from the hub to enable candidate requests.
-                    </p>
-                  </div>
-                ) : (
-                  <div className={`rounded-xl border overflow-hidden ${
-                    isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
-                  }`}>
-                    <div className="max-h-56 overflow-y-auto">
-                      {blocksByCategory.map(({ category, blocks }) => (
-                        <div key={category.id}>
-                          <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider sticky top-0 z-10 ${
-                            isDarkTheme(theme) ? 'bg-gray-800 text-gray-500 border-b border-gray-700' : 'bg-gray-50 text-gray-400 border-b border-gray-200'
-                          }`}>
-                            {category.label}
-                          </div>
-                          {blocks.map(block => {
-                            // Show which employer block enables this option — makes
-                            // the "blocks ↔ outreach" link visually obvious.
-                            const enabledByBlock = block.requiredEmployerBlocks?.find(eb =>
-                              installedEmployerBlockTypes.includes(eb),
-                            )
-                            const enabledByLabel = enabledByBlock
-                              ? getEmployerBlockDefinition(enabledByBlock)?.label ?? enabledByBlock
-                              : null
-                            return (
-                              <button
-                                key={block.id}
-                                onClick={() => setSelectedBlockType(block.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                                  isDarkTheme(theme)
-                                    ? 'hover:bg-gray-700/50 border-b border-gray-700/50'
-                                    : 'hover:bg-gray-50 border-b border-gray-100'
-                                }`}
-                              >
-                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  isDarkTheme(theme) ? 'bg-teal-900/40' : 'bg-teal-100'
-                                }`}>
-                                  <Package className="w-3.5 h-3.5 text-teal-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-                                      {block.label}
-                                    </p>
-                                    {enabledByLabel && (
-                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                                        isDarkTheme(theme)
-                                          ? 'bg-amber-500/20 text-amber-300'
-                                          : 'bg-amber-100 text-amber-700'
-                                      }`}>
-                                        via {enabledByLabel}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className={`text-xs truncate ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    {block.description}
-                                  </p>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            {/* Who receives this — two paths: Storm member vs anyone else (visually split so it is not one undifferentiated stack). */}
-            <div
-              className={cn(
-                'mb-6 rounded-xl border p-4 sm:p-5',
-                isDarkTheme(theme) ? 'border-teal-500/20 bg-gray-950/40' : 'border-teal-100 bg-white dark:border-teal-900/30 dark:bg-gray-950/30',
-              )}
-              ref={profileSearchRef}
-            >
-              <div className="mb-1 flex items-center gap-2">
-                <div
-                  className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                    isDarkTheme(theme) ? 'bg-teal-500/15 text-teal-300' : 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200',
-                  )}
-                >
-                  <Search className="h-4 w-4" aria-hidden />
-                </div>
-                <div>
-                  <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Find someone already on Provven
-                  </h5>
-                  <p className={cn('text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-                    Search by name, email, or city. We attach the invite to their account so they get in-app notifications.
-                  </p>
-                </div>
-              </div>
-
-              {selectedProfile ? (
-                <div
-                  className={cn(
-                    'mt-3 flex items-center justify-between rounded-lg border px-3 py-2',
-                    isDarkTheme(theme) ? 'border-teal-700/50 bg-teal-900/30' : 'border-teal-200 bg-teal-50',
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                    <div>
-                      <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}>
-                        {selectedProfile.full_name || selectedProfile.email}
-                      </p>
-                      <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500' : 'text-teal-500'}`}>
-                        Connected to Provven · In-app notification will fire when email is sent
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs font-medium"
-                    onClick={handleClearProfile}
-                  >
-                    <X className="h-3 w-3" />
-                    Clear
-                  </Button>
-                </div>
-              ) : (
-                <div className="relative mt-3">
-                  <div className="relative">
-                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
-                      isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
-                    }`} />
-                    <input
-                      type="text"
-                      placeholder="Search by name, email, or city…"
-                      value={profileQuery}
-                      onChange={e => setProfileQuery(e.target.value)}
-                      onFocus={() => profileResults.length > 0 && setShowProfileDropdown(true)}
-                      className={`${inputBase} pl-8`}
-                    />
-                    {isSearchingProfiles && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-teal-500" />
-                    )}
-                  </div>
-
-                  {showProfileDropdown && profileResults.length > 0 && (
-                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${
-                      isDarkTheme(theme) ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                    }`}>
-                      {profileResults.map((profile, index) => (
-                        <button
-                          key={profile.user_id || `profile-${index}`}
-                          onClick={() => handleSelectProfile(profile)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-b last:border-b-0 cursor-pointer ${
-                            isDarkTheme(theme)
-                              ? 'hover:bg-gray-700 border-gray-700/60'
-                              : 'hover:bg-gray-50 border-gray-100'
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            isDarkTheme(theme) ? 'bg-teal-900/50' : 'bg-teal-100'
-                          }`}>
-                            <UserCheck className="w-3.5 h-3.5 text-teal-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-                              {profile.full_name || profile.email || 'Unknown'}
-                            </p>
-                            <div className={`flex items-center gap-2 text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {profile.cdl_class && <span>CDL-{profile.cdl_class}</span>}
-                              {(profile.city || profile.state) && (
-                                <span className="flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5" />
-                                  {[profile.city, profile.state].filter(Boolean).join(', ')}
-                                </span>
-                              )}
-                              {profile.email && <span className="truncate">{profile.email}</span>}
-                            </div>
-                          </div>
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                            isDarkTheme(theme) ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
-                          }`}>
-                            Provven
-                          </span>
-                        </button>
-                      ))}
-                      <div className={`px-3 py-2 text-xs ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Not the right person? Use the <span className="font-medium text-gray-500 dark:text-gray-300">invite someone not on Provven</span> section below.
-                      </div>
-                    </div>
-                  )}
-
-                  {showProfileDropdown && profileQuery.trim().length >= 2 && !isSearchingProfiles && profileResults.length === 0 && (
-                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
-                      isDarkTheme(theme) ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
-                    }`}>
-                      No Provven profiles found — use the section below for name / email (email-only invite).
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div
-              className="relative my-7"
-              role="separator"
-              aria-label="Alternative: invite someone who is not in Provven search results"
-            >
-              <div className="absolute inset-0 flex items-center" aria-hidden>
-                <span
-                  className={cn(
-                    'w-full border-t',
-                    isDarkTheme(theme) ? 'border-gray-600/90' : 'border-gray-200 dark:border-gray-700',
-                  )}
-                />
-              </div>
-              <div className="relative flex justify-center px-2">
-                <span
-                  className={cn(
-                    'rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                    isDarkTheme(theme)
-                      ? 'border-gray-600 bg-gray-900 text-gray-400'
-                      : 'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-400',
-                  )}
-                >
-                  or
-                </span>
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                'mb-6 rounded-xl border p-4 sm:p-5',
-                isDarkTheme(theme)
-                  ? 'border-amber-500/25 bg-gray-950/40'
-                  : 'border-amber-100 bg-white dark:border-amber-900/30 dark:bg-gray-950/30',
-              )}
-            >
-              <div className="mb-3 flex items-start gap-2">
-                <div
-                  className={cn(
-                    'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                    isDarkTheme(theme) ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
-                  )}
-                >
-                  <UserPlus className="h-4 w-4" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <h5 className={cn('text-sm font-semibold', isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100')}>
-                    Invite someone not on Provven yet
-                  </h5>
-                  <p className={cn('text-xs leading-relaxed', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400')}>
-                    For anyone you do not find in search—prospects, referrals, or cold outreach. They use your link to join. Add email and/or phone to send from Provven.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className={label}>
-                    Candidate name
-                    {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Optional"
-                    value={form.candidateName}
-                    onChange={(e) => setForm((f) => ({ ...f, candidateName: e.target.value }))}
-                    className={inputBase}
-                  />
-                </div>
-                <div>
-                  <label className={label}>
-                    Candidate email
-                    {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="Optional — needed to email from Provven"
-                    value={form.candidateEmail}
-                    onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
-                    className={inputBase}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={label}>Candidate phone</label>
-                  <input
-                    type="tel"
-                    placeholder="Optional — needed to text from Provven (US 10-digit or +1…)"
-                    value={form.candidatePhone}
-                    onChange={(e) => setForm((f) => ({ ...f, candidatePhone: e.target.value }))}
-                    className={inputBase}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                'border-t pt-5',
-                isDarkTheme(theme) ? 'border-gray-700/70' : 'border-gray-200 dark:border-gray-700',
-              )}
-            >
-              <p
-                className={cn(
-                  'mb-3 text-[10px] font-semibold uppercase tracking-wide',
-                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
-                )}
-              >
-                Optional details
-              </p>
-              {jobs.length > 0 && (
-                <div className="mb-3">
-                  <label className={label}>Link to job posting (optional)</label>
-                  <select
-                    value={form.jobPostingId}
-                    onChange={(e) => setForm((f) => ({ ...f, jobPostingId: e.target.value }))}
-                    className={inputBase}
-                  >
-                    <option value="">No specific job</option>
-                    {jobs.map((job) => (
-                      <option key={job.id} value={job.id}>
-                        {job.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="mb-4">
-                <label className={label}>Custom welcome message (optional)</label>
-                <textarea
-                  placeholder="Add a personal note to the candidate…"
-                  value={form.welcomeMessage}
-                  onChange={(e) => setForm((f) => ({ ...f, welcomeMessage: e.target.value }))}
-                  rows={2}
-                  className={`${inputBase} resize-none`}
-                />
-              </div>
-            </div>
-
-            {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
-
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                className="w-full flex-1 sm:w-auto"
-                onClick={handleCreate}
-                disabled={creating || !canSubmit}
-              >
-                {creating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Link2 className="h-4 w-4" />
-                )}
-                {creating ? 'Creating…' : 'Create & copy link'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                className="w-full shrink-0 sm:w-auto"
-                onClick={() => {
-                  setShowForm(false)
-                  setError(null)
-                  resetForm()
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* ── Tabs + body ───────────────────────────────────────────────────
              Active = kanban by candidate invite status; completed stays on the board.
              Vault  = every paid screening, even if the invite is gone.
              Archive = cancelled / expired invites only. */}
-        {!isCollapsed && (
-          <div
-            className={cn(
-              showForm ? 'mt-8 border-t border-gray-200 pt-6 dark:border-gray-700' : 'mt-5',
-            )}
-          >
-            {/* Tab switcher */}
-            <div
-              className={cn(
-                'mb-4 flex items-center gap-1 rounded-lg border p-1',
-                isDarkTheme(theme)
-                  ? 'border-gray-700/80 bg-gray-900/40'
-                  : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/30',
-              )}
-              role="tablist"
-            >
+          <div>
+            {/* Tab switcher — the board-help info button lives here so it exists
+                exactly once instead of repeating in every tab/empty state */}
+            <div className="mb-5 flex items-end gap-2">
+            <div className="flex min-w-0 flex-1 gap-1 border-b border-stone-200" role="tablist">
               <TabButton
-                label="Active outreach"
+                label="Active"
                 count={boardInvites.length}
                 badgeCount={readyToViewCount}
                 badgeTitle={`${readyToViewCount} report${readyToViewCount === 1 ? '' : 's'} ready to view`}
-                icon={<Users className="h-3.5 w-3.5" />}
                 active={activeTab === 'active'}
                 onClick={() => setActiveTab('active')}
-                theme={theme}
               />
               <TabButton
-                label="Files vault"
+                label="Files"
                 count={screeningsRows.length}
-                icon={<ShieldCheck className="h-3.5 w-3.5" />}
                 active={activeTab === 'vault'}
                 onClick={() => setActiveTab('vault')}
-                theme={theme}
               />
               <TabButton
                 label="Archive"
                 count={archivedTabInvites.length}
-                icon={<ArchiveIcon className="h-3.5 w-3.5" />}
                 active={activeTab === 'archive'}
                 onClick={() => setActiveTab('archive')}
-                theme={theme}
               />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mb-0.5 !p-2 shrink-0 text-ironside"
+              onClick={() => setShowKanbanHelp(true)}
+              aria-label="How this outreach board works"
+              title="How this board works"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
             </div>
 
             {/* ── ACTIVE tab ── */}
@@ -1597,24 +1130,21 @@ export default function CandidateOutreach({
                 {loading ? (
                   <div className="flex items-center justify-center gap-2 py-10">
                     <Loader2 className="h-5 w-5 animate-spin text-teal-500" />
-                    <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <span className={`text-sm ${false ? 'text-gray-400' : 'text-gray-500'}`}>
                       Loading outreach…
                     </span>
                   </div>
                 ) : invites.length === 0 ? (
-                  <EmptyOutreach
-                    theme={theme}
-                    onNewOutreach={() => { setShowForm(true); setError(null); resetForm() }}
-                  />
+                  <EmptyOutreach onNewOutreach={openCreateForm} />
                 ) : boardInvites.length === 0 ? (
                   <div className="py-10 text-center">
                     <Inbox
-                      className={cn('mx-auto mb-3 h-10 w-10', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')}
+                      className={cn('mx-auto mb-3 h-10 w-10', false ? 'text-gray-600' : 'text-gray-300')}
                     />
-                    <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800')}>
+                    <p className={cn('text-sm font-medium', false ? 'text-gray-300' : 'text-gray-800')}>
                       Nothing on your main board
                     </p>
-                    <p className={cn('mx-auto mt-1 max-w-md text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600')}>
+                    <p className={cn('mx-auto mt-1 max-w-md text-xs', false ? 'text-gray-500' : 'text-gray-600')}>
                       Completed outreaches stay on the board so you can keep working them. Cancelled and expired
                       invites live in Archive.
                     </p>
@@ -1629,36 +1159,12 @@ export default function CandidateOutreach({
                         Open Archive ({archivedTabInvites.length})
                       </Button>
                     )}
-                    <div className="mt-3 flex justify-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 text-xs text-gray-600 dark:text-gray-400"
-                        onClick={() => setShowKanbanHelp(true)}
-                        aria-label="How this outreach board works"
-                      >
-                        <Info className="h-3.5 w-3.5 shrink-0" />
-                        How this board works
-                      </Button>
-                    </div>
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-4">
-                      {!showForm && (
-                        <div className="flex justify-center px-2">
-                          <NewOutreachCtaButton
-                            theme={theme}
-                            onClick={() => {
-                              setShowForm(true)
-                              setError(null)
-                              resetForm()
-                            }}
-                          />
-                        </div>
-                      )}
-
+                    {/* Search/filters only earn their space once the board is busy —
+                        a handful of cards doesn't need a filter bar. */}
+                    {(boardInvites.length > 5 || hasActiveFilters) && (
                       <OutreachFilterBar
                         theme={theme}
                         search={search}
@@ -1675,22 +1181,8 @@ export default function CandidateOutreach({
                         totalCount={boardInvites.length}
                         onClearAll={clearAllFilters}
                         hasActiveFilters={hasActiveFilters}
-                        sticky
                       />
-                      <div className="mt-1 flex justify-end px-0.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 text-xs text-gray-600 dark:text-gray-400"
-                          onClick={() => setShowKanbanHelp(true)}
-                          aria-label="How this outreach board works"
-                        >
-                          <Info className="h-3.5 w-3.5 shrink-0" />
-                          How this board works
-                        </Button>
-                      </div>
-                    </div>
+                    )}
 
                     {filteredActive.length === 0 ? (
                       <NoMatches theme={theme} onClear={clearAllFilters} />
@@ -1749,19 +1241,19 @@ export default function CandidateOutreach({
                 {loading ? (
                   <div className="flex items-center justify-center gap-2 py-10">
                     <Loader2 className="h-5 w-5 animate-spin text-teal-500" />
-                    <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <span className={`text-sm ${false ? 'text-gray-400' : 'text-gray-500'}`}>
                       Loading…
                     </span>
                   </div>
                 ) : archivedTabInvites.length === 0 ? (
                   <div className="py-10 text-center">
                     <ArchiveIcon
-                      className={cn('mx-auto mb-2 h-10 w-10', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')}
+                      className={cn('mx-auto mb-2 h-10 w-10', false ? 'text-gray-600' : 'text-gray-300')}
                     />
-                    <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500')}>
+                    <p className={cn('text-sm font-medium', false ? 'text-gray-400' : 'text-gray-500')}>
                       No archived invites
                     </p>
-                    <p className={cn('mt-1 text-xs', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
+                    <p className={cn('mt-1 text-xs', false ? 'text-gray-500' : 'text-gray-500')}>
                       Cancelled or expired invites. Files stay in the vault.
                     </p>
                   </div>
@@ -1788,41 +1280,206 @@ export default function CandidateOutreach({
               </>
             )}
           </div>
-        )}
     </>
   )
 
   return (
     <>
-      {embedded ? (
-        // When embedded inside the parent Blocks & Outreach section,
-        // render just header + body — the parent provides the panel chrome.
-        <div className="flex min-w-0 w-full max-w-full flex-col">
-          <div
-            className={cn(
-              'mb-5 min-w-0 border-b pb-5',
-              isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200 dark:border-gray-700',
-            )}
-          >
-            {outreachHeader}
-          </div>
+      <HubSectionPanel isDark={false} accent="amber">
+        <BlockCard
+          variant="embed"
+          paper
+          icon={Link2}
+          title="Candidate outreach"
+          description={
+            boardInvites.length > 0
+              ? `${boardInvites.length} active — invite candidates and track their screenings.`
+              : 'Invite candidates and track their screenings.'
+          }
+          headerActions={
+            <Button type="button" variant="primary" size="sm" onClick={openCreateForm}>
+              <Plus className="h-4 w-4" />
+              New outreach
+            </Button>
+          }
+        >
           {outreachBody}
-        </div>
-      ) : (
-        <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber">
-          <BlockCard
-            variant="embed"
-            icon={Link2}
-            title="Candidate outreach"
-            description={
-              !isCollapsed
-                ? `${boardInvites.length > 0 ? `${boardInvites.length} active` : 'No active invites'} · Send invite links to candidates`
-                : 'Expand to create and manage invite links.'
-            }
-          >
-            {outreachBody}
-          </BlockCard>
-        </HubSectionPanel>
+        </BlockCard>
+      </HubSectionPanel>
+
+      {showForm && (
+        <Modal
+          onClose={closeCreateForm}
+          maxWidth="max-w-xl"
+          panelShape="block"
+          panelClassName="!border-stone-200 !bg-white !ring-[#173150]/10"
+        >
+          <ModalHeader
+            title="New outreach"
+            subtitle="Invite a candidate to sign screening consent."
+            onClose={closeCreateForm}
+            variant="block"
+            paper
+          />
+          <div className="space-y-5 p-4 sm:p-5">
+            <p className="text-xs leading-relaxed text-ironside">
+              They sign FCRA + PSP + CDLIS consent so you can order MVR and PSP. The DOT
+              application is already a to-do on their career card.
+            </p>
+
+            <div ref={profileSearchRef}>
+              <label className={label}>Find someone already on Provven</label>
+              {selectedProfile ? (
+                <div className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <UserCheck className="h-4 w-4 shrink-0 text-teal-600" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#173150]">
+                        {selectedProfile.full_name || selectedProfile.email}
+                      </p>
+                      <p className="text-xs text-ironside">On Provven — they’ll get an in-app notification</p>
+                    </div>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs" onClick={handleClearProfile}>
+                    <X className="h-3 w-3" />
+                    Clear
+                  </Button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ironside" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, or city…"
+                    value={profileQuery}
+                    onChange={(e) => setProfileQuery(e.target.value)}
+                    onFocus={() => profileResults.length > 0 && setShowProfileDropdown(true)}
+                    className={`${inputBase} pl-8`}
+                  />
+                  {isSearchingProfiles && (
+                    <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-teal-500" />
+                  )}
+                  {showProfileDropdown && profileResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-xl">
+                      {profileResults.map((profile, index) => (
+                        <button
+                          key={profile.user_id || `profile-${index}`}
+                          type="button"
+                          onClick={() => handleSelectProfile(profile)}
+                          className="flex w-full items-center gap-3 border-b border-stone-100 px-3 py-2.5 text-left last:border-b-0 hover:bg-stone-50"
+                        >
+                          <UserCheck className="h-4 w-4 shrink-0 text-teal-600" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-[#173150]">
+                              {profile.full_name || profile.email || 'Unknown'}
+                            </p>
+                            <p className="truncate text-xs text-ironside">
+                              {[
+                                profile.cdl_class && `CDL-${profile.cdl_class}`,
+                                [profile.city, profile.state].filter(Boolean).join(', '),
+                                profile.email,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showProfileDropdown &&
+                    profileQuery.trim().length >= 2 &&
+                    !isSearchingProfiles &&
+                    profileResults.length === 0 && (
+                      <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl border border-stone-200 bg-white px-3 py-3 text-xs text-ironside shadow-xl">
+                        No match — enter name and email below instead.
+                      </div>
+                    )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className={label}>
+                  Name{selectedProfile ? <span className="text-teal-600"> · from profile</span> : ''}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Optional"
+                  value={form.candidateName}
+                  onChange={(e) => setForm((f) => ({ ...f, candidateName: e.target.value }))}
+                  className={inputBase}
+                />
+              </div>
+              <div>
+                <label className={label}>
+                  Email{selectedProfile ? <span className="text-teal-600"> · from profile</span> : ''}
+                </label>
+                <input
+                  type="email"
+                  placeholder="Needed to email the invite"
+                  value={form.candidateEmail}
+                  onChange={(e) => setForm((f) => ({ ...f, candidateEmail: e.target.value }))}
+                  className={inputBase}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={label}>Phone</label>
+                <input
+                  type="tel"
+                  placeholder="Needed to text the invite (US 10-digit or +1…)"
+                  value={form.candidatePhone}
+                  onChange={(e) => setForm((f) => ({ ...f, candidatePhone: e.target.value }))}
+                  className={inputBase}
+                />
+              </div>
+            </div>
+
+            {jobs.length > 0 && (
+              <div>
+                <label className={label}>Job posting (optional)</label>
+                <select
+                  value={form.jobPostingId}
+                  onChange={(e) => setForm((f) => ({ ...f, jobPostingId: e.target.value }))}
+                  className={inputBase}
+                >
+                  <option value="">No specific job</option>
+                  {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                      {job.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className={label}>Note (optional)</label>
+              <textarea
+                placeholder="A short personal note…"
+                value={form.welcomeMessage}
+                onChange={(e) => setForm((f) => ({ ...f, welcomeMessage: e.target.value }))}
+                rows={2}
+                className={`${inputBase} resize-none`}
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="w-full"
+              onClick={handleCreate}
+              disabled={creating || !canSubmit}
+            >
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              {creating ? 'Creating…' : 'Create & copy link'}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {/* QR modal */}
@@ -1842,7 +1499,6 @@ export default function CandidateOutreach({
           invite={editingInvite}
           jobs={jobs}
           blocksByCategory={allBlocksByCategory}
-          installedEmployerBlockTypes={installedEmployerBlockTypes}
           sessionUserId={sessionUserId}
           companyId={companyId}
           companyWalletAddress={companyWalletAddress}
@@ -1922,22 +1578,17 @@ function TabButton({
   count,
   badgeCount = 0,
   badgeTitle,
-  icon,
   active,
   onClick,
-  theme,
 }: {
   label: string
   count: number
-  /** Optional red-dot count (e.g. "X reports ready") */
+  /** Reports ready to view — shown as a readable label, not a mystery red dot. */
   badgeCount?: number
   badgeTitle?: string
-  icon: React.ReactNode
   active: boolean
   onClick: () => void
-  theme: string
 }) {
-  const isDark = isDarkTheme(theme)
   return (
     <button
       type="button"
@@ -1945,101 +1596,50 @@ function TabButton({
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        'relative inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors sm:gap-2 sm:px-3',
+        '-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
         active
-          ? isDark
-            ? 'bg-gray-800 text-white shadow-sm'
-            : 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white'
-          : isDark
-            ? 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
-            : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 dark:text-gray-400',
+          ? 'border-[#173150] text-[#173150]'
+          : 'border-transparent text-ironside hover:text-[#173150]',
       )}
     >
-      {icon}
-      <span className="truncate">{label}</span>
-      <span
-        className={cn(
-          'rounded-full px-1.5 py-0.5 text-[10px]',
-          active
-            ? isDark
-              ? 'bg-gray-700 text-gray-200'
-              : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
-            : isDark
-              ? 'bg-gray-800/80 text-gray-400'
-              : 'bg-gray-200 text-gray-600 dark:bg-gray-800/80 dark:text-gray-400',
-        )}
-      >
-        {count}
-      </span>
+      <span>{label}</span>
+      <span className="tabular-nums text-xs text-ironside">{count}</span>
       {badgeCount > 0 && (
         <span
           title={badgeTitle}
-          className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"
+          className="rounded-full bg-[#c43d14]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c43d14]"
         >
-          {badgeCount}
+          {badgeCount} ready
         </span>
       )}
     </button>
   )
 }
 
-// ─── New outreach — single hero CTA (teal + amber hub accent, no header duplicate) ─
-
-function NewOutreachCtaButton({ theme, onClick }: { theme: string; onClick: () => void }) {
-  const isDark = isDarkTheme(theme)
-  return (
-    <Button
-      type="button"
-      variant="primary"
-      size="lg"
-      onClick={onClick}
-      className={cn(
-        'min-w-[min(100%,16rem)] justify-center gap-2.5 rounded-xl px-8 py-3.5 text-base font-bold tracking-tight',
-        // Gradient + depth — overrides default flat primary for this one hero action
-        '!bg-gradient-to-r !from-teal-500 !via-teal-500 !to-emerald-600 !text-white !shadow-none',
-        'hover:!from-teal-400 hover:!via-teal-400 hover:!to-emerald-500',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2',
-        isDark
-          ? cn(
-              'dark:!from-teal-400 dark:!via-teal-500 dark:!to-emerald-600',
-              'dark:hover:!from-teal-300 dark:hover:!via-teal-400 dark:hover:!to-emerald-500',
-              'focus-visible:ring-offset-gray-950',
-              '!shadow-lg !shadow-teal-500/25 ring-2 ring-amber-400/45',
-            )
-          : cn(
-              '!shadow-lg !shadow-teal-600/25 ring-2 ring-amber-400/70',
-              'focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950',
-            ),
-      )}
-    >
-      <Plus className="h-5 w-5 shrink-0" aria-hidden />
-      New outreach
-    </Button>
-  )
-}
-
 // ─── Empty + no-match states ─────────────────────────────────────────────────
 
-function EmptyOutreach({ theme, onNewOutreach }: { theme: string; onNewOutreach: () => void }) {
-  const isDark = isDarkTheme(theme)
+function EmptyOutreach({ onNewOutreach }: { onNewOutreach: () => void }) {
   return (
     <div className="py-8 text-center">
-      <Link2 className={cn('mx-auto mb-3 h-10 w-10', isDark ? 'text-amber-500/50' : 'text-amber-400')} />
-      <p className={cn('text-sm font-medium', isDark ? 'text-gray-300' : 'text-gray-700')}>
+      <Link2 className="mx-auto mb-3 h-10 w-10 text-amber-400" />
+      <p className="text-sm font-medium text-gray-700">
         No active outreach
       </p>
-      <p className={cn('mt-1 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
+      <p className="mt-1 text-xs text-gray-500">
         Invite your first candidate to get started.
       </p>
-      <div className="mt-6 flex justify-center px-2">
-        <NewOutreachCtaButton theme={theme} onClick={onNewOutreach} />
+      <div className="mt-5 flex justify-center">
+        <Button type="button" variant="primary" size="md" onClick={onNewOutreach}>
+          <Plus className="h-4 w-4" />
+          New outreach
+        </Button>
       </div>
     </div>
   )
 }
 
 function NoMatches({ theme, onClear }: { theme: string; onClear: () => void }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
   return (
     <div className="py-10 text-center">
       <Inbox className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-gray-600' : 'text-gray-300')} />
@@ -2093,7 +1693,7 @@ function ArchiveTabContent({
   onViewFile: (file: ScreeningRow) => void
   onViewConsent?: (bundle: ConsentBundleSummary) => void
 }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
   const bundleMap = consentBundleByUserId ?? EMPTY_CONSENT_BUNDLE_BY_USER_ID
   return (
     <>
@@ -2247,7 +1847,6 @@ function EditInviteModal({
   invite,
   jobs,
   blocksByCategory,
-  installedEmployerBlockTypes,
   sessionUserId,
   companyId,
   companyWalletAddress,
@@ -2261,7 +1860,6 @@ function EditInviteModal({
   invite: Invite
   jobs: Job[]
   blocksByCategory: { category: { id: string; label: string }; blocks: typeof BLOCK_DEFINITIONS }[]
-  installedEmployerBlockTypes: string[]
   sessionUserId: string
   companyId?: string | null
   companyWalletAddress?: string | null
@@ -2281,7 +1879,7 @@ function EditInviteModal({
   onOrderPlaced?: () => void
   onClose: () => void
 }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
 
   const inputCls = cn(
     'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:ring-2 focus:ring-teal-500/40',
@@ -2592,12 +2190,6 @@ function EditInviteModal({
                       (block.id === 'driver-psp' && ordersPlaced.has('psp'))
                     const isScreening = SCREENING_BLOCK_IDS.has(block.id)
                     const isSelected = selectedBlockTypes.has(block.id)
-                    const enabledByBlock = block.requiredEmployerBlocks?.find((eb) =>
-                      installedEmployerBlockTypes.includes(eb),
-                    )
-                    const enabledByLabel = enabledByBlock
-                      ? getEmployerBlockDefinition(enabledByBlock)?.label ?? enabledByBlock
-                      : null
                     const isDisabled = isCurrentBlock || isAlreadyOrdered
 
                     return (
@@ -2660,11 +2252,6 @@ function EditInviteModal({
                             {isScreening && consentComplete && !isDisabled && (
                               <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
                                 direct order
-                              </span>
-                            )}
-                            {enabledByLabel && !isCurrentBlock && !isScreening && (
-                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-100 text-amber-700')}>
-                                via {enabledByLabel}
                               </span>
                             )}
                           </div>
@@ -2805,7 +2392,7 @@ function StormiCandidateModal({
   theme: string
   onClose: () => void
 }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
 
   type Msg = { role: 'user' | 'assistant'; text: string; hidden?: boolean }
   const [messages, setMessages] = useState<Msg[]>([])
@@ -3082,46 +2669,6 @@ function StormiCandidateModal({
         </form>
       </div>
     </Modal>
-  )
-}
-
-// ─── Selected block pill ──────────────────────────────────────────────────────
-
-function SelectedBlockPill({ blockType, theme, onClear }: { blockType: string; theme: string; onClear: () => void }) {
-  const block = getBlockDefinition(blockType)
-  if (!block) return null
-
-  return (
-    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${
-      isDarkTheme(theme)
-        ? 'bg-teal-900/30 border-teal-700/50'
-        : 'bg-teal-50 border-teal-200'
-    }`}>
-      <div className="flex items-center gap-2.5">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-          isDarkTheme(theme) ? 'bg-teal-900/50' : 'bg-teal-100'
-        }`}>
-          <Package className="w-3.5 h-3.5 text-teal-500" />
-        </div>
-        <div>
-          <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}>
-            {block.label}
-          </p>
-          <p className={`text-xs ${isDarkTheme(theme) ? 'text-teal-500/80' : 'text-teal-500'}`}>
-            {block.description}
-          </p>
-        </div>
-      </div>
-      <button
-        onClick={onClear}
-        className={`text-xs font-medium flex items-center gap-1 ${
-          isDarkTheme(theme) ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-        }`}
-      >
-        <ArrowLeft className="w-3 h-3" />
-        Change
-      </button>
-    </div>
   )
 }
 

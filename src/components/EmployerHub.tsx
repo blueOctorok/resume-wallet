@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
@@ -15,13 +14,10 @@ import { useUIStore } from '@/stores'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
 import { calculateEmployerProgress, type EmployerProgressData } from '@/lib/journey-progress'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
-import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
-import { getBlockColor } from '@/lib/block-registry'
 import {
   Briefcase,
   Users,
   FileText,
-  Plus,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -37,22 +33,19 @@ import {
   MessageSquare,
   Phone,
   Mail,
-  Trash2,
   RefreshCw,
   CreditCard,
-  Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
-import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
-import BlockRemovalConfirmModal from '@/components/ui/BlockRemovalConfirmModal'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
-import type { EmployerInstalledHubBlock } from '@/stores/employer-blocks-store'
-import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
 import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
 import DqMonitorSection from '@/components/employer/dq/DqMonitorSection'
+
+/** Flip to true to show Activity snapshot, Job postings, and Hiring pipeline again. */
+const SHOW_HUB_OPS_SECTIONS = false
 
 // ============================================================
 // TYPES
@@ -164,108 +157,14 @@ interface EmployerHubProps {
   onNavigate: (view: string) => void
 }
 
-/**
- * Per-block color scheme for employer tiles. Each employer block gets its own
- * distinct color so they're visually distinct instead of all teal.
- */
-const EMPLOYER_TILE_COLORS: Record<
-  string,
-  { glowColor: string; iconText: { dark: string; light: string } }
-> = {
-  'employer-mvr-orders': {
-    glowColor: 'rgba(59,130,246,0.20)',
-    iconText: { dark: 'text-blue-400', light: 'text-blue-600' },
-  },
-  'employer-psp-orders': {
-    glowColor: 'rgba(245,158,11,0.20)',
-    iconText: { dark: 'text-amber-400', light: 'text-amber-600' },
-  },
-  'employer-screening-consent': {
-    glowColor: 'rgba(100,116,139,0.22)',
-    iconText: { dark: 'text-slate-300', light: 'text-slate-600' },
-  },
-  'employer-dot-screening': {
-    glowColor: 'rgba(184,144,77,0.20)',
-    iconText: { dark: 'text-teal-400', light: 'text-teal-600' },
-  },
-  'employer-employment-verification': {
-    glowColor: 'rgba(100,116,139,0.15)',
-    iconText: { dark: 'text-slate-400', light: 'text-slate-500' },
-  },
-}
-
-const DEFAULT_EMPLOYER_TILE_COLOR = EMPLOYER_TILE_COLORS['employer-dot-screening']
-
-/** Installed capability — vault chrome + label; separators come from the list `divide-x`, not a per-tile box. */
-function EmployerInstalledBlockTile({
-  row,
-  theme,
-  canManage,
-  onRemove,
-}: {
-  row: EmployerInstalledHubBlock
-  theme: string
-  canManage: boolean
-  onRemove: () => void
-}) {
-  const isDark = isDarkTheme(theme)
-  const def = getEmployerBlockDefinition(row.blockType)
-  const blockLabel = def?.label ?? row.blockType
-  const colors = EMPLOYER_TILE_COLORS[row.blockType] ?? DEFAULT_EMPLOYER_TILE_COLOR
-  const Icon = def?.icon ?? Package
-
-  return (
-    <li
-      title={`Installed ${new Date(row.addedAt).toLocaleDateString()}`}
-      className="flex min-w-[7.5rem] flex-col items-center gap-2.5 px-5 py-1.5 text-center sm:min-w-[8.5rem] sm:px-6 sm:py-2"
-    >
-      <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
-        <VaultCredentialChrome
-          isDark={isDark}
-          glowColor={colors.glowColor}
-          hasRoute
-          showSigil={false}
-          className="h-full min-h-12 sm:min-h-14"
-        >
-          <div className="flex h-full items-center justify-center p-0.5">
-            <Icon
-              className={cn('h-6 w-6 sm:h-7 sm:w-7', isDark ? colors.iconText.dark : colors.iconText.light)}
-              aria-hidden
-            />
-          </div>
-        </VaultCredentialChrome>
-      </div>
-      <p
-        className={cn(
-          'line-clamp-2 max-w-[11rem] text-xs font-semibold leading-snug sm:text-sm',
-          isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100',
-        )}
-      >
-        {blockLabel}
-      </p>
-      {canManage && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="!h-9 !w-9 !p-0 text-gray-500 hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/15 dark:hover:text-red-400"
-          onClick={onRemove}
-          aria-label={`Remove ${blockLabel}`}
-          title="Remove block"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
-      )}
-    </li>
-  )
-}
-
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
 
 export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubProps) {
   const { theme } = useTheme()
+  // Paper hub — candidate Build / career card already ignore dark theme.
+  const isDark = false
   const { navigateToMessages } = useUIStore()
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
   const setEmployerNavSnapshot = useUIStore((s) => s.setEmployerNavSnapshot)
@@ -285,15 +184,9 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
 
-  const employerInstalledBlocks = useEmployerBlocksStore((s) => s.installedBlocks)
-  const employerCanManageBlocks = useEmployerBlocksStore((s) => s.canManageEmployerBlocks)
-  const employerPickerOpen = useEmployerBlocksStore((s) => s.isPickerOpen)
-  const openEmployerBlockPicker = useEmployerBlocksStore((s) => s.openPicker)
-  const closeEmployerBlockPicker = useEmployerBlocksStore((s) => s.closePicker)
+  // Employer blocks are preinstalled — the fetch auto-provisions server-side.
+  // CandidateOutreach reads the resulting installed list from this store itself.
   const fetchEmployerBlocks = useEmployerBlocksStore((s) => s.fetchEmployerBlocks)
-  const installEmployerBlock = useEmployerBlocksStore((s) => s.installBlock)
-  const removeEmployerBlock = useEmployerBlocksStore((s) => s.removeBlock)
-  const employerRecentAudit = useEmployerBlocksStore((s) => s.recentAudit)
 
   // One screenings fetch shared across the Active outreach (per-card files) and
   // the Files vault tab. Anchored to `driver_user_id` at the DB level so files
@@ -323,13 +216,11 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
     })
   }, [data, setEmployerNavSnapshot])
 
-  const [employerBlockToRemove, setEmployerBlockToRemove] = useState<{ id: string; label: string } | null>(null)
-
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const defaults = { jobs: true, pipeline: true, outreach: false }
+    const defaults = { jobs: true, pipeline: true }
     if (typeof window === 'undefined') return defaults
     try {
       const stored = localStorage.getItem(SECTIONS_KEY)
@@ -413,11 +304,16 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   // Initial load and explicit Refresh-button clicks pass silent=false so the
   // loading skeleton still appears when there's no existing data to show.
   const fetchHubData = useCallback(async (silent = false) => {
+    if (!sessionUserId) return
     try {
       if (!silent) setLoading(true)
       setError(null)
 
       const response = await fetch('/api/employer/hub')
+
+      // 401 = session ended (logout). A visibility refresh can still be in
+      // flight; don't throw — Next overlays console.error(Error) as a crash.
+      if (response.status === 401) return
 
       if (!response.ok) {
         throw new Error('Failed to fetch hub data')
@@ -472,6 +368,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
 
   // Full hub refresh: main hub API + employer blocks store + screenings + invites (nonce).
   const pullLatestEmployerHub = useCallback(async () => {
+    if (!sessionUserId) return
     await fetchHubData(true)
     if (sessionUserId) {
       await Promise.all([
@@ -586,9 +483,9 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-            isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
+            isDark ? 'text-teal-400' : 'text-teal-600'
           }`} />
-          <p className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
+          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
             Loading your employer hub...
           </p>
         </div>
@@ -599,14 +496,15 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   if (error) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="max-w-md w-full">
+        <HubSectionPanel isDark={isDark} accent="teal" className="max-w-md w-full">
           <BlockCard
             variant="embed"
+            paper
             icon={AlertCircle}
             title="Couldn’t load hub"
             description="Check your connection and try again."
           >
-            <p className={`text-center text-sm ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
+            <p className={`text-center text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>{error}</p>
             <div className="mt-4 flex justify-center">
               <Button type="button" variant="primary" size="md" onClick={() => fetchHubData()}>
                 Try again
@@ -628,14 +526,15 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
     const p = data.employerAccessPending
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="max-w-lg w-full">
+        <HubSectionPanel isDark={isDark} accent="amber" className="max-w-lg w-full">
           <BlockCard
             variant="embed"
+            paper
             icon={Clock}
             title="Employer access pending"
             description={`Your request to join ${p.companyName} is in the queue. Provven admin will approve it.`}
           >
-            <p className={`mb-4 text-center text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
+            <p className={`mb-4 text-center text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
               Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}
               {p.submittedAt ? ` · Submitted ${new Date(p.submittedAt).toLocaleString()}` : ''}
             </p>
@@ -658,151 +557,36 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   return (
     <div className="w-full max-w-full overflow-x-hidden">
       <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 pb-28 max-xl:pb-32 xl:pb-0">
-      {/* ── Blocks & Outreach — unified section ─────────────────────────
-           Top: installed employer blocks (what capabilities does this company have?)
-           Bottom: candidate outreach (create invites using those capabilities)
-           The outreach dropdown mirrors only the blocks installed above.
+      {/* ── Candidate outreach ───────────────────────────────────────────
+           All employer capabilities (consent, MVR, PSP, DOT) are preinstalled
+           server-side, so outreach is the first thing on the hub — no block
+           management UI in between.
       ──────────────────────────────────────────────────────────────── */}
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="amber" className="mb-8">
-        <BlockCard
-          variant="embed"
-          icon={Package}
-          title="Blocks & outreach"
-          description="Install blocks to unlock screening and outreach capabilities, then invite candidates below."
-          headerActions={
-            employerCanManageBlocks ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => openEmployerBlockPicker()}>
-                <Plus className="h-4 w-4" />
-                Add block
-              </Button>
-            ) : undefined
-          }
-        >
-          {/* ── Installed blocks ─────────────────────────────────────── */}
-          {employerInstalledBlocks.length === 0 ? (
-            <div className="py-6 text-center">
-              <Package className={cn('w-8 h-8 mx-auto mb-2', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-300')} />
-              <p className={cn('text-sm font-medium', isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500')}>
-                No blocks installed yet
-              </p>
-              <p className={cn('text-xs mt-1', isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400')}>
-                Add blocks to unlock candidate outreach and screening features.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p
-                className={cn(
-                  'mb-3 text-xs font-semibold uppercase tracking-wide',
-                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400',
-                )}
-              >
-                Installed capabilities
-              </p>
-            <ul
-                className={cn(
-                  'flex flex-nowrap items-stretch justify-center divide-x divide-dotted overflow-x-auto pb-1 pt-0.5',
-                  '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-                  isDarkTheme(theme)
-                    ? 'divide-gray-600/50'
-                    : 'divide-gray-300/80 dark:divide-gray-600/50',
-                )}
-              >
-                {employerInstalledBlocks.map((row) => {
-                  const blockLabel = getEmployerBlockDefinition(row.blockType)?.label ?? row.blockType
-                  return (
-                    <EmployerInstalledBlockTile
-                      key={row.id}
-                      row={row}
-                      theme={theme}
-                      canManage={employerCanManageBlocks}
-                      onRemove={() => setEmployerBlockToRemove({ id: row.id, label: blockLabel })}
-                    />
-                  )
-                })}
-              </ul>
-            </div>
-          )}
-
-          {/* ── Candidate outreach — inset panel so it reads as its own step, not a cramped footer ─ */}
-          {employerInstalledBlocks.length > 0 && (
-            <div
-              id="candidate-outreach"
-              className={cn(
-                'mt-6 min-w-0 max-w-full overflow-x-hidden rounded-xl border p-4 sm:mt-8 sm:p-5',
-                isDarkTheme(theme)
-                  ? 'border-amber-500/20 bg-gray-950/50 shadow-[inset_0_1px_0_0_rgba(251,191,36,0.08)]'
-                  : 'border-amber-200/80 bg-amber-50/50 dark:border-amber-500/25 dark:bg-gray-950/40',
-              )}
-            >
-              <p
-                className={cn(
-                  'mb-3 text-xs leading-relaxed sm:mb-4',
-                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-600 dark:text-gray-400',
-                )}
-              >
-                Active outreach, files vault, and archive — switch with the tabs below. Files are
-                tied to the candidate (not the invite), so they stay safe even if the invite is removed.
-              </p>
-              <CandidateOutreach
-                sessionUserId={sessionUserId}
-                isCollapsed={!openSections.outreach}
-                onToggle={() => toggleSection('outreach')}
-                embedded
-                screeningsRows={screenings.rows}
-                screeningsByUserId={screenings.byUserId}
-                screeningsLoading={screenings.loading}
-                screeningsError={screenings.error}
-                consentBundles={screenings.consentBundles}
-                consentBundleByUserId={screenings.consentBundleByUserId}
-                onRefreshScreenings={() => void screenings.refresh(true)}
-                employerContext={employerStormiContext}
-                companyId={data.company.id}
-                companyWalletAddress={data.company.companyWalletAddress ?? null}
-              />
-            </div>
-          )}
-
-          {employerRecentAudit.length > 0 && (
-            <div className={cn('mt-4 border-t pt-3', isDarkTheme(theme) ? 'border-gray-700/80' : 'border-gray-200')}>
-              <p className={cn('mb-2 text-xs font-semibold uppercase tracking-wide', isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500')}>
-                Recent activity
-              </p>
-              <ul className="space-y-1 text-xs">
-                {employerRecentAudit.slice(0, 5).map((a) => (
-                  <li key={a.id} className={isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}>
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{a.block_type}</span>
-                    {' · '}
-                    {a.action}
-                    {' · '}
-                    {new Date(a.created_at).toLocaleString()}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </BlockCard>
-      </HubSectionPanel>
-
-      {/* (Purchased screenings panel removed — its data now lives inside the
-          Blocks & outreach section's "Files vault" tab, plus per-candidate file
-          pills on each Active outreach card.) */}
+      <div id="candidate-outreach" className="mb-8">
+        <CandidateOutreach
+          sessionUserId={sessionUserId}
+          screeningsRows={screenings.rows}
+          screeningsByUserId={screenings.byUserId}
+          screeningsLoading={screenings.loading}
+          screeningsError={screenings.error}
+          consentBundles={screenings.consentBundles}
+          consentBundleByUserId={screenings.consentBundleByUserId}
+          onRefreshScreenings={() => void screenings.refresh(true)}
+          employerContext={employerStormiContext}
+          companyId={data.company.id}
+          companyWalletAddress={data.company.companyWalletAddress ?? null}
+        />
+      </div>
 
       {/* DQ monitor — roster by name; click opens person detail + DQ checklist */}
-      <DqMonitorSection
-        screeningCapable={employerInstalledBlocks.some((b) =>
-          [
-            'employer-mvr-orders',
-            'employer-psp-orders',
-            'employer-dot-screening',
-            'employer-screening-consent',
-          ].includes(b.blockType),
-        )}
-      />
+      <DqMonitorSection sessionUserId={sessionUserId} />
 
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-6">
+      {SHOW_HUB_OPS_SECTIONS && (
+      <>
+      <HubSectionPanel isDark={isDark} accent="teal" className="mb-6">
         <BlockCard
           variant="embed"
+          paper
           icon={Users}
           title="Activity snapshot"
           description="Pipeline, jobs, and applicants after outreach and screenings."
@@ -846,26 +630,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
 
       {/* Quick actions removed — these page-level destinations now live in the Employer Hub
           dropdown in the global nav (Find Talent, Post Job, Applicants, Company, Team). The
-          "New outreach" CTA still lives inside the Blocks & Outreach section above. */}
-
-      <EmployerBlockPickerModal
-        open={employerPickerOpen}
-        onClose={() => closeEmployerBlockPicker()}
-        installedTypes={new Set(employerInstalledBlocks.map((b) => b.blockType))}
-        canInstall={employerCanManageBlocks}
-        onInstallBlock={async (blockType) => installEmployerBlock(sessionUserId, blockType, null)}
-      />
-
-      <BlockRemovalConfirmModal
-        open={Boolean(employerBlockToRemove)}
-        onClose={() => setEmployerBlockToRemove(null)}
-        blockLabel={employerBlockToRemove?.label ?? ''}
-        onConfirm={async (reason) => {
-          if (!employerBlockToRemove) return
-          const ok = await removeEmployerBlock(sessionUserId, employerBlockToRemove.id, reason)
-          if (!ok) throw new Error('Remove failed')
-        }}
-      />
+          "New outreach" CTA lives in the Candidate outreach section header above. */}
 
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
@@ -878,9 +643,10 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
         onToggle={() => toggleSection('jobs')}
       />
 
-      <HubSectionPanel isDark={isDarkTheme(theme)} accent="teal" className="mb-8">
+      <HubSectionPanel isDark={isDark} accent="teal" className="mb-8">
         <BlockCard
           variant="embed"
+          paper
           icon={Users}
           title="Hiring pipeline"
           description="Move applicants between New, Contacted, and Archived."
@@ -961,7 +727,8 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
           )}
         </BlockCard>
       </HubSectionPanel>
-
+      </>
+      )}
 
       {/* CandidateOutreach is now embedded inside the "Blocks & outreach" section above */}
 
@@ -978,7 +745,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
             onClose={() => setSelectedApplicant(null)}
           />
           {/* Career Card quick-action row */}
-          <div className={`flex items-center gap-2 px-4 py-2 border-b ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className={`flex items-center gap-2 px-4 py-2 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
             <Button
               type="button"
               variant="secondary"
@@ -1053,7 +820,7 @@ function StatCard({
   theme: string
   highlight?: boolean
 }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
   return (
     <div
       className={cn(
@@ -1115,27 +882,28 @@ function Section({
   action?: React.ReactNode
   children: React.ReactNode
 }) {
+  const isDark = false
   return (
     <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
-      isDarkTheme(theme)
+      isDark
         ? 'bg-gray-800/50 border-gray-700'
         : 'bg-white/70 border-gray-200'
     }`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${
-            isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
+            isDark ? 'bg-teal-500/20' : 'bg-teal-100'
           }`}>
-            <span className={isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}>
+            <span className={isDark ? 'text-teal-400' : 'text-teal-600'}>
               {icon}
             </span>
           </div>
-          <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {title}
           </h3>
           {count !== undefined && (
             <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${
-              isDarkTheme(theme) ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+              isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
             }`}>
               {count}
             </span>
@@ -1163,17 +931,18 @@ function EmptyState({
   onAction?: () => void
   theme: string
 }) {
+  const isDark = false
   return (
     <div className={`text-center py-8 px-4 rounded-xl border-2 border-dashed ${
-      isDarkTheme(theme) ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
+      isDark ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
     }`}>
-      <div className={`mb-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
+      <div className={`mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
         {icon}
       </div>
-      <h4 className={`font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+      <h4 className={`font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
         {title}
       </h4>
-      <p className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
+      <p className={`text-sm mb-4 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
         {description}
       </p>
       {actionLabel && onAction && (
@@ -1194,37 +963,38 @@ function ApplicantRow({
   onClick: () => void
   theme: string
 }) {
+  const isDark = false
   const name = applicant.applicantName || 'Unknown'
 
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
-        isDarkTheme(theme)
+        isDark
           ? 'hover:bg-gray-700/50'
           : 'hover:bg-gray-50'
       }`}
     >
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
+        isDark ? 'bg-teal-500/20' : 'bg-teal-100'
       }`}>
         <span className={`text-sm font-bold ${
-          isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'
+          isDark ? 'text-teal-400' : 'text-teal-600'
         }`}>
           {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+        <p className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {name}
         </p>
-        <p className={`text-sm truncate ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
           {applicant.jobTitle}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={applicant.status} theme={theme} />
-        <ChevronRight className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`} />
+        <ChevronRight className={`w-4 h-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
       </div>
     </button>
   )
@@ -1249,12 +1019,13 @@ function ApplicantDetailContent({
   theme: string
   onStatusChange: (applicationId: string, newStatus: string) => Promise<void>
 }) {
+  const isDark = false
   const [changingStatus, setChangingStatus] = useState(false)
 
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
+    isDark ? 'text-gray-400' : 'text-gray-500'
   }`
-  const valueClass = `text-sm ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`
+  const valueClass = `text-sm ${isDark ? 'text-white' : 'text-gray-900'}`
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === applicant.status) return
@@ -1270,13 +1041,13 @@ function ApplicantDetailContent({
     <div className="space-y-4">
       {/* Status Section */}
       <div className={`p-4 rounded-xl ${
-        isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
+        isDark ? 'bg-gray-800/50' : 'bg-gray-50'
       }`}>
         <div className="flex items-center justify-between">
           <div>
             <p className={labelClass}>Application Status</p>
             <p className={`text-sm font-medium ${
-              isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
+              isDark ? 'text-white' : 'text-gray-900'
             }`}>
               {getStatusConfig(applicant.status).label}
             </p>
@@ -1288,7 +1059,7 @@ function ApplicantDetailContent({
             className={`px-3 py-2 text-sm rounded-lg border ${
               changingStatus ? 'opacity-50 cursor-not-allowed' : ''
             } ${
-              isDarkTheme(theme)
+              isDark
                 ? 'bg-gray-900 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
@@ -1314,7 +1085,7 @@ function ApplicantDetailContent({
           <a
             href={`mailto:${applicant.applicantEmail}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              isDarkTheme(theme)
+              isDark
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -1327,7 +1098,7 @@ function ApplicantDetailContent({
           <a
             href={`tel:${applicant.applicantPhone}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              isDarkTheme(theme)
+              isDark
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -1358,14 +1129,14 @@ function ApplicantDetailContent({
         {applicant.hasResume ? (
           <div className="flex items-center gap-2 mt-1">
             <FileText className={`w-4 h-4 ${
-              applicant.resumeVerified ? 'text-green-500' : isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
+              applicant.resumeVerified ? 'text-green-500' : isDark ? 'text-gray-400' : 'text-gray-600'
             }`} />
             <span className={valueClass}>
               {applicant.resumeVerified ? 'Verified Resume' : 'Resume Attached'}
             </span>
           </div>
         ) : (
-          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'}`}>
+          <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             No resume attached
           </p>
         )}
@@ -1376,7 +1147,7 @@ function ApplicantDetailContent({
         <div>
           <p className={labelClass}>Cover Letter</p>
           <p className={`${valueClass} mt-1 p-3 rounded-lg ${
-            isDarkTheme(theme) ? 'bg-gray-800/50' : 'bg-gray-50'
+            isDark ? 'bg-gray-800/50' : 'bg-gray-50'
           }`}>
             {applicant.coverLetter}
           </p>

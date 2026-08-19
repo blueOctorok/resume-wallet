@@ -7,7 +7,12 @@ import { logEmployerBlockAudit } from '@/lib/employer-block-audit'
 import { capabilityDeniedMessage } from '@/lib/employer-permissions'
 
 /**
- * GET /api/employer/hub/blocks — installed employer blocks + permission flag
+ * GET /api/employer/hub/blocks — installed employer blocks.
+ *
+ * Employer blocks are preinstalled: every installable block is auto-provisioned
+ * for the company on first load (idempotent — only missing rows are inserted).
+ * Real DB rows are required because order-time API guards (companyCanOrderMvr,
+ * companyCanOrderPsp, …) read employer_hub_blocks.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,30 +27,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    const [{ data: blocks, error: blocksErr }, { data: auditRows }] = await Promise.all([
-      supabase
-        .from('employer_hub_blocks')
-        .select('id, block_type, position, config, added_at')
-        .eq('company_id', access.companyId)
-        .order('position', { ascending: true }),
-      supabase
-        .from('employer_block_audit')
-        .select('id, block_type, action, actor_kind, reason, created_at')
-        .eq('company_id', access.companyId)
-        .order('created_at', { ascending: false })
-        .limit(10),
-    ])
+    const { data: existing, error: blocksErr } = await supabase
+      .from('employer_hub_blocks')
+      .select('id, block_type, position, config, added_at')
+      .eq('company_id', access.companyId)
+      .order('position', { ascending: true })
 
     if (blocksErr) {
       console.error('[EMPLOYER HUB BLOCKS] GET:', blocksErr.message)
       return NextResponse.json({ error: 'Failed to load blocks' }, { status: 500 })
     }
 
+    let blocks = existing ?? []
+    const installedTypes = new Set(blocks.map((b) => b.block_type))
+    const missing = getInstallableEmployerBlockDefinitions().filter(
+      (def) => !installedTypes.has(def.id),
+    )
+
+    if (missing.length > 0) {
+      const basePosition = blocks.length
+      const { error: seedErr } = await supabase.from('employer_hub_blocks').insert(
+        missing.map((def, i) => ({
+          company_id: access.companyId,
+          block_type: def.id,
+          position: basePosition + i,
+          config: {},
+        })),
+      )
+      if (seedErr) {
+        // 23505 = another request seeded concurrently — safe to ignore and refetch
+        if (seedErr.code !== '23505') {
+          console.error('[EMPLOYER HUB BLOCKS] auto-provision:', seedErr.message)
+        }
+      } else {
+        for (const def of missing) {
+          await logEmployerBlockAudit(supabase, {
+            companyId: access.companyId,
+            blockType: def.id,
+            action: 'installed',
+            actorUserId: null,
+            actorKind: 'storm_admin',
+            reason: 'Auto-provisioned — employer blocks are preinstalled by default',
+          })
+        }
+      }
+
+      const { data: refreshed } = await supabase
+        .from('employer_hub_blocks')
+        .select('id, block_type, position, config, added_at')
+        .eq('company_id', access.companyId)
+        .order('position', { ascending: true })
+      blocks = refreshed ?? blocks
+    }
+
     return NextResponse.json({
       success: true,
-      canManageEmployerBlocks: access.canManageEmployerBlocks,
-      blocks: blocks ?? [],
-      recentAudit: auditRows ?? [],
+      blocks,
     })
   } catch (e) {
     console.error('[EMPLOYER HUB BLOCKS] GET unexpected:', e)

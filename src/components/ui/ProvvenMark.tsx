@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 interface ProvvenMarkProps {
   /** Size via font-size (e.g. `text-5xl`) — height is 1.15em so it tracks type */
   className?: string
-  /** 'ink' = Hot Embers on navy; 'auto' = theme-aware (embers on dark, Midnight Blue on paper) */
+  /** Kept for callers; the shield fill is always Hot Embers. */
   tone?: 'ink' | 'auto'
   isDark?: boolean
   /** Set when the mark stands alone (e.g. "Provven"). Omit inside the wordmark. */
@@ -13,15 +13,13 @@ interface ProvvenMarkProps {
 }
 
 /**
- * Blue Star shield + check. Hot Embers on ink/dark, Midnight Blue on paper.
- * Geometry lives in public/brand/provven-mark*.svg (traced from the agency art).
+ * Blue Star shield + check — always Hot Embers (`#f15a2b`).
+ * Geometry lives in public/brand/provven-mark.svg (traced from the agency art).
  */
-export default function ProvvenMark({ className, tone = 'ink', isDark = false, label }: ProvvenMarkProps) {
-  const src = tone === 'ink' || isDark ? '/brand/provven-mark.svg' : '/brand/provven-mark-light.svg'
-
+export default function ProvvenMark({ className, label }: ProvvenMarkProps) {
   return (
     <img
-      src={src}
+      src="/brand/provven-mark.svg"
       alt={label ?? ''}
       role={label ? 'img' : undefined}
       aria-hidden={label ? undefined : true}

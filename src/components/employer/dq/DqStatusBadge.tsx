@@ -21,27 +21,28 @@ const ITEM_LABELS: Record<DqItemStatus, string> = {
 function toneForItem(status: DqItemStatus): string {
   switch (status) {
     case 'complete':
-      return 'bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200 ring-teal-200/80 dark:ring-teal-400/30'
+      // Emerald, not teal — teal is remapped to gold and washes out on paper.
+      return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
     case 'processing':
     case 'in_progress':
     case 'requested':
-      return 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200 ring-amber-200/80 dark:ring-amber-400/30'
+      return 'bg-stone-100 text-[#173150] ring-stone-200'
     case 'failed':
-      return 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200 ring-red-200/80 dark:ring-red-400/30'
+      return 'bg-red-50 text-red-800 ring-red-200'
     default:
-      return 'bg-slate-100 text-slate-700 dark:bg-gray-700 dark:text-gray-300 ring-slate-200/80 dark:ring-gray-600'
+      return 'bg-stone-100 text-[#173150] ring-stone-200'
   }
 }
 
 function toneForOverall(status: DqOverallStatus): string {
   switch (status) {
     case 'complete':
-      return 'bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200 ring-teal-200/80 dark:ring-teal-400/30'
+      return 'bg-emerald-50 text-emerald-900 ring-emerald-200'
     case 'in_progress':
     case 'started':
-      return 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200 ring-amber-200/80 dark:ring-amber-400/30'
+      return 'bg-stone-100 text-[#173150] ring-stone-200'
     default:
-      return 'bg-slate-100 text-slate-700 dark:bg-gray-700 dark:text-gray-300 ring-slate-200/80 dark:ring-gray-600'
+      return 'bg-stone-100 text-[#173150] ring-stone-200'
   }
 }
 

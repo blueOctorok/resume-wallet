@@ -126,7 +126,7 @@ function ThemeModeToggle({ isDark }: { isDark: boolean }) {
               'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
               selected
                 ? isDark
-                  ? 'bg-teal-500 text-[#173150] shadow-sm'
+                  ? 'bg-teal-500 text-white shadow-sm'
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
@@ -343,7 +343,7 @@ function CandidateViewToggle({
               'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
               selected
                 ? isDark
-                  ? 'bg-teal-500 text-[#173150] shadow-sm'
+                  ? 'bg-teal-500 text-white shadow-sm'
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
@@ -399,7 +399,8 @@ export default function Navigation({
   const currentPage = useUIStore((s) => s.currentPage)
   const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
   const { notifications, unreadCount } = useNotificationStore()
-  const isDark = isDarkTheme(theme)
+  // Bar is the opposite of the page: cream on Dark, ink-navy on Light.
+  const isDark = !isDarkTheme(theme)
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
   const hasNavAttention = unreadCount > 0 || unreadMessageCount > 0

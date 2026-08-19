@@ -30,7 +30,6 @@ import {
   FileCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isDarkTheme } from '@/lib/theme-storage'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { getBlockDefinition } from '@/lib/block-registry'
@@ -206,7 +205,7 @@ export default function OutreachCandidateCard({
   onPipelineStatusOverride,
   statusOverrideSaving = false,
 }: OutreachCandidateCardProps) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
   const statusCfg = STATUS_CONFIG[invite.status] ?? STATUS_CONFIG.pending
   const blockDef = invite.targetBlockType ? getBlockDefinition(invite.targetBlockType) : null
   const blockLabel = blockDef?.label ?? (invite.targetBlockType ? invite.targetBlockType : 'General')
@@ -289,7 +288,7 @@ export default function OutreachCandidateCard({
         'group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border transition-colors',
         isDark
           ? 'border-gray-700/80 bg-gray-900/40 hover:border-gray-600'
-          : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900/30 dark:hover:border-gray-600',
+          : 'border-stone-200 bg-white hover:border-ironside/40',
       )}
     >
       {/* ── Header: identity + badges ───────────────────────────────────────── */}
@@ -304,7 +303,7 @@ export default function OutreachCandidateCard({
             <h4
               className={cn(
                 'truncate text-sm font-semibold',
-                isDark ? 'text-white' : 'text-gray-900 dark:text-gray-100',
+                'text-[#173150]',
               )}
             >
               {invite.candidateName ||
@@ -1064,7 +1063,7 @@ function ActionBtn({
   /** Native tooltip — used when Edit is disabled so recruiters know why. */
   title?: string
 }) {
-  const isDark = isDarkTheme(theme)
+  const isDark = false
   const toneCls =
     tone === 'success'
       ? 'border-green-500/40 text-green-700 dark:text-green-400'
