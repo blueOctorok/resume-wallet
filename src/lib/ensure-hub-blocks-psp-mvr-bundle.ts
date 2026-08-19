@@ -1,6 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
+import { BLOCK_DEFINITIONS, getBlockDefinition, getDefaultDriverBlockIds } from '@/lib/block-registry'
 import { ensureHubBlockInstalled as insertHubBlockIfMissing } from '@/lib/block-data'
+
+/** Install the full driver DQ set. Safe to call on every hub GET — skips rows that exist. */
+export async function ensureDefaultDriverHubBlocks(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  for (const blockType of getDefaultDriverBlockIds()) {
+    await insertHubBlockIfMissing(supabase, userId, blockType)
+  }
+}
 
 /**
  * Install a candidate hub block after an employer action (order, request, invite,

@@ -480,7 +480,7 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
     iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
     borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
-    glowColor:   'rgba(184,144,77,0.18)',
+    glowColor:   'rgba(241,90,43,0.18)',
     badgeColor:  'bg-teal-500',
   },
   'driver-resume': {
@@ -491,11 +491,11 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     badgeColor:  'bg-blue-500',
   },
   'driver-dot-application': {
-    iconBg:      { dark: 'bg-amber-500/15',   light: 'bg-amber-50' },
-    iconText:    { dark: 'text-amber-400',     light: 'text-amber-600' },
-    borderHover: { dark: 'border-amber-500/40', light: 'border-amber-400/50' },
-    glowColor:   'rgba(245,158,11,0.15)',
-    badgeColor:  'bg-amber-500',
+    iconBg:      { dark: 'bg-dark-amber/15',   light: 'bg-dark-amber-50' },
+    iconText:    { dark: 'text-dark-amber',     light: 'text-dark-amber' },
+    borderHover: { dark: 'border-dark-amber/40', light: 'border-dark-amber/50' },
+    glowColor:   'rgba(242,138,15,0.15)',
+    badgeColor:  'bg-dark-amber',
   },
   'driver-screening-consent': {
     iconBg:      { dark: 'bg-slate-500/15',   light: 'bg-slate-100' },
@@ -505,18 +505,18 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     badgeColor:  'bg-slate-500',
   },
   'driver-mvr': {
-    iconBg:      { dark: 'bg-purple-500/15',   light: 'bg-purple-50' },
-    iconText:    { dark: 'text-purple-400',     light: 'text-purple-600' },
-    borderHover: { dark: 'border-purple-500/40', light: 'border-purple-400/50' },
-    glowColor:   'rgba(168,85,247,0.15)',
-    badgeColor:  'bg-purple-500',
+    iconBg:      { dark: 'bg-denim/15',   light: 'bg-denim-50' },
+    iconText:    { dark: 'text-denim',     light: 'text-denim' },
+    borderHover: { dark: 'border-denim/40', light: 'border-denim/50' },
+    glowColor:   'rgba(0,96,139,0.15)',
+    badgeColor:  'bg-denim',
   },
   'driver-psp': {
-    iconBg:      { dark: 'bg-orange-500/15',   light: 'bg-orange-50' },
-    iconText:    { dark: 'text-orange-400',     light: 'text-orange-700' },
-    borderHover: { dark: 'border-orange-500/40', light: 'border-orange-400/50' },
-    glowColor:   'rgba(249,115,22,0.18)',
-    badgeColor:  'bg-orange-500',
+    iconBg:      { dark: 'bg-retro-teal/15',   light: 'bg-retro-teal-50' },
+    iconText:    { dark: 'text-retro-teal',     light: 'text-retro-teal' },
+    borderHover: { dark: 'border-retro-teal/40', light: 'border-retro-teal/50' },
+    glowColor:   'rgba(63,138,140,0.18)',
+    badgeColor:  'bg-retro-teal',
   },
   'driver-cdl-credentials': {
     iconBg:      { dark: 'bg-emerald-500/15',   light: 'bg-emerald-50' },
@@ -526,11 +526,11 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     badgeColor:  'bg-emerald-500',
   },
   'developer-resume': {
-    iconBg:      { dark: 'bg-cyan-500/15',   light: 'bg-cyan-50' },
-    iconText:    { dark: 'text-cyan-400',     light: 'text-cyan-600' },
-    borderHover: { dark: 'border-cyan-500/40', light: 'border-cyan-400/50' },
-    glowColor:   'rgba(6,182,212,0.15)',
-    badgeColor:  'bg-cyan-500',
+    iconBg:      { dark: 'bg-retro-teal/15',   light: 'bg-retro-teal-50' },
+    iconText:    { dark: 'text-retro-teal',     light: 'text-retro-teal' },
+    borderHover: { dark: 'border-retro-teal/40', light: 'border-retro-teal/50' },
+    glowColor:   'rgba(63,138,140,0.15)',
+    badgeColor:  'bg-retro-teal',
   },
   'developer-portfolio': {
     iconBg:      { dark: 'bg-pink-500/15',   light: 'bg-pink-50' },
@@ -540,11 +540,11 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     badgeColor:  'bg-pink-500',
   },
   'developer-projects': {
-    iconBg:      { dark: 'bg-orange-500/15',   light: 'bg-orange-50' },
-    iconText:    { dark: 'text-orange-400',     light: 'text-orange-600' },
-    borderHover: { dark: 'border-orange-500/40', light: 'border-orange-400/50' },
-    glowColor:   'rgba(249,115,22,0.15)',
-    badgeColor:  'bg-orange-500',
+    iconBg:      { dark: 'bg-dark-amber/15',   light: 'bg-dark-amber-50' },
+    iconText:    { dark: 'text-dark-amber',     light: 'text-dark-amber' },
+    borderHover: { dark: 'border-dark-amber/40', light: 'border-dark-amber/50' },
+    glowColor:   'rgba(242,138,15,0.15)',
+    badgeColor:  'bg-dark-amber',
   },
   'developer-github': {
     iconBg:      { dark: 'bg-gray-500/15',   light: 'bg-gray-100' },
@@ -557,7 +557,7 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     iconBg:      { dark: 'bg-sky-500/15',   light: 'bg-sky-50' },
     iconText:    { dark: 'text-sky-400',     light: 'text-sky-700' },
     borderHover: { dark: 'border-sky-500/40', light: 'border-sky-400/50' },
-    glowColor:   'rgba(14,165,233,0.15)',
+    glowColor:   'rgba(0,96,139,0.15)',
     badgeColor:  'bg-sky-500',
   },
   'general-employment-verification': {
@@ -574,7 +574,7 @@ const DEFAULT_BLOCK_COLOR: BlockColorSet = {
   iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
   iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
   borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
-  glowColor:   'rgba(184,144,77,0.15)',
+    glowColor:   'rgba(241,90,43,0.15)',
   badgeColor:  'bg-teal-500',
 }
 
@@ -624,6 +624,14 @@ function isCandidatePickerBlock(b: BlockDefinition): boolean {
 /** Features shown in Add features to career card (drivers wedge). */
 export function getPickerBlockDefinitions(): BlockDefinition[] {
   return BLOCK_DEFINITIONS.filter(isCandidatePickerBlock)
+}
+
+/**
+ * Every driver starts with the DQ spine: DOT (core, hidden from the old picker)
+ * plus the former picker set (consent, MVR, PSP, CDL).
+ */
+export function getDefaultDriverBlockIds(): string[] {
+  return ['driver-dot-application', ...getPickerBlockDefinitions().map((b) => b.id)]
 }
 
 /** Get all block definitions for a category, sorted by complexity (simple first). */

@@ -78,7 +78,6 @@ export { useDqCoachStore } from './dq-coach-store'
 export {
   useHubBlocksStore,
   useInstalledBlocks,
-  useIsPickerOpen,
   useHubOnboarding,
   useAvailableBlocks,
   useWalkthroughDismissed,

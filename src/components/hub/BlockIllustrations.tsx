@@ -27,26 +27,16 @@ interface IllustrationProps {
   isDark: boolean
 }
 
-/** Soft radial bloom behind art so tiles feel finished, not flat icon drops. */
 function IllustrationFrame({
   accentText,
-  isDark,
   children,
 }: {
   accentText: string
-  isDark: boolean
+  isDark?: boolean
   children: React.ReactNode
 }) {
   return (
     <div className={cn('relative z-0 flex flex-col items-center text-current', accentText)}>
-      <div
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute left-1/2 top-1/2 h-[4.25rem] w-[4.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl',
-          isDark ? 'opacity-[0.22]' : 'opacity-[0.15]',
-        )}
-        style={{ background: 'currentColor' }}
-      />
       <div className='relative z-[1]'>{children}</div>
     </div>
   )

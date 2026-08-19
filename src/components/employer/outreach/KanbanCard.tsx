@@ -68,7 +68,7 @@ export default function KanbanCard({ invite, files, consentBundle, onClick }: Ka
       {attention && (
         <span
           aria-label={attention.label}
-          className="pointer-events-none absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#c43d14] ring-2 ring-white"
+          className="pointer-events-none absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[#f15a2b] ring-2 ring-white"
         />
       )}
       <div className="flex min-w-0 items-center gap-2 px-2.5 pt-2.5">

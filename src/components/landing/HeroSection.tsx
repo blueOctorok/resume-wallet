@@ -46,7 +46,7 @@ export default function HeroSection({
               </p>
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 xl:mx-0'>
                 <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55 xl:from-[#f15a2b]/55' />
-                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f78a5c]'>
+                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f15a2b]'>
                   The career card you own
                 </p>
                 <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55' />
@@ -58,7 +58,7 @@ export default function HeroSection({
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}
-              <em className='font-semibold not-italic text-[#f78a5c]'>not paperwork.</em>
+              <em className='font-semibold not-italic text-[#f15a2b]'>not paperwork.</em>
             </h1>
 
             <p
@@ -102,7 +102,7 @@ export default function HeroSection({
                 <button
                   type='button'
                   onClick={onBrowseJobs}
-                  className='text-sm text-ironside underline decoration-ironside/50 underline-offset-4 transition-colors hover:text-[#f78a5c] hover:decoration-[#f15a2b]/50'
+                  className='text-sm text-ironside underline decoration-ironside/50 underline-offset-4 transition-colors hover:text-[#f15a2b] hover:decoration-[#f15a2b]/50'
                 >
                   or browse jobs without an account
                 </button>

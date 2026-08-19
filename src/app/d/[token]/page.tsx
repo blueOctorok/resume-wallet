@@ -278,15 +278,10 @@ export default function PublicDriverProfile() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'>
-      <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 right-0 w-96 h-96 bg-teal-600/5 rounded-full blur-3xl' />
-        <div className='absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl' />
-      </div>
-
       <header className='border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-20'>
         <div className='max-w-4xl mx-auto px-4 py-4 flex items-center justify-between'>
           <a href='/' className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-lg shadow-teal-600/20'>
+            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
             <span className='text-white font-semibold'>Provven</span>

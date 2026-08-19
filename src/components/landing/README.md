@@ -28,7 +28,8 @@ Site-wide brand (Tailwind `teal-*` remaps to Hot Embers).
 
 - **Ink bands** are Midnight Blue (`#173150`).
 - **Light sections** sit on cool paper (`#f3f4f5`). Ironside `#939598` is captions, hints, and borders (`text-ironside`). Ledes stay `#5c6166` for contrast.
-- **Accent: Hot Embers `#f15a2b`.** Verified facts, disclosure seam, CTAs. Text on navy: `#f78a5c`. Text on paper: `#c43d14`.
+- **Accent: Hot Embers `#f15a2b` only.** Same hex on navy and paper. No homemade ember tints.
+- **Secondary:** Denim `#00608b`, Dark Amber `#F28A0F`, Retro Teal `#3F8A8C`.
 - Redaction bars stay **neutral slate**.
 
 ## Brand marks

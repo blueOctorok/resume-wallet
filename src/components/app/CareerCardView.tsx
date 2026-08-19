@@ -212,7 +212,7 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
             className={cn(
               '!rounded-xl !px-4 !py-2 !text-sm',
               resumeStatus === 'ready'
-                ? '!bg-[#173150] !text-[#f4f1ea] hover:!bg-[#1c3d62]'
+                ? '!bg-retro-teal !text-white hover:!brightness-110'
                 : '!border !border-[#173150]/20 !bg-[#fbf8f1] !text-[#173150] hover:!bg-white',
             )}
           >

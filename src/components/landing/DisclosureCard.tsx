@@ -269,7 +269,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
         <div className='min-w-0 flex-1'>
           <div className='flex flex-wrap items-center gap-2'>
             <h3 className='text-[15px] font-semibold text-[#173150]'>Marcus Reed</h3>
-            <span className='inline-flex items-center gap-1 rounded-full bg-[#f15a2b]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#c43d14] ring-1 ring-[#f15a2b]/30'>
+            <span className='inline-flex items-center gap-1 rounded-full bg-[#f15a2b]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#f15a2b] ring-1 ring-[#f15a2b]/30'>
               <ProvvenMark tone='auto' className='h-3 w-auto' />
               Verified by Provven
             </span>
@@ -282,12 +282,12 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
         <p className='min-h-[1.25rem] font-mono text-[10px] tracking-wide text-ironside'>
           {isShared ? (
             <>
-              <span className='text-[#c43d14]'>
+              <span className='text-[#f15a2b]'>
                 sharing with {shareTarget}
                 {showCaret && (
                   <span
                     aria-hidden
-                    className='ml-px inline-block h-[0.85em] w-px translate-y-px bg-[#c43d14] align-middle animate-pulse'
+                    className='ml-px inline-block h-[0.85em] w-px translate-y-px bg-[#f15a2b] align-middle animate-pulse'
                   />
                 )}
               </span>{' '}
@@ -295,7 +295,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
             </>
           ) : (
             <>
-              <span className='text-[#c43d14]'>your vault</span> · everything · visible only to you
+              <span className='text-[#f15a2b]'>your vault</span> · everything · visible only to you
             </>
           )}
         </p>
@@ -333,7 +333,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
                 </p>
               </div>
               {isStamped && (
-                <span className='lp-stamp shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#c43d14]'>
+                <span className='lp-stamp shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#f15a2b]'>
                   verified
                 </span>
               )}
@@ -348,7 +348,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
         aria-hidden
       >
         <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55' />
-        <span className='inline-flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-[#c43d14]'>
+        <span className='inline-flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-[#f15a2b]'>
           <Lock className='h-3 w-3' />
           selective disclosure
         </span>
@@ -369,7 +369,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
               )}
             >
               {open ? (
-                <Eye className='h-3 w-3 shrink-0 text-[#c43d14]/80' />
+                <Eye className='h-3 w-3 shrink-0 text-[#f15a2b]/80' />
               ) : (
                 <Lock className='h-3 w-3 shrink-0 text-ironside' />
               )}
@@ -390,7 +390,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
               <span
                 className={cn(
                   'shrink-0 font-mono text-[8px] font-semibold uppercase tracking-wider',
-                  open ? 'text-[#c43d14]/80' : 'text-ironside',
+                  open ? 'text-[#f15a2b]/80' : 'text-ironside',
                 )}
               >
                 {open ? 'only you' : 'stays private'}

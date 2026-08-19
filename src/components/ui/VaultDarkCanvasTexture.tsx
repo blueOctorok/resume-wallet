@@ -1,8 +1,7 @@
 'use client'
 
 /**
- * Full-viewport dark canvas — same vocabulary as vault tile faces: dual-phase grid,
- * champagne/steel blooms over ink navy.
+ * Full-viewport dark canvas — dual-phase grid over ink navy. No bloom.
  */
 export default function VaultDarkCanvasTexture() {
   return (
@@ -22,18 +21,6 @@ export default function VaultDarkCanvasTexture() {
           backgroundImage:
             'repeating-linear-gradient(178deg, transparent 0px, transparent 5px, rgba(255,255,255,0.028) 5px, rgba(255,255,255,0.028) 6px)',
         }}
-      />
-      <span
-        aria-hidden
-        className='pointer-events-none absolute inset-0'
-        style={{
-          background:
-            'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(241,90,43,0.09) 0%, transparent 58%)',
-        }}
-      />
-      <span
-        aria-hidden
-        className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_42%_at_96%_92%,rgba(95,122,158,0.1)_0%,transparent_52%)]'
       />
       <span
         aria-hidden

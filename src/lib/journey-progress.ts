@@ -457,11 +457,10 @@ export function calculateBlockJourney(
       priority: 'high',
     })
   } else if (installedBlockTypes.length === 0) {
-    // Zero blocks — the most important action is discovering the Block Store
     nextActions.push({
-      label: 'Explore the Block Store',
-      description: 'Browse blocks to build your professional profile',
-      target: 'block-store',
+      label: 'Open your DQ file',
+      description: 'Start with your profile and DOT application',
+      target: 'hub',
       priority: 'high',
     })
     if (identityStatus !== 'complete') {
@@ -499,7 +498,7 @@ export function calculateBlockJourney(
   if (!data.isWalletConnected) {
     greeting = "Welcome to Provven! Let's get you started."
   } else if (installedBlockTypes.length === 0) {
-    greeting = 'Add blocks to your hub — each one is proof employers see on your Career Card.'
+    greeting = 'Open Build to work your DQ file — employers see what’s done on your Career Card.'
   } else if (overallProgress < 30) {
     greeting = 'Great start — keep going so your card is credible when you apply.'
   } else if (overallProgress < 60) {

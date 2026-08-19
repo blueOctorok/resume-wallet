@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DQ done tiles use Retro Teal** (2026-08-19)
+
+Completed Build tiles dropped the forest-green wash. Done = Retro Teal (same “ready” signal as the resume button). Type stays Midnight.
+
+---
+
+## **Dark-mode nav pills are Dark Amber** (2026-08-19)
+
+On the cream Dark-mode bar, the selected Career Card / Build and Light / Dark segments were Midnight (`teal-700` after the ember flatten). They now fill Dark Amber.
+
+---
+
+## **Resume-ready button is Retro Teal** (2026-08-19)
+
+The career-card “Your resume is ready” CTA uses Blue Star Retro Teal (`#3F8A8C`) instead of Midnight.
+
+---
+
+## **Bloom lighting is gone** (2026-08-19)
+
+No more radial ember/steel orbs — loader, dark canvas, vault tiles, sign-in, landing, shared-card pages. Accent stays on marks and CTAs. Depth is a normal contact shadow, not a colored glow.
+
+---
+
+## **One Hot Embers + Blue Star secondary** (2026-08-19)
+
+Blue Star flagged homemade ember tints (`#c43d14`, `#f78a5c`, `#f76d42`). Accent is **only** `#f15a2b` in light and dark — washes use opacity. Secondary is now first-class: **Denim** `#00608b` (`sky-*`), **Dark Amber** `#F28A0F` (in-progress), **Retro Teal** `#3F8A8C`. Tokens in `src/lib/brand-colors.ts` and `docs/BRAND.md`.
+
+---
+
+## **Drivers start with every DQ block** (2026-08-19)
+
+The Add a block picker is gone. Hub GET installs DOT, screening consent, MVR, PSP, and CDL for every driver (existing accounts heal on next load). Build is the file, not a storefront.
+
+---
+
 ## **Light mode drops the orange page glow** (2026-08-19)
 
 Light canvas no longer washes Hot Embers / champagne gold behind the app. Ember stays on marks and CTAs. Body + `StormBackground` keep cool paper and steel corners only.

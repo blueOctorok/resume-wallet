@@ -85,15 +85,6 @@ export function VaultCredentialChrome({
       ? 'rgba(255,255,255,0.22)'
       : 'rgba(51,65,85,0.55)'
 
-  /** Brighter accent for sweep / spark (rim color is often low-alpha rgba). */
-  const accentVivid = hasRoute
-    ? glowColor.replace(/[\d.]+\)$/, '0.45)')
-    : isDark
-      ? 'rgba(241,90,43,0.35)'
-      : 'rgba(156,119,64,0.48)'
-
-  const conicDarkBg = `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(95,122,158,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
-
   return (
     <div
       className={cn(
@@ -112,35 +103,6 @@ export function VaultCredentialChrome({
           hasRoute ? 'opacity-90 group-hover/vault:opacity-100' : 'opacity-95 group-hover/vault:opacity-100',
         )}
         style={{ clipPath: clip, background: rimBg }}
-      />
-
-      {/* Slow conic wash (teal / block accent / violet) — “living” credential */}
-      {hasRoute && (
-        <div
-          aria-hidden
-          className={cn(
-            'vault-conic-slow pointer-events-none absolute -inset-[35%] z-0 motion-reduce:opacity-0',
-            isDark
-              ? 'mix-blend-plus-lighter opacity-[0.2]'
-              : 'mix-blend-multiply opacity-[0.18]',
-          )}
-          style={{
-            clipPath: clip,
-            background: isDark
-              ? conicDarkBg
-              : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(63,82,108,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
-          }}
-        />
-      )}
-
-      {/* Chamfer spark — draws the eye to the signature cut */}
-      <div
-        aria-hidden
-        className='pointer-events-none absolute right-0 top-0 z-[2] h-5 w-5 translate-x-px -translate-y-px'
-        style={{
-          background: `radial-gradient(circle at 80% 15%, ${accentVivid} 0%, transparent 65%)`,
-          filter: 'blur(3px)',
-        }}
       />
 
       <div

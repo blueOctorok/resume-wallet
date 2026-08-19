@@ -1608,7 +1608,7 @@ function TabButton({
       {badgeCount > 0 && (
         <span
           title={badgeTitle}
-          className="rounded-full bg-[#c43d14]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#c43d14]"
+          className="rounded-full bg-[#f15a2b]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#f15a2b]"
         >
           {badgeCount} ready
         </span>

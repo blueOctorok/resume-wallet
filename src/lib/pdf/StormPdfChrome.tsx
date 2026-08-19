@@ -17,14 +17,15 @@ import {
   Text,
   View,
 } from '@react-pdf/renderer'
+import { HOT_EMBERS, MIDNIGHT, DARK_AMBER } from '@/lib/brand-colors'
 import { outcomeLabel, type ScreeningOutcome } from '@/lib/accio-result-status'
 import { StormPdfWordmark } from '@/lib/pdf/StormPdfWordmark'
 
 // ── Storm brand tokens (mirror tailwind.config.ts) ──────────────────────────
 export const STORM_COLORS = {
-  teal: '#c43d14',
-  tealLight: '#f15a2b',
-  tealDark: '#6b5000',
+  teal: HOT_EMBERS,
+  tealLight: HOT_EMBERS,
+  tealDark: MIDNIGHT,
   cream: '#fef5ed',
   ink: '#0f172a', // slate-900
   body: '#1e293b', // slate-800
@@ -37,8 +38,8 @@ export const STORM_COLORS = {
   // tailwind.config.ts (PDFs bypass Tailwind, so the values live here too).
   emerald: '#3a6650',
   emeraldBg: '#f2f7f4',
-  amber: '#b45309',
-  amberBg: '#fef3c7',
+  amber: DARK_AMBER,
+  amberBg: '#fef6eb',
   rose: '#be123c',
   roseBg: '#ffe4e6',
   slate: '#475569',

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getBlockDefinition } from '@/lib/block-registry'
-import { ensureHubBlocksForEmployerInitiatedActions } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
+import {
+  ensureDefaultDriverHubBlocks,
+  ensureHubBlocksForEmployerInitiatedActions,
+} from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 
 /**
  * GET /api/hub/blocks
@@ -29,8 +32,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Heal missing tiles when Pace/employer already ordered or requested a block
-    // (MVR/PSP orders, candidate_requests, claimed invites) — registry-driven.
+    // Drivers get the full DQ set from day one (DOT + consent + MVR + PSP + CDL).
+    await ensureDefaultDriverHubBlocks(supabase, user.id)
+    // Heal missing tiles when an employer already ordered or requested a block.
     await ensureHubBlocksForEmployerInitiatedActions(supabase, user.id)
 
     const [blocksResult, onboardingResult, profileResult] = await Promise.all([

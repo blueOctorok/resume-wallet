@@ -1,3 +1,5 @@
+import { HOT_EMBERS, MIDNIGHT } from '@/lib/brand-colors'
+
 /**
  * Shared Provven email template builder.
  *
@@ -32,11 +34,11 @@ export interface EmailTemplateOptions {
   accentColor?: string
 }
 
-const TEAL = '#c43d14'
-const TEAL_DARK = '#6b5000'
-const TEAL_LIGHT = '#f15a2b'
-const TEAL_BG = '#fbf6e6'
-const TEAL_BORDER = '#ead48a'
+const TEAL = HOT_EMBERS
+const TEAL_DARK = MIDNIGHT
+const TEAL_LIGHT = HOT_EMBERS
+const TEAL_BG = '#fef4f0'
+const TEAL_BORDER = HOT_EMBERS
 
 export function buildEmail(opts: EmailTemplateOptions): string {
   const {

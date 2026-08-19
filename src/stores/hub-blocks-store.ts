@@ -70,7 +70,6 @@ interface HubBlocksState {
   walkthroughDismissed: boolean
 
   isLoading: boolean
-  isPickerOpen: boolean
   isEditMode: boolean
   fetchError: string | null
 
@@ -122,10 +121,6 @@ interface HubBlocksActions {
 
   // Edit mode (jiggle / rearrange)
   setEditMode: (on: boolean) => void
-
-  // Picker modal
-  openPicker: () => void
-  closePicker: () => void
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -137,7 +132,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   avaAutoWelcomeCandidateDone: false,
   walkthroughDismissed: false,
   isLoading: false,
-  isPickerOpen: false,
   isEditMode: false,
   fetchError: null,
   isStormiContextModalOpen: false,
@@ -425,10 +419,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
   // ── Edit mode ──────────────────────────────────────────────────────────────
   setEditMode: (on) => set({ isEditMode: on }),
-
-  // ── Picker ─────────────────────────────────────────────────────────────────
-  openPicker: () => set({ isPickerOpen: true }),
-  closePicker: () => set({ isPickerOpen: false }),
 }))
 
 // ── Selector hooks ────────────────────────────────────────────────────────────
@@ -436,9 +426,6 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
 export const useInstalledBlocks = () =>
   useHubBlocksStore((s) => s.installedBlocks)
-
-export const useIsPickerOpen = () =>
-  useHubBlocksStore((s) => s.isPickerOpen)
 
 export const useIsEditMode = () =>
   useHubBlocksStore((s) => s.isEditMode)

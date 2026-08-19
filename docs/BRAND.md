@@ -9,15 +9,23 @@ fix the asset.
 
 ## Colors
 
+**One hex per token.** Do not invent Hot Embers tints (`#c43d14`, `#f78a5c`, `#f76d42`). Washes are `#f15a2b` at opacity. Light and dark use the same accent hex.
+
 | Token | Hex | Use |
 |---|---|---|
-| Midnight Blue | `#173150` | Ink bands, dark shell, mark on paper, type on light |
-| Hot Embers | `#f15a2b` | Mark on navy, CTAs, verified accent |
-| Ember on navy | `#f78a5c` | Accent text on ink |
-| Ember on paper | `#c43d14` | Accent text on light |
-| Ironside | `#939598` | Captions, hints, paper borders (`text-ironside`, `border-ironside/30`). Not paragraph text on paper — use `#5c6166`. Stormi `violet-400` is this hex. |
+| Midnight Blue | `#173150` | Ink, dark shell, type on paper |
+| Hot Embers | `#f15a2b` | Mark, CTAs, verified — the only orange |
+| Ironside | `#939598` | Captions, hints, paper borders. Not body copy — use `#5c6166`. |
 | Paper | `#f3f4f5` | Light surfaces |
 | Type on navy | `#f4f1ea` | Wordmark + headings on ink |
+
+### Secondary (Blue Star, 2026-08-19)
+
+| Token | Hex | Use |
+|---|---|---|
+| Denim | `#00608b` | Cool support — `sky-*` / `denim` (jobs, info) |
+| Dark Amber | `#F28A0F` | In-progress / attention — not a Hot Embers shade |
+| Retro Teal | `#3F8A8C` | Cool support tiles — `retro-teal` |
 
 ## Mark
 

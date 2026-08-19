@@ -53,8 +53,7 @@ export default function ConstructSectionWrapper({
   const [removeModalOpen, setRemoveModalOpen] = useState(false)
 
   const Illustration = getBlockIllustration(blockType)
-  // Champagne gold across every block — heritage chrome doesn't do per-block colors
-  const accentClass = isDark ? 'text-[#f15a2b]' : 'text-[#c43d14]'
+  const accentClass = 'text-ember'
 
   const ghostBtn = isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200'
   const tealBtn = isDark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
@@ -113,7 +112,7 @@ export default function ConstructSectionWrapper({
               <p
                 className={cn(
                   'text-[11px] font-bold uppercase tracking-[0.12em]',
-                  isDark ? 'text-[#f15a2b]' : 'text-[#c43d14]',
+                  isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]',
                 )}
               >
                 {getBlockDefinition(blockType)?.label ?? blockType}

@@ -8,11 +8,9 @@ import {
   Clock,
   FolderCheck,
   Lock,
-  Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore, useUIStore } from '@/stores'
-import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useJourneyProgress } from '@/stores/journey-store'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
@@ -56,21 +54,21 @@ const DQ_ROUTES: Partial<Record<DqItemId, PageType>> = {
 }
 
 const CHIP_CLASSES: Record<TileStatus, string> = {
-  done: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
-  'in-progress': 'bg-[#f15a2b]/10 text-[#c43d14] ring-1 ring-[#f15a2b]/25',
-  waiting: 'bg-amber-100 text-amber-900',
-  attention: 'bg-amber-100 text-amber-900',
+  done: 'bg-retro-teal/10 text-retro-teal ring-1 ring-retro-teal/25',
+  'in-progress': 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/25',
+  waiting: 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/20',
+  attention: 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/20',
   todo: 'bg-stone-100 text-stone-700',
   locked: 'bg-stone-100 text-ironside',
 }
 
 function TileStatusIcon({ status }: { status: TileStatus }) {
   if (status === 'done')
-    return <CheckCircle2 className='h-4 w-4 shrink-0 text-emerald-600' aria-hidden />
+    return <CheckCircle2 className='h-4 w-4 shrink-0 text-retro-teal' aria-hidden />
   if (status === 'waiting' || status === 'attention')
-    return <Clock className='h-4 w-4 shrink-0 text-amber-600' aria-hidden />
+    return <Clock className='h-4 w-4 shrink-0 text-dark-amber' aria-hidden />
   if (status === 'in-progress')
-    return <CircleDot className='h-4 w-4 shrink-0 text-[#c43d14]' aria-hidden />
+    return <CircleDot className='h-4 w-4 shrink-0 text-dark-amber' aria-hidden />
   if (status === 'locked')
     return <Lock className='h-3.5 w-3.5 shrink-0 text-ironside' aria-hidden />
   return <CircleDot className='h-4 w-4 shrink-0 text-ironside/50' aria-hidden />
@@ -108,7 +106,7 @@ function BoardTileButton({ tile }: { tile: BoardTile }) {
         'flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
         tile.status === 'locked' && 'border-dashed opacity-70',
         tile.status === 'done'
-          ? 'border-emerald-200/80 bg-emerald-50/70'
+          ? 'border-retro-teal/30 bg-retro-teal/[0.08]'
           : 'border-ironside/25 bg-white',
         clickable
           ? 'cursor-pointer hover:border-[#f15a2b]/35 hover:bg-[#f15a2b]/[0.04]'
@@ -124,7 +122,7 @@ function BoardTileButton({ tile }: { tile: BoardTile }) {
             className={cn(
               'text-sm font-medium leading-snug',
               tile.status === 'done'
-                ? 'text-emerald-900/90'
+                ? 'text-[#173150]'
                 : tile.status === 'locked'
                   ? 'text-ironside'
                   : 'text-[#173150]',
@@ -164,7 +162,6 @@ function BoardTileButton({ tile }: { tile: BoardTile }) {
 export default function BuildBoard() {
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
   const dqFile = useDriverHubStore((s) => s.dqFile)
   const journey = useJourneyProgress()
 
@@ -248,17 +245,6 @@ export default function BuildBoard() {
           {activeTiles.map((tile) => (
             <BoardTileButton key={tile.id} tile={tile} />
           ))}
-
-          {/* Add-a-block tile — the picker entry point now that the old
-              "Strengthen your card" rail is gone with the construct card. */}
-          <button
-            type='button'
-            onClick={openPicker}
-            className='flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ironside/40 p-3.5 text-sm font-medium text-ironside transition-colors hover:border-[#f15a2b]/40 hover:text-[#c43d14]'
-          >
-            <Plus className='h-4 w-4' aria-hidden />
-            Add a block
-          </button>
         </div>
 
         {comingTiles.length > 0 && (

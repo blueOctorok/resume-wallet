@@ -335,7 +335,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
   return (
     <div
-      className={`max-w-4xl mx-auto p-6 ${DOT_PAPER_CARD} relative z-10 border-t-4 border-[#c43d14]`}
+      className={`max-w-4xl mx-auto p-6 ${DOT_PAPER_CARD} relative z-10 border-t-4 border-[#f15a2b]`}
     >
       {/* Header */}
       <div className='text-center mb-8'>

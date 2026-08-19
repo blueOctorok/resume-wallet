@@ -6,10 +6,8 @@
  */
 
 import { Check, Circle, Loader2, ChevronRight, IdCard } from 'lucide-react'
-import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { useJourneyProgress } from '@/stores'
-import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
 import type { JourneyProgress, JourneyStep } from '@/lib/journey-progress'
 
@@ -22,7 +20,6 @@ export interface CareerPathStepsProps {
 export default function CareerPathSteps({ onNavigate, progressOverride }: CareerPathStepsProps) {
   const storeProgress = useJourneyProgress()
   const progress = progressOverride ?? storeProgress
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
   const isEmployer = progress.role === 'employer'
 
   if (progress.steps.length === 0) {
@@ -36,13 +33,8 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
         <IdCard className='w-8 h-8 mx-auto mb-2 opacity-50 text-gray-500 dark:text-gray-400' />
         <p className='text-sm font-medium text-gray-800 dark:text-gray-200'>Nothing here yet</p>
         <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-          {isEmployer ? 'Load your hub to see your job path.' : 'Add features to your career card to see your next steps.'}
+          {isEmployer ? 'Load your hub to see your job path.' : 'Open Build to start your DQ file.'}
         </p>
-        {!isEmployer && (
-          <Button type='button' variant='primary' size='sm' className='mt-3' onClick={() => openPicker()}>
-            Add features
-          </Button>
-        )}
       </div>
     )
   }

@@ -23,8 +23,7 @@ interface StormChainWordmarkProps {
 }
 
 /** Same drop-shadow stack as hub `BlockTile` (installed blocks). */
-const STORM_WORDMARK_TILE_SHADOW_LIGHT =
-  'drop-shadow(0 6px 18px rgba(15,23,42,0.12)) drop-shadow(0 0 28px rgba(156,119,64,0.2)) drop-shadow(0 0 48px rgba(54,69,89,0.1))'
+const STORM_WORDMARK_TILE_SHADOW_LIGHT = 'drop-shadow(0 6px 18px rgba(15,23,42,0.12))'
 const STORM_WORDMARK_TILE_SHADOW_DARK = 'drop-shadow(0 4px 18px rgba(0,0,0,0.45))'
 
 type DropletSpec = {
@@ -270,7 +269,7 @@ function StormWordmarkOBlock({
                 'min-h-0 min-w-0 shrink-0 origin-center scale-[1.14] sm:scale-[1.12]',
                 'h-full w-full',
                 isDark
-                  ? 'text-teal-300 drop-shadow-[0_0_4px_rgba(205,168,104,0.95),0_0_9px_rgba(205,168,104,0.55),0_0_14px_rgba(217,192,140,0.22)]'
+                  ? 'text-teal-300'
                   : 'text-teal-700',
               )}
               strokeWidth={stroke}
@@ -393,9 +392,7 @@ export default function StormChainWordmark({
         style={{ filter: tileFilter }}
         onMouseEnter={() =>
           setTileFilter(
-            isDark
-              ? `drop-shadow(0 10px 28px ${tileColors.glowColor})`
-              : `${STORM_WORDMARK_TILE_SHADOW_LIGHT}, drop-shadow(0 8px 24px ${tileColors.glowColor})`,
+            isDark ? STORM_WORDMARK_TILE_SHADOW_DARK : STORM_WORDMARK_TILE_SHADOW_LIGHT,
           )
         }
         onMouseLeave={() =>

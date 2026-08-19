@@ -27,18 +27,15 @@ export default function HubSidebar({ variant, id, onCloseDrawer, className }: Hu
   const isDark = isDarkTheme(theme)
   const pathVaultGlow = getBlockColor('general-resume').glowColor
   const { setCurrentPage } = useUIStore()
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const installedBlocks = useInstalledBlocks()
   const progress = useJourneyProgress()
 
   const handleNavigate = (target: PageType) => {
-    if (target === ('block-store' as PageType)) {
-      onCloseDrawer?.()
-      openPicker()
-      return
-    }
-    const normalized: PageType = target === 'hub' || target === 'signin' ? null : target
+    const normalized: PageType =
+      target === 'hub' || target === 'signin' || target === ('block-store' as PageType)
+        ? null
+        : target
     setCurrentPage(normalized)
     onCloseDrawer?.()
   }

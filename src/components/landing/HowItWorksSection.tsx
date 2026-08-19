@@ -43,13 +43,13 @@ export default function HowItWorksSection({ isDark }: { isDark: boolean }) {
               <p
                 className={cn(
                   'font-display text-6xl font-light leading-none tracking-tight sm:text-7xl',
-                  isDark ? 'text-[#f78a5c]/25' : 'text-[#c43d14]/25',
+                  isDark ? 'text-[#f15a2b]/25' : 'text-[#f15a2b]/25',
                 )}
                 aria-hidden
               >
                 {step.n}
               </p>
-              <div className={cn('mt-4 h-px w-12', isDark ? 'bg-[#f15a2b]/45' : 'bg-[#c43d14]/40')} />
+              <div className={cn('mt-4 h-px w-12', isDark ? 'bg-[#f15a2b]/45' : 'bg-[#f15a2b]/40')} />
               <h3 className={cn('mt-4 font-display text-2xl font-medium tracking-tight', headingText(isDark))}>
                 {step.title}
               </h3>

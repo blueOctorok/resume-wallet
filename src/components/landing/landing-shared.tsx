@@ -12,10 +12,11 @@
  * - Everything outside ink bands is theme-aware via `isDark` ternaries,
  *   matching the rest of the app.
  *
- * Palette (Blue Star preview):
+ * Palette (Blue Star):
  * - Ink bands are Midnight Blue `#173150`.
  * - Light sections sit on cool paper with Ironside `#939598`.
- * - Accent is Hot Embers `#f15a2b`.
+ * - Accent is Hot Embers `#f15a2b` only — no homemade ember tints.
+ * - Secondary: Denim `#00608b`, Dark Amber `#F28A0F`, Retro Teal `#3F8A8C`.
  */
 
 import type { ReactNode } from 'react'
@@ -47,7 +48,7 @@ export function paperBand(isDark: boolean, tint = false) {
  * (the CTA is a brand object, not a theme surface).
  */
 export const GOLD_CTA =
-  'bg-[#f15a2b] text-white shadow-lg shadow-black/25 hover:bg-[#f76d42] dark:bg-[#f15a2b] dark:text-white dark:hover:bg-[#f76d42]'
+  'bg-ember text-white shadow-lg shadow-black/25 hover:brightness-110 dark:bg-ember dark:text-white dark:hover:brightness-110'
 
 /** Fixed palette for ink bands (never changes with theme) */
 export const INK = {
@@ -79,10 +80,10 @@ export function SectionHeader({
   className,
 }: SectionHeaderProps) {
   const eyebrowColor = onInk
-    ? 'text-[#f78a5c]/90'
+    ? 'text-[#f15a2b]/90'
     : isDark
-      ? 'text-[#f78a5c]/90'
-      : 'text-[#c43d14]'
+      ? 'text-[#f15a2b]/90'
+      : 'text-[#f15a2b]'
   const titleColor = onInk ? INK.heading : headingText(isDark)
   const ledeColor = onInk ? INK.body : mutedText(isDark)
 
@@ -171,8 +172,8 @@ interface SealDividerProps {
  * not between every block (scarcity keeps it meaningful).
  */
 export function SealDivider({ onInk = false, isDark = false, className }: SealDividerProps) {
-  const goldLine = onInk || isDark ? 'to-[#f15a2b]/50' : 'to-[#c43d14]/45'
-  const goldDiamond = onInk || isDark ? 'bg-[#f15a2b]/85' : 'bg-[#c43d14]/80'
+  const goldLine = 'to-ember/50'
+  const goldDiamond = 'bg-ember/80'
 
   return (
     <div className={cn('flex items-center', className)} aria-hidden>

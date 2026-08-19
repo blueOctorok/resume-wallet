@@ -94,7 +94,7 @@ export default function StormiJourneyGuide() {
                 className={cn(
                   'flex h-12 w-12 items-center justify-center rounded-full',
                   'bg-gradient-to-br from-teal-600 to-cyan-600',
-                  'shadow-lg shadow-teal-600/30 dark:shadow-teal-400/20',
+                  'shadow-lg shadow-black/20',
                 )}
               >
                 <Bot className='w-6 h-6 text-white' />

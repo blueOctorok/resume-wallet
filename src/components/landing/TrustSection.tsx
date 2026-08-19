@@ -32,19 +32,13 @@ const PILLARS = [
 ] as const
 
 /** Uniform gold seal tiles — no per-pillar color coding, by design */
-const PILLAR_ICON_STYLE = 'bg-[#f15a2b]/12 text-[#f78a5c] ring-[#f15a2b]/25'
+const PILLAR_ICON_STYLE = 'bg-[#f15a2b]/12 text-[#f15a2b] ring-[#f15a2b]/25'
 
 export default function TrustSection() {
   return (
     <InkBand
       className='border-y border-white/[0.06]'
-      atmosphere={
-        <div
-          aria-hidden
-          className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-[0.1]'
-          style={{ background: 'radial-gradient(ellipse, #f15a2b 0%, transparent 70%)' }}
-        />
-      }
+      atmosphere={null}
     >
       <LandingContainer className='py-20 sm:py-28'>
         <SectionHeader
@@ -61,9 +55,9 @@ export default function TrustSection() {
           data-reveal
         >
           <span className='reveal-item inline-block'>
-            prove(<span className='text-[#f78a5c]'>cdl_class</span>) → <span className='text-[#f78a5c]'>valid ✓</span>
+            prove(<span className='text-[#f15a2b]'>cdl_class</span>) → <span className='text-[#f15a2b]'>valid ✓</span>
             <span className='mx-2 text-slate-700'>·</span>
-            prove(<span className='text-[#f78a5c]'>med_cert</span>) → <span className='text-[#f78a5c]'>valid ✓</span>
+            prove(<span className='text-[#f15a2b]'>med_cert</span>) → <span className='text-[#f15a2b]'>valid ✓</span>
           </span>
         </p>
 

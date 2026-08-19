@@ -33,8 +33,8 @@ function RequestMock({ isDark }: { isDark: boolean }) {
         'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold',
         active
           ? isDark
-            ? 'border-[#f15a2b]/40 bg-[#f15a2b]/15 text-[#ffb08a]'
-            : 'border-[#f15a2b]/60 bg-[#fde8e0] text-[#7a2a12]'
+            ? 'border-[#f15a2b]/40 bg-[#f15a2b]/15 text-[#f15a2b]'
+            : 'border-[#f15a2b]/60 bg-[#f15a2b]/10 text-[#173150]'
           : isDark
             ? 'border-white/10 bg-white/[0.03] text-gray-400'
             : 'border-ironside/30 bg-white text-ironside',
@@ -63,15 +63,15 @@ function RequestMock({ isDark }: { isDark: boolean }) {
       <div
         className={cn(
           'mt-4 flex items-center gap-2.5 rounded-lg px-3 py-2.5',
-          isDark ? 'bg-[#f15a2b]/[0.08] ring-1 ring-inset ring-[#f15a2b]/25' : 'bg-[#fde8e0] ring-1 ring-inset ring-[#f15a2b]/40',
+          isDark ? 'bg-[#f15a2b]/[0.08] ring-1 ring-inset ring-[#f15a2b]/25' : 'bg-[#f15a2b]/10 ring-1 ring-inset ring-[#f15a2b]/40',
         )}
       >
-        <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-[#f78a5c]' : 'text-[#c43d14]')} />
+        <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />
         <div className='min-w-0'>
-          <p className={cn('text-xs font-semibold', isDark ? 'text-[#ffb08a]' : 'text-[#7a2a12]')}>
+          <p className={cn('text-xs font-semibold', isDark ? 'text-[#f15a2b]' : 'text-[#173150]')}>
             Clean MVR — 36 months · verified
           </p>
-          <p className={cn('text-[10px]', isDark ? 'text-[#f78a5c]/70' : 'text-[#c43d14]/85')}>
+          <p className={cn('text-[10px]', isDark ? 'text-[#f15a2b]/70' : 'text-[#f15a2b]/85')}>
             Fact shared by candidate · ready to review
           </p>
         </div>
@@ -131,7 +131,7 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
             <ul className='reveal-item mt-8 space-y-5' style={{ transitionDelay: '140ms' }}>
               {POINTS.map((point) => (
                 <li key={point.title} className='flex gap-3.5'>
-                  <BadgeCheck className={cn('mt-0.5 h-5 w-5 shrink-0', isDark ? 'text-[#f78a5c]' : 'text-[#c43d14]')} />
+                  <BadgeCheck className={cn('mt-0.5 h-5 w-5 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />
                   <div>
                     <h3 className={cn('text-[15px] font-semibold', headingText(isDark))}>{point.title}</h3>
                     <p className={cn('mt-1 text-sm leading-relaxed', mutedText(isDark))}>{point.body}</p>
@@ -158,7 +158,7 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
                   href={`mailto:${CONTACT_EMAIL}`}
                   className={cn(
                     'font-medium underline underline-offset-2',
-                    isDark ? 'text-[#f78a5c]' : 'text-[#c43d14]',
+                    isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]',
                   )}
                 >
                   {CONTACT_EMAIL}
@@ -172,8 +172,8 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
                 className={cn(
                   'mt-4 text-sm font-medium underline underline-offset-4 transition-colors',
                   isDark
-                    ? 'text-[#f78a5c] decoration-[#f15a2b]/40 hover:decoration-[#f15a2b]/80'
-                    : 'text-[#c43d14] decoration-[#f15a2b]/50 hover:decoration-[#c43d14]',
+                    ? 'text-[#f15a2b] decoration-[#f15a2b]/40 hover:decoration-[#f15a2b]/80'
+                    : 'text-[#f15a2b] decoration-[#f15a2b]/50 hover:decoration-[#f15a2b]',
                 )}
               >
                 Already on Provven? Log in

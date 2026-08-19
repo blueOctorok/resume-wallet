@@ -161,7 +161,6 @@ export default function SimpleCardPanel() {
   const createLens = useCareerCardLensesStore((s) => s.createLens)
   const setUiMode = useUIModeStore((s) => s.setMode)
   const setReturnToApply = useUIModeStore((s) => s.setReturnToApply)
-  const setOpenPickerAfterHub = useUIModeStore((s) => s.setOpenPickerAfterHub)
 
   const { card, loading, error, refresh } = useProjectedCareerCard(sessionUserId, {
     lensId: activeLensId,
@@ -198,8 +197,7 @@ export default function SimpleCardPanel() {
   const handleAddBlockFromApply = useCallback(() => {
     setReturnToApply(true)
     setUiMode('hub')
-    setOpenPickerAfterHub(true)
-  }, [setReturnToApply, setUiMode, setOpenPickerAfterHub])
+  }, [setReturnToApply, setUiMode])
 
   const handleNavigateToBlock = useCallback(
     (blockType?: string) => {
@@ -213,9 +211,8 @@ export default function SimpleCardPanel() {
       setUiMode('hub')
       const route = getBlockDefinition(bt)?.pageRoute
       if (route) queueMicrotask(() => setCurrentPage(route as PageType))
-      else setOpenPickerAfterHub(true)
     },
-    [setReturnToApply, setUiMode, setCurrentPage, setOpenPickerAfterHub],
+    [setReturnToApply, setUiMode, setCurrentPage],
   )
 
   const handleApply = useCallback(() => {

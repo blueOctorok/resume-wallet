@@ -9,7 +9,6 @@ import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
 import Button from '@/components/ui/Button'
-import BlockPickerModal from './BlockPickerModal'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import BuildBoard from '@/components/hub/BuildBoard'
 
@@ -56,20 +55,10 @@ export default function CandidateHub() {
   const isLoading = useHubBlocksStore((s) => s.isLoading)
   const fetchError = useHubBlocksStore((s) => s.fetchError)
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
-
-  const openPickerAfterHub = useUIModeStore((s) => s.openPickerAfterHub)
-  const setOpenPickerAfterHub = useUIModeStore((s) => s.setOpenPickerAfterHub)
 
   useEffect(() => {
     if (sessionUserId) void syncDriverHubFromApi(sessionUserId)
   }, [sessionUserId])
-
-  useEffect(() => {
-    if (!openPickerAfterHub) return
-    openPicker()
-    setOpenPickerAfterHub(false)
-  }, [openPickerAfterHub, openPicker, setOpenPickerAfterHub])
 
   const refreshHub = useCallback(() => {
     if (!sessionUserId) return
@@ -116,13 +105,9 @@ export default function CandidateHub() {
   }
 
   return (
-    <>
-      <BlockPickerModal />
-
-      <div className='mx-auto w-full max-w-3xl space-y-6'>
-        <ReturnToApplyBanner isDark={isDark} />
-        <BuildBoard />
-      </div>
-    </>
+    <div className='mx-auto w-full max-w-3xl space-y-6'>
+      <ReturnToApplyBanner isDark={isDark} />
+      <BuildBoard />
+    </div>
   )
 }

@@ -1,40 +1,77 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * BLUE STAR PALETTE PREVIEW (2026-08-18) — boss review.
+ * Blue Star palette — official hexes only.
  *
- * Midnight Blue #173150 · Hot Embers #f15a2b · Ironside #939598
- * Teal/cyan classes still mean "accent" and now render the ember scale.
- * Violet/purple stay Ironside-steel (Stormi). Emerald stays forest (success).
+ * Primary: Midnight #173150 · Hot Embers #f15a2b · Ironside #939598
+ * Secondary: Denim #00608b · Dark Amber #F28A0F · Retro Teal #3F8A8C
+ *
+ * Do not invent ember shades (#c43d14, #f78a5c, …). Washes use opacity.
+ * `teal-*` / `cyan-*` = Hot Embers. `sky-*` = Denim. `violet-*` = Ironside steel.
  */
-const gold = {
+const HOT_EMBERS = '#f15a2b'
+const MIDNIGHT = '#173150'
+const DENIM = '#00608b'
+const DARK_AMBER = '#F28A0F'
+const RETRO_TEAL = '#3F8A8C'
+
+/** Same-hue paper washes (50–200) + one accent hex (300–600). Darker steps are Midnight. */
+const ember = {
   50: '#fef4f0',
-  100: '#fde4d8',
-  200: '#fbc4ae',
-  300: '#f89a70',
-  400: '#f15a2b',
-  500: '#d94a1e',
-  600: '#c43d14',
-  700: '#8f2f12',
-  800: '#6b240e',
-  900: '#4a190a',
-  950: '#2a0e06',
+  100: '#fde8e0',
+  200: '#f8c8b8',
+  300: HOT_EMBERS,
+  400: HOT_EMBERS,
+  500: HOT_EMBERS,
+  600: HOT_EMBERS,
+  700: MIDNIGHT,
+  800: MIDNIGHT,
+  900: MIDNIGHT,
+  950: '#0d1a28',
 } as const
 
-/**
- * Success / "done". Raw Tailwind emerald was the one scale that never got
- * heritage-ified, and it showed in LIGHT mode: `emerald-100` (#d1fae5) is a
- * cool mint (hue ~155°) sitting on warm cream (#fef5ed) beside champagne gold
- * (hue ~35°) — two pastels at the same lightness with opposite temperature,
- * which reads muddy/medical. Dark mode never had the problem because a 15%
- * tint over ink navy neutralizes almost all of the hue.
- *
- * Fix: bottle/forest green instead of mint. Navy + gold + deep green is a
- * classic heraldic pairing (banknotes, wax seals). The light steps (50–200)
- * are deliberately LOW-CHROMA sage so a filled chip reads as a soft neutral
- * against cream rather than a block of mint; 600–800 are sober enough to
- * carry text, and 300–400 stay luminous enough to read on ink navy.
- */
+const denim = {
+  50: '#e6f2f6',
+  100: '#cce5ee',
+  200: '#99cbdd',
+  300: DENIM,
+  400: DENIM,
+  500: DENIM,
+  600: DENIM,
+  700: MIDNIGHT,
+  800: MIDNIGHT,
+  900: MIDNIGHT,
+  950: '#0d1a28',
+} as const
+
+const darkAmber = {
+  50: '#fef6eb',
+  100: '#fde8c8',
+  200: '#fad08a',
+  300: DARK_AMBER,
+  400: DARK_AMBER,
+  500: DARK_AMBER,
+  600: DARK_AMBER,
+  700: MIDNIGHT,
+  800: MIDNIGHT,
+  900: MIDNIGHT,
+  950: '#0d1a28',
+} as const
+
+const retroTeal = {
+  50: '#eef6f6',
+  100: '#d4e8e8',
+  200: '#a8d1d2',
+  300: RETRO_TEAL,
+  400: RETRO_TEAL,
+  500: RETRO_TEAL,
+  600: RETRO_TEAL,
+  700: MIDNIGHT,
+  800: MIDNIGHT,
+  900: MIDNIGHT,
+  950: '#0d1a28',
+} as const
+
 const forest = {
   50: '#f2f7f4',
   100: '#e2ece6',
@@ -73,43 +110,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Heritage remap — see file header
-        teal: gold,
-        cyan: gold,
+        teal: ember,
+        cyan: ember,
+        sky: denim,
         violet: steel,
         purple: steel,
         emerald: forest,
         green: forest,
-        /** Blue Star steel — captions, borders, hints. Not body copy (too light on paper). */
+        ember: { DEFAULT: HOT_EMBERS, ...ember },
+        denim: { DEFAULT: DENIM, ...denim },
+        'dark-amber': { DEFAULT: DARK_AMBER, ...darkAmber },
+        'retro-teal': { DEFAULT: RETRO_TEAL, ...retroTeal },
         ironside: {
           DEFAULT: '#939598',
           muted: '#7a7c7f',
         },
-
-        // Brand colors - Theme-aware palette
-        /** @deprecated legacy classnames — now maps to Hot Embers */
+        /** @deprecated legacy classnames — maps to Hot Embers */
         'brand-sage': {
-          DEFAULT: gold[700],
-          light: gold[600],
-          dark: gold[800],
+          DEFAULT: HOT_EMBERS,
+          light: HOT_EMBERS,
+          dark: MIDNIGHT,
         },
         'brand-mint': {
-          DEFAULT: gold[600],
-          light: gold[500],
+          DEFAULT: HOT_EMBERS,
+          light: HOT_EMBERS,
         },
         'brand-cream': {
-          DEFAULT: '#fef5ed', // Original cream color
-          light: '#fef5ed', // Light mode background
-          dark: '#fef5ed', // Original cream for dark mode
+          DEFAULT: '#fef5ed',
+          light: '#fef5ed',
+          dark: '#fef5ed',
         },
-
-        // Legacy color support (will be replaced gradually)
-        'brand-sage-light': gold[200],
-        'brand-sage-dark': gold[800],
+        'brand-sage-light': ember[200],
+        'brand-sage-dark': MIDNIGHT,
       },
       fontFamily: {
         quicksand: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],
-        /** Headlines — same family as body (`--font-montserrat`). `font-display` stays so call sites don't change. */
         display: ['var(--font-montserrat)', 'system-ui', 'sans-serif'],
       },
     },

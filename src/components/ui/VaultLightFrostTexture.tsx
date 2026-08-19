@@ -30,9 +30,6 @@ export default function VaultLightFrostTexture({
     ? 'from-slate-200/[0.18] via-transparent to-violet-100/[0.1]'
     : 'from-teal-100/[0.28] via-transparent to-violet-100/[0.16]'
   const depthClass = isCanvas ? 'from-white/38' : 'from-white/52'
-  const bloom = isCanvas ? 'rgba(255,255,255,0.58)' : 'rgba(255,255,255,0.72)'
-  /* Canvas: steel, not champagne — gold bloom reads as orange on the page. */
-  const corner = isCanvas ? 'rgba(54,69,89,0.055)' : 'rgba(156,119,64,0.1)'
 
   return (
     <>
@@ -71,20 +68,6 @@ export default function VaultLightFrostTexture({
       <span
         aria-hidden
         className={cn('pointer-events-none absolute inset-0 bg-gradient-to-b via-transparent to-slate-400/[0.14]', depthClass)}
-      />
-      <span
-        aria-hidden
-        className='pointer-events-none absolute inset-0'
-        style={{
-          background: `radial-gradient(ellipse 98% 58% at 50% -14%, ${bloom} 0%, transparent 56%)`,
-        }}
-      />
-      <span
-        aria-hidden
-        className='pointer-events-none absolute inset-0'
-        style={{
-          background: `radial-gradient(ellipse 70% 45% at 100% 0%, ${corner} 0%, transparent 55%)`,
-        }}
       />
     </>
   )

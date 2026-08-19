@@ -89,12 +89,6 @@ export default function CareerCardFeatureActions({
                     isDark ? colors.borderHover.dark : colors.borderHover.light,
                     'hover:-translate-y-0.5',
                   )}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = `0 10px 28px -12px ${colors.glowColor}, 0 0 0 1px ${colors.glowColor}`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = ''
-                  }}
                 >
                   {/* Accent strip — mirrors BlockCard vault chrome */}
                   <span

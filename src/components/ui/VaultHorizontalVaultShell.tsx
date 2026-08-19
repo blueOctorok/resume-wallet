@@ -38,11 +38,11 @@ export default function VaultHorizontalVaultShell({
   const isNav = layout === 'nav'
 
   const face = isDark
-    ? 'border-white/[0.1] bg-white/[0.035] ring-1 ring-[#f15a2b]/15 shadow-xl shadow-black/40 backdrop-blur-md'
+    ? 'border-white/[0.1] bg-white/[0.035] ring-1 ring-white/[0.08] shadow-xl shadow-black/40 backdrop-blur-md'
     : // Paper face: white in Light, same cream as the inverted Dark-mode nav.
       'border-ironside/30 bg-white dark:bg-[#fbf8f1]/92 ring-1 ring-[#173150]/[0.06] shadow-[0_24px_70px_-18px_rgba(0,0,0,0.18),0_0_0_1px_rgba(23,49,80,0.04)]'
 
-  const hairline = isDark ? 'via-[#f15a2b]/40' : 'via-[#c43d14]/35'
+  const hairline = isDark ? 'via-[#f15a2b]/40' : 'via-[#f15a2b]/35'
 
   return (
     <div

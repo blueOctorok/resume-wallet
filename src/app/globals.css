@@ -30,8 +30,8 @@
     var(--storm-deep) 45%,
     var(--storm-void) 100%
   );
-  --storm-teal-soft: rgba(241,90,43, 0.12);
-  --storm-violet-soft: rgba(95,122,158, 0.08);
+  --storm-teal-soft: transparent;
+  --storm-violet-soft: transparent;
   --storm-panel-bg: linear-gradient(
     165deg,
     rgba(23, 33, 52, 0.94) 0%,
@@ -39,7 +39,7 @@
     rgba(8, 13, 24, 0.96) 100%
   );
   --storm-panel-border: rgba(148, 163, 184, 0.22);
-  --storm-panel-glow: 0 0 48px -12px rgba(241,90,43, 0.16), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
+  --storm-panel-glow: 0 24px 56px -28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --surface-card: #141e31;
   --surface-elevated: #0f1728;
@@ -60,9 +60,12 @@
   --text-primary: #173150;
   /* Readable muted — Ironside itself fails AA on paper; this is steel-600. */
   --text-secondary: #5c6166;
-  --storm-accent: #c43d14;
+  --storm-accent: #f15a2b;
   --storm-accent-rgb: 241 90 43;
   --storm-accent-mid: #f15a2b;
+  --storm-denim: #00608b;
+  --storm-dark-amber: #f28a0f;
+  --storm-retro-teal: #3f8a8c;
   --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.1);
   --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.135);
   --storm-violet-bloom: rgb(54 69 89 / 0.09);
@@ -95,12 +98,9 @@ body {
   }
 }
 
-/* Dark mode — LoadingScreen-matched void + soft teal/violet blooms (same as full-page loader) */
+/* Dark mode — ink plane only, no bloom */
 [data-theme='dark'] body {
-  background:
-    radial-gradient(ellipse min(88vw, 36rem) min(88vw, 36rem) at 50% 16%, var(--storm-teal-soft), transparent 58%),
-    radial-gradient(ellipse min(72vw, 28rem) min(72vw, 28rem) at 96% 96%, var(--storm-violet-soft), transparent 52%),
-    var(--storm-body-gradient);
+  background: var(--storm-body-gradient);
   color: var(--text-primary);
 }
 
@@ -116,8 +116,6 @@ body {
 [data-theme='light'] body {
   background:
     var(--storm-light-specular),
-    radial-gradient(ellipse min(70vw, 26rem) min(70vw, 26rem) at 98% 96%, var(--storm-violet-bloom), transparent 50%),
-    radial-gradient(ellipse 130% 70% at 50% 108%, rgb(23 49 80 / 0.06), transparent 42%),
     linear-gradient(168deg, #d8d9db 0%, #e4e5e7 32%, #eef0f1 58%, #f7f8f8 100%);
   color: var(--text-primary);
 }
@@ -138,9 +136,7 @@ body {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.82),
     inset 0 0 0 1px rgb(255 255 255 / 0.28),
-    0 0 0 1px rgb(var(--storm-accent-rgb) / 0.17),
     0 1px 2px rgb(15 23 42 / 0.07),
-    0 10px 36px -10px rgb(var(--storm-accent-rgb) / 0.16),
     0 22px 56px -16px rgb(15 51 73 / 0.14);
 }
 

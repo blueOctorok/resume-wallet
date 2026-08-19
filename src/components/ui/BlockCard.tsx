@@ -47,7 +47,7 @@ const statusConfig: Record<BlockStatus, {
   'in-progress': {
     icon: Clock,
     label: 'In Progress',
-    classes: 'text-[#c43d14] dark:text-[#f15a2b]',
+    classes: 'text-dark-amber',
   },
   empty: {
     icon: AlertCircle,
@@ -133,7 +133,7 @@ function BlockCardChrome({
               headerIconSlot
             ) : Icon != null ? (
               <Icon
-                className={paper ? 'h-5 w-5 text-[#c43d14]' : 'h-5 w-5 text-teal-600 dark:text-teal-400'}
+                className={paper ? 'h-5 w-5 text-ember' : 'h-5 w-5 text-ember'}
               />
             ) : null}
           </div>

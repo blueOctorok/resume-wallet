@@ -96,25 +96,10 @@ export default function LoadingScreen({
               isDark
                 ? undefined
                 : {
-                    /* Match [data-theme='light'] body base (blooms sit in StormBackground; loader stays coherent) */
                     background:
                       'linear-gradient(165deg, #e8edf5 0%, #dfe7f1 42%, #d4dde8 100%)',
                   }
             }
-          />
-          <div
-            className={cn(
-              'absolute top-[18%] left-1/2 h-[min(85vw,36rem)] w-[min(85vw,36rem)] -translate-x-1/2 rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isDark ? 'bg-teal-400/[0.09]' : 'bg-[rgb(13_148_136/0.1)]',
-            )}
-            style={{ animationDuration: '3.2s' }}
-          />
-          <div
-            className={cn(
-              'absolute bottom-[-5%] right-[-8%] h-[min(70vw,26rem)] w-[min(70vw,26rem)] rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isDark ? 'bg-violet-500/[0.085]' : 'bg-[rgb(124_58_237/0.08)]',
-            )}
-            style={{ animationDuration: '4s', animationDelay: '0.4s' }}
           />
         </div>
 

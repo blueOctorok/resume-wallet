@@ -40,20 +40,7 @@ const INK_INPUT =
 const INK_LABEL = 'mb-1.5 block text-sm font-medium text-slate-300'
 
 function SignInAtmosphere() {
-  return (
-    <>
-      <div
-        aria-hidden
-        className='pointer-events-none absolute -left-32 top-[-6rem] h-[28rem] w-[28rem] rounded-full opacity-[0.12] blur-[100px]'
-        style={{ background: 'radial-gradient(circle, #f15a2b 0%, transparent 65%)' }}
-      />
-      <div
-        aria-hidden
-        className='pointer-events-none absolute right-[-8rem] bottom-[-4rem] h-[26rem] w-[26rem] rounded-full opacity-[0.12] blur-[110px]'
-        style={{ background: 'radial-gradient(circle, #3d5a8f 0%, transparent 65%)' }}
-      />
-    </>
-  )
+  return null
 }
 
 /**
@@ -233,7 +220,7 @@ export default function SignInScreen() {
               Candidates and employers use the same door
             </p>
             {prefillEmail ? (
-              <p className='mt-3 text-xs text-[#f78a5c]/90'>
+              <p className='mt-3 text-xs text-[#f15a2b]/90'>
                 Use the email your invite was sent to, then we&apos;ll email you a code.
               </p>
             ) : null}
@@ -250,7 +237,7 @@ export default function SignInScreen() {
 
           {info ? (
             <div
-              className='mb-4 rounded-xl border border-[#f15a2b]/30 bg-[#f15a2b]/10 px-4 py-3 text-sm text-[#ffb08a]'
+              className='mb-4 rounded-xl border border-[#f15a2b]/30 bg-[#f15a2b]/10 px-4 py-3 text-sm text-[#f15a2b]'
               role='status'
             >
               {info}
@@ -305,7 +292,7 @@ export default function SignInScreen() {
                   size='sm'
                   isLoading={isSendingCode}
                   onClick={() => handleSendCode({ preventDefault: () => {} } as React.FormEvent)}
-                  className='text-[#f78a5c] hover:text-[#ffb08a] dark:text-[#f78a5c] dark:hover:text-[#ffb08a]'
+                  className='text-[#f15a2b] hover:text-[#f15a2b] dark:text-[#f15a2b] dark:hover:text-[#f15a2b]'
                 >
                   Resend code
                 </Button>
@@ -375,7 +362,7 @@ export default function SignInScreen() {
         <p className='mt-8 text-center text-sm text-slate-400'>
           <Link
             href='/?guided=1'
-            className='font-medium text-[#f78a5c] transition-colors hover:text-[#ffb08a]'
+            className='font-medium text-[#f15a2b] transition-colors hover:text-[#f15a2b]'
           >
             Just browsing? Explore jobs first
           </Link>

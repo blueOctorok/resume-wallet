@@ -126,7 +126,7 @@ function ThemeModeToggle({ isDark }: { isDark: boolean }) {
               selected
                 ? isDark
                   ? 'bg-teal-500 text-white shadow-sm'
-                  : 'bg-teal-700 text-white shadow-sm'
+                  : 'bg-dark-amber text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
                   : 'text-ironside hover:text-[#173150]',
@@ -343,7 +343,7 @@ function CandidateViewToggle({
               selected
                 ? isDark
                   ? 'bg-teal-500 text-white shadow-sm'
-                  : 'bg-teal-700 text-white shadow-sm'
+                  : 'bg-dark-amber text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
                   : 'text-ironside hover:text-[#173150]',
@@ -804,7 +804,7 @@ export default function Navigation({
           aria-hidden
           className={cn(
             'pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent to-transparent',
-            isDark ? 'via-[#f15a2b]/45' : 'via-[#c43d14]/40',
+            isDark ? 'via-[#f15a2b]/45' : 'via-[#f15a2b]/40',
           )}
         />
       </div>
