@@ -35,8 +35,8 @@ export default function StormBackground() {
   }, [])
 
   const stormAtmosphere = `
-      radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(205,168,104,0.07), transparent 58%),
-      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(205,168,104,0.06), transparent 58%),
+      radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(241,90,43,0.08), transparent 58%),
+      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(241,90,43,0.06), transparent 58%),
       radial-gradient(ellipse 72% 48% at 100% 100%, rgba(95,122,158,0.065), transparent 55%),
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `

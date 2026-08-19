@@ -126,7 +126,7 @@ function ThemeModeToggle({ isDark }: { isDark: boolean }) {
               'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
               selected
                 ? isDark
-                  ? 'bg-teal-500 text-[#0c2340] shadow-sm'
+                  ? 'bg-teal-500 text-[#173150] shadow-sm'
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
@@ -343,7 +343,7 @@ function CandidateViewToggle({
               'flex h-8 items-center gap-1 rounded-full px-2 text-[11px] font-semibold transition-all cursor-pointer sm:gap-1.5 sm:px-2.5 sm:text-xs',
               selected
                 ? isDark
-                  ? 'bg-teal-500 text-[#0c2340] shadow-sm'
+                  ? 'bg-teal-500 text-[#173150] shadow-sm'
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
@@ -428,7 +428,7 @@ export default function Navigation({
   }
 
   const barClass = isDark
-    ? 'bg-[#0c2340]/85 border-white/[0.08]'
+    ? 'bg-[#173150]/85 border-white/[0.08]'
     : 'bg-[#fbf8f1]/92 border-stone-300/70'
 
   const wordmarkButtonLabel = isAuthenticated ? 'Go to your hub' : 'Go to home'
@@ -831,7 +831,7 @@ export default function Navigation({
           aria-hidden
           className={cn(
             'pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent to-transparent',
-            isDark ? 'via-[#c99700]/45' : 'via-[#8a6700]/40',
+            isDark ? 'via-[#f15a2b]/45' : 'via-[#c43d14]/40',
           )}
         />
       </div>

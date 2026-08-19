@@ -18,18 +18,18 @@
 [data-theme='dark'] {
   color-scheme: dark;
   /*
-   * ND Blue shell — landing ink plane (#0c2340): navy void, Dome Gold + steel bloom.
+   * Blue Star shell — Midnight Blue ink plane (#173150), Hot Embers bloom.
    */
-  --storm-void: #061525;
-  --storm-deep: #0c2340;
-  --storm-surface: #153154;
+  --storm-void: #0d1a28;
+  --storm-deep: #173150;
+  --storm-surface: #1e3d5c;
   --storm-body-gradient: linear-gradient(
     165deg,
     var(--storm-surface) 0%,
     var(--storm-deep) 45%,
     var(--storm-void) 100%
   );
-  --storm-teal-soft: rgba(201,151,0, 0.1);
+  --storm-teal-soft: rgba(241,90,43, 0.12);
   --storm-violet-soft: rgba(95,122,158, 0.08);
   --storm-panel-bg: linear-gradient(
     165deg,
@@ -38,7 +38,7 @@
     rgba(8, 13, 24, 0.96) 100%
   );
   --storm-panel-border: rgba(148, 163, 184, 0.22);
-  --storm-panel-glow: 0 0 48px -12px rgba(201,151,0, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
+  --storm-panel-glow: 0 0 48px -12px rgba(241,90,43, 0.16), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
   --surface-card: #141e31;
   --surface-elevated: #0f1728;
@@ -50,21 +50,16 @@
 [data-theme='light'] {
   color-scheme: light;
   /*
-   * Heritage cream light — panels sit on warm parchment (landing-page cream
-   * family, stone neutrals) so gold blooms, grain, and rim glows stay visible;
-   * edges read as paper stock, not frost.
+   * Blue Star light — cool paper + Ironside edges, Midnight type, ember accent.
    */
-  --surface-card: #fbf9f4;
-  --surface-elevated: #f4f0e7;
-  --border-subtle: #a8a29e;
-  --text-primary: #1c1917;
-  --text-secondary: #57534e;
-  /*
-   * Single accent hue (Dome Gold) — matches the landing seal.
-   */
-  --storm-accent: #8a6700;
-  --storm-accent-rgb: 201 151 0;
-  --storm-accent-mid: #c99700;
+  --surface-card: #f7f8f8;
+  --surface-elevated: #eef0f1;
+  --border-subtle: #c5c6c8;
+  --text-primary: #173150;
+  --text-secondary: #5c6166;
+  --storm-accent: #c43d14;
+  --storm-accent-rgb: 241 90 43;
+  --storm-accent-mid: #f15a2b;
   --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.1);
   --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.135);
   --storm-violet-bloom: rgb(54 69 89 / 0.09);
@@ -100,8 +95,7 @@ body {
 }
 
 /*
- * Light canvas — heritage parchment: warm cream base + gold blooms + bottom stone vignette
- * so vault grain and gold rims don’t disappear into #fff.
+ * Light canvas — cool paper + ember bloom (Blue Star).
  */
 [data-theme='light'] body {
   background:
@@ -109,8 +103,8 @@ body {
     radial-gradient(ellipse min(88vw, 36rem) min(88vw, 36rem) at 50% 10%, var(--storm-teal-bloom-strong), transparent 56%),
     radial-gradient(ellipse min(72vw, 28rem) min(72vw, 28rem) at 6% 88%, rgb(var(--storm-accent-rgb) / 0.055), transparent 50%),
     radial-gradient(ellipse min(70vw, 26rem) min(70vw, 26rem) at 98% 96%, var(--storm-violet-bloom), transparent 50%),
-    radial-gradient(ellipse 130% 70% at 50% 108%, rgb(41 37 36 / 0.06), transparent 42%),
-    linear-gradient(168deg, #d8d0bd 0%, #e2dac8 32%, #ece5d5 58%, #f5f1e6 100%);
+    radial-gradient(ellipse 130% 70% at 50% 108%, rgb(23 49 80 / 0.06), transparent 42%),
+    linear-gradient(168deg, #d8d9db 0%, #e4e5e7 32%, #eef0f1 58%, #f7f8f8 100%);
   color: var(--text-primary);
 }
 
@@ -428,7 +422,7 @@ button:disabled,
 }
 
 [data-theme='dark'] {
-  --akui-btn-primary: #c99700;
+  --akui-btn-primary: #f15a2b;
   --akui-btn-secondary: #334155;
   --akui-btn-auth: rgba(30, 41, 59, 0.92);
   --akui-fg-primary: #f1f5f9;
@@ -441,7 +435,7 @@ button:disabled,
   --akui-bg-surface-subtle: #1e293b;
   --akui-bg-surface-inset: #334155;
   --akui-static: #64748b;
-  --akui-active: #c99700;
+  --akui-active: #f15a2b;
 }
 
 /* Alchemy AuthCard — headers use design tokens; !important only where Kit still leaks low contrast */

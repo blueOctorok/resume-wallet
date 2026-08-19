@@ -1,30 +1,24 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * ND BRAND PALETTE (2026-08-18) — read before touching colors.
+ * BLUE STAR PALETTE PREVIEW (2026-08-18) — boss review.
  *
- * Provven is ND Blue + cream + Dome Gold (Blue Star mark, not champagne).
- * Teal and violet stay remapped at the theme level:
- *
- *   teal-*, cyan-*        → Dome Gold scale (brand accent, verified, CTAs)
- *   violet-*, purple-*    → steel scale (muted navy-blue; Stormi/AI surfaces)
- *   emerald-*, green-*    → forest scale (success / "done" confirmations)
- *
- * So `bg-teal-600` renders Dome Gold everywhere. Write `teal-*` / `violet-*`
- * / `emerald-*` in new code — they are the accent/AI/success tokens.
+ * Midnight Blue #173150 · Hot Embers #f15a2b · Ironside #939598
+ * Teal/cyan classes still mean "accent" and now render the ember scale.
+ * Violet/purple stay Ironside-steel (Stormi). Emerald stays forest (success).
  */
 const gold = {
-  50: '#fbf6e6',
-  100: '#f5ebc4',
-  200: '#ead48a',
-  300: '#dbb84a',
-  400: '#c99700',
-  500: '#ae8200',
-  600: '#8a6700',
-  700: '#6b5000',
-  800: '#4d3a00',
-  900: '#3a2c00',
-  950: '#211800',
+  50: '#fef4f0',
+  100: '#fde4d8',
+  200: '#fbc4ae',
+  300: '#f89a70',
+  400: '#f15a2b',
+  500: '#d94a1e',
+  600: '#c43d14',
+  700: '#8f2f12',
+  800: '#6b240e',
+  900: '#4a190a',
+  950: '#2a0e06',
 } as const
 
 /**
@@ -56,17 +50,17 @@ const forest = {
 } as const
 
 const steel = {
-  50: '#f4f6fa',
-  100: '#e9edf4',
-  200: '#d0d9e7',
-  300: '#aabbd2',
-  400: '#7f97b8',
-  500: '#5f7a9e',
-  600: '#4c6485',
-  700: '#3f526c',
-  800: '#364559',
-  900: '#2d394a',
-  950: '#1d2530',
+  50: '#f4f5f6',
+  100: '#e8e9ea',
+  200: '#d4d5d6',
+  300: '#b8babc',
+  400: '#939598',
+  500: '#7a7c7f',
+  600: '#626466',
+  700: '#4d4f51',
+  800: '#3a3c3e',
+  900: '#2a2c2d',
+  950: '#18191a',
 } as const
 
 const config: Config = {
@@ -88,7 +82,7 @@ const config: Config = {
         green: forest,
 
         // Brand colors - Theme-aware palette
-        /** @deprecated legacy classnames — now maps to heritage gold */
+        /** @deprecated legacy classnames — now maps to Hot Embers */
         'brand-sage': {
           DEFAULT: gold[700],
           light: gold[600],

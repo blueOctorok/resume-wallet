@@ -29,7 +29,7 @@ function HeroAtmosphere() {
       <div
         aria-hidden
         className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.12] blur-[100px]'
-        style={{ background: 'radial-gradient(circle, #c99700 0%, transparent 65%)' }}
+        style={{ background: 'radial-gradient(circle, #f15a2b 0%, transparent 65%)' }}
       />
       <div
         aria-hidden
@@ -59,11 +59,11 @@ export default function HeroSection({
                 <ProvvenWordmark tone='ink' className='max-w-full tracking-[0.04em] sm:tracking-[0.08em]' />
               </p>
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 lg:mx-0'>
-                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#c99700]/55 to-[#c99700]/55 lg:from-[#c99700]/55' />
-                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#d4b44a]'>
+                <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55 lg:from-[#f15a2b]/55' />
+                <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f78a5c]'>
                   The career card you own
                 </p>
-                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#c99700]/55 to-[#c99700]/55' />
+                <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55' />
               </div>
             </div>
 
@@ -72,7 +72,7 @@ export default function HeroSection({
               style={{ animationDelay: '120ms' }}
             >
               Proof,{' '}
-              <em className='font-semibold not-italic text-[#d4b44a]'>not paperwork.</em>
+              <em className='font-semibold not-italic text-[#f78a5c]'>not paperwork.</em>
             </h1>
 
             <p
@@ -116,7 +116,7 @@ export default function HeroSection({
                 <button
                   type='button'
                   onClick={onBrowseJobs}
-                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#d4b44a] hover:decoration-[#c99700]/50'
+                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#f78a5c] hover:decoration-[#f15a2b]/50'
                 >
                   or browse jobs without an account
                 </button>
@@ -131,7 +131,7 @@ export default function HeroSection({
             <div
               aria-hidden
               className='pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 opacity-25 blur-3xl'
-              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(205,168,104,0.4) 0%, rgba(95,122,158,0.2) 45%, transparent 70%)' }}
+              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(241,90,43,0.4) 0%, rgba(23,49,80,0.35) 45%, transparent 70%)' }}
             />
             <DisclosureCard view='shared' className='relative' />
           </div>

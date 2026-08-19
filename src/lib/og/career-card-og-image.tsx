@@ -6,7 +6,7 @@ import type { CareerCardSection, ProjectedCareerCard } from '@/types/career-card
 
 export type CareerCardOgVariant = 'link' | 'social' | 'signature'
 
-const teal = '#c99700'
+const teal = '#f15a2b'
 const bg = '#0f172a'
 const muted = '#94a3b8'
 const white = '#f8fafc'

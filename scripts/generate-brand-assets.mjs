@@ -1,7 +1,7 @@
 /**
- * Brand assets — Blue Star shield + ND colors.
+ * Brand assets — Blue Star shield + Blue Star colors.
  *
- * Reads public/brand/provven-mark.svg (Dome Gold) and writes:
+ * Reads public/brand/provven-mark.svg (Hot Embers) and writes:
  *   - public/brand/provven-mark-tile.svg
  *   - public/favicon.svg
  *   - src/app/favicon.ico (16/32/48 PNG-in-ICO)
@@ -13,9 +13,9 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import sharp from 'sharp'
 
-const GOLD = '#c99700'
-const NAVY = '#0c2340'
-const NAVY_DEEP = '#061525'
+const GOLD = '#f15a2b'
+const NAVY = '#173150'
+const NAVY_DEEP = '#0d1a28'
 
 const markInner = readFileSync('public/brand/provven-mark.svg', 'utf8')
   .replace(/<svg[^>]*>/, '')

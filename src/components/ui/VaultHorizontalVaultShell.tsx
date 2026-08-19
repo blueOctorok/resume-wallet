@@ -38,10 +38,10 @@ export default function VaultHorizontalVaultShell({
   const isNav = layout === 'nav'
 
   const face = isDark
-    ? 'border-white/[0.1] bg-white/[0.035] ring-1 ring-[#c99700]/15 shadow-xl shadow-black/40 backdrop-blur-md'
-    : 'border-stone-400/45 bg-gradient-to-b from-[#fffdf8] via-[#fbf7ee] to-[#f6efe2] ring-1 ring-[#8a6700]/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(41,37,36,0.06),0_16px_40px_-18px_rgba(41,37,36,0.18)]'
+    ? 'border-white/[0.1] bg-white/[0.035] ring-1 ring-[#f15a2b]/15 shadow-xl shadow-black/40 backdrop-blur-md'
+    : 'border-stone-400/45 bg-gradient-to-b from-[#fffdf8] via-[#fbf7ee] to-[#f6efe2] ring-1 ring-[#c43d14]/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(41,37,36,0.06),0_16px_40px_-18px_rgba(41,37,36,0.18)]'
 
-  const hairline = isDark ? 'via-[#c99700]/40' : 'via-[#8a6700]/35'
+  const hairline = isDark ? 'via-[#f15a2b]/40' : 'via-[#c43d14]/35'
 
   return (
     <div

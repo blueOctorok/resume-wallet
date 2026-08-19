@@ -12,29 +12,23 @@
  * - Everything outside ink bands is theme-aware via `isDark` ternaries,
  *   matching the rest of the app.
  *
- * Palette (ND Blue + Dome Gold, Blue Star mark):
- * - Ink bands are ND Blue `#0c2340`.
- * - Light sections sit on warm cream with stone neutrals.
- * - ONE accent: Dome Gold `#c99700`. Marks brand moments, verified facts,
- *   the disclosure seam, and primary CTAs.
- *
- * Gold values (keep consistent — three tones, nothing else):
- * - `#c99700` — lines, borders, fills (usually at /15–/60 opacity)
- * - `#d4b44a` — accent text on navy · `#e0c56a` bright variant
- * - `#8a6700` — accent text on cream (AA on #f7f4ed)
+ * Palette (Blue Star preview):
+ * - Ink bands are Midnight Blue `#173150`.
+ * - Light sections sit on cool paper with Ironside `#939598`.
+ * - Accent is Hot Embers `#f15a2b`.
  */
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Muted body copy on theme-aware (non-ink) sections — warm stone on cream */
+/** Muted body copy — Ironside on paper */
 export function mutedText(isDark: boolean) {
-  return isDark ? 'text-gray-400' : 'text-stone-600'
+  return isDark ? 'text-gray-400' : 'text-[#5c6166]'
 }
 
-/** Primary heading color on theme-aware sections */
+/** Primary heading — Midnight Blue on paper */
 export function headingText(isDark: boolean) {
-  return isDark ? 'text-white' : 'text-stone-900'
+  return isDark ? 'text-white' : 'text-[#173150]'
 }
 
 /**
@@ -43,8 +37,8 @@ export function headingText(isDark: boolean) {
  * would show through, so the page reads as one navy slab on phones.
  */
 export function paperBand(isDark: boolean, tint = false) {
-  if (isDark) return tint ? 'bg-[#153154]' : 'bg-[#12263f]'
-  return tint ? 'bg-[#eee8da]' : 'bg-[#f7f4ed]'
+  if (isDark) return tint ? 'bg-[#1e3d5c]' : 'bg-[#152a42]'
+  return tint ? 'bg-[#e6e7e8]' : 'bg-[#f3f4f5]'
 }
 
 /**
@@ -53,7 +47,7 @@ export function paperBand(isDark: boolean, tint = false) {
  * (the CTA is a brand object, not a theme surface).
  */
 export const GOLD_CTA =
-  'bg-[#c99700] text-[#0c2340] shadow-lg shadow-black/25 hover:bg-[#d4a810] dark:bg-[#c99700] dark:text-[#0c2340] dark:hover:bg-[#d4a810]'
+  'bg-[#f15a2b] text-white shadow-lg shadow-black/25 hover:bg-[#f76d42] dark:bg-[#f15a2b] dark:text-white dark:hover:bg-[#f76d42]'
 
 /** Fixed palette for ink bands (never changes with theme) */
 export const INK = {
@@ -85,10 +79,10 @@ export function SectionHeader({
   className,
 }: SectionHeaderProps) {
   const eyebrowColor = onInk
-    ? 'text-[#d4b44a]/90'
+    ? 'text-[#f78a5c]/90'
     : isDark
-      ? 'text-[#d4b44a]/90'
-      : 'text-[#8a6700]'
+      ? 'text-[#f78a5c]/90'
+      : 'text-[#c43d14]'
   const titleColor = onInk ? INK.heading : headingText(isDark)
   const ledeColor = onInk ? INK.body : mutedText(isDark)
 
@@ -142,7 +136,7 @@ export function InkBand({ children, className, atmosphere, id }: InkBandProps) {
   return (
     <section
       id={id}
-      className={cn('relative isolate overflow-hidden bg-[#0c2340] [clip-path:inset(0)]', className)}
+      className={cn('relative isolate overflow-hidden bg-[#173150] [clip-path:inset(0)]', className)}
     >
       {/* Ledger grid — horizontal record lines, barely-there */}
       <div
@@ -177,8 +171,8 @@ interface SealDividerProps {
  * not between every block (scarcity keeps it meaningful).
  */
 export function SealDivider({ onInk = false, isDark = false, className }: SealDividerProps) {
-  const goldLine = onInk || isDark ? 'to-[#c99700]/50' : 'to-[#8a6700]/45'
-  const goldDiamond = onInk || isDark ? 'bg-[#c99700]/85' : 'bg-[#8a6700]/80'
+  const goldLine = onInk || isDark ? 'to-[#f15a2b]/50' : 'to-[#c43d14]/45'
+  const goldDiamond = onInk || isDark ? 'bg-[#f15a2b]/85' : 'bg-[#c43d14]/80'
 
   return (
     <div className={cn('flex items-center', className)} aria-hidden>

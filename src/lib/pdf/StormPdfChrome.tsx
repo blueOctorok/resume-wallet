@@ -22,8 +22,8 @@ import { StormPdfWordmark } from '@/lib/pdf/StormPdfWordmark'
 
 // ── Storm brand tokens (mirror tailwind.config.ts) ──────────────────────────
 export const STORM_COLORS = {
-  teal: '#8a6700',
-  tealLight: '#c99700',
+  teal: '#c43d14',
+  tealLight: '#f15a2b',
   tealDark: '#6b5000',
   cream: '#fef5ed',
   ink: '#0f172a', // slate-900

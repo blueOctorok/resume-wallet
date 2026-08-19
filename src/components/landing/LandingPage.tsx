@@ -80,7 +80,7 @@ export default function LandingPage({
   return (
     // Light mode gets its own warm-cream base so non-ink sections sit on paper
     // (not the app's cool slate canvas); dark mode keeps the storm gradient.
-    <div ref={revealRef} className={`relative z-10 ${isDark ? 'bg-[#12263f]' : 'bg-[#f7f4ed]'}`}>
+    <div ref={revealRef} className={`relative z-10 ${isDark ? 'bg-[#152a42]' : 'bg-[#f3f4f5]'}`}>
       <HeroSection
         isAuthenticated={isAuthenticated}
         onLogIn={onLogIn}

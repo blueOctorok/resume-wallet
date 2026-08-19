@@ -28,7 +28,7 @@ export default function VaultDarkCanvasTexture() {
         className='pointer-events-none absolute inset-0'
         style={{
           background:
-            'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(205,168,104,0.09) 0%, transparent 58%)',
+            'radial-gradient(ellipse min(100%, 90vw) min(70%, 48rem) at 50% 8%, rgba(241,90,43,0.09) 0%, transparent 58%)',
         }}
       />
       <span

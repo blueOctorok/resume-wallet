@@ -32,9 +32,9 @@ export interface EmailTemplateOptions {
   accentColor?: string
 }
 
-const TEAL = '#8a6700'
+const TEAL = '#c43d14'
 const TEAL_DARK = '#6b5000'
-const TEAL_LIGHT = '#c99700'
+const TEAL_LIGHT = '#f15a2b'
 const TEAL_BG = '#fbf6e6'
 const TEAL_BORDER = '#ead48a'
 

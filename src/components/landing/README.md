@@ -22,20 +22,20 @@ One section = one job. `LandingPage.tsx` is composition only.
 
 **Ink bands** (hero, disclosure, trust) are deliberately theme-independent — always the deep-ink plane, in light and dark themes. Everything else is theme-aware via `isDark`.
 
-## Palette (ND Blue + Dome Gold, 2026-08-18)
+## Palette (Blue Star preview, 2026-08-18)
 
-Site-wide brand (Tailwind `teal-*` remaps to Dome Gold). **No teal, violet, or Hot Embers.**
+Site-wide brand (Tailwind `teal-*` remaps to Hot Embers).
 
-- **Ink bands** are ND Blue (`#0c2340`).
-- **Light sections** sit on warm cream (`#f7f4ed`) with stone neutrals.
-- **One accent: Dome Gold `#c99700`.** Verified facts, disclosure seam, CTAs. Text on navy: `#d4b44a`. Text on cream: `#8a6700`.
+- **Ink bands** are Midnight Blue (`#173150`).
+- **Light sections** sit on cool paper (`#f3f4f5`) with Ironside `#939598`.
+- **Accent: Hot Embers `#f15a2b`.** Verified facts, disclosure seam, CTAs. Text on navy: `#f78a5c`. Text on paper: `#c43d14`.
 - Redaction bars stay **neutral slate**.
 
 ## Brand marks
 
 - **`ProvvenWordmark`** — Blue Star shield + `PROVVEN` (Montserrat bold). Hero, nav, sign-in, footer.
-- **`ProvvenMark`** — shield alone. Gold on navy, ND Blue on cream. Favicon + `public/brand/`. Spec: `docs/BRAND.md`.
-- **`SealDivider`** — hairline + gold diamond.
+- **`ProvvenMark`** — shield alone. Embers on navy, Midnight Blue on paper. Favicon + `public/brand/`. Spec: `docs/BRAND.md`.
+- **`SealDivider`** — hairline + ember diamond.
 
 ## Fonts
 

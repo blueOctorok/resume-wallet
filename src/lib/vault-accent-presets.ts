@@ -27,37 +27,36 @@ export interface VaultAccentLayers {
 
 const TEAL: VaultAccentLayers = {
   rimLight:
-    'linear-gradient(135deg, rgba(156,119,64,0.42) 0%, rgba(205,168,104,0.16) 20%, transparent 50%, rgba(54,69,89,0.16) 100%)',
+    'linear-gradient(135deg, rgba(241,90,43,0.42) 0%, rgba(241,90,43,0.16) 20%, transparent 50%, rgba(23,49,80,0.16) 100%)',
   rimDark:
-    'linear-gradient(135deg, rgba(205,168,104,0.36) 0%, transparent 50%, rgba(127,151,184,0.2) 100%)',
+    'linear-gradient(135deg, rgba(241,90,43,0.36) 0%, transparent 50%, rgba(147,149,152,0.2) 100%)',
   stripLight:
-    'linear-gradient(90deg, transparent, rgba(156,119,64,0.52), rgba(54,69,89,0.28), transparent)',
+    'linear-gradient(90deg, transparent, rgba(241,90,43,0.52), rgba(23,49,80,0.28), transparent)',
   stripDark:
-    'linear-gradient(90deg, transparent, rgba(205,168,104,0.38), rgba(95,122,158,0.26), transparent)',
+    'linear-gradient(90deg, transparent, rgba(241,90,43,0.38), rgba(147,149,152,0.26), transparent)',
   conicLight:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(156,119,64,0.38) 42deg, rgba(54,69,89,0.18) 100deg, transparent 220deg, rgba(125,94,51,0.28) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(241,90,43,0.38) 42deg, rgba(23,49,80,0.18) 100deg, transparent 220deg, rgba(196,61,20,0.28) 300deg, transparent 360deg)',
   conicDark:
-    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(205,168,104,0.28) 42deg, rgba(95,122,158,0.16) 100deg, transparent 220deg, rgba(205,168,104,0.2) 300deg, transparent 360deg)',
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(241,90,43,0.28) 42deg, rgba(147,149,152,0.16) 100deg, transparent 220deg, rgba(241,90,43,0.2) 300deg, transparent 360deg)',
   chamferLight:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(156,119,64,0.48) 0%, rgba(205,168,104,0.2) 48%, transparent 72%)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(241,90,43,0.48) 0%, rgba(241,90,43,0.2) 48%, transparent 72%)',
   chamferDark:
-    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(205,168,104,0.48) 0%, transparent 70%)',
-  sweepLight: 'linear-gradient(to right, transparent, rgba(156,119,64,0.36), transparent)',
-  sweepDark: 'linear-gradient(to right, transparent, rgba(205,168,104,0.22), transparent)',
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(241,90,43,0.48) 0%, transparent 70%)',
+  sweepLight: 'linear-gradient(to right, transparent, rgba(241,90,43,0.36), transparent)',
+  sweepDark: 'linear-gradient(to right, transparent, rgba(241,90,43,0.22), transparent)',
   filterPanelLight:
-    'drop-shadow(0 12px 32px rgba(15,23,42,0.11)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 40px rgba(156,119,64,0.22)) drop-shadow(0 0 60px rgba(54,69,89,0.12))',
+    'drop-shadow(0 12px 32px rgba(15,23,42,0.11)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 40px rgba(241,90,43,0.22)) drop-shadow(0 0 60px rgba(23,49,80,0.12))',
   filterPanelDark:
-    'drop-shadow(0 10px 32px rgba(0,0,0,0.42)) drop-shadow(0 0 32px rgba(205,168,104,0.14)) drop-shadow(0 0 48px rgba(95,122,158,0.1))',
+    'drop-shadow(0 10px 32px rgba(0,0,0,0.42)) drop-shadow(0 0 32px rgba(241,90,43,0.14)) drop-shadow(0 0 48px rgba(147,149,152,0.1))',
   filterNavLight:
-    'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(156,119,64,0.2)) drop-shadow(0 0 72px rgba(54,69,89,0.11))',
+    'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(241,90,43,0.2)) drop-shadow(0 0 72px rgba(23,49,80,0.11))',
   filterNavDark:
-    'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(205,168,104,0.12))',
-  /* Heritage faces: warm cream (light) / ink-navy glass (dark) — matches landing plane */
+    'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(241,90,43,0.12))',
   innerBgLight:
-    'linear-gradient(175deg, rgba(255,254,250,0.96) 0%, rgba(250,245,236,0.9) 40%, rgba(245,238,226,0.92) 72%, rgba(240,232,218,0.94) 100%)',
+    'linear-gradient(175deg, rgba(255,255,255,0.96) 0%, rgba(247,248,248,0.9) 40%, rgba(238,240,241,0.92) 72%, rgba(230,231,232,0.94) 100%)',
   innerBgDark:
-    'linear-gradient(175deg, rgba(22,32,51,0.96) 0%, rgba(9,15,26,0.98) 100%)',
-  sheenLightClassName: 'bg-gradient-to-r from-transparent via-[#f4ecd9]/50 to-transparent',
+    'linear-gradient(175deg, rgba(30,61,92,0.96) 0%, rgba(13,26,40,0.98) 100%)',
+  sheenLightClassName: 'bg-gradient-to-r from-transparent via-white/50 to-transparent',
 }
 
 const SKY: VaultAccentLayers = {

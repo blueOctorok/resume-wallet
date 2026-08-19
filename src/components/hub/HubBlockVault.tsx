@@ -89,7 +89,7 @@ export function VaultCredentialChrome({
   const accentVivid = hasRoute
     ? glowColor.replace(/[\d.]+\)$/, '0.45)')
     : isDark
-      ? 'rgba(205,168,104,0.35)'
+      ? 'rgba(241,90,43,0.35)'
       : 'rgba(156,119,64,0.48)'
 
   const conicDarkBg = `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(95,122,158,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`

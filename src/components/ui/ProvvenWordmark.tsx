@@ -15,7 +15,7 @@ interface ProvvenWordmarkProps {
  * Size via `className` font-size — the mark scales in em with the type.
  */
 export default function ProvvenWordmark({ className, tone = 'ink', isDark = false }: ProvvenWordmarkProps) {
-  const type = tone === 'ink' ? 'text-[#f4f1ea]' : isDark ? 'text-white' : 'text-[#0c2340]'
+  const type = tone === 'ink' ? 'text-[#f4f1ea]' : isDark ? 'text-white' : 'text-[#173150]'
 
   return (
     <span

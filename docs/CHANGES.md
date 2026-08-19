@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Blue Star palette preview** (2026-08-18)
+
+Live site now uses the agency trio so the boss can judge it in product, not a slide: **Midnight Blue `#173150`**, **Hot Embers `#f15a2b`**, **Ironside `#939598`**. ND gold/navy is parked. Mark SVGs, `teal-*` scale, ink bands, CTAs, and vault blooms all follow. Revert this pass to restore Dome Gold.
+
+---
+
 ## **Landing paper bands opaque on mobile** (2026-08-18)
 
 Non-ink sections used no fill or `/60` cream, so navy `InkBand` blurs (iOS ignores `overflow-hidden` on filtered layers) and the fixed canvas showed through — the page read as one navy slab on phones. Each paper section now has an opaque `paperBand()` fill; ink bands also `clip-path: inset(0)`.
