@@ -114,7 +114,7 @@ export default function HeroSection({
           </div>
 
           <div className='lp-rise relative flex min-w-0 justify-center xl:justify-end' style={{ animationDelay: '260ms' }}>
-            <DisclosureCard view='shared' className='relative' />
+            <DisclosureCard view='shared' live className='relative' />
           </div>
         </div>
       </LandingContainer>

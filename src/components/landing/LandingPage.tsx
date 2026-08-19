@@ -128,6 +128,56 @@ export default function LandingPage({
         .lp-rise {
           animation: lpRise 0.85s cubic-bezier(0.2, 0.7, 0.3, 1) both;
         }
+        @keyframes lpFactIn {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        .lp-fact-in {
+          animation: lpFactIn 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+        }
+        @keyframes lpStamp {
+          from {
+            opacity: 0;
+            transform: scale(0.55);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        .lp-stamp {
+          animation: lpStamp 0.35s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+        }
+        @keyframes lpRedact {
+          0%,
+          100% {
+            filter: brightness(1);
+          }
+          50% {
+            filter: brightness(0.82);
+          }
+        }
+        .lp-redact-bar {
+          animation: lpRedact 2.2s ease-in-out infinite;
+        }
+        @keyframes lpSeamPulse {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          40% {
+            opacity: 0.45;
+          }
+        }
+        .lp-seam-pulse {
+          animation: lpSeamPulse 0.7s ease;
+        }
         .reveal-item {
           opacity: 0;
           transform: translateY(24px);
@@ -142,6 +192,12 @@ export default function LandingPage({
         }
         @media (prefers-reduced-motion: reduce) {
           .lp-rise {
+            animation: none;
+          }
+          .lp-fact-in,
+          .lp-stamp,
+          .lp-redact-bar,
+          .lp-seam-pulse {
             animation: none;
           }
           .reveal-item {

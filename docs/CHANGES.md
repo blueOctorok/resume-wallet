@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hero card plays selective disclosure** (2026-08-19)
+
+Landing hero card is a full product demo: facts stamp in with a verified tick, “sharing with …” types, private rows unlock one-by-one (vault), then lock and the audience deletes/retypes. The lower section’s toggle staggers the same lock/unlock so it isn’t a hard cut. Respects `prefers-reduced-motion`.
+
+---
+
 ## **Hero stacks on iPad** (2026-08-19)
 
 Two-column hero started at `lg` (1024px) — iPad Pro portrait. The PROVVEN lockup is viewport-sized (`11vw`) so it overflowed under the career card. Side-by-side now starts at `xl` (1280+); tablet stays stacked. Lockup also shrinks in the two-column layout so it stays in its column.
