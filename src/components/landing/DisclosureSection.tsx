@@ -64,7 +64,7 @@ export default function DisclosureSection() {
       atmosphere={
         <div
           aria-hidden
-          className='pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[52rem] -translate-x-1/2 -translate-y-1/2 opacity-[0.12] blur-[110px]'
+          className='pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[52rem] -translate-x-1/2 -translate-y-1/2 opacity-40'
           style={{ background: 'radial-gradient(ellipse, #f15a2b 0%, #3d5a8f 55%, transparent 75%)' }}
         />
       }

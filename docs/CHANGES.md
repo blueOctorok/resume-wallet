@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **iPhone homepage stayed navy** (2026-08-18)
+
+Two iOS-specific causes: (1) landing followed app dark mode, so “paper” bands were midnight blue; (2) `filter: blur()` on ink atmospheres leaks past overflow on Safari, and `background-attachment: fixed` stops later section fills from painting. Homepage is now a fixed navy/paper brand object; glows are gradients only; iPhone body attachment is `scroll`.
+
+---
+
 ## **Blue Star palette preview** (2026-08-18)
 
 Live site now uses the agency trio so the boss can judge it in product, not a slide: **Midnight Blue `#173150`**, **Hot Embers `#f15a2b`**, **Ironside `#939598`**. ND gold/navy is parked. Mark SVGs, `teal-*` scale, ink bands, CTAs, and vault blooms all follow. Revert this pass to restore Dome Gold.

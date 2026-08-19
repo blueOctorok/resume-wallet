@@ -26,14 +26,15 @@ interface HeroSectionProps {
 function HeroAtmosphere() {
   return (
     <>
+      {/* Soft glows via gradient only — CSS `filter: blur()` escapes overflow on iOS */}
       <div
         aria-hidden
-        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-[0.12] blur-[100px]'
+        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-40'
         style={{ background: 'radial-gradient(circle, #f15a2b 0%, transparent 65%)' }}
       />
       <div
         aria-hidden
-        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-[0.14] blur-[110px]'
+        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-40'
         style={{ background: 'radial-gradient(circle, #3d5a8f 0%, transparent 65%)' }}
       />
       <div aria-hidden className='pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-black/40' />

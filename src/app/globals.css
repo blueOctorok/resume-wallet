@@ -78,11 +78,18 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background-attachment: fixed; /* Keeps gradient fixed while scrolling */
+  background-attachment: fixed;
   min-height: 100vh;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+}
+
+/* iOS Safari: fixed body attachment stops later section fills from painting. */
+@supports (-webkit-touch-callout: none) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 /* Dark mode — LoadingScreen-matched void + soft teal/violet blooms (same as full-page loader) */

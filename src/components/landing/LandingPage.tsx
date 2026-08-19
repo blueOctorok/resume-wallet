@@ -12,8 +12,6 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
-import { isDarkTheme } from '@/lib/theme-storage'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { LandingContainer, SealDivider, mutedText } from './landing-shared'
 import HeroSection from './HeroSection'
@@ -69,8 +67,10 @@ export default function LandingPage({
   onLogIn,
   onBrowseJobs,
 }: LandingPageProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Marketing page is a brand object, same as InkBand — always navy / paper.
+  // Following app theme made paper bands midnight (`#152a42`) on iPhones that
+  // already use dark mode in the hub, so the whole homepage read as one slab.
+  const isDark = false
   const revealRef = useScrollReveal()
 
   const scrollToEmployers = () => {
@@ -78,9 +78,7 @@ export default function LandingPage({
   }
 
   return (
-    // Light mode gets its own warm-cream base so non-ink sections sit on paper
-    // (not the app's cool slate canvas); dark mode keeps the storm gradient.
-    <div ref={revealRef} className={`relative z-10 ${isDark ? 'bg-[#152a42]' : 'bg-[#f3f4f5]'}`}>
+    <div ref={revealRef} className='relative z-10 isolate bg-[#f3f4f5]'>
       <HeroSection
         isAuthenticated={isAuthenticated}
         onLogIn={onLogIn}

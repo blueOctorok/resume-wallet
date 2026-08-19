@@ -41,7 +41,7 @@ export default function TrustSection() {
       atmosphere={
         <div
           aria-hidden
-          className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-[0.1] blur-[100px]'
+          className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-40'
           style={{ background: 'radial-gradient(ellipse, #f15a2b 0%, transparent 70%)' }}
         />
       }
