@@ -80,6 +80,11 @@ const config: Config = {
         purple: steel,
         emerald: forest,
         green: forest,
+        /** Blue Star steel — captions, borders, hints. Not body copy (too light on paper). */
+        ironside: {
+          DEFAULT: '#939598',
+          muted: '#7a7c7f',
+        },
 
         // Brand colors - Theme-aware palette
         /** @deprecated legacy classnames — now maps to Hot Embers */

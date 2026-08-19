@@ -23,25 +23,6 @@ interface HeroSectionProps {
   onBrowseJobs?: () => void
 }
 
-function HeroAtmosphere() {
-  return (
-    <>
-      {/* Soft glows via gradient only — CSS `filter: blur()` escapes overflow on iOS */}
-      <div
-        aria-hidden
-        className='pointer-events-none absolute -left-40 top-[-8rem] h-[34rem] w-[34rem] rounded-full opacity-40'
-        style={{ background: 'radial-gradient(circle, #f15a2b 0%, transparent 65%)' }}
-      />
-      <div
-        aria-hidden
-        className='pointer-events-none absolute right-[-10rem] top-1/3 h-[30rem] w-[30rem] rounded-full opacity-40'
-        style={{ background: 'radial-gradient(circle, #3d5a8f 0%, transparent 65%)' }}
-      />
-      <div aria-hidden className='pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-black/40' />
-    </>
-  )
-}
-
 export default function HeroSection({
   isAuthenticated,
   onLogIn,
@@ -51,7 +32,7 @@ export default function HeroSection({
   const primaryLabel = isAuthenticated ? 'Go to your hub' : 'Log in'
 
   return (
-    <InkBand atmosphere={<HeroAtmosphere />} className='border-b border-white/[0.06]'>
+    <InkBand className='border-b border-white/[0.06]'>
       <LandingContainer className='pb-20 pt-14 sm:pb-28 sm:pt-20 lg:pt-24'>
         <div className='grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16'>
           <div className='min-w-0 text-center lg:text-left'>
@@ -117,23 +98,18 @@ export default function HeroSection({
                 <button
                   type='button'
                   onClick={onBrowseJobs}
-                  className='text-sm text-slate-500 underline decoration-slate-600 underline-offset-4 transition-colors hover:text-[#f78a5c] hover:decoration-[#f15a2b]/50'
+                  className='text-sm text-ironside underline decoration-ironside/50 underline-offset-4 transition-colors hover:text-[#f78a5c] hover:decoration-[#f15a2b]/50'
                 >
                   or browse jobs without an account
                 </button>
               )}
-              <p className='mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-600'>
+              <p className='mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-ironside'>
                 free for candidates · no wallets, no tokens · built on Midnight
               </p>
             </div>
           </div>
 
           <div className='lp-rise relative flex min-w-0 justify-center lg:justify-end' style={{ animationDelay: '260ms' }}>
-            <div
-              aria-hidden
-              className='pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 opacity-25 blur-3xl'
-              style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(241,90,43,0.4) 0%, rgba(23,49,80,0.35) 45%, transparent 70%)' }}
-            />
             <DisclosureCard view='shared' className='relative' />
           </div>
         </div>

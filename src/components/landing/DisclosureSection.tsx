@@ -44,7 +44,7 @@ function ViewToggle({ view, onChange }: { view: DisclosureView; onChange: (v: Di
               'rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-300',
               active
                 ? 'bg-[#f15a2b]/20 text-[#ffb08a] ring-1 ring-[#f15a2b]/45'
-                : 'text-slate-500 hover:text-slate-300',
+                : 'text-ironside hover:text-[#b8babc]',
             )}
           >
             {opt.label}
@@ -64,7 +64,7 @@ export default function DisclosureSection() {
       atmosphere={
         <div
           aria-hidden
-          className='pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[52rem] -translate-x-1/2 -translate-y-1/2 opacity-40'
+          className='pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[52rem] -translate-x-1/2 -translate-y-1/2 opacity-[0.12]'
           style={{ background: 'radial-gradient(ellipse, #f15a2b 0%, #3d5a8f 55%, transparent 75%)' }}
         />
       }
@@ -99,12 +99,12 @@ export default function DisclosureSection() {
                       'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1',
                       row.shared
                         ? 'bg-[#f15a2b]/15 text-[#f78a5c] ring-[#f15a2b]/35'
-                        : 'bg-white/[0.04] text-slate-500 ring-white/10',
+                        : 'bg-white/[0.04] text-ironside ring-white/10',
                     )}
                   >
                     {row.shared ? <Check className='h-3 w-3' /> : <X className='h-3 w-3' />}
                   </span>
-                  <span className={cn('text-sm leading-relaxed sm:text-[15px]', row.shared ? INK.bodyBright : 'text-slate-500')}>
+                  <span className={cn('text-sm leading-relaxed sm:text-[15px]', row.shared ? INK.bodyBright : 'text-ironside')}>
                     {row.text}
                     <span className='ml-2 font-mono text-[9px] font-semibold uppercase tracking-wider'>
                       {row.shared ? (

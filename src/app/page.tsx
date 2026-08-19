@@ -341,7 +341,10 @@ const HomeContent = () => {
           ancestor, which silently breaks the nav's position:sticky. clip just
           crops paint without changing scroll behavior. */}
       <div className='min-h-screen overflow-x-clip relative'>
-        <StormBackground />
+        {/* Guest landing paints its own navy/paper bands. The app canvas
+            (white specular + ember bloom) sat behind the hero and read as
+            a light leaking through the blue. */}
+        {!isGuest && <StormBackground />}
 
         {/* Global Navigation — hidden on the guest marketing landing so the
             hero can own the first viewport (brand-first, no app chrome).

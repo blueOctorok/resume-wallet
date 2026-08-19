@@ -21,9 +21,9 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Muted body copy — Ironside on paper */
+/** Muted body copy — darker neighbor of Ironside so ledes stay readable */
 export function mutedText(isDark: boolean) {
-  return isDark ? 'text-gray-400' : 'text-[#5c6166]'
+  return isDark ? 'text-ironside' : 'text-[#5c6166]'
 }
 
 /** Primary heading — Midnight Blue on paper */
@@ -52,8 +52,8 @@ export const GOLD_CTA =
 /** Fixed palette for ink bands (never changes with theme) */
 export const INK = {
   heading: 'text-[#f4f1ea]',
-  body: 'text-slate-400',
-  bodyBright: 'text-slate-300',
+  body: 'text-ironside',
+  bodyBright: 'text-[#b8babc]',
   hairline: 'border-white/[0.08]',
 } as const
 
@@ -144,7 +144,7 @@ export function InkBand({ children, className, atmosphere, id }: InkBandProps) {
         className='pointer-events-none absolute inset-0 opacity-[0.5]'
         style={{
           backgroundImage:
-            'repeating-linear-gradient(to bottom, rgba(148,163,184,0.05) 0px, rgba(148,163,184,0.05) 1px, transparent 1px, transparent 56px)',
+            'repeating-linear-gradient(to bottom, rgba(147,149,152,0.08) 0px, rgba(147,149,152,0.08) 1px, transparent 1px, transparent 56px)',
         }}
       />
       {atmosphere}

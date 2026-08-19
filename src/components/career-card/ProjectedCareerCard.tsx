@@ -1,11 +1,9 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, FileWarning, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import Button from '@/components/ui/Button'
@@ -209,8 +207,8 @@ export default function ProjectedCareerCard({
   onEmployerViewCompanyPsp,
   demoteEmployerScreeningDetails = false,
 }: ProjectedCareerCardProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Paper document, same as the landing mock — not vault glass.
+  const isDark = false
   const employerList = data.employerConfirmations ?? []
   const sections = data.sections ?? []
   const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
@@ -263,7 +261,7 @@ export default function ProjectedCareerCard({
                 <div
                   className={cn(
                     'flex max-w-[min(100vw-5rem,18rem)] items-center gap-1 text-[11px] sm:max-w-[20rem]',
-                    isDark ? 'text-gray-500' : 'text-gray-400',
+                    'text-ironside',
                   )}
                 >
                   {lensSwitchNote ? (
@@ -381,7 +379,7 @@ export default function ProjectedCareerCard({
                   <Pencil
                     className={cn(
                       'h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100',
-                      isDark ? 'text-gray-400' : 'text-slate-500',
+                      'text-ironside',
                     )}
                     aria-hidden
                   />
@@ -402,7 +400,7 @@ export default function ProjectedCareerCard({
                 </p>
               )}
               {isCareerCardOwnerMode(mode) && (
-                <p className={cn('text-[10px] mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                <p className={cn('text-[10px] mt-1', 'text-ironside')}>
                   Card strength
                 </p>
               )}
@@ -413,15 +411,15 @@ export default function ProjectedCareerCard({
           {/* Meta row */}
           <div className='flex flex-wrap gap-4 mt-4'>
             {data.location && (
-              <span className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <span className={cn('flex items-center gap-1 text-xs', 'text-ironside')}>
                 <MapPin className='w-3 h-3' /> {data.location}
               </span>
             )}
-            <span className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            <span className={cn('flex items-center gap-1 text-xs', 'text-ironside')}>
               <Calendar className='w-3 h-3' /> Member since {new Date(data.memberSince).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
             </span>
             {data.viewCount !== undefined && (
-              <span className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <span className={cn('flex items-center gap-1 text-xs', 'text-ironside')}>
                 <Eye className='w-3 h-3' /> {data.viewCount} views
               </span>
             )}
@@ -432,13 +430,13 @@ export default function ProjectedCareerCard({
             <div className='flex flex-wrap gap-4 mt-3'>
               {data.contact.email && (
                 <a href={`mailto:${data.contact.email}`}
-                  className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-400 hover:text-teal-400' : 'text-gray-500 hover:text-teal-600')}>
+                  className={cn('flex items-center gap-1 text-xs', isDark ? 'text-ironside hover:text-teal-400' : 'text-ironside hover:text-teal-600')}>
                   <Mail className='w-3 h-3' /> {data.contact.email}
                 </a>
               )}
               {data.contact.phone && (
                 <a href={`tel:${data.contact.phone}`}
-                  className={cn('flex items-center gap-1 text-xs', isDark ? 'text-gray-400 hover:text-teal-400' : 'text-gray-500 hover:text-teal-600')}>
+                  className={cn('flex items-center gap-1 text-xs', isDark ? 'text-ironside hover:text-teal-400' : 'text-ironside hover:text-teal-600')}>
                   <Phone className='w-3 h-3' /> {data.contact.phone}
                 </a>
               )}
@@ -675,25 +673,25 @@ export default function ProjectedCareerCard({
             {!demoteEmployerScreeningDetails && (
               <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Status</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Status</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyMvr.results?.licenseStatus || 'Pending'}
                   </p>
                 </div>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Class</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Class</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyMvr.results?.licenseClass || '—'}
                   </p>
                 </div>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Points</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Points</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyMvr.results?.totalPoints ?? '—'}
                   </p>
                 </div>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Violations</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Violations</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyMvr.results?.violationCount ?? '—'}
                   </p>
@@ -743,19 +741,19 @@ export default function ProjectedCareerCard({
             {!demoteEmployerScreeningDetails && (
               <div className='grid grid-cols-2 gap-3 text-sm sm:grid-cols-3'>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Order status</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Order status</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyPsp.orderStatus}
                   </p>
                 </div>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>DL state</p>
+                  <p className={cn('text-xs', 'text-ironside')}>DL state</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyPsp.licenseState}
                   </p>
                 </div>
                 <div>
-                  <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Vendor</p>
+                  <p className={cn('text-xs', 'text-ironside')}>Vendor</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyPsp.resultSummary?.resultStatus ?? 'Pending'}
                   </p>
@@ -799,7 +797,7 @@ export default function ProjectedCareerCard({
           <div
             className={cn(
               'rounded-2xl border border-dashed p-8 text-center',
-              isDark ? 'border-gray-600/60 bg-gray-800/30 text-gray-400' : 'border-gray-300/80 bg-slate-50/80 text-gray-500',
+              isDark ? 'border-gray-600/60 bg-gray-800/30 text-ironside' : 'border-ironside/25 bg-slate-50/80 text-ironside',
             )}
           >
             <p className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>

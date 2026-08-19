@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useMemo } from 'react'
 import {
   CheckCircle2,
@@ -12,7 +11,6 @@ import {
   Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
@@ -57,27 +55,24 @@ const DQ_ROUTES: Partial<Record<DqItemId, PageType>> = {
 }
 
 const CHIP_CLASSES: Record<TileStatus, string> = {
-  // Outlined like `in-progress` rather than a solid fill — a grid of filled
-  // chips is the spot where an off-neutral tint reads loudest against cream.
-  done: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/25',
-  'in-progress':
-    'bg-teal-50 text-teal-800 ring-1 ring-teal-200 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/25',
-  waiting: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200',
-  attention: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200',
-  todo: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-gray-300',
-  locked: 'bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-gray-500',
+  done: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
+  'in-progress': 'bg-[#f15a2b]/10 text-[#c43d14] ring-1 ring-[#f15a2b]/25',
+  waiting: 'bg-amber-100 text-amber-900',
+  attention: 'bg-amber-100 text-amber-900',
+  todo: 'bg-stone-100 text-stone-700',
+  locked: 'bg-stone-100 text-ironside',
 }
 
 function TileStatusIcon({ status }: { status: TileStatus }) {
   if (status === 'done')
-    return <CheckCircle2 className='h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400' aria-hidden />
+    return <CheckCircle2 className='h-4 w-4 shrink-0 text-emerald-600' aria-hidden />
   if (status === 'waiting' || status === 'attention')
-    return <Clock className='h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400' aria-hidden />
+    return <Clock className='h-4 w-4 shrink-0 text-amber-600' aria-hidden />
   if (status === 'in-progress')
-    return <CircleDot className='h-4 w-4 shrink-0 text-teal-600 dark:text-teal-300' aria-hidden />
+    return <CircleDot className='h-4 w-4 shrink-0 text-[#c43d14]' aria-hidden />
   if (status === 'locked')
-    return <Lock className='h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-gray-500' aria-hidden />
-  return <CircleDot className='h-4 w-4 shrink-0 text-slate-300 dark:text-gray-600' aria-hidden />
+    return <Lock className='h-3.5 w-3.5 shrink-0 text-ironside' aria-hidden />
+  return <CircleDot className='h-4 w-4 shrink-0 text-ironside/50' aria-hidden />
 }
 
 /** Map a resolved DQ item status onto tile status + chip + hint. */
@@ -101,7 +96,7 @@ function dqStatusToTile(item: DqItemStatusResult): Pick<BoardTile, 'status' | 'c
   }
 }
 
-function BoardTileButton({ tile, isDark }: { tile: BoardTile; isDark: boolean }) {
+function BoardTileButton({ tile }: { tile: BoardTile }) {
   const clickable = !!tile.onClick
   return (
     <button
@@ -112,16 +107,10 @@ function BoardTileButton({ tile, isDark }: { tile: BoardTile; isDark: boolean })
         'flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
         tile.status === 'locked' && 'border-dashed opacity-70',
         tile.status === 'done'
-          ? isDark
-            ? 'border-emerald-500/25 bg-emerald-500/[0.06]'
-            : 'border-emerald-200/80 bg-emerald-50/50'
-          : isDark
-            ? 'border-white/10 bg-white/[0.03]'
-            : 'border-slate-200 bg-white/70',
+          ? 'border-emerald-200/80 bg-emerald-50/70'
+          : 'border-ironside/25 bg-white',
         clickable
-          ? isDark
-            ? 'cursor-pointer hover:border-teal-400/40 hover:bg-white/[0.06]'
-            : 'cursor-pointer hover:border-teal-300 hover:bg-teal-50/40'
+          ? 'cursor-pointer hover:border-[#f15a2b]/35 hover:bg-[#f15a2b]/[0.04]'
           : 'cursor-default',
       )}
     >
@@ -134,28 +123,22 @@ function BoardTileButton({ tile, isDark }: { tile: BoardTile; isDark: boolean })
             className={cn(
               'text-sm font-medium leading-snug',
               tile.status === 'done'
-                ? isDark
-                  ? 'text-emerald-200/90'
-                  : 'text-emerald-900/90'
+                ? 'text-emerald-900/90'
                 : tile.status === 'locked'
-                  ? isDark
-                    ? 'text-gray-400'
-                    : 'text-slate-500'
-                  : isDark
-                    ? 'text-gray-100'
-                    : 'text-slate-900',
+                  ? 'text-ironside'
+                  : 'text-[#173150]',
             )}
           >
             {tile.label}
           </span>
           {tile.cfrNote && (
-            <span className={cn('shrink-0 text-[10px]', isDark ? 'text-gray-500' : 'text-slate-400')}>
+            <span className='shrink-0 text-[10px] text-ironside'>
               {tile.cfrNote}
             </span>
           )}
         </span>
         {tile.hint && (
-          <span className={cn('mt-0.5 block text-xs leading-snug', isDark ? 'text-gray-400' : 'text-slate-500')}>
+          <span className='mt-0.5 block text-xs leading-snug text-ironside'>
             {tile.hint}
           </span>
         )}
@@ -170,7 +153,7 @@ function BoardTileButton({ tile, isDark }: { tile: BoardTile; isDark: boolean })
           {tile.chip}
         </span>
         {clickable && (
-          <ChevronRight className={cn('h-3.5 w-3.5', isDark ? 'text-gray-500' : 'text-slate-400')} aria-hidden />
+          <ChevronRight className='h-3.5 w-3.5 text-ironside' aria-hidden />
         )}
       </span>
     </button>
@@ -178,9 +161,6 @@ function BoardTileButton({ tile, isDark }: { tile: BoardTile; isDark: boolean })
 }
 
 export default function BuildBoard() {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
-
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
@@ -248,29 +228,23 @@ export default function BuildBoard() {
     completedCount >= totalCount ? 'complete' : completedCount > 0 ? 'in-progress' : 'empty'
 
   return (
-    <HubSectionPanel isDark={isDark} accent='teal'>
+    <HubSectionPanel isDark={false} accent='teal'>
       <BlockCard
         variant='embed'
+        paper
         icon={FolderCheck}
         title='Your DQ file'
         description='Everything a complete file needs — tap a tile to work on it.'
         status={overallStatus}
         headerActions={
-          <span
-            className={cn(
-              'shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums',
-              isDark
-                ? 'border-white/10 bg-white/[0.04] text-gray-200'
-                : 'border-slate-200 bg-white/70 text-slate-700',
-            )}
-          >
+          <span className='shrink-0 rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
             {completedCount}/{totalCount} done
           </span>
         }
       >
         <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
           {activeTiles.map((tile) => (
-            <BoardTileButton key={tile.id} tile={tile} isDark={isDark} />
+            <BoardTileButton key={tile.id} tile={tile} />
           ))}
 
           {/* Add-a-block tile — the picker entry point now that the old
@@ -278,12 +252,7 @@ export default function BuildBoard() {
           <button
             type='button'
             onClick={openPicker}
-            className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-xl border border-dashed p-3.5 text-sm font-medium transition-colors',
-              isDark
-                ? 'border-white/15 text-gray-300 hover:border-teal-400/40 hover:text-teal-200'
-                : 'border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-800',
-            )}
+            className='flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ironside/40 p-3.5 text-sm font-medium text-ironside transition-colors hover:border-[#f15a2b]/40 hover:text-[#c43d14]'
           >
             <Plus className='h-4 w-4' aria-hidden />
             Add a block
@@ -292,17 +261,12 @@ export default function BuildBoard() {
 
         {comingTiles.length > 0 && (
           <div className='mt-5'>
-            <p
-              className={cn(
-                'mb-2.5 text-[11px] font-semibold uppercase tracking-wide',
-                isDark ? 'text-gray-500' : 'text-slate-400',
-              )}
-            >
+            <p className='mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-ironside'>
               Coming online — handled by your employer or arriving soon
             </p>
             <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
               {comingTiles.map((tile) => (
-                <BoardTileButton key={tile.id} tile={tile} isDark={isDark} />
+                <BoardTileButton key={tile.id} tile={tile} />
               ))}
             </div>
           </div>

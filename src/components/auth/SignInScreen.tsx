@@ -348,7 +348,7 @@ export default function SignInScreen() {
 
               <div className='my-6 flex items-center gap-3'>
                 <span className='h-px flex-1 bg-gradient-to-r from-transparent to-white/15' />
-                <span className='text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500'>
+                <span className='text-[11px] font-semibold uppercase tracking-[0.28em] text-ironside'>
                   or
                 </span>
                 <span className='h-px flex-1 bg-gradient-to-l from-transparent to-white/15' />

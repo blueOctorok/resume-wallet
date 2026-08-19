@@ -37,7 +37,7 @@ function RequestMock({ isDark }: { isDark: boolean }) {
             : 'border-[#f15a2b]/60 bg-[#fde8e0] text-[#7a2a12]'
           : isDark
             ? 'border-white/10 bg-white/[0.03] text-gray-400'
-            : 'border-stone-200 bg-white text-stone-500',
+            : 'border-ironside/30 bg-white text-ironside',
       )}
     >
       {icon}
@@ -49,10 +49,10 @@ function RequestMock({ isDark }: { isDark: boolean }) {
     <div
       className={cn(
         'rounded-2xl border p-5 shadow-lg',
-        isDark ? 'border-white/10 bg-gray-900/70' : 'border-stone-200 bg-white/90',
+        isDark ? 'border-white/10 bg-gray-900/70' : 'border-ironside/30 bg-white/90',
       )}
     >
-      <p className={cn('text-[10px] font-semibold uppercase tracking-[0.2em]', isDark ? 'text-gray-500' : 'text-stone-400')}>
+      <p className='text-[10px] font-semibold uppercase tracking-[0.2em] text-ironside'>
         Request from Marcus Reed
       </p>
       <div className='mt-3 flex flex-wrap gap-2'>

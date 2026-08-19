@@ -269,7 +269,7 @@ export default function VerifiedFactsStrip({ data, isDark }: { data: CardData; i
                       {fact.label}
                     </span>
                     <span
-                      className={cn('block text-[11px]', isDark ? 'text-gray-400' : 'text-gray-500')}
+                      className='block text-[11px] text-ironside'
                     >
                       {fact.provenance}
                     </span>

@@ -15,7 +15,7 @@ fix the asset.
 | Hot Embers | `#f15a2b` | Mark on navy, CTAs, verified accent |
 | Ember on navy | `#f78a5c` | Accent text on ink |
 | Ember on paper | `#c43d14` | Accent text on light |
-| Ironside | `#939598` | Muted steel, borders, Stormi/violet scale |
+| Ironside | `#939598` | Captions, hints, paper borders (`text-ironside`, `border-ironside/30`). Not paragraph text on paper — use `#5c6166`. Stormi `violet-400` is this hex. |
 | Paper | `#f3f4f5` | Light surfaces |
 | Type on navy | `#f4f1ea` | Wordmark + headings on ink |
 

@@ -130,7 +130,7 @@ function ThemeModeToggle({ isDark }: { isDark: boolean }) {
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
-                  : 'text-stone-500 hover:text-stone-800',
+                  : 'text-ironside hover:text-[#173150]',
             )}
           >
             <Icon className='h-3.5 w-3.5 shrink-0' aria-hidden />
@@ -347,7 +347,7 @@ function CandidateViewToggle({
                   : 'bg-teal-700 text-white shadow-sm'
                 : isDark
                   ? 'text-gray-400 hover:text-gray-200'
-                  : 'text-stone-500 hover:text-stone-800',
+                  : 'text-ironside hover:text-[#173150]',
             )}
           >
             <Icon className='h-3.5 w-3.5 shrink-0' />

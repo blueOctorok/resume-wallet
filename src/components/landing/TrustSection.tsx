@@ -41,7 +41,7 @@ export default function TrustSection() {
       atmosphere={
         <div
           aria-hidden
-          className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-40'
+          className='pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[44rem] -translate-x-1/2 opacity-[0.1]'
           style={{ background: 'radial-gradient(ellipse, #f15a2b 0%, transparent 70%)' }}
         />
       }
@@ -56,7 +56,7 @@ export default function TrustSection() {
 
         {/* Decorative proof line — the "technical moment" in mono */}
         <p
-          className='mx-auto mt-8 w-fit rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-center font-mono text-[11px] tracking-wide text-slate-500'
+          className='mx-auto mt-8 w-fit rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-center font-mono text-[11px] tracking-wide text-ironside'
           aria-hidden
           data-reveal
         >

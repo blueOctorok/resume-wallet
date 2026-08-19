@@ -4,6 +4,48 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Ironside as a site token** (2026-08-18)
+
+`#939598` is now `ironside` in Tailwind. Used for captions, hints, and paper borders on the landing, vault shell, Build board, and career card. Body copy on paper stays `#5c6166` — the raw swatch fails contrast at paragraph size.
+
+---
+
+## **In Progress is ember, not amber** (2026-08-18)
+
+`BlockCard` “In Progress” status used yellow (`amber-*`). It’s now Hot Embers (`#c43d14` / `#f15a2b`) so Build matches the brand accent.
+
+---
+
+## **Build board is paper** (2026-08-18)
+
+The DQ Build grid was navy glass on midnight — pale type on blue, hard to read. Same treatment as the career card: white face, midnight type, ember chips. `BlockCard` gained a `paper` prop so `dark:` title invert cannot wash cream onto white.
+
+---
+
+## **Live career card is paper** (2026-08-18)
+
+`ProjectedCareerCard` is the same white document as the landing mock (always paper, not vault glass). Shell face is white + stone border.
+
+---
+
+## **Landing career card is paper** (2026-08-18)
+
+`DisclosureCard` is a white document on the navy hero (Midnight type, ember verified chips) instead of another dark glass panel.
+
+---
+
+## **Homepage hero is flat midnight** (2026-08-18)
+
+Removed hero orbs, the card pedestal glow, and `StormBackground` on the guest landing. The light behind the navy was the app canvas (white specular + ember bloom) showing through.
+
+---
+
+## **Homepage atmosphere back to a hint** (2026-08-18)
+
+Ink-band glows were at 40% opacity after the iOS blur removal — they read as orange/white stage lights. Back to ~12%, gradients only.
+
+---
+
 ## **iPhone homepage stayed navy** (2026-08-18)
 
 Two iOS-specific causes: (1) landing followed app dark mode, so “paper” bands were midnight blue; (2) `filter: blur()` on ink atmospheres leaks past overflow on Safari, and `background-attachment: fixed` stops later section fills from painting. Homepage is now a fixed navy/paper brand object; glows are gradients only; iPhone body attachment is `scroll`.

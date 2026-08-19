@@ -11,6 +11,6 @@ export function careerCardInsetPanelClass(isDark: boolean) {
     'rounded-xl border p-4',
     isDark
       ? 'border-gray-600/55 bg-gray-800/50 ring-1 ring-white/[0.04]'
-      : 'border-gray-200/90 bg-white/75 ring-1 ring-gray-900/[0.04]',
+      : 'border-ironside/25 bg-white/75 ring-1 ring-[#173150]/[0.04]',
   )
 }

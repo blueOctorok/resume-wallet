@@ -26,6 +26,8 @@ export type BlockCardProps = BlockCardHeaderVisual & {
    * `embed` — header + content only (no rounded `Card`); no left accent/sigil (outer vault frames the block); extra padding. Use inside `HubSectionPanel` (hub) or `VaultHorizontalVaultShell`.
    */
   variant?: 'default' | 'embed'
+  /** Paper face — keep midnight type even when `data-theme=dark` (career card / Build). */
+  paper?: boolean
   className?: string
   children?: React.ReactNode
 }
@@ -45,7 +47,7 @@ const statusConfig: Record<BlockStatus, {
   'in-progress': {
     icon: Clock,
     label: 'In Progress',
-    classes: 'text-amber-500 dark:text-amber-400',
+    classes: 'text-[#c43d14] dark:text-[#f15a2b]',
   },
   empty: {
     icon: AlertCircle,
@@ -80,6 +82,7 @@ function BlockCardChrome({
   onRemove,
   headerActions,
   children,
+  paper = false,
   /** Inside vault shell — no left accent bar (vault already frames the block) + roomier padding */
   embed = false,
 }: Omit<BlockCardProps, 'variant' | 'className'> & { embed?: boolean }) {
@@ -110,7 +113,8 @@ function BlockCardChrome({
       <div
         className={cn(
           // Stack on narrow viewports so titles wrap and actions don't squeeze the label column.
-          'flex flex-col gap-3 border-b border-slate-300/90 dark:border-gray-700/50 sm:flex-row sm:items-start sm:justify-between sm:gap-3',
+          'flex flex-col gap-3 border-b sm:flex-row sm:items-start sm:justify-between sm:gap-3',
+          paper ? 'border-ironside/25' : 'border-slate-300/90 dark:border-gray-700/50',
           embed
             ? 'px-5 py-4 sm:px-6 sm:py-5'
             : 'p-4 pl-5 sm:p-5 sm:pl-6',
@@ -118,24 +122,39 @@ function BlockCardChrome({
       >
         <div className='flex min-w-0 w-full flex-1 items-center gap-3 sm:w-auto'>
           <div
-            className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30 overflow-hidden'
+            className={cn(
+              'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl overflow-hidden',
+              paper
+                ? 'bg-[#f15a2b]/10 ring-1 ring-[#f15a2b]/20'
+                : 'bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30',
+            )}
           >
             {headerIconSlot != null ? (
               headerIconSlot
             ) : Icon != null ? (
               <Icon
-                className={'h-5 w-5 text-teal-600 dark:text-teal-400'}
+                className={paper ? 'h-5 w-5 text-[#c43d14]' : 'h-5 w-5 text-teal-600 dark:text-teal-400'}
               />
             ) : null}
           </div>
 
           <div className='min-w-0 flex-1'>
             {/* font-display → Montserrat (same family as body; weight does the hierarchy) */}
-            <h3 className='font-display text-[0.95rem] font-semibold tracking-tight text-stone-900 dark:text-[#f4f1ea] break-words sm:truncate'>
+            <h3
+              className={cn(
+                'font-display text-[0.95rem] font-semibold tracking-tight break-words sm:truncate',
+                paper ? 'text-[#173150]' : 'text-stone-900 dark:text-[#f4f1ea]',
+              )}
+            >
               {title}
             </h3>
             {description && (
-              <p className='mt-0.5 text-xs text-slate-600 dark:text-gray-400 break-words line-clamp-3 sm:line-clamp-none sm:truncate'>
+              <p
+                className={cn(
+                  'mt-0.5 text-xs break-words line-clamp-3 sm:line-clamp-none sm:truncate',
+                  paper ? 'text-ironside' : 'text-slate-600 dark:text-gray-400',
+                )}
+              >
                 {description}
               </p>
             )}

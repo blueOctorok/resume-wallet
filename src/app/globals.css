@@ -13,6 +13,7 @@
   --border-subtle: #c5ced9;
   --text-primary: #0f172a;
   --text-secondary: #475569;
+  --ironside: #939598;
 }
 
 [data-theme='dark'] {
@@ -54,8 +55,10 @@
    */
   --surface-card: #f7f8f8;
   --surface-elevated: #eef0f1;
+  --ironside: #939598;
   --border-subtle: #c5c6c8;
   --text-primary: #173150;
+  /* Readable muted — Ironside itself fails AA on paper; this is steel-600. */
   --text-secondary: #5c6166;
   --storm-accent: #c43d14;
   --storm-accent-rgb: 241 90 43;
