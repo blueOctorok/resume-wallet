@@ -71,7 +71,8 @@ export function mergeVerifiedEmployersIntoForm3(
         ...mapped,
         // Soft-preserve contact fields the EVR does not carry
         phone: self.phone || mapped.phone,
-        email: self.email || mapped.email,
+        hiringManagerName: self.hiringManagerName || mapped.hiringManagerName,
+        hiringManagerPhone: self.hiringManagerPhone || mapped.hiringManagerPhone,
         address: self.address || mapped.address,
         duties: self.duties || mapped.duties,
         reasonForLeaving: self.reasonForLeaving || mapped.reasonForLeaving,

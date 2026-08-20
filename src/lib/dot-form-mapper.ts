@@ -136,7 +136,10 @@ export interface DotForm2Data {
 export interface DotForm3Employer {
   name: string
   phone: string
-  email: string
+  /** Leftover on older drafts — no longer collected. */
+  email?: string
+  hiringManagerName?: string
+  hiringManagerPhone?: string
   address: string
   positionHeld: string
   duties?: string
@@ -414,9 +417,9 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       responsibilities: [],
       equipment: [],
       reasonForLeaving: emp.reasonForLeaving,
-      supervisorName: '',
-      supervisorPhone: emp.phone,
-      supervisorEmail: emp.email || undefined,
+      supervisorName: emp.hiringManagerName || '',
+      supervisorPhone: emp.hiringManagerPhone || emp.phone,
+      supervisorEmail: undefined,
       subjectToFMCSR: emp.subjectToFMCSR === 'yes',
       subjectToDrugTest: emp.safetySensitiveFunction === 'yes',
     }))
@@ -449,7 +452,8 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
     id: emp.id,
     name: emp.companyName,
     phone: emp.supervisorPhone || '',
-    email: emp.supervisorEmail || '',
+    hiringManagerName: emp.supervisorName || '',
+    hiringManagerPhone: emp.supervisorName ? emp.supervisorPhone || '' : '',
     address: emp.location,
     positionHeld: emp.position,
     fromDate: profileDateToForm3Date(emp.startDate, false),

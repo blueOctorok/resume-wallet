@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT Form 3 history picker + dates stay paper; hiring manager optional** (2026-08-20)
+
+Add History Type sat on a navy modal; month/year pickers followed Dark mode even on cream. Both are paper now. Employer email is gone (it was required). Optional hiring manager name + phone replace it — many drivers will leave them blank.
+
+---
+
 ## **File watcher skips Haiku when the DQ snapshot is unchanged** (2026-08-20)
 
 Every File open was a full Sonnet 5 call. The clerk compare is already in `heuristicDqReview`. File now uses Haiku 4.5 (`max_tokens` 600) and stores `sha256(snapshot)` + the brief in `dq_coach_reviews`. Same hash → return the cache, no Anthropic. Apply migration `107_dq_coach_reviews.sql`.

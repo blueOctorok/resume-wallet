@@ -3,7 +3,7 @@
 import { isDotFormDark as isDarkTheme, DOT_PAPER_CARD, DOT_PAPER_LOCKED } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import Modal from '@/components/ui/Modal'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -81,7 +81,9 @@ export default function PersonalInfoForm3({
       type: HistoryEntryType
       name: string
       phone: string
-      email: string
+      email?: string
+      hiringManagerName?: string
+      hiringManagerPhone?: string
       address: string
       positionHeld: string
       duties: string
@@ -226,7 +228,8 @@ export default function PersonalInfoForm3({
             type: 'employment' as const,
             name: '',
             phone: '',
-            email: '',
+            hiringManagerName: '',
+            hiringManagerPhone: '',
             address: '',
             positionHeld: '',
             duties: '',
@@ -380,12 +383,6 @@ export default function PersonalInfoForm3({
             } else {
               newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
             }
-          }
-          const emailValue = (employer.email || '').trim()
-          if (!emailValue) {
-            newErrors[`employer${index}Email`] = 'Employer email is required (DOT § 383.35)'
-          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
-            newErrors[`employer${index}Email`] = 'Please enter a valid email address (e.g., hr@company.com)'
           }
           if (!employer.fromDate)
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
@@ -567,7 +564,8 @@ export default function PersonalInfoForm3({
           type,
           name: '',
           phone: '',
-          email: '',
+          hiringManagerName: '',
+          hiringManagerPhone: '',
           address: '',
           positionHeld: '',
           duties: '',
@@ -1385,8 +1383,7 @@ export default function PersonalInfoForm3({
             {/* EMPLOYMENT-specific fields */}
             {entryType === 'employment' && (
               <>
-                {/* Company Name, Phone, Email */}
-                <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <div className='md:col-span-2'>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       EMPLOYER NAME <span className="text-red-500">*</span>
@@ -1417,22 +1414,39 @@ export default function PersonalInfoForm3({
                       }`}
                     />
                   </div>
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      EMAIL <span className="text-red-500">*</span>
+                      HIRING MANAGER
                     </label>
                     <input
-                      type='email'
-                      value={employer.email ?? ''}
-                      onChange={(e) => handleInputChange('employers', { email: e.target.value }, index)}
-                      placeholder="hr@company.com"
+                      type='text'
+                      value={employer.hiringManagerName ?? ''}
+                      onChange={(e) => handleInputChange('employers', { hiringManagerName: e.target.value }, index)}
+                      placeholder='Name — if you remember'
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      } ${dotErrorInputClass(!!errors[`employer${index}Email`])}`}
+                      }`}
                     />
-                    <DotFieldError message={errors[`employer${index}Email`]} />
+                    <p className='mt-1 text-xs text-ironside'>Optional. Many drivers do not have this.</p>
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                      HIRING MANAGER PHONE
+                    </label>
+                    <PhoneInput
+                      value={employer.hiringManagerPhone ?? ''}
+                      onChange={(formatted) => handleInputChange('employers', { hiringManagerPhone: formatted }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        isDarkTheme(theme)
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                      }`}
+                    />
                   </div>
                 </div>
 
@@ -1773,50 +1787,27 @@ export default function PersonalInfoForm3({
       
       {/* Type Selector Modal */}
       {showTypeSelector && (
-        <Modal onClose={() => setShowTypeSelector(false)} maxWidth="max-w-md">
-          <div className='p-6'>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`text-xl font-bold ${
-                isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-800'
-              }`}>
-                Select History Type
-              </h3>
+        <Modal onClose={() => setShowTypeSelector(false)} maxWidth="max-w-md" paper>
+          <ModalHeader
+            title="Select History Type"
+            subtitle="What type of history entry would you like to add?"
+            onClose={() => setShowTypeSelector(false)}
+            paper
+          />
+          <div className="space-y-2 p-6 pt-2">
+            {HISTORY_TYPES.map(({ value, label, icon: Icon, color }) => (
               <button
+                key={value}
                 type="button"
-                onClick={() => setShowTypeSelector(false)}
-                className={`p-2 rounded-lg ${
-                  isDarkTheme(theme) ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-                }`}
+                onClick={() => addHistoryEntry(value)}
+                className="flex w-full items-center gap-4 rounded-xl border border-ironside/20 bg-white p-4 text-[#173150] transition-colors hover:bg-stone-50"
               >
-                <X className="w-5 h-5" />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${color}`}>
+                  <Icon className="h-5 w-5 text-white" />
+                </div>
+                <span className="font-medium">{label}</span>
               </button>
-            </div>
-            
-            <p className={`text-sm mb-4 ${
-              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              What type of history entry would you like to add?
-            </p>
-            
-            <div className="space-y-2">
-              {HISTORY_TYPES.map(({ value, label, icon: Icon, color }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => addHistoryEntry(value)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
-                    isDarkTheme(theme)
-                      ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-100'
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </Modal>
       )}
