@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Start DOT no longer opens a leftover “submitted” test app** (2026-08-20)
+
+The DOT Zustand persist key was one browser-wide blob (`dot-application`). A previous “Fill test data” + submit stayed in localStorage, so a new driver (Barry) hitting Start immediately saw Application submitted with John Doe fixture data — not Form 1 + MVR locks.
+
+Persist is now owned by `ownerUserId`. Switching accounts wipes it. A successful GET with no `driver_applications` row also resets. `isApplicationCompleted` is no longer persisted (DB hydrate is source of truth). MVR/PSP prefill still runs on the empty Form 1.
+
+---
+
 ## **Invite email/SMS refuse retired ZKnight From + links** (2026-08-20)
 
 Changing Pingram’s default sender or Supabase Auth templates does not control employer outreach. Those sends use Vercel `PINGRAM_FROM_*` and `NEXT_PUBLIC_APP_URL`. If those still say zknight, every invite still does too.

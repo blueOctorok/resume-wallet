@@ -90,6 +90,10 @@ export default function DotApplicationFlow({
   const dotApp = useDotApplicationStore()
   const { showEmploymentVerification, setShowEmploymentVerification } = useUIStore()
 
+  /** Persist can rehydrate *after* first paint — wait so we don't bind, then get John Doe overwritten. */
+  const [dotPersistReady, setDotPersistReady] = useState(
+    () => useDotApplicationStore.persist?.hasHydrated() ?? true,
+  )
   /** False until we merge server application_data (form3 / employment live in DB, not only localStorage). */
   const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !sessionUserId?.trim())
   const [mvrPrefillStatus, setMvrPrefillStatus] = useState<
@@ -111,10 +115,26 @@ export default function DotApplicationFlow({
   if (profileWalletRef.current !== (sessionUserId ?? null)) {
     profileWalletRef.current = sessionUserId ?? null
     profileLoadAttemptedRef.current = false
+    mvrPrefillAttemptedRef.current = false
   }
   // When true, loads from profile even if forms have data (navigating from Resume Builder)
   const forceProfileLoadRef = useRef(false)
   const resetInProgressRef = useRef(false)
+
+  useEffect(() => {
+    if (dotPersistReady) return
+    const persistApi = useDotApplicationStore.persist
+    if (!persistApi) {
+      setDotPersistReady(true)
+      return
+    }
+    return persistApi.onFinishHydration(() => setDotPersistReady(true))
+  }, [dotPersistReady])
+
+  useEffect(() => {
+    if (!dotPersistReady) return
+    useDotApplicationStore.getState().bindToUser(sessionUserId?.trim() || null)
+  }, [dotPersistReady, sessionUserId])
 
   // -------------------------------------------------------
   // Attestation summaries for field badge honesty tiers
@@ -146,6 +166,7 @@ export default function DotApplicationFlow({
   // -------------------------------------------------------
   useEffect(() => {
     const w = sessionUserId?.trim()
+    if (!dotPersistReady) return
     if (!w) {
       setDotBootstrapReady(true)
       return
@@ -170,7 +191,20 @@ export default function DotApplicationFlow({
         }
         const app = json.application
         const ad = app?.application_data
-        if (!app || !ad || (!ad.form1 && !ad.form2 && !ad.form3)) return
+        // No server draft — drop leftover persist (Fill test data / submitted from another login).
+        if (!app || !ad || (!ad.form1 && !ad.form2 && !ad.form3)) {
+          const store = useDotApplicationStore.getState()
+          if (
+            store.isApplicationCompleted ||
+            store.form1Data ||
+            store.form2Data ||
+            store.form3Data ||
+            store.applicationId
+          ) {
+            store.resetApplication()
+          }
+          return
+        }
 
         const f3 = normalizeForm3Data(ad.form3)
         const step = Number(app.current_step) || 1
@@ -199,7 +233,7 @@ export default function DotApplicationFlow({
     return () => {
       cancelled = true
     }
-  }, [sessionUserId])
+  }, [sessionUserId, dotPersistReady])
 
   // -------------------------------------------------------
   // P3.7 — Always re-project MVR → Form 1 + Form 2 after bootstrap.

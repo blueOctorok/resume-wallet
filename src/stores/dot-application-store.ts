@@ -59,6 +59,8 @@ interface DotApplicationState {
   // Database sync
   applicationId: string | null
   lastSyncedAt: string | null
+  /** Which session owns this persist blob. Mismatch → wipe (test data / other account). */
+  ownerUserId: string | null
 }
 
 interface DotApplicationActions {
@@ -102,6 +104,8 @@ interface DotApplicationActions {
   
   // Compound actions
   resetApplication: () => void
+  /** Drop leftover persist when the signed-in user is not the blob owner. */
+  bindToUser: (userId: string | null) => void
   loadFromDatabase: (data: {
     applicationId: string
     form1?: DotForm1Data
@@ -136,6 +140,7 @@ const initialState: DotApplicationState = {
   formResetKey: 0,
   applicationId: null,
   lastSyncedAt: null,
+  ownerUserId: null,
 }
 
 export const useDotApplicationStore = create<DotApplicationState & DotApplicationActions>()(
@@ -239,8 +244,20 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
       // Compound actions
       resetApplication: () => set({
         ...initialState,
+        ownerUserId: get().ownerUserId,
         formResetKey: get().formResetKey + 1,
       }),
+
+      bindToUser: (userId) => {
+        const state = get()
+        if (!userId) return
+        if (state.ownerUserId === userId) return
+        set({
+          ...initialState,
+          ownerUserId: userId,
+          formResetKey: state.formResetKey + 1,
+        })
+      },
 
       loadFromDatabase: (data) => set({
         applicationId: data.applicationId,
@@ -277,7 +294,7 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
         form3Data: state.form3Data,
         currentForm: state.currentForm,
         applicationId: state.applicationId,
-        isApplicationCompleted: state.isApplicationCompleted,
+        ownerUserId: state.ownerUserId,
         hasPrefilled: state.hasPrefilled,
         lastSyncedAt: state.lastSyncedAt,
       }),
