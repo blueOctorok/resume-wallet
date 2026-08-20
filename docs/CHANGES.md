@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **File shows the full DQ packet again** (2026-08-20)
+
+The AI queue stays short (next clicks only). Under it, **Full DQ packet** lists every registry item — MVR, PSP, DOT, consent, EVR, plus ones not shipped (DL photos, med card, Key background, drug screen, Clearinghouse, CDLIS report) marked **Not built yet**. The watcher snapshot already has those rows so Sonnet can name them without treating them as a driver to-do.
+
+---
+
 ## **Hub mode renamed Build → File** (2026-08-20)
 
 The AI queue is a clerk watch on the DQ file, not a block workshop. The hub toggle and driver copy now say **File**. The `build` page id stays so deep-links and history do not break.

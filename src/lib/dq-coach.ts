@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCdlData, getDriverEmployment, getMvrData, getPspData } from '@/lib/block-data'
 import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { getDqItemDefinition } from '@/lib/dq-file-registry'
 import type { DqItemStatus } from '@/lib/dq-file-status'
 import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
 import { loadPspDotProjection } from '@/lib/psp-form2-projection'
@@ -413,8 +414,9 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
     })
   }
 
-  // One card per DQ hole — this is the floor. The model only adds extra wording.
+  // One card per live DQ hole. Placeholders stay in the packet list, not Next.
   for (const item of snapshot.dqItems) {
+    if (!getDqItemDefinition(item.id).blocksOverallCompletion) continue
     if (
       item.status === 'complete' ||
       item.status === 'processing' ||
@@ -591,7 +593,8 @@ Write a JSON object only (no markdown) with:
 - watching: one sentence on what you compared
 - next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification
 - flags: { severity: "warn"|"info", title, detail, target } — only unfinished work and real mismatches. Include target so the driver can open that page. At most 6 flags.
-- Do not list completed items. Those already live on the career card.
+- Do not list completed items as action flags. Those already live on the career card.
+- dqItems is the full DQ packet, including pieces not built in product yet (coming_soon / needs_key / needs_gov). You may name them as not available yet. Do not give them a target or treat them as the driver's next click.
 
 Your job:
 1. What is not done (missing / in-progress DQ tiles, empty required profile fields).
