@@ -52,6 +52,7 @@ export function mapEvrToForm3Employer(evr: VerifiedEmploymentSource): DotForm3Em
     phone: '',
     hiringManagerName: '',
     hiringManagerPhone: '',
+    hiringManagerEmail: '',
     address: '',
     positionHeld: evr.claimed_position || '',
     duties: '',

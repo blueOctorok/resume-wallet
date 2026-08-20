@@ -84,6 +84,7 @@ export default function PersonalInfoForm3({
       email?: string
       hiringManagerName?: string
       hiringManagerPhone?: string
+      hiringManagerEmail?: string
       address: string
       positionHeld: string
       duties: string
@@ -230,6 +231,7 @@ export default function PersonalInfoForm3({
             phone: '',
             hiringManagerName: '',
             hiringManagerPhone: '',
+            hiringManagerEmail: '',
             address: '',
             positionHeld: '',
             duties: '',
@@ -383,6 +385,10 @@ export default function PersonalInfoForm3({
             } else {
               newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
             }
+          }
+          const hiringEmail = (employer.hiringManagerEmail || '').trim()
+          if (hiringEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(hiringEmail)) {
+            newErrors[`employer${index}HiringEmail`] = 'Enter a valid email, or leave this blank'
           }
           if (!employer.fromDate)
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
@@ -566,6 +572,7 @@ export default function PersonalInfoForm3({
           phone: '',
           hiringManagerName: '',
           hiringManagerPhone: '',
+          hiringManagerEmail: '',
           address: '',
           positionHeld: '',
           duties: '',
@@ -1416,7 +1423,7 @@ export default function PersonalInfoForm3({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
                       HIRING MANAGER
@@ -1432,7 +1439,6 @@ export default function PersonalInfoForm3({
                           : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                       }`}
                     />
-                    <p className='mt-1 text-xs text-ironside'>Optional. Many drivers do not have this.</p>
                   </div>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1448,7 +1454,25 @@ export default function PersonalInfoForm3({
                       }`}
                     />
                   </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                      HIRING MANAGER EMAIL
+                    </label>
+                    <input
+                      type='email'
+                      value={employer.hiringManagerEmail ?? ''}
+                      onChange={(e) => handleInputChange('employers', { hiringManagerEmail: e.target.value }, index)}
+                      placeholder='Optional'
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        isDarkTheme(theme)
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                      } ${dotErrorInputClass(!!errors[`employer${index}HiringEmail`])}`}
+                    />
+                    <DotFieldError message={errors[`employer${index}HiringEmail`]} />
+                  </div>
                 </div>
+                <p className='-mt-2 text-xs text-ironside'>Hiring manager fields are optional. Many drivers do not have this.</p>
 
                 {/* Address */}
                 <div>

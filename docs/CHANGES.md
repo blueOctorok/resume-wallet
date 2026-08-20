@@ -6,7 +6,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **DOT Form 3 history picker + dates stay paper; hiring manager optional** (2026-08-20)
 
-Add History Type sat on a navy modal; month/year pickers followed Dark mode even on cream. Both are paper now. Employer email is gone (it was required). Optional hiring manager name + phone replace it — many drivers will leave them blank.
+Add History Type sat on a navy modal; month/year pickers followed Dark mode even on cream. Both are paper now. Employer email is gone (it was required). Optional hiring manager name, phone, and email replace it — many drivers will leave them blank.
 
 ---
 

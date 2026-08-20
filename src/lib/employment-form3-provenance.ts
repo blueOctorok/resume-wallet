@@ -73,6 +73,7 @@ export function mergeVerifiedEmployersIntoForm3(
         phone: self.phone || mapped.phone,
         hiringManagerName: self.hiringManagerName || mapped.hiringManagerName,
         hiringManagerPhone: self.hiringManagerPhone || mapped.hiringManagerPhone,
+        hiringManagerEmail: self.hiringManagerEmail || mapped.hiringManagerEmail,
         address: self.address || mapped.address,
         duties: self.duties || mapped.duties,
         reasonForLeaving: self.reasonForLeaving || mapped.reasonForLeaving,
