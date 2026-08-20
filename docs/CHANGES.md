@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR phone locks onto DOT Form 1** (2026-08-20)
+
+Accio subject phone was mapped but only soft-filled when the field was empty, and it was not in `MVR_FORM1_LOCK_PATHS` — so a real number on the report (e.g. `(216) 314-6034`) never overwrote Form 1 and never got a verified badge. Phone is now a lock path: sanitize placeholders (`555-555-5555`), format `(XXX) XXX-XXXX`, project + badge like name/DOB. Profile-only phone still fills but stays unlocked (not issuer-backed).
+
+---
+
 ## **Start DOT no longer opens a leftover “submitted” test app** (2026-08-20)
 
 The DOT Zustand persist key was one browser-wide blob (`dot-application`). A previous “Fill test data” + submit stayed in localStorage, so a new driver (Barry) hitting Start immediately saw Application submitted with John Doe fixture data — not Form 1 + MVR locks.

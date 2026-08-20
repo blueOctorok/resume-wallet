@@ -26,6 +26,16 @@ export function sanitizeSubjectPhone(
   return phone.trim()
 }
 
+/** DOT Form 1 / PhoneInput mask: (XXX) XXX-XXXX. Empty if placeholder or not 10 US digits. */
+export function formatPhoneForDotForm(phone: string | null | undefined): string {
+  const cleaned = sanitizeSubjectPhone(phone)
+  if (!cleaned) return ''
+  const digits = cleaned.replace(/\D/g, '')
+  const ten = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits
+  if (ten.length !== 10) return ''
+  return `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}`
+}
+
 export function isUnknownGender(gender: string | null | undefined): boolean {
   if (!gender?.trim()) return true
   const g = gender.trim().toUpperCase()

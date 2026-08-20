@@ -153,7 +153,8 @@ export default function PersonalInfoForm1({
         (field === 'firstName' ||
           field === 'middleName' ||
           field === 'lastName' ||
-          field === 'dateOfBirth') &&
+          field === 'dateOfBirth' ||
+          field === 'phone') &&
         isLocked(field)
       ) {
         return
@@ -834,8 +835,14 @@ export default function PersonalInfoForm1({
           <PhoneInput
             value={formData.phone}
             onChange={(value) => handleInputChange('phone', value)}
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${dotErrorInputClass(!!errors.phone)}`}
+            disabled={isLocked('phone')}
+            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
+              isLocked('phone') ? lockedInputClass : ''
+            } ${dotErrorInputClass(!!errors.phone)}`}
           />
+          {lockEntry('phone') && (
+            <VerifiedFieldBadge entry={lockEntry('phone')!} attestations={attestations} />
+          )}
           <DotFieldError message={errors.phone} />
         </div>
         <div>

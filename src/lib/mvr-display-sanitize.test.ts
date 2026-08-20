@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   collapseCumulativePipeField,
   formatDisplayGender,
+  formatPhoneForDotForm,
   hasDmvPersonalCharacteristics,
   isPlaceholderPhone,
   isUnknownGender,
@@ -24,6 +25,14 @@ describe('mvr-display-sanitize', () => {
     expect(sanitizeSubjectPhone('704-555-1234')).toBe('704-555-1234')
     expect(sanitizeSubjectGender('U')).toBeUndefined()
     expect(sanitizeSubjectGender('M')).toBe('M')
+  })
+
+  it('formats Accio/MVR phones for DOT Form 1', () => {
+    expect(formatPhoneForDotForm('(216) 314-6034')).toBe('(216) 314-6034')
+    expect(formatPhoneForDotForm('2163146034')).toBe('(216) 314-6034')
+    expect(formatPhoneForDotForm('12163146034')).toBe('(216) 314-6034')
+    expect(formatPhoneForDotForm('555-555-5555')).toBe('')
+    expect(formatPhoneForDotForm('')).toBe('')
   })
 
   it('resolves display phone from profile when subject is placeholder', () => {

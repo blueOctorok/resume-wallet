@@ -44,6 +44,7 @@ const FORM1_LABELS: Record<DotFieldPath, string> = {
   middleName: 'Middle name',
   lastName: 'Last name',
   dateOfBirth: 'Date of birth',
+  phone: 'Phone',
   'currentLicenses.0.state': 'License state',
   'currentLicenses.0.licenseNumber': 'License number',
   'currentLicenses.0.typeClass': 'License class',

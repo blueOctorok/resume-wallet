@@ -10,6 +10,7 @@ import { mapMvrToForm2Rows } from '@/lib/mvr-to-form2-mapper'
 import { buildMvrForm1Provenance, type DotForm1FieldProvenance } from '@/lib/dot-field-provenance'
 import type { Form2AccidentRow, Form2ConvictionRow } from '@/lib/mvr-to-form2-mapper'
 import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
+import { formatPhoneForDotForm } from '@/lib/mvr-display-sanitize'
 
 export interface MvrDotProjection {
   form1Data: Record<string, unknown>
@@ -207,6 +208,18 @@ export async function loadMvrDotProjection(
     accioOrderNumber,
     asOf: stampAsOf,
   })
+
+  // PDF may show profile phone when Accio subject is empty/placeholder.
+  // Fill the DOT field, but do not lock it — that number is not issuer-backed.
+  if (!String(form1Data.phone ?? '').trim()) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('phone')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const profilePhone = formatPhoneForDotForm(profile?.phone)
+    if (profilePhone) form1Data.phone = profilePhone
+  }
 
   const { accidents, convictions } = mapMvrToForm2Rows(parsed)
 

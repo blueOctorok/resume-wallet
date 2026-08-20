@@ -18,6 +18,7 @@ export type DotFieldPath =
   | 'middleName'
   | 'lastName'
   | 'dateOfBirth'
+  | 'phone'
   | 'currentLicenses.0.state'
   | 'currentLicenses.0.licenseNumber'
   | 'currentLicenses.0.typeClass'
@@ -30,6 +31,7 @@ export const MVR_FORM1_LOCK_PATHS: readonly DotFieldPath[] = [
   'middleName',
   'lastName',
   'dateOfBirth',
+  'phone',
   'currentLicenses.0.state',
   'currentLicenses.0.licenseNumber',
   'currentLicenses.0.typeClass',
@@ -208,8 +210,10 @@ export function mergeMvrPrefillIntoForm1(
     }
   }
 
-  // Soft-fill empty contact/address only (never overwrite driver-entered contact)
-  const softFillKeys = ['phone', 'email'] as const
+  // Soft-fill empty email/address only. Phone is an MVR lock path — it
+  // overwrites above. Never lock a blank or Accio 555 placeholder (mapper
+  // already strips those, so an empty MVR phone skips the lock).
+  const softFillKeys = ['email'] as const
   for (const key of softFillKeys) {
     const existingVal = String(base[key] ?? '').trim()
     const mvrVal = String(mvrForm1[key] ?? '').trim()

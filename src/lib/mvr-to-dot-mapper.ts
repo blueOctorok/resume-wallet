@@ -6,6 +6,7 @@
  */
 
 import { ParsedMvrResult } from './accio-xml-parser'
+import { formatPhoneForDotForm } from './mvr-display-sanitize'
 
 /**
  * Convert YYYYMMDD date format to YYYY-MM-DD
@@ -119,7 +120,7 @@ export function mapMvrToForm1Data(mvrResult: ParsedMvrResult): any {
     firstName: name.firstName,
     middleName: name.middleName,
     lastName: name.lastName,
-    phone: subject?.phone || '',
+    phone: formatPhoneForDotForm(subject?.phone),
     email: subject?.email || '',
     dateOfBirth: dateOfBirth,
     socialSecurity: '', // Never extracted from MVR for privacy/security
