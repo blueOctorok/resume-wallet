@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Full DQ packet is two columns on wide screens** (2026-08-20)
+
+Same rows (label + status chip). From `md` up the inventory sits in two columns so the File board is shorter.
+
+---
+
 ## **Profile setup stays cream paper in Dark mode** (2026-08-20)
 
 The name/email modal followed the app theme and sat on navy. Forms use the same cream (`#fbf8f1`) + midnight ink as DOT / File / career card. `Modal paper` now paints that cream; the first-run profile page uses the same tokens.

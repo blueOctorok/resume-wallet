@@ -98,11 +98,14 @@ export default function BuildBoard() {
           <p className='mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#173150]'>
             Full DQ packet
           </p>
-          <ul className='divide-y divide-ironside/10'>
+          <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-8'>
             {packet.map((row) => {
               const chip = packetChip(row.status, row.live)
               return (
-                <li key={row.id} className='flex items-baseline justify-between gap-3 py-2'>
+                <li
+                  key={row.id}
+                  className='flex items-baseline justify-between gap-3 border-b border-ironside/10 py-2'
+                >
                   <span className='min-w-0'>
                     <span className='text-sm text-[#173150]'>{row.label}</span>
                     {row.hint ? (
