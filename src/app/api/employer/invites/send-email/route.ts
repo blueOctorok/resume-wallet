@@ -4,6 +4,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendInviteEmail } from '@/lib/send-invite-email'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { createNotification } from '@/lib/create-notification'
+import { getAppBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/employer/invites/send-email
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     const company = invite.companies as any
     const job = invite.job_postings as any
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = getAppBaseUrl(request)
 
     // Send the email
     const result = await sendInviteEmail({
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
           targetBlockType: targetBlock,
           jobTitle: job?.title ?? null,
         },
-        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/apply/${invite.token}`,
+        actionUrl: `${baseUrl}/apply/${invite.token}`,
       }).catch(err => console.error('[SEND INVITE EMAIL] Notification error:', err))
     }
 

@@ -37,8 +37,30 @@ export type SendSmsParams = {
   message: string
 }
 
-const FROM_EMAIL = process.env.PINGRAM_FROM_EMAIL ?? 'provven@verify.provven.com'
-const FROM_NAME = process.env.PINGRAM_FROM_NAME ?? 'Provven'
+const DEFAULT_FROM_EMAIL = 'provven@verify.provven.com'
+const DEFAULT_FROM_NAME = 'Provven'
+
+function resolveFromEmail(): string {
+  const raw = process.env.PINGRAM_FROM_EMAIL ?? DEFAULT_FROM_EMAIL
+  // Env wins over code defaults — a leftover zknight From still brands every send.
+  if (/zknight|stormchain/i.test(raw)) {
+    console.warn('[MESSAGING] Ignoring retired PINGRAM_FROM_EMAIL=%s', raw)
+    return DEFAULT_FROM_EMAIL
+  }
+  return raw
+}
+
+function resolveFromName(): string {
+  const raw = process.env.PINGRAM_FROM_NAME ?? DEFAULT_FROM_NAME
+  if (/zknight|storm/i.test(raw)) {
+    console.warn('[MESSAGING] Ignoring retired PINGRAM_FROM_NAME=%s', raw)
+    return DEFAULT_FROM_NAME
+  }
+  return raw
+}
+
+const FROM_EMAIL = resolveFromEmail()
+const FROM_NAME = resolveFromName()
 
 let client: Pingram | null | undefined
 

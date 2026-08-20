@@ -7,6 +7,7 @@ import { isInviteStatus } from '@/components/employer/outreach/types'
 import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
 import { normalizeToE164 } from '@/lib/phone-e164'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { getAppBaseUrl } from '@/lib/app-url'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import crypto from 'crypto'
 
@@ -179,7 +180,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to cleaner response
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = getAppBaseUrl(request)
     
     return NextResponse.json({
       invites: (invites || []).map((invite) =>
@@ -329,7 +330,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = getAppBaseUrl(request)
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,14 @@
 import type { NextRequest } from 'next/server'
 
+/** Retired product hosts — never put these in outbound email/SMS even if env is stale. */
+const RETIRED_PUBLIC_ORIGIN = /^https?:\/\/(www\.)?(zknight\.io|stormchain\.ai)$/i
+
+export function canonicalizePublicOrigin(url: string): string {
+  const trimmed = url.replace(/\/$/, '')
+  if (RETIRED_PUBLIC_ORIGIN.test(trimmed)) return 'https://provven.com'
+  return trimmed
+}
+
 /**
  * Returns the app's public base URL for links (e.g. verify link in emails).
  * Use this so verification emails point to the real domain in production, not localhost.
@@ -8,7 +17,7 @@ import type { NextRequest } from 'next/server'
  */
 export function getAppBaseUrl(request?: NextRequest): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+    return canonicalizePublicOrigin(process.env.NEXT_PUBLIC_APP_URL)
   }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`

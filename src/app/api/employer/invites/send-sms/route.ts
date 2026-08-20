@@ -6,6 +6,7 @@ import { buildCandidateInviteSmsBody } from '@/lib/invite-sms-body'
 import { normalizeToE164 } from '@/lib/phone-e164'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { createNotification } from '@/lib/create-notification'
+import { getAppBaseUrl } from '@/lib/app-url'
 
 /**
  * POST /api/employer/invites/send-sms
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     const company = invite.companies as { company_name?: string } | null
     const job = invite.job_postings as { title?: string } | null
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = getAppBaseUrl(request)
     const inviteLink = `${baseUrl}/apply/${invite.token}`
     const targetBlockType = (invite as { target_block_type?: string | null }).target_block_type || null
 

@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Invite email/SMS refuse retired ZKnight From + links** (2026-08-20)
+
+Changing Pingram’s default sender or Supabase Auth templates does not control employer outreach. Those sends use Vercel `PINGRAM_FROM_*` and `NEXT_PUBLIC_APP_URL`. If those still say zknight, every invite still does too.
+
+Code now remaps retired From (`zknight@…` / “ZKnight”) to `Provven <provven@verify.provven.com>` and retired hosts (`zknight.io` / `stormchain.ai`) to `https://provven.com` in invite email/SMS links. Still set the Vercel vars to Provven and redeploy so logs stay clean.
+
+---
+
 ## **Employer screening-consent invite survives Google sign-in** (2026-08-20)
 
 Google OAuth was dropping `?next=/onboard/{token}` and landing the candidate on `/` (often with `?invite=` or a leftover `?code=`). The homepage ignored `?invite=`, cleared the resume token too early, and treated some OAuth returns as an F5 — so they were logged in on the career card with no consent forms.
