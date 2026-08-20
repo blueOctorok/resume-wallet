@@ -1,9 +1,9 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
-import { Loader2, Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import { DOT_PAPER_CARD, DOT_PAPER_INPUT, DOT_PAPER_LABEL } from '@/lib/dot-form-paper'
+import { Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -51,32 +51,23 @@ function Field({
   label,
   required,
   children,
-  theme,
 }: {
   label: string
   required?: boolean
   children: React.ReactNode
-  theme: string
 }) {
   return (
     <div>
-      <label className={`block text-sm font-medium mb-1.5 ${
-        isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-      }`}>
+      <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="ml-1 text-red-600">*</span>}
       </label>
       {children}
     </div>
   )
 }
 
-const inputClass = (theme: string) =>
-  `w-full px-3 py-2.5 rounded-xl border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/40 ${
-    isDarkTheme(theme)
-      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-  }`
+const inputClass = `w-full rounded-xl border px-3 py-2.5 text-sm ${DOT_PAPER_INPUT}`
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -85,7 +76,6 @@ export default function ProfileSetup({
   sessionUserId,
   onComplete,
 }: ProfileSetupProps) {
-  const { theme } = useTheme()
   const isDriver = role === 'driver'
 
   const [driverFields, setDriverFields] = useState<DriverFields>({
@@ -186,42 +176,29 @@ export default function ProfileSetup({
   // ─── Success state ────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-          isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
-        }`}>
-          <CheckCircle className="w-8 h-8 text-teal-500" />
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ember/10">
+          <CheckCircle className="h-8 w-8 text-ember" />
         </div>
-        <h2 className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-          Profile created!
-        </h2>
-        <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
-          Taking you to your hub…
-        </p>
+        <h2 className="text-xl font-bold text-[#173150]">Profile created!</h2>
+        <p className="text-sm text-ironside">Taking you to your hub…</p>
       </div>
     )
   }
 
   // ─── Form ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-8">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-          isDriver
-            ? isDarkTheme(theme) ? 'bg-teal-500/20' : 'bg-teal-100'
-            : isDarkTheme(theme) ? 'bg-indigo-500/20' : 'bg-indigo-100'
-        }`}>
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <div className="mb-8 flex items-start gap-4">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-ember/10">
           {isDriver
-            ? <Car className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-teal-400' : 'text-teal-600'}`} />
-            : <Code2 className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            ? <Car className="h-6 w-6 text-ember" />
+            : <Code2 className="h-6 w-6 text-ember" />
           }
         </div>
         <div>
-          <h1 className={`text-2xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-            Set up your profile
-          </h1>
-          <p className={`text-sm mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+          <h1 className="text-2xl font-bold text-[#173150]">Set up your profile</h1>
+          <p className="mt-1 text-sm text-ironside">
             {isDriver
               ? 'Quick setup so employers can find you. Takes under a minute.'
               : 'Basic info so employers know who you are and can reach out.'
@@ -230,58 +207,31 @@ export default function ProfileSetup({
         </div>
       </div>
 
-      {/* Form card */}
-      <form
-        onSubmit={handleSubmit}
-        className={`rounded-2xl p-6 space-y-5 ${
-          isDarkTheme(theme)
-            ? 'bg-gray-900 border border-gray-700'
-            : 'bg-white shadow-sm border border-gray-100'
-        }`}
-      >
-
-        {/* Cross-role identity banner */}
+      <form onSubmit={handleSubmit} className={`${DOT_PAPER_CARD} space-y-5 p-6`}>
         {crossRoleName && (
-          <div className={`p-4 rounded-xl border flex items-start gap-3 ${
-            isDarkTheme(theme)
-              ? 'bg-amber-500/10 border-amber-500/30'
-              : 'bg-amber-50 border-amber-200'
-          }`}>
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-800'}`}>
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-amber-800">
                 We see you already have a {crossRoleHubLabel} profile as <strong>{crossRoleName}</strong>.
               </p>
-              <p className={`text-sm mt-0.5 ${isDarkTheme(theme) ? 'text-amber-400/80' : 'text-amber-700'}`}>
+              <p className="mt-0.5 text-sm text-amber-700">
                 Is that you?
               </p>
-              <div className="flex gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={applyExistingName}
-                  className="px-3 py-1 rounded-lg text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
-                >
+              <div className="mt-2 flex gap-2">
+                <Button type="button" size="sm" onClick={applyExistingName}>
                   Yes, use this name
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCrossRoleName(null)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    isDarkTheme(theme)
-                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-                >
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setCrossRoleName(null)}>
                   No, I&apos;m different
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Name (both roles) ── */}
         <div className="grid grid-cols-2 gap-4">
-          <Field label="First Name" required theme={theme}>
+          <Field label="First Name" required>
             <input
               type="text"
               autoFocus
@@ -291,10 +241,10 @@ export default function ProfileSetup({
                 : updateDev('firstName', e.target.value)
               }
               placeholder="Leon"
-              className={inputClass(theme)}
+              className={inputClass}
             />
           </Field>
-          <Field label="Last Name" required theme={theme}>
+          <Field label="Last Name" required>
             <input
               type="text"
               value={isDriver ? driverFields.lastName : devFields.lastName}
@@ -303,13 +253,12 @@ export default function ProfileSetup({
                 : updateDev('lastName', e.target.value)
               }
               placeholder="Kennedy"
-              className={inputClass(theme)}
+              className={inputClass}
             />
           </Field>
         </div>
 
-        {/* ── Email (both roles) ── */}
-        <Field label="Email" theme={theme}>
+        <Field label="Email">
           <input
             type="email"
             value={isDriver ? driverFields.email : devFields.email}
@@ -318,47 +267,43 @@ export default function ProfileSetup({
               : updateDev('email', e.target.value)
             }
             placeholder="leon@example.com"
-            className={inputClass(theme)}
+            className={inputClass}
           />
         </Field>
 
         {isDriver ? (
           <>
-            {/* ── Driver: Phone + Location ── */}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Phone" theme={theme}>
+              <Field label="Phone">
                 <input
                   type="tel"
                   value={driverFields.phone}
                   onChange={e => updateDriver('phone', e.target.value)}
                   placeholder="(555) 123-4567"
-                  className={inputClass(theme)}
+                  className={inputClass}
                 />
               </Field>
-              <Field label="City" theme={theme}>
+              <Field label="City">
                 <input
                   type="text"
                   value={driverFields.city}
                   onChange={e => updateDriver('city', e.target.value)}
                   placeholder="Columbus"
-                  className={inputClass(theme)}
+                  className={inputClass}
                 />
               </Field>
             </div>
 
-            {/* ── Driver: CDL info ── */}
-            <div className={`pt-4 border-t ${isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-100'}`}>
-              <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
-                isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+            <div className="border-t border-ironside/20 pt-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ironside">
                 CDL Information
               </p>
               <div className="grid grid-cols-3 gap-4">
-                <Field label="CDL Class" theme={theme}>
+                <Field label="CDL Class">
                   <select
                     value={driverFields.cdlClass}
                     onChange={e => updateDriver('cdlClass', e.target.value)}
-                    className={inputClass(theme)}
+                    className={inputClass}
                   >
                     <option value="">Select…</option>
                     {CDL_CLASSES.map(c => (
@@ -366,11 +311,11 @@ export default function ProfileSetup({
                     ))}
                   </select>
                 </Field>
-                <Field label="CDL State" theme={theme}>
+                <Field label="CDL State">
                   <select
                     value={driverFields.cdlState}
                     onChange={e => updateDriver('cdlState', e.target.value)}
-                    className={inputClass(theme)}
+                    className={inputClass}
                   >
                     <option value="">State…</option>
                     {US_STATES.map(s => (
@@ -378,11 +323,11 @@ export default function ProfileSetup({
                     ))}
                   </select>
                 </Field>
-                <Field label="Home State" theme={theme}>
+                <Field label="Home State">
                   <select
                     value={driverFields.state}
                     onChange={e => updateDriver('state', e.target.value)}
-                    className={inputClass(theme)}
+                    className={inputClass}
                   >
                     <option value="">State…</option>
                     {US_STATES.map(s => (
@@ -395,73 +340,54 @@ export default function ProfileSetup({
           </>
         ) : (
           <>
-            {/* ── Dev: Headline ── */}
-            <Field label="What do you do?" theme={theme}>
+            <Field label="What do you do?">
               <input
                 type="text"
                 value={devFields.headline}
                 onChange={e => updateDev('headline', e.target.value)}
                 placeholder="Full Stack Developer · React & Node.js"
-                className={inputClass(theme)}
+                className={inputClass}
               />
             </Field>
 
-            {/* ── Dev: GitHub + Location ── */}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="GitHub Username" theme={theme}>
+              <Field label="GitHub Username">
                 <div className="relative">
-                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm ${
-                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
-                  }`}>@</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ironside">@</span>
                   <input
                     type="text"
                     value={devFields.githubUsername}
                     onChange={e => updateDev('githubUsername', e.target.value)}
                     placeholder="username"
-                    className={`${inputClass(theme)} pl-7`}
+                    className={`${inputClass} pl-7`}
                   />
                 </div>
               </Field>
-              <Field label="Location" theme={theme}>
+              <Field label="Location">
                 <input
                   type="text"
                   value={devFields.location}
                   onChange={e => updateDev('location', e.target.value)}
                   placeholder="Columbus, OH"
-                  className={inputClass(theme)}
+                  className={inputClass}
                 />
               </Field>
             </div>
           </>
         )}
 
-        {/* Error */}
         {error && (
-          <p className="text-sm text-red-500 pt-1">{error}</p>
+          <p className="pt-1 text-sm text-red-600">{error}</p>
         )}
 
-        {/* Submit */}
         <div className="pt-2">
-          <button
-            type="submit"
-            disabled={!canSubmit || saving}
-            className={`w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-              canSubmit && !saving
-                ? isDriver
-                  ? 'bg-teal-600 hover:bg-teal-500 text-white'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
-            }`}
-          >
-            {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Saving…</>
-              : 'Save & Go to Hub'
-            }
-          </button>
+          <Button type="submit" disabled={!canSubmit} isLoading={saving} className="w-full">
+            Save & Go to Hub
+          </Button>
         </div>
       </form>
 
-      <p className={`text-xs text-center mt-4 ${isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
+      <p className="mt-4 text-center text-xs text-ironside">
         You can always update this later from your hub settings.
       </p>
     </div>

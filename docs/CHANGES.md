@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Profile setup stays cream paper in Dark mode** (2026-08-20)
+
+The name/email modal followed the app theme and sat on navy. Forms use the same cream (`#fbf8f1`) + midnight ink as DOT / File / career card. `Modal paper` now paints that cream; the first-run profile page uses the same tokens.
+
+---
+
 ## **File shows the full DQ packet again** (2026-08-20)
 
 The AI queue stays short (next clicks only). Under it, **Full DQ packet** lists every registry item — MVR, PSP, DOT, consent, EVR, plus ones not shipped (DL photos, med card, Key background, drug screen, Clearinghouse, CDLIS report) marked **Not built yet**. The watcher snapshot already has those rows so Sonnet can name them without treating them as a driver to-do.

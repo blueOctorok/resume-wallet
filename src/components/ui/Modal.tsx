@@ -32,8 +32,8 @@ interface ModalProps {
    */
   panelShape?: 'default' | 'block'
   /**
-   * Force the paper (white / midnight) panel even when the app theme is dark.
-   * Used by employer-hub dialogs that sit on a paper surface.
+   * Force cream paper (`#fbf8f1`) + midnight ink even when the app theme is dark.
+   * Forms and legal packets use this — same face as DOT / File / career card.
    */
   paper?: boolean
   /** Merged onto the panel div (extra utilities beyond shape defaults). */
@@ -123,13 +123,17 @@ export default function Modal({
                 'rounded-xl border shadow-xl ring-1 ring-teal-500/20 dark:ring-teal-500/25',
                 isDarkMode
                   ? 'border-gray-700 bg-gray-800/95'
-                  : 'border-gray-200 bg-white',
+                  : paper
+                    ? 'border-ironside/30 bg-[#fbf8f1] text-[#173150] [color-scheme:light]'
+                    : 'border-gray-200 bg-white',
               )
             : cn(
                 'rounded-2xl ring-1 ring-white/15 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.45)] dark:ring-white/10 dark:shadow-[0_28px_72px_-8px_rgba(0,0,0,0.75)]',
                 isDarkMode
                   ? 'bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-600/80'
-                  : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90',
+                  : paper
+                    ? 'bg-[#fbf8f1] border border-ironside/30 text-[#173150] [color-scheme:light] shadow-[0_24px_64px_-12px_rgba(0,0,0,0.35)]'
+                    : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90',
               ),
           maxWidth,
           panelClassName,
@@ -159,8 +163,7 @@ interface ModalHeaderProps {
   /** Match `Modal` `panelShape="block"` — header edge aligns with category-card shell. */
   variant?: 'default' | 'block'
   /**
-   * Force the paper (white / midnight) header even when the app theme is dark.
-   * Used by employer-hub dialogs that sit on a paper panel.
+   * Force cream paper header even when the app theme is dark.
    */
   paper?: boolean
 }

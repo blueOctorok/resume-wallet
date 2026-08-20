@@ -1,12 +1,12 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { useTheme } from '@/contexts/ThemeContext'
+import Button from '@/components/ui/Button'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
-import { User, Mail, Phone, MapPin, Loader2, Sparkles } from 'lucide-react'
+import { DOT_PAPER_INPUT, DOT_PAPER_LABEL } from '@/lib/dot-form-paper'
+import { User, Mail, Phone, MapPin, Sparkles } from 'lucide-react'
 
 interface ProfileSetupModalProps {
   isOpen: boolean
@@ -63,8 +63,6 @@ export default function ProfileSetupModal({
   userRole,
   userEmail,
 }: ProfileSetupModalProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
 
   const [form, setForm] = useState<ProfileData>({
@@ -166,37 +164,28 @@ export default function ProfileSetupModal({
       zIndex={100}
       disableBackdropClose
       disableEscapeClose
+      paper
     >
-      <div className={`px-6 pt-6 pb-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div className='flex items-center gap-3 mb-2'>
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              isDark ? 'bg-teal-500/20' : 'bg-teal-100'
-            }`}
-          >
-            <Sparkles className={`w-5 h-5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+      <div className='border-b border-ironside/20 px-6 pb-4 pt-6'>
+        <div className='mb-2 flex items-center gap-3'>
+          <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-ember/10'>
+            <Sparkles className='h-5 w-5 text-ember' />
           </div>
           <div>
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Welcome to Provven!
-            </h2>
-            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Let&apos;s set up your profile
-            </p>
+            <h2 className='text-lg font-semibold text-[#173150]'>Welcome to Provven!</h2>
+            <p className='text-sm text-ironside'>Let&apos;s set up your profile</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className='p-6 space-y-4'>
+      <form onSubmit={handleSubmit} className='space-y-4 p-6'>
         <div className='grid grid-cols-2 gap-3'>
           <div>
-            <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>
               First Name *
             </label>
             <div className='relative'>
-              <User
-                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
-              />
+              <User className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside' />
               <input
                 type='text'
                 name='given-name'
@@ -204,16 +193,12 @@ export default function ProfileSetupModal({
                 value={form.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
                 placeholder='John'
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-                } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
               />
             </div>
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>
               Last Name *
             </label>
             <input
@@ -223,23 +208,15 @@ export default function ProfileSetupModal({
               value={form.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
               placeholder='Smith'
-              className={`w-full px-4 py-2.5 rounded-xl border transition-colors ${
-                isDark
-                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-              } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+              className={`w-full rounded-xl border px-4 py-2.5 ${DOT_PAPER_INPUT}`}
             />
           </div>
         </div>
 
         <div>
-          <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Email
-          </label>
+          <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>Email</label>
           <div className='relative'>
-            <Mail
-              className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
-            />
+            <Mail className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside' />
             <input
               type='email'
               name='email'
@@ -247,32 +224,20 @@ export default function ProfileSetupModal({
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
               placeholder='john@example.com'
-              className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors ${
-                isDark
-                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-              } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+              className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
             />
           </div>
         </div>
 
         <div>
-          <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Phone
-          </label>
+          <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>Phone</label>
           <div className='relative'>
-            <Phone
-              className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
-            />
+            <Phone className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside' />
             <PhoneInput
               value={form.phone}
               onChange={(val) => handleChange('phone', val)}
               placeholder='(555) 123-4567'
-              className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors ${
-                isDark
-                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-              } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+              className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
             />
           </div>
         </div>
@@ -280,13 +245,9 @@ export default function ProfileSetupModal({
         {userRole === 'driver' ? (
           <div className='grid grid-cols-2 gap-3'>
             <div>
-              <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                City
-              </label>
+              <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>City</label>
               <div className='relative'>
-                <MapPin
-                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
-                />
+                <MapPin className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside' />
                 <input
                   type='text'
                   name='address-level2'
@@ -294,28 +255,18 @@ export default function ProfileSetupModal({
                   value={form.city}
                   onChange={(e) => handleChange('city', e.target.value)}
                   placeholder='Dallas'
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors ${
-                    isDark
-                      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-                  } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+                  className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
                 />
               </div>
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                State
-              </label>
+              <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>State</label>
               <select
                 name='address-level1'
                 autoComplete='address-level1'
                 value={form.state}
                 onChange={(e) => handleChange('state', e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-xl border transition-colors ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-600 text-white focus:border-teal-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:border-teal-500'
-                } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+                className={`w-full rounded-xl border px-4 py-2.5 ${DOT_PAPER_INPUT}`}
               >
                 <option value=''>Select</option>
                 {US_STATES.map((st) => (
@@ -328,13 +279,11 @@ export default function ProfileSetupModal({
           </div>
         ) : (
           <div>
-            <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label className={`mb-1.5 block text-sm font-medium ${DOT_PAPER_LABEL}`}>
               Location
             </label>
             <div className='relative'>
-              <MapPin
-                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
-              />
+              <MapPin className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ironside' />
               <input
                 type='text'
                 name='address-level2'
@@ -342,38 +291,21 @@ export default function ProfileSetupModal({
                 value={form.location}
                 onChange={(e) => handleChange('location', e.target.value)}
                 placeholder='San Francisco, CA or Remote'
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors ${
-                  isDark
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
-                } focus:outline-none focus:ring-1 focus:ring-teal-500`}
+                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
               />
             </div>
           </div>
         )}
 
-        {error && <p className='text-red-400 text-sm'>{error}</p>}
+        {error && <p className='text-sm text-red-600'>{error}</p>}
 
         <div className='pt-2'>
-          <button
-            type='submit'
-            disabled={saving}
-            className={`w-full px-4 py-2.5 rounded-xl font-medium transition-colors ${
-              saving ? 'bg-teal-600/50 cursor-not-allowed' : 'bg-teal-600 hover:bg-teal-500'
-            } text-white`}
-          >
-            {saving ? (
-              <span className='flex items-center justify-center gap-2'>
-                <Loader2 className='w-4 h-4 animate-spin' />
-                Saving...
-              </span>
-            ) : (
-              'Save Profile'
-            )}
-          </button>
+          <Button type='submit' isLoading={saving} className='w-full'>
+            Save Profile
+          </Button>
         </div>
 
-        <p className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className='text-center text-xs text-ironside'>
           You can update contact details anytime from your hub after saving
         </p>
       </form>
