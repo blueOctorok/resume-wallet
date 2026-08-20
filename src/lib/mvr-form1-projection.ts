@@ -10,7 +10,7 @@ import { mapMvrToForm2Rows } from '@/lib/mvr-to-form2-mapper'
 import { buildMvrForm1Provenance, type DotForm1FieldProvenance } from '@/lib/dot-field-provenance'
 import type { Form2AccidentRow, Form2ConvictionRow } from '@/lib/mvr-to-form2-mapper'
 import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
-import { formatPhoneForDotForm } from '@/lib/mvr-display-sanitize'
+import { formatPhoneForDotForm, resolveDisplayPhone } from '@/lib/mvr-display-sanitize'
 
 export interface MvrDotProjection {
   form1Data: Record<string, unknown>
@@ -202,24 +202,26 @@ export async function loadMvrDotProjection(
   const form1Data = mapMvrToForm1Data(parsed) as Record<string, unknown>
   const summary = getMvrExtractionSummary(parsed)
   const stampAsOf = mvrResult.received_at ?? asOf
+
+  // Same phone the MVR PDF prints (Accio subject, else profile). Stamp
+  // provenance *after* so Form 1 locks it — previously a profile fallback
+  // filled the field with no badge.
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('phone')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const reportPhone = formatPhoneForDotForm(
+    resolveDisplayPhone(parsed.subject?.phone, profile?.phone),
+  )
+  if (reportPhone) form1Data.phone = reportPhone
+
   const form1Provenance = buildMvrForm1Provenance(form1Data, {
     mvrResultId: mvrResult.id,
     orderId,
     accioOrderNumber,
     asOf: stampAsOf,
   })
-
-  // PDF may show profile phone when Accio subject is empty/placeholder.
-  // Fill the DOT field, but do not lock it — that number is not issuer-backed.
-  if (!String(form1Data.phone ?? '').trim()) {
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('phone')
-      .eq('user_id', userId)
-      .maybeSingle()
-    const profilePhone = formatPhoneForDotForm(profile?.phone)
-    if (profilePhone) form1Data.phone = profilePhone
-  }
 
   const { accidents, convictions } = mapMvrToForm2Rows(parsed)
 
