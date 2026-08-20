@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub refresh no longer opens empty screening consent** (2026-08-20)
+
+F5 on the logged-in hub (`/`) replayed a leftover invite token: `/onboard/{token}` → `/?onboard=screening-consent` → “No pending request.” A leftover token is only for the Google/auth hop, not a refresh. Reload now stays on the hub. Stale tokens clear when the invite is already used.
+
+---
+
 ## **Build no longer lists completed items** (2026-08-20)
 
 Done chips (MVR, DOT, …) duplicated the career card. Build is only the next work. The watcher prompt no longer asks for a “what’s solid” list.

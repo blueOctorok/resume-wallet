@@ -71,6 +71,13 @@ export default function OnboardPage() {
     fetchInvite()
   }, [token])
 
+  useEffect(() => {
+    if (inviteData && !inviteData.valid) {
+      clearInviteToken()
+      clearAuthNext()
+    }
+  }, [inviteData])
+
   // ─── Auth gate + post-authentication setup ──────────────────────────────────
   // Supabase is the only front door now. If there's no session, bounce to
   // /sign-in?next=<this page> so the user returns here once authenticated; the

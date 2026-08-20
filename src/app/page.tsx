@@ -21,6 +21,7 @@ import type { PageType } from '@/stores'
 import {
   ONBOARD_TARGET_KEY,
   clearAuthNext,
+  isDocumentReload,
   isInviteToken,
   onboardTokenFromPath,
   peekAuthNext,
@@ -210,6 +211,9 @@ const HomeContent = () => {
   // -------------------------------------------------------
   const didResumeInviteRef = useRef(false)
   useEffect(() => {
+    // Hub F5 is a reload of `/`. A leftover invite token must not replay
+    // /onboard → screening-consent. Only follow the token after an auth hop.
+    if (isDocumentReload()) return
     if (didResumeInviteRef.current) return
     if (!sessionUserId && !user) return
     const hasOnboardTarget =
@@ -236,20 +240,17 @@ const HomeContent = () => {
   // -------------------------------------------------------
   const didHandleOnboardRef = useRef(false)
   useEffect(() => {
-    // F5 on a stale notification URL (`/?onboard=screening-consent`) should land
-    // on the hub. An employer invite (`?invite=` or the localStorage resume token)
-    // is a live claim — don't strip it. OAuth returns are often mis-tagged as
-    // `reload`; treating those as F5 was dumping invited drivers on the homepage.
-    if (typeof window !== 'undefined' && performance.getEntriesByType('navigation')[0]) {
-      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-      const liveInvite = searchParams.get('invite') || peekInviteToken()
-      if (nav.type === 'reload' && !liveInvite) {
+    // F5 on the hub (`/`) or a stale `/?onboard=screening-consent` must stay
+    // on the hub. A leftover localStorage invite is not a live auth hop —
+    // treating it as one sent signed-in drivers back to empty consent.
+    if (isDocumentReload()) {
+      if (typeof window !== 'undefined') {
         window.sessionStorage.removeItem(ONBOARD_TARGET_KEY)
-        if (searchParams.get('onboard')) {
-          router.replace('/', { scroll: false })
-        }
-        return
       }
+      if (searchParams.get('onboard') || searchParams.get('invite')) {
+        router.replace('/', { scroll: false })
+      }
+      return
     }
 
     // Invite deep-links pass the target block via ?onboard=<route>. We ALSO read it

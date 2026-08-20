@@ -51,6 +51,13 @@ export function clearAuthNext() {
   window.localStorage.removeItem(AUTH_NEXT_KEY)
 }
 
+/** F5 / toolbar refresh — not an OAuth return. */
+export function isDocumentReload(): boolean {
+  if (typeof performance === 'undefined') return false
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  return nav?.type === 'reload'
+}
+
 export function onboardTokenFromPath(path: string): string | null {
   const match = path.match(/^\/onboard\/([A-Za-z0-9_-]+)/)
   return match && isInviteToken(match[1]) ? match[1] : null

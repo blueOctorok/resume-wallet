@@ -68,10 +68,10 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
     void fetch(`/api/invite/${token}`, { method: 'POST' })
       .then((res) => {
         if (cancelled) return
-        if (res.ok) {
-          clearInviteToken()
-          return refreshPendingRequest()
-        }
+        // Used / expired / already claimed — don't keep replaying this token
+        // on every hub refresh.
+        clearInviteToken()
+        if (res.ok) return refreshPendingRequest()
       })
       .finally(() => {
         if (!cancelled) setClaimingInvite(false)
