@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Build no longer lists completed items** (2026-08-20)
+
+Done chips (MVR, DOT, …) duplicated the career card. Build is only the next work. The watcher prompt no longer asks for a “what’s solid” list.
+
+---
+
+## **Build scan shows a thinking state** (2026-08-20)
+
+A rescan only spun the tiny refresh icon, so the old list looked frozen. While the watcher runs, Build now swaps the queue for a “Thinking” card — clerk copy plus pulsing dots — so it is obvious the AI is reading the file.
+
+---
+
+## **Build is one AI-ordered queue** (2026-08-20)
+
+The DQ tile grid under the watcher was the same work twice — a checklist plus an AI dump. Build now shows one numbered list from the review: do this first, then the next clickable item. One step per destination (profile / MVR / DOT / …), max six. Done work stays as chips. Coming-soon employer items are off the board. The list updates on scan after they finish a step — not a free-form todo editor.
+
+---
+
 ## **Build coach: Sonnet 5 + discrepancy floor** (2026-08-20)
 
 DQ review is a carrier-clerk job (unfinished work + mismatches), not a cheap tile summary. The route now calls `claude-sonnet-5` (falls back to Sonnet 4.6 if the key cannot use 5). Haiku stays on chat fluff.

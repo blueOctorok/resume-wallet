@@ -119,7 +119,12 @@ function bothDiffer(
 }
 
 function warn(title: string, detail: string): DqCoachFlag {
-  return { severity: 'warn', title, detail }
+  return {
+    severity: 'warn',
+    title,
+    detail,
+    target: DISCREPANCY_TARGET[title] ?? null,
+  }
 }
 
 function issuerDatesMissingFromDot(

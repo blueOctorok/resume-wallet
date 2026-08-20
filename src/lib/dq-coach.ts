@@ -27,13 +27,49 @@ export interface DqCoachFlag {
   severity: 'warn' | 'info'
   title: string
   detail: string
+  target?: DqCoachTarget
 }
 
 export interface DqCoachReview {
   watching: string
   next: { title: string; detail: string; target: DqCoachTarget } | null
   flags: DqCoachFlag[]
-  clear: string[]
+}
+
+export interface DqCoachStep {
+  title: string
+  detail: string
+  target: Exclude<DqCoachTarget, null>
+  severity: 'warn' | 'info'
+}
+
+const MAX_ACTION_STEPS = 6
+
+/** One clickable queue — next first, then leftover warns, then info with a target. */
+export function buildDqActionSteps(review: DqCoachReview): DqCoachStep[] {
+  const steps: DqCoachStep[] = []
+  const seenTarget = new Set<string>()
+
+  const push = (
+    title: string,
+    detail: string,
+    target: DqCoachTarget,
+    severity: 'warn' | 'info',
+  ) => {
+    if (!target || seenTarget.has(target) || steps.length >= MAX_ACTION_STEPS) return
+    seenTarget.add(target)
+    steps.push({ title, detail, target, severity })
+  }
+
+  if (review.next) {
+    push(review.next.title, review.next.detail, review.next.target, 'warn')
+  }
+  const warns = review.flags.filter((f) => f.severity === 'warn')
+  const infos = review.flags.filter((f) => f.severity === 'info' && f.target)
+  for (const flag of [...warns, ...infos]) {
+    push(flag.title, flag.detail, flag.target ?? null, flag.severity)
+  }
+  return steps
 }
 
 export interface DqCoachSnapshot {
@@ -351,6 +387,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       severity: 'warn',
       title: 'CDL looks expired',
       detail: `Expiration on file is ${snapshot.cdl?.expiration}. Update it if you've renewed.`,
+      target: 'profile',
     })
   }
   if (!snapshot.profile.name) {
@@ -358,6 +395,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       severity: 'info',
       title: 'Name missing',
       detail: 'Finish your profile so the career card and packet share the same name.',
+      target: 'profile',
     })
   }
   if (!snapshot.profile.hasPhone || !snapshot.profile.hasEmail) {
@@ -370,6 +408,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       ]
         .filter(Boolean)
         .join(' · ') + ' on the profile.',
+      target: 'profile',
     })
   }
 
@@ -384,6 +423,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
     ) {
       continue
     }
+    const target = DQ_TO_TARGET[item.id] ?? null
     if (item.status === 'needs_driver' || item.status === 'needs_key') {
       flags.push({
         severity: 'info',
@@ -392,6 +432,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
           item.status === 'needs_key'
             ? 'A key or consent step is still open before this can complete.'
             : 'This item needs a driver action before it can go on the card.',
+        target,
       })
       continue
     }
@@ -400,6 +441,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
         severity: 'warn',
         title: `${item.label} requested`,
         detail: 'An employer asked for this — finish it before they move on.',
+        target,
       })
       continue
     }
@@ -408,6 +450,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
         severity: 'warn',
         title: `${item.label} failed`,
         detail: 'The last attempt did not complete. Open it and retry.',
+        target,
       })
       continue
     }
@@ -418,7 +461,8 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       detail:
         item.status === 'in_progress'
           ? 'Pick up where you left off so the career card can show it.'
-          : 'A complete DQ file includes this. Open the tile to start.',
+          : 'A complete DQ file includes this. Open it to start.',
+      target,
     })
   }
 
@@ -427,13 +471,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       severity: 'info',
       title: 'MVR result incomplete',
       detail: 'An order is on file but we do not have a license status yet.',
-    })
-  }
-  if (snapshot.cdl?.endorsements?.length) {
-    flags.push({
-      severity: 'info',
-      title: 'Endorsements on file',
-      detail: snapshot.cdl.endorsements.join(', ') + ' — confirm they still match your license.',
+      target: 'mvr',
     })
   }
   flags.push(...employmentGapFlags(snapshot.employment))
@@ -466,12 +504,10 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
             target: 'profile' as DqCoachTarget,
           }
 
-  const done = snapshot.dqItems.filter((i) => i.status === 'complete').map((i) => i.label)
   return {
     watching: 'Scanning your DQ file and career-card blocks for gaps and mismatches.',
     next,
     flags,
-    clear: done.slice(0, 4),
   }
 }
 
@@ -498,7 +534,6 @@ export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoa
     watching: extra.watching || base.watching,
     next: floorNext ?? extra.next ?? base.next,
     flags: flags.slice(0, 16),
-    clear: extra.clear.length > 0 ? extra.clear : base.clear,
   }
 }
 
@@ -533,10 +568,11 @@ export function parseDqCoachReview(text: string, fallback: DqCoachReview): DqCoa
               severity: f.severity === 'warn' ? 'warn' : 'info',
               title: f.title,
               detail: typeof f.detail === 'string' ? f.detail : '',
+              target:
+                typeof f.target === 'string' && TARGETS.has(f.target)
+                  ? (f.target as DqCoachTarget)
+                  : undefined,
             }))
-        : [],
-      clear: Array.isArray(raw.clear)
-        ? raw.clear.filter((s): s is string => typeof s === 'string').slice(0, 5)
         : [],
     }
     // Rule-based flags are the floor — the model must not erase holes it skipped.
@@ -553,8 +589,8 @@ export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot): string {
 Write a JSON object only (no markdown) with:
 - watching: one sentence on what you compared
 - next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification
-- flags: { severity: "warn"|"info", title, detail } for holes AND discrepancies
-- clear: up to 4 short strings of what's solid (only if true)
+- flags: { severity: "warn"|"info", title, detail, target } — only unfinished work and real mismatches. Include target so the driver can open that page. At most 6 flags.
+- Do not list completed items. Those already live on the career card.
 
 Your job:
 1. What is not done (missing / in-progress DQ tiles, empty required profile fields).

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildDqActionSteps,
   heuristicDqReview,
   mergeDqReviews,
   personNamesConflict,
@@ -216,10 +217,18 @@ describe('heuristicDqReview discrepancies', () => {
       watching: 'Looks complete.',
       next: { title: 'Add PSP', detail: 'Missing.', target: 'psp' },
       flags: [],
-      clear: ['MVR'],
     }
     const merged = mergeDqReviews(base, extra)
     expect(merged.next?.target).toBe('profile')
     expect(merged.flags.some((f) => f.title === PROFILE_MVR_NAME_FLAG)).toBe(true)
+  })
+
+  it('builds one clickable step per target, next first', () => {
+    const review = heuristicDqReview(snapshot())
+    const steps = buildDqActionSteps(review)
+    expect(steps[0]?.target).toBe('profile')
+    expect(steps[0]?.title).toMatch(/does not match your MVR/i)
+    expect(new Set(steps.map((s) => s.target)).size).toBe(steps.length)
+    expect(steps.length).toBeLessThanOrEqual(6)
   })
 })

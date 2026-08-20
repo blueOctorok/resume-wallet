@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
-import { AlertTriangle, ArrowRight, Info, Loader2, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useDqCoachStore } from '@/stores/dq-coach-store'
-import type { DqCoachTarget } from '@/lib/dq-coach'
+import { buildDqActionSteps, type DqCoachTarget } from '@/lib/dq-coach'
 import type { PageType } from '@/stores/types'
 
 const TARGET_PAGE: Record<Exclude<DqCoachTarget, null>, PageType | 'profile'> = {
@@ -20,9 +19,50 @@ const TARGET_PAGE: Record<Exclude<DqCoachTarget, null>, PageType | 'profile'> = 
   'employment-verification': 'employment-verification',
 }
 
-/** Beat Card's dark: slate face — this well is always cream paper. */
-const paperCard =
-  '!bg-white !border-ironside/20 !shadow-none dark:!bg-white dark:!border-ironside/20'
+const THINKING_LINES = [
+  'Comparing your profile to the MVR…',
+  'Checking the DOT against your reports…',
+  'Looking for holes and mismatches…',
+]
+
+function ThinkingBlock() {
+  const [line, setLine] = useState(0)
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setLine((n) => (n + 1) % THINKING_LINES.length)
+    }, 2200)
+    return () => window.clearInterval(id)
+  }, [])
+
+  return (
+    <div
+      className='rounded-xl border border-[#173150]/15 bg-[#173150]/[0.04] px-4 py-5'
+      role='status'
+      aria-live='polite'
+      aria-busy='true'
+    >
+      <p className='text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5c6166]'>
+        Thinking
+      </p>
+      <p className='mt-1 text-sm font-semibold text-[#173150]'>
+        Reading your file like a safety clerk would
+      </p>
+      <p className='mt-1 text-xs leading-relaxed text-[#5c6166]'>{THINKING_LINES[line]}</p>
+      <div className='mt-3 flex items-center gap-1.5' aria-hidden>
+        <span className='size-2 rounded-full bg-[#f15a2b] motion-safe:animate-pulse' />
+        <span
+          className='size-2 rounded-full bg-[#f15a2b] motion-safe:animate-pulse'
+          style={{ animationDelay: '160ms' }}
+        />
+        <span
+          className='size-2 rounded-full bg-[#f15a2b] motion-safe:animate-pulse'
+          style={{ animationDelay: '320ms' }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function DqCoachPanel() {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
@@ -37,9 +77,7 @@ export default function DqCoachPanel() {
     if (sessionUserId) void scan()
   }, [sessionUserId, scan])
 
-  const goNext = () => {
-    const target = review?.next?.target
-    if (!target) return
+  const go = (target: Exclude<DqCoachTarget, null>) => {
     if (target === 'profile') {
       setShowProfileSetup(true)
       return
@@ -47,9 +85,11 @@ export default function DqCoachPanel() {
     setCurrentPage(TARGET_PAGE[target])
   }
 
+  const steps = review ? buildDqActionSteps(review) : []
+
   return (
-    <div className='mb-5'>
-      <div className='mb-3 flex items-start gap-3'>
+    <div>
+      <div className='mb-4 flex items-start gap-3'>
         <ProvvenMark className='mt-0.5 shrink-0 text-xl' />
         <div className='min-w-0 flex-1'>
           <div className='flex items-start justify-between gap-2'>
@@ -66,16 +106,12 @@ export default function DqCoachPanel() {
               title='Scan again'
               aria-label='Scan file again'
             >
-              {isLoading ? (
-                <Loader2 className='h-3.5 w-3.5 animate-spin' />
-              ) : (
-                <RefreshCw className='h-3.5 w-3.5' />
-              )}
+              <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'opacity-40')} />
             </Button>
           </div>
-          {isLoading && !review ? (
-            <p className='mt-1 text-sm text-[#173150]'>
-              Reading your career card and every block…
+          {isLoading ? (
+            <p className='mt-1 text-sm leading-snug text-[#173150]'>
+              Thinking through your file…
             </p>
           ) : error && !review ? (
             <p className='mt-1 text-sm text-red-700'>{error}</p>
@@ -85,75 +121,70 @@ export default function DqCoachPanel() {
         </div>
       </div>
 
-      {review ? (
-        <div className='space-y-3'>
-          {review.next ? (
-            <Card variant='flat' className={cn(paperCard, 'p-4')}>
-              <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <div className='min-w-0'>
-                  <p className='text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5c6166]'>
-                    Next
-                  </p>
-                  <p className='mt-0.5 text-sm font-semibold text-[#173150]'>{review.next.title}</p>
-                  {review.next.detail ? (
-                    <p className='mt-1 text-xs leading-relaxed text-[#5c6166]'>{review.next.detail}</p>
-                  ) : null}
-                </div>
-                {review.next.target ? (
-                  <Button type='button' variant='primary' size='sm' onClick={goNext} className='shrink-0'>
-                    Open
-                    <ArrowRight className='h-3.5 w-3.5' aria-hidden />
-                  </Button>
-                ) : null}
-              </div>
-            </Card>
-          ) : (
-            <p className='text-sm font-medium text-[#173150]'>
-              No holes right now — keep the file current when something changes.
-            </p>
-          )}
+      {isLoading ? <ThinkingBlock /> : null}
 
-          {review.flags.length > 0 ? (
-            <ul className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-              {review.flags.map((flag, i) => {
-                const warn = flag.severity === 'warn'
-                const Icon = warn ? AlertTriangle : Info
+      {review && !isLoading ? (
+        <div className='space-y-3'>
+          {steps.length === 0 ? (
+            <p className='text-sm font-medium text-[#173150]'>
+              Nothing waiting on you — keep the file current when something changes.
+            </p>
+          ) : (
+            <ol className='space-y-2'>
+              {steps.map((step, i) => {
+                const first = i === 0
                 return (
-                  <li key={`${flag.title}-${i}`}>
-                    <Card variant='flat' className={cn(paperCard, 'h-full p-3.5')}>
-                      <div className='flex items-start gap-2.5'>
+                  <li key={`${step.target}-${step.title}`}>
+                    <button
+                      type='button'
+                      onClick={() => go(step.target)}
+                      className={cn(
+                        'flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
+                        first
+                          ? 'border-[#f15a2b]/35 bg-[#f15a2b]/[0.04] hover:bg-[#f15a2b]/[0.07]'
+                          : 'border-ironside/25 bg-white hover:border-[#f15a2b]/35 hover:bg-[#f15a2b]/[0.04]',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums',
+                          first
+                            ? 'bg-[#f15a2b] text-white'
+                            : 'bg-stone-100 text-[#173150]',
+                        )}
+                      >
+                        {i + 1}
+                      </span>
+                      <span className='min-w-0 flex-1'>
+                        {first ? (
+                          <span className='text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5c6166]'>
+                            Do this first
+                          </span>
+                        ) : null}
                         <span
                           className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                            warn ? 'bg-amber-50 text-amber-800' : 'bg-stone-100 text-[#5c6166]',
+                            'block text-sm font-semibold leading-snug text-[#173150]',
+                            first && 'mt-0.5',
                           )}
                         >
-                          <Icon className='h-3.5 w-3.5' aria-hidden />
+                          {step.title}
                         </span>
-                        <div className='min-w-0'>
-                          <p className='text-sm font-semibold leading-snug text-[#173150]'>{flag.title}</p>
-                          <p className='mt-1 text-xs leading-relaxed text-[#5c6166]'>{flag.detail}</p>
-                        </div>
-                      </div>
-                    </Card>
+                        {step.detail ? (
+                          <span className='mt-1 block text-xs leading-relaxed text-[#5c6166]'>
+                            {step.detail}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className='flex shrink-0 items-center gap-1 pt-0.5 text-xs font-semibold text-[#173150]'>
+                        Open
+                        <ArrowRight className='h-3.5 w-3.5' aria-hidden />
+                      </span>
+                    </button>
                   </li>
                 )
               })}
-            </ul>
-          ) : null}
-
-          {review.clear.length > 0 ? (
-            <div className='flex flex-wrap gap-1.5'>
-              {review.clear.map((item) => (
-                <span
-                  key={item}
-                  className='rounded-full border border-ironside/20 bg-white px-2.5 py-1 text-[11px] text-[#173150]'
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          ) : null}
+            </ol>
+          )}
         </div>
       ) : null}
     </div>
