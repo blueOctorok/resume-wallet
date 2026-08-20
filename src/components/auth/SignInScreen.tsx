@@ -10,6 +10,12 @@ import Input from '@/components/ui/Input'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { GOLD_CTA, InkBand, SealDivider } from '@/components/landing/landing-shared'
 import { cn } from '@/lib/utils'
+import {
+  onboardTokenFromPath,
+  resolvePostAuthPath,
+  stashAuthNext,
+  stashInviteToken,
+} from '@/lib/invite-resume'
 
 /**
  * Only accept a same-origin relative path (starts with a single "/") as the
@@ -55,7 +61,14 @@ export default function SignInScreen() {
   const supabase = createClient()
 
   const next = safeNext(searchParams.get('next'))
+  const postAuthPath = resolvePostAuthPath(next)
   const prefillEmail = searchParams.get('email') ?? ''
+
+  useEffect(() => {
+    stashAuthNext(postAuthPath)
+    const fromNext = onboardTokenFromPath(next)
+    if (fromNext) stashInviteToken(fromNext)
+  }, [postAuthPath, next])
   const [email, setEmail] = useState(prefillEmail)
   const [code, setCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
@@ -76,7 +89,7 @@ export default function SignInScreen() {
       // Hard navigation (see handleVerifyCode) so home boots fresh with the
       // session and avoids the dual-provider soft-nav race. replace() keeps
       // /sign-in out of history so back doesn't bounce here.
-      if (data.user) window.location.replace(next)
+      if (data.user) window.location.replace(resolvePostAuthPath(next))
       else setCheckingSession(false)
     })
     return () => {
@@ -97,10 +110,13 @@ export default function SignInScreen() {
     setError(null)
     setInfo(null)
     setIsGoogleLoading(true)
+    // Query-string `next` is often dropped by Google/Supabase Site URL fallback.
+    // Stash it so `/` and this screen can resume /onboard/[token].
+    stashAuthNext(postAuthPath)
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: authCallbackUrl(next) },
+        options: { redirectTo: authCallbackUrl(postAuthPath) },
       })
       if (oauthError) {
         setError(oauthError.message)
@@ -129,7 +145,7 @@ export default function SignInScreen() {
         email: email.trim(),
         // shouldCreateUser: first-time emails get an Auth user (candidate hub by
         // default). Employer accounts are provisioned separately and already exist.
-        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(next) },
+        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(postAuthPath) },
       })
       if (otpError) {
         setError(otpError.message)
@@ -171,7 +187,7 @@ export default function SignInScreen() {
       // "who's authenticated" — the prod-only login flicker. This matches what the
       // Google OAuth path already does (server redirect from /auth/callback) and
       // what a manual refresh does. Don't reset isVerifying: we're leaving the page.
-      window.location.assign(next)
+      window.location.assign(postAuthPath)
       return
     } catch {
       setError('Could not verify the code. Please try again.')

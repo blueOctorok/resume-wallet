@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { CDLIS_PAGE_BREADCRUMB } from '@/lib/employer-psp-mvr-page3-copy'
 import { validateDateOfBirth } from '@/lib/screening-validation'
+import { clearInviteToken, peekInviteToken } from '@/lib/invite-resume'
 
 interface ScreeningConsentBlockProps {
   userAddress: string
@@ -48,6 +49,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const [invalidStoredDob, setInvalidStoredDob] = useState<string | null>(null)
   const [retrySubmitting, setRetrySubmitting] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [claimingInvite, setClaimingInvite] = useState(false)
 
   useEffect(() => {
     if (pendingEmployerRequest && !capturedRequest) {
@@ -55,8 +57,32 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
     }
   }, [pendingEmployerRequest, capturedRequest])
 
+  // Google can dump the driver on the hub before /onboard claims the invite.
+  // If the resume token is still here, claim it so the disclosure forms load.
   useEffect(() => {
-    if (pendingEmployerRequest || complete) {
+    if (!userAddress || pendingEmployerRequest || complete) return
+    const token = peekInviteToken()
+    if (!token) return
+    let cancelled = false
+    setClaimingInvite(true)
+    void fetch(`/api/invite/${token}`, { method: 'POST' })
+      .then((res) => {
+        if (cancelled) return
+        if (res.ok) {
+          clearInviteToken()
+          return refreshPendingRequest()
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setClaimingInvite(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userAddress, pendingEmployerRequest, complete, refreshPendingRequest])
+
+  useEffect(() => {
+    if (pendingEmployerRequest || complete || claimingInvite) {
       setRetryLoading(false)
       return
     }
@@ -89,7 +115,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
     return () => {
       cancelled = true
     }
-  }, [pendingEmployerRequest, complete])
+  }, [pendingEmployerRequest, complete, claimingInvite])
 
   const activeEmployerRequest = capturedRequest || pendingEmployerRequest
 
@@ -138,7 +164,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   }
 
   if (!activeEmployerRequest && !complete) {
-    if (retryLoading) {
+    if (retryLoading || claimingInvite) {
       return (
         <div className="w-full p-8 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
@@ -204,8 +230,9 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
           </div>
           <div className={`${cardClass} p-8 text-center`}>
             <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
-              No pending screening consent request. If you already signed consent, track MVR and PSP progress from
-              your hub career card or My Files. When an employer sends a new request, it will appear here.
+              No pending screening consent request. If an employer emailed you a consent link, open that email again
+              — signing in from the link attaches the forms here. After you sign, track MVR and PSP from your career
+              card or Build.
             </p>
             <div className="mt-6">
               <Button variant="primary" onClick={onBack}>

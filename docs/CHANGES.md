@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer screening-consent invite survives Google sign-in** (2026-08-20)
+
+Google OAuth was dropping `?next=/onboard/{token}` and landing the candidate on `/` (often with `?invite=` or a leftover `?code=`). The homepage ignored `?invite=`, cleared the resume token too early, and treated some OAuth returns as an F5 — so they were logged in on the career card with no consent forms.
+
+**Fixes:** resume `/onboard/{token}` from `?invite=` + localStorage (do not consume the token until the invite is claimed); keep `next` in localStorage across Google; Career Card **Up next** reopens the forms (pending request or leftover invite); the consent block claims a leftover invite if they open it from Build.
+
+---
+
 ## **DQ done tiles use Retro Teal** (2026-08-19)
 
 Completed Build tiles dropped the forest-green wash. Done = Retro Teal (same “ready” signal as the resume button). Type stays Midnight.

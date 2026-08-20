@@ -18,6 +18,14 @@ import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
 import { createClient as createSupabaseBrowserClient } from '@/utils/supabase/client'
 import type { PageType } from '@/stores'
+import {
+  ONBOARD_TARGET_KEY,
+  clearAuthNext,
+  isInviteToken,
+  onboardTokenFromPath,
+  peekAuthNext,
+  peekInviteToken,
+} from '@/lib/invite-resume'
 
 // Shell components — employer vs candidate only.
 // DriverShell / DeveloperShell are frozen leftovers and must not be mounted from `/`.
@@ -28,11 +36,6 @@ import SimpleModeShell from '@/components/simple/SimpleModeShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal } from '@/components/ui'
 import StormiJourneyGuide from '@/components/StormiJourneyGuide'
-
-// Invite deep-link target stashed by /onboard/[token] before it redirects to `/`.
-// sessionStorage survives the sign-in round-trip that can strip ?onboard=.
-// Key must stay in sync with src/app/onboard/[token]/page.tsx.
-const ONBOARD_TARGET_KEY = 'storm_onboard_target'
 
 const LandingPage = dynamic(
   () => import('@/components/landing/LandingPage').then((mod) => mod.default),
@@ -179,6 +182,7 @@ const HomeContent = () => {
               // candidates on the hub after the Supabase auth cutover.
               const hasPendingOnboard =
                 searchParams.get('onboard') ||
+                searchParams.get('invite') ||
                 (typeof window !== 'undefined' &&
                   window.sessionStorage.getItem(ONBOARD_TARGET_KEY))
               if (!hasPendingOnboard && (!currentPage || currentPage === 'signin')) {
@@ -199,25 +203,31 @@ const HomeContent = () => {
 
   // -------------------------------------------------------
   // Resume an invite that lost its ?next during the Supabase auth round-trip.
-  // /onboard/[token] stashes the token before bouncing to /sign-in. If the user
-  // returns to `/` instead of the onboard page (the magic-link redirect can fall
-  // back to the Site URL), pick the flow back up so role + block setup actually
-  // runs — otherwise they're stranded on the hub with a role-selection prompt.
-  // We clear the token before redirecting so a failed/invalid invite can't loop.
+  // Google often returns to the Site URL (`/` or `/?code=` / `/?invite=`) instead
+  // of /onboard/[token]. Don't consume the token here — onboard clears it after
+  // the invite is claimed. If ?onboard= is already present, open that block
+  // instead of bouncing back into /onboard (avoids a redirect loop).
   // -------------------------------------------------------
   const didResumeInviteRef = useRef(false)
   useEffect(() => {
     if (didResumeInviteRef.current) return
     if (!sessionUserId && !user) return
+    const hasOnboardTarget =
+      searchParams.get('onboard') ||
+      (typeof window !== 'undefined' && window.sessionStorage.getItem(ONBOARD_TARGET_KEY))
+    if (hasOnboardTarget) return
+
+    const fromQuery = searchParams.get('invite')
     const pendingToken =
-      typeof window !== 'undefined'
-        ? window.localStorage.getItem('stormchain_invite_token')
-        : null
+      (isInviteToken(fromQuery) ? fromQuery : null) ||
+      peekInviteToken() ||
+      onboardTokenFromPath(peekAuthNext() ?? '')
     if (!pendingToken) return
+
     didResumeInviteRef.current = true
-    window.localStorage.removeItem('stormchain_invite_token')
+    clearAuthNext()
     router.replace(`/onboard/${pendingToken}`)
-  }, [sessionUserId, user, router])
+  }, [sessionUserId, user, router, searchParams])
 
   // -------------------------------------------------------
   // Handle onboard redirect (from /onboard/[token] flow)
@@ -226,11 +236,14 @@ const HomeContent = () => {
   // -------------------------------------------------------
   const didHandleOnboardRef = useRef(false)
   useEffect(() => {
-    // Full page reload should land on the hub — not re-run stale ?onboard= deep links
-    // (notification URLs like /?onboard=screening-consent otherwise fire every F5).
+    // F5 on a stale notification URL (`/?onboard=screening-consent`) should land
+    // on the hub. An employer invite (`?invite=` or the localStorage resume token)
+    // is a live claim — don't strip it. OAuth returns are often mis-tagged as
+    // `reload`; treating those as F5 was dumping invited drivers on the homepage.
     if (typeof window !== 'undefined' && performance.getEntriesByType('navigation')[0]) {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-      if (nav.type === 'reload') {
+      const liveInvite = searchParams.get('invite') || peekInviteToken()
+      if (nav.type === 'reload' && !liveInvite) {
         window.sessionStorage.removeItem(ONBOARD_TARGET_KEY)
         if (searchParams.get('onboard')) {
           router.replace('/', { scroll: false })

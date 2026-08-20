@@ -16,6 +16,8 @@ import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useJourneyProgress } from '@/stores/journey-store'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { getDriverNextAction } from '@/lib/driver-next-action'
+import { peekInviteToken } from '@/lib/invite-resume'
+import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import Button from '@/components/ui/Button'
 import ProvvenMark from '@/components/ui/ProvvenMark'
@@ -45,7 +47,26 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
   const setShowPrefillUpload = useDotApplicationStore((s) => s.setShowPrefillUpload)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const journey = useJourneyProgress()
-  const nextAction = getDriverNextAction(journey)
+  const journeyNext = getDriverNextAction(journey)
+  const { pendingRequest } = usePendingScreeningRequest('psp', sessionUserId)
+  const [leftoverInvite, setLeftoverInvite] = useState<string | null>(null)
+  useEffect(() => {
+    setLeftoverInvite(peekInviteToken())
+  }, [])
+
+  const nextAction = pendingRequest
+    ? {
+        id: 'driver-screening-consent',
+        label: `Finish screening for ${pendingRequest.companyName}`,
+        page: 'screening-consent' as PageType,
+      }
+    : leftoverInvite
+      ? {
+          id: 'invite-resume',
+          label: 'Finish employer screening consent',
+          page: 'screening-consent' as PageType,
+        }
+      : journeyNext
 
   const [data, setData] = useState<CardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -104,6 +125,10 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
 
   const runNextAction = useCallback(() => {
     if (!nextAction) return
+    if (nextAction.id === 'invite-resume' && leftoverInvite) {
+      window.location.assign(`/onboard/${leftoverInvite}`)
+      return
+    }
     if (nextAction.id === 'profile' || nextAction.page === null) {
       setShowProfileSetup(true)
       return
@@ -112,7 +137,7 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
       setShowPrefillUpload(true)
     }
     setCurrentPage(nextAction.page)
-  }, [nextAction, setShowProfileSetup, setShowPrefillUpload, setCurrentPage])
+  }, [nextAction, leftoverInvite, setShowProfileSetup, setShowPrefillUpload, setCurrentPage])
 
   const openResumePreview = useCallback(async () => {
     setResumeLoading(true)

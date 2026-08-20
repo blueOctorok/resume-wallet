@@ -4,6 +4,13 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { getBlockDefinition } from '@/lib/block-registry'
+import {
+  ONBOARD_TARGET_KEY,
+  clearAuthNext,
+  clearInviteToken,
+  stashAuthNext,
+  stashInviteToken,
+} from '@/lib/invite-resume'
 import LoadingScreen from '@/components/LoadingScreen'
 import { AlertCircle, Loader2 } from 'lucide-react'
 
@@ -80,16 +87,13 @@ export default function OnboardPage() {
 
       if (!sessionUser) {
         // Stash the token so we can resume this exact invite even if the
-        // ?next= round-trip is lost during auth (e.g. the Supabase magic-link
-        // redirect falls back to the Site URL and lands the user on `/`).
-        // localStorage (not sessionStorage) so it survives the magic-link
-        // opening in a NEW tab. page.tsx reads this and routes back here.
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('stormchain_invite_token', token)
-        }
+        // ?next= round-trip is lost during auth (Google OAuth / magic-link
+        // Site URL fallback lands on `/` with a leftover ?code= or ?invite=).
+        // localStorage (not sessionStorage) so it survives a new tab.
+        stashInviteToken(token)
+        stashAuthNext(`/onboard/${token}`)
         // Pre-fill the sign-in email with the address the invite was sent to, so
-        // the candidate doesn't have to remember which email Pace used. They can
-        // still change it on the sign-in page if needed.
+        // the candidate doesn't have to remember which email the employer used.
         const inviteEmail = inviteData!.invite.candidateEmail
         const emailParam = inviteEmail ? `&email=${encodeURIComponent(inviteEmail)}` : ''
         router.replace(`/sign-in?next=${encodeURIComponent(`/onboard/${token}`)}${emailParam}`)
@@ -97,12 +101,6 @@ export default function OnboardPage() {
       }
 
       setRedirecting(true)
-
-      // We have a session and are committing to setup — consume the resume token
-      // so neither flow below loops back here via page.tsx.
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem('stormchain_invite_token')
-      }
 
       const targetBlockType = inviteData!.invite.targetBlockType
 
@@ -151,8 +149,13 @@ export default function OnboardPage() {
           const blockDef = getBlockDefinition(targetBlockType)
           const pageRoute = blockDef?.pageRoute
           if (pageRoute && typeof window !== 'undefined') {
-            window.sessionStorage.setItem('storm_onboard_target', pageRoute)
+            window.sessionStorage.setItem(ONBOARD_TARGET_KEY, pageRoute)
           }
+          // Consume the resume token only after setup succeeded. Clearing it
+          // earlier left Google-return users on `/` with no way back.
+          clearInviteToken()
+          clearAuthNext()
+
           const destination = pageRoute
             ? `/?onboard=${pageRoute}&invite=${token}`
             : `/?invite=${token}`
@@ -170,17 +173,18 @@ export default function OnboardPage() {
             body: JSON.stringify({ role: 'candidate' }),
           })
 
-          // Mark invite as in_progress
           await fetch(`/api/invite/${token}`, {
             method: 'POST',
           }).catch(() => {})
 
-          // Land on the hub → onboarding form
+          clearInviteToken()
+          clearAuthNext()
           router.push('/')
         }
       } catch (err) {
         console.error('Onboard setup error:', err)
-        router.push('/')
+        // Keep the invite token so `/` or the consent block can retry the claim.
+        router.push(`/?invite=${token}`)
       }
     }
 
