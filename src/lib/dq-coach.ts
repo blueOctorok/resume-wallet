@@ -8,6 +8,11 @@ import { getCdlData, getDriverEmployment, getMvrData, getPspData } from '@/lib/b
 import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
 import { getBlockDefinition } from '@/lib/block-registry'
 import type { DqItemStatus } from '@/lib/dq-file-status'
+import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
+import { loadPspDotProjection } from '@/lib/psp-form2-projection'
+import { collectDiscrepancyFlags, nextFromDiscrepancies } from '@/lib/dq-coach-compare'
+
+export { personNameParts, personNamesConflict, PROFILE_MVR_NAME_FLAG } from '@/lib/dq-coach-compare'
 
 export type DqCoachTarget =
   | 'profile'
@@ -36,12 +41,15 @@ export interface DqCoachSnapshot {
     name: string | null
     city: string | null
     state: string | null
+    dateOfBirth: string | null
+    phone: string | null
     hasPhone: boolean
     hasEmail: boolean
   }
   blocks: string[]
   dqItems: Array<{ id: string; label: string; status: DqItemStatus }>
   cdl: {
+    number: string | null
     state: string | null
     class: string | null
     expiration: string | null
@@ -52,11 +60,43 @@ export interface DqCoachSnapshot {
     points: number
     violationCount: number
     lastOrderedAt: string | null
+    subjectName: string | null
+    dateOfBirth: string | null
+    phone: string | null
+    city: string | null
+    state: string | null
+    licenseNumber: string | null
+    licenseState: string | null
+    licenseClass: string | null
+    licenseExpiration: string | null
+    filledCode: string | null
+    accidents: Array<{ date: string; nature: string }>
+    convictions: Array<{ date: string; violation: string; state: string }>
   } | null
   psp: {
     reportStatus: string | null
     crashCount: number | null
     inspectionCount: number | null
+    subjectName: string | null
+    crashDates: string[]
+  } | null
+  /** Latest DOT draft — null until they start the app. */
+  dot: {
+    started: boolean
+    complete: boolean
+    name: string | null
+    dateOfBirth: string | null
+    phone: string | null
+    city: string | null
+    state: string | null
+    licenseNumber: string | null
+    licenseState: string | null
+    licenseClass: string | null
+    licenseExpiration: string | null
+    accidentDates: string[]
+    convictionDates: string[]
+    hasNoAccidents: boolean
+    hasNoConvictions: boolean
   } | null
   employment: Array<{
     company: string
@@ -75,6 +115,28 @@ const TARGETS = new Set<string>([
   'screening-consent',
   'employment-verification',
 ])
+
+function formatPersonName(first?: string | null, last?: string | null): string | null {
+  const name = [first?.trim(), last?.trim()].filter(Boolean).join(' ')
+  return name || null
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function strField(obj: Record<string, unknown> | null, key: string): string | null {
+  const v = obj?.[key]
+  return typeof v === 'string' && v.trim() ? v.trim() : null
+}
+
+function license0(form1: Record<string, unknown> | null): Record<string, unknown> | null {
+  const licenses = form1?.currentLicenses
+  if (!Array.isArray(licenses) || licenses.length === 0) return null
+  return asRecord(licenses[0])
+}
 
 const DQ_TO_TARGET: Record<string, DqCoachTarget> = {
   mvr: 'mvr',
@@ -96,10 +158,13 @@ export async function buildDqCoachSnapshot(
     employment,
     mvr,
     psp,
+    mvrProj,
+    pspProj,
+    { data: latestDot },
   ] = await Promise.all([
     supabase
       .from('user_profiles')
-      .select('first_name, last_name, display_name, city, state, phone, email')
+      .select('first_name, last_name, display_name, city, state, phone, email, date_of_birth')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase.from('hub_blocks').select('block_type').eq('user_id', userId),
@@ -108,18 +173,42 @@ export async function buildDqCoachSnapshot(
     getDriverEmployment(supabase, userId),
     getMvrData(supabase, userId),
     getPspData(supabase, userId),
+    loadMvrDotProjection(supabase, userId),
+    loadPspDotProjection(supabase, userId),
+    supabase
+      .from('driver_applications')
+      .select('is_complete, application_data')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const first = typeof profile?.first_name === 'string' ? profile.first_name.trim() : ''
   const last = typeof profile?.last_name === 'string' ? profile.last_name.trim() : ''
   const display = typeof profile?.display_name === 'string' ? profile.display_name.trim() : ''
   const name = [first, last].filter(Boolean).join(' ') || display || null
+  const subjectName = formatPersonName(
+    mvrProj?.parsed.subject?.firstName,
+    mvrProj?.parsed.subject?.lastName,
+  )
+  const mvrForm1 = (mvrProj?.form1Data as Record<string, unknown> | undefined) ?? null
+  const mvrLicense = license0(mvrForm1)
+  const appData = asRecord(latestDot?.application_data)
+  const form1 = asRecord(appData?.form1)
+  const form2 = asRecord(appData?.form2)
+  const dotLicense = license0(form1)
+  const mailing = asRecord(form1?.currentMailing)
+  const accidents = Array.isArray(form2?.accidents) ? form2.accidents : []
+  const convictions = Array.isArray(form2?.convictions) ? form2.convictions : []
 
   return {
     profile: {
       name,
       city: typeof profile?.city === 'string' ? profile.city : null,
       state: typeof profile?.state === 'string' ? profile.state : null,
+      dateOfBirth: typeof profile?.date_of_birth === 'string' ? profile.date_of_birth : null,
+      phone: typeof profile?.phone === 'string' ? profile.phone : null,
       hasPhone: Boolean(profile?.phone),
       hasEmail: Boolean(profile?.email),
     },
@@ -127,25 +216,78 @@ export async function buildDqCoachSnapshot(
     dqItems: dqFile.items.map((i) => ({ id: i.id, label: i.label, status: i.status })),
     cdl: cdl
       ? {
+          number: cdl.cdl_number,
           state: cdl.cdl_state,
           class: cdl.cdl_class,
           expiration: cdl.cdl_expiration,
           endorsements: cdl.endorsements ?? [],
         }
       : null,
-    mvr: mvr
+    mvr:
+      mvr || subjectName || mvrProj
+        ? {
+            licenseStatus: mvr?.license_status ?? null,
+            points: mvr?.total_points ?? 0,
+            violationCount: mvr?.violation_count ?? 0,
+            lastOrderedAt: mvr?.last_ordered_at ?? null,
+            subjectName,
+            dateOfBirth: strField(mvrForm1, 'dateOfBirth') ?? mvrProj?.parsed.subject?.dateOfBirth ?? null,
+            phone: strField(mvrForm1, 'phone') ?? mvrProj?.parsed.subject?.phone ?? null,
+            city: mvrProj?.parsed.subject?.city ?? null,
+            state: mvrProj?.parsed.subject?.state ?? null,
+            licenseNumber:
+              strField(mvrLicense, 'licenseNumber') ?? mvrProj?.parsed.licenseNumber ?? null,
+            licenseState: strField(mvrLicense, 'state') ?? mvrProj?.parsed.licenseState ?? null,
+            licenseClass: strField(mvrLicense, 'typeClass') ?? null,
+            licenseExpiration:
+              strField(mvrLicense, 'expirationDate') ??
+              mvrProj?.parsed.licenseExpirationDate ??
+              null,
+            filledCode: mvrProj?.parsed.filledCode ?? null,
+            accidents: (mvrProj?.mvrAccidents ?? []).map((a) => ({
+              date: a.date,
+              nature: a.nature,
+            })),
+            convictions: (mvrProj?.mvrConvictions ?? []).map((c) => ({
+              date: c.dateConvicted,
+              violation: c.violation,
+              state: c.stateOfViolation,
+            })),
+          }
+        : null,
+    psp:
+      psp || pspProj
+        ? {
+            reportStatus: psp?.report_status ?? null,
+            crashCount: psp?.crash_count ?? pspProj?.crashCount ?? null,
+            inspectionCount: psp?.inspection_count ?? pspProj?.inspectionCount ?? null,
+            subjectName: pspProj?.subjectName ?? null,
+            crashDates: (pspProj?.pspCrashesAsAccidents ?? [])
+              .map((c) => c.date)
+              .filter(Boolean),
+          }
+        : null,
+    dot: latestDot
       ? {
-          licenseStatus: mvr.license_status,
-          points: mvr.total_points,
-          violationCount: mvr.violation_count,
-          lastOrderedAt: mvr.last_ordered_at,
-        }
-      : null,
-    psp: psp
-      ? {
-          reportStatus: psp.report_status,
-          crashCount: psp.crash_count,
-          inspectionCount: psp.inspection_count,
+          started: true,
+          complete: Boolean(latestDot.is_complete),
+          name: formatPersonName(strField(form1, 'firstName'), strField(form1, 'lastName')),
+          dateOfBirth: strField(form1, 'dateOfBirth'),
+          phone: strField(form1, 'phone'),
+          city: strField(mailing, 'city'),
+          state: strField(mailing, 'state'),
+          licenseNumber: strField(dotLicense, 'licenseNumber'),
+          licenseState: strField(dotLicense, 'state'),
+          licenseClass: strField(dotLicense, 'typeClass'),
+          licenseExpiration: strField(dotLicense, 'expirationDate'),
+          accidentDates: accidents
+            .map((row) => strField(asRecord(row), 'date'))
+            .filter((d): d is string => Boolean(d)),
+          convictionDates: convictions
+            .map((row) => strField(asRecord(row), 'dateConvicted'))
+            .filter((d): d is string => Boolean(d)),
+          hasNoAccidents: form2?.hasNoAccidents === true,
+          hasNoConvictions: form2?.hasNoConvictions === true,
         }
       : null,
     employment: employment
@@ -201,16 +343,8 @@ function employmentGapFlags(
 }
 
 export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
-  const flags: DqCoachFlag[] = []
-  const profileState = snapshot.profile.state?.trim().toUpperCase() || null
-  const cdlState = snapshot.cdl?.state?.trim().toUpperCase() || null
-  if (profileState && cdlState && profileState !== cdlState) {
-    flags.push({
-      severity: 'warn',
-      title: 'License state vs profile',
-      detail: `Profile lists ${profileState} but CDL is ${cdlState}. Carriers notice that.`,
-    })
-  }
+  const flags: DqCoachFlag[] = collectDiscrepancyFlags(snapshot)
+  const discrepancyNext = nextFromDiscrepancies(flags)
   const exp = parseDay(snapshot.cdl?.expiration ?? null)
   if (exp && exp.getTime() < Date.now()) {
     flags.push({
@@ -309,26 +443,28 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
       i.status,
     ),
   )
-  const next = priority
-    ? {
-        title:
-          priority.status === 'requested'
-            ? `An employer asked for ${priority.label}`
-            : priority.status === 'failed'
-              ? `Retry ${priority.label}`
-              : priority.status === 'in_progress'
-                ? `Finish ${priority.label}`
-                : `Add ${priority.label}`,
-        detail: 'This is the next hole in a complete DQ file.',
-        target: DQ_TO_TARGET[priority.id] ?? null,
-      }
-    : snapshot.profile.name
-      ? null
-      : {
-          title: 'Finish your profile',
-          detail: 'Name and contact feed every block and the career card.',
-          target: 'profile' as DqCoachTarget,
+  const next = discrepancyNext
+    ? discrepancyNext
+    : priority
+      ? {
+          title:
+            priority.status === 'requested'
+              ? `An employer asked for ${priority.label}`
+              : priority.status === 'failed'
+                ? `Retry ${priority.label}`
+                : priority.status === 'in_progress'
+                  ? `Finish ${priority.label}`
+                  : `Add ${priority.label}`,
+          detail: 'This is the next hole in a complete DQ file.',
+          target: DQ_TO_TARGET[priority.id] ?? null,
         }
+      : snapshot.profile.name
+        ? null
+        : {
+            title: 'Finish your profile',
+            detail: 'Name and contact feed every block and the career card.',
+            target: 'profile' as DqCoachTarget,
+          }
 
   const done = snapshot.dqItems.filter((i) => i.status === 'complete').map((i) => i.label)
   return {
@@ -356,10 +492,12 @@ export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoa
     seen.add(key)
     flags.push(flag)
   }
+  // Discrepancies are the floor — the model must not bury them under "add PSP".
+  const floorNext = nextFromDiscrepancies(flags)
   return {
     watching: extra.watching || base.watching,
-    next: extra.next ?? base.next,
-    flags: flags.slice(0, 10),
+    next: floorNext ?? extra.next ?? base.next,
+    flags: flags.slice(0, 16),
     clear: extra.clear.length > 0 ? extra.clear : base.clear,
   }
 }
@@ -410,19 +548,32 @@ export function parseDqCoachReview(text: string, fallback: DqCoachReview): DqCoa
 
 export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot): string {
   const blockLabels = snapshot.blocks.map((id) => getBlockDefinition(id)?.label ?? id)
-  return `You watch a truck driver's DQ (driver qualification) file on Provven. You are not a chatbot. You do not greet, joke, or offer to chat.
+  return `You review a truck driver's DQ file the way a carrier safety clerk would. You are not a chatbot. No greetings.
 
 Write a JSON object only (no markdown) with:
-- watching: one sentence on what you just checked
+- watching: one sentence on what you compared
 - next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification
-- flags: { severity: "warn"|"info", title, detail } for every real hole or mismatch in the snapshot
+- flags: { severity: "warn"|"info", title, detail } for holes AND discrepancies
 - clear: up to 4 short strings of what's solid (only if true)
 
+Your job:
+1. What is not done (missing / in-progress DQ tiles, empty required profile fields).
+2. What is done but does not match another source they have actually filled.
+
+Compare only fields that exist on both sides. An empty DOT Form 1 is not a name mismatch — it is unfinished. Once they typed a name, DOB, phone, or license, it must agree with the MVR subject / license. Same for CDL block vs MVR.
+
+Issuer events vs Form 2: if MVR/PSP lists accidents, convictions, or crashes and Form 2 says none (or omits those dates), that is a warn. Carriers catch this by hand today.
+
+Residence state ≠ CDL/MVR license state is often legal — info, not a identity fail.
+
+Accio filledCode "discrepancy" is the CRA outcome (hits / identity alerts), separate from profile vs report name.
+
 Rules:
-- Only third-party facts (MVR, PSP, employer confirmations) are "verified". Self-reported DOT/resume is never "proven".
-- Prefer the next actionable hole in a complete DQ file.
-- Be specific (state codes, dates, company names from the snapshot). Do not invent facts.
-- List each missing DQ item (MVR, PSP, CDLIS/consent, etc.) as its own flag. Do not collapse them into watching.
+- Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven".
+- Do not invent violations, crashes, employers, or dates.
+- Be specific (names, state codes, dates from the snapshot).
+- List each missing DQ item as its own flag. Do not collapse them into watching.
+- Identity and report-vs-form mismatches beat a missing optional tile for next.
 
 Installed blocks: ${blockLabels.join(', ') || 'none'}
 Snapshot:

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { ANTHROPIC_MODEL_HAIKU } from '@/lib/anthropic-models'
+import { ANTHROPIC_MODEL_SONNET, ANTHROPIC_MODEL_SONNET_5 } from '@/lib/anthropic-models'
 import {
   buildDqCoachSnapshot,
   dqCoachSystemPrompt,
@@ -34,12 +34,27 @@ export async function POST(request: NextRequest) {
 
     try {
       const anthropic = new Anthropic({ apiKey: process.env.AVA_BRAIN })
-      const response = await anthropic.messages.create({
-        model: ANTHROPIC_MODEL_HAIKU,
-        max_tokens: 1400,
-        system: dqCoachSystemPrompt(snapshot),
-        messages: [{ role: 'user', content: 'Review this DQ file. JSON only.' }],
-      })
+      const runReview = (model: string) =>
+        anthropic.messages.create({
+          model,
+          max_tokens: 2500,
+          system: dqCoachSystemPrompt(snapshot),
+          messages: [
+            {
+              role: 'user',
+              content:
+                'Review this DQ file for unfinished work and discrepancies. JSON only.',
+            },
+          ],
+        })
+
+      let response
+      try {
+        response = await runReview(ANTHROPIC_MODEL_SONNET_5)
+      } catch (err) {
+        console.warn('[DQ REVIEW] Sonnet 5 unavailable — falling back to Sonnet 4.6:', err)
+        response = await runReview(ANTHROPIC_MODEL_SONNET)
+      }
 
       const text = response.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')

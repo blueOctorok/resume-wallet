@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Build coach: Sonnet 5 + discrepancy floor** (2026-08-20)
+
+DQ review is a carrier-clerk job (unfinished work + mismatches), not a cheap tile summary. The route now calls `claude-sonnet-5` (falls back to Sonnet 4.6 if the key cannot use 5). Haiku stays on chat fluff.
+
+The snapshot now includes comparable fields from profile, CDL, driver-owned MVR (name, DOB, phone, license, Accio filledCode, accident/conviction dates), PSP crash dates, and the latest DOT Form 1/2. A rule layer flags conflicts only when both sides are filled — empty DOT is unfinished, not a mismatch — plus issuer events vs Form 2 “none.” Those warns stay Next so the model cannot bury them.
+
+Residence state ≠ CDL state is info (often legal). Identity / report-vs-form mismatches are warns.
+
+---
+
 ## **MVR phone locks onto DOT Form 1** (2026-08-20)
 
 Accio subject phone was mapped but only soft-filled when the field was empty, and it was not in `MVR_FORM1_LOCK_PATHS`. Phone is a lock path now. The number printed on the MVR PDF (`resolveDisplayPhone`: Accio subject, else profile) is stamped into provenance so Form 1 gets the same verified badge as name/DOB. Placeholders (`555-555-5555`) stay stripped.

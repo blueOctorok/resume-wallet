@@ -21,6 +21,7 @@ export interface PspDotProjection {
   inspectionCount: number
   /** True even when both counts are 0 — clean PSP still stamps provenance */
   isCleanRecord: boolean
+  subjectName: string | null
 }
 
 function reconstructParsedPsp(parsedData: Record<string, unknown>): ParsedPspResult {
@@ -113,6 +114,10 @@ export async function loadPspDotProjection(
   const parsed = reconstructParsedPsp(pspResult.parsed_data)
   const { crashesAsAccidents, inspections } = mapPspToForm2Rows(parsed)
   const stampAsOf = pspResult.received_at ?? asOf
+  const subjectName = [parsed.subject?.firstName, parsed.subject?.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || null
 
   return {
     pspCrashesAsAccidents: crashesAsAccidents,
@@ -124,5 +129,6 @@ export async function loadPspDotProjection(
     crashCount: crashesAsAccidents.length,
     inspectionCount: inspections.length,
     isCleanRecord: crashesAsAccidents.length === 0 && inspections.length === 0,
+    subjectName,
   }
 }
