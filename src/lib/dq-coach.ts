@@ -1,6 +1,7 @@
 /**
  * DQ file watcher — Anthropic reviews the driver's blocks + card facts.
- * Not a chat: one structured brief (next step + mismatches) for the Build board.
+ * Not a chat: one structured brief (next step + mismatches) for the File board.
+ * Haiku 4.5 rewrites this floor — we do not call it when the snapshot hash is unchanged.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'

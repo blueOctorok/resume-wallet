@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **File watcher skips Haiku when the DQ snapshot is unchanged** (2026-08-20)
+
+Every File open was a full Sonnet 5 call. The clerk compare is already in `heuristicDqReview`. File now uses Haiku 4.5 (`max_tokens` 600) and stores `sha256(snapshot)` + the brief in `dq_coach_reviews`. Same hash → return the cache, no Anthropic. Apply migration `107_dq_coach_reviews.sql`.
+
+---
+
 ## **Full DQ packet is two columns on wide screens** (2026-08-20)
 
 Same rows (label + status chip). From `md` up the inventory sits in two columns so the File board is shorter.

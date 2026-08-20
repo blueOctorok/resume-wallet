@@ -9,6 +9,7 @@ import {
   type DqCoachSnapshot,
 } from './dq-coach'
 import { collectDiscrepancyFlags, normalizeLicenseClass } from './dq-coach-compare'
+import { hashDqCoachSnapshot } from './dq-coach-hash'
 
 function snapshot(partial: Partial<DqCoachSnapshot> = {}): DqCoachSnapshot {
   return {
@@ -230,5 +231,19 @@ describe('heuristicDqReview discrepancies', () => {
     expect(steps[0]?.title).toMatch(/does not match your MVR/i)
     expect(new Set(steps.map((s) => s.target)).size).toBe(steps.length)
     expect(steps.length).toBeLessThanOrEqual(6)
+  })
+})
+
+describe('hashDqCoachSnapshot', () => {
+  it('is stable when key order differs', () => {
+    const a = snapshot()
+    const b = snapshot()
+    expect(hashDqCoachSnapshot(a)).toBe(hashDqCoachSnapshot(b))
+  })
+
+  it('changes when a compared field changes', () => {
+    const a = snapshot()
+    const b = snapshot({ profile: { ...snapshot().profile, name: 'Sam Blaha' } })
+    expect(hashDqCoachSnapshot(a)).not.toBe(hashDqCoachSnapshot(b))
   })
 })

@@ -7,7 +7,5 @@
 
 /** Sonnet 4.6 — Stormi chat / drafting workhorse */
 export const ANTHROPIC_MODEL_SONNET = 'claude-sonnet-4-6'
-/** Sonnet 5 — DQ file review (identity + MVR/PSP/DOT discrepancies) */
-export const ANTHROPIC_MODEL_SONNET_5 = 'claude-sonnet-5'
-/** Haiku 4.5 — pinned snapshot for stable behavior */
+/** Haiku 4.5 — File DQ review (compare/contrast) + other short structured jobs */
 export const ANTHROPIC_MODEL_HAIKU = 'claude-haiku-4-5-20251001'
