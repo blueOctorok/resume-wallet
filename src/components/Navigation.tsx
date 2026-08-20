@@ -15,7 +15,7 @@ import {
   Users,
   Shield,
   CheckCircle,
-  Blocks,
+  FolderCheck,
   Gift,
   LogOut,
   Menu,
@@ -299,7 +299,7 @@ function NavOptionsMenu({
 type CandidateHubView = 'build' | 'career-card'
 
 /**
- * Hub toggle: Build (the workspace) · Career Card (the showroom).
+ * Hub toggle: File (the DQ queue) · Career Card (the showroom).
  * Lives in the nav center on every breakpoint — never buried in Options/hamburger.
  * One outer box; the selected segment fills gold so the switch is unmistakable.
  */
@@ -315,7 +315,7 @@ function CandidateViewToggle({
   // Career Card first (left) — it's the default home after login
   const options: { id: CandidateHubView; label: string; icon: LucideIcon }[] = [
     { id: 'career-card', label: 'Career Card', icon: LayoutDashboard },
-    { id: 'build', label: 'Build', icon: Blocks },
+    { id: 'build', label: 'File', icon: FolderCheck },
   ]
 
   return (
@@ -359,9 +359,8 @@ function CandidateViewToggle({
   )
 }
 
-// Career Card is home (null / career-card). Build is the DQ board.
-// Work pages (dotapp, mvr, …) keep the Build segment selected so the
-// driver knows they're in the workshop.
+// Career Card is home (null / career-card). File is the DQ queue.
+// Work pages (dotapp, mvr, …) keep the File segment selected.
 function candidateHubViewFromPage(page: PageType): CandidateHubView {
   return page === 'career-card' || page === null ? 'career-card' : 'build'
 }

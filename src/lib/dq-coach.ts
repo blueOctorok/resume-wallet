@@ -105,7 +105,7 @@ export interface DqCoachSnapshot {
     licenseState: string | null
     licenseClass: string | null
     licenseExpiration: string | null
-    filledCode: string | null
+    hasDiscrepancyAlert: boolean
     accidents: Array<{ date: string; nature: string }>
     convictions: Array<{ date: string; violation: string; state: string }>
   } | null
@@ -279,7 +279,8 @@ export async function buildDqCoachSnapshot(
               strField(mvrLicense, 'expirationDate') ??
               mvrProj?.parsed.licenseExpirationDate ??
               null,
-            filledCode: mvrProj?.parsed.filledCode ?? null,
+            hasDiscrepancyAlert:
+              mvrProj?.parsed.filledCode?.trim().toLowerCase() === 'discrepancy',
             accidents: (mvrProj?.mvrAccidents ?? []).map((a) => ({
               date: a.date,
               nature: a.nature,
@@ -505,7 +506,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
           }
 
   return {
-    watching: 'Scanning your DQ file and career-card blocks for gaps and mismatches.',
+    watching: 'Checking your file for unfinished work and anything that does not match.',
     next,
     flags,
   }
@@ -596,13 +597,15 @@ Your job:
 1. What is not done (missing / in-progress DQ tiles, empty required profile fields).
 2. What is done but does not match another source they have actually filled.
 
-Compare only fields that exist on both sides. An empty DOT Form 1 is not a name mismatch — it is unfinished. Once they typed a name, DOB, phone, or license, it must agree with the MVR subject / license. Same for CDL block vs MVR.
+Compare only fields that exist on both sides. An empty DOT application is not a name mismatch — it is unfinished. Once they typed a name, DOB, phone, or license, it must agree with the MVR. Same for the CDL block vs MVR.
 
-Issuer events vs Form 2: if MVR/PSP lists accidents, convictions, or crashes and Form 2 says none (or omits those dates), that is a warn. Carriers catch this by hand today.
+If the MVR or PSP lists accidents, convictions, or crashes and the DOT application says none (or omits those dates), that is a warn.
 
-Residence state ≠ CDL/MVR license state is often legal — info, not a identity fail.
+Residence state ≠ CDL/MVR license state is often legal — info, not an identity fail.
 
-Accio filledCode "discrepancy" is the CRA outcome (hits / identity alerts), separate from profile vs report name.
+mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity issue. That is separate from profile name vs the name on the report.
+
+Write like a safety clerk talking to a driver. Never say filledCode, Accio, CRA, XML, Form 1, Form 2, or vendor field names.
 
 Rules:
 - Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven".

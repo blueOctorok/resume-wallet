@@ -232,7 +232,7 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
             <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
               No pending screening consent request. If an employer emailed you a consent link, open that email again
               — signing in from the link attaches the forms here. After you sign, track MVR and PSP from your career
-              card or Build.
+              card or File.
             </p>
             <div className="mt-6">
               <Button variant="primary" onClick={onBack}>

@@ -201,7 +201,7 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 
 ## 🚧 Next Up — DQ File Completion (May–June 2026)
 
-> **Candidate product focus (2026-08-07):** drivers only. Login home = Career Card; Build = DQ board (`build` page). Non-driver tiles scraped from Build. Legacy developer routes may still exist in the shell for old deep-links — not part of the active surface. See `CHANGES.md` (“Drivers-only home”).
+> **Candidate product focus (2026-08-20):** drivers only. Login home = Career Card; **File** = DQ queue (page id still `build`). Non-driver tiles stay off File. Legacy developer routes may still exist in the shell for old deep-links — not part of the active surface. See `CHANGES.md` (“Hub mode renamed Build → File”).
 
 > **Coordination with Foundation Reset:** These are **product-feature** phases (DQ file content). The **Foundation Reset** above is **infrastructure** phases (Web2 stack, attestations). They run in parallel. DQ-File-Completion-Phase-1 (language cleanup) reinforces Foundation-Reset-Phase-1 (UI no longer says "blockchain-verified"). DQ-File-Completion-Phase-10 (IPFS PDF archival) is **superseded** by Foundation-Reset-Phase-2 (attestation-backed verification — see below).
 

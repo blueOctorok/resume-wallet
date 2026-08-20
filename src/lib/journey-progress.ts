@@ -498,7 +498,7 @@ export function calculateBlockJourney(
   if (!data.isWalletConnected) {
     greeting = "Welcome to Provven! Let's get you started."
   } else if (installedBlockTypes.length === 0) {
-    greeting = 'Open Build to work your DQ file — employers see what’s done on your Career Card.'
+    greeting = 'Open File to work your DQ file — employers see what’s done on your Career Card.'
   } else if (overallProgress < 30) {
     greeting = 'Great start — keep going so your card is credible when you apply.'
   } else if (overallProgress < 60) {

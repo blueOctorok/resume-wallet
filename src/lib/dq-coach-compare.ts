@@ -29,7 +29,7 @@ const DISCREPANCY_TARGET: Record<string, DqCoachTarget> = {
   'MVR accidents missing on DOT': 'dotapp',
   'MVR convictions missing on DOT': 'dotapp',
   'PSP crashes missing on DOT': 'dotapp',
-  'Accio marked this MVR a discrepancy': 'mvr',
+  'MVR came back with a discrepancy': 'mvr',
 }
 
 /** First + last after dropping Jr/Sr. Null if we cannot compare two tokens. */
@@ -279,12 +279,11 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
     )
   }
 
-  const filled = mvr?.filledCode?.trim().toLowerCase()
-  if (filled === 'discrepancy') {
+  if (mvr?.hasDiscrepancyAlert) {
     flags.push(
       warn(
-        'Accio marked this MVR a discrepancy',
-        'The CRA returned filledCode=discrepancy (hits and/or identity alerts). Open the report before a carrier does.',
+        'MVR came back with a discrepancy',
+        'The motor vehicle report flagged a violation or an identity mismatch. Open it and review it before a carrier does.',
       ),
     )
   }
@@ -311,8 +310,8 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
         warn(
           'MVR accidents missing on DOT',
           dot.hasNoAccidents
-            ? `MVR lists ${mvr.accidents.length} accident(s). Form 2 says none.`
-            : `MVR has accident dates Form 2 does not: ${missingAccidents.slice(0, 3).join(', ')}.`,
+            ? `The MVR lists ${mvr.accidents.length} accident(s). Your DOT application says none.`
+            : `The MVR has accident dates your DOT application does not: ${missingAccidents.slice(0, 3).join(', ')}.`,
         ),
       )
     }
@@ -326,8 +325,8 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
         warn(
           'MVR convictions missing on DOT',
           dot.hasNoConvictions
-            ? `MVR lists ${mvr.convictions.length} conviction(s). Form 2 says none.`
-            : `MVR has conviction dates Form 2 does not: ${missingConvictions.slice(0, 3).join(', ')}.`,
+            ? `The MVR lists ${mvr.convictions.length} conviction(s). Your DOT application says none.`
+            : `The MVR has conviction dates your DOT application does not: ${missingConvictions.slice(0, 3).join(', ')}.`,
         ),
       )
     }
@@ -344,8 +343,8 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
         warn(
           'PSP crashes missing on DOT',
           dot.hasNoAccidents
-            ? `PSP lists ${psp.crashDates.length} crash(es). Form 2 says no accidents.`
-            : `PSP has crash dates Form 2 does not: ${missingCrashes.slice(0, 3).join(', ')}.`,
+            ? `The PSP lists ${psp.crashDates.length} crash(es). Your DOT application says no accidents.`
+            : `The PSP has crash dates your DOT application does not: ${missingCrashes.slice(0, 3).join(', ')}.`,
         ),
       )
     }

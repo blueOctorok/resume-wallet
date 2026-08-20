@@ -305,7 +305,7 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
             Your card is looking solid.
           </p>
           <p className={cn('mt-0.5 text-xs', isDark ? 'text-emerald-300/70' : 'text-emerald-800/80')}>
-            Share it, or open Build to review your full DQ file.
+            Share it, or open File to review your full DQ file.
           </p>
         </div>
       )}
