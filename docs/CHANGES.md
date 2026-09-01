@@ -4,6 +4,54 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin can invite company teammates** (2026-09-01)
+
+Central Admin Companies could only list/remove members. Inviting required signing in as the company owner — and that path returned a misleading **Company not found** when the current login was not on `company_members` (admin-only session, leftover employer role, etc.).
+
+| Change | Detail |
+|---|---|
+| `POST /api/admin/companies/[id]/members` | Storm admin invite, same domain + duplicate rules as employer Team |
+| Companies tab | Email + role + Invite under the expanded roster |
+| Employer Team 404 copy | Names the real cause: this login is not linked to a company |
+
+Shared insert/email lives in `create-company-member-invite.ts`. If the invitee already has a candidate account, the invite is refused (same-login guard).
+
+---
+
+## **Mainnet deploy: public sync, keyed submit only** (2026-09-01)
+
+Pointing the wallet `relayURL` at the Foundation keyed node hung sync (`block N/0`, non-linear merkle). Sync + prove stay on public `rpc.mainnet`. `contractDeploy` is the only call that uses `MIDNIGHT_DEPLOY_RPC_URL`. We build the extrinsic on public HTTP RPC and POST `author_submitExtrinsic` to the keyed URL — that node closes WebSocket `submitAndWatch` immediately. midnight-js then confirms inclusion via the public indexer. Stale wallet caches (>48h) are ignored so we cold-sync instead of looping.
+
+Do **not** put the keyed URL on Vercel or in `MIDNIGHT_NODE_RPC_URL`. Lace 99% sync is a Lace UI issue — the server seed already has DUST from the cNIGHT mapper.
+
+---
+
+## **EV block is the official § 391.23 paper** (2026-08-31)
+
+The hub employment-verification page was a job list + Request button. It now looks like the Safety Performance History Records Request (`docs/AUTH_FORM.md`): Section 1 (driver auth) prefills from the DOT packet + profile, Section 2 stays locked until the previous employer replies, Section 3 is the attempt log.
+
+DOT / profile fields stay **self-reported** — never a verified badge. A reply is **Verified by Provven** only when inbound DKIM passes and the domain lines up with the invited mailbox (the DKIM path we already wired). My Files and Stormi’s journey step use that same DKIM gate.
+
+---
+
+## **Employment verification block reads the DOT packet** (2026-08-31)
+
+The hub EV page was a hidden stub that only saw synced `block_driver_employment`. It is now a picker block: cream paper, jobs from Form 3 + resumes, hiring-manager name/email/phone filled in so the driver does not retype them. Same company + month enriches the existing row instead of duplicating. My Files / Stormi journey follow verified vs pending vs empty.
+
+---
+
+## **Midnight mainnet cutover started (P3.9)** (2026-08-25)
+
+Lace shows ~28k / 50.5k DUST from cNIGHT (Nethermind mapper; native C2M bridge still off). Unblocked the runtime: `setNetworkId` follows `MIDNIGHT_NETWORK` (was hardcoded `'preprod'`), reject mainnet + leftover Preprod RPC, deploy log uses the real network. Local `.env.local` flips to mainnet RPC/indexer; **Vercel stays Preprod** until wallet status + one deploy + one prove. Preprod addresses kept in `midnight/deployment.preprod.json`.
+
+**First mainnet deploy blocked:** public `rpc.mainnet.midnight.network` returns Substrate `1016 Immediately Dropped` on `contractDeploy`. Midnight team confirmed: apply via MIP PR (`docs/midnight/deployment-request-provven.md`, scores 2 / 1 / 2). Wallet sync + ~28.6k DUST on the server seed are fine.
+
+**2026-08-26:** `blueOctorok/resume-wallet` is **public** — MIP reviewers can read [`compact/`](https://github.com/blueOctorok/resume-wallet/tree/main/compact). [MIP PR #287](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/287) **merged** 2026-08-27 by nstanford5.
+
+**Nick (Discord, 2026-08-27):** keyed RPC is **deploy-only**. Public `rpc.mainnet` still 1016s `contractDeploy`. After deploy, switch the app back to the public RPC or the key can be revoked. Do not share the key. Do not put it on Vercel. Ricardo will provision it — wait. DUST already funded via cNIGHT.
+
+---
+
 ## **DOT Form 3 history picker + dates stay paper; hiring manager optional** (2026-08-20)
 
 Add History Type sat on a navy modal; month/year pickers followed Dark mode even on cream. Both are paper now. Employer email is gone (it was required). Optional hiring manager name, phone, and email replace it — many drivers will leave them blank.

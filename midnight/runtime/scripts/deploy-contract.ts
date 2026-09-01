@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Deploy Midnight fact circuits to Preprod.
+ * Deploy Midnight fact circuits to whatever MIDNIGHT_NETWORK is set to.
  *
  * Usage:
  *   npm run midnight:deploy                          # all shipped circuits
@@ -71,7 +71,9 @@ async function main() {
 
   for (const fact of facts) {
     const cfg = MIDNIGHT_CIRCUIT_CONFIGS[fact]
-    console.log(`[MIDNIGHT] Deploying ${cfg.contractName} (${fact}) to Preprod...`)
+    console.log(
+      `[MIDNIGHT] Deploying ${cfg.contractName} (${fact}) to ${MIDNIGHT_CONFIG.network}...`,
+    )
     try {
       const { contractAddress } = await deployMidnightContract(
         fact,

@@ -38,6 +38,10 @@ export default function CompaniesTab({
   const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('recruiter')
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
 
   type AdminEmployerHubPayload = {
     companyId: string
@@ -121,6 +125,38 @@ export default function CompaniesTab({
       setLoadingMembers(false)
     }
   }, [sessionUserId])
+
+  const handleInviteCompanyMember = useCallback(async (companyId: string) => {
+    if (!sessionUserId) return
+    const email = inviteEmail.trim()
+    if (!email) {
+      setInviteError('Email is required')
+      return
+    }
+    setInviting(true)
+    setInviteError(null)
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': sessionUserId,
+        },
+        body: JSON.stringify({ email, role: inviteRole }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send invite')
+      }
+      setInviteEmail('')
+      fetchCompanyMembers(companyId)
+      fetchData()
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to send invite')
+    } finally {
+      setInviting(false)
+    }
+  }, [sessionUserId, inviteEmail, inviteRole, fetchCompanyMembers, fetchData])
 
   const handleRemoveCompanyMember = useCallback(async (companyId: string, memberId: string, memberName: string) => {
     if (!sessionUserId) return
@@ -283,6 +319,7 @@ export default function CompaniesTab({
                       setCompanyEmployerHub(null)
                     } else {
                       setExpandedCompanyId(company.id)
+                      setInviteError(null)
                       fetchCompanyMembers(company.id)
                     }
                   }}
@@ -493,6 +530,50 @@ export default function CompaniesTab({
                       ))}
                     </div>
                   )}
+
+                  <div className='mt-4 space-y-2'>
+                    <p className={`text-xs font-medium ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Invite a teammate
+                    </p>
+                    <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
+                      <input
+                        type='email'
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder='metro@pacedrivers.com'
+                        className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${
+                          isDarkTheme(theme)
+                            ? 'border-gray-600 bg-gray-900 text-white placeholder-gray-500'
+                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                        }`}
+                      />
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        className={`rounded-lg border px-2 py-2 text-sm ${
+                          isDarkTheme(theme)
+                            ? 'border-gray-600 bg-gray-900 text-white'
+                            : 'border-gray-300 bg-white text-gray-900'
+                        }`}
+                      >
+                        <option value='recruiter'>Team member</option>
+                        <option value='admin'>Admin</option>
+                        <option value='viewer'>Viewer</option>
+                      </select>
+                      <button
+                        type='button'
+                        onClick={() => handleInviteCompanyMember(company.id)}
+                        disabled={inviting}
+                        className='inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50'
+                      >
+                        {inviting ? <Loader2 className='h-4 w-4 animate-spin' /> : <UserPlus className='h-4 w-4' />}
+                        Invite
+                      </button>
+                    </div>
+                    {inviteError && (
+                      <p className='text-xs text-red-500'>{inviteError}</p>
+                    )}
+                  </div>
 
                   {companyEmployerHub?.companyId === company.id && (
                     <div className='mt-6 border-t border-gray-200 pt-4 dark:border-gray-700'>

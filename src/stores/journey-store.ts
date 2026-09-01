@@ -13,6 +13,8 @@ import {
   calculateEmployerProgress,
 } from '@/lib/journey-progress'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
+import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
+import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
 
 /**
  * Journey Store - Manages Stormi Journey Guide state
@@ -104,6 +106,7 @@ export function useJourneyProgress(): JourneyProgress {
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const hubStore = useDriverHubStore()
   const { isApplicationCompleted, currentForm } = useDotApplicationStore()
+  const evRequests = useEmploymentVerificationBlockStore((s) => s.requests)
 
   const employerHiring = useEmployerHiringPathStore((s) => s.hiring)
 
@@ -200,6 +203,10 @@ export function useJourneyProgress(): JourneyProgress {
     hasConnectedGithub: Boolean(hubStore.github?.username?.trim()),
     hasScreeningConsentBundle: hubStore.stats?.hasScreeningConsentBundle === true,
     hasVerifiedAttestation: (hubStore.stats?.attestationCount ?? 0) > 0,
+    employmentVerificationVerified: evRequests.some((r) => isDkimVerifiedRequest(r)),
+    employmentVerificationPending: evRequests.some(
+      (r) => r.status === 'VERIFICATION_REQUESTED' || r.status === 'VERIFICATION_IN_PROGRESS',
+    ),
   }
 
   const blockTypes = installedBlocks.map((b) => b.blockType)

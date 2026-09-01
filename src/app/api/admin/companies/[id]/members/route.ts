@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { createCompanyMemberInvite } from '@/lib/create-company-member-invite'
 
 /**
  * GET /api/admin/companies/[id]/members
@@ -98,5 +99,58 @@ export async function GET(
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * POST /api/admin/companies/[id]/members
+ *
+ * Storm admin invite — same insert + email as employer Team, keyed by company id
+ * so you do not have to be signed in as the company owner.
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdmin(request)
+    if (!auth.authorized) return auth.error!
+
+    const { id: companyId } = await params
+    const body = await request.json()
+    const email = typeof body.email === 'string' ? body.email : ''
+    const role = typeof body.role === 'string' ? body.role : 'recruiter'
+
+    const supabase = await getAdminSupabaseClient()
+
+    const result = await createCompanyMemberInvite(supabase, {
+      companyId,
+      email,
+      role,
+      invitedByUserId: auth.userId || companyId,
+      inviterFallbackName: auth.email || 'Provven admin',
+    })
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, details: result.details },
+        { status: result.status },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Invitation sent successfully',
+      member: {
+        id: result.memberId,
+        email: result.email,
+        role: result.role,
+        isPending: true,
+      },
+      inviteUrl: result.inviteUrl,
+    })
+  } catch (error) {
+    console.error('[ADMIN MEMBERS] Invite error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

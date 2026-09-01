@@ -200,7 +200,7 @@ export interface DotForm3Data {
  * Convert Form 3's MM/YYYY format to profile's YYYY-MM format
  * Also handles "Present" and various edge cases
  */
-function form3DateToProfileDate(dateStr: string): string {
+export function form3DateToProfileDate(dateStr: string): string {
   if (!dateStr) return ''
   if (dateStr.toLowerCase() === 'present') return ''
   

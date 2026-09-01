@@ -8,11 +8,12 @@ Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midni
 
 | Variable | Required | Example (Preprod) | Notes |
 |---|---|---|---|
-| `MIDNIGHT_NETWORK` | yes (P3.3+) | `preprod` | `preprod` for testnet work; mainnet later |
+| `MIDNIGHT_NETWORK` | yes (P3.3+) | `preprod` or `mainnet` | Must match RPC/indexer. Runtime rejects `mainnet` + leftover preprod URLs. |
 | `MIDNIGHT_PROOF_SERVER_URL` | yes | `http://127.0.0.1:6300` or `https://….fly.dev` | Local Docker **or** hosted Fly origin (no userinfo — see auth rows) |
 | `MIDNIGHT_PROOF_SERVER_USER` | hosted | `prove` | Basic-auth user for Fly nginx |
 | `MIDNIGHT_PROOF_SERVER_PASSWORD` | hosted | (secret) | Basic-auth password — prefer this over `user:pass@` in the URL (undici rejects credentialed URLs) |
-| `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.preprod.midnight.network` | Public Preprod node RPC |
+| `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.preprod.midnight.network` | Public node RPC (sync + prove). Mainnet app/Vercel stay here. |
+| `MIDNIGHT_DEPLOY_RPC_URL` | mainnet deploy only | `https://rpc.mainnet.midnight.foundation/v1/mk_…` | Foundation keyed node. **`contractDeploy` submit only.** Never set this as `MIDNIGHT_NODE_RPC_URL` (wallet relay) — the node reports tip 0 and merkle sync loops. Never Vercel. |
 | `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v4/graphql` | GraphQL indexer v4 (Preprod matrix) |
 | `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | Real-time indexer events |
 | `MIDNIGHT_PRIVATE_STATE_PASSWORD` | yes (P3.3+) | `"Str0ng!LocalOnly"` | Encrypts LevelDB contract private state on disk — server-side only |
@@ -58,7 +59,7 @@ Default image: `midnightntwrk/proof-server:8.0.3` on port `6300` (do not remap c
 |---|---|
 | Proof server | **Fly.io** app `provven-midnight-proof` (`midnight/proof-server/`) — always-on 8 GB, Basic auth |
 | Wallet mnemonic | Vercel secret `MIDNIGHT_WALLET_MNEMONIC` (server-only) |
-| RPC / indexer | Public Preprod (or mainnet when ready) |
+| RPC / indexer | Public Preprod until P3.9 smoke; then `rpc.mainnet.midnight.network` + `indexer.mainnet…/api/v4/graphql` |
 
 Vercel hosts the Next.js app only. The wallet SDK calls the proof server over HTTPS; the proof server does not open outbound connections.
 

@@ -91,6 +91,7 @@ export const MIDNIGHT_CIRCUIT_CONFIGS: Record<MidnightShippedFactType, MidnightC
 
 interface DeploymentJson {
   contractAddress?: string
+  network?: string
   contracts?: Partial<Record<MidnightShippedFactType, string>>
 }
 
@@ -101,6 +102,10 @@ export function resolveContractAddressForFact(factType: MidnightShippedFactType)
 
   if (fs.existsSync(DEPLOYMENT_JSON_PATH)) {
     const raw = JSON.parse(fs.readFileSync(DEPLOYMENT_JSON_PATH, 'utf8')) as DeploymentJson
+    if (raw.network && raw.network !== MIDNIGHT_CONFIG.network) {
+      raw.contracts = undefined
+      raw.contractAddress = undefined
+    }
     const fromMap = raw.contracts?.[factType]?.trim()
     if (fromMap) return fromMap
     if (factType === 'mvr_clean_36_months' && raw.contractAddress?.trim()) {

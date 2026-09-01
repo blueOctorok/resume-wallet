@@ -22,7 +22,7 @@ import { InMemoryTransactionHistoryStorage } from '@midnight-ntwrk/wallet-sdk-ab
 
 import { MIDNIGHT_CONFIG, ZK_CONFIG_PATH } from './config.js'
 
-function toRelayUrl(nodeRpc: string): URL {
+export function toRelayUrl(nodeRpc: string): URL {
   if (nodeRpc.startsWith('https://')) {
     return new URL(nodeRpc.replace(/^https:\/\//, 'wss://'))
   }
@@ -32,10 +32,15 @@ function toRelayUrl(nodeRpc: string): URL {
   return new URL(nodeRpc)
 }
 
+/** Incremental merkle restore dies if the cache is days behind the indexer. */
+const MAX_WALLET_CACHE_AGE_MS = 48 * 60 * 60 * 1000
+
 // @ts-expect-error SDK expects WebSocket on global in Node
 globalThis.WebSocket = WebSocket
 
-setNetworkId(MIDNIGHT_CONFIG.network as 'preprod')
+// NetworkId is a string — Preprod was hardcoded so mainnet txs would encode
+// as mn_addr_preprod / fail against mainnet RPC. Must match MIDNIGHT_NETWORK.
+setNetworkId(MIDNIGHT_CONFIG.network)
 
 const CONTRACT_NAME = 'mvr-clean-36'
 
@@ -68,6 +73,13 @@ function loadWalletState(): Omit<SerializedWalletState, 'network' | 'savedAt'> |
     ) as Partial<SerializedWalletState>
     // Ignore a cache from a different network or an older/garbled schema.
     if (raw.network !== MIDNIGHT_CONFIG.network) return null
+    const savedAtMs = raw.savedAt ? Date.parse(raw.savedAt) : NaN
+    if (!Number.isFinite(savedAtMs) || Date.now() - savedAtMs > MAX_WALLET_CACHE_AGE_MS) {
+      console.error(
+        `[MIDNIGHT] Wallet cache is stale (${raw.savedAt ?? 'no savedAt'}) — cold-syncing on public RPC`,
+      )
+      return null
+    }
     if (
       typeof raw.shielded === 'string' &&
       typeof raw.unshielded === 'string' &&
@@ -175,6 +187,8 @@ export async function createMidnightWallet(seed: Buffer) {
       indexerWsUrl: MIDNIGHT_CONFIG.indexerWs,
     },
     provingServerUrl: new URL(MIDNIGHT_CONFIG.proofServer),
+    // Always the public node. Keyed Foundation RPC is submit-only — wiring it
+    // here as relayURL reports tip height 0 and breaks merkle sync.
     relayURL: toRelayUrl(MIDNIGHT_CONFIG.nodeRpc),
     txHistoryStorage: new InMemoryTransactionHistoryStorage(),
     costParameters: {

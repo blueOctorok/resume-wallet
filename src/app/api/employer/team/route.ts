@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { randomUUID } from 'crypto'
-import { sendTeamInviteEmail } from '@/lib/send-team-invite-email'
-import { checkEmailAgainstCompanyDomains } from '@/lib/employer-domain-match'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
+import { createCompanyMemberInvite } from '@/lib/create-company-member-invite'
 
 // All valid roles for company members
 const VALID_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer', 'viewer']
@@ -180,18 +178,25 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id, email')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // This login is not on a company_members row and does not own a company.
+    // Common when Central Admin is open on an admin-only account, or a leftover
+    // employer role with no Pace membership.
     const access = await getEmployerCompanyAccess(supabase, userId)
     if (!access) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+      return NextResponse.json(
+        {
+          error:
+            'This login is not linked to a company. Sign in as a Pace owner/admin, or invite from Central Admin → Companies.',
+        },
+        { status: 404 },
+      )
     }
-
-    const companyId = access.companyId
 
     if (!can(access.companyRole, 'manageTeam')) {
       return NextResponse.json(
@@ -200,167 +205,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get company details for domain validation
-    const { data: company } = await supabase
-      .from('companies')
-      .select('company_name, email, designated_owner_email, allowed_email_domains')
-      .eq('id', companyId)
-      .single()
-
-    if (!company) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-    }
-
-    // The company's declared domain policy is the boundary. This used to be a
-    // local 15-entry public-domain list plus a derivation from companies.email,
-    // which silently skipped enforcement whenever the company's contact address
-    // was itself a consumer inbox.
-    const domainCheck = checkEmailAgainstCompanyDomains({
-      allowedDomains: company.allowed_email_domains,
+    const result = await createCompanyMemberInvite(supabase, {
+      companyId: access.companyId,
       email,
-      companyName: company.company_name,
-      legacyCompanyEmail: company.email || company.designated_owner_email,
-    })
-
-    if (!domainCheck.allowed) {
-      return NextResponse.json(
-        { error: domainCheck.error, details: domainCheck.details },
-        { status: 400 }
-      )
-    }
-
-    // Check if user with this email already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id, email, wallet_address')
-      .ilike('email', email)
-      .maybeSingle()
-
-    // Check if this user/email is already a member of THIS company
-    if (existingUser) {
-      const { data: existingMember } = await supabase
-        .from('company_members')
-        .select('id, is_active, accepted_at')
-        .eq('company_id', companyId)
-        .eq('user_id', existingUser.id)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (existingMember) {
-        // If there's a stale record (user was deleted but record lingered), clean it up
-        if (!existingMember.accepted_at) {
-          console.log('[TEAM] Found stale membership record, deleting:', existingMember.id)
-          await supabase
-            .from('company_members')
-            .delete()
-            .eq('id', existingMember.id)
-        } else {
-          console.log('[TEAM] User already a member:', { email, memberId: existingMember.id })
-          return NextResponse.json(
-            { error: 'This user is already a team member' },
-            { status: 409 }
-          )
-        }
-      }
-    }
-
-    // Check if there's already a pending invite for this email
-    // Must be active and not expired
-    const { data: pendingInvite } = await supabase
-      .from('company_members')
-      .select('id, invite_expires_at')
-      .eq('company_id', companyId)
-      .eq('invite_email', email.toLowerCase())
-      .eq('is_active', true)
-      .is('accepted_at', null)
-      .maybeSingle()
-
-    if (pendingInvite) {
-      // Check if invite has expired - if so, delete it and allow re-invite
-      const expiresAt = pendingInvite.invite_expires_at ? new Date(pendingInvite.invite_expires_at) : null
-      if (expiresAt && expiresAt < new Date()) {
-        // Delete expired invite
-        await supabase
-          .from('company_members')
-          .delete()
-          .eq('id', pendingInvite.id)
-        console.log('[TEAM] Deleted expired invite for:', email)
-      } else {
-        return NextResponse.json(
-          { error: 'There is already a pending invite for this email' },
-          { status: 409 }
-        )
-      }
-    }
-
-    // Generate invite token (must be UUID format for DB column)
-    const inviteToken = randomUUID()
-
-    // Create the membership record
-    const { data: newMember, error: insertError } = await supabase
-      .from('company_members')
-      .insert({
-        company_id: companyId,
-        user_id: existingUser?.id || null, // Will be null for new users
-        role,
-        job_scope: jobScope || null,
-        candidate_scope: candidateScope || null,
-        invited_by: user.id,
-        invite_email: email.toLowerCase(),
-        invite_token: inviteToken,
-        invite_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-        is_active: true,
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('[TEAM] Error creating invite:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to create invite' },
-        { status: 500 }
-      )
-    }
-
-    // Build invite URL (company already fetched above for domain validation)
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${inviteToken}`
-    const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-
-    // Resolve inviter name from user_profiles
-    const { data: inviterProfile } = await supabase
-      .from('user_profiles')
-      .select('first_name, last_name')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    const inviterName = [inviterProfile?.first_name, inviterProfile?.last_name].filter(Boolean).join(' ').trim() || user.email || 'Your team admin'
-
-    // Send invite email (non-blocking)
-    sendTeamInviteEmail({
-      to: email,
-      inviterName,
-      companyName: company?.company_name || 'Your company',
       role,
-      inviteToken,
-      expiresAt: inviteExpiresAt,
-    }).then(result => {
-      if (result.ok) {
-        console.log(`[TEAM] Invite email sent to ${email}`)
-      } else {
-        console.warn(`[TEAM] Failed to send invite email to ${email}:`, result.error)
-      }
+      invitedByUserId: user.id,
+      inviterFallbackName: user.email,
+      jobScope,
+      candidateScope,
     })
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, details: result.details },
+        { status: result.status },
+      )
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Invitation sent successfully',
       member: {
-        id: newMember.id,
-        email,
-        role,
+        id: result.memberId,
+        email: result.email,
+        role: result.role,
         isPending: true,
       },
-      inviteUrl, // Still return for testing/manual sharing
+      inviteUrl: result.inviteUrl,
     })
 
   } catch (error) {

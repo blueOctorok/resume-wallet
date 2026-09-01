@@ -252,9 +252,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     id: 'general-employment-verification',
     label: 'Employment Verification',
     description:
-      'Optional: email past employers to confirm your work dates (from any resume or DOT history). Voluntary for them — boosts trust on your career card.',
+      'Official safety-performance history form (§ 391.23). Jobs fill from your DOT application. Verified only when the previous employer replies and DKIM passes.',
     icon: 'ShieldCheck',
-    categoryId: 'general',
+    categoryId: 'drivers',
     suggestedFor: [
       'verify',
       'employment',
@@ -264,6 +264,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
       'career',
       'employer',
       'hr',
+      'dot',
+      'driver',
     ],
     complexity: 'simple',
     appearsOnCareerCard: false,
@@ -273,8 +275,6 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: null,
     completionField: null,
     requiredEmployerBlocks: null,
-    /** Drivers-wedge: hide general EV from candidate feature picker. */
-    hiddenFromBlockPicker: true,
   },
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
@@ -615,7 +615,7 @@ export function employerCanRequest(
 
 /**
  * Candidate feature picker is drivers-only (no General / Developers category step).
- * Legacy resume aliases + general EV stay hidden via `hiddenFromBlockPicker`.
+ * Legacy resume aliases stay hidden via `hiddenFromBlockPicker`.
  */
 function isCandidatePickerBlock(b: BlockDefinition): boolean {
   return !b.hiddenFromBlockPicker && b.categoryId === 'drivers'

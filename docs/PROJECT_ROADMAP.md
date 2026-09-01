@@ -13,7 +13,7 @@ The Foundation Reset's first arc is **complete**: Phase 1 (Web2 cleanup), Web3 d
 | **Auth swap (Alchemy → Supabase)** | Email/Google passwordless login; ~115 API routes off `x-wallet-address`; admin gated by `ADMIN_EMAILS`. | ✅ **DONE & live** |
 | **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | ✅ **DONE (D1–D5)** |
 | **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (license class, endorsements, restrictions, med cert, prior employer) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | ✅ **SHIPPED (P2.1–P2.7)** |
-| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active track — go-to-market driven (DEC-2026-06-001)** |
+| **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active — P3.9 mainnet cutover in progress (2026-08-25). Vercel still Preprod until smoke.** |
 | **Payments (Stripe)** | Greenfield Checkout (one-time) + Subscriptions, added **when a paying non-Pace customer exists**. *Not* a USDC→Stripe conversion — USDC is being deleted in demolition, so there's nothing to migrate. | ⏸ **Deferred** |
 
 ### Pre-flight decisions (resolved 2026-05-22)
@@ -202,6 +202,8 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 ## 🚧 Next Up — DQ File Completion (May–June 2026)
 
 > **Candidate product focus (2026-08-20):** drivers only. Login home = Career Card; **File** = DQ queue (page id still `build`). Non-driver tiles stay off File. Legacy developer routes may still exist in the shell for old deep-links — not part of the active surface. See `CHANGES.md` (“Hub mode renamed Build → File”).
+
+> **Candidate EV (2026-08-31):** Hub block is the official § 391.23 Safety Performance History paper (`docs/AUTH_FORM.md`). Section 1 prefills from the DOT packet (self-reported). Section 2 verifies only after a previous-employer reply with passing DKIM. See `CHANGES.md`.
 
 > **Coordination with Foundation Reset:** These are **product-feature** phases (DQ file content). The **Foundation Reset** above is **infrastructure** phases (Web2 stack, attestations). They run in parallel. DQ-File-Completion-Phase-1 (language cleanup) reinforces Foundation-Reset-Phase-1 (UI no longer says "blockchain-verified"). DQ-File-Completion-Phase-10 (IPFS PDF archival) is **superseded** by Foundation-Reset-Phase-2 (attestation-backed verification — see below).
 
@@ -838,6 +840,8 @@ Replaced horizontal tabs with a clean, organized sidebar layout:
 ---
 
 #### ✅ **Employment Verification System (COMPLETE - January 2026)**
+
+**2026-08-31:** Candidate hub block is live. It scans DOT Form 3 (and resumes) for jobs + hiring-manager contact so the driver does not retype them. Employer-orchestrated DOT outreach (`employer-employment-verification`) is still coming soon.
 
 **Three-Party Verification Flow:**
 

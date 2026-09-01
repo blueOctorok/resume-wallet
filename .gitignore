@@ -44,6 +44,8 @@ yarn-error.log*
 # (and one WASM instance) with compact-js. Source .compact stays version-controlled.
 /midnight/runtime/managed/
 /midnight/deployment.json
+/midnight/deployment.preprod.json
+/midnight/deployment.mainnet.json
 /midnight/runtime/node_modules/
 # Cached wallet sync state (block height + local state) for incremental re-sync.
 # Contains wallet financial state — never commit.

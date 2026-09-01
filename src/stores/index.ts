@@ -73,6 +73,7 @@ export {
 export { useSavedJobsStore, type SavedJobEntry, type ShortlistLane } from './saved-jobs-store'
 
 export { useDqCoachStore } from './dq-coach-store'
+export { useEmploymentVerificationBlockStore } from './employment-verification-block-store'
 
 // Hub Blocks Store (composable hub)
 export {

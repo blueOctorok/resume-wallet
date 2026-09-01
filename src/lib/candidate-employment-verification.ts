@@ -1,10 +1,12 @@
 /**
- * Candidate hub: merge employment rows from driver blocks, developer profile, and general resumes
- * so one optional "employment verification" flow can email past employers (date-focused, voluntary).
+ * Candidate hub EV: merge work history (DOT Form 3 + block tables + resumes)
+ * and applicant identity for the official § 391.23 paper. DOT fields are
+ * self-reported. Verified only when a previous-employer reply has dkim_valid.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getDriverEmployment, getDevProfile } from '@/lib/block-data'
+import { form3DateToProfileDate } from '@/lib/dot-form-mapper'
 import type { VerificationRequest } from '@/types/employment-verification'
 
 export type CandidateEmploymentSource = 'driver' | 'developer' | 'general'
@@ -23,6 +25,8 @@ export interface CandidateEmploymentRow {
   supervisorEmail?: string
   supervisorPhone?: string
   reasonForLeaving?: string
+  /** From Form 3 only — not a block_driver_employment row (do not DELETE it). */
+  fromDotDraft?: boolean
 }
 
 export function compositeVerificationKey(
@@ -96,14 +100,139 @@ export async function fetchGeneralEmploymentsFromResumes(
   return []
 }
 
+function normCompany(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function normStartMonth(date: string): string {
+  const s = date.trim()
+  const iso = s.match(/^(\d{4})-(\d{2})/)
+  if (iso) return `${iso[1]}-${iso[2]}`
+  return form3DateToProfileDate(s).slice(0, 7)
+}
+
+export function employmentDedupeKey(company: string, startDate: string): string {
+  return `${normCompany(company)}|${normStartMonth(startDate)}`
+}
+
+type Form3EmployerLoose = {
+  id?: string
+  type?: string
+  name?: string
+  phone?: string
+  email?: string
+  hiringManagerName?: string
+  hiringManagerPhone?: string
+  hiringManagerEmail?: string
+  address?: string
+  positionHeld?: string
+  fromDate?: string
+  toDate?: string
+  reasonForLeaving?: string
+  isUnemployment?: boolean
+}
+
+function isRealEmployer(emp: Form3EmployerLoose): boolean {
+  if (emp.isUnemployment) return false
+  const type = emp.type ?? 'employment'
+  if (type === 'unemployment' || type === 'school' || type === 'drivingSchool' || type === 'military') {
+    return false
+  }
+  return Boolean(emp.name?.trim())
+}
+
+/** DOT Form 3 employers as EV rows — hiring manager contact rides along. */
+export function form3EmployersToCandidateRows(
+  employers: Form3EmployerLoose[] | undefined,
+): CandidateEmploymentRow[] {
+  if (!employers?.length) return []
+  const rows: CandidateEmploymentRow[] = []
+  employers.forEach((emp, index) => {
+    if (!isRealEmployer(emp)) return
+    const id = emp.id?.trim() || `dot-form3-${index}`
+    const startDate = form3DateToProfileDate(emp.fromDate ?? '')
+    const endDate =
+      emp.toDate?.toLowerCase() === 'present' ? '' : form3DateToProfileDate(emp.toDate ?? '')
+    rows.push({
+      verificationKey: compositeVerificationKey('driver', id),
+      source: 'driver',
+      sourceLabel: 'DOT application',
+      id,
+      companyName: emp.name!.trim(),
+      position: emp.positionHeld?.trim() ?? '',
+      startDate,
+      endDate,
+      location: emp.address?.trim() || undefined,
+      supervisorName: emp.hiringManagerName?.trim() || undefined,
+      supervisorEmail: emp.hiringManagerEmail?.trim() || emp.email?.trim() || undefined,
+      supervisorPhone: emp.hiringManagerPhone?.trim() || emp.phone?.trim() || undefined,
+      reasonForLeaving: emp.reasonForLeaving?.trim() || undefined,
+      fromDotDraft: true,
+    })
+  })
+  return rows
+}
+
+/** Same company + start month: keep the driver row, fill empty contact from Form 3. */
+export function mergeDotForm3IntoEmployments(
+  existing: CandidateEmploymentRow[],
+  form3Rows: CandidateEmploymentRow[],
+): CandidateEmploymentRow[] {
+  const driverIndex = new Map<string, number>()
+  existing.forEach((row, i) => {
+    if (row.source === 'driver') {
+      driverIndex.set(employmentDedupeKey(row.companyName, row.startDate), i)
+    }
+  })
+  const next = [...existing]
+  for (const incoming of form3Rows) {
+    const key = employmentDedupeKey(incoming.companyName, incoming.startDate)
+    const idx = driverIndex.get(key)
+    if (idx === undefined) {
+      driverIndex.set(key, next.length)
+      next.push(incoming)
+      continue
+    }
+    const prev = next[idx]
+    next[idx] = {
+      ...prev,
+      supervisorName: prev.supervisorName || incoming.supervisorName,
+      supervisorEmail: prev.supervisorEmail || incoming.supervisorEmail,
+      supervisorPhone: prev.supervisorPhone || incoming.supervisorPhone,
+      reasonForLeaving: prev.reasonForLeaving || incoming.reasonForLeaving,
+      location: prev.location || incoming.location,
+    }
+  }
+  return next
+}
+
+async function fetchDotForm3Employers(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<CandidateEmploymentRow[]> {
+  const { data } = await supabase
+    .from('driver_applications')
+    .select('application_data')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const appData = (data?.application_data ?? {}) as {
+    form3?: { employers?: Form3EmployerLoose[] }
+    form3Data?: { employers?: Form3EmployerLoose[] }
+  }
+  const employers = appData.form3?.employers ?? appData.form3Data?.employers
+  return form3EmployersToCandidateRows(employers)
+}
+
 export async function getMergedCandidateEmployments(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<CandidateEmploymentRow[]> {
-  const [driverRows, devProfile, generalRows] = await Promise.all([
+  const [driverRows, devProfile, generalRows, form3Rows] = await Promise.all([
     getDriverEmployment(supabase, userId),
     getDevProfile(supabase, userId),
     fetchGeneralEmploymentsFromResumes(supabase, userId),
+    fetchDotForm3Employers(supabase, userId),
   ])
 
   const out: CandidateEmploymentRow[] = []
@@ -148,7 +277,7 @@ export async function getMergedCandidateEmployments(
   }
 
   out.push(...generalRows)
-  return out
+  return mergeDotForm3IntoEmployments(out, form3Rows)
 }
 
 /** Match verification request to a merged employment row (supports legacy unprefixed employment_id). */
@@ -179,4 +308,89 @@ export function findApplicantVerificationForRow(
   row: CandidateEmploymentRow,
 ): VerificationRequest | undefined {
   return requests.find((r) => requestMatchesCandidateRow(r, row))
+}
+
+/** Portal / email reply on file is not a verified fact. DKIM + domain align is. */
+export function isDkimVerifiedRequest(
+  req: Pick<VerificationRequest, 'dkimValid'> | null | undefined,
+): boolean {
+  return Boolean(req?.dkimValid)
+}
+
+export type EvApplicantIdentity = {
+  driverName: string
+  dateOfBirth: string
+  /** Last 4 only — never a full SSN. */
+  ssnLastFour: string
+}
+
+export type EvForm1Loose = {
+  firstName?: string
+  lastName?: string
+  middleName?: string
+  dateOfBirth?: string
+  socialSecurity?: string
+}
+
+function formatPersonName(
+  first?: string | null,
+  middle?: string | null,
+  last?: string | null,
+): string {
+  return [first, middle, last]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(' ')
+}
+
+function last4Ssn(ssn?: string | null): string {
+  if (!ssn) return ''
+  const digits = ssn.replace(/\D/g, '')
+  return digits.length >= 4 ? digits.slice(-4) : ''
+}
+
+/** Profile wins for name/DOB; DOT Form 1 fills gaps + last-4 SSN. Never a verification signal. */
+export function extractEvApplicantIdentity(input: {
+  firstName?: string | null
+  lastName?: string | null
+  dateOfBirth?: string | null
+  form1?: EvForm1Loose | null
+}): EvApplicantIdentity {
+  const form1 = input.form1
+  const driverName =
+    formatPersonName(input.firstName, null, input.lastName) ||
+    formatPersonName(form1?.firstName, form1?.middleName, form1?.lastName)
+  return {
+    driverName,
+    dateOfBirth: input.dateOfBirth?.trim() || form1?.dateOfBirth?.trim() || '',
+    ssnLastFour: last4Ssn(form1?.socialSecurity),
+  }
+}
+
+export async function getEvApplicantIdentity(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<EvApplicantIdentity> {
+  const [profileRes, appRes] = await Promise.all([
+    supabase
+      .from('user_profiles')
+      .select('first_name, last_name, date_of_birth')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('driver_applications')
+      .select('application_data')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ])
+  const appData = (appRes.data?.application_data ?? {}) as {
+    form1?: EvForm1Loose
+    form1Data?: EvForm1Loose
+  }
+  return extractEvApplicantIdentity({
+    firstName: profileRes.data?.first_name as string | undefined,
+    lastName: profileRes.data?.last_name as string | undefined,
+    dateOfBirth: profileRes.data?.date_of_birth as string | undefined,
+    form1: appData.form1 ?? appData.form1Data,
+  })
 }

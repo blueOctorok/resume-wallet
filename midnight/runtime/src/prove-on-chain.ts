@@ -22,6 +22,7 @@ import {
   saveWalletState,
 } from './wallet.js'
 import { createMidnightProviders } from './providers.js'
+import { MIDNIGHT_CONFIG } from './config.js'
 import { mnemonicToSeedBuffer } from './mnemonic-seed.js'
 import {
   createMvrCleanCircuitWitness,
@@ -130,16 +131,32 @@ function makeSyncProgressLogger(): (s: FacadeState) => void {
   }
 }
 
+const WALLET_SYNC_TIMEOUT_MS = 45 * 60 * 1000
+
+function waitForWalletSync(wallet: { state: () => Rx.Observable<FacadeState> }) {
+  return Rx.firstValueFrom(
+    wallet.state().pipe(
+      Rx.tap(makeSyncProgressLogger()),
+      Rx.filter((s) => s.isSynced),
+      Rx.timeout({
+        first: WALLET_SYNC_TIMEOUT_MS,
+        with: () =>
+          Rx.throwError(
+            () =>
+              new Error(
+                `Wallet sync timed out after ${WALLET_SYNC_TIMEOUT_MS / 60000} minutes — delete midnight/runtime/.wallet-cache/${MIDNIGHT_CONFIG.network}.json and retry on public RPC`,
+              ),
+          ),
+      }),
+    ),
+  )
+}
+
 export async function registerDustIfNeeded(
   walletCtx: Awaited<ReturnType<typeof createMidnightWallet>>,
 ): Promise<void> {
   logProgress('Syncing wallet (first run after a restart can take several minutes)...')
-  const state = await Rx.firstValueFrom(
-    walletCtx.wallet.state().pipe(
-      Rx.tap(makeSyncProgressLogger()),
-      Rx.filter((s) => s.isSynced),
-    ),
-  )
+  const state = await waitForWalletSync(walletCtx.wallet)
   logProgress('Wallet synced')
 
   if (state.dust.balance(new Date()) <= 0n) {
@@ -218,6 +235,12 @@ export async function deployMidnightContract(
   factType: MidnightShippedFactType,
   mnemonic: string,
 ): Promise<{ contractAddress: string }> {
+  if (MIDNIGHT_CONFIG.network === 'mainnet' && !MIDNIGHT_CONFIG.deployNodeRpc) {
+    throw new Error(
+      'Mainnet contractDeploy needs MIDNIGHT_DEPLOY_RPC_URL (Foundation keyed node). Leave MIDNIGHT_NODE_RPC_URL on public rpc.mainnet.',
+    )
+  }
+
   const seed = mnemonicToSeedBuffer(mnemonic)
   const walletCtx = await createMidnightWallet(seed)
 
@@ -227,7 +250,12 @@ export async function deployMidnightContract(
       factType,
       emptyWitnessForFact(factType),
     )
-    const providers = await createMidnightProviders(walletCtx, factType)
+    if (MIDNIGHT_CONFIG.deployNodeRpc) {
+      logProgress('Submitting contractDeploy via Foundation keyed RPC (sync stayed on public node)')
+    }
+    const providers = await createMidnightProviders(walletCtx, factType, {
+      submitViaDeployRpc: Boolean(MIDNIGHT_CONFIG.deployNodeRpc),
+    })
     const deployed = await deployContract(providers, {
       compiledContract,
       args: [],
@@ -397,12 +425,7 @@ export async function getWalletStatus(mnemonic: string) {
     logProgress('Syncing wallet (first run can take several minutes)...')
     logProgress(`Unshielded address: ${address}`)
 
-    const state = await Rx.firstValueFrom(
-      walletCtx.wallet.state().pipe(
-        Rx.tap(makeSyncProgressLogger()),
-        Rx.filter((s) => s.isSynced),
-      ),
-    )
+    const state = await waitForWalletSync(walletCtx.wallet)
     await saveWalletState(walletCtx)
 
     const tNight =

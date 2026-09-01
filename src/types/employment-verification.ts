@@ -109,6 +109,10 @@ export interface VerificationRequest {
   
   // The 6 FMCSA answers
   answers: VerificationAnswers | null
+
+  /** Inbound reply DKIM passed and domain aligned with the invited mailbox. */
+  dkimValid?: boolean
+  dkimDomain?: string | null
   
   // Token for previous employer (not exposed to frontend except in portal)
   verificationToken?: string
@@ -199,6 +203,8 @@ export interface VerificationRequestRow {
   created_at: string
   updated_at: string
   finalized_at: string | null
+  dkim_valid?: boolean
+  dkim_domain?: string | null
 }
 
 export interface VerificationAttemptRow {
@@ -249,6 +255,8 @@ export function rowToVerificationRequest(
     verifiedByName: row.verified_by_name,
     verifiedByTitle: row.verified_by_title,
     verificationMethod: row.verification_method as VerificationRequest['verificationMethod'],
+    dkimValid: Boolean(row.dkim_valid),
+    dkimDomain: row.dkim_domain ?? null,
     answers: row.dates_correct ? {
       datesCorrect: row.dates_correct,
       correctedStartDate: row.corrected_start_date || undefined,

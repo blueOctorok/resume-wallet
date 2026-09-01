@@ -1,26 +1,55 @@
 'use client'
 
+import { ShieldCheck } from 'lucide-react'
 import { useAuthStore, useUIStore } from '@/stores'
+import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
+import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
+import { getBlockDefinition } from '@/lib/block-registry'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import BlockCard from '@/components/ui/BlockCard'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
 import CandidateEmploymentVerificationSection from '@/components/verification/CandidateEmploymentVerificationSection'
 
 /**
- * Optional hub block: voluntary date confirmation emails to past employers.
- * Work history is merged from driver/DOT employment, developer profile, and general resume.
+ * Official § 391.23 Safety Performance History form.
+ * Section 1 prefills from DOT (self-reported). Section 2 verifies only via DKIM.
  */
 export default function EmploymentVerificationBlock() {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const navigateToHub = useUIStore((s) => s.navigateToHub)
+  const employments = useEmploymentVerificationBlockStore((s) => s.employments)
+  const requests = useEmploymentVerificationBlockStore((s) => s.requests)
+  const def = getBlockDefinition('general-employment-verification')
+  const verified = requests.some((r) => isDkimVerifiedRequest(r))
+  const pending = requests.some(
+    (r) => r.status === 'VERIFICATION_REQUESTED' || r.status === 'VERIFICATION_IN_PROGRESS',
+  )
+  const status = verified ? 'complete' : pending || employments.length > 0 ? 'in-progress' : 'empty'
 
   return (
-    <div className='max-w-3xl mx-auto space-y-6 px-4 py-6'>
-      <div className='flex items-center gap-3'>
-        <BackToHubButton onClick={() => navigateToHub()} />
-      </div>
-      <ErrorBoundary section='Employment verification'>
-        <CandidateEmploymentVerificationSection userAddress={sessionUserId} />
-      </ErrorBoundary>
+    <div className='mx-auto max-w-4xl space-y-4 px-4 py-6'>
+      <BackToHubButton onClick={() => navigateToHub()} />
+      <HubSectionPanel isDark={false} accent='teal'>
+        <BlockCard
+          variant='embed'
+          paper
+          icon={ShieldCheck}
+          title={def?.label ?? 'Employment Verification'}
+          description={
+            def?.description ??
+            'Jobs from your DOT application and resumes. Ask a past employer to confirm dates.'
+          }
+          status={status}
+        >
+          <ErrorBoundary section='Employment verification'>
+            <CandidateEmploymentVerificationSection
+              userAddress={sessionUserId}
+              embedded
+            />
+          </ErrorBoundary>
+        </BlockCard>
+      </HubSectionPanel>
     </div>
   )
 }

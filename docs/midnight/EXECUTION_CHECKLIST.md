@@ -813,6 +813,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.6** | Honesty gate: "Proven on Midnight" when the circuit ran + CRA cite (DEC-2026-08-004) | ✅ |
 | **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
 | **P3.8** | **Hosted proof server (Fly)** — so Vercel can reach a prover without local Docker; JWT stays default until Vercel flip | ✅ Fly live + hosted smoke 2026-08-10 · **Vercel `ATTESTATION_BACKEND=midnight` flipped 2026-08-13 (Preprod)** |
+| **P3.9** | **Mainnet cutover** — DUST from cNIGHT designation; redeploy circuits; smoke; then flip Vercel RPC | 🟡 **In progress 2026-08-25** — Lace tank ~28k/50.5k DUST; local env + `setNetworkId` unblocked. **Do not flip Vercel until smoke.** |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
 
@@ -1256,6 +1257,28 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 **Files:** `midnight/proof-server/` · `midnight/runtime/src/proof-server-url.ts` · `docs/midnight/MIDNIGHT_ENV.md`
 
 **Commit:** `feat(midnight): hosted proof server on Fly (P3.8)`
+
+#### P3.9 — Mainnet cutover
+
+| | |
+|---|---|
+| Status | 🟡 **In progress 2026-08-25** — cNIGHT→DUST mapped (Nethermind); native C2M bridge still off |
+| Pre-conditions | P3.8 ✅ · Lace Midnight DUST tank filling · same mnemonic as `MIDNIGHT_WALLET_MNEMONIC` |
+| Pace risk | **Do not** change Vercel `MIDNIGHT_*` RPC/indexer/contract addresses until a mainnet smoke tx exists. Prod stays Preprod until then. |
+
+**Goal:** Server wallet submits real mainnet txs. Pass = `wallet:status` shows DUST on `mainnet` + one billboard contract deployed + one `midnight:prove-fact` with `paidFees` captured.
+
+**Do in order:**
+
+1. ✅ cNIGHT designated via Nethermind mapper (12h observation). Native bridge not enabled — DUST comes from Cardano NIGHT.
+2. 🟡 Flip **local** `.env.local` only: `MIDNIGHT_NETWORK=mainnet`, `rpc.mainnet` / `indexer.mainnet` v4. Keep Fly proof server. Comment out Preprod contract addresses.
+3. ✅ `midnight:wallet:address` = Lace unshielded `mn_addr1vr5lrw9c…wctap` (same seed).
+4. ✅ `midnight:wallet:status` — mainnet synced; NIGHT 0 (still on Cardano); DUST ≈ 28.6k specks/1e15 (matches Lace tank).
+5. 🟡 [MIP PR #287](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/287) **merged** 2026-08-27. Nick: Ricardo will send a **deploy-only** API key (private node). Public `rpc.mainnet` still 1016s `contractDeploy`. **Do not** leave the keyed URL in the app or Vercel — after `contractDeploy`, flip `MIDNIGHT_NODE_RPC_URL` back to public `rpc.mainnet` or the key can be revoked. Do not share the key.
+6. 🟡 Ricardo key assigned 2026-09-01 (local `MIDNIGHT_DEPLOY_RPC_URL` only). **Do not** set `MIDNIGHT_NODE_RPC_URL` to the keyed node — that broke wallet sync (`164338/0`). Public indexer + public `rpc.mainnet` for sync; keyed URL for `contractDeploy` submit only. Then smoke `midnight:prove-fact` + `midnight:cost-benchmark`.
+7. ⬜ **Then** Vercel: `MIDNIGHT_NETWORK=mainnet` + **public** `rpc.mainnet` / indexer v4 + new contract addresses. Never the keyed URL.
+
+**Gotcha:** Preprod contract addresses are invalid on mainnet. `setNetworkId` must follow `MIDNIGHT_NETWORK` (was cast to `'preprod'`).
 
 #### P3.6 — Honesty gate (per-fact "proven on Midnight")
 

@@ -7,6 +7,7 @@ import {
   type DriverVerificationSummary,
 } from '@/types/employment-verification'
 import {
+  getEvApplicantIdentity,
   getMergedCandidateEmployments,
   requestMatchesCandidateRow,
 } from '@/lib/candidate-employment-verification'
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const employments = await getMergedCandidateEmployments(supabase, user.id)
+    const [employments, applicant] = await Promise.all([
+      getMergedCandidateEmployments(supabase, user.id),
+      getEvApplicantIdentity(supabase, user.id),
+    ])
     const totalEmployments = employments.length
 
     let query = supabase
@@ -64,6 +68,7 @@ export async function GET(request: NextRequest) {
       if (requestsError.code === '42P01' || requestsError.message?.includes('does not exist')) {
         return NextResponse.json({
           success: true,
+          applicant,
           employments,
           summary: {
             totalEmployments,
@@ -146,6 +151,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      applicant,
       employments,
       summary,
       requests,

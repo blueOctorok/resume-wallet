@@ -9,11 +9,13 @@ import {
   MIDNIGHT_CIRCUIT_CONFIGS,
   type MidnightShippedFactType,
 } from './contract-registry.js'
+import { submitDeployTx } from './deploy-submit.js'
 import type { MidnightWalletContext } from './wallet.js'
 
 export async function createMidnightProviders(
   walletCtx: MidnightWalletContext,
   factType: MidnightShippedFactType = 'mvr_clean_36_months',
+  opts?: { submitViaDeployRpc?: boolean },
 ) {
   const privateStatePassword = MIDNIGHT_CONFIG.privateStatePassword
   if (!privateStatePassword) {
@@ -46,7 +48,14 @@ export async function createMidnightProviders(
 
       return walletCtx.wallet.finalizeRecipe(signedRecipe)
     },
-    submitTx: (tx: FinalizedTransaction) => walletCtx.wallet.submitTransaction(tx),
+    submitTx: async (tx: FinalizedTransaction) => {
+      // Prove path stays on public rpc.mainnet. Deploy is the only call that
+      // may use the Foundation keyed node (Nick: contractDeploy submit only).
+      if (opts?.submitViaDeployRpc && MIDNIGHT_CONFIG.deployNodeRpc) {
+        return submitDeployTx(tx)
+      }
+      return walletCtx.wallet.submitTransaction(tx)
+    },
   }
 
   const zkConfigProvider = new NodeZkConfigProvider(zkConfigPath)

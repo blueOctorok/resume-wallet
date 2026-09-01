@@ -36,8 +36,21 @@ const proofServerEndpoint = resolveProofServerEndpoint({
 // WalletFacade / Effect HttpClient touch the proof server.
 installProofServerAuthFetch(proofServerEndpoint)
 
+const SUPPORTED_NETWORKS = ['preprod', 'preview', 'mainnet'] as const
+type MidnightNetwork = (typeof SUPPORTED_NETWORKS)[number]
+
+function resolveNetwork(): MidnightNetwork {
+  const raw = (process.env.MIDNIGHT_NETWORK?.trim() || 'preprod').toLowerCase()
+  if ((SUPPORTED_NETWORKS as readonly string[]).includes(raw)) {
+    return raw as MidnightNetwork
+  }
+  throw new Error(
+    `MIDNIGHT_NETWORK=${raw} is not supported (use preprod | preview | mainnet)`,
+  )
+}
+
 export const MIDNIGHT_CONFIG = {
-  network: process.env.MIDNIGHT_NETWORK?.trim() || 'preprod',
+  network: resolveNetwork(),
   /** Clean origin (no user:pass) — safe for undici + cross-fetch. */
   proofServer: proofServerEndpoint.url,
   /** Basic auth when password set (separate env or legacy user:pass@host URL). */
@@ -45,12 +58,25 @@ export const MIDNIGHT_CONFIG = {
   nodeRpc:
     process.env.MIDNIGHT_NODE_RPC_URL?.trim() ||
     'https://rpc.preprod.midnight.network',
+  // Foundation keyed RPC — contractDeploy only. Never use for wallet sync or Vercel.
+  deployNodeRpc: process.env.MIDNIGHT_DEPLOY_RPC_URL?.trim() || '',
   indexer: rawIndexer,
   indexerWs: rawIndexerWs,
   contractAddress: process.env.MIDNIGHT_CONTRACT_ADDRESS?.trim() || '',
   privateStatePassword: process.env.MIDNIGHT_PRIVATE_STATE_PASSWORD?.trim() || '',
   walletMnemonic: process.env.MIDNIGHT_WALLET_MNEMONIC?.trim() || '',
 } as const
+
+// Don't let a leftover preprod RPC ride along after flipping MIDNIGHT_NETWORK.
+if (
+  MIDNIGHT_CONFIG.network === 'mainnet' &&
+  (MIDNIGHT_CONFIG.nodeRpc.includes('preprod') ||
+    MIDNIGHT_CONFIG.indexer.includes('preprod'))
+) {
+  throw new Error(
+    'MIDNIGHT_NETWORK=mainnet but RPC/indexer still point at Preprod — flip MIDNIGHT_NODE_RPC_URL and MIDNIGHT_INDEXER_* first',
+  )
+}
 
 // Compiled artifact lives INSIDE the runtime package (not the source dir under
 // compact/). This is load-bearing: the compiled contract imports
@@ -84,6 +110,11 @@ export function resolveContractAddress(): string {
   if (fs.existsSync(DEPLOYMENT_JSON_PATH)) {
     const raw = JSON.parse(fs.readFileSync(DEPLOYMENT_JSON_PATH, 'utf8')) as {
       contractAddress?: string
+      network?: string
+    }
+    // Preprod addresses in this file must not be used after a mainnet flip.
+    if (raw.network && raw.network !== MIDNIGHT_CONFIG.network) {
+      raw.contractAddress = undefined
     }
     if (raw.contractAddress?.trim()) return raw.contractAddress.trim()
   }

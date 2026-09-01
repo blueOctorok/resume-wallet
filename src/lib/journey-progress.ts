@@ -118,6 +118,8 @@ export interface BlockProgressData {
   hasConnectedGithub: boolean
   /** Full screening consent package on file (any employer) — drives driver-screening-consent journey */
   hasScreeningConsentBundle?: boolean
+  employmentVerificationVerified?: boolean
+  employmentVerificationPending?: boolean
   /** Candidate has at least one Verified by Storm attestation issued */
   hasVerifiedAttestation?: boolean
 }
@@ -198,17 +200,30 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
   },
 
   'general-employment-verification': {
-    resolve: () => [
+    resolve: (d) => [
       {
         id: 'general-employment-verification',
         label: 'Employment date verification',
         description:
-          'Optional: invite past employers to confirm your work dates by email (voluntary for them)',
-        status: 'pending',
+          'Official § 391.23 form. Jobs fill from your DOT file. Verified only after a DKIM-backed previous-employer reply.',
+        status: d.employmentVerificationVerified
+          ? 'complete'
+          : d.employmentVerificationPending
+            ? 'in_progress'
+            : 'pending',
         isOptional: true,
-        action: { label: 'Manage', target: 'employment-verification' },
+        action: { label: 'Open', target: 'employment-verification' },
       },
     ],
+    nextAction: (d) =>
+      d.employmentVerificationVerified
+        ? null
+        : {
+            label: 'Request employment verification',
+            description: 'Sign Section 1 and send. Verified when the previous employer reply passes DKIM.',
+            target: 'employment-verification',
+            priority: 'medium',
+          },
   },
 
   'driver-screening-consent': {

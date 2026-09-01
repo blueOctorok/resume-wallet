@@ -22,6 +22,9 @@ import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
+import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
+import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
+import type { VerificationRequest } from '@/types/employment-verification'
 
 export function useHubDocuments(refreshKey: number): {
   documents: HubDocument[]
@@ -348,21 +351,27 @@ export function useHubDocuments(refreshKey: number): {
       if (hasEmploymentVerificationBlock && sessionUserId) {
         const vr = await fetch('/api/candidate/verification/status?initiatedBy=applicant')
         if (vr.ok) {
-          const j = (await vr.json()) as { requests?: Array<{ status: string }> }
+          const j = (await vr.json()) as {
+            requests?: VerificationRequest[]
+            employments?: unknown[]
+          }
           const reqs = j.requests ?? []
-          const verified = reqs.filter(
-            (r) => r.status === 'VERIFIED' || r.status === 'PARTIALLY_VERIFIED',
-          ).length
+          useEmploymentVerificationBlockStore.setState({
+            requests: reqs,
+          })
+          const verified = reqs.filter((r) => isDkimVerifiedRequest(r)).length
           const pending = reqs.filter((r) =>
             ['VERIFICATION_REQUESTED', 'VERIFICATION_IN_PROGRESS'].includes(r.status),
           ).length
+          const hasJobs = (j.employments ?? []).length > 0
           docs.push({
             id: 'employment-verifications',
             type: 'employment_verifications',
             title: 'Employment verifications',
-            subtitle: `${verified} verified · ${pending} pending`,
-            status: pending > 0 ? 'in-progress' : 'complete',
-            verified: false,
+            subtitle: `${verified} DKIM-verified · ${pending} pending`,
+            status:
+              verified > 0 ? 'complete' : pending > 0 || hasJobs ? 'in-progress' : 'empty',
+            verified: verified > 0,
             txHash: null,
             canVerify: false,
             canDelete: false,
