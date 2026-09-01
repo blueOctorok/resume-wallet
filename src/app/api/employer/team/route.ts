@@ -4,6 +4,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import { createCompanyMemberInvite } from '@/lib/create-company-member-invite'
+import { teamInviteUrl } from '@/lib/app-url'
 
 // All valid roles for company members
 const VALID_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer', 'viewer']
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
         candidate_scope,
         invited_by,
         invite_email,
+        invite_token,
         invited_at,
         accepted_at,
         is_active,
@@ -102,6 +104,9 @@ export async function GET(request: NextRequest) {
         isPending: !member.accepted_at,
         invitedAt: member.invited_at,
         acceptedAt: member.accepted_at,
+        inviteUrl: !member.accepted_at && member.invite_token
+          ? teamInviteUrl(member.invite_token)
+          : null,
         jobScope: member.job_scope,
         candidateScope: member.candidate_scope,
       }

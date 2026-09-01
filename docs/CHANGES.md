@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Team invite link — Provven + copy + reopen** (2026-09-01)
+
+Invite URLs were built from raw `NEXT_PUBLIC_APP_URL`, so a stale `zknight.io` env produced a dead host. The success box was a clipped URL with no obvious Copy, and closing the modal lost the link.
+
+| Change | Detail |
+|---|---|
+| `teamInviteUrl()` | Uses `getAppBaseUrl()` which remaps zknight.io / stormchain.ai → `https://provven.com` |
+| `InviteShareLink` | Labeled Copy link + Copied state |
+| Pending invites | Same link stays on Team and admin company roster after you close the dialog |
+
+---
+
 ## **Admin company invite 500** (2026-09-01)
 
 Inviting someone who has never signed in (e.g. `metro@pacedrivers.com`) inserted `company_members.user_id = null`. The column was still `NOT NULL` from migration 016, so Postgres returned 500. `invited_by` could also fail if the admin Auth user has no `public.users` row.

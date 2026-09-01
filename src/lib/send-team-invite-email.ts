@@ -1,7 +1,6 @@
 import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
 import { isMessagingConfigured, sendEmail } from './messaging'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://provven.com'
+import { getAppBaseUrl } from './app-url'
 
 export interface SendTeamInviteEmailParams {
   to: string
@@ -25,7 +24,7 @@ export async function sendTeamInviteEmail(
 
   const { to, inviterName, companyName, role, inviteToken, expiresAt } = params
 
-  const inviteUrl = `${APP_URL}/invite/${inviteToken}`
+  const inviteUrl = `${getAppBaseUrl()}/invite/${inviteToken}`
   const roleDisplay = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const expiresFormatted = expiresAt.toLocaleDateString('en-US', {
     weekday: 'long',

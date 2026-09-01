@@ -36,6 +36,11 @@ export function getAppBaseUrl(request?: NextRequest): string {
   return 'http://localhost:3000'
 }
 
+/** Public team-invite URL. Always Provven — never a retired zknight/stormchain host. */
+export function teamInviteUrl(inviteToken: string): string {
+  return `${getAppBaseUrl()}/invite/${inviteToken}`
+}
+
 /**
  * Resolve the public webhook URL for an Accio screening (MVR/PSP) order.
  * Hard-fails in production if no real URL can be resolved — silently posting

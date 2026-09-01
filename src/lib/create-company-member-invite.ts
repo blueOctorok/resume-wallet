@@ -6,6 +6,7 @@ import {
   isCandidateSurfaceRole,
 } from '@/lib/employer-account-guard'
 import { sendTeamInviteEmail } from '@/lib/send-team-invite-email'
+import { teamInviteUrl } from '@/lib/app-url'
 
 export const INVITEABLE_DB_ROLES = [
   'admin',
@@ -219,8 +220,7 @@ export async function createCompanyMemberInvite(
     input.inviterFallbackName ||
     'Provven admin'
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const inviteUrl = `${appUrl}/invite/${inviteToken}`
+  const inviteUrl = teamInviteUrl(inviteToken)
 
   void sendTeamInviteEmail({
     to: email,

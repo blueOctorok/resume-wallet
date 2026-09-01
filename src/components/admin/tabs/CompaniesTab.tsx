@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import type { AdminTabProps, AdminCompany, CompanyMember } from '@/components/admin/admin-types'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
+import InviteShareLink from '@/components/ui/InviteShareLink'
 
 interface CompaniesTabProps extends AdminTabProps {
   onCreateCompany: () => void
@@ -480,10 +481,11 @@ export default function CompaniesTab({
                       {companyMembers.map(member => (
                         <div
                           key={member.id}
-                          className={`flex items-center justify-between p-2 rounded-lg ${
+                          className={`space-y-2 rounded-lg p-2 ${
                             isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-100'
                           }`}
                         >
+                          <div className='flex items-center justify-between gap-2'>
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-2'>
                               <span className={`text-sm font-medium truncate ${
@@ -527,6 +529,10 @@ export default function CompaniesTab({
                               <Trash2 className='w-4 h-4' />
                             )}
                           </button>
+                          </div>
+                          {member.isPending && member.inviteUrl && (
+                            <InviteShareLink url={member.inviteUrl} isDark={isDarkTheme(theme)} />
+                          )}
                         </div>
                       ))}
                     </div>

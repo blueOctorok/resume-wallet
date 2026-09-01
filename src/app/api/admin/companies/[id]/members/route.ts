@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { createCompanyMemberInvite } from '@/lib/create-company-member-invite'
+import { teamInviteUrl } from '@/lib/app-url'
 
 /**
  * GET /api/admin/companies/[id]/members
@@ -42,6 +43,7 @@ export async function GET(
         invited_at,
         accepted_at,
         invite_email,
+        invite_token,
         users!company_members_user_id_fkey (
           id,
           email,
@@ -80,6 +82,9 @@ export async function GET(
         invitedAt: member.invited_at,
         acceptedAt: member.accepted_at,
         inviteEmail: member.invite_email,
+        inviteUrl: !member.accepted_at && member.invite_token
+          ? teamInviteUrl(member.invite_token)
+          : null,
         name: profileName,
         email: user?.email || member.invite_email,
         legacyWalletAddress: user?.wallet_address || null,

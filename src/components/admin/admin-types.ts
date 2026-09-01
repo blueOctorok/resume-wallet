@@ -304,6 +304,7 @@ export interface CompanyMember {
   invitedAt: string
   acceptedAt: string | null
   inviteEmail: string | null
+  inviteUrl?: string | null
   name: string | null
   email: string | null
   sessionUserId: string | null
