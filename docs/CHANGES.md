@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin company invite 500** (2026-09-01)
+
+Inviting someone who has never signed in (e.g. `metro@pacedrivers.com`) inserted `company_members.user_id = null`. The column was still `NOT NULL` from migration 016, so Postgres returned 500. `invited_by` could also fail if the admin Auth user has no `public.users` row.
+
+| Fix | Detail |
+|---|---|
+| `108_company_members_pending_user_nullable.sql` | Drop NOT NULL on `company_members.user_id` for pending invites |
+| Invite helper | Only set `invited_by` when that id exists in `users`; return the real DB error |
+
+Apply 108 on the database you are hitting, then retry Invite on the Pace card.
+
+---
+
 ## **Admin can invite company teammates** (2026-09-01)
 
 Central Admin Companies could only list/remove members. Inviting required signing in as the company owner — and that path returned a misleading **Company not found** when the current login was not on `company_members` (admin-only session, leftover employer role, etc.).

@@ -67,20 +67,39 @@ export async function createCompanyMemberInvite(
     }
   }
 
-  const { data: company, error: companyError } = await supabase
+  let company: {
+    company_name: string | null
+    email: string | null
+    designated_owner_email: string | null
+    allowed_email_domains?: string[] | null
+  } | null = null
+
+  const fullCompany = await supabase
     .from('companies')
     .select('company_name, email, designated_owner_email, allowed_email_domains')
     .eq('id', input.companyId)
     .maybeSingle()
 
-  if (companyError) {
-    console.error('[TEAM INVITE] Company lookup failed:', companyError)
-    return {
-      ok: false,
-      status: 500,
-      error: 'Could not load company for this invite',
-      details: companyError.message,
+  if (fullCompany.error) {
+    // Legacy DBs that have not run 104 still work — domain check falls back
+    // to companies.email.
+    const legacyCompany = await supabase
+      .from('companies')
+      .select('company_name, email, designated_owner_email')
+      .eq('id', input.companyId)
+      .maybeSingle()
+    if (legacyCompany.error) {
+      console.error('[TEAM INVITE] Company lookup failed:', legacyCompany.error)
+      return {
+        ok: false,
+        status: 500,
+        error: 'Could not load company for this invite',
+        details: legacyCompany.error.message,
+      }
     }
+    company = legacyCompany.data
+  } else {
+    company = fullCompany.data
   }
 
   if (!company) {
@@ -154,15 +173,23 @@ export async function createCompanyMemberInvite(
   const inviteToken = randomUUID()
   const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
+  // invited_by FKs to public.users. An admin Auth user is not always bootstrapped
+  // into that table — write null rather than 500 on the FK.
+  const { data: inviterRow } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', input.invitedByUserId)
+    .maybeSingle()
+
   const { data: newMember, error: insertError } = await supabase
     .from('company_members')
     .insert({
       company_id: input.companyId,
-      user_id: existingUser?.id || null,
+      user_id: existingUser?.id ?? null,
       role,
       job_scope: input.jobScope || null,
       candidate_scope: input.candidateScope || null,
-      invited_by: input.invitedByUserId,
+      invited_by: inviterRow?.id ?? null,
       invite_email: email,
       invite_token: inviteToken,
       invite_expires_at: inviteExpiresAt.toISOString(),
@@ -173,7 +200,12 @@ export async function createCompanyMemberInvite(
 
   if (insertError || !newMember) {
     console.error('[TEAM INVITE] Insert failed:', insertError)
-    return { ok: false, status: 500, error: 'Failed to create invite' }
+    return {
+      ok: false,
+      status: 500,
+      error: insertError?.message || 'Failed to create invite',
+      details: insertError?.details || insertError?.hint || undefined,
+    }
   }
 
   const { data: inviterProfile } = await supabase

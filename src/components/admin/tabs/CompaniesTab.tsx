@@ -146,7 +146,8 @@ export default function CompaniesTab({
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send invite')
+        const detail = typeof data.details === 'string' ? ` — ${data.details}` : ''
+        throw new Error((data.error || 'Failed to send invite') + detail)
       }
       setInviteEmail('')
       fetchCompanyMembers(companyId)
