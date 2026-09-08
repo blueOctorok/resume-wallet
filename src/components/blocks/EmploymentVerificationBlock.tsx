@@ -38,7 +38,7 @@ export default function EmploymentVerificationBlock() {
           title={def?.label ?? 'Employment Verification'}
           description={
             def?.description ??
-            'Jobs from your DOT application and resumes. Ask a past employer to confirm dates.'
+            'Sign an authorization, send the safety-performance packet, then review before sharing.'
           }
           status={status}
         >

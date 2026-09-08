@@ -319,6 +319,11 @@ export async function POST(
         void applyEmploymentProjectionToDriverApplication(supabase, driverId).catch((err) =>
           console.warn('[EVR RESPOND] DOT projection non-fatal:', err),
         )
+        const { notifyDriverEvrReturned } = await import('@/lib/notify-evr-returned')
+        void notifyDriverEvrReturned(supabase, {
+          driverId,
+          employerName: String(request_data.previous_employer_name ?? ''),
+        }).catch((err) => console.warn('[EVR RESPOND] Driver notify non-fatal:', err))
       }
     }
 

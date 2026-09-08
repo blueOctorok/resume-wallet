@@ -37,6 +37,7 @@ export async function submitDeployTx(tx: FinalizedTransaction): Promise<string> 
     await publicApi.disconnect()
   }
 
+  console.log(`[MIDNIGHT] POST author_submitExtrinsic → ${deployRpcHost()}`)
   const res = await fetch(deployUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -46,6 +47,7 @@ export async function submitDeployTx(tx: FinalizedTransaction): Promise<string> 
       method: 'author_submitExtrinsic',
       params: [extrinsicHex],
     }),
+    signal: AbortSignal.timeout(90_000),
   })
   const body = (await res.json()) as {
     result?: string
@@ -59,5 +61,14 @@ export async function submitDeployTx(tx: FinalizedTransaction): Promise<string> 
   if (!body.result) {
     throw new Error(`Keyed deploy submit returned no hash (${deployRpcHost()})`)
   }
-  return body.result
+  // author_submitExtrinsic returns the Substrate extrinsic hash. midnight-js
+  // watchForTxData queries the indexer by ledger identifier — watching the
+  // extrinsic hash hangs forever (MVR deploy sat 4h after a successful include).
+  const identifier = tx.identifiers().at(-1)
+  if (!identifier) {
+    throw new Error('Deploy tx has no ledger identifier after keyed submit')
+  }
+  console.log(`[MIDNIGHT] Keyed submit accepted extrinsic=${body.result}`)
+  console.log(`[MIDNIGHT] Indexer will watch identifier=${identifier}`)
+  return identifier
 }

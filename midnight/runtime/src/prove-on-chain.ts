@@ -251,11 +251,15 @@ export async function deployMidnightContract(
       emptyWitnessForFact(factType),
     )
     if (MIDNIGHT_CONFIG.deployNodeRpc) {
-      logProgress('Submitting contractDeploy via Foundation keyed RPC (sync stayed on public node)')
+      logProgress('Deploy will submit via Foundation keyed RPC (sync stays on public node)')
     }
+    logProgress('Creating providers (proof server + indexer)...')
     const providers = await createMidnightProviders(walletCtx, factType, {
       submitViaDeployRpc: Boolean(MIDNIGHT_CONFIG.deployNodeRpc),
     })
+    // The silent wait is almost always this: ZK prove of the deploy tx.
+    // Keyed submit happens only after prove+balance finish — often 10–30+ min.
+    logProgress('Proving contractDeploy (slow — no keyed submit until this finishes)...')
     const deployed = await deployContract(providers, {
       compiledContract,
       args: [],

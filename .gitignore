@@ -50,6 +50,7 @@ yarn-error.log*
 # Cached wallet sync state (block height + local state) for incremental re-sync.
 # Contains wallet financial state — never commit.
 /midnight/runtime/.wallet-cache/
+/midnight/runtime/.batch-*.log
 # Local Midnight private-state LevelDB (encrypted contract private state).
 # Regenerable per machine — never commit. Matches root + runtime cwd variants.
 midnight-level-db/

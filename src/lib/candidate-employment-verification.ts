@@ -5,7 +5,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getDriverEmployment, getDevProfile } from '@/lib/block-data'
+import { getCdlData, getDriverEmployment, getDevProfile } from '@/lib/block-data'
 import { form3DateToProfileDate } from '@/lib/dot-form-mapper'
 import type { VerificationRequest } from '@/types/employment-verification'
 
@@ -130,6 +130,17 @@ type Form3EmployerLoose = {
   toDate?: string
   reasonForLeaving?: string
   isUnemployment?: boolean
+  /** Driver asked us not to contact this employer — no EV packet. */
+  doNotContact?: boolean
+}
+
+/** Current jobs stay off EV unless the driver unchecks "do not contact". */
+export function shouldCreateEvPacket(emp: Form3EmployerLoose): boolean {
+  if (!isRealEmployer(emp)) return false
+  if (emp.doNotContact === true) return false
+  const isCurrent = emp.toDate?.trim().toLowerCase() === 'present'
+  if (isCurrent && emp.doNotContact !== false) return false
+  return true
 }
 
 function isRealEmployer(emp: Form3EmployerLoose): boolean {
@@ -148,7 +159,7 @@ export function form3EmployersToCandidateRows(
   if (!employers?.length) return []
   const rows: CandidateEmploymentRow[] = []
   employers.forEach((emp, index) => {
-    if (!isRealEmployer(emp)) return
+    if (!shouldCreateEvPacket(emp)) return
     const id = emp.id?.trim() || `dot-form3-${index}`
     const startDate = form3DateToProfileDate(emp.fromDate ?? '')
     const endDate =
@@ -303,11 +314,18 @@ export function requestMatchesCandidateRow(
   return false
 }
 
+export function findApplicantVerificationsForRow(
+  requests: VerificationRequest[],
+  row: CandidateEmploymentRow,
+): VerificationRequest[] {
+  return requests.filter((r) => requestMatchesCandidateRow(r, row))
+}
+
 export function findApplicantVerificationForRow(
   requests: VerificationRequest[],
   row: CandidateEmploymentRow,
 ): VerificationRequest | undefined {
-  return requests.find((r) => requestMatchesCandidateRow(r, row))
+  return findApplicantVerificationsForRow(requests, row)[0]
 }
 
 /** Portal / email reply on file is not a verified fact. DKIM + domain align is. */
@@ -319,9 +337,19 @@ export function isDkimVerifiedRequest(
 
 export type EvApplicantIdentity = {
   driverName: string
+  firstName: string
+  middleName: string
+  lastName: string
   dateOfBirth: string
   /** Last 4 only — never a full SSN. */
   ssnLastFour: string
+  email: string
+  phone: string
+  mailingAddress: string
+  cdlNumber: string
+  cdlState: string
+  licenseNumber: string
+  licenseState: string
 }
 
 export type EvForm1Loose = {
@@ -330,6 +358,19 @@ export type EvForm1Loose = {
   middleName?: string
   dateOfBirth?: string
   socialSecurity?: string
+  email?: string
+  phone?: string
+  currentMailing?: {
+    street?: string
+    city?: string
+    state?: string
+    zipCode?: string
+  }
+  currentLicenses?: Array<{
+    state?: string
+    licenseNumber?: string
+    typeClass?: string
+  }>
 }
 
 function formatPersonName(
@@ -349,21 +390,46 @@ function last4Ssn(ssn?: string | null): string {
   return digits.length >= 4 ? digits.slice(-4) : ''
 }
 
-/** Profile wins for name/DOB; DOT Form 1 fills gaps + last-4 SSN. Never a verification signal. */
+function formatMailing(m?: EvForm1Loose['currentMailing']): string {
+  if (!m) return ''
+  return [m.street, m.city, m.state, m.zipCode].map((p) => p?.trim()).filter(Boolean).join(', ')
+}
+
+/** Profile wins for name/DOB/contact; DOT Form 1 fills gaps + last-4 SSN. Never a verification signal. */
 export function extractEvApplicantIdentity(input: {
   firstName?: string | null
   lastName?: string | null
   dateOfBirth?: string | null
+  email?: string | null
+  phone?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
   form1?: EvForm1Loose | null
+  cdlNumber?: string | null
+  cdlState?: string | null
 }): EvApplicantIdentity {
   const form1 = input.form1
-  const driverName =
-    formatPersonName(input.firstName, null, input.lastName) ||
-    formatPersonName(form1?.firstName, form1?.middleName, form1?.lastName)
+  const firstName = input.firstName?.trim() || form1?.firstName?.trim() || ''
+  const middleName = form1?.middleName?.trim() || ''
+  const lastName = input.lastName?.trim() || form1?.lastName?.trim() || ''
+  const license0 = form1?.currentLicenses?.[0]
+  const mailing = formatMailing(form1?.currentMailing)
+  const profilePlace = [input.city, input.state, input.zip].map((p) => p?.trim()).filter(Boolean).join(', ')
   return {
-    driverName,
+    firstName,
+    middleName,
+    lastName,
+    driverName: formatPersonName(firstName, middleName, lastName),
     dateOfBirth: input.dateOfBirth?.trim() || form1?.dateOfBirth?.trim() || '',
     ssnLastFour: last4Ssn(form1?.socialSecurity),
+    email: input.email?.trim() || form1?.email?.trim() || '',
+    phone: input.phone?.trim() || form1?.phone?.trim() || '',
+    mailingAddress: mailing || profilePlace,
+    cdlNumber: input.cdlNumber?.trim() || '',
+    cdlState: input.cdlState?.trim() || '',
+    licenseNumber: license0?.licenseNumber?.trim() || '',
+    licenseState: license0?.state?.trim() || '',
   }
 }
 
@@ -371,10 +437,10 @@ export async function getEvApplicantIdentity(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<EvApplicantIdentity> {
-  const [profileRes, appRes] = await Promise.all([
+  const [profileRes, appRes, cdl] = await Promise.all([
     supabase
       .from('user_profiles')
-      .select('first_name, last_name, date_of_birth')
+      .select('first_name, last_name, date_of_birth, email, phone, city, state, zip_code')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase
@@ -382,6 +448,7 @@ export async function getEvApplicantIdentity(
       .select('application_data')
       .eq('user_id', userId)
       .maybeSingle(),
+    getCdlData(supabase, userId),
   ])
   const appData = (appRes.data?.application_data ?? {}) as {
     form1?: EvForm1Loose
@@ -391,6 +458,13 @@ export async function getEvApplicantIdentity(
     firstName: profileRes.data?.first_name as string | undefined,
     lastName: profileRes.data?.last_name as string | undefined,
     dateOfBirth: profileRes.data?.date_of_birth as string | undefined,
+    email: profileRes.data?.email as string | undefined,
+    phone: profileRes.data?.phone as string | undefined,
+    city: profileRes.data?.city as string | undefined,
+    state: profileRes.data?.state as string | undefined,
+    zip: profileRes.data?.zip_code as string | undefined,
     form1: appData.form1 ?? appData.form1Data,
+    cdlNumber: cdl?.cdl_number,
+    cdlState: cdl?.cdl_state,
   })
 }

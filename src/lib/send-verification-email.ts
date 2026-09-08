@@ -41,9 +41,10 @@ export async function sendVerificationEmail(
 
   const bodyHtml = `
     <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
-      A former employee has listed <strong>${claimedCompanyName}</strong> on their Provven career profile and
-      asked us to reach out so you can <strong>confirm or correct their employment dates</strong> if you choose to.
-      This is a voluntary, job-agnostic check — not a government or DOT investigation.
+      A former employee asked Provven to send you their signed authorization and a
+      Safety Performance History Records Request for <strong>${claimedCompanyName}</strong>.
+      Please confirm or correct their employment dates if you choose to.
+      This is a voluntary, driver-initiated request — not a motor-carrier DOT investigation.
     </p>
     ${detailsBox(`
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Employment Details Provided</p>

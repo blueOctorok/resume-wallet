@@ -813,7 +813,7 @@ Candidate-**controlled**, agency-**funded**. Drivers won't pay to screen themsel
 | **P3.6** | Honesty gate: "Proven on Midnight" when the circuit ran + CRA cite (DEC-2026-08-004) | ✅ |
 | **P3.7** | **Verified DQ-file assembly** — proven facts prefill + lock the DOT app; headline "Verified" (once a **majority** of risk-bearing fields are issuer-backed) with honest per-field badges. The **use-case payoff** (consumes 3a facts; MVR→Form 1 slice can start on P3.4-A) | ✅ Core shipped (DEC-2026-07-001) |
 | **P3.8** | **Hosted proof server (Fly)** — so Vercel can reach a prover without local Docker; JWT stays default until Vercel flip | ✅ Fly live + hosted smoke 2026-08-10 · **Vercel `ATTESTATION_BACKEND=midnight` flipped 2026-08-13 (Preprod)** |
-| **P3.9** | **Mainnet cutover** — DUST from cNIGHT designation; redeploy circuits; smoke; then flip Vercel RPC | 🟡 **In progress 2026-08-25** — Lace tank ~28k/50.5k DUST; local env + `setNetworkId` unblocked. **Do not flip Vercel until smoke.** |
+| **P3.9** | **Mainnet cutover** — DUST from cNIGHT designation; redeploy circuits; smoke; then flip Vercel RPC | 🟡 **Smoke ✅ 2026-09-03** — `cdl_class` tx `00488add…1827564c`, `paidFees=1`. Vercel still Preprod. |
 
 #### P3.1 — WSL2 + Compact toolchain smoke test (START HERE)
 
@@ -1262,9 +1262,9 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 | | |
 |---|---|
-| Status | 🟡 **In progress 2026-08-25** — cNIGHT→DUST mapped (Nethermind); native C2M bridge still off |
-| Pre-conditions | P3.8 ✅ · Lace Midnight DUST tank filling · same mnemonic as `MIDNIGHT_WALLET_MNEMONIC` |
-| Pace risk | **Do not** change Vercel `MIDNIGHT_*` RPC/indexer/contract addresses until a mainnet smoke tx exists. Prod stays Preprod until then. |
+| Status | 🟡 **Vercel Production mainnet 2026-09-04** — batch prove running locally (677 READY). |
+| Pre-conditions | P3.8 ✅ · 1AM seed on `MIDNIGHT_WALLET_MNEMONIC` · DUST tank filling from Cardano NIGHT |
+| Pace risk | Smoke exists. Vercel flip is public `rpc.mainnet` + new addresses only — **never** the keyed deploy URL. |
 
 **Goal:** Server wallet submits real mainnet txs. Pass = `wallet:status` shows DUST on `mainnet` + one billboard contract deployed + one `midnight:prove-fact` with `paidFees` captured.
 
@@ -1272,11 +1272,22 @@ ATTESTATION_BACKEND=midnight npm run midnight:prove-fact -- --fact previous_empl
 
 1. ✅ cNIGHT designated via Nethermind mapper (12h observation). Native bridge not enabled — DUST comes from Cardano NIGHT.
 2. 🟡 Flip **local** `.env.local` only: `MIDNIGHT_NETWORK=mainnet`, `rpc.mainnet` / `indexer.mainnet` v4. Keep Fly proof server. Comment out Preprod contract addresses.
-3. ✅ `midnight:wallet:address` = Lace unshielded `mn_addr1vr5lrw9c…wctap` (same seed).
-4. ✅ `midnight:wallet:status` — mainnet synced; NIGHT 0 (still on Cardano); DUST ≈ 28.6k specks/1e15 (matches Lace tank).
-5. 🟡 [MIP PR #287](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/287) **merged** 2026-08-27. Nick: Ricardo will send a **deploy-only** API key (private node). Public `rpc.mainnet` still 1016s `contractDeploy`. **Do not** leave the keyed URL in the app or Vercel — after `contractDeploy`, flip `MIDNIGHT_NODE_RPC_URL` back to public `rpc.mainnet` or the key can be revoked. Do not share the key.
-6. 🟡 Ricardo key assigned 2026-09-01 (local `MIDNIGHT_DEPLOY_RPC_URL` only). **Do not** set `MIDNIGHT_NODE_RPC_URL` to the keyed node — that broke wallet sync (`164338/0`). Public indexer + public `rpc.mainnet` for sync; keyed URL for `contractDeploy` submit only. Then smoke `midnight:prove-fact` + `midnight:cost-benchmark`.
-7. ⬜ **Then** Vercel: `MIDNIGHT_NETWORK=mainnet` + **public** `rpc.mainnet` / indexer v4 + new contract addresses. Never the keyed URL.
+3. ✅ Ops seed flipped to **1AM** (`mn_addr1tkdkxcz3j…kal30`). Old Lace address is stale (NIGHT moved on Cardano; Lace DUST UI was leftover).
+4. ✅ `midnight:wallet:status` — mainnet synced; Midnight NIGHT 0 (10,100 NIGHT on Cardano); DUST ~6,123 (tank still filling toward ~50.5k).
+5. ✅ [MIP PR #287](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/287) **merged** 2026-08-27.
+6. ✅ All seven circuits live on mainnet (2026-09-04). Volume batch stopped. Type-coverage smokes: Class A `0067fd64…`, EVR `004ef77e…`, clean-MVR `00007a4a…`. Never the keyed URL on Vercel.
+7. ✅ Vercel Production mainnet (2026-09-04). Add `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` + `MIDNIGHT_CONTRACT_ADDRESS_PREVIOUS_EMPLOYER` and redeploy.
+8. ⬜ In-app Vercel prove may still 504 (cold wallet sync). Real EVR card rows still need a DKIM-valid employer reply.
+
+**Ricardo (Foundation, Discord — official deploy procedure). This is the lock; do not reinterpret.**
+
+- Public mainnet nodes **intentionally** drop `contractDeploy` (`1016 Immediately Dropped`). Expected.
+- API key = access to a **private** mainnet node that **permits** `contractDeploy`. Use it for **that transaction only**.
+- After deploy, switch the DApp back to the **regular public** mainnet RPC. Leave the key in the app → key may be **revoked**.
+- DUST is required to deploy. NIGHT lives on Cardano: use **cNIGHT → DUST**, **or** [1AM](https://1am.xyz) DUST sponsorship. **1AM is a wallet/sponsor product, not a clock time.** We already have Lace/server DUST from cNIGHT — 1AM is optional, not a blocker.
+- **Only you** may deploy. Do not share the API key. The Compact contracts are meant to be deployed by this ops wallet.
+
+Code split that implements the above: `MIDNIGHT_DEPLOY_RPC_URL` = keyed submit for `contractDeploy` only; `MIDNIGHT_NODE_RPC_URL` stays public `rpc.mainnet`.
 
 **Gotcha:** Preprod contract addresses are invalid on mainnet. `setNetworkId` must follow `MIDNIGHT_NETWORK` (was cast to `'preprod'`).
 
@@ -1452,6 +1463,8 @@ Every AI session appends one entry here. Newest at top.
 
 | Date | Step(s) | Model | Commit | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-09-04 | **P3.9 all 7 circuits** | Grok | uncommitted | Stopped volume batch. Deployed Class A + EVR. Type smokes: `cdl_class_a` `0067fd64…`, EVR `004ef77e…`, clean-MVR `00007a4a…`. Vercel needs the two new addresses. |
+| 2026-09-03 | **P3.9 mainnet smoke ✅** | Grok | uncommitted | 1AM seed only; Lace cache deleted. `cdl_class` tx `00488add…1827564c` on `28f7c5c9…8388c5`, `paidFees=1` SPECK (~29s). Midnight NIGHT 0 / Cardano 10,100 NIGHT. Vercel still Preprod. |
 | 2026-08-18 | **Card seal + quiet resume** | Grok | uncommitted | Prestige Midnight tiles on career card; resume chips stay small and point at the card. Loader now passes `provenOnMidnight`. |
 | 2026-08-18 | **MVR batch prove stopped** | Grok | uncommitted | Full Preprod backfill killed. Keep smoke rows only; rerun `midnight:prove-batch` on mainnet. Dry-run numbers still valid (574 ready). |
 | 2026-08-18 | **Billboard proves live** | Grok | uncommitted | Deployed `cdl_class` `48450d4b…` / `cdl_endorsements` `47b8d0f9…` / `cdl_restrictions` `fc2ce577…` / `med_cert_valid` `3a57cc27…`. Four smokes on `f6d55342-…` all `predicateEnforced`. **Vercel:** add the four env vars. EV Midnight still needs a DKIM reply. |

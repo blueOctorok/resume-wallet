@@ -7,8 +7,18 @@ import type { VerificationRequest } from '@/types/employment-verification'
 
 const EMPTY_APPLICANT: EvApplicantIdentity = {
   driverName: '',
+  firstName: '',
+  middleName: '',
+  lastName: '',
   dateOfBirth: '',
   ssnLastFour: '',
+  email: '',
+  phone: '',
+  mailingAddress: '',
+  cdlNumber: '',
+  cdlState: '',
+  licenseNumber: '',
+  licenseState: '',
 }
 
 interface EmploymentVerificationBlockState {

@@ -5,6 +5,7 @@ import {
   form3EmployersToCandidateRows,
   isDkimVerifiedRequest,
   mergeDotForm3IntoEmployments,
+  shouldCreateEvPacket,
   type CandidateEmploymentRow,
 } from './candidate-employment-verification'
 
@@ -44,6 +45,13 @@ describe('form3EmployersToCandidateRows', () => {
     expect(rows[0].fromDotDraft).toBe(true)
     expect(rows[0].startDate).toBe('2015-01')
   })
+
+  it('does not create a packet for a current job', () => {
+    const rows = form3EmployersToCandidateRows([
+      { type: 'employment', name: 'Now Trucking', fromDate: '01/2024', toDate: 'Present' },
+    ])
+    expect(rows).toHaveLength(0)
+  })
 })
 
 describe('mergeDotForm3IntoEmployments', () => {
@@ -72,7 +80,7 @@ describe('mergeDotForm3IntoEmployments', () => {
         {
           name: 'Midwest Transport',
           fromDate: '03/2016',
-          toDate: 'Present',
+          toDate: '12/2018',
           hiringManagerName: 'Sam',
         },
       ]),
@@ -127,6 +135,7 @@ describe('extractEvApplicantIdentity', () => {
     expect(id.driverName).toBe('Sam Rivera')
     expect(id.dateOfBirth).toBe('1988-04-12')
     expect(id.ssnLastFour).toBe('6789')
+    expect(id.firstName).toBe('Sam')
   })
 
   it('falls back to Form 1 when the profile is empty', () => {
@@ -135,6 +144,33 @@ describe('extractEvApplicantIdentity', () => {
     })
     expect(id.driverName).toBe('Pat Lee')
     expect(id.dateOfBirth).toBe('1990-06-01')
+  })
+})
+
+describe('shouldCreateEvPacket', () => {
+  it('skips current jobs unless the driver opts in to contact', () => {
+    expect(
+      shouldCreateEvPacket({ name: 'Now Trucking', type: 'employment', toDate: 'Present' }),
+    ).toBe(false)
+    expect(
+      shouldCreateEvPacket({
+        name: 'Now Trucking',
+        type: 'employment',
+        toDate: 'Present',
+        doNotContact: false,
+      }),
+    ).toBe(true)
+  })
+
+  it('skips a past job marked do not contact', () => {
+    expect(
+      shouldCreateEvPacket({
+        name: 'Old Carrier',
+        type: 'employment',
+        toDate: '02/2016',
+        doNotContact: true,
+      }),
+    ).toBe(false)
   })
 })
 

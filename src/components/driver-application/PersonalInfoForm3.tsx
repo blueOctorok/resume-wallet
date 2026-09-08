@@ -96,6 +96,8 @@ export default function PersonalInfoForm3({
       subjectToFMCSR: string
       safetySensitiveFunction: string
       isUnemployment: boolean
+      /** Skip EV packet for this employer (default on current / Present jobs). */
+      doNotContact?: boolean
       schoolName?: string
       courseOfStudy?: string
       militaryBranch?: string
@@ -1359,7 +1361,13 @@ export default function PersonalInfoForm3({
                       </label>
                       <MonthYearPicker
                         value={employer.toDate}
-                        onChange={(value) => handleInputChange('employers', { toDate: value }, index)}
+                        onChange={(value) => {
+                          const patch: { toDate: string; doNotContact?: boolean } = { toDate: value }
+                          if (value.toLowerCase() === 'present' && employer.doNotContact === undefined) {
+                            patch.doNotContact = true
+                          }
+                          handleInputChange('employers', patch, index)
+                        }}
                         placeholder="Select end date"
                         allowPresent={index === 0}
                         error={!!errors[`employer${index}ToDate`] || dateOrderError}
@@ -1382,6 +1390,28 @@ export default function PersonalInfoForm3({
                     }`}>
                       💡 Start with your most recent/current position. Select "Present" if you're still here.
                     </div>
+                  )}
+                  {entryType === 'employment' && (
+                    <label className='flex items-start gap-2 text-sm text-[#173150]'>
+                      <input
+                        type='checkbox'
+                        checked={
+                          employer.doNotContact === true ||
+                          (employer.doNotContact !== false &&
+                            employer.toDate?.toLowerCase() === 'present')
+                        }
+                        onChange={(e) =>
+                          handleInputChange('employers', { doNotContact: e.target.checked }, index)
+                        }
+                        className='mt-0.5 accent-[#173150]'
+                      />
+                      <span>
+                        Do not contact this employer for employment verification.
+                        {employer.toDate?.toLowerCase() === 'present'
+                          ? ' Checked by default for your current job.'
+                          : ''}
+                      </span>
+                    </label>
                   )}
                 </>
               )

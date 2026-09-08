@@ -32,6 +32,7 @@ function mockSupabase(opts: {
       })),
     })),
     update: vi.fn(() => ({ eq: updateEq })),
+    insert: vi.fn().mockResolvedValue({ error: null }),
   }))
   return { client: { from } as unknown as SupabaseClient, updateEq }
 }

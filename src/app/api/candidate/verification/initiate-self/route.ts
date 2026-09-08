@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { verificationKey, previousEmployerEmail, previousEmployerPhone } = body as {
+    const { verificationKey, previousEmployerEmail, previousEmployerPhone, correctionOf } = body as {
       verificationKey?: string
       previousEmployerEmail?: string
       previousEmployerPhone?: string
+      correctionOf?: string
     }
 
     if (!verificationKey || typeof verificationKey !== 'string') {
@@ -87,15 +88,17 @@ export async function POST(request: NextRequest) {
 
     const applicantType = applicantTypeForSource(row.source)
 
-    const { data: existingRequest } = await supabase
-      .from('employment_verification_requests')
-      .select('id, status')
-      .eq('driver_id', userId)
-      .eq('employment_id', verificationKey)
-      .eq('initiated_by', 'applicant')
-      .eq('applicant_type', applicantType)
-      .not('status', 'in', '("ATTEMPTS_EXHAUSTED","VERIFICATION_DENIED","VERIFICATION_DECLINED")')
-      .maybeSingle()
+    const { data: existingRequest } = correctionOf
+      ? { data: null }
+      : await supabase
+          .from('employment_verification_requests')
+          .select('id, status')
+          .eq('driver_id', userId)
+          .eq('employment_id', verificationKey)
+          .eq('initiated_by', 'applicant')
+          .eq('applicant_type', applicantType)
+          .not('status', 'in', '("ATTEMPTS_EXHAUSTED","VERIFICATION_DENIED","VERIFICATION_DECLINED")')
+          .maybeSingle()
 
     if (existingRequest) {
       return NextResponse.json(
@@ -125,6 +128,7 @@ export async function POST(request: NextRequest) {
       status: 'VERIFICATION_REQUESTED',
       attempt_count: 0,
       next_attempt_at: new Date().toISOString(),
+      ...(typeof correctionOf === 'string' && correctionOf ? { correction_of: correctionOf } : {}),
     }
 
     const { data: newRequest, error: insertError } = await supabase
@@ -184,6 +188,22 @@ export async function POST(request: NextRequest) {
       if (!emailResult.ok) {
         console.warn('[CANDIDATE VERIFICATION] Email send failed:', emailResult.error)
       }
+      const now = new Date().toISOString()
+      await supabase.from('verification_attempts').insert({
+        verification_request_id: String((newRequest as { id: string }).id),
+        attempt_number: 1,
+        method: 'email',
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+      })
+      await supabase
+        .from('employment_verification_requests')
+        .update({
+          attempt_count: 1,
+          last_attempt_at: now,
+          status: 'VERIFICATION_IN_PROGRESS',
+        })
+        .eq('id', (newRequest as { id: string }).id)
     }
 
     return NextResponse.json({

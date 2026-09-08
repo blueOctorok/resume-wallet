@@ -243,17 +243,24 @@ export async function buildProjectedCareerCard(
     )
   }
 
-  const [{ data: evrRows }, attestedFacts] = await Promise.all([
+  const [evrResult, attestedFacts] = await Promise.all([
     supabase
       .from('employment_verification_requests')
       .select(
-        'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at',
+        'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at, driver_share_consent, driver_hidden',
       )
       .eq('driver_id', userId)
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+      .eq('driver_share_consent', 'share')
+      .eq('driver_hidden', false)
       .order('verified_at', { ascending: false }),
     loadCardAttestedFacts(supabase, userId),
   ])
+
+  if (evrResult.error) {
+    console.warn('[CAREER CARD] EV share filter skipped (apply migration 108):', evrResult.error.message)
+  }
+  const evrRows = evrResult.error ? [] : evrResult.data
 
   const employerConfirmations = (evrRows ?? []).map((row) => ({
     companyName: String(row.previous_employer_name ?? 'Employer'),

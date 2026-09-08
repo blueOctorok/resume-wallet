@@ -185,6 +185,14 @@ export async function processEvrInboundEmail(
     return { ok: false, error: error.message }
   }
 
+  if (patch.status === 'VERIFIED' || patch.status === 'VERIFICATION_DENIED') {
+    const { notifyDriverEvrReturned } = await import('@/lib/notify-evr-returned')
+    void notifyDriverEvrReturned(supabase, {
+      driverId: String(request.driver_id),
+      employerName: String(request.previous_employer_name ?? ''),
+    }).catch((err) => console.warn('[EVR INBOUND] Driver notify non-fatal:', err))
+  }
+
   return { ok: true, requestId: String(request.id), dkimValid }
 }
 

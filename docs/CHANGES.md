@@ -4,6 +4,86 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV block follows the driver-packet instructions** (2026-09-08)
+
+Boss notes (“Steps Provven needs to do on EV”) are now the candidate flow:
+
+- One **authorization + Safety Performance History** packet per former employer, filled from the DOT app.
+- Current jobs (and any “do not contact” employer) do **not** get a packet unless the driver opts in on Form 3.
+- Driver signs and checks **I agree to send through Provven** using their email on file.
+- Sends are tracked **up to 3 times**.
+- When the employer replies (portal or DKIM email), the driver is notified and must **review** before anything hits the career card: share / do not share / hide. A correction is a **new** packet — the original stays.
+- Career card only shows packets with `driver_share_consent = share` and not hidden.
+
+Apply migration `108_evr_driver_review.sql`.
+
+---
+
+## **Vercel Production Midnight env verified** (2026-09-04)
+
+Pulled Production on `storm-chain/stormchain`: `MIDNIGHT_NETWORK=mainnet`, public mainnet RPC/indexer, Fly proof URL, all **seven** contract addresses match live mainnet. Wallet mnemonic is set. **Remove `MIDNIGHT_DEPLOY_RPC_URL` from Vercel** — it is the keyed Foundation node; Ricardo will revoke if it stays in the app. Then redeploy. Unattended proves still need a Fly worker.
+
+---
+
+## **Vercel Production on mainnet + batch prove** (2026-09-04)
+
+Production env flipped + redeployed: public `rpc.mainnet` / indexer v4 + the five live billboard addresses. Never the keyed deploy URL. `ATTESTATION_BACKEND=midnight` stays.
+
+Volume batch **stopped** (goal is one smoke per circuit type). All **seven** Compact circuits now have a mainnet tx (`paidFees=1`). New deploys: `cdl_class_a` `d3644533…b219608f`, `previous_employer_verified` `83983ccd…01b69161`. Add those two env vars on Vercel Production.
+
+| Circuit | Mainnet tx (sample) | `predicateEnforced` |
+|---|---|---|
+| `cdl_class` | `00488add…` / batch | true |
+| `cdl_endorsements` | batch | true |
+| `cdl_restrictions` | batch | true |
+| `med_cert_valid` | batch | true |
+| `cdl_class_a` | `0067fd64…d798d5a2` | false (boolean circuit) |
+| `previous_employer_verified` | `004ef77e…96c5e1b9` | false (DKIM circuit) |
+| `mvr_clean_36_months` | `00007a4a…281023e1` | true |
+
+---
+
+## **First mainnet prove smoke** (2026-09-03)
+
+Chain-only `cdl_class` (class A) on the live billboard. Ops seed is the **1AM** mnemonic (`MIDNIGHT_WALLET_MNEMONIC` only; Lace cache deleted). Wallet: Midnight NIGHT `0` (10,100 NIGHT stays on Cardano), DUST tank ~6,123 DUST and still filling.
+
+| Field | Value |
+|---|---|
+| Tx | `00488addf9044ef04c247316a2c3e65215abd11b574ddc3d646d137ffe1827564c` |
+| Contract | `28f7c5c9720fd79fa364ecfacd02b267fa04fdd2820defa9641e4ff37b8388c5` |
+| `paidFees` | **1 SPECK** (~29s, `predicateEnforced`) |
+| Unshielded | `mn_addr1tkdkxcz3j…kal30` |
+
+Same 1-SPECK fee as Preprod — do not treat that as a forever mainnet schedule. Vercel stays Preprod until the env flip (public RPC + these addresses; never the keyed deploy URL). Still Preprod-only: `cdl_class_a`, `previous_employer_verified`.
+
+---
+
+## **Deploy submit returns the indexer identifier** (2026-09-02)
+
+Keyed submit still POSTs `author_submitExtrinsic`, but `submitTx` now returns `tx.identifiers().at(-1)` — same id the wallet SDK and `watchForTxData` use. Four more mainnet billboards deployed and the CLI exited: `cdl_class`, `cdl_endorsements`, `cdl_restrictions`, `med_cert_valid`. Addresses in `.env.local` + `midnight/deployment.mainnet.json`. Still Preprod-only: `cdl_class_a`, `previous_employer_verified`. Vercel stays Preprod until a mainnet smoke prove.
+
+---
+
+## **First mainnet contract is live** (2026-09-02)
+
+`mvr_clean_36_months` deployed in block **2406804**. Keyed `author_submitExtrinsic` succeeded; the CLI hung ~4h because it watched the **Substrate extrinsic hash** (`0xb4e673…`) while the indexer keys the **Midnight tx** (`0xa890d783…`). Address: `477ba559…1479401a` in `midnight/deployment.mainnet.json`. Safe to Ctrl+C that process.
+
+---
+
+## **Mainnet deploy hang — indexer wait, not prove** (2026-09-01)
+
+`npm run midnight:deploy` sat ~80+ min on “Submitting contractDeploy…”. That log printed *before* prove/submit. The process was idle (0.4% CPU), sockets only to `indexer.mainnet`, no TCP to Fly or the keyed RPC. Local Docker `/health` was a false green: `.env.local` points at Fly; the health script does not load `.env.local`.
+
+midnight-js `submitTx` proves, submits, then **`watchForTxData` polls the public indexer forever**. Kill and restart. New logs: `Creating providers` → `Proving` → `POST author_submitExtrinsic` + hash. Keyed submit now has a 90s timeout.
+
+---
+
+## **Ricardo mainnet deploy procedure locked** (2026-09-01)
+
+Foundation (Ricardo) confirmed: public RPC 1016s `contractDeploy` on purpose; keyed private node is **deploy-only**; switch back to public RPC after deploy or the key can be revoked; DUST via **cNIGHT or 1AM sponsorship** (1AM = https://1am.xyz, not 1:00 AM); **only you** deploy, key is not shareable. Written into `EXECUTION_CHECKLIST.md` P3.9. We already have Lace DUST from cNIGHT — 1AM is optional.
+
+---
+
 ## **Team invite link — Provven + copy + reopen** (2026-09-01)
 
 Invite URLs were built from raw `NEXT_PUBLIC_APP_URL`, so a stale `zknight.io` env produced a dead host. The success box was a clipped URL with no obvious Copy, and closing the modal lost the link.

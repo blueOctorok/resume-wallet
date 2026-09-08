@@ -252,7 +252,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     id: 'general-employment-verification',
     label: 'Employment Verification',
     description:
-      'Official safety-performance history form (§ 391.23). Jobs fill from your DOT application. Verified only when the previous employer replies and DKIM passes.',
+      'Authorization + safety-performance history packet per former employer. Current jobs stay private unless you opt in. Share a returned packet on your career card only after you review it.',
     icon: 'ShieldCheck',
     categoryId: 'drivers',
     suggestedFor: [

@@ -113,6 +113,11 @@ export interface VerificationRequest {
   /** Inbound reply DKIM passed and domain aligned with the invited mailbox. */
   dkimValid?: boolean
   dkimDomain?: string | null
+
+  driverReviewedAt?: string | null
+  driverShareConsent?: 'share' | 'hold' | null
+  driverHidden?: boolean
+  correctionOf?: string | null
   
   // Token for previous employer (not exposed to frontend except in portal)
   verificationToken?: string
@@ -205,6 +210,10 @@ export interface VerificationRequestRow {
   finalized_at: string | null
   dkim_valid?: boolean
   dkim_domain?: string | null
+  driver_reviewed_at?: string | null
+  driver_share_consent?: 'share' | 'hold' | null
+  driver_hidden?: boolean
+  correction_of?: string | null
 }
 
 export interface VerificationAttemptRow {
@@ -257,6 +266,10 @@ export function rowToVerificationRequest(
     verificationMethod: row.verification_method as VerificationRequest['verificationMethod'],
     dkimValid: Boolean(row.dkim_valid),
     dkimDomain: row.dkim_domain ?? null,
+    driverReviewedAt: row.driver_reviewed_at ?? null,
+    driverShareConsent: row.driver_share_consent ?? null,
+    driverHidden: Boolean(row.driver_hidden),
+    correctionOf: row.correction_of ?? null,
     answers: row.dates_correct ? {
       datesCorrect: row.dates_correct,
       correctedStartDate: row.corrected_start_date || undefined,

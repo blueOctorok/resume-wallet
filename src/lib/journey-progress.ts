@@ -205,7 +205,7 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
         id: 'general-employment-verification',
         label: 'Employment date verification',
         description:
-          'Official § 391.23 form. Jobs fill from your DOT file. Verified only after a DKIM-backed previous-employer reply.',
+          'Sign the authorization, send the packet (up to 3 times), review the return, then choose whether to share it.',
         status: d.employmentVerificationVerified
           ? 'complete'
           : d.employmentVerificationPending
