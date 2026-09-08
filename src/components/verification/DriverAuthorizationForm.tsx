@@ -261,8 +261,8 @@ export default function DriverAuthorizationForm({
             />
             <span>
               I agree to send this authorization and Safety Performance History request to the past
-              employer through Provven, using my email on file ({applicant.email || 'add an email
-              on your profile'}) as the driver contact.
+              employer through Provven, using my email on file (
+              {applicant.email || 'add an email on your profile'}) as the driver contact.
             </span>
           </label>
           <Button

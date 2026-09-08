@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV authorization copy no longer splits a string** (2026-09-08)
+
+Vercel `next build` died on an unterminated quote in `DriverAuthorizationForm` (the “add an email on your profile” fallback wrapped across two lines). One string now.
+
+---
+
 ## **EV block follows the driver-packet instructions** (2026-09-08)
 
 Boss notes (“Steps Provven needs to do on EV”) are now the candidate flow:
