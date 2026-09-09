@@ -6,6 +6,7 @@ import {
   isDkimVerifiedRequest,
   mergeDotForm3IntoEmployments,
   shouldCreateEvPacket,
+  shouldHoldEvSend,
   type CandidateEmploymentRow,
 } from './candidate-employment-verification'
 
@@ -46,11 +47,13 @@ describe('form3EmployersToCandidateRows', () => {
     expect(rows[0].startDate).toBe('2015-01')
   })
 
-  it('does not create a packet for a current job', () => {
+  it('creates a packet for a current job and marks it hold-by-default', () => {
     const rows = form3EmployersToCandidateRows([
       { type: 'employment', name: 'Now Trucking', fromDate: '01/2024', toDate: 'Present' },
     ])
-    expect(rows).toHaveLength(0)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].isCurrent).toBe(true)
+    expect(shouldHoldEvSend(rows[0])).toBe(true)
   })
 })
 
@@ -148,21 +151,13 @@ describe('extractEvApplicantIdentity', () => {
 })
 
 describe('shouldCreateEvPacket', () => {
-  it('skips current jobs unless the driver opts in to contact', () => {
+  it('includes current jobs — send is opt-out, not hidden', () => {
     expect(
       shouldCreateEvPacket({ name: 'Now Trucking', type: 'employment', toDate: 'Present' }),
-    ).toBe(false)
-    expect(
-      shouldCreateEvPacket({
-        name: 'Now Trucking',
-        type: 'employment',
-        toDate: 'Present',
-        doNotContact: false,
-      }),
     ).toBe(true)
   })
 
-  it('skips a past job marked do not contact', () => {
+  it('still creates a packet when the driver prefers no contact', () => {
     expect(
       shouldCreateEvPacket({
         name: 'Old Carrier',
@@ -170,7 +165,15 @@ describe('shouldCreateEvPacket', () => {
         toDate: '02/2016',
         doNotContact: true,
       }),
-    ).toBe(false)
+    ).toBe(true)
+  })
+})
+
+describe('shouldHoldEvSend', () => {
+  it('defaults hold on for current jobs and prefer-no-contact', () => {
+    expect(shouldHoldEvSend({ ...driverRow({}), endDate: '', isCurrent: true })).toBe(true)
+    expect(shouldHoldEvSend({ ...driverRow({}), preferNoContact: true })).toBe(true)
+    expect(shouldHoldEvSend(driverRow({ endDate: '2016-02', isCurrent: false }))).toBe(false)
   })
 })
 

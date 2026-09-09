@@ -27,6 +27,18 @@ export interface CandidateEmploymentRow {
   reasonForLeaving?: string
   /** From Form 3 only — not a block_driver_employment row (do not DELETE it). */
   fromDotDraft?: boolean
+  isCurrent?: boolean
+  /** Driver prefers we not send — packet still exists; send stays opt-in. */
+  preferNoContact?: boolean
+}
+
+export function isCurrentEmploymentRow(row: CandidateEmploymentRow): boolean {
+  return row.isCurrent === true || !String(row.endDate ?? '').trim()
+}
+
+/** Current job or Form 3 "prefer not to contact" — default the send opt-out on. */
+export function shouldHoldEvSend(row: CandidateEmploymentRow): boolean {
+  return Boolean(row.preferNoContact) || isCurrentEmploymentRow(row)
 }
 
 export function compositeVerificationKey(
@@ -134,13 +146,9 @@ type Form3EmployerLoose = {
   doNotContact?: boolean
 }
 
-/** Current jobs stay off EV unless the driver unchecks "do not contact". */
+/** Real employers always get a packet — current jobs included. Send is opt-out, not hidden. */
 export function shouldCreateEvPacket(emp: Form3EmployerLoose): boolean {
-  if (!isRealEmployer(emp)) return false
-  if (emp.doNotContact === true) return false
-  const isCurrent = emp.toDate?.trim().toLowerCase() === 'present'
-  if (isCurrent && emp.doNotContact !== false) return false
-  return true
+  return isRealEmployer(emp)
 }
 
 function isRealEmployer(emp: Form3EmployerLoose): boolean {
@@ -162,8 +170,8 @@ export function form3EmployersToCandidateRows(
     if (!shouldCreateEvPacket(emp)) return
     const id = emp.id?.trim() || `dot-form3-${index}`
     const startDate = form3DateToProfileDate(emp.fromDate ?? '')
-    const endDate =
-      emp.toDate?.toLowerCase() === 'present' ? '' : form3DateToProfileDate(emp.toDate ?? '')
+    const isCurrent = emp.toDate?.toLowerCase() === 'present'
+    const endDate = isCurrent ? '' : form3DateToProfileDate(emp.toDate ?? '')
     rows.push({
       verificationKey: compositeVerificationKey('driver', id),
       source: 'driver',
@@ -179,6 +187,8 @@ export function form3EmployersToCandidateRows(
       supervisorPhone: emp.hiringManagerPhone?.trim() || emp.phone?.trim() || undefined,
       reasonForLeaving: emp.reasonForLeaving?.trim() || undefined,
       fromDotDraft: true,
+      isCurrent,
+      preferNoContact: emp.doNotContact === true,
     })
   })
   return rows
@@ -212,6 +222,8 @@ export function mergeDotForm3IntoEmployments(
       supervisorPhone: prev.supervisorPhone || incoming.supervisorPhone,
       reasonForLeaving: prev.reasonForLeaving || incoming.reasonForLeaving,
       location: prev.location || incoming.location,
+      isCurrent: prev.isCurrent || incoming.isCurrent,
+      preferNoContact: prev.preferNoContact || incoming.preferNoContact,
     }
   }
   return next
@@ -263,6 +275,7 @@ export async function getMergedCandidateEmployments(
       supervisorEmail: e.supervisorEmail,
       supervisorPhone: e.supervisorPhone,
       reasonForLeaving: e.reasonForLeaving,
+      isCurrent: e.isCurrent || !String(e.endDate ?? '').trim(),
     })
   }
 

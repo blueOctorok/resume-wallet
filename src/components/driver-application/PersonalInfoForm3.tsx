@@ -1406,9 +1406,9 @@ export default function PersonalInfoForm3({
                         className='mt-0.5 accent-[#173150]'
                       />
                       <span>
-                        Do not contact this employer for employment verification.
+                        Prefer not to send employment verification to this employer.
                         {employer.toDate?.toLowerCase() === 'present'
-                          ? ' Checked by default for your current job.'
+                          ? ' Default for a current job — you can still send later if you need to (for example, a layoff).'
                           : ''}
                       </span>
                     </label>

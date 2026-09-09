@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV paper is the full § 391.23 form; current jobs are opt-out** (2026-09-09)
+
+The official Safety Performance History request is one paper again: Section 1 (driver authorization + send), Section 2 (employer response, including drug/alcohol § 40.25), Section 3 (attempts). Current employers stay on the list. Send defaults to **Do not send to my current employer** — uncheck if they want it sent (layoff). Form 3 “prefer not to contact” is the same preference, not a hidden packet.
+
+---
+
 ## **EV authorization copy no longer splits a string** (2026-09-08)
 
 Vercel `next build` died on an unterminated quote in `DriverAuthorizationForm` (the “add an email on your profile” fallback wrapped across two lines). One string now.

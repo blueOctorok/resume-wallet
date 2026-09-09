@@ -1,13 +1,30 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { DOT_PAPER_INPUT } from '@/lib/dot-form-paper'
+import Button from '@/components/ui/Button'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import type { CandidateEmploymentRow, EvApplicantIdentity } from '@/lib/candidate-employment-verification'
-import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
+import {
+  isDkimVerifiedRequest,
+  shouldHoldEvSend,
+} from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
+import { Loader2, Send } from 'lucide-react'
 
 function paperDate(value: string | null | undefined): string {
   if (!value) return 'Present'
   const ym = value.match(/^(\d{4})-(\d{2})/)
   if (ym) return `${ym[2]}/${ym[1]}`
+  return value
+}
+
+function formatDob(value: string): string {
+  if (!value) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-')
+    return `${m}/${d}/${y}`
+  }
   return value
 }
 
@@ -47,15 +64,42 @@ function Check({ checked, label }: { checked: boolean; label: string }) {
   )
 }
 
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export default function SafetyPerformanceHistoryPaper({
   applicant,
   employment,
   request,
+  sending,
+  onSend,
 }: {
   applicant: EvApplicantIdentity
   employment: CandidateEmploymentRow
   request?: VerificationRequest
+  sending: boolean
+  onSend: (contact: { email: string; phone: string; signature: string; date: string }) => void
 }) {
+  const holdDefault = shouldHoldEvSend(employment)
+  const [email, setEmail] = useState(employment.supervisorEmail ?? '')
+  const [phone, setPhone] = useState(employment.supervisorPhone ?? '')
+  const [address, setAddress] = useState(employment.location ?? '')
+  const [signature, setSignature] = useState('')
+  const [signatureDate, setSignatureDate] = useState(todayIso())
+  const [agreeSend, setAgreeSend] = useState(false)
+  const [doNotSend, setDoNotSend] = useState(holdDefault)
+
+  useEffect(() => {
+    setEmail(employment.supervisorEmail ?? '')
+    setPhone(employment.supervisorPhone ?? '')
+    setAddress(employment.location ?? '')
+    setSignature('')
+    setSignatureDate(todayIso())
+    setAgreeSend(false)
+    setDoNotSend(shouldHoldEvSend(employment))
+  }, [employment.verificationKey, employment.supervisorEmail, employment.supervisorPhone, employment.location])
+
   const dkimVerified = isDkimVerifiedRequest(request)
   const hasReply = Boolean(
     request?.answers ||
@@ -78,7 +122,15 @@ export default function SafetyPerformanceHistoryPaper({
     answers?.datesCorrect === 'partial' && answers.correctedEndDate
       ? answers.correctedEndDate
       : request?.claimedEndDate ?? employment.endDate
-  const driverContact = [applicant.email, applicant.phone].filter(Boolean).join(' · ')
+
+  const canSend = Boolean(
+    !sent &&
+      !doNotSend &&
+      signature.trim() &&
+      signatureDate &&
+      agreeSend &&
+      (email.trim() || phone.trim()),
+  )
 
   return (
     <div className='space-y-6 text-[#173150] [color-scheme:light]'>
@@ -86,28 +138,156 @@ export default function SafetyPerformanceHistoryPaper({
         <h2 className='text-lg font-semibold tracking-tight sm:text-xl'>
           Safety Performance History Records Request
         </h2>
-        <p className='mt-0.5 text-sm text-[#173150]/70'>Driver-retained employer response form</p>
+        <p className='mt-0.5 text-sm text-[#173150]/70'>(Employment Verification)</p>
         <p className='mt-1 text-xs text-[#173150]/55'>Required by 49 CFR § 391.23</p>
       </header>
 
-      <p className='text-xs text-[#173150]/65'>
-        Records holder: complete Parts 2–5 and return this form to the driver through Provven. The
-        signed authorization above applies and stays attached.
+      <p className='rounded-lg border border-[#173150]/15 bg-white/70 px-3 py-2 text-xs text-[#173150]/75'>
+        Section 1 is from your DOT application and profile — self-reported, not verified. Section 2
+        is for the previous employer. A reply is verified only when DKIM on that email passes.
       </p>
 
       <section>
         <h3 className='mb-3 border-b border-[#173150]/25 pb-1 text-sm font-semibold uppercase tracking-wide'>
-          Part 1 – Driver / Request Identification
+          Section 1 – Driver/Applicant Authorization
         </h3>
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <PaperLine label='Driver Name' value={applicant.driverName} />
-          <PaperLine label='Former Employer / Records Holder' value={employment.companyName} />
           <PaperLine
-            label='Employment Dates'
-            value={`${paperDate(employment.startDate)} – ${paperDate(employment.endDate)}`}
+            label='SSN (optional)'
+            value={applicant.ssnLastFour ? `XXX-XX-${applicant.ssnLastFour}` : ''}
           />
-          <PaperLine label='Driver Contact' value={driverContact} />
+          <PaperLine label='Date of Birth' value={formatDob(applicant.dateOfBirth)} />
+          <PaperLine label='Previous Employer' value={employment.companyName} />
         </div>
+        <div className='mt-4'>
+          {sent ? (
+            <PaperLine label='Employer Address' value={address} />
+          ) : (
+            <div>
+              <label className='text-[11px] font-semibold uppercase tracking-wide text-[#173150]/65'>
+                Employer Address
+              </label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={2}
+                className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+              />
+            </div>
+          )}
+        </div>
+        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3'>
+          <PaperLine label='Employment Dates From' value={paperDate(employment.startDate)} />
+          <PaperLine label='Employment Dates To' value={paperDate(employment.endDate)} />
+          <PaperLine label='Position Held' value={employment.position} />
+        </div>
+
+        <p className='mt-4 text-sm leading-relaxed text-[#173150]/90'>
+          I hereby authorize you to release all information on my employment, accident, and safety
+          performance history, including any alcohol and controlled substances testing information,
+          in accordance with 49 CFR § 391.23. I understand that I have the right to review this
+          information, request correction of errors, and have a copy furnished to me.
+        </p>
+
+        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          <div>
+            <label className='text-[11px] font-semibold uppercase tracking-wide text-[#173150]/65'>
+              Driver Signature
+            </label>
+            <input
+              type='text'
+              value={sent ? applicant.driverName || 'Signed when sent' : signature}
+              onChange={(e) => setSignature(e.target.value)}
+              disabled={sent}
+              placeholder='Type your full name'
+              className='mt-0.5 w-full border-0 border-b border-[#173150]/35 bg-transparent px-0 py-1.5 text-sm text-[#173150]'
+            />
+          </div>
+          <div>
+            <label className='text-[11px] font-semibold uppercase tracking-wide text-[#173150]/65'>
+              Date
+            </label>
+            <input
+              type='date'
+              value={sent ? (request?.createdAt ?? signatureDate).slice(0, 10) : signatureDate}
+              onChange={(e) => setSignatureDate(e.target.value)}
+              disabled={sent}
+              className='mt-0.5 w-full border-0 border-b border-[#173150]/35 bg-transparent px-0 py-1.5 text-sm text-[#173150]'
+            />
+          </div>
+        </div>
+
+        {!sent && (
+          <div className='mt-4 space-y-3'>
+            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+              <div>
+                <label className='text-[11px] font-semibold uppercase tracking-wide text-[#173150]/65'>
+                  Previous employer email
+                </label>
+                <input
+                  type='email'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder='hr@previous-employer.com'
+                  className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+                />
+              </div>
+              <div>
+                <label className='text-[11px] font-semibold uppercase tracking-wide text-[#173150]/65'>
+                  Phone (optional)
+                </label>
+                <PhoneInput
+                  value={phone}
+                  onChange={setPhone}
+                  className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+                />
+              </div>
+            </div>
+
+            {holdDefault && (
+              <label className='flex items-start gap-2 rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-sm'>
+                <input
+                  type='checkbox'
+                  checked={doNotSend}
+                  onChange={(e) => setDoNotSend(e.target.checked)}
+                  className='mt-0.5 accent-[#173150]'
+                />
+                <span>
+                  Do not send this to my current employer. Uncheck only if you want them contacted
+                  (for example, a layoff).
+                </span>
+              </label>
+            )}
+
+            <label className='flex items-start gap-2 text-sm'>
+              <input
+                type='checkbox'
+                checked={agreeSend}
+                onChange={(e) => setAgreeSend(e.target.checked)}
+                disabled={doNotSend}
+                className='mt-0.5 accent-[#173150]'
+              />
+              <span>
+                I agree to send this authorization and Safety Performance History request through
+                Provven, using my email on file ({applicant.email || 'add an email on your profile'})
+                as the driver contact.
+              </span>
+            </label>
+
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
+              disabled={!canSend || sending}
+              onClick={() => onSend({ email, phone, signature, date: signatureDate })}
+              className='inline-flex items-center gap-2'
+            >
+              {sending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
+              {sending ? 'Sending…' : 'Send employment verification'}
+            </Button>
+          </div>
+        )}
       </section>
 
       <section>
@@ -128,8 +308,7 @@ export default function SafetyPerformanceHistoryPaper({
         )}
         {!hasReply && (
           <p className='mb-3 text-xs text-[#173150]/55'>
-            Locked until the previous employer responds. You cannot fill this from the DOT
-            application.
+            The previous employer fills this section. It stays blank until they reply.
           </p>
         )}
 
@@ -139,25 +318,17 @@ export default function SafetyPerformanceHistoryPaper({
               label='Company Name'
               value={hasReply ? (request?.previousEmployerName ?? employment.companyName) : ''}
             />
-            <PaperLine
-              label='Phone'
-              value={hasReply ? (request?.previousEmployerPhone ?? '') : ''}
-            />
+            <PaperLine label='Phone' value={hasReply ? (request?.previousEmployerPhone ?? '') : ''} />
             <PaperLine
               label='Address'
               value={hasReply ? (request?.previousEmployerAddress ?? '') : ''}
               className='sm:col-span-2'
             />
             <PaperLine label='Person Completing Form' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
+            <PaperLine label='Title' value={hasReply ? (request?.verifiedByTitle ?? '') : ''} />
             <PaperLine
-              label='Title / Date'
-              value={
-                hasReply
-                  ? [request?.verifiedByTitle, request?.verifiedAt ? paperDate(request.verifiedAt) : '']
-                      .filter(Boolean)
-                      .join(' · ')
-                  : ''
-              }
+              label='Date'
+              value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
             />
           </div>
 
@@ -165,10 +336,7 @@ export default function SafetyPerformanceHistoryPaper({
             Employment Verification
           </p>
           <div className='mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2'>
-            <PaperLine
-              label='Employment Dates From'
-              value={hasReply ? paperDate(verifiedDatesFrom) : ''}
-            />
+            <PaperLine label='Employment Dates From' value={hasReply ? paperDate(verifiedDatesFrom) : ''} />
             <PaperLine
               label='Employment Dates To'
               value={hasReply ? paperDate(verifiedDatesTo ?? null) : ''}
@@ -237,6 +405,26 @@ export default function SafetyPerformanceHistoryPaper({
             />
           </div>
 
+          <p className='mt-5 text-xs font-semibold uppercase tracking-wide text-[#173150]/65'>
+            Drug and Alcohol (49 CFR § 40.25)
+          </p>
+          <div className='mt-2 space-y-2 text-sm'>
+            <div className='flex flex-wrap gap-4'>
+              <span className='font-medium'>Failed a Clearinghouse / post-accident test?</span>
+              <Check checked={hasReply && answers?.failedClearinghouseTest === 'yes'} label='Yes' />
+              <Check checked={hasReply && answers?.failedClearinghouseTest === 'no'} label='No' />
+              <Check checked={hasReply && answers?.failedClearinghouseTest === 'na'} label='N/A' />
+            </div>
+            <PaperLine label='Notes' value={hasReply ? (answers?.clearinghouseNotes ?? '') : ''} />
+            <div className='flex flex-wrap gap-4'>
+              <span className='font-medium'>Random drug test or refused a test?</span>
+              <Check checked={hasReply && answers?.randomDrugTestOrRefused === 'yes'} label='Yes' />
+              <Check checked={hasReply && answers?.randomDrugTestOrRefused === 'no'} label='No' />
+              <Check checked={hasReply && answers?.randomDrugTestOrRefused === 'na'} label='N/A' />
+            </div>
+            <PaperLine label='Details' value={hasReply ? (answers?.drugTestDetails ?? '') : ''} />
+          </div>
+
           <p className='mt-5 text-xs leading-relaxed text-[#173150]/70'>
             Certification by Previous Employer — This information is provided in accordance with 49
             CFR § 391.23(d) and § 40.25(h).
@@ -244,6 +432,11 @@ export default function SafetyPerformanceHistoryPaper({
           <div className='mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2'>
             <PaperLine label='Signature' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
             <PaperLine label='Printed Name' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
+            <PaperLine label='Title' value={hasReply ? (request?.verifiedByTitle ?? '') : ''} />
+            <PaperLine
+              label='Date'
+              value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
+            />
           </div>
         </div>
       </section>

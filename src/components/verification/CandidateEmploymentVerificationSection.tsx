@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
 import Button from '@/components/ui/Button'
-import DriverAuthorizationForm from './DriverAuthorizationForm'
 import SafetyPerformanceHistoryPaper from './SafetyPerformanceHistoryPaper'
 import {
   findApplicantVerificationsForRow,
@@ -163,8 +162,8 @@ export default function CandidateEmploymentVerificationSection({
     return (
       <div className='py-2'>
         <p className='mb-4 text-sm text-[#173150]/75'>
-          No former employers to verify. Fill <strong className='font-medium'>DOT Form 3</strong>.
-          Current jobs stay off this list unless you uncheck “do not contact.”
+          No employers on file yet. Fill <strong className='font-medium'>DOT Form 3</strong>. Current
+          jobs appear here too — you can choose not to send.
         </p>
         <Button
           type='button'
@@ -359,20 +358,13 @@ export default function CandidateEmploymentVerificationSection({
       )}
 
       {selected && (
-        <div className='space-y-8'>
-          <DriverAuthorizationForm
-            applicant={applicant}
-            employment={selected}
-            sent={sent}
-            sending={initiatingKey === selected.verificationKey}
-            onSend={({ email, phone }) => initiateVerification(selected, email, phone)}
-          />
-          <SafetyPerformanceHistoryPaper
-            applicant={applicant}
-            employment={selected}
-            request={request}
-          />
-        </div>
+        <SafetyPerformanceHistoryPaper
+          applicant={applicant}
+          employment={selected}
+          request={request}
+          sending={initiatingKey === selected.verificationKey}
+          onSend={({ email, phone }) => initiateVerification(selected, email, phone)}
+        />
       )}
     </div>
   )
