@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV packet is 4-part driver auth + 5-part SPHRR** (2026-09-09)
+
+`docs/AUTH_FORM.md` is the count. Page 1: (1) applicant ID, (2) previous employer to contact, (3) § 391.23 release + rights, (4) § 40.25 release + signature. Page 2: (1) completing employer, (2) employment verification, (3) accident history, (4) six D&A questions, (5) record of attempts.
+
+---
+
+## **EV packet is the full 2+2 DOT form** (2026-09-09)
+
+Page 1 is **Driver Authorization to Release DOT Information**: Part 1 safety performance (§ 391.23 + review/correction/rebuttal rights) and Part 2 alcohol and controlled substances (§ 40.25). Page 2 is **Safety Performance History**: Part 1 employment/accidents (§ 390.15 register) and Part 2 the six official drug-and-alcohol questions. `docs/AUTH_FORM.md` is that complete packet.
+
+---
+
 ## **EV page 1 starts as driver authorization** (2026-09-09)
 
 Page 1 title is **Section 1 – Driver/Applicant Authorization**, not Safety Performance History. Page 2 is the records-holder SPHRR sheet.

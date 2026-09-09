@@ -8,13 +8,7 @@ import type { CandidateEmploymentRow, EvApplicantIdentity } from '@/lib/candidat
 import { isDriverSendDeclined, shouldHoldEvSend } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
 import { Ban, Loader2, Send } from 'lucide-react'
-import {
-  OfficialFormFooter,
-  PaperLine,
-  formatDob,
-  paperDate,
-  todayIso,
-} from './ev-paper-shared'
+import { OfficialFormFooter, PaperLine, formatDob, paperDate, todayIso } from './ev-paper-shared'
 
 export default function DriverAuthorizationForm({
   applicant,
@@ -39,6 +33,8 @@ export default function DriverAuthorizationForm({
   const [address, setAddress] = useState(employment.location ?? '')
   const [signature, setSignature] = useState('')
   const [signatureDate, setSignatureDate] = useState(todayIso())
+  const [authorizeSph, setAuthorizeSph] = useState(false)
+  const [authorizeDa, setAuthorizeDa] = useState(false)
   const [agreeSend, setAgreeSend] = useState(false)
   const [agreeDecline, setAgreeDecline] = useState(false)
   const [doNotSend, setDoNotSend] = useState(holdDefault)
@@ -49,6 +45,8 @@ export default function DriverAuthorizationForm({
     setAddress(employment.location ?? '')
     setSignature('')
     setSignatureDate(todayIso())
+    setAuthorizeSph(false)
+    setAuthorizeDa(false)
     setAgreeSend(false)
     setAgreeDecline(false)
     setDoNotSend(shouldHoldEvSend(employment))
@@ -71,6 +69,8 @@ export default function DriverAuthorizationForm({
       !doNotSend &&
       signature.trim() &&
       signatureDate &&
+      authorizeSph &&
+      authorizeDa &&
       agreeSend &&
       (email.trim() || phone.trim()),
   )
@@ -79,14 +79,13 @@ export default function DriverAuthorizationForm({
     <div className={`${DOT_PAPER_CARD} border-t-4 border-ember p-5 sm:p-8`}>
       <header className='mb-6 border-b border-[#173150]/25 pb-4 text-center'>
         <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
-          Section 1 – Driver/Applicant Authorization
+          Driver Authorization to Release DOT Information
         </h2>
-        <p className='mt-1 text-sm text-[#173150]/55'>Required by 49 CFR § 391.23</p>
-        <p className='mt-2 text-[11px] text-[#173150]/45'>Page 1 of 2</p>
+        <p className='mt-1 text-sm text-[#173150]/55'>49 CFR § 391.23 and § 40.25 · Page 1 of 2</p>
       </header>
 
       <section>
-
+        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Applicant Identification</h3>
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <PaperLine label='Driver Name:' value={applicant.driverName} />
           <PaperLine
@@ -94,9 +93,12 @@ export default function DriverAuthorizationForm({
             value={applicant.ssnLastFour ? `XXX-XX-${applicant.ssnLastFour}` : ''}
           />
           <PaperLine label='Date of Birth:' value={formatDob(applicant.dateOfBirth)} />
-          <PaperLine label='Previous Employer:' value={employment.companyName} />
         </div>
+      </section>
 
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Previous Employer to Contact</h3>
+        <PaperLine label='Previous Employer:' value={employment.companyName} />
         <div className='mt-4'>
           {sent ? (
             <PaperLine label='Employer Address:' value={address} />
@@ -112,7 +114,34 @@ export default function DriverAuthorizationForm({
             </div>
           )}
         </div>
-
+        {sent && (
+          <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+            <PaperLine label='Email:' value={email} />
+            <PaperLine label='Telephone:' value={phone} />
+          </div>
+        )}
+        {!sent && (
+          <div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>
+            <div>
+              <label className='text-sm font-medium text-[#173150]'>Email:</label>
+              <input
+                type='email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder='hr@previous-employer.com'
+                className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+              />
+            </div>
+            <div>
+              <label className='text-sm font-medium text-[#173150]'>Telephone:</label>
+              <PhoneInput
+                value={phone}
+                onChange={setPhone}
+                className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+              />
+            </div>
+          </div>
+        )}
         <div className='mt-4 flex flex-wrap items-end gap-4'>
           <span className='text-sm font-medium text-[#173150]'>Employment Dates:</span>
           <PaperLine
@@ -126,18 +155,70 @@ export default function DriverAuthorizationForm({
             className='min-w-[7rem] flex-1'
           />
         </div>
-
         <div className='mt-4'>
           <PaperLine label='Position Held:' value={employment.position} />
         </div>
+      </section>
 
-        <p className='mt-5 text-sm leading-relaxed text-[#173150]'>
-          I hereby authorize you to release all information on my employment, accident, and safety
-          performance history, including any alcohol and controlled substances testing information,
-          in accordance with 49 CFR § 391.23. I understand that I have the right to review this
-          information, request correction of errors, and have a copy furnished to me.
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>
+          Part 3 — Release of Safety Performance History (49 CFR § 391.23)
+        </h3>
+        <p className='text-sm leading-relaxed text-[#173150]'>
+          I hereby authorize the previous employer named above to release all information on my
+          employment, accident, and safety performance history, in accordance with 49 CFR § 391.23. I
+          understand that I have the right to:
         </p>
+        <ul className='mt-2 list-disc space-y-1 pl-5 text-sm text-[#173150]'>
+          <li>Review information provided by current/previous employers;</li>
+          <li>
+            Have errors in the information corrected by previous employers, and for those previous
+            employers to resend the corrected information to the prospective employer; and
+          </li>
+          <li>
+            Have a rebuttal statement attached to the alleged erroneous information, if the previous
+            employer(s) and I cannot agree on the accuracy of the information.
+          </li>
+        </ul>
+        <label className='mt-4 flex items-start gap-2 text-sm'>
+          <input
+            type='checkbox'
+            checked={sent || authorizeSph}
+            onChange={(e) => setAuthorizeSph(e.target.checked)}
+            disabled={sent}
+            className='mt-0.5 accent-[#173150]'
+          />
+          <span>I authorize release of my safety performance history (49 CFR § 391.23).</span>
+        </label>
+      </section>
 
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>
+          Part 4 — Release of Alcohol and Controlled Substances Records (49 CFR § 40.25)
+        </h3>
+        <p className='text-sm leading-relaxed text-[#173150]'>
+          I hereby authorize the previous employer named above to release and forward my Alcohol and
+          Controlled Substances Testing records within the previous 3 years, as requested in Part 4 of
+          the Safety Performance History Records Request, in accordance with 49 CFR § 40.25 and §
+          391.23(e).
+        </p>
+        <p className='mt-3 text-sm leading-relaxed text-[#173150]'>
+          In compliance with § 40.25(g) and § 391.23(h), release of this information must be made in a
+          written form that ensures confidentiality, such as fax, email, or letter.
+        </p>
+        <label className='mt-4 flex items-start gap-2 text-sm'>
+          <input
+            type='checkbox'
+            checked={sent || authorizeDa}
+            onChange={(e) => setAuthorizeDa(e.target.checked)}
+            disabled={sent}
+            className='mt-0.5 accent-[#173150]'
+          />
+          <span>
+            I authorize release of my DOT alcohol and controlled substances testing records (49 CFR §
+            40.25).
+          </span>
+        </label>
         <div className='mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <div>
             <label className='text-sm font-medium text-[#173150]'>Driver Signature:</label>
@@ -166,29 +247,9 @@ export default function DriverAuthorizationForm({
       {!sent && (
         <div className='mt-8 space-y-3 border-t border-[#173150]/20 pt-5'>
           <p className='text-xs text-[#173150]/60'>
-            Provven send — not part of the printed form. This page is for {employment.companyName}{' '}
-            only.
+            Provven send — not part of the printed form. This authorization is for{' '}
+            {employment.companyName} only.
           </p>
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-            <div>
-              <label className='text-sm font-medium text-[#173150]'>Previous employer email</label>
-              <input
-                type='email'
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder='hr@previous-employer.com'
-                className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
-              />
-            </div>
-            <div>
-              <label className='text-sm font-medium text-[#173150]'>Phone (optional)</label>
-              <PhoneInput
-                value={phone}
-                onChange={setPhone}
-                className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
-              />
-            </div>
-          </div>
 
           {isDriverSendDeclined(request) && (
             <p className='rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-xs text-[#173150]/80'>
@@ -228,9 +289,8 @@ export default function DriverAuthorizationForm({
               className='mt-0.5 accent-[#173150]'
             />
             <span>
-              I agree to send this authorization and Safety Performance History request through
-              Provven, using my email on file ({applicant.email || 'add an email on your profile'})
-              as the driver contact.
+              I agree to send this authorization through Provven, using my email on file (
+              {applicant.email || 'add an email on your profile'}) as the driver contact.
             </span>
           </label>
 

@@ -7,11 +7,16 @@ import type { VerificationRequest } from '@/types/employment-verification'
 import {
   Check,
   OfficialFormFooter,
-  OfficialFormHeader,
   OfficialTable,
   PaperLine,
+  YesNoLine,
   paperDate,
 } from './ev-paper-shared'
+
+function yn(value: string | null | undefined): 'yes' | 'no' | undefined {
+  if (value === 'yes' || value === 'no') return value
+  return undefined
+}
 
 export default function SafetyPerformanceHistoryPaper({
   employment,
@@ -42,10 +47,27 @@ export default function SafetyPerformanceHistoryPaper({
     answers?.datesCorrect === 'partial' && answers.correctedEndDate
       ? answers.correctedEndDate
       : request?.claimedEndDate ?? employment.endDate
+  const noAccidents = hasReply && answers?.hadAccident === 'no'
+  const leaving =
+    answers?.wasTerminated === 'yes'
+      ? 'discharged'
+      : answers?.terminationReason?.toLowerCase().includes('resign')
+        ? 'resignation'
+        : answers?.terminationReason?.toLowerCase().includes('layoff')
+          ? 'layoff'
+          : ''
 
   return (
     <div className={`${DOT_PAPER_CARD} border-t-4 border-ember p-5 sm:p-8`}>
-      <OfficialFormHeader page={2} />
+      <header className='mb-6 border-b border-[#173150]/25 pb-4 text-center'>
+        <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
+          Safety Performance History Records Request
+        </h2>
+        <p className='mt-0.5 text-base text-[#173150]/70'>(Employment Verification)</p>
+        <p className='mt-1 text-sm text-[#173150]/55'>
+          To be completed by the previous employer · 49 CFR § 391.23 and § 40.25 · Page 2 of 2
+        </p>
+      </header>
 
       {dkimVerified && (
         <p className='mb-4 rounded-lg border border-teal-600/25 bg-teal-50 px-3 py-2 text-xs text-teal-800'>
@@ -60,7 +82,7 @@ export default function SafetyPerformanceHistoryPaper({
       )}
 
       <section>
-        <h3 className='mb-4 text-lg font-semibold'>Section 2 – To Be Completed by Previous Employer</h3>
+        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Previous Employer Completing This Request</h3>
 
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <PaperLine
@@ -88,10 +110,139 @@ export default function SafetyPerformanceHistoryPaper({
             value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
           />
         </div>
+      </section>
 
-        <h4 className='mt-6 mb-3 text-base font-semibold'>Employment Verification:</h4>
-        <div className='flex flex-wrap items-end gap-4'>
-          <span className='text-sm font-medium text-[#173150]'>Employment Dates:</span>
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Employment Verification</h3>
+
+        <div className='flex flex-wrap gap-4'>
+          <span className='text-sm font-medium'>The applicant named above was employed by us.</span>
+          <Check checked={hasReply} label='Yes' />
+          <Check checked={false} label='No' />
+        </div>
+        <div className='mt-4'>
+          <PaperLine
+            label='Employed as:'
+            value={hasReply ? (request?.claimedPosition ?? employment.position) : ''}
+          />
+        </div>
+        <div className='mt-4 flex flex-wrap items-end gap-4'>
+          <PaperLine
+            label='From (m/y)'
+            value={hasReply ? paperDate(verifiedDatesFrom) : ''}
+            className='min-w-[7rem] flex-1'
+          />
+          <PaperLine
+            label='To (m/y)'
+            value={hasReply ? paperDate(verifiedDatesTo ?? null) || 'Present' : ''}
+            className='min-w-[7rem] flex-1'
+          />
+        </div>
+
+        <div className='mt-4'>
+          <p className='text-sm font-medium'>Did he/she drive a motor vehicle for you?</p>
+          <div className='mt-2 flex flex-wrap gap-3'>
+            <Check checked={false} label='Yes' />
+            <Check checked={false} label='No' />
+          </div>
+          <p className='mt-3 text-sm font-medium'>If yes, what type?</p>
+          <div className='mt-2 flex flex-wrap gap-3'>
+            {['Straight Truck', 'Tractor-Semitrailer', 'Bus', 'Cargo Tank', 'Doubles/Triples', 'Other'].map(
+              (t) => (
+                <Check key={t} checked={false} label={t} />
+              ),
+            )}
+          </div>
+        </div>
+
+        <div className='mt-4'>
+          <p className='text-sm font-medium'>Reason for leaving:</p>
+          <div className='mt-2 flex flex-wrap gap-3'>
+            <Check checked={leaving === 'discharged'} label='Discharged' />
+            <Check checked={leaving === 'resignation'} label='Resignation' />
+            <Check checked={leaving === 'layoff'} label='Lay Off' />
+            <Check checked={false} label='Military Duty' />
+            <Check
+              checked={hasReply && !leaving && Boolean(answers?.terminationReason || answers?.returnNotes)}
+              label='Other'
+            />
+          </div>
+          <div className='mt-3'>
+            <PaperLine
+              label='Other / remarks:'
+              value={
+                hasReply
+                  ? (answers?.terminationReason || answers?.returnNotes || request?.claimedReasonForLeaving || '')
+                  : ''
+              }
+            />
+          </div>
+        </div>
+
+        <div className='mt-4'>
+          <Check checked={false} label='If there is no safety performance history to report, check here, sign below and return.' />
+        </div>
+        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3'>
+          <PaperLine label='Signature:' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
+          <PaperLine label='Title:' value={hasReply ? (request?.verifiedByTitle ?? '') : ''} />
+          <PaperLine
+            label='Date:'
+            value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
+          />
+        </div>
+      </section>
+
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 3 — Accident History</h3>
+        <p className='mb-3 text-sm text-[#173150]'>
+          Complete the following for any accidents included on your accident register (§ 390.15(b))
+          that involved the applicant in the 3 years prior to the application date, or check here if
+          there is no accident register data for this driver.
+        </p>
+        <div className='mb-3'>
+          <Check checked={noAccidents} label='No accident register data for this driver.' />
+        </div>
+        <OfficialTable headers={['Date', 'Location', '# Injuries', '# Fatalities', 'Hazmat Spill']}>
+          {[0, 1, 2].map((i) => (
+            <tr key={i}>
+              <td className='h-9 border border-[#173150] px-2 py-2'>
+                {i === 0 && hasReply && answers?.hadAccident === 'yes' ? 'Yes' : ''}
+              </td>
+              <td className='border border-[#173150] px-2 py-2' />
+              <td className='border border-[#173150] px-2 py-2' />
+              <td className='border border-[#173150] px-2 py-2' />
+              <td className='border border-[#173150] px-2 py-2'>
+                {i === 0 && hasReply ? (answers?.accidentDetails ?? '') : ''}
+              </td>
+            </tr>
+          ))}
+        </OfficialTable>
+        <div className='mt-4'>
+          <PaperLine
+            label='Other accidents reported to government agencies, insurers, or retained under company policy:'
+            value={hasReply && answers?.hadAccident === 'yes' ? (answers.accidentDetails ?? '') : ''}
+          />
+        </div>
+        <div className='mt-4'>
+          <PaperLine label='Any other remarks:' value={hasReply ? (answers?.additionalNotes ?? '') : ''} />
+        </div>
+      </section>
+
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 4 — Drug and Alcohol History</h3>
+        <p className='text-sm text-[#173150]'>
+          If driver was not subject to Department of Transportation testing requirements while
+          employed by this employer, please check here, fill in the dates of employment, complete the
+          bottom of Part 4, sign, and return.
+        </p>
+        <div className='mt-3'>
+          <Check
+            checked={hasReply && answers?.failedClearinghouseTest === 'na' && answers?.randomDrugTestOrRefused === 'na'}
+            label='Driver was not subject to DOT testing requirements.'
+          />
+        </div>
+        <div className='mt-4 flex flex-wrap items-end gap-4'>
+          <span className='text-sm font-medium'>Driver was subject to DOT testing requirements</span>
           <PaperLine
             label='From'
             value={hasReply ? paperDate(verifiedDatesFrom) : ''}
@@ -103,97 +254,82 @@ export default function SafetyPerformanceHistoryPaper({
             className='min-w-[7rem] flex-1'
           />
         </div>
-        <div className='mt-4'>
-          <PaperLine
-            label='Position(s) Held:'
-            value={hasReply ? (request?.claimedPosition ?? employment.position) : ''}
-          />
-        </div>
-        <div className='mt-4 flex flex-wrap gap-4'>
-          <span className='text-sm font-medium'>Eligible for Rehire?</span>
-          <Check checked={hasReply && answers?.eligibleToReturn === 'yes'} label='Yes' />
-          <Check checked={hasReply && answers?.eligibleToReturn === 'no'} label='No' />
-          <Check checked={hasReply && answers?.eligibleToReturn === 'discuss'} label='Would Discuss' />
-        </div>
-        <div className='mt-4'>
-          <PaperLine
-            label='Reason for Leaving:'
-            value={
-              hasReply
-                ? (answers?.terminationReason ||
-                    answers?.returnNotes ||
-                    request?.claimedReasonForLeaving ||
-                    '')
-                : ''
-            }
-          />
-        </div>
 
-        <h4 className='mt-6 mb-3 text-base font-semibold'>Accident History (Past 3 Years):</h4>
-        <OfficialTable headers={['Date', 'Location', 'Injuries', 'Fatalities', 'Hazmat Spill', 'Comments']}>
-          <tr>
-            <td className='h-9 border border-[#173150] px-2 py-2'>
-              {hasReply && answers?.hadAccident === 'yes' ? 'Yes' : ''}
-            </td>
-            <td className='border border-[#173150] px-2 py-2' />
-            <td className='border border-[#173150] px-2 py-2' />
-            <td className='border border-[#173150] px-2 py-2' />
-            <td className='border border-[#173150] px-2 py-2' />
-            <td className='border border-[#173150] px-2 py-2'>
-              {hasReply ? (answers?.accidentDetails ?? '') : ''}
-            </td>
-          </tr>
-        </OfficialTable>
-        <div className='mt-3'>
-          <Check
-            checked={hasReply && answers?.hadAccident === 'no'}
-            label='No DOT-recordable accidents reported.'
+        <div className='mt-5 space-y-3'>
+          <YesNoLine
+            question='1. Has this person had an alcohol test with the result of 0.04 or higher alcohol concentration?'
           />
+          <YesNoLine
+            question='2. Has this person tested positive or adulterated or substituted a test specimen for controlled substances?'
+            answer={yn(answers?.failedClearinghouseTest)}
+          />
+          <YesNoLine
+            question='3. Has this person refused to submit to a post-accident, random, reasonable suspicion, or follow-up alcohol or controlled substance test?'
+            answer={yn(answers?.randomDrugTestOrRefused)}
+          />
+          <YesNoLine question='4. Has this person committed other violations of Subpart B of Part 382, or Part 40?' />
+          <YesNoLine question='5. If this person has violated a DOT drug and alcohol regulation, did this person complete a SAP-prescribed rehabilitation program in your employ, including return-to-duty and follow-up tests?' />
+          <YesNoLine question='6. For a driver who successfully completed a SAP’s rehabilitation referral and remained in your employ, did this driver subsequently have an alcohol test result of 0.04 or greater, a verified positive drug test, or refuse to be tested?' />
         </div>
-
-        <h4 className='mt-6 mb-3 text-base font-semibold'>Certification by Previous Employer:</h4>
-        <p className='text-sm text-[#173150]'>
-          This information is provided in accordance with 49 CFR § 391.23(d) and § 40.25(h).
+        <p className='mt-4 text-sm text-[#173150]'>
+          In answering these questions, include any required DOT drug or alcohol testing information
+          obtained from prior previous employers in the previous 3 years.
         </p>
+        {(answers?.clearinghouseNotes || answers?.drugTestDetails) && (
+          <div className='mt-3'>
+            <PaperLine
+              label='Notes:'
+              value={[answers.clearinghouseNotes, answers.drugTestDetails].filter(Boolean).join(' ')}
+            />
+          </div>
+        )}
         <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
-          <PaperLine label='Signature:' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
-          <PaperLine label='Printed Name:' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
-          <PaperLine label='Title:' value={hasReply ? (request?.verifiedByTitle ?? '') : ''} />
+          <PaperLine label='Name:' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
+          <PaperLine
+            label='Company:'
+            value={hasReply ? (request?.previousEmployerName ?? employment.companyName) : ''}
+          />
+          <PaperLine
+            label='Part 4 Completed by (Signature):'
+            value={hasReply ? (request?.verifiedByName ?? '') : ''}
+          />
           <PaperLine
             label='Date:'
             value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
           />
         </div>
-
-        {hasReply && (
-          <div className='mt-6 space-y-2 text-sm'>
-            <p className='text-sm font-medium text-[#173150]'>
-              Alcohol and controlled substances testing (49 CFR § 40.25)
-            </p>
-            <div className='flex flex-wrap gap-4'>
-              <span>Failed a Clearinghouse / post-accident test?</span>
-              <Check checked={answers?.failedClearinghouseTest === 'yes'} label='Yes' />
-              <Check checked={answers?.failedClearinghouseTest === 'no'} label='No' />
-              <Check checked={answers?.failedClearinghouseTest === 'na'} label='N/A' />
-            </div>
-            {answers?.clearinghouseNotes ? (
-              <PaperLine label='Notes:' value={answers.clearinghouseNotes} />
-            ) : null}
-            <div className='flex flex-wrap gap-4'>
-              <span>Random drug test or refused a test?</span>
-              <Check checked={answers?.randomDrugTestOrRefused === 'yes'} label='Yes' />
-              <Check checked={answers?.randomDrugTestOrRefused === 'no'} label='No' />
-              <Check checked={answers?.randomDrugTestOrRefused === 'na'} label='N/A' />
-            </div>
-            {answers?.drugTestDetails ? (
-              <PaperLine label='Details:' value={answers.drugTestDetails} />
-            ) : null}
-          </div>
-        )}
       </section>
 
-      <section className='mt-8'>
-        <h3 className='mb-4 text-lg font-semibold'>Section 3 – Record of Attempts (for Employer Use)</h3>
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 5 — Record of Attempts (for Employer Use)</h3>
+        <p className='text-sm font-medium'>This form was:</p>
+        <div className='mt-2 flex flex-wrap gap-3'>
+          <Check checked={false} label='Faxed' />
+          <Check checked={sent || hasReply} label='Emailed' />
+          <Check checked={false} label='Mailed' />
+          <Check checked={false} label='Other' />
+        </div>
+        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          <PaperLine label='By:' value={sent || hasReply ? 'Provven' : ''} />
+          <PaperLine
+            label='Date:'
+            value={request ? paperDate(request.lastAttemptAt ?? request.createdAt) : ''}
+          />
+          <PaperLine
+            label='Information received from:'
+            value={hasReply ? (request?.previousEmployerName ?? '') : ''}
+          />
+          <PaperLine label='Recorded by:' value={hasReply ? (request?.verifiedByName ?? '') : ''} />
+          <PaperLine
+            label='Method:'
+            value={request ? (request.verificationMethod ?? (sent ? 'email' : '')) : ''}
+          />
+          <PaperLine
+            label='Date received:'
+            value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
+          />
+        </div>
+        <div className='mt-4'>
         <OfficialTable headers={['Date', 'Method', 'Contact Person', 'Result']}>
           <tr>
             <td className='h-9 border border-[#173150] px-2 py-2'>
@@ -216,6 +352,7 @@ export default function SafetyPerformanceHistoryPaper({
             </td>
           </tr>
         </OfficialTable>
+        </div>
       </section>
 
       <OfficialFormFooter />

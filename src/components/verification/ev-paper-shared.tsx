@@ -18,25 +18,10 @@ export function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function OfficialFormHeader({ page }: { page: 1 | 2 }) {
-  return (
-    <header className='mb-6 border-b border-[#173150]/25 pb-4 text-center'>
-      <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
-        Safety Performance History Records Request
-      </h2>
-      <p className='mt-0.5 text-base text-[#173150]/70'>(Employment Verification)</p>
-      <p className='mt-1 text-sm text-[#173150]/55'>Required by 49 CFR § 391.23</p>
-      <p className='mt-2 text-[11px] text-[#173150]/45'>
-        Page {page} of 2
-      </p>
-    </header>
-  )
-}
-
 export function OfficialFormFooter() {
   return (
     <p className='mt-6 text-center text-[11px] italic text-[#173150]/45'>
-      Form complies with 49 CFR § 391.23 — Revised 2025 Edition.
+      Form complies with 49 CFR § 391.23 and § 40.25 — Revised 2025 Edition.
     </p>
   )
 }
@@ -72,6 +57,24 @@ export function Check({ checked, label }: { checked: boolean; label: string }) {
       </span>
       {label}
     </span>
+  )
+}
+
+export function YesNoLine({
+  question,
+  answer,
+}: {
+  question: string
+  answer?: 'yes' | 'no' | null
+}) {
+  return (
+    <div className='flex flex-wrap items-start gap-3 text-sm text-[#173150]'>
+      <p className='min-w-0 flex-1'>{question}</p>
+      <span className='flex shrink-0 gap-3'>
+        <Check checked={answer === 'yes'} label='Yes' />
+        <Check checked={answer === 'no'} label='No' />
+      </span>
+    </div>
   )
 }
 
