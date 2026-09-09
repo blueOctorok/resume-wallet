@@ -33,8 +33,13 @@ export default function DriverAuthorizationForm({
   const [address, setAddress] = useState(employment.location ?? '')
   const [signature, setSignature] = useState('')
   const [signatureDate, setSignatureDate] = useState(todayIso())
-  const [authorizeSph, setAuthorizeSph] = useState(false)
-  const [authorizeDa, setAuthorizeDa] = useState(false)
+  const [sendBy, setSendBy] = useState({
+    secureEmail: true,
+    electronicPdf: false,
+    usMail: false,
+    other: false,
+  })
+  const [sendByOther, setSendByOther] = useState('')
   const [agreeSend, setAgreeSend] = useState(false)
   const [agreeDecline, setAgreeDecline] = useState(false)
   const [doNotSend, setDoNotSend] = useState(holdDefault)
@@ -45,8 +50,8 @@ export default function DriverAuthorizationForm({
     setAddress(employment.location ?? '')
     setSignature('')
     setSignatureDate(todayIso())
-    setAuthorizeSph(false)
-    setAuthorizeDa(false)
+    setSendBy({ secureEmail: true, electronicPdf: false, usMail: false, other: false })
+    setSendByOther('')
     setAgreeSend(false)
     setAgreeDecline(false)
     setDoNotSend(shouldHoldEvSend(employment))
@@ -69,8 +74,6 @@ export default function DriverAuthorizationForm({
       !doNotSend &&
       signature.trim() &&
       signatureDate &&
-      authorizeSph &&
-      authorizeDa &&
       agreeSend &&
       (email.trim() || phone.trim()),
   )
@@ -93,6 +96,8 @@ export default function DriverAuthorizationForm({
             value={applicant.ssnLastFour ? `XXX-XX-${applicant.ssnLastFour}` : ''}
           />
           <PaperLine label='Date of Birth:' value={formatDob(applicant.dateOfBirth)} />
+          <PaperLine label='Email:' value={applicant.email} />
+          <PaperLine label='Mailing Address:' value={applicant.mailingAddress} className='sm:col-span-2' />
         </div>
       </section>
 
@@ -161,65 +166,82 @@ export default function DriverAuthorizationForm({
       </section>
 
       <section className='mt-8 border-t border-[#173150]/25 pt-6'>
-        <h3 className='mb-4 text-lg font-semibold'>
-          Part 3 — Release of Safety Performance History (49 CFR § 391.23)
-        </h3>
+        <h3 className='mb-4 text-lg font-semibold'>Part 3 — Authorization and Delivery Instructions</h3>
         <p className='text-sm leading-relaxed text-[#173150]'>
-          I hereby authorize the previous employer named above to release all information on my
-          employment, accident, and safety performance history, in accordance with 49 CFR § 391.23. I
-          understand that I have the right to:
+          I authorize my previous employers, contractors (if owner-operator), and trucking schools, as
+          applicable, to release my Safety Performance History and DOT drug and alcohol information, as
+          permitted by 49 CFR § 391.23 and other applicable regulations, directly to me at the address
+          or email listed below. I also authorize release of employment verification information
+          reasonably related to my DOT-regulated work history. A fax, image, or copy of this
+          authorization may be treated as valid as the original.
         </p>
-        <ul className='mt-2 list-disc space-y-1 pl-5 text-sm text-[#173150]'>
-          <li>Review information provided by current/previous employers;</li>
-          <li>
-            Have errors in the information corrected by previous employers, and for those previous
-            employers to resend the corrected information to the prospective employer; and
-          </li>
-          <li>
-            Have a rebuttal statement attached to the alleged erroneous information, if the previous
-            employer(s) and I cannot agree on the accuracy of the information.
-          </li>
-        </ul>
-        <label className='mt-4 flex items-start gap-2 text-sm'>
-          <input
-            type='checkbox'
-            checked={sent || authorizeSph}
-            onChange={(e) => setAuthorizeSph(e.target.checked)}
-            disabled={sent}
-            className='mt-0.5 accent-[#173150]'
-          />
-          <span>I authorize release of my safety performance history (49 CFR § 391.23).</span>
-        </label>
+        <p className='mt-4 text-sm font-semibold text-[#173150]'>
+          Please provide the requested records directly to the driver. If there are no responsive
+          records, indicate “No Records Found.”
+        </p>
+        <div className='mt-4'>
+          <p className='text-sm font-medium text-[#173150]'>Send Records By:</p>
+          <div className='mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm'>
+            <label className='inline-flex items-center gap-1.5'>
+              <input
+                type='checkbox'
+                checked={sendBy.secureEmail}
+                onChange={(e) => setSendBy((s) => ({ ...s, secureEmail: e.target.checked }))}
+                disabled={sent}
+                className='accent-[#173150]'
+              />
+              Secure Email
+            </label>
+            <label className='inline-flex items-center gap-1.5'>
+              <input
+                type='checkbox'
+                checked={sendBy.electronicPdf}
+                onChange={(e) => setSendBy((s) => ({ ...s, electronicPdf: e.target.checked }))}
+                disabled={sent}
+                className='accent-[#173150]'
+              />
+              Electronic PDF
+            </label>
+            <label className='inline-flex items-center gap-1.5'>
+              <input
+                type='checkbox'
+                checked={sendBy.usMail}
+                onChange={(e) => setSendBy((s) => ({ ...s, usMail: e.target.checked }))}
+                disabled={sent}
+                className='accent-[#173150]'
+              />
+              U.S. Mail
+            </label>
+            <label className='inline-flex items-center gap-1.5'>
+              <input
+                type='checkbox'
+                checked={sendBy.other}
+                onChange={(e) => setSendBy((s) => ({ ...s, other: e.target.checked }))}
+                disabled={sent}
+                className='accent-[#173150]'
+              />
+              Other:
+            </label>
+            <input
+              type='text'
+              value={sendByOther}
+              onChange={(e) => setSendByOther(e.target.value)}
+              disabled={sent || !sendBy.other}
+              className='min-w-[8rem] flex-1 border-0 border-b border-[#173150] bg-transparent px-0 py-1 text-sm text-[#173150]'
+            />
+          </div>
+        </div>
+        <div className='mt-4'>
+          <p className='text-sm font-medium text-[#173150]'>Delivery Destination:</p>
+          <p className='mt-1 text-sm text-[#173150]'>
+            Use the driver email or mailing address listed in Part 1.
+          </p>
+        </div>
       </section>
 
       <section className='mt-8 border-t border-[#173150]/25 pt-6'>
-        <h3 className='mb-4 text-lg font-semibold'>
-          Part 4 — Release of Alcohol and Controlled Substances Records (49 CFR § 40.25)
-        </h3>
-        <p className='text-sm leading-relaxed text-[#173150]'>
-          I hereby authorize the previous employer named above to release and forward my Alcohol and
-          Controlled Substances Testing records within the previous 3 years, as requested in Part 4 of
-          the Safety Performance History Records Request, in accordance with 49 CFR § 40.25 and §
-          391.23(e).
-        </p>
-        <p className='mt-3 text-sm leading-relaxed text-[#173150]'>
-          In compliance with § 40.25(g) and § 391.23(h), release of this information must be made in a
-          written form that ensures confidentiality, such as fax, email, or letter.
-        </p>
-        <label className='mt-4 flex items-start gap-2 text-sm'>
-          <input
-            type='checkbox'
-            checked={sent || authorizeDa}
-            onChange={(e) => setAuthorizeDa(e.target.checked)}
-            disabled={sent}
-            className='mt-0.5 accent-[#173150]'
-          />
-          <span>
-            I authorize release of my DOT alcohol and controlled substances testing records (49 CFR §
-            40.25).
-          </span>
-        </label>
-        <div className='mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 4 — Driver Signature</h3>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <div>
             <label className='text-sm font-medium text-[#173150]'>Driver Signature:</label>
             <input

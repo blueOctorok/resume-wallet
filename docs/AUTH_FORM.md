@@ -17,6 +17,10 @@ Page 2 — Safety Performance History: **5 parts**.
 
 **Date of Birth:** ________________
 
+**Email:** ________________
+
+**Mailing Address:** ________________
+
 ---
 
 ### Part 2 — Previous Employer to Contact
@@ -33,25 +37,19 @@ Page 2 — Safety Performance History: **5 parts**.
 
 ---
 
-### Part 3 — Release of Safety Performance History (49 CFR § 391.23)
+### Part 3 — Authorization and Delivery Instructions
 
-I hereby authorize the previous employer named above to release all information on my employment, accident, and safety performance history, in accordance with 49 CFR § 391.23. I understand that I have the right to:
+I authorize my previous employers, contractors (if owner-operator), and trucking schools, as applicable, to release my Safety Performance History and DOT drug and alcohol information, as permitted by 49 CFR § 391.23 and other applicable regulations, directly to me at the address or email listed below. I also authorize release of employment verification information reasonably related to my DOT-regulated work history. A fax, image, or copy of this authorization may be treated as valid as the original.
 
-- Review information provided by current/previous employers;
-- Have errors in the information corrected by previous employers, and for those previous employers to resend the corrected information to the prospective employer; and
-- Have a rebuttal statement attached to the alleged erroneous information, if the previous employer(s) and I cannot agree on the accuracy of the information.
+**Please provide the requested records directly to the driver. If there are no responsive records, indicate “No Records Found.”**
 
-☐ I authorize release of my safety performance history (49 CFR § 391.23).
+**Send Records By:** ☐ Secure Email ☐ Electronic PDF ☐ U.S. Mail ☐ Other: ________
+
+**Delivery Destination:** Use the driver email or mailing address listed in Part 1.
 
 ---
 
-### Part 4 — Release of Alcohol and Controlled Substances Records (49 CFR § 40.25)
-
-I hereby authorize the previous employer named above to release and forward my Alcohol and Controlled Substances Testing records within the previous 3 years, as requested in Part 4 of the Safety Performance History Records Request, in accordance with 49 CFR § 40.25 and § 391.23(e).
-
-In compliance with § 40.25(g) and § 391.23(h), release of this information must be made in a written form that ensures confidentiality, such as fax, email, or letter.
-
-☐ I authorize release of my DOT alcohol and controlled substances testing records (49 CFR § 40.25).
+### Part 4 — Driver Signature
 
 **Driver Signature:** ________________ **Date:** ________________
 

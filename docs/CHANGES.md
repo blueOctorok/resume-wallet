@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV driver auth Part 3–4 match the release form** (2026-09-09)
+
+Part 3 is the real authorization: records go **to the driver**, previous employers / contractors / trucking schools, Send Records By, delivery = Part 1 email/address. Part 4 is Driver Signature only. No rewritten 391.23(i) bullets.
+
+---
+
 ## **EV packet is 4-part driver auth + 5-part SPHRR** (2026-09-09)
 
 `docs/AUTH_FORM.md` is the count. Page 1: (1) applicant ID, (2) previous employer to contact, (3) § 391.23 release + rights, (4) § 40.25 release + signature. Page 2: (1) completing employer, (2) employment verification, (3) accident history, (4) six D&A questions, (5) record of attempts.
