@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV papers match the official § 391.23 form** (2026-09-09)
+
+Both pages now use the same header, field labels, From/To dates, checkbox line, bordered accident/attempts tables, certification, and “Revised 2025 Edition” footer as `docs/AUTH_FORM.md`. Section 2 stays a blank official form until the records holder replies (not a faded empty panel). Send/decline sits under Section 1 and is labeled as Provven, not a form field. Authorization does not name Pace.
+
+---
+
+## **EV: two pages per company** (2026-09-09)
+
+Each employer is two papers again, not one combined sheet. **Page 1** is Driver/Applicant Authorization (sign, send, or decline). **Page 2** is the Safety Performance History Records Request for the records holder (Section 2 + attempts). Identity is the same person; authorization is still per company.
+
+---
+
+## **EV: recorded decline per employer** (2026-09-09)
+
+Every employer packet now has **I decline to send this request**. That writes a `DRIVER_SEND_DECLINED` row (who, when, which employer) and does **not** email anyone. It is not “complete” and does not go on the career card. They can still send later (layoff). This is not `VERIFICATION_DECLINED` — that still means the previous employer refused to verify.
+
+Apply migration `109_evr_driver_send_declined.sql`.
+
+---
+
 ## **EV paper is the full § 391.23 form; current jobs are opt-out** (2026-09-09)
 
 The official Safety Performance History request is one paper again: Section 1 (driver authorization + send), Section 2 (employer response, including drug/alcohol § 40.25), Section 3 (attempts). Current employers stay on the list. Send defaults to **Do not send to my current employer** — uncheck if they want it sent (layoff). Form 3 “prefer not to contact” is the same preference, not a hidden packet.

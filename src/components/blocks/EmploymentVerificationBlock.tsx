@@ -12,8 +12,8 @@ import ErrorBoundary from '@/components/app/ErrorBoundary'
 import CandidateEmploymentVerificationSection from '@/components/verification/CandidateEmploymentVerificationSection'
 
 /**
- * Official § 391.23 Safety Performance History form.
- * Section 1 prefills from DOT (self-reported). Section 2 verifies only via DKIM.
+ * Two pages per employer: authorization, then Safety Performance History.
+ * Page 1 prefills from DOT (self-reported). Page 2 verifies only via DKIM.
  */
 export default function EmploymentVerificationBlock() {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)

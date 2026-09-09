@@ -203,7 +203,7 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 
 > **Candidate product focus (2026-08-20):** drivers only. Login home = Career Card; **File** = DQ queue (page id still `build`). Non-driver tiles stay off File. Legacy developer routes may still exist in the shell for old deep-links — not part of the active surface. See `CHANGES.md` (“Hub mode renamed Build → File”).
 
-> **Candidate EV (2026-09-09):** One official § 391.23 paper (Sections 1–3 + § 40.25 drug/alcohol). Current employers stay on the list with send defaulted off. Returned packets stay off the career card until the driver reviews and agrees to share. DKIM still gates “verified.” See `CHANGES.md`.
+> **Candidate EV (2026-09-09):** Two pages per employer, laid out like `docs/AUTH_FORM.md` (same title, Section 1–3, tables, 2025 footer). Send/decline is under Section 1, not a form field. Career card still requires review + share. DKIM still gates “verified.” See `CHANGES.md`. Apply `109_evr_driver_send_declined.sql`.
 
 > **Coordination with Foundation Reset:** These are **product-feature** phases (DQ file content). The **Foundation Reset** above is **infrastructure** phases (Web2 stack, attestations). They run in parallel. DQ-File-Completion-Phase-1 (language cleanup) reinforces Foundation-Reset-Phase-1 (UI no longer says "blockchain-verified"). DQ-File-Completion-Phase-10 (IPFS PDF archival) is **superseded** by Foundation-Reset-Phase-2 (attestation-backed verification — see below).
 

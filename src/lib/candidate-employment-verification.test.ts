@@ -4,6 +4,7 @@ import {
   extractEvApplicantIdentity,
   form3EmployersToCandidateRows,
   isDkimVerifiedRequest,
+  isDriverSendDeclined,
   mergeDotForm3IntoEmployments,
   shouldCreateEvPacket,
   shouldHoldEvSend,
@@ -174,6 +175,15 @@ describe('shouldHoldEvSend', () => {
     expect(shouldHoldEvSend({ ...driverRow({}), endDate: '', isCurrent: true })).toBe(true)
     expect(shouldHoldEvSend({ ...driverRow({}), preferNoContact: true })).toBe(true)
     expect(shouldHoldEvSend(driverRow({ endDate: '2016-02', isCurrent: false }))).toBe(false)
+  })
+})
+
+describe('isDriverSendDeclined', () => {
+  it('is only true for a driver send decline, not an employer refusal', () => {
+    expect(isDriverSendDeclined({ status: 'DRIVER_SEND_DECLINED' })).toBe(true)
+    expect(isDriverSendDeclined({ status: 'VERIFICATION_DECLINED' })).toBe(false)
+    expect(isDriverSendDeclined({ status: 'VERIFICATION_REQUESTED' })).toBe(false)
+    expect(isDriverSendDeclined(undefined)).toBe(false)
   })
 })
 

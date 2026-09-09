@@ -22,6 +22,7 @@ export type VerificationStatus =
   | 'VERIFICATION_DENIED'     // Previous employer says details are false
   | 'ATTEMPTS_EXHAUSTED'      // 3 attempts made, no response
   | 'VERIFICATION_DECLINED'   // Previous employer declined to verify
+  | 'DRIVER_SEND_DECLINED'    // Driver recorded they will not send this packet
 
 // ===== FMCSA VERIFICATION QUESTIONS =====
 
@@ -342,6 +343,7 @@ export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
   VERIFICATION_DENIED: 'Verification Denied',
   ATTEMPTS_EXHAUSTED: 'No Response',
   VERIFICATION_DECLINED: 'Declined to Verify',
+  DRIVER_SEND_DECLINED: 'Driver declined to send',
 }
 
 export const VERIFICATION_STATUS_COLORS: Record<VerificationStatus, { bg: string; text: string; border: string }> = {
@@ -353,6 +355,7 @@ export const VERIFICATION_STATUS_COLORS: Record<VerificationStatus, { bg: string
   VERIFICATION_DENIED: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', border: 'border-red-300 dark:border-red-600' },
   ATTEMPTS_EXHAUSTED: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-300 dark:border-orange-600' },
   VERIFICATION_DECLINED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-400', border: 'border-gray-300 dark:border-gray-600' },
+  DRIVER_SEND_DECLINED: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-300 dark:border-orange-600' },
 }
 
 export function getVerificationStatusIcon(status: VerificationStatus): string {
@@ -365,6 +368,7 @@ export function getVerificationStatusIcon(status: VerificationStatus): string {
     case 'VERIFICATION_DENIED': return '❌'
     case 'ATTEMPTS_EXHAUSTED': return '⚠️'
     case 'VERIFICATION_DECLINED': return '🚫'
+    case 'DRIVER_SEND_DECLINED': return '🚫'
   }
 }
 

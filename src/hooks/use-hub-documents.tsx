@@ -363,12 +363,13 @@ export function useHubDocuments(refreshKey: number): {
           const pending = reqs.filter((r) =>
             ['VERIFICATION_REQUESTED', 'VERIFICATION_IN_PROGRESS'].includes(r.status),
           ).length
+          const declined = reqs.filter((r) => r.status === 'DRIVER_SEND_DECLINED').length
           const hasJobs = (j.employments ?? []).length > 0
           docs.push({
             id: 'employment-verifications',
             type: 'employment_verifications',
             title: 'Employment verifications',
-            subtitle: `${verified} DKIM-verified · ${pending} pending`,
+            subtitle: `${verified} DKIM-verified · ${pending} pending · ${declined} declined`,
             status:
               verified > 0 ? 'complete' : pending > 0 || hasJobs ? 'in-progress' : 'empty',
             verified: verified > 0,

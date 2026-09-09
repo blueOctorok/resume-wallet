@@ -105,6 +105,15 @@ const STATUS_CONFIG: Record<VerificationStatus, {
     borderLight: 'border-gray-300',
     borderDark: 'border-gray-600',
   },
+  DRIVER_SEND_DECLINED: {
+    icon: Ban,
+    bgLight: 'bg-orange-100',
+    bgDark: 'bg-orange-900/30',
+    textLight: 'text-orange-700',
+    textDark: 'text-orange-400',
+    borderLight: 'border-orange-300',
+    borderDark: 'border-orange-600',
+  },
 }
 
 const SIZE_CONFIG = {

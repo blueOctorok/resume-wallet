@@ -341,6 +341,13 @@ export function findApplicantVerificationForRow(
   return findApplicantVerificationsForRow(requests, row)[0]
 }
 
+/** Driver recorded they will not send this packet. Not an employer refusal. */
+export function isDriverSendDeclined(
+  req: Pick<VerificationRequest, 'status'> | null | undefined,
+): boolean {
+  return req?.status === 'DRIVER_SEND_DECLINED'
+}
+
 /** Portal / email reply on file is not a verified fact. DKIM + domain align is. */
 export function isDkimVerifiedRequest(
   req: Pick<VerificationRequest, 'dkimValid'> | null | undefined,

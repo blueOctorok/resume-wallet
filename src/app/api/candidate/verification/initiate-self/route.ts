@@ -97,7 +97,11 @@ export async function POST(request: NextRequest) {
           .eq('employment_id', verificationKey)
           .eq('initiated_by', 'applicant')
           .eq('applicant_type', applicantType)
-          .not('status', 'in', '("ATTEMPTS_EXHAUSTED","VERIFICATION_DENIED","VERIFICATION_DECLINED")')
+          .not(
+            'status',
+            'in',
+            '("ATTEMPTS_EXHAUSTED","VERIFICATION_DENIED","VERIFICATION_DECLINED","DRIVER_SEND_DECLINED")',
+          )
           .maybeSingle()
 
     if (existingRequest) {

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
 import Button from '@/components/ui/Button'
+import DriverAuthorizationForm from './DriverAuthorizationForm'
 import SafetyPerformanceHistoryPaper from './SafetyPerformanceHistoryPaper'
 import {
   findApplicantVerificationsForRow,
   isDkimVerifiedRequest,
+  isDriverSendDeclined,
   type CandidateEmploymentRow,
 } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
@@ -41,8 +43,10 @@ export default function CandidateEmploymentVerificationSection({
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [initiatingKey, setInitiatingKey] = useState<string | null>(null)
+  const [decliningKey, setDecliningKey] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
+  const [formPage, setFormPage] = useState<1 | 2>(1)
 
   useEffect(() => {
     if (userAddress) void fetchData()
@@ -99,6 +103,26 @@ export default function CandidateEmploymentVerificationSection({
       alert('Failed to send packet')
     } finally {
       setInitiatingKey(null)
+    }
+  }
+
+  const declineVerification = async (row: CandidateEmploymentRow) => {
+    if (!userAddress) return
+    setDecliningKey(row.verificationKey)
+    try {
+      const response = await fetch('/api/candidate/verification/decline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationKey: row.verificationKey }),
+      })
+      const data = await response.json()
+      if (response.ok) void fetchData()
+      else alert(data.error ?? 'Failed to record decline')
+    } catch (err) {
+      console.error('Error declining verification:', err)
+      alert('Failed to record decline')
+    } finally {
+      setDecliningKey(null)
     }
   }
 
@@ -188,7 +212,7 @@ export default function CandidateEmploymentVerificationSection({
   }
 
   const replied = hasEmployerReply(request)
-  const sent = Boolean(request)
+  const sent = Boolean(request) && !isDriverSendDeclined(request)
   const attempts = request?.attemptCount ?? 0
   const canResend =
     sent && !replied && attempts < 3 && request?.status !== 'ATTEMPTS_EXHAUSTED'
@@ -209,6 +233,7 @@ export default function CandidateEmploymentVerificationSection({
                 onClick={() => {
                   setSelectedKey(row.verificationKey)
                   setSelectedRequestId(reqs[0]?.id ?? null)
+                  setFormPage(1)
                 }}
                 className={`rounded-lg border px-3 py-1.5 text-left text-xs font-medium ${
                   active
@@ -222,9 +247,11 @@ export default function CandidateEmploymentVerificationSection({
                     ? 'DKIM verified'
                     : latest && hasEmployerReply(latest)
                       ? 'Returned — review'
-                      : latest
-                        ? `Sent ${latest.attemptCount || 1}/3`
-                        : 'Needs send'}
+                      : isDriverSendDeclined(latest)
+                        ? 'Declined'
+                        : latest
+                          ? `Sent ${latest.attemptCount || 1}/3`
+                          : 'Needs send'}
                 </span>
               </button>
             )
@@ -358,13 +385,67 @@ export default function CandidateEmploymentVerificationSection({
       )}
 
       {selected && (
-        <SafetyPerformanceHistoryPaper
-          applicant={applicant}
-          employment={selected}
-          request={request}
-          sending={initiatingKey === selected.verificationKey}
-          onSend={({ email, phone }) => initiateVerification(selected, email, phone)}
-        />
+        <div>
+          <div className='mb-4 flex gap-2'>
+            <button
+              type='button'
+              onClick={() => setFormPage(1)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                formPage === 1
+                  ? 'border-[#173150] bg-[#173150] text-[#fbf8f1]'
+                  : 'border-ironside/35 bg-white text-[#173150]'
+              }`}
+            >
+              Page 1 · Section 1
+            </button>
+            <button
+              type='button'
+              onClick={() => setFormPage(2)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                formPage === 2
+                  ? 'border-[#173150] bg-[#173150] text-[#fbf8f1]'
+                  : 'border-ironside/35 bg-white text-[#173150]'
+              }`}
+            >
+              Page 2 · Section 2
+            </button>
+          </div>
+
+          {formPage === 1 ? (
+            <DriverAuthorizationForm
+              applicant={applicant}
+              employment={selected}
+              request={request}
+              sending={initiatingKey === selected.verificationKey}
+              declining={decliningKey === selected.verificationKey}
+              onSend={({ email, phone }) => initiateVerification(selected, email, phone)}
+              onDecline={() => declineVerification(selected)}
+            />
+          ) : (
+            <SafetyPerformanceHistoryPaper employment={selected} request={request} />
+          )}
+
+          <div className='mt-4 flex justify-between'>
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              disabled={formPage === 1}
+              onClick={() => setFormPage(1)}
+            >
+              Previous: Section 1
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              disabled={formPage === 2}
+              onClick={() => setFormPage(2)}
+            >
+              Next: Section 2
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   )
