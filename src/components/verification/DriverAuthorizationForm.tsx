@@ -24,13 +24,22 @@ export default function DriverAuthorizationForm({
   request?: VerificationRequest
   sending: boolean
   declining?: boolean
-  onSend: (contact: { email: string; phone: string; signature: string; date: string }) => void
+  onSend: (contact: {
+    email: string
+    phone: string
+    signature: string
+    date: string
+    needsResearch: boolean
+  }) => void
   onDecline?: () => void
 }) {
   const holdDefault = shouldHoldEvSend(employment)
   const [email, setEmail] = useState(employment.supervisorEmail ?? '')
   const [phone, setPhone] = useState(employment.supervisorPhone ?? '')
   const [address, setAddress] = useState(employment.location ?? '')
+  // Drivers often don't know their old employer's HR contact. Instead of blocking
+  // the send, they can flag Part 2 for employer-side research and submit anyway.
+  const [needsResearch, setNeedsResearch] = useState(false)
   const [signature, setSignature] = useState('')
   const [signatureDate, setSignatureDate] = useState(todayIso())
   const [sendBy, setSendBy] = useState({
@@ -48,6 +57,7 @@ export default function DriverAuthorizationForm({
     setEmail(employment.supervisorEmail ?? '')
     setPhone(employment.supervisorPhone ?? '')
     setAddress(employment.location ?? '')
+    setNeedsResearch(false)
     setSignature('')
     setSignatureDate(todayIso())
     setSendBy({ secureEmail: true, electronicPdf: false, usMail: false, other: false })
@@ -75,7 +85,7 @@ export default function DriverAuthorizationForm({
       signature.trim() &&
       signatureDate &&
       agreeSend &&
-      (email.trim() || phone.trim()),
+      (email.trim() || phone.trim() || needsResearch),
   )
 
   return (
@@ -146,6 +156,26 @@ export default function DriverAuthorizationForm({
               />
             </div>
           </div>
+        )}
+        {!sent && !email.trim() && !phone.trim() && (
+          <label className='mt-4 flex items-start gap-2 rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-sm'>
+            <input
+              type='checkbox'
+              checked={needsResearch}
+              onChange={(e) => setNeedsResearch(e.target.checked)}
+              className='mt-0.5 accent-[#173150]'
+            />
+            <span>
+              I don&apos;t have this employer&apos;s contact information. Submit my signed
+              authorization anyway — the employer side will research and complete this part before
+              the packet is sent.
+            </span>
+          </label>
+        )}
+        {sent && !email.trim() && !phone.trim() && (
+          <p className='mt-4 rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-xs text-[#173150]/75'>
+            Submitted without contact information — employer-side research will complete this part.
+          </p>
         )}
         <div className='mt-4 flex flex-wrap items-end gap-4'>
           <span className='text-sm font-medium text-[#173150]'>Employment Dates:</span>
@@ -338,11 +368,23 @@ export default function DriverAuthorizationForm({
               variant='primary'
               size='sm'
               disabled={!canSend || sending || declining}
-              onClick={() => onSend({ email, phone, signature, date: signatureDate })}
+              onClick={() =>
+                onSend({
+                  email,
+                  phone,
+                  signature,
+                  date: signatureDate,
+                  needsResearch: needsResearch && !email.trim() && !phone.trim(),
+                })
+              }
               className='inline-flex items-center gap-2'
             >
               {sending ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
-              {sending ? 'Sending…' : 'Send employment verification'}
+              {sending
+                ? 'Sending…'
+                : needsResearch && !email.trim() && !phone.trim()
+                  ? 'Submit for contact research'
+                  : 'Send employment verification'}
             </Button>
             {onDecline && (
               <Button

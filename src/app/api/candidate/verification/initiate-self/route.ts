@@ -39,11 +39,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { verificationKey, previousEmployerEmail, previousEmployerPhone, correctionOf } = body as {
+    const {
+      verificationKey,
+      previousEmployerEmail,
+      previousEmployerPhone,
+      correctionOf,
+      needsContactResearch,
+    } = body as {
       verificationKey?: string
       previousEmployerEmail?: string
       previousEmployerPhone?: string
       correctionOf?: string
+      needsContactResearch?: boolean
     }
 
     if (!verificationKey || typeof verificationKey !== 'string') {
@@ -65,7 +72,11 @@ export async function POST(request: NextRequest) {
     const contactEmail = previousEmployerEmail ?? row.supervisorEmail ?? null
     const contactPhone = previousEmployerPhone ?? row.supervisorPhone ?? null
 
-    if (!contactEmail && !contactPhone) {
+    // Drivers can submit a signed authorization without knowing the employer's
+    // contact info. The packet is created but nothing is emailed (see the
+    // !contactEmail branch below) — it sits at attempt_count 0 until the
+    // employer side researches the contact and completes auth Part 2.
+    if (!contactEmail && !contactPhone && !needsContactResearch) {
       return NextResponse.json(
         {
           error: 'No contact information for previous employer. Please provide an email or phone number.',
@@ -213,7 +224,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       verificationRequest,
-      message: `Verification request created for ${row.companyName}. We'll email your contact to confirm dates if possible.`,
+      message: contactEmail
+        ? `Verification request created for ${row.companyName}. We'll email your contact to confirm dates if possible.`
+        : `Authorization saved for ${row.companyName}. Contact research is needed before the packet can be sent.`,
     })
   } catch (error) {
     console.error('[CANDIDATE VERIFICATION] Error:', error)

@@ -1,7 +1,10 @@
 'use client'
 
 import { DOT_PAPER_CARD } from '@/lib/dot-form-paper'
-import type { CandidateEmploymentRow } from '@/lib/candidate-employment-verification'
+import type {
+  CandidateEmploymentRow,
+  EvApplicantIdentity,
+} from '@/lib/candidate-employment-verification'
 import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
 import {
@@ -10,6 +13,7 @@ import {
   OfficialTable,
   PaperLine,
   YesNoLine,
+  formatDob,
   paperDate,
 } from './ev-paper-shared'
 
@@ -19,9 +23,11 @@ function yn(value: string | null | undefined): 'yes' | 'no' | undefined {
 }
 
 export default function SafetyPerformanceHistoryPaper({
+  applicant,
   employment,
   request,
 }: {
+  applicant: EvApplicantIdentity
   employment: CandidateEmploymentRow
   request?: VerificationRequest
 }) {
@@ -81,8 +87,50 @@ export default function SafetyPerformanceHistoryPaper({
         </p>
       )}
 
+      {/* Part 1 identifies WHOSE records are requested and from WHOM — always
+          prefilled from the driver's claim, so the records holder knows exactly
+          which file to pull before they touch Part 2. */}
       <section>
-        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Previous Employer Completing This Request</h3>
+        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Driver and Former Employer</h3>
+
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          <PaperLine label='Driver Name:' value={applicant.driverName} />
+          <PaperLine
+            label='SSN:'
+            value={applicant.ssnLastFour ? `XXX-XX-${applicant.ssnLastFour}` : ''}
+          />
+          <PaperLine label='Date of Birth:' value={formatDob(applicant.dateOfBirth)} />
+          <PaperLine
+            label='Former Employer:'
+            value={request?.previousEmployerName ?? employment.companyName}
+          />
+        </div>
+        <div className='mt-4 flex flex-wrap items-end gap-4'>
+          <span className='text-sm font-medium'>Employment Dates (as claimed by driver):</span>
+          <PaperLine
+            label='From'
+            value={paperDate(request?.claimedStartDate ?? employment.startDate)}
+            className='min-w-[7rem] flex-1'
+          />
+          <PaperLine
+            label='To'
+            value={paperDate(request?.claimedEndDate ?? employment.endDate) || 'Present'}
+            className='min-w-[7rem] flex-1'
+          />
+        </div>
+        <div className='mt-4'>
+          <PaperLine
+            label='Position Held:'
+            value={request?.claimedPosition ?? employment.position}
+          />
+        </div>
+      </section>
+
+      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
+        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Employment Verification</h3>
+        <p className='mb-4 text-sm text-[#173150]/70'>
+          To be completed by the previous employer (records holder).
+        </p>
 
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <PaperLine
@@ -103,19 +151,8 @@ export default function SafetyPerformanceHistoryPaper({
             value={hasReply ? (request?.verifiedByName ?? '') : ''}
           />
         </div>
-        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
-          <PaperLine label='Title:' value={hasReply ? (request?.verifiedByTitle ?? '') : ''} />
-          <PaperLine
-            label='Date:'
-            value={hasReply && request?.verifiedAt ? paperDate(request.verifiedAt) : ''}
-          />
-        </div>
-      </section>
 
-      <section className='mt-8 border-t border-[#173150]/25 pt-6'>
-        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Employment Verification</h3>
-
-        <div className='flex flex-wrap gap-4'>
+        <div className='mt-6 flex flex-wrap gap-4'>
           <span className='text-sm font-medium'>The applicant named above was employed by us.</span>
           <Check checked={hasReply} label='Yes' />
           <Check checked={false} label='No' />

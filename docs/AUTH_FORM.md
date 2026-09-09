@@ -35,6 +35,8 @@ Page 2 — Safety Performance History: **5 parts**.
 
 **Position Held:** ________________
 
+_Drivers often can't reliably complete this part. If contact info is unknown, the driver may still sign and submit — the packet is held and Part 2 is researched and completed on the employer side before sending._
+
 ---
 
 ### Part 3 — Authorization and Delivery Instructions
@@ -59,21 +61,31 @@ I authorize my previous employers, contractors (if owner-operator), and trucking
 
 To be completed by the previous employer (records holder), except Part 5.
 
-### Part 1 — Previous Employer Completing This Request
+### Part 1 — Driver and Former Employer
 
-**Company Name:** ________________
+Identifies whose records are requested and from whom. Prefilled from the driver's claim.
 
-**Address:** ________________
+**Driver Name:** ________________
 
-**Phone:** ________________
+**SSN:** ________________ **Date of Birth:** ________________
 
-**Person Completing Form:** ________________
+**Former Employer:** ________________
 
-**Title:** ________________ **Date:** ________________
+**Employment Dates (as claimed by driver):** From ________ To ________
+
+**Position Held:** ________________
 
 ---
 
 ### Part 2 — Employment Verification
+
+To be completed by the previous employer (records holder).
+
+**Company Name:** ________________ **Phone:** ________________
+
+**Address:** ________________
+
+**Person Completing Form:** ________________
 
 The applicant named above was employed by us. ☐ Yes ☐ No
 

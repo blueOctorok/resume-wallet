@@ -81,6 +81,7 @@ export default function CandidateEmploymentVerificationSection({
     overrideEmail?: string,
     overridePhone?: string,
     correctionOf?: string,
+    needsContactResearch?: boolean,
   ) => {
     if (!userAddress) return
     setInitiatingKey(row.verificationKey)
@@ -93,6 +94,7 @@ export default function CandidateEmploymentVerificationSection({
           previousEmployerEmail: overrideEmail ?? row.supervisorEmail,
           previousEmployerPhone: overridePhone ?? row.supervisorPhone,
           correctionOf,
+          needsContactResearch,
         }),
       })
       const data = await response.json()
@@ -214,8 +216,16 @@ export default function CandidateEmploymentVerificationSection({
   const replied = hasEmployerReply(request)
   const sent = Boolean(request) && !isDriverSendDeclined(request)
   const attempts = request?.attemptCount ?? 0
+  // A packet submitted with no employer contact is parked for employer-side
+  // research — nothing has actually gone out yet, so resend makes no sense.
+  const awaitingContactResearch =
+    sent && !request?.previousEmployerEmail && !request?.previousEmployerPhone
   const canResend =
-    sent && !replied && attempts < 3 && request?.status !== 'ATTEMPTS_EXHAUSTED'
+    sent &&
+    !replied &&
+    !awaitingContactResearch &&
+    attempts < 3 &&
+    request?.status !== 'ATTEMPTS_EXHAUSTED'
 
   return (
     <div className={embedded ? '' : 'rounded-xl border border-ironside/30 bg-[#fbf8f1] p-4 sm:p-6'}>
@@ -249,9 +259,11 @@ export default function CandidateEmploymentVerificationSection({
                       ? 'Returned — review'
                       : isDriverSendDeclined(latest)
                         ? 'Declined'
-                        : latest
-                          ? `Sent ${latest.attemptCount || 1}/3`
-                          : 'Needs send'}
+                        : latest && !latest.previousEmployerEmail && !latest.previousEmployerPhone
+                          ? 'Researching contact'
+                          : latest
+                            ? `Sent ${latest.attemptCount || 1}/3`
+                            : 'Needs send'}
                 </span>
               </button>
             )
@@ -366,9 +378,11 @@ export default function CandidateEmploymentVerificationSection({
       {selected && sent && !replied && (
         <div className='mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#173150]/70'>
           <span>
-            Sent {attempts}/3
-            {request?.previousEmployerEmail ? ` to ${request.previousEmployerEmail}` : ''}.
-            We send this packet at least three times if they do not reply.
+            {awaitingContactResearch
+              ? 'Submitted — the employer side is researching contact info for this employer. The packet goes out once Part 2 of the authorization is completed.'
+              : `Sent ${attempts}/3${
+                  request?.previousEmployerEmail ? ` to ${request.previousEmployerEmail}` : ''
+                }. We send this packet at least three times if they do not reply.`}
           </span>
           {canResend && request && (
             <Button
@@ -396,7 +410,7 @@ export default function CandidateEmploymentVerificationSection({
                   : 'border-ironside/35 bg-white text-[#173150]'
               }`}
             >
-              Page 1 · Section 1
+              Section 1 · Driver Authorization
             </button>
             <button
               type='button'
@@ -407,7 +421,7 @@ export default function CandidateEmploymentVerificationSection({
                   : 'border-ironside/35 bg-white text-[#173150]'
               }`}
             >
-              Page 2 · Section 2
+              Section 2 · Safety Performance History
             </button>
           </div>
 
@@ -418,11 +432,17 @@ export default function CandidateEmploymentVerificationSection({
               request={request}
               sending={initiatingKey === selected.verificationKey}
               declining={decliningKey === selected.verificationKey}
-              onSend={({ email, phone }) => initiateVerification(selected, email, phone)}
+              onSend={({ email, phone, needsResearch }) =>
+                initiateVerification(selected, email, phone, undefined, needsResearch)
+              }
               onDecline={() => declineVerification(selected)}
             />
           ) : (
-            <SafetyPerformanceHistoryPaper employment={selected} request={request} />
+            <SafetyPerformanceHistoryPaper
+              applicant={applicant}
+              employment={selected}
+              request={request}
+            />
           )}
 
           <div className='mt-4 flex justify-between'>
@@ -433,7 +453,7 @@ export default function CandidateEmploymentVerificationSection({
               disabled={formPage === 1}
               onClick={() => setFormPage(1)}
             >
-              Previous: Section 1
+              Previous: Driver Authorization
             </Button>
             <Button
               type='button'
@@ -442,7 +462,7 @@ export default function CandidateEmploymentVerificationSection({
               disabled={formPage === 2}
               onClick={() => setFormPage(2)}
             >
-              Next: Section 2
+              Next: Safety Performance History
             </Button>
           </div>
         </div>

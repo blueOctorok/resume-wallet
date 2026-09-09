@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV: SPHRR Part 1 = driver + former employer; auth Part 2 gets contact research** (2026-09-09)
+
+Two structural fixes per boss feedback:
+
+- **SPHRR Part 1** now identifies the request — driver name, SSN, DOB, former employer, claimed dates, position (always prefilled from the driver's claim). The records holder's company/person fields moved to the top of **Part 2 — Employment Verification**, where the responder actually fills them.
+- **Auth Part 2 no longer blocks on contact info.** Drivers often don't know their old employer's HR contact, so when email and phone are blank a checkbox appears: submit the signed authorization anyway and the employer side researches and completes Part 2. `initiate-self` accepts `needsContactResearch: true` to skip the 400; the packet is created at `attempt_count 0` with no email sent, the company tab shows **Researching contact**, and resend is disabled until contact exists.
+- Section tabs renamed to **Section 1 · Driver Authorization** / **Section 2 · Safety Performance History**.
+
+| File | Change |
+|---|---|
+| `SafetyPerformanceHistoryPaper.tsx` | Part 1 restructured; takes `applicant` prop; responder fields in Part 2 |
+| `DriverAuthorizationForm.tsx` | Research checkbox, `needsResearch` in `onSend`, "Submit for contact research" label |
+| `CandidateEmploymentVerificationSection.tsx` | Tab renames, `awaitingContactResearch` banner + resend guard, passes flag to API |
+| `api/candidate/verification/initiate-self/route.ts` | `needsContactResearch` bypasses the missing-contact 400 |
+| `docs/AUTH_FORM.md` | Page 2 Part 1 spec corrected; research note on page 1 Part 2 |
+
+---
+
 ## **EV driver auth Part 3–4 match the release form** (2026-09-09)
 
 Part 3 is the real authorization: records go **to the driver**, previous employers / contractors / trucking schools, Send Records By, delivery = Part 1 email/address. Part 4 is Driver Signature only. No rewritten 391.23(i) bullets.
