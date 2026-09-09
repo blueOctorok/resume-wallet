@@ -10,7 +10,6 @@ import type { VerificationRequest } from '@/types/employment-verification'
 import { Ban, Loader2, Send } from 'lucide-react'
 import {
   OfficialFormFooter,
-  OfficialFormHeader,
   PaperLine,
   formatDob,
   paperDate,
@@ -78,10 +77,15 @@ export default function DriverAuthorizationForm({
 
   return (
     <div className={`${DOT_PAPER_CARD} border-t-4 border-ember p-5 sm:p-8`}>
-      <OfficialFormHeader page={1} />
+      <header className='mb-6 border-b border-[#173150]/25 pb-4 text-center'>
+        <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
+          Section 1 – Driver/Applicant Authorization
+        </h2>
+        <p className='mt-1 text-sm text-[#173150]/55'>Required by 49 CFR § 391.23</p>
+        <p className='mt-2 text-[11px] text-[#173150]/45'>Page 1 of 2</p>
+      </header>
 
       <section>
-        <h3 className='mb-4 text-lg font-semibold'>Section 1 – Driver/Applicant Authorization</h3>
 
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <PaperLine label='Driver Name:' value={applicant.driverName} />

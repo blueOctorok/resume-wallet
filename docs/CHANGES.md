@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV page 1 starts as driver authorization** (2026-09-09)
+
+Page 1 title is **Section 1 – Driver/Applicant Authorization**, not Safety Performance History. Page 2 is the records-holder SPHRR sheet.
+
+---
+
 ## **EV papers match the official § 391.23 form** (2026-09-09)
 
 Both pages now use the same header, field labels, From/To dates, checkbox line, bordered accident/attempts tables, certification, and “Revised 2025 Edition” footer as `docs/AUTH_FORM.md`. Section 2 stays a blank official form until the records holder replies (not a faded empty panel). Send/decline sits under Section 1 and is labeled as Provven, not a form field. Authorization does not name Pace.
