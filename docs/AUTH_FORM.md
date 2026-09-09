@@ -1,41 +1,58 @@
-# Driver Authorization to Release DOT Information + Safety Performance History Records Request
+# Driver Authorization to Release DOT Records + Safety Performance History Records Request
 
-**Required by 49 CFR § 391.23 and § 40.25**
+Transcribed from the boss's packet: `CDL_Driver_DOT_Employment_Verification_Workflow_with_Driver_Review_and_Dispute.pdf`
+(pages 4–5 of 7). This file is the source of truth for the EV papers — do NOT substitute the
+generic FMCSA form.
 
-Page 1 — Driver authorization: **4 parts**.  
-Page 2 — Safety Performance History: **5 parts**.
-
----
-
-## PAGE 1 — Driver Authorization to Release DOT Information
-
-### Part 1 — Applicant Identification
-
-**Driver Name:** ________________
-
-**SSN (optional):** ________________
-
-**Date of Birth:** ________________
-
-**Email:** ________________
-
-**Mailing Address:** ________________
+One packet per former employer, contractor, or trucking school.
+Page 1 — Driver authorization: **4 parts** (driver completes and signs).
+Page 2 — Safety Performance History: **5 parts** (records holder completes Parts 2–5).
 
 ---
 
-### Part 2 — Previous Employer to Contact
+## PAGE 1 — DRIVER AUTHORIZATION TO RELEASE DOT RECORDS
 
-**Previous Employer:** ________________
+_To be completed and signed by the driver_
 
-**Employer Address:** ________________
+**Purpose:** Use one packet for each former employer, contractor, or trucking school. The records
+holder should return the completed Safety Performance History Request and any attachments directly
+to the driver.
 
-**Email:** ________________ **Telephone:** ________________
+### Part 1 — Driver Information
 
-**Employment Dates:** From ________ To ________
+**Printed Name** First: ________ M.I.: ____ Last: ________
 
-**Position Held:** ________________
+**Other Name(s) Used:** ________________
 
-_Drivers often can't reliably complete this part. If contact info is unknown, the driver may still sign and submit — the packet is held and Part 2 is researched and completed on the employer side before sending._
+**Date of Birth (optional):** ________________
+
+**Last 4 of SSN or Driver License No.:** ________ **State:** ________
+
+**CDL Number / State:** ________________
+
+**Email Address:** ________________
+
+**Mailing Address** Street: ________________ City/State/ZIP: ________________
+
+**Phone Number:** ________________
+
+---
+
+### Part 2 — Former Employer / Contractor / School
+
+_Drivers often can't reliably complete this part. If contact info is unknown, the driver may still
+sign and submit — the packet is held and Part 2 is researched and completed on the employer side
+before sending._
+
+**Company / School Name:** ________________
+
+**Attention / Department:** ________________
+
+**Address** Street: ________________ City/State/ZIP: ________________
+
+**Phone / Email:** ________________
+
+**Employment / Attendance Dates:** From ________ To ________
 
 ---
 
@@ -43,7 +60,7 @@ _Drivers often can't reliably complete this part. If contact info is unknown, th
 
 I authorize my previous employers, contractors (if owner-operator), and trucking schools, as applicable, to release my Safety Performance History and DOT drug and alcohol information, as permitted by 49 CFR § 391.23 and other applicable regulations, directly to me at the address or email listed below. I also authorize release of employment verification information reasonably related to my DOT-regulated work history. A fax, image, or copy of this authorization may be treated as valid as the original.
 
-**Please provide the requested records directly to the driver. If there are no responsive records, indicate “No Records Found.”**
+**Please provide the requested records directly to the driver. If there are no responsive records, indicate "No Records Found."**
 
 **Send Records By:** ☐ Secure Email ☐ Electronic PDF ☐ U.S. Mail ☐ Other: ________
 
@@ -55,103 +72,78 @@ I authorize my previous employers, contractors (if owner-operator), and trucking
 
 **Driver Signature:** ________________ **Date:** ________________
 
+**Printed Name:** ________________
+
 ---
 
-## PAGE 2 — Safety Performance History Records Request
+## PAGE 2 — SAFETY PERFORMANCE HISTORY RECORDS REQUEST
 
-To be completed by the previous employer (records holder), except Part 5.
+_Driver-retained employer response form_
 
-### Part 1 — Driver and Former Employer
+**Instructions to records holder:** Complete Parts 2–5 and return this form, with any responsive
+records, directly to the driver using the delivery information on page 1.
 
-Identifies whose records are requested and from whom. Prefilled from the driver's claim.
+### Part 1 — Driver / Request Identification
 
 **Driver Name:** ________________
 
-**SSN:** ________________ **Date of Birth:** ________________
+**Former Employer / Records Holder:** ________________
 
-**Former Employer:** ________________
+**Employment Dates:** From ________ To ________
 
-**Employment Dates (as claimed by driver):** From ________ To ________
+**Driver Contact Email / Phone:** ________________
 
-**Position Held:** ________________
+_The signed authorization immediately preceding this request applies and should remain attached._
 
 ---
 
-### Part 2 — Employment Verification
+### Part 2 — Employment Verification — Completed by Records Holder
 
-To be completed by the previous employer (records holder).
+**Was the driver employed / contracted?** ☐ Yes ☐ No ☐ No Records Found
 
-**Company Name:** ________________ **Phone:** ________________
+**Verified Employment Dates:** From ________ To ________
 
-**Address:** ________________
+**Position(s) Held:** ________________
 
-**Person Completing Form:** ________________
+**Operated a Commercial Motor Vehicle?** ☐ Yes ☐ No ☐ Unknown
 
-The applicant named above was employed by us. ☐ Yes ☐ No
+**Equipment Type (if known):** ☐ Straight Truck ☐ Tractor-Semitrailer ☐ Bus ☐ Other: ________
 
-**Employed as:** ________________ **From (m/y):** ________ **To (m/y):** ________
-
-Did he/she drive a motor vehicle for you? ☐ Yes ☐ No
-
-If yes, what type? ☐ Straight Truck ☐ Tractor-Semitrailer ☐ Bus ☐ Cargo Tank ☐ Doubles/Triples ☐ Other
-
-**Reason for leaving:** ☐ Discharged ☐ Resignation ☐ Lay Off ☐ Military Duty ☐ Other: ________
-
-☐ If there is no safety performance history to report, check here, sign below and return.
-
-**Signature:** ________________ **Title:** ________________ **Date:** ________________
+**Reason for Separation (if maintained):** ☐ Resignation ☐ Discharge ☐ Layoff ☐ Other: ________
 
 ---
 
 ### Part 3 — Accident History
 
-Complete the following for any accidents included on your accident register (§ 390.15(b)) that involved the applicant in the 3 years prior to the application date, or check here if there is no accident register data for this driver. ☐
+During the applicable period, was the driver involved in any accidents maintained under 49 CFR § 390.15?
+☐ No accidents found ☐ Yes — list below ☐ Records unavailable
 
-| Date | Location | # Injuries | # Fatalities | Hazmat Spill |
-| ---- | -------- | ---------- | ------------ | ------------ |
-|      |          |            |              |              |
-|      |          |            |              |              |
-|      |          |            |              |              |
-
-Please provide information concerning any other accidents involving the applicant that were reported to government agencies or insurers or retained under internal company policies:
-
-**Any other remarks:**
+| Date | Location | Injuries | Fatalities | Hazmat Spill / Notes |
+| ---- | -------- | -------- | ---------- | -------------------- |
+|      |          |          |            |                      |
+|      |          |          |            |                      |
+|      |          |          |            |                      |
 
 ---
 
-### Part 4 — Drug and Alcohol History
+### Part 4 — Other Safety Performance Information
 
-If driver was not subject to Department of Transportation testing requirements while employed by this employer, please check here ☐, fill in the dates of employment from ________ to ________, complete the bottom of Part 4, sign, and return.
+☐ No additional safety performance information found. ☐ Additional information attached.
+☐ Records unavailable. ☐ No Records Found.
 
-Driver was subject to Department of Transportation testing requirements from ________ to ________.
-
-1. Has this person had an alcohol test with the result of 0.04 or higher alcohol concentration? ☐ Yes ☐ No
-2. Has this person tested positive or adulterated or substituted a test specimen for controlled substances? ☐ Yes ☐ No
-3. Has this person refused to submit to a post-accident, random, reasonable suspicion, or follow-up alcohol or controlled substance test? ☐ Yes ☐ No
-4. Has this person committed other violations of Subpart B of Part 382, or Part 40? ☐ Yes ☐ No
-5. If this person has violated a DOT drug and alcohol regulation, did this person complete a SAP-prescribed rehabilitation program in your employ, including return-to-duty and follow-up tests? ☐ Yes ☐ No
-6. For a driver who successfully completed a SAP’s rehabilitation referral and remained in your employ, did this driver subsequently have an alcohol test result of 0.04 or greater, a verified positive drug test, or refuse to be tested? ☐ Yes ☐ No
-
-In answering these questions, include any required DOT drug or alcohol testing information obtained from prior previous employers in the previous 3 years.
-
-**Name:** ________________ **Company:** ________________
-
-**Part 4 Completed by (Signature):** ________________ **Date:** ________________
+**Explanation / additional safety information:** ________________
 
 ---
 
-### Part 5 — Record of Attempts (for Employer Use)
+### Part 5 — Records Holder Certification
 
-This form was: ☐ Faxed ☐ Mailed ☐ Emailed ☐ Other ________ **By:** ________ **Date:** ________
+I certify that the information provided is true and correct to the best of my knowledge and is based on records maintained by the company or organization identified above.
 
-Information received from: ________________
+**Completed By / Title** Name: ________________ Title: ________________
 
-**Recorded by:** ________________ **Method:** ________________ **Date:** ________________
+**Signature / Date** Signature: ________________ Date: ________________
 
-| Date | Method | Contact Person | Result |
-| ---- | ------ | -------------- | ------ |
-|      |        |                |        |
+**Phone / Email:** ________________
 
----
-
-_Form complies with 49 CFR § 391.23 and § 40.25 — Revised 2025 Edition._
+_Return the completed packet and attachments directly to the driver. The driver should retain the
+original response and upload an unaltered copy to the appropriate career-card employer entry._

@@ -4,6 +4,35 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV papers now match the boss's actual PDF — fabricated Part 4 removed** (2026-09-09)
+
+**Root cause:** `docs/AUTH_FORM.md` had been reconstructed from a *web search* of the generic FMCSA
+Safety Performance History form, not from the packet the boss provided. That generic form carries a
+six-question Drug and Alcohol History section and a "Record of Attempts" part — neither exists on
+the real form. The actual source is
+`CDL_Driver_DOT_Employment_Verification_Workflow_with_Driver_Review_and_Dispute.pdf` (Downloads),
+pages 4–5.
+
+Both papers and the spec are now transcribed from that PDF:
+
+- **Page 1 — Driver Authorization to Release DOT Records:** Part 1 Driver Information (printed
+  first/M.I./last, other names, DOB optional, last-4 SSN or DL/state, CDL number/state, email,
+  mailing address, phone), Part 2 Former Employer / Contractor / School (company, attention/dept,
+  address, phone/email, dates — no "position held"), Part 3 authorization + delivery (unchanged,
+  was already from the PDF), Part 4 signature + printed name.
+- **Page 2 — Safety Performance History Records Request:** Part 1 Driver / Request Identification,
+  Part 2 Employment Verification (employed/contracted, verified dates, positions, operated CMV,
+  equipment type, reason for separation), Part 3 Accident History (§ 390.15 checkboxes + table),
+  **Part 4 Other Safety Performance Information** (checkboxes + explanation — replaces the invented
+  six drug/alcohol questions), **Part 5 Records Holder Certification** (replaces the invented
+  "Record of Attempts").
+- Removed the fabricated "Revised 2025 Edition" footer (`OfficialFormFooter`) and the now-unused
+  `YesNoLine` from `ev-paper-shared.tsx`.
+- Portal-collected drug/alcohol answers surface under Part 4's explanation line — the real form has
+  no dedicated D&A question block.
+
+---
+
 ## **EV: SPHRR Part 1 = driver + former employer; auth Part 2 gets contact research** (2026-09-09)
 
 Two structural fixes per boss feedback:

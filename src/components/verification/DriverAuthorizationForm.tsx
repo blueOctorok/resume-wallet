@@ -8,7 +8,7 @@ import type { CandidateEmploymentRow, EvApplicantIdentity } from '@/lib/candidat
 import { isDriverSendDeclined, shouldHoldEvSend } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
 import { Ban, Loader2, Send } from 'lucide-react'
-import { OfficialFormFooter, PaperLine, formatDob, paperDate, todayIso } from './ev-paper-shared'
+import { PaperLine, formatDob, paperDate, todayIso } from './ev-paper-shared'
 
 export default function DriverAuthorizationForm({
   applicant,
@@ -92,34 +92,61 @@ export default function DriverAuthorizationForm({
     <div className={`${DOT_PAPER_CARD} border-t-4 border-ember p-5 sm:p-8`}>
       <header className='mb-6 border-b border-[#173150]/25 pb-4 text-center'>
         <h2 className='text-xl font-bold tracking-tight sm:text-2xl'>
-          Driver Authorization to Release DOT Information
+          Driver Authorization to Release DOT Records
         </h2>
-        <p className='mt-1 text-sm text-[#173150]/55'>49 CFR § 391.23 and § 40.25 · Page 1 of 2</p>
+        <p className='mt-0.5 text-base text-[#173150]/70'>
+          To be completed and signed by the driver
+        </p>
+        <p className='mt-1 text-sm text-[#173150]/55'>
+          Purpose: Use one packet for each former employer, contractor, or trucking school. The
+          records holder should return the completed Safety Performance History Request and any
+          attachments directly to the driver.
+        </p>
       </header>
 
       <section>
-        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Applicant Identification</h3>
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-          <PaperLine label='Driver Name:' value={applicant.driverName} />
+        <h3 className='mb-4 text-lg font-semibold'>Part 1 — Driver Information</h3>
+        <div className='flex flex-wrap items-end gap-4'>
+          <span className='text-sm font-medium text-[#173150]'>Printed Name:</span>
+          <PaperLine label='First' value={applicant.firstName} className='min-w-[8rem] flex-1' />
+          <PaperLine label='M.I.' value={applicant.middleName.slice(0, 1)} className='w-16' />
+          <PaperLine label='Last' value={applicant.lastName} className='min-w-[8rem] flex-1' />
+        </div>
+        <div className='mt-4'>
+          <PaperLine label='Other Name(s) Used:' value='' />
+        </div>
+        <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+          <PaperLine label='Date of Birth (optional):' value={formatDob(applicant.dateOfBirth)} />
           <PaperLine
-            label='SSN (optional):'
-            value={applicant.ssnLastFour ? `XXX-XX-${applicant.ssnLastFour}` : ''}
+            label='Last 4 of SSN or Driver License No. / State:'
+            value={
+              applicant.ssnLastFour
+                ? `XXX-XX-${applicant.ssnLastFour}`
+                : [applicant.licenseNumber, applicant.licenseState].filter(Boolean).join(' / ')
+            }
           />
-          <PaperLine label='Date of Birth:' value={formatDob(applicant.dateOfBirth)} />
-          <PaperLine label='Email:' value={applicant.email} />
-          <PaperLine label='Mailing Address:' value={applicant.mailingAddress} className='sm:col-span-2' />
+          <PaperLine
+            label='CDL Number / State:'
+            value={[applicant.cdlNumber, applicant.cdlState].filter(Boolean).join(' / ')}
+          />
+          <PaperLine label='Phone Number:' value={applicant.phone} />
+          <PaperLine label='Email Address:' value={applicant.email} />
+          <PaperLine label='Mailing Address:' value={applicant.mailingAddress} />
         </div>
       </section>
 
       <section className='mt-8 border-t border-[#173150]/25 pt-6'>
-        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Previous Employer to Contact</h3>
-        <PaperLine label='Previous Employer:' value={employment.companyName} />
+        <h3 className='mb-4 text-lg font-semibold'>Part 2 — Former Employer / Contractor / School</h3>
+        <PaperLine label='Company / School Name:' value={employment.companyName} />
+        <div className='mt-4'>
+          <PaperLine label='Attention / Department:' value='' />
+        </div>
         <div className='mt-4'>
           {sent ? (
-            <PaperLine label='Employer Address:' value={address} />
+            <PaperLine label='Address:' value={address} />
           ) : (
             <div>
-              <label className='text-sm font-medium text-[#173150]'>Employer Address:</label>
+              <label className='text-sm font-medium text-[#173150]'>Address:</label>
               <textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -178,7 +205,7 @@ export default function DriverAuthorizationForm({
           </p>
         )}
         <div className='mt-4 flex flex-wrap items-end gap-4'>
-          <span className='text-sm font-medium text-[#173150]'>Employment Dates:</span>
+          <span className='text-sm font-medium text-[#173150]'>Employment / Attendance Dates:</span>
           <PaperLine
             label='From'
             value={paperDate(employment.startDate)}
@@ -189,9 +216,6 @@ export default function DriverAuthorizationForm({
             value={paperDate(employment.endDate) || 'Present'}
             className='min-w-[7rem] flex-1'
           />
-        </div>
-        <div className='mt-4'>
-          <PaperLine label='Position Held:' value={employment.position} />
         </div>
       </section>
 
@@ -271,6 +295,9 @@ export default function DriverAuthorizationForm({
 
       <section className='mt-8 border-t border-[#173150]/25 pt-6'>
         <h3 className='mb-4 text-lg font-semibold'>Part 4 — Driver Signature</h3>
+        <div className='mb-4'>
+          <PaperLine label='Printed Name:' value={applicant.driverName} />
+        </div>
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <div>
             <label className='text-sm font-medium text-[#173150]'>Driver Signature:</label>
@@ -406,8 +433,6 @@ export default function DriverAuthorizationForm({
           </div>
         </div>
       )}
-
-      <OfficialFormFooter />
     </div>
   )
 }
