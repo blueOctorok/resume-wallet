@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Screening consent wizard gets a recorded decline** (2026-09-10)
+
+Audit of every consent surface (boss ask: "consent must be clicked — add a decline too"):
+
+| Surface | Decline already existed? |
+|---|---|
+| EV driver authorization (page 1) | ✅ `DRIVER_SEND_DECLINED` |
+| Records-holder portal `/verify/[token]` | ✅ `VERIFICATION_DECLINED` |
+| Employer requests inbox modal (incl. FCRA/PSP flows) | ✅ `candidate_requests.status = 'declined'` |
+| Screening consent wizard (`ScreeningConsentBlock` — invite deep-link path) | ❌ **gap — fixed** |
+
+Invited drivers land directly in the wizard and never see the inbox's Decline button; their only
+out was a silent "Back to Hub" that left the request pending forever. The wizard now shows a
+"Decline this request" bar (inline confirm, no modal) that PATCHes the same
+`/api/candidate/requests/[requestId]` endpoint with `status: 'declined'`, then shows a
+"Request declined" card. No schema or API changes — reuses the inbox's decline path.
+
+---
+
 ## **EV papers now match the boss's actual PDF — fabricated Part 4 removed** (2026-09-09)
 
 **Root cause:** `docs/AUTH_FORM.md` had been reconstructed from a *web search* of the generic FMCSA

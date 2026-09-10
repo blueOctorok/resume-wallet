@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useEffect } from 'react'
-import { CheckCircle, Loader2 } from 'lucide-react'
+import { Ban, CheckCircle, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import PspDisclosureForm from '@/components/PspDisclosureForm'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
@@ -50,6 +50,11 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const [retrySubmitting, setRetrySubmitting] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
   const [claimingInvite, setClaimingInvite] = useState(false)
+  // Explicit decline (boss ask): consent forms must offer a recorded "no",
+  // not just a silent Back to Hub that leaves the request pending forever.
+  const [confirmingDecline, setConfirmingDecline] = useState(false)
+  const [declining, setDeclining] = useState(false)
+  const [declined, setDeclined] = useState(false)
 
   useEffect(() => {
     if (pendingEmployerRequest && !capturedRequest) {
@@ -128,6 +133,27 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const inputClass = isDarkTheme(theme)
     ? 'w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500'
     : 'w-full px-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500'
+
+  const handleDecline = async () => {
+    if (!activeEmployerRequest) return
+    setDeclining(true)
+    try {
+      // Same endpoint the requests inbox uses — records candidate_requests.status = 'declined'.
+      const res = await fetch(`/api/candidate/requests/${activeEmployerRequest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'declined' }),
+      })
+      if (!res.ok) throw new Error('Failed to decline')
+      setDeclined(true)
+      void refreshPendingRequest()
+    } catch (e) {
+      console.error('[SCREENING CONSENT] Decline error:', e)
+      alert('Failed to record your decline. Please try again.')
+    } finally {
+      setDeclining(false)
+    }
+  }
 
   const handleOrderRetry = async () => {
     if (!orderRetry) return
@@ -245,6 +271,37 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
     )
   }
 
+  if (declined) {
+    return (
+      <div className="w-full p-4 sm:p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className={`${cardClass} p-8 text-center`}>
+            <div
+              className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                isDarkTheme(theme) ? 'bg-red-500/15' : 'bg-red-50'
+              }`}
+            >
+              <Ban className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'}`} />
+            </div>
+            <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
+              Request declined
+            </h3>
+            <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+              Your decision is on file — no consent was signed and no reports will be ordered.
+              {activeEmployerRequest?.companyName
+                ? ` ${activeEmployerRequest.companyName} can see the request was declined.`
+                : ''}{' '}
+              If you change your mind, ask the employer to send a new request.
+            </p>
+            <Button variant="primary" onClick={onBack}>
+              Back to Hub
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (complete) {
     return (
       <div className="w-full p-4 sm:p-6 lg:p-8">
@@ -324,6 +381,53 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
             3
           </span>
           <span className={step === 'attestation' ? 'font-medium' : ''}>{CDLIS_PAGE_BREADCRUMB}</span>
+        </div>
+
+        {/* Recorded decline — redundant with simply not signing, but the choice
+            must be on file (same pattern as the EV packet decline). */}
+        <div
+          className={`mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm ${
+            isDarkTheme(theme)
+              ? 'bg-gray-800/50 border border-gray-700 text-gray-300'
+              : 'bg-white/70 border border-gray-200 text-gray-600'
+          }`}
+        >
+          {confirmingDecline ? (
+            <>
+              <span>
+                Decline this screening request?
+                {activeEmployerRequest?.companyName
+                  ? ` ${activeEmployerRequest.companyName} will see it was declined.`
+                  : ''}{' '}
+                Nothing is signed and no reports are ordered.
+              </span>
+              <span className="flex gap-2">
+                <Button
+                  variant="danger"
+                  size="sm"
+                  isLoading={declining}
+                  onClick={handleDecline}
+                >
+                  Confirm decline
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={declining}
+                  onClick={() => setConfirmingDecline(false)}
+                >
+                  Keep reviewing
+                </Button>
+              </span>
+            </>
+          ) : (
+            <>
+              <span>Don&apos;t want to consent? You can decline — your decision is recorded.</span>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmingDecline(true)}>
+                Decline this request
+              </Button>
+            </>
+          )}
         </div>
 
         {step === 'bg-disclosure' && activeEmployerRequest && (
