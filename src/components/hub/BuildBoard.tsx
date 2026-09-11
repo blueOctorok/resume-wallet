@@ -1,10 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { FolderCheck } from 'lucide-react'
+import { ArrowRight, FolderCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthStore, useUIStore } from '@/stores'
 import { useJourneyProgress } from '@/stores/journey-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
+import type { PageType } from '@/stores/types'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import DqCoachPanel from '@/components/hub/DqCoachPanel'
@@ -15,6 +17,15 @@ import type { DqItemStatus } from '@/lib/dq-file-status'
  * File board — AI-ordered next steps, then the full DQ packet
  * (including items we have not shipped yet).
  */
+
+const PACKET_PAGE: Partial<Record<string, PageType | 'profile'>> = {
+  profile: 'profile',
+  mvr: 'mvr',
+  psp: 'psp',
+  dot_application: 'dotapp',
+  cdlis_consent: 'screening-consent',
+  employment_verification: 'employment-verification',
+}
 
 function packetChip(status: DqItemStatus | 'todo', live: boolean): { label: string; className: string } {
   if (status === 'complete') {
@@ -35,6 +46,8 @@ function packetChip(status: DqItemStatus | 'todo', live: boolean): { label: stri
 export default function BuildBoard() {
   const dqFile = useDriverHubStore((s) => s.dqFile)
   const journey = useJourneyProgress()
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
 
   const { completedCount, totalCount, packet } = useMemo(() => {
     const live = DQ_ITEM_DEFINITIONS.filter((d) => d.blocksOverallCompletion)
@@ -101,6 +114,17 @@ export default function BuildBoard() {
           <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-8'>
             {packet.map((row) => {
               const chip = packetChip(row.status, row.live)
+              const page = PACKET_PAGE[row.id]
+              const actionLabel =
+                row.id === 'dot_application' && row.status === 'complete' ? 'Edit' : 'Open'
+              const open = () => {
+                if (!page) return
+                if (page === 'profile') {
+                  setShowProfileSetup(true)
+                  return
+                }
+                setCurrentPage(page)
+              }
               return (
                 <li
                   key={row.id}
@@ -112,13 +136,25 @@ export default function BuildBoard() {
                       <span className='ml-1.5 text-[10px] text-ironside'>{row.hint}</span>
                     ) : null}
                   </span>
-                  <span
-                    className={cn(
-                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                      chip.className,
-                    )}
-                  >
-                    {chip.label}
+                  <span className='flex shrink-0 items-center gap-2'>
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                        chip.className,
+                      )}
+                    >
+                      {chip.label}
+                    </span>
+                    {page && row.live ? (
+                      <button
+                        type='button'
+                        onClick={open}
+                        className='inline-flex items-center gap-0.5 text-xs font-semibold text-[#173150] hover:text-[#f15a2b]'
+                      >
+                        {actionLabel}
+                        <ArrowRight className='h-3.5 w-3.5' aria-hidden />
+                      </button>
+                    ) : null}
                   </span>
                 </li>
               )

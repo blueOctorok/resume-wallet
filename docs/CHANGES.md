@@ -6,6 +6,8 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **DOT application can be edited after submit** (2026-09-11)
 
+The File board had no Edit control — Watching-your-file **Open** on “Profile name vs DOT” went to Profile setup. That step now opens the DOT wizard. **Full DQ packet → DOT application** shows **Edit** when the app is already on file.
+
 Submitted DOT apps only showed the success screen. Hub **Edit** still routed to `dotapp`, so it looked like you could change it and then you could not.
 
 The lock was UI-only (`isApplicationCompleted` copied from `is_complete` on load). Save APIs already accepted updates. Load now reopens the wizard; the success screen is only shown right after submit and has **Edit application**. Saving a submitted app re-runs `sync-from-dot` so the career card / employer view pick up changes. Issuer-backed MVR/PSP fields stay locked.

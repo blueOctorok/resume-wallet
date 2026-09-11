@@ -13,7 +13,7 @@ const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv'])
 const DISCREPANCY_TARGET: Record<string, DqCoachTarget> = {
   [PROFILE_MVR_NAME_FLAG]: 'profile',
   'DOT name vs MVR': 'dotapp',
-  'Profile name vs DOT': 'profile',
+  'Profile name vs DOT': 'dotapp',
   'Date of birth vs MVR': 'profile',
   'DOT date of birth vs MVR': 'dotapp',
   'Phone vs MVR': 'profile',
