@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { evrDeliveryAddress } from '@/lib/evr-delivery'
 import { persistPingramTrackingId } from '@/lib/evr-inbound'
 import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
 import { isMessagingConfigured, sendEmail } from './messaging'
@@ -11,6 +12,8 @@ export interface SendVerificationEmailParams {
   claimedCompanyName: string
   claimedStartDate?: string
   claimedEndDate?: string | null
+  /** Per-packet Provven inbound address — responses sent here auto-file to the request. */
+  deliveryAddress?: string
 }
 
 /**
@@ -32,6 +35,7 @@ export async function sendVerificationEmail(
     claimedCompanyName,
     claimedStartDate,
     claimedEndDate,
+    deliveryAddress,
   } = params
 
   const dateRange =
@@ -57,6 +61,14 @@ export async function sendVerificationEmail(
       <strong>reply to this email</strong> with YES if the dates are correct.
       The link is valid for <strong>30 days</strong>.
     </p>
+    ${
+      deliveryAddress
+        ? `<p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      To return a completed Safety Performance History form or supporting records, email them to
+      the driver's secure delivery address: <strong>${deliveryAddress}</strong>.
+    </p>`
+        : ''
+    }
     ${infoBox(`<p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
       <strong>You are not required to respond.</strong> If you choose not to respond, the
       verification request will simply expire. Your response is kept confidential.
@@ -98,7 +110,10 @@ export async function sendVerificationEmailAndTrack(
   requestId: string,
   params: SendVerificationEmailParams,
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
-  const result = await sendVerificationEmail(params)
+  const result = await sendVerificationEmail({
+    ...params,
+    deliveryAddress: params.deliveryAddress ?? evrDeliveryAddress(requestId),
+  })
   if (result.ok && result.id) {
     await persistPingramTrackingId(supabase, requestId, result.id)
   }

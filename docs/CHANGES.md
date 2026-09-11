@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV responses always land in Provven — per-packet delivery address** (2026-09-11)
+
+Boss requirement: the employer's response must ALWAYS come back into Provven. Reply-path and
+portal-path already did; the leak was an employer emailing the driver's personal address printed on
+the paper. Every packet now has a Pingram-caught delivery alias, **`evr-<requestId>@verify.provven.com`**:
+
+- **`src/lib/evr-delivery.ts`** (new, client-safe) — `evrDeliveryAddress()` + `parseEvrDeliveryRequestId()`.
+- **Inbound matching** (`evr-inbound.ts`) — the alias in the `to` field is now the *first* match
+  strategy (names the request outright, works for fresh non-reply emails), then Pingram tracking id,
+  then domain-align fallback. From-domain alignment is still enforced.
+- **Outbound email** — `sendVerificationEmailAndTrack` injects the alias; the employer email now
+  says "return completed forms/records to the driver's secure delivery address."
+- **Auth paper Part 3** — Delivery Destination shows the secure address once the packet is sent.
+- **SPHRR Part 1** — Driver Contact Email is the secure address (phone unchanged).
+
+No schema change — the alias derives from the request id. Test added for fresh-email alias matching.
+
+**Ops prerequisite:** Pingram inbound must be a domain catch-all for `verify.provven.com` (any
+local part → EMAIL_INBOUND webhook), not just the `provven@` mailbox.
+
+---
+
 ## **Screening consent wizard gets a recorded decline** (2026-09-10)
 
 Audit of every consent surface (boss ask: "consent must be clicked — add a decline too"):

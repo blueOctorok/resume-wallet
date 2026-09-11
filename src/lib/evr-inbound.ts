@@ -5,6 +5,7 @@ import {
   sha256Hex,
   verifyDkimRfc822,
 } from '@/lib/dkim-verify'
+import { parseEvrDeliveryRequestId } from '@/lib/evr-delivery'
 
 export interface PingramInboundEmail {
   eventType?: string
@@ -87,7 +88,22 @@ export async function processEvrInboundEmail(
   const trackingId = String(payload.trackingId ?? '').trim()
   let request: Record<string, unknown> | null = null
 
-  if (trackingId) {
+  // Strongest match first: mail sent to the packet's own delivery address
+  // (evr-<requestId>@...) names the request outright — works even for fresh
+  // emails that aren't replies to our thread.
+  const aliasRequestId = parseEvrDeliveryRequestId(payload.to)
+  if (aliasRequestId) {
+    const { data } = await supabase
+      .from('employment_verification_requests')
+      .select(
+        'id, driver_id, previous_employer_email, previous_employer_name, claimed_start_date, claimed_end_date, status',
+      )
+      .eq('id', aliasRequestId)
+      .maybeSingle()
+    request = data
+  }
+
+  if (!request && trackingId) {
     const { data } = await supabase
       .from('employment_verification_requests')
       .select(

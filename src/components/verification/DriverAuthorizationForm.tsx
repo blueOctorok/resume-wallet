@@ -8,6 +8,7 @@ import type { CandidateEmploymentRow, EvApplicantIdentity } from '@/lib/candidat
 import { isDriverSendDeclined, shouldHoldEvSend } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
 import { Ban, Loader2, Send } from 'lucide-react'
+import { evrDeliveryAddress } from '@/lib/evr-delivery'
 import { PaperLine, formatDob, paperDate, todayIso } from './ev-paper-shared'
 
 export default function DriverAuthorizationForm({
@@ -287,9 +288,21 @@ export default function DriverAuthorizationForm({
         </div>
         <div className='mt-4'>
           <p className='text-sm font-medium text-[#173150]'>Delivery Destination:</p>
-          <p className='mt-1 text-sm text-[#173150]'>
-            Use the driver email or mailing address listed in Part 1.
-          </p>
+          {/* Boss requirement: responses must always land in Provven. The packet's
+              delivery address is a Pingram-caught inbound alias, so even a fresh
+              (non-reply) email from the employer auto-files to this request. */}
+          {request?.id ? (
+            <p className='mt-1 text-sm text-[#173150]'>
+              Send records to the driver&apos;s secure delivery address:{' '}
+              <strong>{evrDeliveryAddress(request.id)}</strong>, or the mailing address listed in
+              Part 1.
+            </p>
+          ) : (
+            <p className='mt-1 text-sm text-[#173150]'>
+              Use the driver email or mailing address listed in Part 1. A secure delivery address
+              is assigned to this packet when it is sent.
+            </p>
+          )}
         </div>
       </section>
 

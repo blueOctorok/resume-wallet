@@ -76,4 +76,22 @@ describe('evr-inbound', () => {
     })
     expect(result).toEqual({ ok: true, requestId: 'evr-1', dkimValid: false })
   })
+
+  it('matches a fresh email sent to the per-packet delivery address', async () => {
+    // Not a reply (no tracking id) — the employer composed a new email to
+    // evr-<requestId>@verify.provven.com. The alias in `to` names the request.
+    const uuidRow = { ...OPEN_ROW, id: '3f9c2f2a-71c4-4c5e-9d55-2f5a8b1c9e10' }
+    const { client } = mockSupabase({ byTracking: uuidRow })
+    const result = await processEvrInboundEmail(client, {
+      eventType: 'EMAIL_INBOUND',
+      from: 'records@acmetrucking.com',
+      to: 'evr-3f9c2f2a-71c4-4c5e-9d55-2f5a8b1c9e10@verify.provven.com',
+      bodyText: 'Completed form attached. Dates confirmed.',
+    })
+    expect(result).toEqual({
+      ok: true,
+      requestId: '3f9c2f2a-71c4-4c5e-9d55-2f5a8b1c9e10',
+      dkimValid: false,
+    })
+  })
 })

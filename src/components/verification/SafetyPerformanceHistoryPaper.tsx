@@ -7,6 +7,7 @@ import type {
 } from '@/lib/candidate-employment-verification'
 import { isDkimVerifiedRequest } from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
+import { evrDeliveryAddress } from '@/lib/evr-delivery'
 import { Check, OfficialTable, PaperLine, paperDate } from './ev-paper-shared'
 
 /**
@@ -111,9 +112,16 @@ export default function SafetyPerformanceHistoryPaper({
           />
         </div>
         <div className='mt-4'>
+          {/* The packet's secure delivery address (Pingram inbound) — keeps the
+              employer's response inside Provven instead of a personal inbox. */}
           <PaperLine
             label='Driver Contact Email / Phone:'
-            value={[applicant.email, applicant.phone].filter(Boolean).join(' / ')}
+            value={[
+              request?.id ? evrDeliveryAddress(request.id) : applicant.email,
+              applicant.phone,
+            ]
+              .filter(Boolean)
+              .join(' / ')}
           />
         </div>
         <p className='mt-3 text-sm italic text-[#173150]/70'>
