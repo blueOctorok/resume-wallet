@@ -6,10 +6,11 @@
  * 
  * Form 1: Personal Info, Residency, License, Medical
  * Form 2: Driving Experience, Accidents, Convictions
- * Form 3: Employment History, Education, Signature
+ * Form 3: Employment History (incl. CDL / school), Signature
  */
 
 import type { UnifiedDriverProfile, UnifiedEmployment, UnifiedEducation } from '@/types/driver-profile'
+import { parseCertifications } from '@/lib/cdl-certifications'
 
 // =====================================================
 // FORM 1 DATA TYPES
@@ -134,10 +135,15 @@ export interface DotForm2Data {
 // =====================================================
 
 export interface DotForm3Employer {
+  /** History entry kind. Absent on older drafts, which are all employment. */
+  type?: 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
   name: string
   phone: string
+  /** School / CDL program for `school` + `drivingSchool` entries. */
+  courseOfStudy?: string
   /** Leftover on older drafts — no longer collected. */
   email?: string
+  /** Leftover on older drafts — no longer collected on Form 3 (EV block owns contact). */
   hiringManagerName?: string
   hiringManagerPhone?: string
   hiringManagerEmail?: string
@@ -175,7 +181,6 @@ export interface DotForm3Education {
 export interface DotForm3Data {
   employers: DotForm3Employer[]
   education: DotForm3Education[]
-  otherQualifications?: string
   applicantSignature?: string
   signatureDate?: string
   applicantNamePrinted?: string
@@ -402,10 +407,14 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
   // Defensive checks - form3Data might exist but have undefined arrays
   const employers = data?.employers || []
   const educationData = data?.education || []
-  
+  const isSchoolEntry = (emp: DotForm3Employer) =>
+    emp.type === 'school' || emp.type === 'drivingSchool'
+
   // Map Form 3 employers to profile employmentHistory
   const employmentHistory: UnifiedEmployment[] = employers
-    .filter(emp => !emp.isUnemployment && emp.name) // Skip unemployment periods and empty entries
+    // Skip unemployment, schools, and empty entries. Schools live in the same
+    // history array but they're education, not jobs — see below.
+    .filter(emp => !emp.isUnemployment && !isSchoolEntry(emp) && emp.name)
     .map((emp, idx): UnifiedEmployment => ({
       // Preserve stable id so EVR.employment_id linkage survives Form 3 ↔ profile sync
       id: emp.id?.trim() || `form3-emp-${idx}-${Date.now()}`,
@@ -418,28 +427,46 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       responsibilities: [],
       equipment: [],
       reasonForLeaving: emp.reasonForLeaving,
-      supervisorName: emp.hiringManagerName || '',
-      supervisorPhone: emp.hiringManagerPhone || emp.phone,
-      supervisorEmail: emp.hiringManagerEmail || undefined,
       subjectToFMCSR: emp.subjectToFMCSR === 'yes',
       subjectToDrugTest: emp.safetySensitiveFunction === 'yes',
     }))
 
-  // Map Form 3 education to profile education
-  const education: UnifiedEducation[] = educationData
-    .filter(edu => edu.nameAndLocation) // Skip empty entries
-    .map((edu, idx): UnifiedEducation => ({
-      id: `form3-edu-${idx}-${Date.now()}`,
-      school: edu.nameAndLocation,
-      degree: edu.graduated === 'yes' ? 'Completed' : 'Attended',
-      field: edu.courseOfStudy,
-      year: edu.yearsCompleted,
-      certifications: edu.details ? [edu.details] : [],
-    }))
+  // The required CDL / School section in the history timeline replaced the old
+  // standalone Education step, so those entries are the education source now.
+  const education: UnifiedEducation[] = [
+    ...employers
+      .filter(emp => isSchoolEntry(emp) && emp.name)
+      .map((emp, idx): UnifiedEducation => {
+        // Driving school keeps its CDL classes/endorsements in courseOfStudy as
+        // a comma-joined list — surface those as real certifications.
+        const isDrivingSchool = emp.type === 'drivingSchool'
+        return {
+          id: emp.id?.trim() || `form3-school-${idx}-${Date.now()}`,
+          school: emp.name,
+          degree: isDrivingSchool ? 'CDL Training' : emp.courseOfStudy || '',
+          field: emp.courseOfStudy || '',
+          year: emp.toDate || '',
+          certifications: isDrivingSchool ? parseCertifications(emp.courseOfStudy) : [],
+        }
+      }),
+    // Drafts saved before the Education step was removed still carry entries.
+    ...educationData
+      .filter(edu => edu.nameAndLocation)
+      .map((edu, idx): UnifiedEducation => ({
+        id: `form3-edu-${idx}-${Date.now()}`,
+        school: edu.nameAndLocation,
+        degree: edu.graduated === 'yes' ? 'Completed' : 'Attended',
+        field: edu.courseOfStudy,
+        year: edu.yearsCompleted,
+        certifications: edu.details ? [edu.details] : [],
+      })),
+  ]
 
   return {
     employmentHistory,
-    education,
+    // Omit rather than send [] — `saveEducation` would wipe block_education,
+    // which the resume blocks share.
+    ...(education.length ? { education } : {}),
   }
 }
 
@@ -450,12 +477,10 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
 export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3Data> {
   // Map profile employmentHistory to Form 3 employers
   const employers: DotForm3Employer[] = profile.employmentHistory.map(emp => ({
+    type: 'employment' as const,
     id: emp.id,
     name: emp.companyName,
-    phone: emp.supervisorPhone || '',
-    hiringManagerName: emp.supervisorName || '',
-    hiringManagerPhone: emp.supervisorName ? emp.supervisorPhone || '' : '',
-    hiringManagerEmail: emp.supervisorEmail || '',
+    phone: '',
     address: emp.location,
     positionHeld: emp.position,
     fromDate: profileDateToForm3Date(emp.startDate, false),
@@ -469,20 +494,30 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
     _source: 'self',
   }))
 
-  // Map profile education to Form 3 education
-  const education: DotForm3Education[] = profile.education.map(edu => ({
-    schoolType: edu.degree.toUpperCase().includes('HIGH') ? 'HIGH SCHOOL' : 
-                edu.degree.toUpperCase().includes('COLLEGE') ? 'COLLEGE' : 'OTHER',
-    nameAndLocation: edu.school,
-    courseOfStudy: edu.field,
-    yearsCompleted: edu.year,
-    graduated: edu.degree === 'Completed' ? 'yes' : 'no',
-    details: edu.certifications?.join(', ') || '',
+  // Education prefills the required CDL / School section of the history
+  // timeline — Form 3 no longer has a separate Education step. Dates are blank
+  // because profile education only stores a year; the driver fills them in.
+  const schools: DotForm3Employer[] = profile.education.map(edu => ({
+    type: 'school' as const,
+    id: edu.id,
+    name: edu.school,
+    phone: '',
+    address: '',
+    positionHeld: '',
+    courseOfStudy: edu.field || edu.degree || '',
+    fromDate: '',
+    toDate: '',
+    reasonForLeaving: '',
+    subjectToFMCSR: 'no',
+    safetySensitiveFunction: 'no',
+    isUnemployment: false,
+    _source: 'self' as const,
   }))
 
+  const historyEntries = [...employers, ...schools]
+
   return {
-    employers: employers.length > 0 ? employers : undefined,
-    education: education.length > 0 ? education : undefined,
+    employers: historyEntries.length > 0 ? historyEntries : undefined,
     applicantNamePrinted: `${profile.firstName} ${profile.middleName} ${profile.lastName}`.replace(/\s+/g, ' ').trim(),
     applicantSignature: `${profile.firstName} ${profile.middleName} ${profile.lastName}`.replace(/\s+/g, ' ').trim(),
   }

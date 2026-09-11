@@ -728,7 +728,7 @@ export default function PersonalInfoForm1({
         className='justify-end'
         onClick={() =>
           requestHelp({
-            section: 'Form 1 – Personal Information',
+            section: 'Section 1 – Personal Information',
             question:
               'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
             regulation: '49 CFR 391.21',
@@ -2153,7 +2153,7 @@ export default function PersonalInfoForm1({
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
         >
-          {currentStep === STEPS.length ? 'Continue to Form 2' : 'Next'}
+          {currentStep === STEPS.length ? 'Continue to Section 2' : 'Next'}
         </button>
       </div>
     </div>

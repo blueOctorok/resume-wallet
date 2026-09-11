@@ -5,7 +5,11 @@ import { DOT_PAPER_CARD, DOT_PAPER_INPUT } from '@/lib/dot-form-paper'
 import Button from '@/components/ui/Button'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import type { CandidateEmploymentRow, EvApplicantIdentity } from '@/lib/candidate-employment-verification'
-import { isDriverSendDeclined, shouldHoldEvSend } from '@/lib/candidate-employment-verification'
+import {
+  isDkimVerifiedRequest,
+  isDriverSendDeclined,
+  shouldHoldEvSend,
+} from '@/lib/candidate-employment-verification'
 import type { VerificationRequest } from '@/types/employment-verification'
 import { Ban, Loader2, Send } from 'lucide-react'
 import { evrDeliveryAddress } from '@/lib/evr-delivery'
@@ -31,10 +35,20 @@ export default function DriverAuthorizationForm({
     signature: string
     date: string
     needsResearch: boolean
+    companyName: string
+    address: string
+    startDate: string
+    endDate: string
   }) => void
   onDecline?: () => void
 }) {
   const holdDefault = shouldHoldEvSend(employment)
+  // Driver-claimed employer facts stay editable until a DKIM-valid reply.
+  // Sending the packet is not a lock — the driver still owns this data.
+  const dkimLocked = isDkimVerifiedRequest(request)
+  const [companyName, setCompanyName] = useState(employment.companyName)
+  const [startDate, setStartDate] = useState(employment.startDate)
+  const [endDate, setEndDate] = useState(employment.endDate ?? '')
   const [email, setEmail] = useState(employment.supervisorEmail ?? '')
   const [phone, setPhone] = useState(employment.supervisorPhone ?? '')
   const [address, setAddress] = useState(employment.location ?? '')
@@ -55,9 +69,12 @@ export default function DriverAuthorizationForm({
   const [doNotSend, setDoNotSend] = useState(holdDefault)
 
   useEffect(() => {
-    setEmail(employment.supervisorEmail ?? '')
-    setPhone(employment.supervisorPhone ?? '')
-    setAddress(employment.location ?? '')
+    setCompanyName(request?.previousEmployerName || employment.companyName)
+    setStartDate(request?.claimedStartDate || employment.startDate)
+    setEndDate(request?.claimedEndDate || employment.endDate || '')
+    setEmail(request?.previousEmployerEmail || employment.supervisorEmail || '')
+    setPhone(request?.previousEmployerPhone || employment.supervisorPhone || '')
+    setAddress(request?.previousEmployerAddress || employment.location || '')
     setNeedsResearch(false)
     setSignature('')
     setSignatureDate(todayIso())
@@ -66,7 +83,22 @@ export default function DriverAuthorizationForm({
     setAgreeSend(false)
     setAgreeDecline(false)
     setDoNotSend(shouldHoldEvSend(employment))
-  }, [employment.verificationKey, employment.supervisorEmail, employment.supervisorPhone, employment.location])
+  }, [
+    employment.verificationKey,
+    employment.companyName,
+    employment.startDate,
+    employment.endDate,
+    employment.supervisorEmail,
+    employment.supervisorPhone,
+    employment.location,
+    request?.id,
+    request?.previousEmployerName,
+    request?.previousEmployerEmail,
+    request?.previousEmployerPhone,
+    request?.previousEmployerAddress,
+    request?.claimedStartDate,
+    request?.claimedEndDate,
+  ])
 
   const hasReply = Boolean(
     request?.answers ||
@@ -138,12 +170,24 @@ export default function DriverAuthorizationForm({
 
       <section className='mt-8 border-t border-[#173150]/25 pt-6'>
         <h3 className='mb-4 text-lg font-semibold'>Part 2 — Former Employer / Contractor / School</h3>
-        <PaperLine label='Company / School Name:' value={employment.companyName} />
+        {dkimLocked ? (
+          <PaperLine label='Company / School Name:' value={companyName} />
+        ) : (
+          <div>
+            <label className='text-sm font-medium text-[#173150]'>Company / School Name:</label>
+            <input
+              type='text'
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+            />
+          </div>
+        )}
         <div className='mt-4'>
           <PaperLine label='Attention / Department:' value='' />
         </div>
         <div className='mt-4'>
-          {sent ? (
+          {dkimLocked ? (
             <PaperLine label='Address:' value={address} />
           ) : (
             <div>
@@ -157,13 +201,12 @@ export default function DriverAuthorizationForm({
             </div>
           )}
         </div>
-        {sent && (
+        {dkimLocked ? (
           <div className='mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
             <PaperLine label='Email:' value={email} />
             <PaperLine label='Telephone:' value={phone} />
           </div>
-        )}
-        {!sent && (
+        ) : (
           <div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>
             <div>
               <label className='text-sm font-medium text-[#173150]'>Email:</label>
@@ -185,7 +228,7 @@ export default function DriverAuthorizationForm({
             </div>
           </div>
         )}
-        {!sent && !email.trim() && !phone.trim() && (
+        {!dkimLocked && !email.trim() && !phone.trim() && (
           <label className='mt-4 flex items-start gap-2 rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-sm'>
             <input
               type='checkbox'
@@ -207,16 +250,41 @@ export default function DriverAuthorizationForm({
         )}
         <div className='mt-4 flex flex-wrap items-end gap-4'>
           <span className='text-sm font-medium text-[#173150]'>Employment / Attendance Dates:</span>
-          <PaperLine
-            label='From'
-            value={paperDate(employment.startDate)}
-            className='min-w-[7rem] flex-1'
-          />
-          <PaperLine
-            label='To'
-            value={paperDate(employment.endDate) || 'Present'}
-            className='min-w-[7rem] flex-1'
-          />
+          {dkimLocked ? (
+            <>
+              <PaperLine
+                label='From'
+                value={paperDate(startDate)}
+                className='min-w-[7rem] flex-1'
+              />
+              <PaperLine
+                label='To'
+                value={paperDate(endDate) || 'Present'}
+                className='min-w-[7rem] flex-1'
+              />
+            </>
+          ) : (
+            <>
+              <div className='min-w-[7rem] flex-1'>
+                <label className='text-sm font-medium text-[#173150]'>From</label>
+                <input
+                  type='month'
+                  value={startDate.slice(0, 7)}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+                />
+              </div>
+              <div className='min-w-[7rem] flex-1'>
+                <label className='text-sm font-medium text-[#173150]'>To</label>
+                <input
+                  type='month'
+                  value={endDate.toLowerCase() === 'present' ? '' : endDate.slice(0, 7)}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={`mt-0.5 w-full ${DOT_PAPER_INPUT} px-3 py-2 text-sm`}
+                />
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -397,7 +465,7 @@ export default function DriverAuthorizationForm({
               className='mt-0.5 accent-[#173150]'
             />
             <span>
-              I decline to send this request to {employment.companyName}. This stays on file and
+              I decline to send this request to {companyName || employment.companyName}. This stays on file and
               does not complete the verification.
             </span>
           </label>
@@ -415,6 +483,10 @@ export default function DriverAuthorizationForm({
                   signature,
                   date: signatureDate,
                   needsResearch: needsResearch && !email.trim() && !phone.trim(),
+                  companyName,
+                  address,
+                  startDate,
+                  endDate,
                 })
               }
               className='inline-flex items-center gap-2'

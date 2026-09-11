@@ -193,7 +193,7 @@ export function computeDotVerifiedCoverage(
     slots,
     caveat:
       totalCount === 0
-        ? 'No risk-bearing fields filled yet. Complete Form 1–2 or apply an MVR/PSP to start verifying.'
+        ? 'No risk-bearing fields filled yet. Complete Section 1–2 or apply an MVR/PSP to start verifying.'
         : `Verified fields are sourced from your MVR/PSP (Accio) or prior-employer confirmation. Other fields are self-certified by you — not issuer-verified.`,
   }
 }

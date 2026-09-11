@@ -3,12 +3,17 @@
 import { isDotFormDark as isDarkTheme, DOT_PAPER_CARD, DOT_PAPER_LOCKED } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
-import { Briefcase, Clock, GraduationCap, Truck, Shield, X } from 'lucide-react'
+import { Briefcase, Clock, Truck, Shield, X, Plus, ChevronDown } from 'lucide-react'
 import AskStormiButton from '@/components/ui/AskStormiButton'
+import {
+  CDL_CERTIFICATION_OPTIONS,
+  addCertification,
+  joinCertifications,
+  parseCertifications,
+} from '@/lib/cdl-certifications'
 import { MonthYearPicker, parseDateToNumber } from '@/components/ui/MonthYearPicker'
 import { resolveEmploymentDotBadge, type AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 import type { DotForm3EmployerProvenance } from '@/lib/employment-form3-provenance'
@@ -22,14 +27,125 @@ import {
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
 
+// Per-entry labels. Legacy 'school' entries (from before School/Education was
+// merged into CDL/School) still render — grouped under the CDL/School section.
 const HISTORY_TYPES = [
-  { value: 'employment' as const, label: 'Employment / Contract', icon: Briefcase, color: 'bg-blue-500' },
-  { value: 'unemployment' as const, label: 'Unemployment', icon: Clock, color: 'bg-yellow-500' },
-  { value: 'school' as const, label: 'School / Education', icon: GraduationCap, color: 'bg-purple-500' },
-  { value: 'drivingSchool' as const, label: 'Driving School / CDL Training', icon: Truck, color: 'bg-green-500' },
-  { value: 'military' as const, label: 'Military Service', icon: Shield, color: 'bg-red-500' },
+  { value: 'employment' as const, label: 'Employment / Contract' },
+  { value: 'unemployment' as const, label: 'Unemployment' },
+  { value: 'school' as const, label: 'College / High School' },
+  { value: 'drivingSchool' as const, label: 'Driving School' },
+  { value: 'military' as const, label: 'Military Service' },
 ]
 
+// The four history sections shown on the Employment History step, in fixed order.
+// Required sections always show at least one ready-to-fill card (auto-seeded);
+// optional sections start as a dashed "add if it applies" placeholder.
+type HistoryGroup = 'employment' | 'drivingSchool' | 'unemployment' | 'military'
+
+const HISTORY_SECTIONS: Array<{
+  group: HistoryGroup
+  /** Entry type auto-seeded when a required section has no entries. */
+  seedType: HistoryEntryType
+  label: string
+  required: boolean
+  description: string
+  /** One add button per entry type the section accepts; first one is primary. */
+  addActions: Array<{ type: HistoryEntryType; label: string }>
+  icon: typeof Briefcase
+  color: string
+}> = [
+  {
+    group: 'employment',
+    seedType: 'employment',
+    label: 'Employment',
+    required: true,
+    description: 'Every job or contract position in the last 10 years — start with your most recent.',
+    addActions: [{ type: 'employment', label: 'Add another employer' }],
+    icon: Briefcase,
+    color: 'bg-[#173150]',
+  },
+  {
+    group: 'drivingSchool',
+    seedType: 'drivingSchool',
+    label: 'CDL / School',
+    required: true,
+    description: 'Where you earned your CDL and which classes or endorsements you hold. College or high school is optional.',
+    addActions: [
+      { type: 'drivingSchool', label: 'Add driving school' },
+      { type: 'school', label: 'Add college or high school' },
+    ],
+    icon: Truck,
+    color: 'bg-[#f15a2b]',
+  },
+  {
+    group: 'unemployment',
+    seedType: 'unemployment',
+    label: 'Unemployment',
+    required: false,
+    description: 'Time between jobs — only dates are needed. Adding gaps keeps your 10-year timeline airtight.',
+    addActions: [{ type: 'unemployment', label: 'Add unemployment period' }],
+    icon: Clock,
+    color: 'bg-[#3F8A8C]',
+  },
+  {
+    group: 'military',
+    seedType: 'military',
+    label: 'Military Service',
+    required: false,
+    description: 'Branch, dates, and role. Military driving experience is a strong signal for carriers.',
+    addActions: [{ type: 'military', label: 'Add military service' }],
+    icon: Shield,
+    color: 'bg-[#00608b]',
+  },
+]
+
+// Which section an entry renders under. Legacy 'school' entries merge into the
+// CDL/School section; entries with no type fall back to the old isUnemployment flag.
+const entryGroupOf = (entry: { type?: HistoryEntryType; isUnemployment?: boolean }): HistoryGroup => {
+  const type = entry.type || (entry.isUnemployment ? 'unemployment' : 'employment')
+  if (type === 'school' || type === 'drivingSchool') return 'drivingSchool'
+  if (type === 'unemployment' || type === 'military') return type
+  return 'employment'
+}
+
+// Blank entry factory — shared by the section add buttons and the auto-seed
+// effect that keeps required sections populated with a ready-to-fill card.
+const blankHistoryEntry = (type: HistoryEntryType) => ({
+  id:
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `emp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  type,
+  name: '',
+  phone: '',
+  hiringManagerName: '',
+  hiringManagerPhone: '',
+  hiringManagerEmail: '',
+  address: '',
+  positionHeld: '',
+  duties: '',
+  fromDate: '',
+  toDate: '',
+  reasonForLeaving: '',
+  salary: '',
+  gapsInEmployment: '',
+  subjectToFMCSR: '',
+  safetySensitiveFunction: '',
+  isUnemployment: type === 'unemployment',
+  schoolName: '',
+  courseOfStudy: '',
+  militaryBranch: '',
+  dischargeType: '',
+  _source: 'self' as const,
+})
+
+// Stable identity for collapse state + React keys. Falls back to array index
+// for very old drafts whose entries predate generated ids.
+const entryCardKey = (entry: { id?: string; _evrKey?: string }, index: number) =>
+  entry.id || entry._evrKey || `emp-${index}`
+
+// Education is no longer its own step — the required CDL / School section in
+// Employment History already documents schooling for the 10-year timeline.
 const STEPS = [
   {
     id: 1,
@@ -38,11 +154,6 @@ const STEPS = [
   },
   {
     id: 2,
-    title: 'Education',
-    description: 'Educational background and qualifications',
-  },
-  {
-    id: 3,
     title: 'Signature',
     description: 'Application completion and signature',
   },
@@ -71,8 +182,8 @@ export default function PersonalInfoForm3({
   const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  // State for type selector modal
-  const [showTypeSelector, setShowTypeSelector] = useState(false)
+  // Per-entry collapse state, keyed by entryCardKey (local UI toggle only)
+  const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({})
   
   const [formData, setFormData] = useState({
     // Employment History - now with entry type
@@ -108,21 +219,6 @@ export default function PersonalInfoForm3({
       _verificationStatus?: string
       _verifiedAt?: string
     }>,
-
-    // Education
-    education: [
-      {
-        schoolType: '',
-        nameAndLocation: '',
-        courseOfStudy: '',
-        yearsCompleted: '',
-        graduated: '',
-        details: '',
-      },
-    ],
-
-    // Other Qualifications
-    otherQualifications: '',
 
     // Signature
     applicantSignature: '',
@@ -251,17 +347,6 @@ export default function PersonalInfoForm3({
             dischargeType: '',
           },
         ],
-        education: [
-          {
-            schoolType: '',
-            nameAndLocation: '',
-            courseOfStudy: '',
-            yearsCompleted: '',
-            graduated: '',
-            details: '',
-          },
-        ],
-        otherQualifications: '',
         applicantSignature: '',
         signatureDate: '',
         applicantNamePrinted: '',
@@ -294,11 +379,51 @@ export default function PersonalInfoForm3({
       setFormData((prev) => {
         const merged = { ...prev, ...initialData }
         if (!Array.isArray(merged.employers)) merged.employers = prev.employers
-        if (!Array.isArray(merged.education)) merged.education = prev.education
         return merged
       })
     }
   }, [initialData])
+
+  // Required history sections (Employment, CDL/School) always show a
+  // ready-to-fill card — if a group has no entry (fresh form, hydrated draft
+  // from before CDL/School was required, or the driver removed the last one),
+  // seed a blank entry so the section never collapses to nothing.
+  // Runs after the hydrate effect above, so functional updates see merged data.
+  useEffect(() => {
+    setFormData((prev) => {
+      const missing = HISTORY_SECTIONS.filter(
+        (section) =>
+          section.required &&
+          !prev.employers.some((entry) => entryGroupOf(entry) === section.group),
+      )
+      if (missing.length === 0) return prev
+      return {
+        ...prev,
+        employers: [...prev.employers, ...missing.map((section) => blankHistoryEntry(section.seedType))],
+      }
+    })
+  }, [formData.employers])
+
+  // Employment cards are long, so filled-in entries (loaded drafts, verified
+  // rows) start collapsed to a one-line summary; blank/new entries start open.
+  // The default is snapshotted ONCE per entry — otherwise a card would collapse
+  // itself mid-edit the moment its fields became "complete".
+  useEffect(() => {
+    setCollapsedEntries((prev) => {
+      let changed = false
+      const next = { ...prev }
+      formData.employers.forEach((employer, index) => {
+        const key = entryCardKey(employer, index)
+        if (next[key] === undefined) {
+          next[key] = Boolean(
+            employer.fromDate && employer.toDate && (employer.name || employer.militaryBranch),
+          )
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [formData.employers])
 
   // Capture IP address on mount — stored in form data so it's saved with the signature
   useEffect(() => {
@@ -388,10 +513,6 @@ export default function PersonalInfoForm3({
               newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
             }
           }
-          const hiringEmail = (employer.hiringManagerEmail || '').trim()
-          if (hiringEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(hiringEmail)) {
-            newErrors[`employer${index}HiringEmail`] = 'Enter a valid email, or leave this blank'
-          }
           if (!employer.fromDate)
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
           if (!employer.toDate)
@@ -400,8 +521,6 @@ export default function PersonalInfoForm3({
           const isCurrentJob = employer.toDate?.toLowerCase() === 'present'
           if (!isCurrentJob && !employer.reasonForLeaving.trim())
             newErrors[`employer${index}Reason`] = 'Reason for leaving is required (DOT § 383.35(c)(3))'
-          if (!employer.positionHeld.trim())
-            newErrors[`employer${index}Position`] = 'Position held is required'
           if (!employer.subjectToFMCSR)
             newErrors[`employer${index}FMCSR`] = 'Please specify FMCSR compliance'
           if (!employer.safetySensitiveFunction)
@@ -481,17 +600,6 @@ export default function PersonalInfoForm3({
         }
       }
     } else if (step === 2) {
-      // Education validation
-      ;(formData.education ?? []).forEach((edu, index) => {
-        if (edu.schoolType?.trim() || edu.nameAndLocation?.trim()) {
-          if (!edu.schoolType?.trim())
-            newErrors[`education${index}Type`] = 'School type is required'
-          if (!edu.nameAndLocation?.trim())
-            newErrors[`education${index}Name`] =
-              'School name and location is required'
-        }
-      })
-    } else if (step === 3) {
       // Signature validation
       if (!formData.applicantSignature?.trim())
         newErrors.applicantSignature = 'Signature is required'
@@ -529,6 +637,27 @@ export default function PersonalInfoForm3({
       }
     }
 
+    // Auto-expand any collapsed history card that has validation errors —
+    // otherwise the red fields would be hidden inside a closed card.
+    if (step === 1) {
+      const errorEntryIndexes = new Set(
+        Object.keys(newErrors)
+          .map((key) => key.match(/^employer(\d+)/)?.[1])
+          .filter((value): value is string => value !== undefined)
+          .map(Number),
+      )
+      if (errorEntryIndexes.size > 0) {
+        setCollapsedEntries((prev) => {
+          const next = { ...prev }
+          errorEntryIndexes.forEach((idx) => {
+            const employer = formData.employers[idx]
+            if (employer) next[entryCardKey(employer, idx)] = false
+          })
+          return next
+        })
+      }
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -562,73 +691,15 @@ export default function PersonalInfoForm3({
   const addHistoryEntry = (type: HistoryEntryType) => {
     setFormData((prev) => ({
       ...prev,
-      employers: [
-        ...prev.employers,
-        {
-          id:
-            typeof crypto !== 'undefined' && crypto.randomUUID
-              ? crypto.randomUUID()
-              : `emp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type,
-          name: '',
-          phone: '',
-          hiringManagerName: '',
-          hiringManagerPhone: '',
-          hiringManagerEmail: '',
-          address: '',
-          positionHeld: '',
-          duties: '',
-          fromDate: '',
-          toDate: '',
-          reasonForLeaving: '',
-          salary: '',
-          gapsInEmployment: '',
-          subjectToFMCSR: '',
-          safetySensitiveFunction: '',
-          isUnemployment: type === 'unemployment',
-          schoolName: '',
-          courseOfStudy: '',
-          militaryBranch: '',
-          dischargeType: '',
-          _source: 'self' as const,
-        },
-      ],
+      employers: [...prev.employers, blankHistoryEntry(type)],
     }))
-    setShowTypeSelector(false)
   }
-  
-  // Legacy function for backwards compatibility
-  const addEmployer = () => addHistoryEntry('employment')
 
   const removeEmployer = (index: number) => {
     if (isVerifiedEmployer(formData.employers[index])) return
     setFormData((prev) => ({
       ...prev,
       employers: prev.employers.filter((_, i) => i !== index),
-    }))
-  }
-
-  const addEducation = () => {
-    setFormData((prev) => ({
-      ...prev,
-      education: [
-        ...prev.education,
-        {
-          schoolType: '',
-          nameAndLocation: '',
-          courseOfStudy: '',
-          yearsCompleted: '',
-          graduated: '',
-          details: '',
-        },
-      ],
-    }))
-  }
-
-  const removeEducation = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index),
     }))
   }
 
@@ -847,31 +918,6 @@ export default function PersonalInfoForm3({
           },
         ],
       
-      // Education - add test data only if empty
-      education: prev.education?.length > 0 && prev.education.some(edu => edu.nameAndLocation || edu.courseOfStudy)
-        ? prev.education
-        : [
-            {
-              schoolType: 'HIGH SCHOOL',
-              nameAndLocation: 'Central High School, Columbus, OH',
-              courseOfStudy: 'General Education',
-              yearsCompleted: '4',
-              graduated: 'yes',
-              details: 'High School Diploma',
-            },
-            {
-              schoolType: 'TRADE SCHOOL',
-              nameAndLocation: 'Ohio Commercial Driving Academy, Columbus, OH',
-              courseOfStudy: 'CDL Training',
-              yearsCompleted: '0.5',
-              graduated: 'yes',
-              details: 'CDL-A Certification',
-            },
-          ],
-      
-      // Qualifications - only fill if empty
-      otherQualifications: prev.otherQualifications || 'Certified in Hazardous Materials Transportation, First Aid/CPR Certified',
-      
       // Signature - use AI-extracted name if available, otherwise test data
       applicantSignature: prev.applicantSignature || 'John Michael Doe',
       signatureDate: prev.signatureDate || new Date().toISOString().slice(0, 10),
@@ -916,8 +962,6 @@ export default function PersonalInfoForm3({
       case 1:
         return renderEmploymentHistory()
       case 2:
-        return renderEducation()
-      case 3:
         return renderSignature()
       default:
         return null
@@ -937,7 +981,7 @@ export default function PersonalInfoForm3({
           className='justify-end mb-4'
           onClick={() =>
             requestHelp({
-              section: 'Form 3 – Employment History',
+              section: 'Section 3 – Employment History',
               question:
                 'What specifically must drivers include to satisfy the 10-year DOT employment history requirement?',
               regulation: '49 CFR 391.21(b)(10) & 49 CFR 383.35',
@@ -1235,26 +1279,80 @@ export default function PersonalInfoForm3({
         </p>
       </div>
 
-      {/* Show message if no entries yet */}
-      {(formData.employers?.length ?? 0) === 0 && (
-        <div className={`p-8 rounded-xl border-2 border-dashed text-center ${
-          isDarkTheme(theme) ? 'border-gray-600 bg-gray-800/30' : 'border-gray-300 bg-gray-50'
-        }`}>
-          <p className={`text-lg mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}>
-            No history entries yet
-          </p>
-          <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-            Click &quot;+ Add History Entry&quot; below to start documenting your 10-year history
-          </p>
-        </div>
-      )}
-      
-      {(formData.employers ?? []).map((employer, index) => {
+      {/* History sections — every entry type is visible by default, required
+          sections first. Entries keep their index in the FULL employers array
+          so validation error keys (employer{index}…) and handleInputChange
+          continue to work unchanged. */}
+      {HISTORY_SECTIONS.map((section) => {
+        const entries = (formData.employers ?? [])
+          .map((employer, index) => ({ employer, index }))
+          .filter(({ employer }) => entryGroupOf(employer) === section.group)
+        const SectionIcon = section.icon
+        // Only optional sections can be empty — required ones are auto-seeded
+        const isEmptyOptional = entries.length === 0
+
+        return (
+          <section key={section.group} className='space-y-3'>
+            {/* Section header — greyed out while an optional section is untouched */}
+            <div className={`flex items-start gap-3 ${isEmptyOptional ? 'opacity-60' : ''}`}>
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                  isEmptyOptional
+                    ? 'border-2 border-dashed border-stone-300 bg-white text-ironside'
+                    : `${section.color} text-white`
+                }`}
+              >
+                <SectionIcon className='h-5 w-5' />
+              </div>
+              <div className='min-w-0 flex-1'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <h3 className='text-lg font-bold text-[#173150]'>{section.label}</h3>
+                  {section.required ? (
+                    <span className='rounded-full bg-[#f15a2b]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#f15a2b] ring-1 ring-[#f15a2b]/25'>
+                      Required
+                    </span>
+                  ) : (
+                    <span className='rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ironside ring-1 ring-stone-200'>
+                      Optional
+                    </span>
+                  )}
+                  {entries.length > 1 && (
+                    <span className='text-xs font-medium text-ironside'>
+                      {entries.length} entries
+                    </span>
+                  )}
+                </div>
+                <p className='text-sm text-gray-600'>{section.description}</p>
+              </div>
+            </div>
+
+            {/* Rail visually ties the section's cards to its header — ml-5 puts
+                the line under the center of the 40px icon tile above. Dashed
+                while an optional section is still untouched. */}
+            <div
+              className={`ml-5 space-y-4 border-l-2 pl-4 sm:pl-6 ${
+                isEmptyOptional ? 'border-dashed border-stone-300' : 'border-stone-200'
+              }`}
+            >
+            {/* NOTE: the card body below kept its original (shallower) indentation
+                when it moved inside this section loop — re-indenting ~570 lines
+                would have destroyed the git history for the whole card. */}
+            {entries.map(({ employer, index }, groupPos) => {
         // Get type info for this entry (default to employment for legacy entries)
         const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
         const typeInfo = HISTORY_TYPES.find(t => t.value === entryType) || HISTORY_TYPES[0]
-        const TypeIcon = typeInfo.icon
         const locked = isVerifiedEmployer(employer)
+        const cardKey = entryCardKey(employer, index)
+        const collapsed = collapsedEntries[cardKey] ?? false
+        // Driving school and college/high school share one field block; the CDL
+        // picker stores its selections in the same `courseOfStudy` string.
+        const isSchoolType = entryType === 'school' || entryType === 'drivingSchool'
+        const certifications = parseCertifications(employer.courseOfStudy)
+        const remainingCertifications = CDL_CERTIFICATION_OPTIONS.filter(
+          (option) => !certifications.includes(option),
+        )
+        const setCertifications = (next: string[]) =>
+          handleInputChange('employers', { courseOfStudy: joinCertifications(next) }, index)
         const verifiedBadge =
           entryType === 'employment' && locked
             ? resolveEmploymentDotBadge(
@@ -1270,59 +1368,98 @@ export default function PersonalInfoForm3({
         
         return (
         <div
-          key={employer.id || employer._evrKey || `emp-${index}`}
-          className={`rounded-xl border-2 overflow-hidden ${
+          key={cardKey}
+          className={`overflow-hidden rounded-xl border-2 border-l-4 ${
             locked
-              ? isDarkTheme(theme)
-                ? 'border-teal-500/40 bg-teal-950/20'
-                : 'border-teal-200 bg-teal-50/40'
-              : isDarkTheme(theme)
-                ? 'border-gray-700 bg-gray-800/30'
-                : 'border-gray-200 bg-white'
+              ? 'border-teal-200 border-l-teal-600 bg-teal-50/50'
+              : groupPos % 2 === 0
+                ? 'border-stone-200 border-l-[#173150] bg-white'
+                : 'border-stone-300 border-l-[#00608b] bg-stone-100'
           }`}
         >
-          {/* Entry Header with Type Badge */}
-          <div className={`flex items-center justify-between p-4 ${
-            isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'
-          }`}>
-            <div className='flex items-center gap-3'>
-              <div className={`w-10 h-10 rounded-lg ${typeInfo.color} flex items-center justify-center`}>
-                <TypeIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-                  {index === 0 ? 'Most Recent' : `Entry ${index + 1}`} — {typeInfo.label}
-                </h3>
-                {verifiedBadge && (
-                  <span
-                    className={`text-xs ${isDarkTheme(theme) ? 'text-teal-300' : 'text-teal-700'}`}
-                    data-honesty-tier={verifiedBadge.tier}
+          {/* Header is the collapse control. Number + zebra fill keep Employer
+             2/3 visually distinct from the cream page; the chevron + Show/Hide
+             chip make expand/collapse an obvious action, not a decorative caret. */}
+          {(() => {
+            const entryTitle =
+              section.group === 'employment'
+                ? groupPos === 0
+                  ? 'Most recent'
+                  : `Employer ${groupPos + 1}`
+                : entries.length > 1
+                  ? `${typeInfo.label} ${groupPos + 1}`
+                  : 'Details'
+            const selfCertified = entryType === 'employment' && !locked && groupPos < 3
+            // Removing the last card in a required section just re-seeds a blank
+            // one, so only offer the X when it actually removes something.
+            const showRemove = !locked && (entries.length > 1 || !section.required)
+            const summaryName =
+              entryType === 'military' ? employer.militaryBranch || employer.name : employer.name
+            const summaryDates =
+              employer.fromDate || employer.toDate
+                ? `${employer.fromDate || '…'} – ${employer.toDate || '…'}`
+                : ''
+            const summary = [summaryName, summaryDates].filter(Boolean).join(' · ')
+            return (
+              <div
+                className={`flex items-center justify-between gap-2 pr-2 ${
+                  collapsed ? '' : 'border-b border-stone-200'
+                } ${groupPos % 2 === 0 ? 'bg-stone-50' : 'bg-stone-200/60'}`}
+              >
+                <button
+                  type='button'
+                  onClick={() =>
+                    setCollapsedEntries((prev) => ({ ...prev, [cardKey]: !collapsed }))
+                  }
+                  aria-expanded={!collapsed}
+                  className='flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-black/5'
+                >
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-[#173150] transition-transform ${
+                      collapsed ? '-rotate-90' : ''
+                    }`}
+                  />
+                  <span className='min-w-0 flex-1'>
+                    <span className='flex flex-wrap items-center gap-x-2 gap-y-0.5'>
+                      <span className='text-xs font-bold uppercase tracking-wider text-[#173150]'>
+                        {entryTitle}
+                      </span>
+                      <span className='rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#173150] ring-1 ring-stone-300'>
+                        {collapsed ? 'Show details' : 'Hide details'}
+                      </span>
+                      {verifiedBadge && (
+                        <span className='text-xs text-teal-700' data-honesty-tier={verifiedBadge.tier}>
+                          {verifiedBadge.text}
+                        </span>
+                      )}
+                    </span>
+                    {collapsed && (
+                      <span className='mt-0.5 block truncate text-sm text-gray-600'>
+                        {summary || 'Not filled in yet'}
+                      </span>
+                    )}
+                    {!collapsed && selfCertified && (
+                      <span className='mt-0.5 block text-xs text-yellow-700'>
+                        Self-certified — request prior-employer verification from your hub
+                      </span>
+                    )}
+                  </span>
+                </button>
+                {showRemove && (
+                  <button
+                    type='button'
+                    onClick={() => removeEmployer(index)}
+                    aria-label='Remove entry'
+                    className='shrink-0 rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50'
                   >
-                    {verifiedBadge.text}
-                  </span>
-                )}
-                {entryType === 'employment' && !isVerifiedEmployer(employer) && index < 3 && (
-                  <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                    Self-certified — request prior-employer verification from your hub
-                  </span>
+                    <X className='h-4 w-4' />
+                  </button>
                 )}
               </div>
-            </div>
-            {!isVerifiedEmployer(employer) && (
-            <button
-              type='button'
-              onClick={() => removeEmployer(index)}
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkTheme(theme)
-                  ? 'hover:bg-red-900/50 text-red-400'
-                  : 'hover:bg-red-50 text-red-500'
-              }`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-            )}
-          </div>
+            )
+          })()}
           
+          {!collapsed && (
           <fieldset disabled={locked} className="p-6 space-y-5 border-0 min-w-0 disabled:opacity-90">
             {/* Date Range - Common to ALL types */}
             {(() => {
@@ -1362,14 +1499,10 @@ export default function PersonalInfoForm3({
                       <MonthYearPicker
                         value={employer.toDate}
                         onChange={(value) => {
-                          const patch: { toDate: string; doNotContact?: boolean } = { toDate: value }
-                          if (value.toLowerCase() === 'present' && employer.doNotContact === undefined) {
-                            patch.doNotContact = true
-                          }
-                          handleInputChange('employers', patch, index)
+                          handleInputChange('employers', { toDate: value }, index)
                         }}
                         placeholder="Select end date"
-                        allowPresent={index === 0}
+                        allowPresent={groupPos === 0}
                         error={!!errors[`employer${index}ToDate`] || dateOrderError}
                         theme={theme}
                         minDate={employer.fromDate}
@@ -1384,34 +1517,12 @@ export default function PersonalInfoForm3({
                       ⚠️ "To" date must be after "From" date
                     </div>
                   )}
-                  {index === 0 && !employer.toDate && (
+                  {section.group === 'employment' && groupPos === 0 && !employer.toDate && (
                     <div className={`p-3 rounded-lg text-sm ${
                       isDarkTheme(theme) ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'
                     }`}>
                       💡 Start with your most recent/current position. Select "Present" if you're still here.
                     </div>
-                  )}
-                  {entryType === 'employment' && (
-                    <label className='flex items-start gap-2 text-sm text-[#173150]'>
-                      <input
-                        type='checkbox'
-                        checked={
-                          employer.doNotContact === true ||
-                          (employer.doNotContact !== false &&
-                            employer.toDate?.toLowerCase() === 'present')
-                        }
-                        onChange={(e) =>
-                          handleInputChange('employers', { doNotContact: e.target.checked }, index)
-                        }
-                        className='mt-0.5 accent-[#173150]'
-                      />
-                      <span>
-                        Prefer not to send employment verification to this employer.
-                        {employer.toDate?.toLowerCase() === 'present'
-                          ? ' Default for a current job — you can still send later if you need to (for example, a layoff).'
-                          : ''}
-                      </span>
-                    </label>
                   )}
                 </>
               )
@@ -1453,56 +1564,9 @@ export default function PersonalInfoForm3({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      HIRING MANAGER
-                    </label>
-                    <input
-                      type='text'
-                      value={employer.hiringManagerName ?? ''}
-                      onChange={(e) => handleInputChange('employers', { hiringManagerName: e.target.value }, index)}
-                      placeholder='Name — if you remember'
-                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      HIRING MANAGER PHONE
-                    </label>
-                    <PhoneInput
-                      value={employer.hiringManagerPhone ?? ''}
-                      onChange={(formatted) => handleInputChange('employers', { hiringManagerPhone: formatted }, index)}
-                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      HIRING MANAGER EMAIL
-                    </label>
-                    <input
-                      type='email'
-                      value={employer.hiringManagerEmail ?? ''}
-                      onChange={(e) => handleInputChange('employers', { hiringManagerEmail: e.target.value }, index)}
-                      placeholder='Optional'
-                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      } ${dotErrorInputClass(!!errors[`employer${index}HiringEmail`])}`}
-                    />
-                    <DotFieldError message={errors[`employer${index}HiringEmail`]} />
-                  </div>
-                </div>
-                <p className='-mt-2 text-xs text-ironside'>Hiring manager fields are optional. Many drivers do not have this.</p>
+
+                {/* Hiring-manager / EV contact is collected on the Employment
+                    Verification block so a later edit lives in one place. */}
 
                 {/* Address */}
                 <div>
@@ -1521,60 +1585,6 @@ export default function PersonalInfoForm3({
                     } ${dotErrorInputClass(!!errors[`employer${index}Address`])}`}
                   />
                   <DotFieldError message={errors[`employer${index}Address`]} />
-                </div>
-
-                {/* Position and Salary */}
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      POSITION HELD <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type='text'
-                      value={employer.positionHeld}
-                      onChange={(e) => handleInputChange('employers', { positionHeld: e.target.value }, index)}
-                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      } ${dotErrorInputClass(!!errors[`employer${index}Position`])}`}
-                    />
-                    <DotFieldError message={errors[`employer${index}Position`]} />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                      SALARY
-                    </label>
-                    <input
-                      type='text'
-                      value={employer.salary}
-                      onChange={(e) => handleInputChange('employers', { salary: e.target.value }, index)}
-                      placeholder="e.g., $50,000/year"
-                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                        isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* Description of Duties */}
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                    DESCRIPTION OF DUTIES
-                  </label>
-                  <textarea
-                    value={employer.duties ?? ''}
-                    onChange={(e) => handleInputChange('employers', { duties: e.target.value }, index)}
-                    rows={2}
-                    placeholder="e.g., OTR freight hauling, pre-trip inspections, load securing..."
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
-                  />
                 </div>
 
                 {/* Reason for Leaving */}
@@ -1673,8 +1683,9 @@ export default function PersonalInfoForm3({
               </div>
             )}
             
-            {/* SCHOOL-specific fields */}
-            {entryType === 'school' && (
+            {/* SCHOOL fields — shared by driving school and college/high school.
+                Only the second field differs: CDL picker vs. free-text course. */}
+            {isSchoolType && (
               <>
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1684,7 +1695,7 @@ export default function PersonalInfoForm3({
                     type='text'
                     value={employer.name}
                     onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
-                    placeholder="Name of school or institution"
+                    placeholder={entryType === 'drivingSchool' ? 'Name of CDL / driving school' : 'Name of college, high school, or program'}
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
@@ -1693,61 +1704,83 @@ export default function PersonalInfoForm3({
                   />
                   <DotFieldError message={errors[`employer${index}Name`]} />
                 </div>
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                    COURSE OF STUDY
-                  </label>
-                  <input
-                    type='text'
-                    value={employer.courseOfStudy || ''}
-                    onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
-                    placeholder="e.g., High School Diploma, Associate Degree"
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
-                  />
-                </div>
-              </>
-            )}
-            
-            {/* DRIVING SCHOOL-specific fields */}
-            {entryType === 'drivingSchool' && (
-              <>
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                    DRIVING SCHOOL NAME <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type='text'
-                    value={employer.name}
-                    onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
-                    placeholder="Name of CDL/driving school"
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
-                  />
-                  <DotFieldError message={errors[`employer${index}Name`]} />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                    CDL/CERTIFICATION OBTAINED
-                  </label>
-                  <input
-                    type='text'
-                    value={employer.courseOfStudy || ''}
-                    onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
-                    placeholder="e.g., Class A CDL, Hazmat endorsement"
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
-                  />
-                </div>
+
+                {entryType === 'drivingSchool' ? (
+                  /* Picker + chips instead of free text — employers filter on
+                     these, so "Class A" vs "class-a cdl" can't both exist. */
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                      CDL CLASSES &amp; ENDORSEMENTS
+                    </label>
+
+                    {certifications.length > 0 && (
+                      <div className='mb-2 flex flex-wrap gap-2'>
+                        {certifications.map((cert) => (
+                          <span
+                            key={cert}
+                            className='inline-flex items-center gap-1.5 rounded-full bg-[#f15a2b]/10 px-3 py-1 text-xs font-semibold text-[#f15a2b] ring-1 ring-[#f15a2b]/25'
+                          >
+                            {cert}
+                            <button
+                              type='button'
+                              onClick={() => setCertifications(certifications.filter((c) => c !== cert))}
+                              className='rounded-full p-0.5 transition-colors hover:bg-[#f15a2b]/20'
+                              aria-label={`Remove ${cert}`}
+                            >
+                              <X className='h-3 w-3' />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <select
+                      value=''
+                      disabled={remainingCertifications.length === 0}
+                      onChange={(e) => {
+                        if (e.target.value) setCertifications(addCertification(certifications, e.target.value))
+                      }}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-60 ${
+                        isDarkTheme(theme)
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                      }`}
+                    >
+                      <option value=''>
+                        {remainingCertifications.length === 0
+                          ? 'All classes and endorsements added'
+                          : certifications.length === 0
+                            ? 'Select a class or endorsement…'
+                            : 'Add another…'}
+                      </option>
+                      {remainingCertifications.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <p className='mt-1.5 text-xs text-gray-500'>
+                      Add each one you hold — carriers search by class and endorsement.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                      COURSE OF STUDY
+                    </label>
+                    <input
+                      type='text'
+                      value={employer.courseOfStudy || ''}
+                      onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
+                      placeholder="e.g., High School Diploma, Associate Degree"
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        isDarkTheme(theme)
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                      }`}
+                    />
+                  </div>
+                )}
               </>
             )}
             
@@ -1820,311 +1853,53 @@ export default function PersonalInfoForm3({
               </>
             )}
           </fieldset>
+          )}
         </div>
         )
       })}
 
-      {/* Add More Button */}
-      <div className='flex justify-center pt-4'>
-        <button
-          type='button'
-          onClick={() => setShowTypeSelector(true)}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
-        >
-          + Add History Entry
-        </button>
-      </div>
-      
-      {/* Type Selector Modal */}
-      {showTypeSelector && (
-        <Modal onClose={() => setShowTypeSelector(false)} maxWidth="max-w-md" paper>
-          <ModalHeader
-            title="Select History Type"
-            subtitle="What type of history entry would you like to add?"
-            onClose={() => setShowTypeSelector(false)}
-            paper
-          />
-          <div className="space-y-2 p-6 pt-2">
-            {HISTORY_TYPES.map(({ value, label, icon: Icon, color }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => addHistoryEntry(value)}
-                className="flex w-full items-center gap-4 rounded-xl border border-ironside/20 bg-white p-4 text-[#173150] transition-colors hover:bg-stone-50"
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${color}`}>
-                  <Icon className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-medium">{label}</span>
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-    </div>
-  )
-
-  const renderEducation = () => (
-    <div className='space-y-8'>
-      <div className='text-center'>
-        <h2
-          className={`text-2xl font-bold mb-2 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
-        >
-          EDUCATION
-        </h2>
-      </div>
-
-      {(formData.education ?? []).map((edu, index) => (
-        <div key={index} className='space-y-4'>
-          <div className='flex justify-between items-center'>
-            <h3
-              className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
-            >
-              EDUCATION {index + 1}
-            </h3>
-            {(formData.education?.length ?? 0) > 1 && (
+            {isEmptyOptional ? (
+              /* Dashed placeholder — the whole card is the add button. Greyed +
+                 dotted signals "not filled in, and that's fine". */
               <button
                 type='button'
-                onClick={() => removeEducation(index)}
-                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                  isDarkTheme(theme)
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-red-500 text-white hover:bg-red-600'
-                }`}
+                onClick={() => addHistoryEntry(section.addActions[0].type)}
+                className='group w-full rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/60 p-5 text-left transition-all hover:border-[#173150]/40 hover:bg-white'
               >
-                Remove
+                <div className='flex items-center gap-3'>
+                  <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dashed border-stone-400 text-ironside transition-colors group-hover:border-[#173150]/50 group-hover:text-[#173150]'>
+                    <Plus className='h-4 w-4' />
+                  </div>
+                  <div>
+                    <p className='text-sm font-semibold text-gray-500 transition-colors group-hover:text-[#173150]'>
+                      {section.addActions[0].label}
+                    </p>
+                    <p className='text-xs text-gray-400'>
+                      Optional — skip it if this doesn&apos;t apply. It won&apos;t hold up your application.
+                    </p>
+                  </div>
+                </div>
               </button>
-            )}
-          </div>
-          {/* min-h-10 on labels keeps inputs aligned when labels wrap */}
-          <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
-            <div className='flex flex-col'>
-              <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                SCHOOL TYPE
-              </label>
-              <select
-                value={edu.schoolType}
-                onChange={(e) =>
-                  handleInputChange(
-                    'education',
-                    { schoolType: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                } ${dotErrorInputClass(!!errors[`education${index}Type`])}`}
-              >
-                <option value=''>Select school type...</option>
-                <option value='HIGH SCHOOL'>High School</option>
-                <option value='COLLEGE'>College</option>
-                <option value='UNIVERSITY'>University</option>
-                <option value='TRADE SCHOOL'>Trade School</option>
-                <option value='VOCATIONAL'>Vocational</option>
-                <option value='CERTIFICATION'>Certification Program</option>
-                <option value='OTHER'>Other</option>
-              </select>
-              <DotFieldError message={errors[`education${index}Type`]} />
-            </div>
-            <div className='md:col-span-2 flex flex-col'>
-              <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                NAME & LOCATION
-              </label>
-              <input
-                type='text'
-                value={edu.nameAndLocation}
-                onChange={(e) =>
-                  handleInputChange(
-                    'education',
-                    { nameAndLocation: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                } ${dotErrorInputClass(!!errors[`education${index}Name`])}`}
-              />
-              <DotFieldError message={errors[`education${index}Name`]} />
-            </div>
-            <div className='flex flex-col'>
-              <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                COURSE OF STUDY
-              </label>
-              <input
-                type='text'
-                value={edu.courseOfStudy}
-                onChange={(e) =>
-                  handleInputChange(
-                    'education',
-                    { courseOfStudy: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
-              />
-            </div>
-            <div className='flex flex-col'>
-              <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                YEARS
-              </label>
-              <input
-                type='text'
-                value={edu.yearsCompleted}
-                onChange={(e) =>
-                  handleInputChange(
-                    'education',
-                    { yearsCompleted: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                }`}
-              />
-            </div>
-            <div className='flex flex-col'>
-              <label
-                className={`block text-sm font-medium mb-2 min-h-10 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-              >
-                GRADUATE (Y/N)
-              </label>
-              <div className='flex space-x-4'>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`graduated_${index}`}
-                    value='yes'
-                    checked={edu.graduated === 'yes'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'education',
-                        { graduated: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
-                  />
-                  <span
-                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
+            ) : (
+              <div className='flex flex-wrap gap-2'>
+                {section.addActions.map((action) => (
+                  <button
+                    key={action.type}
+                    type='button'
+                    onClick={() => addHistoryEntry(action.type)}
+                    className='inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-stone-300 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-[#173150]/50 hover:bg-white hover:text-[#173150]'
                   >
-                    Y
-                  </span>
-                </label>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`graduated_${index}`}
-                    value='no'
-                    checked={edu.graduated === 'no'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'education',
-                        { graduated: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
-                  />
-                  <span
-                    className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-                  >
-                    N
-                  </span>
-                </label>
+                    <Plus className='h-4 w-4' />
+                    {action.label}
+                  </button>
+                ))}
               </div>
+            )}
             </div>
-          </div>
+          </section>
+        )
+      })}
 
-          {/* Details field - full width */}
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
-            >
-              DETAILS
-            </label>
-            <input
-              type='text'
-              value={edu.details}
-              onChange={(e) =>
-                handleInputChange(
-                  'education',
-                  { details: e.target.value },
-                  index
-                )
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                isDarkTheme(theme)
-                  ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                  : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-              }`}
-            />
-          </div>
-        </div>
-      ))}
-
-      {/* Add More Button */}
-      <div className='flex justify-center pt-4'>
-        <button
-          type='button'
-          onClick={addEducation}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
-        >
-          + Add Education
-        </button>
-      </div>
-
-      {/* Other Qualifications */}
-      <div className='space-y-4'>
-        <h3
-          className={`text-lg font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}
-        >
-          OTHER QUALIFICATIONS
-        </h3>
-        <p
-          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
-        >
-          Please list any other qualifications that you have and which you
-          believe should be considered.
-        </p>
-        <textarea
-          value={formData.otherQualifications}
-          onChange={(e) =>
-            handleInputChange('otherQualifications', e.target.value)
-          }
-          rows={6}
-          className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-            isDarkTheme(theme)
-              ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-              : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-          }`}
-        />
-      </div>
     </div>
   )
 
@@ -2142,7 +1917,7 @@ export default function PersonalInfoForm3({
           type='button'
           onClick={() =>
             requestHelp({
-              section: 'Form 3 – Final Certifications',
+              section: 'Section 3 – Final Certifications',
               question:
                 'Summarize what acknowledgements and consents the applicant must provide in the signature section and why they are required.',
               regulation: '49 CFR 391.21(d) & 49 CFR 391.23',

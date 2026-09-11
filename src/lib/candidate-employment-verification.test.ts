@@ -26,7 +26,7 @@ function driverRow(partial: Partial<CandidateEmploymentRow>): CandidateEmploymen
 }
 
 describe('form3EmployersToCandidateRows', () => {
-  it('skips unemployment and keeps hiring manager contact', () => {
+  it('skips unemployment and does not copy hiring-manager contact onto the EV row', () => {
     const rows = form3EmployersToCandidateRows([
       { type: 'unemployment', name: 'Gap', fromDate: '01/2014', toDate: '12/2014' },
       {
@@ -36,14 +36,17 @@ describe('form3EmployersToCandidateRows', () => {
         positionHeld: 'Entry Level Driver',
         fromDate: '01/2015',
         toDate: '02/2016',
+        phone: '(555) 345-6789',
         hiringManagerName: 'Pat Lee',
         hiringManagerEmail: 'pat@firsttransport.com',
         hiringManagerPhone: '(555) 111-2222',
       },
     ])
     expect(rows).toHaveLength(1)
-    expect(rows[0].supervisorName).toBe('Pat Lee')
-    expect(rows[0].supervisorEmail).toBe('pat@firsttransport.com')
+    expect(rows[0].companyName).toBe('First Transport Inc')
+    expect(rows[0].supervisorPhone).toBe('(555) 345-6789')
+    expect(rows[0].supervisorName).toBeUndefined()
+    expect(rows[0].supervisorEmail).toBeUndefined()
     expect(rows[0].fromDotDraft).toBe(true)
     expect(rows[0].startDate).toBe('2015-01')
   })
@@ -73,7 +76,7 @@ describe('mergeDotForm3IntoEmployments', () => {
     )
     expect(merged).toHaveLength(1)
     expect(merged[0].id).toBe('block-1')
-    expect(merged[0].supervisorEmail).toBe('pat@firsttransport.com')
+    expect(merged[0].supervisorEmail).toBeUndefined()
     expect(merged[0].fromDotDraft).toBeUndefined()
   })
 

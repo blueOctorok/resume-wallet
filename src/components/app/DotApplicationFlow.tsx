@@ -733,9 +733,9 @@ export default function DotApplicationFlow({
   const renderFormStepTabs = () => {
     if (dotApp.isApplicationCompleted || showEmploymentVerification) return null
     const steps = [
-      { id: 1, label: 'Form 1', sublabel: 'Personal Info' },
-      { id: 2, label: 'Form 2', sublabel: 'Driving & Records' },
-      { id: 3, label: 'Form 3', sublabel: 'Employment & Signature' },
+      { id: 1, label: 'Section 1', sublabel: 'Personal Info' },
+      { id: 2, label: 'Section 2', sublabel: 'Driving & Records' },
+      { id: 3, label: 'Section 3', sublabel: 'Employment & Signature' },
     ]
     return (
       <div className='flex justify-center mb-8 px-4'>

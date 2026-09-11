@@ -128,17 +128,17 @@ const TEMPLATES: Record<string, AvaResponse> = {
   },
   'nav:form1': {
     message:
-      '**Form 1: Personal Information**\n\nThis covers your basic info, address history, and license details. Most of this should be straightforward!',
+      '**Section 1: Personal Information**\n\nThis covers your basic info, address history, and license details. Most of this should be straightforward!',
     useAI: false,
   },
   'nav:form2': {
     message:
-      "**Form 2: Driving Experience**\n\nHere we'll document your experience with different vehicle types, your driving record, and any accidents or violations.\n\n💡 Be honest here - employers verify this information!",
+      "**Section 2: Driving Experience**\n\nHere we'll document your experience with different vehicle types, your driving record, and any accidents or violations.\n\n💡 Be honest here - employers verify this information!",
     useAI: false,
   },
   'nav:form3': {
     message:
-      '**Form 3: Employment History**\n\nList your work history for the past 10 years, plus professional references.\n\n💡 Tip: Include all driving jobs, even short ones. Gaps in history raise red flags!',
+      '**Section 3: Employment History**\n\nList your work history for the past 10 years, plus professional references.\n\n💡 Tip: Include all driving jobs, even short ones. Gaps in history raise red flags!',
     useAI: false,
   },
 
@@ -214,17 +214,17 @@ const TEMPLATES: Record<string, AvaResponse> = {
   },
   'milestone:form1_complete': {
     message:
-      "🎉 **Form 1 Complete!**\n\nYou're 1/3 of the way through the DOT application. Keep going!",
+      "🎉 **Section 1 Complete!**\n\nYou're 1/3 of the way through the DOT application. Keep going!",
     useAI: false,
   },
   'milestone:form2_complete': {
     message:
-      "🎉 **Form 2 Complete!**\n\nJust one more form to go. You're doing great!",
+      "🎉 **Section 2 Complete!**\n\nJust one more section to go. You're doing great!",
     useAI: false,
   },
   'milestone:all_forms_complete': {
     message:
-      "🎉 **All Forms Complete!**\n\nYou've finished your DOT application! Ready to submit it to the blockchain for verification?",
+      "🎉 **All Sections Complete!**\n\nYou've finished your DOT application! Ready to submit it to the blockchain for verification?",
     useAI: false,
     actions: [
       { id: 'submit', label: 'Submit for verification', value: 'submit' },

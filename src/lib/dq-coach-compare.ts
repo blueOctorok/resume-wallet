@@ -162,7 +162,7 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
     flags.push(
       warn(
         'DOT name vs MVR',
-        `DOT Form 1 says ${dot.name}. The MVR is for ${mvr.subjectName}.`,
+        `DOT Section 1 says ${dot.name}. The MVR is for ${mvr.subjectName}.`,
       ),
     )
   }
@@ -170,7 +170,7 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
     flags.push(
       warn(
         'Profile name vs DOT',
-        `Profile says ${profile.name}. DOT Form 1 says ${dot.name}.`,
+        `Profile says ${profile.name}. DOT Section 1 says ${dot.name}.`,
       ),
     )
   }
@@ -189,7 +189,7 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
     flags.push(
       warn(
         'DOT date of birth vs MVR',
-        `DOT Form 1 DOB ${dobDotMvr.left} does not match MVR ${dobDotMvr.right}.`,
+        `DOT Section 1 DOB ${dobDotMvr.left} does not match MVR ${dobDotMvr.right}.`,
       ),
     )
   }
@@ -200,7 +200,7 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
   }
   const phoneDotMvr = bothDiffer(dot?.phone, mvr?.phone, normalizePhoneDigits)
   if (phoneDotMvr) {
-    flags.push(warn('DOT phone vs MVR', 'DOT Form 1 phone does not match the number on the MVR.'))
+    flags.push(warn('DOT phone vs MVR', 'DOT Section 1 phone does not match the number on the MVR.'))
   }
 
   const licDotMvr = bothDiffer(dot?.licenseNumber, mvr?.licenseNumber, normalizeLicense)

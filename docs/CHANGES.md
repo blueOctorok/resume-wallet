@@ -4,6 +4,119 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT wizard says Section 1–3, not Form 1–3** (2026-09-11)
+
+Drivers were looking at tabs labeled Form 1 / Form 2 / Form 3. Those are now **Section 1 / 2 / 3**.
+Continue buttons, Stormi copy, EV empty-state, coverage caveat, and DQ-coach compare strings follow.
+Internal names (`form1`, `PersonalInfoForm1`, `application_data.form3`) stay — this is a label
+change, not a data rename.
+
+---
+
+## **CDL certifications are a picker, not free text** (2026-09-11)
+
+Drivers hand-typed their CDL class and endorsements after driving school, so "Class A", "class-a
+cdl", and "CDL A" all meant the same thing and none of it was filterable. It's a dropdown + chips
+now, and the CDL / School section splits into two add buttons.
+
+| Change | Detail |
+|---|---|
+| `src/lib/cdl-certifications.ts` (new) | The 11 options (Class A/B/C, H, N, X, T, P, S, L, None/Other) plus `parseCertifications` / `joinCertifications` / `addCertification`. Selections live in the entry's existing `courseOfStudy` field as a comma-joined list — no option contains a comma, so legacy hand-typed values round-trip as chips instead of being dropped. No migration, no new column. |
+| None/Other | Exclusive in both directions: picking it clears the classes, picking a class clears it. Contradictory data can't be entered. |
+| Picker UI | Select acts as an adder (resets to placeholder after each pick), chosen options render as removable Hot Embers chips, already-picked options drop out of the list, and the select disables itself once everything is added. |
+| Two add buttons | The CDL / School section now offers **Add driving school** (the required, auto-seeded one) and **Add college or high school** (optional). `HISTORY_SECTIONS` gained `addActions[]` + `seedType` in place of the single `addType`/`addLabel`. |
+| Merged field blocks | `school` and `drivingSchool` shared ~40 lines of near-identical JSX. Now one block: label is **SCHOOL NAME** for both, and only the second field differs (CDL picker vs. free-text course of study). |
+| Other Qualifications | **Removed.** It was write-only — collected and saved, but never on the PDF, career card, or profile. Gone from `formData`, `fillTestData`, and `DotForm3Data`. |
+| `form3ToProfile` | Driving-school entries now map their picked options into `UnifiedEducation.certifications` (a real array) with `degree: 'CDL Training'`, rather than dumping the raw string into `degree`. |
+
+---
+
+## **DOT Form 3 drops the Education step** (2026-09-11)
+
+The CDL / School section is now required inside the 10-year history timeline, so a separate
+Education step asked the same question twice. Form 3 is **two steps** now: Employment History →
+Signature.
+
+| Change | Detail |
+|---|---|
+| `PersonalInfoForm3.tsx` | `STEPS` down to 2; `renderEducation`, `addEducation`, `removeEducation`, the `formData.education` array, its `validateStep(2)` block, and the education test data are gone. The signature step is now step 2. |
+| Other Qualifications | Re-homed to the bottom of the Employment History step as an optional section (it lived inside the education step). Styled to match the history sections; nothing else consumes this field. |
+| `form3ToProfile` | CDL/School entries (`type: 'school' \| 'drivingSchool'`) now map to `education` instead of `employmentHistory` — a driving school was landing in `block_driver_employment` as a job. Legacy drafts' `education` entries are still read and merged. |
+| `form3ToProfile` | **Stops returning `education: []`.** `/api/driver/profile` writes whenever `education !== undefined`, so an empty array would have wiped `block_education` — which the resume blocks share. Omitted instead, mirroring `form2ToProfile`. |
+| `profileToForm3` | Profile education now prefills **CDL/School history entries** rather than the removed education array. Dates are left blank (profile education only stores a year). |
+| `DotForm3Employer` | Gains `type` and `courseOfStudy`, which the form component already wrote but the shared type didn't declare. |
+
+Legacy submitted applications keep their `form3.education` JSON, and `DotAppPreviewContent` still
+renders it — nothing historical is rewritten.
+
+---
+
+## **EV driver-claimed fields stay editable until DKIM** (2026-09-11)
+
+Autofilled employer facts on the authorization (company name, address, email, phone, dates) were
+locking as soon as the packet was sent. They now stay editable until a DKIM-valid employer reply.
+Edits go on the packet at send. Signature / send-by still lock after send (that's the authorization
+act, not driver work-history data).
+
+---
+
+## **DOT Form 3 drops hiring-manager / EV contact** (2026-09-11)
+
+Hiring manager name/phone/email and the "prefer not to send EV" checkbox are off Form 3. Those
+belong on the Employment Verification block so a driver who comes back months later edits contact
+in one place. Form 3 → EV mapping no longer copies leftover hiring-manager fields onto supervisor
+contact; `form3ToProfile` / `profileToForm3` also stop shuttling supervisor contact through DOT.
+Employer **name and company phone** still flow to the EV packet (the driver already typed them).
+
+Employment cards also drop position held, salary, and description of duties (kept on the data
+shape for old drafts / EVR-verified rows). Military still has Position / MOS.
+
+---
+
+## **DOT Form 3 — history sections visible by default** (2026-09-11)
+
+The 10-year history step hid all entry types behind a "+ Add History Entry" modal; a driver could
+miss unemployment/military entirely, and School/Education vs CDL/Driving School was a confusing split.
+
+`PersonalInfoForm3.tsx` now renders four fixed sections, all visible on the page:
+
+1. **Employment** — required; always shows a ready-to-fill card, "+ Add another employer" below.
+2. **CDL / School** — required (**new**: at least one entry must be completed). Merges the old
+   School/Education option into CDL/Driving School — the standalone school type is no longer offered,
+   but legacy `school` entries still render and validate under this section.
+3. **Unemployment** — optional.
+4. **Military Service** — optional.
+
+Optional sections start as a greyed, dashed-border placeholder labeled "Optional — skip it if this
+doesn't apply"; clicking it adds the entry card. Required sections are auto-seeded (an effect re-adds
+a blank card if the last one is removed, so they never collapse to nothing). The type-picker modal,
+empty-state block, and old add button are gone. Section icon tiles use palette colors (Midnight
+employment, Hot Embers CDL/School, Retro Teal unemployment, Denim military).
+
+De-duplication pass: entry cards no longer repeat the section's icon + type label. Cards have a slim
+header strip with only position ("Most recent", "Employer 2"), verification/self-certified badges,
+and remove — and the strip is omitted entirely when empty (a lone card in a required section is
+headerless). The remove X is hidden on the last card of a required section (removing would just
+re-seed a blank). Each section's cards hang off a vertical rail aligned under the section icon;
+the rail renders dashed while an optional section is untouched. The last-3-employers self-certified
+note + "Present" end-date option key off employment-section position instead of raw array position.
+
+Collapsible cards: the slim header strip is now the collapse toggle (unfilled Midnight chevron +
+**Show details** / **Hide details** chip + "name · dates" summary when closed). Entries that load with
+name + dates already filled start collapsed so a 10-year history is scannable; blank/new entries
+start open. The default is snapshotted once per entry id so a card never collapses itself mid-edit,
+and failed step-1 validation auto-expands any collapsed card that has errors so red fields are
+never hidden.
+
+Zebra + accent rail: odd/even cards alternate white vs stone-100 with a Midnight vs Denim left
+stripe so Employer 2/3 don't blend into the cream page.
+
+Data shape unchanged — entries keep their index in the single `employers` array, so validation keys,
+saved drafts, submitted apps, and the `sync-from-dot` mapping all work as before. Existing apps
+without CDL training will be asked to add it on next edit (per new requirement).
+
+---
+
 ## **DOT application can be edited after submit** (2026-09-11)
 
 The File board had no Edit control — Watching-your-file **Open** on “Profile name vs DOT” went to Profile setup. That step now opens the DOT wizard. **Full DQ packet → DOT application** shows **Edit** when the app is already on file.

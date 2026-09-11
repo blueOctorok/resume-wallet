@@ -78,10 +78,16 @@ export default function CandidateEmploymentVerificationSection({
 
   const initiateVerification = async (
     row: CandidateEmploymentRow,
-    overrideEmail?: string,
-    overridePhone?: string,
-    correctionOf?: string,
-    needsContactResearch?: boolean,
+    override?: {
+      email?: string
+      phone?: string
+      companyName?: string
+      address?: string
+      startDate?: string
+      endDate?: string
+      correctionOf?: string
+      needsContactResearch?: boolean
+    },
   ) => {
     if (!userAddress) return
     setInitiatingKey(row.verificationKey)
@@ -91,10 +97,14 @@ export default function CandidateEmploymentVerificationSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           verificationKey: row.verificationKey,
-          previousEmployerEmail: overrideEmail ?? row.supervisorEmail,
-          previousEmployerPhone: overridePhone ?? row.supervisorPhone,
-          correctionOf,
-          needsContactResearch,
+          previousEmployerEmail: override?.email ?? row.supervisorEmail,
+          previousEmployerPhone: override?.phone ?? row.supervisorPhone,
+          previousEmployerName: override?.companyName,
+          previousEmployerAddress: override?.address,
+          claimedStartDate: override?.startDate,
+          claimedEndDate: override?.endDate,
+          correctionOf: override?.correctionOf,
+          needsContactResearch: override?.needsContactResearch,
         }),
       })
       const data = await response.json()
@@ -188,7 +198,7 @@ export default function CandidateEmploymentVerificationSection({
     return (
       <div className='py-2'>
         <p className='mb-4 text-sm text-[#173150]/75'>
-          No employers on file yet. Fill <strong className='font-medium'>DOT Form 3</strong>. Current
+          No employers on file yet. Fill <strong className='font-medium'>DOT Section 3</strong>. Current
           jobs appear here too — you can choose not to send.
         </p>
         <Button
@@ -355,12 +365,11 @@ export default function CandidateEmploymentVerificationSection({
               size='sm'
               disabled={initiatingKey !== null}
               onClick={() =>
-                initiateVerification(
-                  selected,
-                  request.previousEmployerEmail ?? undefined,
-                  request.previousEmployerPhone ?? undefined,
-                  request.id,
-                )
+                initiateVerification(selected, {
+                  email: request.previousEmployerEmail ?? undefined,
+                  phone: request.previousEmployerPhone ?? undefined,
+                  correctionOf: request.id,
+                })
               }
             >
               Request correction
@@ -432,8 +441,16 @@ export default function CandidateEmploymentVerificationSection({
               request={request}
               sending={initiatingKey === selected.verificationKey}
               declining={decliningKey === selected.verificationKey}
-              onSend={({ email, phone, needsResearch }) =>
-                initiateVerification(selected, email, phone, undefined, needsResearch)
+              onSend={({ email, phone, needsResearch, companyName, address, startDate, endDate }) =>
+                initiateVerification(selected, {
+                  email,
+                  phone,
+                  companyName,
+                  address,
+                  startDate,
+                  endDate,
+                  needsContactResearch: needsResearch,
+                })
               }
               onDecline={() => declineVerification(selected)}
             />

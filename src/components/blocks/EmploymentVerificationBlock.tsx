@@ -13,7 +13,8 @@ import CandidateEmploymentVerificationSection from '@/components/verification/Ca
 
 /**
  * Two pages per employer: authorization, then Safety Performance History.
- * Page 1 prefills from DOT (self-reported). Page 2 verifies only via DKIM.
+ * Contact (email/phone/hold-send) is edited here — Form 3 no longer prefills it.
+ * Page 2 verifies only via DKIM.
  */
 export default function EmploymentVerificationBlock() {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)

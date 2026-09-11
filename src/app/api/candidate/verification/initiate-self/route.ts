@@ -43,12 +43,20 @@ export async function POST(request: NextRequest) {
       verificationKey,
       previousEmployerEmail,
       previousEmployerPhone,
+      previousEmployerName,
+      previousEmployerAddress,
+      claimedStartDate: claimedStartDateOverride,
+      claimedEndDate: claimedEndDateOverride,
       correctionOf,
       needsContactResearch,
     } = body as {
       verificationKey?: string
       previousEmployerEmail?: string
       previousEmployerPhone?: string
+      previousEmployerName?: string
+      previousEmployerAddress?: string
+      claimedStartDate?: string
+      claimedEndDate?: string
       correctionOf?: string
       needsContactResearch?: boolean
     }
@@ -86,16 +94,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const claimedStartDate = toDateOnly(row.startDate)
+    const employerName = previousEmployerName?.trim() || row.companyName || ''
+    const employerAddress = previousEmployerAddress?.trim() || row.location || null
+    const claimedStartDate = toDateOnly(claimedStartDateOverride || row.startDate)
     if (!claimedStartDate) {
       return NextResponse.json(
         {
-          error: 'Start date for this employment is missing or invalid. Update the job dates in your resume or DOT application.',
+          error: 'Start date for this employment is missing or invalid. Update the job dates on this packet.',
         },
         { status: 400 },
       )
     }
-    const claimedEndDate = toDateOnly(row.endDate ?? undefined)
+    const claimedEndDate = toDateOnly(claimedEndDateOverride || row.endDate || undefined)
 
     const applicantType = applicantTypeForSource(row.source)
 
@@ -132,10 +142,10 @@ export async function POST(request: NextRequest) {
       requesting_company_id: null,
       initiated_by: 'applicant',
       applicant_type: applicantType,
-      previous_employer_name: row.companyName ?? '',
+      previous_employer_name: employerName,
       previous_employer_email: contactEmail,
       previous_employer_phone: contactPhone,
-      previous_employer_address: row.location ?? null,
+      previous_employer_address: employerAddress,
       claimed_position: row.position ?? '',
       claimed_start_date: claimedStartDate,
       claimed_end_date: claimedEndDate,
@@ -193,9 +203,9 @@ export async function POST(request: NextRequest) {
         {
           to: contactEmail,
           verificationLink,
-          previousEmployerName: row.companyName ?? '',
+          previousEmployerName: employerName,
           claimedPosition: row.position ?? '',
-          claimedCompanyName: row.companyName ?? '',
+          claimedCompanyName: employerName,
           claimedStartDate: claimedStartDate ?? undefined,
           claimedEndDate: claimedEndDate ?? null,
         },
@@ -225,8 +235,8 @@ export async function POST(request: NextRequest) {
       success: true,
       verificationRequest,
       message: contactEmail
-        ? `Verification request created for ${row.companyName}. We'll email your contact to confirm dates if possible.`
-        : `Authorization saved for ${row.companyName}. Contact research is needed before the packet can be sent.`,
+        ? `Verification request created for ${employerName}. We'll email your contact to confirm dates if possible.`
+        : `Authorization saved for ${employerName}. Contact research is needed before the packet can be sent.`,
     })
   } catch (error) {
     console.error('[CANDIDATE VERIFICATION] Error:', error)

@@ -160,7 +160,9 @@ function isRealEmployer(emp: Form3EmployerLoose): boolean {
   return Boolean(emp.name?.trim())
 }
 
-/** DOT Form 3 employers as EV rows — hiring manager contact rides along. */
+/** DOT Form 3 employers as EV rows. Company name + phone ride along (the
+ *  driver already typed them). Hiring-manager name/email and send-hold stay
+ *  on the EV block so a later contact edit is one place. */
 export function form3EmployersToCandidateRows(
   employers: Form3EmployerLoose[] | undefined,
 ): CandidateEmploymentRow[] {
@@ -182,13 +184,10 @@ export function form3EmployersToCandidateRows(
       startDate,
       endDate,
       location: emp.address?.trim() || undefined,
-      supervisorName: emp.hiringManagerName?.trim() || undefined,
-      supervisorEmail: emp.hiringManagerEmail?.trim() || emp.email?.trim() || undefined,
-      supervisorPhone: emp.hiringManagerPhone?.trim() || emp.phone?.trim() || undefined,
+      supervisorPhone: emp.phone?.trim() || undefined,
       reasonForLeaving: emp.reasonForLeaving?.trim() || undefined,
       fromDotDraft: true,
       isCurrent,
-      preferNoContact: emp.doNotContact === true,
     })
   })
   return rows

@@ -1766,7 +1766,7 @@ export default function PersonalInfoForm2({
               : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
         >
-          {currentStep === STEPS.length ? 'Continue to Form 3' : 'Next'}
+          {currentStep === STEPS.length ? 'Continue to Section 3' : 'Next'}
         </button>
       </div>
     </div>
