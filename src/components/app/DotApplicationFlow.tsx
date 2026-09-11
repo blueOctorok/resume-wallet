@@ -520,6 +520,20 @@ export default function DotApplicationFlow({
           console.warn('⚠️ [DOT] DB save non-fatal:', dbErr)
         }
 
+        // Submitted apps already appear on the career card — re-sync so edits
+        // show up without requiring a second Form 3 submit.
+        if (useDotApplicationStore.getState().hasSubmittedApplication) {
+          try {
+            await fetch('/api/driver/sync-from-dot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionUserId }),
+            })
+          } catch (syncErr) {
+            console.warn('⚠️ [DOT] Post-edit sync-from-dot non-fatal:', syncErr)
+          }
+        }
+
         if (showIndicator) syncSuccess()
         lastSavedDataRef.current = {
           form1: dotApp.form1Data,
@@ -570,12 +584,9 @@ export default function DotApplicationFlow({
       const { checkDuplicateApplicationHash } = await import('@/lib/supabase-client-db')
       const dupCheck = await checkDuplicateApplicationHash(sessionUserId, applicationHash)
       if (dupCheck.exists) {
-        dotApp.setSubmissionError(
-          'This application has already been submitted. Please modify your data before resubmitting.'
-        )
-        dotApp.setCurrentForm(1)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        dotApp.setIsSubmitting(false)
+        // Same content as the saved row — already submitted. Show success, not an error.
+        dotApp.completeApplication()
+        setShowEmploymentVerification(false)
         return
       }
 
@@ -756,6 +767,11 @@ export default function DotApplicationFlow({
     if (dotApp.isApplicationCompleted && !showEmploymentVerification) {
       return (
         <ApplicationSubmitted
+          onEdit={() => {
+            useDotApplicationStore.getState().setIsApplicationCompleted(false)
+            useDotApplicationStore.getState().setCurrentForm(1)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
           onNavigateToDashboard={() => {
             // Navigate off `dotapp` first. Clearing `isApplicationCompleted` while
             // this flow is still mounted remounts Form 3 for a frame — and because
@@ -941,6 +957,15 @@ export default function DotApplicationFlow({
                 Fields from your MVR/PSP overwrite what you typed (even if the values match)
                 and show a verified badge. You can still add extra accident or conviction
                 disclosures the reports do not list.
+              </p>
+            </div>
+          )}
+          {dotApp.hasSubmittedApplication && !dotApp.isApplicationCompleted && (
+            <div className='max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border bg-teal-50 border-teal-200 text-teal-900'>
+              <p className='text-sm font-medium'>This application is already submitted.</p>
+              <p className='mt-1 text-xs opacity-90'>
+                Edit any section and save — your career card and employer view update from
+                this copy. Issuer-backed MVR/PSP fields stay locked.
               </p>
             </div>
           )}

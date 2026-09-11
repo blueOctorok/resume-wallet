@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT application can be edited after submit** (2026-09-11)
+
+Submitted DOT apps only showed the success screen. Hub **Edit** still routed to `dotapp`, so it looked like you could change it and then you could not.
+
+The lock was UI-only (`isApplicationCompleted` copied from `is_complete` on load). Save APIs already accepted updates. Load now reopens the wizard; the success screen is only shown right after submit and has **Edit application**. Saving a submitted app re-runs `sync-from-dot` so the career card / employer view pick up changes. Issuer-backed MVR/PSP fields stay locked.
+
+---
+
 ## **EV responses always land in Provven — per-packet delivery address** (2026-09-11)
 
 Boss requirement: the employer's response must ALWAYS come back into Provven. Reply-path and

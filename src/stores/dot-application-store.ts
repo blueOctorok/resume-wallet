@@ -37,6 +37,8 @@ interface DotApplicationState {
   isSubmitting: boolean
   submissionError: string | null
   isApplicationCompleted: boolean
+  /** DB `is_complete` — submitted at least once. Independent of the success screen. */
+  hasSubmittedApplication: boolean
   blockchainData: BlockchainData | null
   
   // Dirty state tracking
@@ -81,6 +83,7 @@ interface DotApplicationActions {
   setBlockchainData: (data: BlockchainData | null) => void
   completeApplication: (blockchainData?: BlockchainData) => void
   setIsApplicationCompleted: (completed: boolean) => void
+  setHasSubmittedApplication: (submitted: boolean) => void
   
   // Dirty state actions
   markDirty: () => void
@@ -128,6 +131,7 @@ const initialState: DotApplicationState = {
   isSubmitting: false,
   submissionError: null,
   isApplicationCompleted: false,
+  hasSubmittedApplication: false,
   blockchainData: null,
   hasUnsavedChanges: false,
   lastSavedData: null,
@@ -203,14 +207,15 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
       
       completeApplication: (blockchainData) => set({
         isApplicationCompleted: true,
+        hasSubmittedApplication: true,
         blockchainData: blockchainData ?? null,
         hasUnsavedChanges: false,
         isSubmitting: false,
       }),
       
-      // Simple setter for toggling completed state without resetting form data
-      // Used when navigating from success screen back to Hub
+      // Success-screen toggle only — does not change hasSubmittedApplication
       setIsApplicationCompleted: (completed) => set({ isApplicationCompleted: completed }),
+      setHasSubmittedApplication: (submitted) => set({ hasSubmittedApplication: submitted }),
 
       // Dirty state actions
       markDirty: () => set({ hasUnsavedChanges: true }),
@@ -264,8 +269,11 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
         form1Data: data.form1 ?? null,
         form2Data: data.form2 ?? null,
         form3Data: data.form3 ?? null,
-        currentForm: data.currentStep,
-        isApplicationCompleted: data.isComplete,
+        currentForm: data.currentStep >= 1 && data.currentStep <= 3 ? data.currentStep : 3,
+        // Reopen the wizard so a submitted app can be edited. Success screen
+        // is only shown right after submit (completeApplication), not on load.
+        isApplicationCompleted: false,
+        hasSubmittedApplication: data.isComplete,
         hasUnsavedChanges: false,
         lastSavedData: {
           form1: data.form1 ?? null,
@@ -293,6 +301,7 @@ export const useDotApplicationStore = create<DotApplicationState & DotApplicatio
         form2Data: state.form2Data,
         form3Data: state.form3Data,
         currentForm: state.currentForm,
+        hasSubmittedApplication: state.hasSubmittedApplication,
         applicationId: state.applicationId,
         ownerUserId: state.ownerUserId,
         hasPrefilled: state.hasPrefilled,

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 
 interface ApplicationSubmittedProps {
   onNavigateToDashboard?: () => void
+  onEdit?: () => void
   /**
    * @deprecated Legacy Base-era payload. Ignored for display (DEC-2026-07-001).
    * Self-reported DOT apps are never "Verified on Blockchain."
@@ -20,6 +21,7 @@ interface ApplicationSubmittedProps {
 
 const ApplicationSubmitted = ({
   onNavigateToDashboard,
+  onEdit,
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
   const dark = isDarkTheme(theme)
@@ -107,11 +109,18 @@ const ApplicationSubmitted = ({
         </div>
       </div>
 
-      {onNavigateToDashboard && (
-        <div className='flex justify-center'>
-          <Button variant='primary' onClick={onNavigateToDashboard}>
-            Return to Hub
-          </Button>
+      {(onEdit || onNavigateToDashboard) && (
+        <div className='flex flex-wrap items-center justify-center gap-3'>
+          {onEdit && (
+            <Button variant='secondary' onClick={onEdit}>
+              Edit application
+            </Button>
+          )}
+          {onNavigateToDashboard && (
+            <Button variant='primary' onClick={onNavigateToDashboard}>
+              Return to Hub
+            </Button>
+          )}
         </div>
       )}
 
