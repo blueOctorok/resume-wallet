@@ -16,6 +16,7 @@ import type {
   UnifiedEducation,
   UnifiedSkill,
 } from '@/types/driver-profile'
+import { mvrFlagToYesNo } from '@/types/driver-profile'
 
 import type { DriverApplicationData } from '@/components/driver-application/types/driver-application.types'
 
@@ -289,8 +290,8 @@ export function profileToDotApplication(profile: UnifiedDriverProfile): Partial<
       accidents: profile.mvrAccidents.map((a) => ({
         date: a.date,
         description: a.description,
-        fatalities: a.fatalities ? 'Yes' : 'No',
-        injuries: a.injuries ? 'Yes' : 'No',
+        fatalities: mvrFlagToYesNo(a.fatalities),
+        injuries: mvrFlagToYesNo(a.injuries),
         propertyDamage: '', // Not in MVR data
       })),
     },

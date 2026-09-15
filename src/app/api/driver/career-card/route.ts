@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
       if (mvr) {
         const { data: mvrResults } = await supabase
           .from('mvr_results')
-          .select('id, license_status, license_class, total_points, violation_count')
+          .select('id, license_status, license_class, total_points, violation_count, accident_count')
           .eq('mvr_order_id', mvr.id)
           .single()
         mvrData = { order: mvr, results: mvrResults, wasOrderedByEmployer: !!mvr.ordered_by_company_id }
@@ -239,6 +239,7 @@ export async function GET(request: NextRequest) {
                     licenseClass: mvrData.results.license_class,
                     totalPoints: mvrData.results.total_points,
                     violationCount: mvrData.results.violation_count,
+                    accidentCount: mvrData.results.accident_count,
                   }
                 : null,
             }

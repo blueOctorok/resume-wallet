@@ -640,7 +640,7 @@ async function fetchMvrData(
   const ids = orders.map((o) => o.id)
   const { data: resultRows } = await supabase
     .from('mvr_results')
-    .select('mvr_order_id, license_status, license_class, total_points, violation_count')
+    .select('mvr_order_id, license_status, license_class, total_points, violation_count, accident_count')
     .in('mvr_order_id', ids)
 
   const resultByOrderId = new Map((resultRows ?? []).map((r) => [r.mvr_order_id as string, r]))
@@ -660,6 +660,7 @@ async function fetchMvrData(
           licenseClass: row.license_class,
           totalPoints: row.total_points,
           violationCount: row.violation_count,
+          accidentCount: row.accident_count,
         }
       : null
   return {
@@ -864,6 +865,7 @@ export function toMvrDataFromOrderRow(order: {
   license_class: string
   total_points: number
   violation_count: number
+  accident_count: number
 } | null): MvrData {
   return {
     orderId: order.id,
@@ -878,6 +880,7 @@ export function toMvrDataFromOrderRow(order: {
           licenseClass: results.license_class,
           totalPoints: results.total_points,
           violationCount: results.violation_count,
+          accidentCount: results.accident_count,
         }
       : null,
   }

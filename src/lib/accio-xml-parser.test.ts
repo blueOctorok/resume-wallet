@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { parseAccioMvrResult, mvrResultToJsonb } from './accio-xml-parser'
 
 /**
@@ -306,5 +306,181 @@ describe('parseAccioMvrResult — IL violation_type routing (Edwards)', () => {
     expect(jsonb.violations.count).toBe(4)
     expect(jsonb.suspensions.count).toBe(2)
     expect(jsonb.additionalDriverInfo).toHaveLength(3)
+  })
+})
+
+/**
+ * Regression fixture for the Sept 2026 "MVRs never show accidents" bug.
+ *
+ * The parser looked for a dedicated `<mvr_accident>` element that Accio has
+ * never sent — 0 of 1,084 stored payloads contained one. Accidents actually
+ * arrive as `<mvr_violation>` with violation_type `DRIVER ACCIDENT` or `ACCD`,
+ * and the classifier's catch-all filed them under additionalDriverInfo, so
+ * every MVR reported accidentCount 0.
+ *
+ * Every block below is a real production shape, including the ACD-code spread
+ * (ACC / U32 / empty / '-') that makes violation_type the only safe signal.
+ */
+describe('parseAccioMvrResult — accidents arrive as mvr_violation blocks', () => {
+  const ACCIDENT_XML = `<ScreeningResults>
+  <completeOrder number="17800000000000001" remote_number="61999">
+    <subOrder type="MVR" filledStatus="filled" filledCode="discrepancy">
+      <dlnum>A12345678</dlnum>
+      <dlstate>OH</dlstate>
+      <mvr_violation>
+        <violation_type>DRIVER ACCIDENT</violation_type>
+        <description>ACCIDENT - MOVING</description>
+        <violation_date>20210726</violation_date>
+        <acd_code>ACC</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER ACCIDENT</violation_type>
+        <description>D-CALIFORNIA ACCIDENT (REPORTED BY CHP)</description>
+        <violation_date>20220803</violation_date>
+        <acd_code>U32</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>ACCD</violation_type>
+        <description>** ACCIDENT **</description>
+        <violation_date>20241210</violation_date>
+        <acd_code>-</acd_code>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>ACCD</violation_type>
+        <description>INJURY ACCIDENT</description>
+        <violation_date>20251113</violation_date>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER VIOLATION</violation_type>
+        <description>FAIL TO CONTROL - ACC</description>
+        <violation_date>20250301</violation_date>
+        <conviction_date>20250402</conviction_date>
+        <acd_code>ACC</acd_code>
+        <points>2</points>
+      </mvr_violation>
+      <mvr_violation>
+        <violation_type>DRIVER OTHER INFORMATION</violation_type>
+        <description>TEMPORARY DRIVER'S LICENSE</description>
+        <violation_date>20240424</violation_date>
+        <acd_code>INFO</acd_code>
+      </mvr_violation>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  const parsed = parseAccioMvrResult(ACCIDENT_XML)
+
+  it('extracts accidents from DRIVER ACCIDENT and ACCD blocks', () => {
+    expect(parsed.accidentCount).toBe(4)
+    expect(parsed.accidents).toHaveLength(4)
+    expect(parsed.accidents?.map((a) => a.date)).toEqual([
+      '20210726',
+      '20220803',
+      '20241210',
+      '20251113',
+    ])
+    expect(parsed.accidents?.[0].description).toBe('ACCIDENT - MOVING')
+    expect(parsed.accidents?.[3].description).toBe('INJURY ACCIDENT')
+  })
+
+  it('classifies on violation_type, not the ACD code', () => {
+    // A state that codes a crash as a moving violation sends DRIVER VIOLATION
+    // with ACD 'ACC' — that stays a violation and keeps its points.
+    expect(parsed.violationCount).toBe(1)
+    expect(parsed.violations?.[0].description).toBe('FAIL TO CONTROL - ACC')
+    expect(parsed.totalPoints).toBe(2)
+  })
+
+  it('stops filing accidents under additionalDriverInfo', () => {
+    expect(parsed.additionalDriverInfo).toHaveLength(1)
+    expect(parsed.additionalDriverInfo?.[0].type).toBe('DRIVER OTHER INFORMATION')
+  })
+
+  it('leaves severity and fault unset rather than guessing from description', () => {
+    expect(parsed.accidents?.every((a) => a.severity === undefined)).toBe(true)
+    expect(parsed.accidents?.every((a) => a.fault === undefined)).toBe(true)
+  })
+
+  it('serializes accidents into JSONB for mvr_results', () => {
+    const jsonb = mvrResultToJsonb(parsed) as {
+      accidents: { count: number; details: unknown[] }
+    }
+    expect(jsonb.accidents.count).toBe(4)
+    expect(jsonb.accidents.details).toHaveLength(4)
+  })
+})
+
+/**
+ * The tripwire that was missing. Accidents sat in the catch-all for two years
+ * because an unrecognized `violation_type` and a deliberately-informational one
+ * were indistinguishable. These assert the log fires for genuinely new vendor
+ * values and stays quiet for the DMV record types we've already triaged.
+ */
+describe('parseAccioMvrResult — unrecognized violation_type telemetry', () => {
+  function xmlWithType(violationType: string): string {
+    return `<ScreeningResults>
+  <completeOrder number="1" remote_number="1">
+    <subOrder type="MVR" filledStatus="filled" filledCode="clear">
+      <dlnum>C11111111</dlnum>
+      <dlstate>OH</dlstate>
+      <mvr_violation>
+        <violation_type>${violationType}</violation_type>
+        <description>SOMETHING THE DMV SENT</description>
+        <violation_date>20250101</violation_date>
+      </mvr_violation>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+  }
+
+  it('warns when a violation_type matches no branch and no known type', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const parsed = parseAccioMvrResult(xmlWithType('DRIVER TELEMATICS EVENT'))
+
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0][0]).toContain('DRIVER TELEMATICS EVENT')
+    // Still filed conservatively — a new type must not inflate violations.
+    expect(parsed.violationCount).toBe(0)
+    expect(parsed.additionalDriverInfo).toHaveLength(1)
+    warn.mockRestore()
+  })
+
+  it('stays quiet for DMV record types already triaged as informational', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    for (const t of ['DRIVER ID CARD', 'DRIVER POINT CREDIT', 'DEPARTMENTAL']) {
+      parseAccioMvrResult(xmlWithType(t))
+    }
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('stays quiet for types that do match a category', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    for (const t of ['DRIVER ACCIDENT', 'ACCD', 'DRIVER VIOLATION', 'DRIVER SUSPENSION']) {
+      parseAccioMvrResult(xmlWithType(t))
+    }
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})
+
+describe('parseAccioMvrResult — clean records report no accidents', () => {
+  const CLEAN_XML = `<ScreeningResults>
+  <completeOrder number="17800000000000002" remote_number="62000">
+    <subOrder type="MVR" filledStatus="filled" filledCode="clear">
+      <dlnum>B87654321</dlnum>
+      <dlstate>OH</dlstate>
+      <text>
+ Violations/Convictions And Failures to Appear And Accidents
+ ** NONE TO REPORT ***
+      </text>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  it('does not invent accidents from the report text heading', () => {
+    const parsed = parseAccioMvrResult(CLEAN_XML)
+    expect(parsed.accidentCount).toBe(0)
+    expect(parsed.accidents).toEqual([])
   })
 })

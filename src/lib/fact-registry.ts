@@ -8,7 +8,6 @@ import {
   type MvrAttestationContext,
 } from '@/lib/block-data'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
-import type { MvrViolation } from '@/types/driver-profile'
 import {
   classLetterToCode,
   endorsementMaskFromCodes,
@@ -94,7 +93,7 @@ function formatDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-function parseViolationDate(raw: string): Date | null {
+function parseMvrEventDate(raw: string): Date | null {
   if (!raw?.trim()) return null
   const trimmed = raw.trim()
   if (/^\d{8}$/.test(trimmed)) {
@@ -106,13 +105,21 @@ function parseViolationDate(raw: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-function movingViolationsInWindow(
-  violations: MvrViolation[],
+/**
+ * Both violations and accidents are dated MVR events, so one window check
+ * serves both. Undated events cannot be placed in the window and are ignored.
+ *
+ * Exported so the supersede script re-evaluates existing attestations with the
+ * exact predicate that issues them — a second implementation could drift and
+ * leave a false "clean" attestation standing.
+ */
+export function hasDatedEventInWindow(
+  events: Array<{ date: string }>,
   windowStart: Date,
   windowEnd: Date,
 ): boolean {
-  return violations.some((v) => {
-    const d = parseViolationDate(v.date)
+  return events.some((e) => {
+    const d = parseMvrEventDate(e.date)
     return d !== null && d >= windowStart && d <= windowEnd
   })
 }
@@ -151,17 +158,24 @@ async function proveMvrClean36Months(ctx: ProveContext): Promise<FactResult> {
   const windowEnd = anchor
   const windowStart = subtractMonths(anchor, MONTHS_36)
 
-  const violations = mvrCtx.mvr.violations ?? []
-  const hasRecentViolation = movingViolationsInWindow(violations, windowStart, windowEnd)
-
-  if (hasRecentViolation) {
+  if (hasDatedEventInWindow(mvrCtx.mvr.violations ?? [], windowStart, windowEnd)) {
     throw new AttestationError(
       'Moving violations found within the 36-month verification window — cannot attest clean MVR'
     )
   }
 
+  // A carrier reading "Clean MVR" means no crashes either. Accidents arrive on
+  // the same DMV record as violations (violation_type DRIVER ACCIDENT / ACCD),
+  // so they gate this fact too — attesting "clean" over a reportable accident
+  // would be a false verified badge.
+  if (hasDatedEventInWindow(mvrCtx.mvr.accidents ?? [], windowStart, windowEnd)) {
+    throw new AttestationError(
+      'Accidents found within the 36-month verification window — cannot attest clean MVR'
+    )
+  }
+
   return {
-    factSummary: 'Clean MVR — no moving violations in the last 36 months',
+    factSummary: 'Clean MVR — no moving violations or accidents in the last 36 months',
     disclosedFields: {
       verificationWindowStart: formatDateOnly(windowStart),
       verificationWindowEnd: formatDateOnly(windowEnd),
@@ -327,7 +341,7 @@ const SHIPPED_FACTS: Record<ShippedFactType, FactDefinition> = {
   mvr_clean_36_months: {
     factType: 'mvr_clean_36_months',
     label: 'Clean MVR (36 months)',
-    description: 'No moving violations in the last 36 months per Accio MVR',
+    description: 'No moving violations or accidents in the last 36 months per Accio MVR',
     category: 'driving',
     source: 'third_party',
     proveImpl: proveMvrClean36Months,

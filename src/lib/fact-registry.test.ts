@@ -154,6 +154,46 @@ describe('fact-registry', () => {
         }),
       ).rejects.toThrow(/moving violations/i)
     })
+
+    // Sept 2026: accidents didn't parse, so a driver with a crash and no
+    // moving violations was issued — and Midnight-proven — as "Clean MVR".
+    it('throws when an accident falls inside the window, even with no violations', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({
+          mvr: baseMvr({
+            violations: [],
+            accidents: [{ date: '20250318', description: 'PROPERTY DAMAGE' }],
+          }),
+        }),
+      )
+
+      await expect(
+        resolveAttestationFact({
+          candidateUserId: CANDIDATE_ID,
+          factType: 'mvr_clean_36_months',
+        }),
+      ).rejects.toThrow(/accidents/i)
+    })
+
+    it('attests when an accident predates the 36-month window', async () => {
+      getMvrAttestationContext.mockResolvedValue(
+        completedMvrCtx({
+          mvr: baseMvr({
+            accidents: [{ date: '20180401', description: 'PROPERTY DAMAGE' }],
+          }),
+        }),
+      )
+
+      const resolved = await resolveAttestationFact({
+        candidateUserId: CANDIDATE_ID,
+        factType: 'mvr_clean_36_months',
+      })
+
+      expect(resolved.factSummary).toMatch(/no moving violations or accidents/i)
+      // The accident itself is never disclosed — only the window (selective disclosure).
+      expect(resolved.disclosedFields).not.toHaveProperty('accidents')
+      assertNoPii(resolved.disclosedFields)
+    })
   })
 
   describe('cdl_class_a', () => {

@@ -669,7 +669,7 @@ export default function ProjectedCareerCard({
               )}
             </div>
             {!demoteEmployerScreeningDetails && (
-              <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
+              <div className='grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm'>
                 <div>
                   <p className={cn('text-xs', 'text-ironside')}>Status</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
@@ -692,6 +692,18 @@ export default function ProjectedCareerCard({
                   <p className={cn('text-xs', 'text-ironside')}>Violations</p>
                   <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
                     {data.employerCompanyMvr.results?.violationCount ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className={cn('text-xs', 'text-ironside')}>Accidents</p>
+                  {/* Amber on a non-zero count — a carrier must not scan past a crash. */}
+                  <p className={cn(
+                    'font-medium',
+                    (data.employerCompanyMvr.results?.accidentCount ?? 0) > 0
+                      ? isDark ? 'text-amber-300' : 'text-amber-800'
+                      : isDark ? 'text-white' : 'text-gray-900',
+                  )}>
+                    {data.employerCompanyMvr.results?.accidentCount ?? '—'}
                   </p>
                 </div>
               </div>

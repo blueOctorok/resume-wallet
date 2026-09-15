@@ -10,6 +10,7 @@
  */
 
 import type { UnifiedDriverProfile, UnifiedEmployment, UnifiedEducation } from '@/types/driver-profile'
+import { mvrFlagToYesNo } from '@/types/driver-profile'
 import { parseCertifications } from '@/lib/cdl-certifications'
 
 // =====================================================
@@ -383,9 +384,9 @@ export function profileToForm2(profile: UnifiedDriverProfile): Partial<DotForm2D
     accidents: profile.mvrAccidents.map(acc => ({
       date: acc.date,
       nature: acc.description,
-      fatalities: acc.fatalities ? 'Yes' : 'No',
-      injuries: acc.injuries ? 'Yes' : 'No',
-      atFault: acc.atFault ? 'Yes' : 'No',
+      fatalities: mvrFlagToYesNo(acc.fatalities),
+      injuries: mvrFlagToYesNo(acc.injuries),
+      atFault: mvrFlagToYesNo(acc.atFault),
     })),
     hasNoAccidents: profile.mvrAccidents.length === 0,
     // Pre-fill convictions from MVR if available

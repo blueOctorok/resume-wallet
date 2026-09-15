@@ -43,6 +43,20 @@ export interface DotAppData {
   majorityVerified?: boolean
 }
 
+/**
+ * DMV rollup shown on every MVR surface (candidate card, employer card,
+ * employer-private company pull). Declared once so a new field can't reach one
+ * surface and silently skip another — which is how accidents stayed invisible.
+ */
+export interface MvrResultsSummary {
+  licenseStatus: string
+  licenseClass: string
+  totalPoints: number
+  violationCount: number
+  /** Accidents on the DMV record (violation_type DRIVER ACCIDENT / ACCD). */
+  accidentCount: number
+}
+
 export interface MvrData {
   orderId: string
   orderStatus: string
@@ -55,12 +69,7 @@ export interface MvrData {
   licenseState: string
   orderedAt: string
   completedAt: string | null
-  results: {
-    licenseStatus: string
-    licenseClass: string
-    totalPoints: number
-    violationCount: number
-  } | null
+  results: MvrResultsSummary | null
   /**
    * True when a company paid for this order (`ordered_by_company_id` set).
    * Candidate hub shows status only; full MVR opens for the purchasing employer.

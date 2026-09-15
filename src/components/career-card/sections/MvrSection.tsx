@@ -144,7 +144,7 @@ export default function MvrSection({
         </div>
       ) : isComplete && data.results ? (
         <div className='space-y-2'>
-          <div className='grid grid-cols-3 gap-3'>
+          <div className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
             <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
               <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Status</p>
               <p className={cn('text-sm font-semibold', isDark ? 'text-green-400' : 'text-green-600')}>
@@ -161,6 +161,18 @@ export default function MvrSection({
               <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Violations</p>
               <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
                 {data.results.violationCount}
+              </p>
+            </div>
+            <div className={cn('rounded-lg p-3 text-center', isDark ? 'bg-gray-700/50' : 'bg-gray-50')}>
+              <p className={cn('text-xs mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>Accidents</p>
+              {/* Amber on a non-zero count — the driver should see what a carrier sees. */}
+              <p className={cn(
+                'text-sm font-semibold',
+                data.results.accidentCount > 0
+                  ? isDark ? 'text-amber-300' : 'text-amber-700'
+                  : isDark ? 'text-white' : 'text-gray-900',
+              )}>
+                {data.results.accidentCount}
               </p>
             </div>
           </div>

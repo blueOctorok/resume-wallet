@@ -138,12 +138,12 @@ export async function POST(request: NextRequest) {
                 state: v.state ?? '',
                 points: v.points ?? 0,
               })),
+              // atFault/injuries/fatalities are intentionally omitted: the MVR
+              // doesn't report them, and defaulting to `false` would surface as
+              // "No" on DOT Form 2.
               accidents: (parsed.accidents ?? []).map((a) => ({
                 date: a.date ?? '',
                 description: a.description ?? '',
-                atFault: false,
-                injuries: false,
-                fatalities: false,
               })),
             })
           }

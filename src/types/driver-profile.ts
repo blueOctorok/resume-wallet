@@ -108,9 +108,24 @@ export interface MvrViolation {
 export interface MvrAccident {
   date: string
   description: string
-  atFault: boolean
-  injuries: boolean
-  fatalities: boolean
+  /**
+   * Optional because state accident records carry only a date and description.
+   * `undefined` means "the MVR didn't say" and must stay blank on DOT Form 2 —
+   * writing `false` here would assert not-at-fault / no-injuries / no-fatalities
+   * on a federal form on the driver's behalf.
+   */
+  atFault?: boolean
+  injuries?: boolean
+  fatalities?: boolean
+}
+
+/**
+ * Render an `MvrAccident` tri-state flag for a DOT form. `undefined` ("the MVR
+ * didn't say") must render blank so the driver answers it, not us.
+ */
+export function mvrFlagToYesNo(flag: boolean | undefined): string {
+  if (flag === undefined) return ''
+  return flag ? 'Yes' : 'No'
 }
 
 // ===== MAIN UNIFIED PROFILE =====

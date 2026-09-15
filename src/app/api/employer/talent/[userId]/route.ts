@@ -100,7 +100,7 @@ export async function GET(
     if (companyMvr) {
       const { data: companyMvrResults } = await supabase
         .from('mvr_results')
-        .select('license_status, license_class, total_points, violation_count')
+        .select('license_status, license_class, total_points, violation_count, accident_count')
         .eq('mvr_order_id', companyMvr.id)
         .maybeSingle()
 

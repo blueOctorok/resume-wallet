@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import { careerCardInsetPanelClass } from '@/lib/career-card-styles'
+import type { MvrResultsSummary } from '@/types/career-card'
 import {
   Mail,
   Phone,
@@ -122,12 +123,7 @@ export interface CareerCardData {
     orderedAt: string
     completedAt: string | null
     wasOrderedByEmployer: boolean
-    results: {
-      licenseStatus: string
-      licenseClass: string
-      totalPoints: number
-      violationCount: number
-    } | null
+    results: MvrResultsSummary | null
   } | null
   // Employer's private MVR order — only populated when the viewing employer
   // is the one who ordered it. Never sent to the driver or other employers.
@@ -137,12 +133,7 @@ export interface CareerCardData {
     licenseState: string
     orderedAt: string
     completedAt: string | null
-    results: {
-      licenseStatus: string
-      licenseClass: string
-      totalPoints: number
-      violationCount: number
-    } | null
+    results: MvrResultsSummary | null
   } | null
   workHistory: Array<{
     companyName?: string
@@ -529,11 +520,17 @@ export default function CareerCard({
                   Self-Ordered
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
                 <InfoItem label="License Status" value={data.mvr.results?.licenseStatus || 'Pending'} theme={theme} />
                 <InfoItem label="Class" value={data.mvr.results?.licenseClass || 'N/A'} theme={theme} />
                 <InfoItem label="Points" value={String(data.mvr.results?.totalPoints ?? 'N/A')} theme={theme} />
                 <InfoItem label="Violations" value={String(data.mvr.results?.violationCount ?? 'N/A')} theme={theme} />
+                <InfoItem
+                  label="Accidents"
+                  value={String(data.mvr.results?.accidentCount ?? 'N/A')}
+                  theme={theme}
+                  emphasize={(data.mvr.results?.accidentCount ?? 0) > 0}
+                />
               </div>
             </div>
           ) : null}
@@ -549,11 +546,17 @@ export default function CareerCard({
                   Private to Your Company
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
                 <InfoItem label="License Status" value={data.companyMvr.results?.licenseStatus || 'Pending'} theme={theme} />
                 <InfoItem label="Class" value={data.companyMvr.results?.licenseClass || 'N/A'} theme={theme} />
                 <InfoItem label="Points" value={String(data.companyMvr.results?.totalPoints ?? 'N/A')} theme={theme} />
                 <InfoItem label="Violations" value={String(data.companyMvr.results?.violationCount ?? 'N/A')} theme={theme} />
+                <InfoItem
+                  label="Accidents"
+                  value={String(data.companyMvr.results?.accidentCount ?? 'N/A')}
+                  theme={theme}
+                  emphasize={(data.companyMvr.results?.accidentCount ?? 0) > 0}
+                />
               </div>
             </div>
           ) : null}
@@ -811,11 +814,32 @@ export function PreviewSection({ title, children, theme }: { title: string; chil
   )
 }
 
-export function InfoItem({ label, value, theme }: { label: string; value: string; theme: string }) {
+export function InfoItem({
+  label,
+  value,
+  theme,
+  emphasize = false,
+}: {
+  label: string
+  value: string
+  theme: string
+  /** Draws attention to adverse findings (e.g. a non-zero accident count). */
+  emphasize?: boolean
+}) {
   return (
     <div>
       <p className={`text-xs ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>{label}</p>
-      <p className={isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-800'}>{value}</p>
+      <p
+        className={
+          emphasize
+            ? `font-semibold ${isDarkTheme(theme) ? 'text-amber-300' : 'text-amber-800'}`
+            : isDarkTheme(theme)
+              ? 'text-gray-200'
+              : 'text-gray-800'
+        }
+      >
+        {value}
+      </p>
     </div>
   )
 }

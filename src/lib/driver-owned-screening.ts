@@ -119,7 +119,7 @@ export async function fetchLatestDriverOwnedMvrData(
 
   const { data: results } = await supabase
     .from('mvr_results')
-    .select('license_status, license_class, total_points, violation_count')
+    .select('license_status, license_class, total_points, violation_count, accident_count')
     .eq('mvr_order_id', order.id)
     .maybeSingle()
 

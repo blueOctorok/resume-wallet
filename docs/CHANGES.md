@@ -4,6 +4,142 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVRs never reported accidents** (2026-09-15)
+
+Every MVR Provven has ever delivered reported **zero accidents**. All 1,084 stored results had
+`accident_count = 0`, while **180 of them (176 drivers, 226 records)** contained genuine state
+accident records — `ACCIDENT - MOVING`, `INJURY ACCIDENT`, `PROPERTY DAMAGE ACCIDENT`,
+`D-CALIFORNIA ACCIDENT (REPORTED BY CHP)` — dated 2021 through 2026. Roughly 1 in 6 MVRs showed a
+driver as accident-free when the state said otherwise.
+
+**Root cause.** `extractMvrAccidents` searched for `<mvr_accident>` / `<accident>` / `<ACCIDENT>`
+elements — tags Accio has **never** sent (0 of 1,084 payloads contain one; the code's own comment
+said "tags that Accio *might* use"). Accio actually delivers accidents in the same
+`<mvr_violation>` container as everything else, distinguished only by `violation_type`:
+`DRIVER ACCIDENT` (164 records) or `ACCD` (62 records). `classifyMvrViolationCategory` had no
+accident branch, so both fell through to its `return 'additional'` catch-all and were filed under
+**Additional Driver Info** — the bucket meant for temp-license admin notices. Nothing errored, no
+count looked wrong, and the dead extractor silently returned `[]` for two years.
+
+| Change | Detail |
+|---|---|
+| `accio-xml-parser.ts` — `MvrEventCategory` | Gains `'accident'`. |
+| `accio-xml-parser.ts` — `classifyMvrViolationCategory` | New branch for `DRIVER ACCIDENT` / `ACCD` / any type containing `ACCIDENT`. Placed **after** the `DRIVER VIOLATION` check: one production record is `DRIVER VIOLATION` with ACD `ACC` (a state coding a crash as a moving violation) and must stay a violation with its points. Classification is on `violation_type` only — the ACD code on accident rows is inconsistent (`ACC`, `U32`, `U33`, `D45`, `E70`, `M14`, `N50`, empty, `-`), so it is not a safe signal. |
+| `accio-xml-parser.ts` — `extractClassifiedMvrEvents` | Returns `accidents`; the main parse reads `classified.accidents` instead of the dead extractor. |
+| `accio-xml-parser.ts` — `extractMvrAccidents` | **Deleted.** 42 lines that never matched a single production payload. |
+| `accio-xml-parser.test.ts` | Two new describe blocks (10 assertions) built from real production shapes: the full ACD spread, the `DRIVER VIOLATION` + `ACC` record staying a violation, accidents leaving `additionalDriverInfo`, and a clean record whose report text reads "Violations/Convictions And Failures to Appear And Accidents / ** NONE TO REPORT ***" *not* yielding a phantom accident. There was previously **no accident test coverage and no accident fixture** anywhere in the repo. |
+| `scripts/backfill-mvr-accidents.ts` (new) | Re-parses `mvr_orders.result_xml` and corrects only the accident fields. Dry-run by default. Asserts an invariant before writing — new `additionalDriverInfo` length must equal old minus accident count — so the backfill provably changes nothing but accidents. Held for all 180. |
+
+**No false attestations.** Populating accidents exposed a second latent bug: the re-parse route wrote
+`atFault: false, injuries: false, fatalities: false` into `block_driver_mvr.accidents`, and
+`dot-form-mapper` / `profile-mapper` render `false` as a literal **"No"**. That would have asserted
+*not at fault, no injuries, no fatalities* on DOT Form 2 for 176 drivers — a claim the MVR does not
+support. State accident records carry only a date and a description.
+
+| Change | Detail |
+|---|---|
+| `types/driver-profile.ts` — `MvrAccident` | `atFault` / `injuries` / `fatalities` are now **optional**, so "the MVR didn't say" is representable. New `mvrFlagToYesNo` helper renders `undefined` as `''`. |
+| `dot-form-mapper.ts`, `profile-mapper.ts` | Use `mvrFlagToYesNo` instead of `x ? 'Yes' : 'No'`. |
+| `reparse-screening-results/route.ts` | Stops writing hardcoded `false`. |
+| Parser `Accident` | `severity` / `fault` stay in the type (employer surfaces render columns for them) but are never inferred from description text — these rows feed a federal form. The live Form 2 path (`mvr-to-form2-mapper.ts`) already emitted blanks correctly. |
+
+**Backfill applied 2026-09-15.** 180 orders / 226 accident records corrected in `mvr_results`
+(`accidents`, `accident_count`, `parsed_data.accidents`) and 120 driver-owned `block_driver_mvr`
+caches. Verified: accident counts match the raw XML exactly on all 180, flat columns agree with
+`parsed_data`, and **0** hub rows assert at-fault. No Accio re-orders needed — raw XML was intact
+in `mvr_orders.result_xml` the whole time, so no data was ever lost.
+
+**Lesson.** A silent default on an open-ended vendor enum. The catch-all was written defensively
+against *unknown* types, but "unknown" and "known-but-unhandled" got identical treatment, and the
+fallback bucket was low-visibility enough that nothing ever looked broken. A `console.warn` on the
+unmatched branch, or a test pinning the set of `violation_type` values actually observed, would have
+caught this on the first Ohio fill.
+
+### Follow-on: a Midnight-proven "Clean MVR" over a real crash (2026-09-15)
+
+Parsing accidents only fixed the *storage* layer. Three downstream surfaces still behaved as if
+accidents didn't exist, and one of them was issuing a false verified badge.
+
+**`mvr_clean_36_months` never checked accidents.** `proveMvrClean36Months` gated only on
+`block_driver_mvr.violations`, which was defensible while `accidents` was permanently `[]` — and
+became a false attestation the moment it wasn't. A driver with a reportable crash and no moving
+violations was issued, and **proven on Midnight** (`proof_artifact.kind = 'midnight_zk'`), as
+"Clean MVR (36 months)". One live attestation was in exactly that state: `bbf13f23-…` (candidate
+`14a02100-…`, window 2023-08-06 → 2026-08-06) carried a `PROPERTY DAMAGE` accident dated
+2025-03-18 — **inside its own disclosed window**. The `factSummary` wording ("no moving
+violations") was literally true; the carrier-facing label was not. That is the demo-ware line in
+`strategic-direction.mdc`, crossed.
+
+| Change | Detail |
+|---|---|
+| `fact-registry.ts` — `proveMvrClean36Months` | Now rejects when an accident falls inside the 36-month window, not just a violation. `factSummary` and the registry description read "no moving violations **or accidents**". The accident itself is never disclosed — `disclosedFields` stays `{verificationWindowStart, verificationWindowEnd}`. |
+| `fact-registry.ts` — `movingViolationsInWindow` | Generalized to exported `hasDatedEventInWindow(events, start, end)`. Violations and accidents are both dated MVR events, so one predicate serves both — and the supersede script imports it rather than reimplementing the window math, so issuer and auditor can't drift. `parseViolationDate` → `parseMvrEventDate`. |
+| `scripts/supersede-stale-clean-mvr-attestations.ts` (new) | Re-evaluates every live clean-MVR attestation against **its own** disclosed window and tombstones the ones the corrected predicate contradicts. Data-driven, not hardcoded IDs, so it stays correct if more accidents surface. Dry-run by default. Filters `source_cra IS NOT NULL` to skip tombstone rows, which share `fact_type`. |
+| `fact-registry.test.ts` | Accident-in-window rejects; accident predating the window still attests and discloses no accident data. |
+
+**Applied 2026-09-15.** 1 of 3 live clean-MVR attestations superseded (`bbf13f23-…` →
+`f0b05e47-…`). The original row was **not** edited — attestations are immutable, so a tombstone was
+inserted and `superseded_by` pointed at it, per `attestation-architecture.mdc`. The other two
+attestations are genuinely clean and were left alone.
+
+**Accident count now reaches every MVR surface.** It was stored but rendered nowhere.
+
+| Change | Detail |
+|---|---|
+| `types/career-card.ts` — `MvrResultsSummary` (new) | The `{licenseStatus, licenseClass, totalPoints, violationCount, accidentCount}` rollup was **duplicated in four places**, which is precisely how a field reaches one card and skips another. Declared once; `MvrData.results` and both `CareerCard` MVR blocks now reference it, so the compiler catches the next omission. |
+| `MvrSection.tsx` | Fourth tile, **Accidents** (3-col → `grid-cols-2 sm:grid-cols-4`). This is the shared section `ProjectedCareerCard` renders for `driver-mvr`, so one change covers the candidate hub *and* the employer talent modal. |
+| `ProjectedCareerCard.tsx` | Employer-only company-paid MVR block gains an Accidents cell (4-col → 5-col). |
+| `CareerCard.tsx` (legacy `DriverShell`) | Accidents cell on both the self-ordered and company-ordered grids. `InfoItem` gains an optional `emphasize` prop — a non-zero accident count renders amber so a carrier can't scan past a crash. |
+| Four `mvr_results` selects | `accident_count` added in `projected-career-card.ts`, `driver-owned-screening.ts`, `api/employer/talent/[userId]`, and `api/driver/career-card`. The column was never being read. |
+
+**Parser telemetry — the tripwire the lesson above asked for.** `classifyMvrViolationCategory` now
+logs `[MVR PARSE] Unrecognized violation_type …` on the catch-all. The warning is only useful if it
+means "genuinely new vendor value", so it's paired with `KNOWN_ADDITIONAL_VIOLATION_TYPES` — the 21
+DMV record types Accio has actually sent that legitimately *are* informational. Verified against the
+real corpus: parsing all **1,084** stored payloads produces **0** warnings, so any future warning is
+pure signal. Three tests pin the behavior (fires on a novel type, silent on triaged types, silent on
+categorized types).
+
+**Open question, not changed.** `DRIVER REVOCATION`, `DISQUALIFICATION`, `DRIVER WITHDRAWAL`, and
+`SURRENDER` (~50 records) currently file as Additional Driver Info. Those read like adverse license
+actions that arguably belong with suspensions on a DQ file. Reclassifying would move
+employer-visible suspension counts, so it needs a product decision rather than a parser tweak —
+tracked in `PROJECT_ROADMAP.md`.
+
+### ⚠ The parser fix is not deployed — new MVRs still misfile accidents
+
+The backfill repaired the **stored** data; it did not stop the bug. All of the above is
+**uncommitted local work**, so the Accio webhook is still hitting deployed code running the old
+parser. Proof, caught while verifying: order `2eab4216-…` (driver `6b5a4b99-…`) completed
+**2026-09-15 13:27 UTC**, after the backfill, and was written with `accident_count = 0` and its
+accident misfiled as `additionalDriverInfo: ["ACCIDENT"]` — the old parser's exact signature. It
+was the only drifted row (1 of 1,084) and has been repaired.
+
+**Every MVR that completes before deploy re-introduces the bug on that order.** Until then:
+
+1. Deploy. This is the actual fix — `process-mvr-accio-webhook.ts` is the only live write path
+   (`reparse-screening-results` is the other, and it's admin-triggered).
+2. Re-run `scripts/backfill-mvr-accidents.ts --apply` after deploying, to sweep anything that
+   landed in the gap.
+3. Re-run `scripts/supersede-stale-clean-mvr-attestations.ts --apply` after that, since a newly
+   surfaced accident can invalidate a clean-MVR attestation issued in the meantime.
+
+`backfill-mvr-accidents.ts` was made **re-run-safe** for this reason. Its invariant originally
+assumed a first pass (`oldAdditional - newAdditional === accidents.length`), which fails on an
+already-corrected order where the delta is 0. It now accepts a removal count of either
+`accidents.length` or `0`, and additionally asserts the new `additionalDriverInfo` is a subset of
+the old one — so "nothing but accidents moved" is still proven on every pass.
+
+That subset check needed a **canonical serializer**, not `JSON.stringify`: `jsonb` does not preserve
+key order (it stores keys sorted by length, then bytewise), so a record read back from Postgres
+stringifies differently than the identical freshly parsed object. The naive comparison reported 53
+false mismatches. `canonicalize()` sorts keys recursively before comparing.
+
+**Verified after repair:** 180 results / 226 accident records, **0** mismatches against raw XML,
+**0** `parsed_data` mismatches, 120 hub caches populated, **0** rows asserting at-fault.
+
+---
+
 ## **DOT wizard says Section 1–3, not Form 1–3** (2026-09-11)
 
 Drivers were looking at tabs labeled Form 1 / Form 2 / Form 3. Those are now **Section 1 / 2 / 3**.

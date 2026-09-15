@@ -94,7 +94,7 @@ export interface ParsedMvrResult {
   violationCount?: number
   violations?: Violation[]
   
-  // Accidents
+  // Accidents (from mvr_violation blocks with violation_type DRIVER ACCIDENT/ACCD)
   accidentCount?: number
   accidents?: Accident[]
   
@@ -159,6 +159,12 @@ export interface Violation {
   stateCode?: string          // State-specific code
 }
 
+/**
+ * State accident records only carry a date and a description. `severity` and
+ * `fault` are retained because employer-facing surfaces render columns for
+ * them, but no state fill populates them — they are never inferred from the
+ * description, since these rows feed DOT Form 2.
+ */
 export interface Accident {
   date?: string
   severity?: string
@@ -181,7 +187,7 @@ export interface AdditionalDriverInfo {
   endDate?: string
 }
 
-type MvrEventCategory = 'violation' | 'suspension' | 'additional'
+type MvrEventCategory = 'violation' | 'accident' | 'suspension' | 'additional'
 
 /**
  * Parse Accio XML result into structured data
@@ -352,8 +358,9 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     // Extract mvr_license blocks (can be multiple)
     result.licenses = extractMvrLicenses(xml)
 
-    // Accio puts violations, suspensions, and admin notices in `<mvr_violation>`
-    // blocks — route by violation_type so employers only see true violations.
+    // Accio puts violations, accidents, suspensions, and admin notices in
+    // `<mvr_violation>` blocks — route by violation_type so employers only see
+    // true violations.
     const classified = extractClassifiedMvrEvents(xml)
     result.violations = classified.violations
     result.violationCount = classified.violations.length
@@ -366,9 +373,8 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       result.totalPointsSource = 'computed'
     }
 
-    // Extract mvr_accident blocks
-    result.accidents = extractMvrAccidents(xml)
-    result.accidentCount = result.accidents?.length || 0
+    result.accidents = classified.accidents
+    result.accidentCount = classified.accidents.length
 
     // Standalone `<mvr_suspension>` tags plus suspensions reclassified from
     // `<mvr_violation>` (common on IL fills).
@@ -742,9 +748,45 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
 }
 
 /**
+ * `violation_type` values Accio has actually sent that legitimately belong in
+ * "Additional Driver Info". This exists purely so the catch-all below can tell
+ * "a DMV record type we've seen and deliberately treat as informational" apart
+ * from "a value we've never seen" — the latter gets logged.
+ *
+ * Accidents hid in the catch-all for two years because those two cases were
+ * indistinguishable. Add a type here only after deciding it really is
+ * informational; if it represents an adverse action or an event a carrier must
+ * see, give it a real category instead.
+ */
+const KNOWN_ADDITIONAL_VIOLATION_TYPES = new Set([
+  'DRIVER ACTION',
+  'DRIVER ADMINISTRATIVE',
+  'DRIVER ADSAS',
+  'DRIVER CANCELLATION',
+  'DRIVER CORRESPONDENCE',
+  'DRIVER DISQUALIFICATION',
+  'DISQUALIFICATION',
+  'DRIVER ID CARD',
+  'DRIVER IMPROVEMENT',
+  'DRIVER PERMIT',
+  'DRIVER POINT CREDIT',
+  'DRIVER PROBATION',
+  'DRIVER PROGRAM ACTIVITY',
+  'DRIVER REINSTATE',
+  'DRIVER RESTORATION',
+  'DRIVER REVOCATION',
+  'REVOCATION',
+  'DRIVER WITHDRAWAL',
+  'WITHDRAWAL',
+  'DEPARTMENTAL',
+  'SURRENDER',
+])
+
+/**
  * Route Accio `<mvr_violation>` blocks to the category Key Background uses on
  * employer reports. Only `DRIVER VIOLATION` / `VIOL` are true violations —
- * suspensions and temp-license admin notices must not inflate violation counts.
+ * accidents, suspensions, and temp-license admin notices must not inflate
+ * violation counts.
  */
 function classifyMvrViolationCategory(
   violationType?: string,
@@ -756,6 +798,17 @@ function classifyMvrViolationCategory(
   const desc = (description ?? '').trim().toUpperCase()
 
   if (t === 'DRIVER VIOLATION' || t === 'VIOL') return 'violation'
+
+  // Accio never sends a dedicated accident element — accidents arrive as
+  // `<mvr_violation>` with violation_type `DRIVER ACCIDENT` (most states) or
+  // `ACCD` (OH/IL-style fills). Classify on violation_type only: the ACD code
+  // on these records is inconsistent (ACC, U32, U33, D45, E70, M14, N50, or
+  // empty), and a state that codes a crash as a moving violation sends
+  // `DRIVER VIOLATION` with ACD `ACC` — that must stay a violation, which is
+  // why this check sits after the violation check above.
+  if (t === 'DRIVER ACCIDENT' || t === 'ACCD' || t.includes('ACCIDENT')) {
+    return 'accident'
+  }
 
   if (
     t === 'DRIVER SUSPENSION' ||
@@ -792,7 +845,16 @@ function classifyMvrViolationCategory(
     return 'additional'
   }
 
-  // Unknown types: do not inflate the employer-facing violation count.
+  // Unrecognized types: still don't inflate the employer-facing violation
+  // count, but say so out loud. A new DMV record type landing here silently is
+  // exactly how accidents went missing — this log is the tripwire.
+  if (t && !KNOWN_ADDITIONAL_VIOLATION_TYPES.has(t)) {
+    console.warn(
+      `[MVR PARSE] Unrecognized violation_type "${t}" (ACD "${acd || '-'}") ` +
+        `filed as additionalDriverInfo — confirm it isn't an accident, suspension, or violation.`,
+    )
+  }
+
   return 'additional'
 }
 
@@ -808,10 +870,12 @@ function parseMvrViolationPoints(violationXml: string): number | undefined {
 
 function extractClassifiedMvrEvents(xml: string): {
   violations: Violation[]
+  accidents: Accident[]
   suspensionsFromBlocks: Suspension[]
   additionalDriverInfo: AdditionalDriverInfo[]
 } {
   const violations: Violation[] = []
+  const accidents: Accident[] = []
   const suspensionsFromBlocks: Suspension[] = []
   const additionalDriverInfo: AdditionalDriverInfo[] = []
 
@@ -858,6 +922,16 @@ function extractClassifiedMvrEvents(xml: string): {
           stateCode,
         })
         break
+      case 'accident':
+        // `severity` and `fault` stay undefined: state accident records carry
+        // only a date and a description. Deriving at-fault or injury counts
+        // from description text would put a guess into DOT Form 2, so those
+        // fields are left blank for the driver to complete.
+        accidents.push({
+          date: violationDate,
+          description,
+        })
+        break
       case 'suspension':
         suspensionsFromBlocks.push({
           date: violationDate,
@@ -878,7 +952,7 @@ function extractClassifiedMvrEvents(xml: string): {
     }
   }
 
-  return { violations, suspensionsFromBlocks, additionalDriverInfo }
+  return { violations, accidents, suspensionsFromBlocks, additionalDriverInfo }
 }
 
 function dedupeSuspensions(items: Suspension[]): Suspension[] {
@@ -889,50 +963,6 @@ function dedupeSuspensions(items: Suspension[]): Suspension[] {
     seen.add(key)
     return true
   })
-}
-
-/**
- * Extract all mvr_accident blocks from XML
- * Based on real MVR report structure - accidents may include date, severity, fault, description
- */
-function extractMvrAccidents(xml: string): Accident[] {
-  const accidents: Accident[] = []
-  
-  // Try multiple tag patterns that Accio might use
-  const tagPatterns = [
-    /<mvr_accident(?:\s[^>]*)?>([\s\S]*?)<\/mvr_accident>/gi,
-    /<accident(?:\s[^>]*)?>([\s\S]*?)<\/accident>/gi,
-    /<ACCIDENT(?:\s[^>]*)?>([\s\S]*?)<\/ACCIDENT>/gi
-  ]
-  
-  for (const regex of tagPatterns) {
-    let match
-    while ((match = regex.exec(xml)) !== null) {
-      const accidentXml = match[1]
-      
-      // Try multiple field name variations
-      const accident: Accident = {
-        date: extractXmlValue(accidentXml, 'accident_date') 
-          || extractXmlValue(accidentXml, 'date')
-          || extractXmlValue(accidentXml, 'incident_date'),
-        severity: extractXmlValue(accidentXml, 'severity')
-          || extractXmlValue(accidentXml, 'accident_severity'),
-        fault: extractXmlValue(accidentXml, 'fault')
-          || extractXmlValue(accidentXml, 'at_fault')
-          || extractXmlValue(accidentXml, 'fault_indicator'),
-        description: extractXmlValue(accidentXml, 'description')
-          || extractXmlValue(accidentXml, 'accident_description')
-          || extractXmlValue(accidentXml, 'state_description')
-      }
-      
-      // Only add if we have at least some data
-      if (accident.date || accident.description || accident.severity) {
-        accidents.push(accident)
-      }
-    }
-  }
-  
-  return accidents
 }
 
 /**
