@@ -12,7 +12,9 @@
  */
 
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
+import { SITE_LEGAL } from '@/lib/site-legal'
 import { LandingContainer, SealDivider, mutedText } from './landing-shared'
 import HeroSection from './HeroSection'
 import ProblemSection from './ProblemSection'
@@ -106,9 +108,26 @@ export default function LandingPage({
             <p className='text-lg'>
               <ProvvenWordmark tone='auto' isDark={isDark} />
             </p>
+            <nav className={`flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs ${mutedText(isDark)}`}>
+              <Link href='/privacy' className='underline-offset-2 hover:underline'>
+                Privacy Policy
+              </Link>
+              <Link href='/terms' className='underline-offset-2 hover:underline'>
+                Terms of Service
+              </Link>
+              <a
+                href={`mailto:${SITE_LEGAL.contactEmail}`}
+                className='underline-offset-2 hover:underline'
+              >
+                {SITE_LEGAL.contactEmail}
+              </a>
+            </nav>
             <p className={`text-[11px] ${mutedText(isDark)}`}>
               © {new Date().getFullYear()} Provven · The career card you own · Built on Midnight
             </p>
+            {SITE_LEGAL.mailingAddress ? (
+              <p className={`text-[11px] ${mutedText(isDark)}`}>{SITE_LEGAL.mailingAddress}</p>
+            ) : null}
           </div>
         </LandingContainer>
       </footer>

@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **provven.com lives on Atom, not Namecheap** (2026-09-18)
+
+Ops checklists said Namecheap. The domain was bought on Atom. DNS is **Atom Domain Manager → DNS Records** when using Atom nameservers (or whatever NS actually points at). Atom has no Namecheap-style alias forwarder — `support@provven.com` needs an apex mail provider (ImprovMX / Cloudflare Email Routing / Workspace). Do not move `verify.provven.com` Pingram MX.
+
+---
+
+## **Public Privacy + Terms for Pingram A2P** (2026-09-17)
+
+Carriers will not file Provven 10DLC until Privacy and Terms are reachable outside the app,
+with SMS no-sell + STOP/HELP language and footer links. Those pages did not exist.
+
+| Change | Detail |
+|---|---|
+| `/privacy`, `/terms` | Public App Router pages. SMS consent + preferred “we don’t sell mobile information” copy live in `src/lib/site-legal.ts` so both pages stay aligned with the verbal-consent script Danny will file. |
+| Landing footer | Privacy, Terms, and `support@provven.com`. Optional `SITE_LEGAL.mailingAddress` when we have a street address. |
+| Sitemap | Both URLs listed so they stay crawlable. |
+
+**Ops:** Deploy, then tell Pingram the live URLs are `https://provven.com/privacy` and `https://provven.com/terms`. Add a mailing address in `site-legal.ts` if carriers bounce the footer. Confirmation SMS + recruiter attestation are still follow-ups — not required for him to submit.
+
+---
+
 ## **MVRs never reported accidents** (2026-09-15)
 
 Every MVR Provven has ever delivered reported **zero accidents**. All 1,084 stored results had

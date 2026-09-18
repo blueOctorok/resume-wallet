@@ -86,22 +86,22 @@ Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop a
 1. **Vercel → Project → Settings → Domains → Add** `provven.com` and `www.provven.com`.
    - Set `provven.com` as **Primary**; make `www` **redirect to** the apex (or vice-versa — pick one canonical host).
    - Vercel shows the exact DNS records to create.
-2. **Namecheap → Domain List → provven.com → Advanced DNS.** Add what Vercel shows, typically:
+2. **Atom → Domain Manager → `provven.com` → DNS Records** (only if the domain uses Atom nameservers; otherwise edit DNS wherever NS points — Cloudflare, Vercel, etc.). Add what Vercel shows, typically:
    - `A` record — Host `@` → `76.76.21.21`
    - `CNAME` — Host `www` → `cname.vercel-dns.com`
-   - (Alternative: switch Namecheap to Vercel's nameservers — simpler but hands all DNS to Vercel.)
+   - (Alternative: point nameservers at Vercel — simpler but hands all DNS to Vercel.)
    - Wait for propagation; Vercel auto-issues the SSL cert once records resolve.
 3. **Vercel → Settings → Environment Variables → `NEXT_PUBLIC_APP_URL`** = `https://provven.com` (Production). This one var drives email links, Accio webhooks, share URLs, and the GitHub OAuth redirect. Then **redeploy** (env changes need a fresh build).
 4. **Supabase → Authentication → URL Configuration** (critical — magic-link/Google sign-in break otherwise):
    - **Site URL** → `https://provven.com`
    - **Redirect URLs** allow-list → add `https://provven.com/**` (keep `http://localhost:3000/**` for dev). Remove old `zknight.io` / `stormchain.ai` entries once cut over.
-5. **Pingram → Domains → verify `verify.provven.com`**, add the `pingram.*` SPF/DKIM/DMARC/MX records to Namecheap. Set:
+5. **Pingram → Domains → verify `verify.provven.com`**, add the `pingram.*` SPF/DKIM/DMARC/MX records in the same DNS host as step 2 (Atom DNS Records if on Atom NS). Set:
    - `PINGRAM_FROM_EMAIL` = `provven@verify.provven.com`
    - `PINGRAM_FROM_NAME` = `Provven`
    If these still say `zknight@verify.zknight.io` / `ZKnight`, **every transactional email will still show the old brand** even though app code defaults to Provven (env overrides the default).
    Point Supabase Auth SMTP at `smtp.pingram.io` (Pingram dashboard has a one-click Supabase integrate).
    **Supabase Auth emails are a separate path** — magic-link / confirm / reset subjects and the From header live in **Supabase → Authentication → Email Templates** + **SMTP settings**, not in this repo. Update From to `Provven <provven@verify.provven.com>` and replace any "ZKnight" / "zknight.io" copy in those templates.
-6. **Pingram SMS / A2P 10DLC (Outreach Text):** On the paid plan, start **A2P 10DLC** for brand **Provven** (legal name, EIN, address, website `https://provven.com`, privacy/terms, sample messages matching invite SMS + STOP). No Namecheap DNS for SMS. Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
+6. **Pingram SMS / A2P 10DLC (Outreach Text):** Public pages are `/privacy` and `/terms` (footer-linked). After deploy, tell Pingram those URLs are live so they can file brand **Provven**. Paid plan + A2P still required. `support@provven.com` is not a Namecheap alias — Atom has no built-in forwarder; add apex MX via ImprovMX / Cloudflare Email Routing / Workspace (leave `verify.provven.com` Pingram MX alone). Apply DB migration `103_application_invites_sms.sql` before relying on Text in prod.
 7. **GitHub OAuth App** (github.com → Settings → Developer settings → OAuth Apps): set **Authorization callback URL** → `https://provven.com/api/github/callback`. `GITHUB_CLIENT_ID`/`SECRET` unchanged.
 8. **Keep zknight.io / stormchain.ai (optional):** leave them on the Vercel project as domains that **redirect to** provven.com so old links/emails don't 404.
 
