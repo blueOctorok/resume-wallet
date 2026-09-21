@@ -5,6 +5,7 @@ import {
   DOT_PAPER_CARD,
   DOT_PAPER_INPUT,
   DOT_PAPER_LOCKED,
+  DOT_PAPER_ADD_BTN,
 } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -682,8 +683,8 @@ export default function PersonalInfoForm2({
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                 } ${dotErrorInputClass(!!errors[`drivingExp${index}Equipment`])}`}
               >
                 <option value=''>Select equipment type...</option>
@@ -721,8 +722,8 @@ export default function PersonalInfoForm2({
                 placeholder='e.g., 2.5, 5, 10+'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                 } ${dotErrorInputClass(!!errors[`drivingExp${index}Years`])}`}
               />
               <DotFieldError message={errors[`drivingExp${index}Years`]} />
@@ -736,11 +737,7 @@ export default function PersonalInfoForm2({
         <button
           type='button'
           onClick={addDrivingExperience}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
+          className={DOT_PAPER_ADD_BTN}
         >
           + Add Driving Experience
         </button>
@@ -774,7 +771,7 @@ export default function PersonalInfoForm2({
           onChange={(e) =>
             handleInputChange('hasNoAccidents', e.target.checked)
           }
-          className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
+          className='w-4 h-4 accent-teal-600'
         />
         <label
           htmlFor='hasNoAccidents'
@@ -854,8 +851,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`accident${index}Date`])}`}
                   />
                   <DotFieldError message={errors[`accident${index}Date`]} />
@@ -881,8 +878,8 @@ export default function PersonalInfoForm2({
                     placeholder='Head-on, rear-end, upset, etc.'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`accident${index}Nature`])}`}
                   />
                   <DotFieldError message={errors[`accident${index}Nature`]} />
@@ -907,8 +904,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
@@ -932,8 +929,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
@@ -957,8 +954,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
@@ -986,7 +983,7 @@ export default function PersonalInfoForm2({
                           index
                         )
                       }
-                      className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                      className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
                     />
                     <span
                       className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1008,7 +1005,7 @@ export default function PersonalInfoForm2({
                           index
                         )
                       }
-                      className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                      className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
                     />
                     <span
                       className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1028,11 +1025,7 @@ export default function PersonalInfoForm2({
             <button
               type='button'
               onClick={addAccident}
-              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-                isDarkTheme(theme)
-                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-              }`}
+              className={DOT_PAPER_ADD_BTN}
             >
               + Add Accident
             </button>
@@ -1191,7 +1184,7 @@ export default function PersonalInfoForm2({
                   value={val}
                   checked={formData.drugTestPositive === val}
                   onChange={e => handleInputChange('drugTestPositive', e.target.value)}
-                  className='accent-indigo-500'
+                  className='accent-teal-600'
                 />
                 <span className={`font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{val.toUpperCase()}</span>
               </label>
@@ -1248,7 +1241,7 @@ export default function PersonalInfoForm2({
                 value={val}
                 checked={formData.cfr391ConvictedYesNo === val}
                 onChange={e => handleInputChange('cfr391ConvictedYesNo', e.target.value)}
-                className='accent-indigo-500'
+                className='accent-teal-600'
               />
               <span className={`font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{val.toUpperCase()}</span>
             </label>
@@ -1265,7 +1258,7 @@ export default function PersonalInfoForm2({
                   type='checkbox'
                   checked={(formData.cfr391ConvictedOffenses || []).includes(offense.key)}
                   onChange={() => toggleCfr391Offense(offense.key)}
-                  className='mt-0.5 h-4 w-4 accent-indigo-500 flex-shrink-0'
+                  className='mt-0.5 h-4 w-4 accent-teal-600 flex-shrink-0'
                 />
                 <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>{offense.label}</span>
               </label>
@@ -1304,7 +1297,7 @@ export default function PersonalInfoForm2({
           onChange={(e) =>
             handleInputChange('hasNoConvictions', e.target.checked)
           }
-          className={`w-4 h-4 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'}`}
+          className='w-4 h-4 accent-teal-600'
         />
         <label
           htmlFor='hasNoConvictions'
@@ -1410,8 +1403,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''} ${dotErrorInputClass(!!errors[`conviction${index}Violation`])}`}
                   />
                   <DotFieldError message={errors[`conviction${index}Violation`]} />
@@ -1456,8 +1449,8 @@ export default function PersonalInfoForm2({
                     placeholder='Forfeited bond, collateral and/or points'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${locked ? lockedInputClass : ''}`}
                   />
                 </div>
@@ -1471,11 +1464,7 @@ export default function PersonalInfoForm2({
             <button
               type='button'
               onClick={addConviction}
-              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-                isDarkTheme(theme)
-                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-              }`}
+              className={DOT_PAPER_ADD_BTN}
             >
               + Add Conviction
             </button>
@@ -1502,7 +1491,7 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('deniedLicense', e.target.value)
                 }
-                className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
               />
               <span
                 className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1519,7 +1508,7 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('deniedLicense', e.target.value)
                 }
-                className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
               />
               <span
                 className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1568,7 +1557,7 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('suspendedLicense', e.target.value)
                 }
-                className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
               />
               <span
                 className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1585,7 +1574,7 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('suspendedLicense', e.target.value)
                 }
-                className={`mr-2 ${isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
+                className={`mr-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'} accent-teal-600`}
               />
               <span
                 className={`${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
@@ -1665,7 +1654,7 @@ export default function PersonalInfoForm2({
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
           }`}
         >
           Complete in full or it will not be considered.
@@ -1698,8 +1687,8 @@ export default function PersonalInfoForm2({
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
               isDarkTheme(theme)
-                ? 'bg-indigo-500'
-                : 'bg-indigo-600'
+                ? 'bg-[#173150]'
+                : 'bg-[#173150]'
             }`}
             style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
           ></div>

@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT packet controls use Midnight + Hot Embers** (2026-09-21)
+
+Add-row buttons (previous address, licenses, accident, conviction, driving experience),
+Choose Files, radios, and checkboxes were still indigo. Add / file pickers are Midnight
+`#173150` with Denim hover. Native radios/checkboxes use `accent-teal-600` (Hot Embers).
+Focus rings and step progress match Midnight. Tokens live on `dot-form-paper.ts`
+(`DOT_PAPER_ADD_BTN`, `DOT_PAPER_CONTROL`).
+
+---
+
 ## **DOT Fill Test Data shows on localhost only** (2026-09-21)
 
 `SHOW_FILL_TEST_DATA` is `NODE_ENV === 'development'`, so the yellow button is back in

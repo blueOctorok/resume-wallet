@@ -871,7 +871,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                     onChange={(e) =>
                       handleInputChange('eligibleForRehire', e.target.value)
                     }
-                    className='mr-2'
+                    className='mr-2 accent-teal-600'
                   />
                   <span
                     className={`capitalize ${
@@ -1133,7 +1133,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 onChange={(e) =>
                   handleInputChange('noAccidentsReported', e.target.checked)
                 }
-                className='mr-2'
+                className='mr-2 accent-teal-600'
               />
               <span
                 className={`${

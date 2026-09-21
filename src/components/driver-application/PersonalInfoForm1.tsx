@@ -7,6 +7,7 @@ import {
   DOT_PAPER_LABEL,
   DOT_PAPER_LOCKED,
   DOT_PAPER_SECTION,
+  DOT_PAPER_ADD_BTN,
 } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -1254,11 +1255,7 @@ export default function PersonalInfoForm1({
         <button
           type='button'
           onClick={addPreviousAddress}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
+          className={DOT_PAPER_ADD_BTN}
         >
           + Add Previous Address
         </button>
@@ -1470,11 +1467,7 @@ export default function PersonalInfoForm1({
         <button
           type='button'
           onClick={addCurrentLicense}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
+          className={DOT_PAPER_ADD_BTN}
         >
           + Add Current License
         </button>
@@ -1611,11 +1604,7 @@ export default function PersonalInfoForm1({
         <button
           type='button'
           onClick={addPreviousLicense}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
+          className={DOT_PAPER_ADD_BTN}
         >
           + Add Previous License
         </button>
@@ -2025,7 +2014,7 @@ export default function PersonalInfoForm1({
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
           }`}
         >
           Complete in full or it will not be considered.
@@ -2058,8 +2047,8 @@ export default function PersonalInfoForm1({
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
               isDarkTheme(theme)
-                ? 'bg-indigo-500'
-                : 'bg-indigo-600'
+                ? 'bg-[#173150]'
+                : 'bg-[#173150]'
             }`}
             style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
           ></div>

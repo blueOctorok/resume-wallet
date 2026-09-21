@@ -21,3 +21,10 @@ export const DOT_PAPER_INPUT =
 
 export const DOT_PAPER_LOCKED =
   'bg-stone-100 cursor-not-allowed opacity-90 text-[#173150]'
+
+/** Filled “+ Add …” row button — Midnight, Denim hover. */
+export const DOT_PAPER_ADD_BTN =
+  'px-6 py-3 rounded-md font-semibold bg-[#173150] text-white hover:bg-[#00608b] shadow-sm transition-colors'
+
+/** Native checkbox / radio — `teal-*` remaps to Hot Embers. */
+export const DOT_PAPER_CONTROL = 'accent-teal-600'

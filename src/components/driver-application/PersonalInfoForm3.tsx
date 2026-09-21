@@ -1527,8 +1527,8 @@ export default function PersonalInfoForm3({
                       onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                     />
                     <DotFieldError message={errors[`employer${index}Name`]} />
@@ -1542,8 +1542,8 @@ export default function PersonalInfoForm3({
                       onChange={(formatted) => handleInputChange('employers', { phone: formatted }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       }`}
                     />
                   </div>
@@ -1565,8 +1565,8 @@ export default function PersonalInfoForm3({
                     placeholder="Street, City, State, ZIP"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${dotErrorInputClass(!!errors[`employer${index}Address`])}`}
                   />
                   <DotFieldError message={errors[`employer${index}Address`]} />
@@ -1584,8 +1584,8 @@ export default function PersonalInfoForm3({
                     onChange={(e) => handleInputChange('employers', { reasonForLeaving: e.target.value }, index)}
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${dotErrorInputClass(!!errors[`employer${index}Reason`])}`}
                   />
                   <DotFieldError message={errors[`employer${index}Reason`]} />
@@ -1606,7 +1606,7 @@ export default function PersonalInfoForm3({
                             value={val}
                             checked={employer.subjectToFMCSR === val}
                             onChange={(e) => handleInputChange('employers', { subjectToFMCSR: e.target.value }, index)}
-                            className="mr-2 accent-indigo-500"
+                            className="mr-2 accent-teal-600"
                           />
                           <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                             {val.toUpperCase()}
@@ -1629,7 +1629,7 @@ export default function PersonalInfoForm3({
                             value={val}
                             checked={employer.safetySensitiveFunction === val}
                             onChange={(e) => handleInputChange('employers', { safetySensitiveFunction: e.target.value }, index)}
-                            className="mr-2 accent-indigo-500"
+                            className="mr-2 accent-teal-600"
                           />
                           <span className={isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}>
                             {val.toUpperCase()}
@@ -1660,8 +1660,8 @@ export default function PersonalInfoForm3({
                     placeholder="e.g., Looking for work, Personal reasons"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     }`}
                   />
                 </div>
@@ -1683,8 +1683,8 @@ export default function PersonalInfoForm3({
                     placeholder={entryType === 'drivingSchool' ? 'Name of CDL / driving school' : 'Name of college, high school, or program'}
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                   />
                   <DotFieldError message={errors[`employer${index}Name`]} />
@@ -1727,8 +1727,8 @@ export default function PersonalInfoForm3({
                       }}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-60 ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       }`}
                     >
                       <option value=''>
@@ -1760,8 +1760,8 @@ export default function PersonalInfoForm3({
                       placeholder="e.g., High School Diploma, Associate Degree"
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       }`}
                     />
                   </div>
@@ -1782,8 +1782,8 @@ export default function PersonalInfoForm3({
                       onChange={(e) => handleInputChange('employers', { militaryBranch: e.target.value, name: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       } ${dotErrorInputClass(!!errors[`employer${index}Name`])}`}
                     >
                       <option value="">Select branch...</option>
@@ -1807,8 +1807,8 @@ export default function PersonalInfoForm3({
                       onChange={(e) => handleInputChange('employers', { dischargeType: e.target.value }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         isDarkTheme(theme)
-                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                          ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                          : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                       }`}
                     >
                       <option value="">Select discharge type...</option>
@@ -1830,8 +1830,8 @@ export default function PersonalInfoForm3({
                     placeholder="e.g., 88M Motor Transport Operator"
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       isDarkTheme(theme)
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     }`}
                   />
                 </div>
@@ -1921,8 +1921,8 @@ export default function PersonalInfoForm3({
           }
           className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
             isDarkTheme(theme)
-              ? 'border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/10'
-              : 'border-indigo-500/40 text-indigo-600 hover:bg-indigo-500/10'
+              ? 'border-[#173150]/30 text-[#173150] hover:bg-[#173150]/5'
+              : 'border-[#173150]/30 text-[#173150] hover:bg-[#173150]/5'
           }`}
         >
           <span>✍️</span>
@@ -2040,8 +2040,8 @@ export default function PersonalInfoForm3({
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
               isDarkTheme(theme)
-                ? 'border-gray-600 bg-transparent accent-indigo-500'
-                : 'border-gray-300 bg-white accent-indigo-500'
+                ? 'border-gray-600 bg-transparent accent-teal-600'
+                : 'border-gray-300 bg-white accent-teal-600'
             }`}
           />
           <span
@@ -2089,8 +2089,8 @@ export default function PersonalInfoForm3({
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
               isDarkTheme(theme)
-                ? 'border-gray-600 bg-transparent accent-indigo-500'
-                : 'border-gray-300 bg-white accent-indigo-500'
+                ? 'border-gray-600 bg-transparent accent-teal-600'
+                : 'border-gray-300 bg-white accent-teal-600'
             }`}
           />
           <span
@@ -2139,8 +2139,8 @@ export default function PersonalInfoForm3({
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
               isDarkTheme(theme)
-                ? 'border-gray-600 bg-transparent accent-indigo-500'
-                : 'border-gray-300 bg-white accent-indigo-500'
+                ? 'border-gray-600 bg-transparent accent-teal-600'
+                : 'border-gray-300 bg-white accent-teal-600'
             }`}
           />
           <span
@@ -2177,8 +2177,8 @@ export default function PersonalInfoForm3({
                     handleInputChange('hasPreviousRoadTest', e.target.value)
                   }
                   className={`mr-1 ${
-                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                  } accent-indigo-500`}
+                    isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                  } accent-teal-600`}
                 />
                 <span
                   className={`${
@@ -2213,8 +2213,8 @@ export default function PersonalInfoForm3({
                 errors.previousRoadTestDetails
                   ? 'border-red-500'
                   : isDarkTheme(theme)
-                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
               }`}
             />
             {errors.previousRoadTestDetails && (
@@ -2266,8 +2266,8 @@ export default function PersonalInfoForm3({
                   checked={formData.hasValidCDL === value}
                   onChange={(e) => handleInputChange('hasValidCDL', e.target.value)}
                   className={`mr-1 ${
-                    isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                  } accent-indigo-500`}
+                    isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                  } accent-teal-600`}
                 />
                 <span
                   className={`${
@@ -2302,8 +2302,8 @@ export default function PersonalInfoForm3({
             }}
             className={`block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold ${
               isDarkTheme(theme)
-                ? 'file:bg-indigo-500 file:text-white'
-                : 'file:bg-indigo-600 file:text-white'
+                ? 'file:bg-[#173150] file:text-white hover:file:bg-[#00608b]'
+                : 'file:bg-[#173150] file:text-white hover:file:bg-[#00608b]'
             }`}
           />
           {formData.roadTestCertificateFiles?.length ? (
@@ -2354,8 +2354,8 @@ export default function PersonalInfoForm3({
             }
             className={`mt-1 h-5 w-5 rounded border-2 ${
               isDarkTheme(theme)
-                ? 'border-gray-600 bg-transparent accent-indigo-500'
-                : 'border-gray-300 bg-white accent-indigo-500'
+                ? 'border-gray-600 bg-transparent accent-teal-600'
+                : 'border-gray-300 bg-white accent-teal-600'
             }`}
           />
           <span
@@ -2393,8 +2393,8 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasApplicationComplete', e.target.value)
                     }
                     className={`mr-1 ${
-                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                    } accent-indigo-500`}
+                      isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                    } accent-teal-600`}
                   />
                   <span
                     className={`${
@@ -2433,8 +2433,8 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasRoadTestDocs', e.target.value)
                     }
                     className={`mr-1 ${
-                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                    } accent-indigo-500`}
+                      isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                    } accent-teal-600`}
                   />
                   <span
                     className={`${
@@ -2473,8 +2473,8 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqHasMedicalDocs', e.target.value)
                     }
                     className={`mr-1 ${
-                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                    } accent-indigo-500`}
+                      isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                    } accent-teal-600`}
                   />
                   <span
                     className={`${
@@ -2513,8 +2513,8 @@ export default function PersonalInfoForm3({
                       handleInputChange('dqUnderstandsRetention', e.target.value)
                     }
                     className={`mr-1 ${
-                      isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
-                    } accent-indigo-500`}
+                      isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
+                    } accent-teal-600`}
                   />
                   <span
                     className={`${
@@ -2537,9 +2537,9 @@ export default function PersonalInfoForm3({
 
       {/* ── FCRA Summary of Rights Acknowledgment ─────────────────── */}
       <div className={`p-4 rounded-xl border-2 ${
-        isDarkTheme(theme) ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-indigo-300 bg-indigo-50'
+        isDarkTheme(theme) ? 'border-[#173150]/25 bg-[#173150]/5' : 'border-[#173150]/20 bg-[#173150]/5'
       }`}>
-        <p className={`text-sm font-semibold mb-2 ${isDarkTheme(theme) ? 'text-indigo-300' : 'text-indigo-800'}`}>
+        <p className={`text-sm font-semibold mb-2 ${isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'}`}>
           Federal FCRA Summary of Rights Acknowledgment
         </p>
         <p className={`text-sm mb-3 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -2551,7 +2551,7 @@ export default function PersonalInfoForm3({
             checked={Boolean(formData.fcraAcknowledgement)}
             onChange={(e) => handleInputChange('fcraAcknowledgement', e.target.checked)}
             className={`mt-1 h-5 w-5 rounded border-2 ${
-              isDarkTheme(theme) ? 'border-gray-600 bg-transparent accent-indigo-500' : 'border-gray-300 bg-white accent-indigo-500'
+              isDarkTheme(theme) ? 'border-gray-600 bg-transparent accent-teal-600' : 'border-gray-300 bg-white accent-teal-600'
             }`}
           />
           <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-800'}`}>
@@ -2581,7 +2581,7 @@ export default function PersonalInfoForm3({
               value={formData.applicantSignature}
               onChange={(e) => handleInputChange('applicantSignature', e.target.value)}
               placeholder='Full legal name'
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent italic ${
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#173150]/25 focus:border-transparent italic ${
                 isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
@@ -2595,7 +2595,7 @@ export default function PersonalInfoForm3({
               type='date'
               value={formData.signatureDate}
               onChange={(e) => handleInputChange('signatureDate', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#173150]/25 focus:border-transparent ${
                 isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
@@ -2612,7 +2612,7 @@ export default function PersonalInfoForm3({
             value={formData.applicantNamePrinted}
             onChange={(e) => handleInputChange('applicantNamePrinted', e.target.value)}
             placeholder='Print your full name'
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#173150]/25 focus:border-transparent ${
               isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
             }`}
           />
@@ -2683,7 +2683,7 @@ export default function PersonalInfoForm3({
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            isDarkTheme(theme) ? 'text-indigo-400' : 'text-indigo-600'
+            isDarkTheme(theme) ? 'text-[#173150]' : 'text-[#173150]'
           }`}
         >
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
@@ -2716,8 +2716,8 @@ export default function PersonalInfoForm3({
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
               isDarkTheme(theme)
-                ? 'bg-indigo-500'
-                : 'bg-indigo-600'
+                ? 'bg-[#173150]'
+                : 'bg-[#173150]'
             }`}
             style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
           ></div>
