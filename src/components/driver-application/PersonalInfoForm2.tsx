@@ -8,7 +8,7 @@ import {
 } from '@/lib/dot-form-paper'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import SaveProgressButton from './SaveProgressButton'
+import DotFormStepNav from './DotFormStepNav'
 import { StateSelect, normalizeState } from '@/components/ui/StateSelect'
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
 import VerifiedFieldBadge from '@/components/driver-application/VerifiedFieldBadge'
@@ -560,6 +560,7 @@ export default function PersonalInfoForm2({
     }))
   }
 
+  // Wired to Fill Test Data on localhost (`SHOW_FILL_TEST_DATA`).
   const fillTestData = () => {
     // Smart fill: only fill EMPTY fields, preserve existing data
     setFormData((prev) => ({
@@ -1621,6 +1622,17 @@ export default function PersonalInfoForm2({
   )
 
   const cardClass = DOT_PAPER_CARD
+  const renderStepNav = () => (
+    <DotFormStepNav
+      currentStep={currentStep}
+      onPrevious={prevStep}
+      onNext={nextStep}
+      nextLabel={currentStep === STEPS.length ? 'Continue to Section 3' : 'Next'}
+      onSaveProgress={onSaveProgress}
+      sessionUserId={sessionUserId}
+      onFillTestData={fillTestData}
+    />
+  )
 
   return (
     <div className={`max-w-4xl mx-auto relative z-10 ${cardClass}`}>
@@ -1658,27 +1670,6 @@ export default function PersonalInfoForm2({
         >
           Complete in full or it will not be considered.
         </p>
-
-        {/* Save and Test Data Buttons */}
-        <div className='mt-4 flex flex-wrap items-center gap-3'>
-          <SaveProgressButton
-            onSaveProgress={onSaveProgress}
-            sessionUserId={sessionUserId}
-          />
-          <button
-            type='button'
-            onClick={fillTestData}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
-              isDarkTheme(theme)
-                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
-                : 'bg-yellow-500 text-white hover:bg-yellow-400'
-            }`}
-            title='Fill test data'
-          >
-            <span>⚡</span>
-            <span>Fill Test Data</span>
-          </button>
-        </div>
       </div>
 
       {/* Progress Bar */}
@@ -1715,60 +1706,15 @@ export default function PersonalInfoForm2({
         </div>
       </div>
 
+      {renderStepNav()}
+
       {/* Step Content */}
       <div className='px-6 py-8'>
         <DotValidationBanner errors={errors} isDark={isDarkTheme(theme)} />
         {renderStepContent()}
       </div>
 
-      {/* Navigation */}
-      <div
-        className={`flex justify-between items-center px-6 py-8 border-t-2 ${
-          isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
-        }`}
-      >
-        <button
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
-            currentStep === 1
-              ? 'opacity-50 cursor-not-allowed'
-              : isDarkTheme(theme)
-                ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
-          }`}
-        >
-          Previous
-        </button>
-
-        <div className='flex space-x-2 mx-8'>
-          {STEPS.map((step) => (
-            <div
-              key={step.id}
-              className={`w-3 h-3 rounded-full ${
-                step.id <= currentStep
-                  ? isDarkTheme(theme)
-                    ? 'bg-indigo-500'
-                    : 'bg-indigo-600'
-                  : isDarkTheme(theme)
-                    ? 'bg-gray-600'
-                    : 'bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-
-        <button
-          onClick={nextStep}
-          className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
-            isDarkTheme(theme)
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
-          }`}
-        >
-          {currentStep === STEPS.length ? 'Continue to Section 3' : 'Next'}
-        </button>
-      </div>
+      {renderStepNav()}
     </div>
   )
 }

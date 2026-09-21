@@ -4,6 +4,7 @@ import { isDotFormDark as isDarkTheme, DOT_PAPER_CARD } from '@/lib/dot-form-pap
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
+import { SHOW_FILL_TEST_DATA } from './DotFormStepNav'
 
 interface EmploymentVerificationData {
   // Section 1 - Driver/Applicant Authorization
@@ -361,7 +362,8 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
           Required by 49 CFR § 391.23
         </p>
 
-        {/* Test Data (Lightning) */}
+        {/* Test Data (Lightning) — gated; fillTestData stays for local testing. */}
+        {SHOW_FILL_TEST_DATA && (
         <div className='mt-4'>
           <button
             type='button'
@@ -377,6 +379,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             <span>Fill Test Data</span>
           </button>
         </div>
+        )}
       </div>
 
       {/* Section 1 - Driver/Applicant Authorization */}

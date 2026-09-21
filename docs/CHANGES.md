@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT Fill Test Data shows on localhost only** (2026-09-21)
+
+`SHOW_FILL_TEST_DATA` is `NODE_ENV === 'development'`, so the yellow button is back in
+`next dev` and stays off production builds.
+
+---
+
+## **DOT Section 1 drops the personal-info Ask AI button** (2026-09-21)
+
+"Ask AI about this section" is gone from Section 1 applicant information. Same cleanup as
+the Section 3 employment button.
+
+---
+
+## **DOT Section 3 drops the employment Ask AI button** (2026-09-21)
+
+The "Ask AI about 10-year history" control sat above the employment timeline. The 10-year
+requirement callout already explains it; the button is gone. Signature-step Stormi help is
+unchanged.
+
+---
+
 ## **provven.com lives on Atom, not Namecheap** (2026-09-18)
 
 Ops checklists said Namecheap. The domain was bought on Atom. DNS is **Atom Domain Manager → DNS Records** when using Atom nameservers (or whatever NS actually points at). Atom has no Namecheap-style alias forwarder — `support@provven.com` needs an apex mail provider (ImprovMX / Cloudflare Email Routing / Workspace). Do not move `verify.provven.com` Pingram MX.
@@ -158,6 +180,15 @@ false mismatches. `canonicalize()` sorts keys recursively before comparing.
 
 **Verified after repair:** 180 results / 226 accident records, **0** mismatches against raw XML,
 **0** `parsed_data` mismatches, 120 hub caches populated, **0** rows asserting at-fault.
+
+---
+
+## **DOT section nav: Save in the middle, Prev/Next at top** (2026-09-21)
+
+Fill Test Data is off the DOT packet UI (`SHOW_FILL_TEST_DATA` in `DotFormStepNav.tsx` —
+flip that to bring the button back; `fillTestData` stays in each form). Save Progress sits
+in the middle of Previous / Next. That same bar now appears above and below the fields on
+Sections 1–3 so a long step does not force a scroll just to move on.
 
 ---
 
