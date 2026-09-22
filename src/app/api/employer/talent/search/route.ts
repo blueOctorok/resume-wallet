@@ -277,7 +277,8 @@ export async function GET(request: NextRequest) {
       hasMvr: c.has_mvr,
       hasDriverApp: c.has_driver_app,
       hasResume: c.has_resume,
-      verifiedJobsCount: c.verified_jobs_count,
+      // verified_jobs_count is intentionally NOT returned — no browse/filter
+      // by EV status in talent search (Track B clickwrap clause A.3).
       memberSince: c.member_since,
       hasApplied: appliedSet.has(c.user_id),
       // Role derived from profile data in view — not users.role

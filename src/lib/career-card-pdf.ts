@@ -48,7 +48,11 @@ export async function buildCareerCardPdfBuffer(
   pdf.setTextColor(...MUTED)
   pdf.text(`Career card score: ${card.careerCardScore} / 100`, margin, y)
   y += 6
-  pdf.text(`Employer confirmations: ${card.employerConfirmedEmploymentCount}`, margin, y)
+  pdf.text(
+    `Employment verification: ${card.employmentVerificationAvailable ? 'available on request' : 'not on file'}`,
+    margin,
+    y,
+  )
   y += 10
 
   pdf.setTextColor(...SLATE)
@@ -96,7 +100,7 @@ export async function buildCareerCardPdfBuffer(
     'SECTIONS:',
     ...card.sections.map((s) => `- ${s.label}`),
     '',
-    `EMPLOYER_CONFIRMATIONS: ${card.employerConfirmedEmploymentCount}`,
+    `EMPLOYMENT_VERIFICATION_AVAILABLE: ${card.employmentVerificationAvailable ? 'yes' : 'no'}`,
     `CAREER_CARD_SCORE: ${card.careerCardScore}`,
     '',
     `PUBLIC_CARD_URL: ${publicCardUrl}`,

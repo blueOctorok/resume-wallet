@@ -15,7 +15,7 @@ function baseCard(over: Partial<ProjectedCareerCard> = {}): ProjectedCareerCard 
     sections: [],
     settings: { showContact: false, allowConnect: false },
     employerConfirmedEmploymentCount: 0,
-    employerConfirmations: [],
+    employmentVerificationAvailable: false,
     onChainCredentialCount: 0,
     onChainCredentials: [],
     careerCardScore: 0,
@@ -45,7 +45,7 @@ describe('deriveVerifiedFacts', () => {
               resultOutcome: 'clear',
               completedAt: '2026-08-01T00:00:00.000Z',
             },
-          } as ProjectedCareerCard['sections'][number],
+          } as unknown as ProjectedCareerCard['sections'][number],
         ],
       }),
     )

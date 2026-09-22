@@ -299,7 +299,8 @@ export async function GET(
       dqFile,
       verifiedFacts,
       completenessScore: careerRow?.completeness_score ?? 0,
-      verifiedJobsCount: careerRow?.verified_jobs_count ?? 0,
+      // verified_jobs_count is intentionally NOT returned — EV status needs a
+      // Step 6 share grant (Track B strict visibility).
       workHistoryCount: careerRow?.work_history_count ?? 0,
     })
   } catch (error) {

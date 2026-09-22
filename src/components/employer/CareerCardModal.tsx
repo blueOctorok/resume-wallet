@@ -24,6 +24,7 @@ import type { ProjectedCareerCard as ProjectedCardData } from '@/types/career-ca
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
+import EvShareRequestSection from '@/components/employer/EvShareRequestSection'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -637,6 +638,19 @@ export default function CareerCardModal({
             <div className="mb-4">
               <CredentialFactsPanel facts={verifiedFacts} theme="light" />
             </div>
+            {/* EV share requests are only allowed in a candidate-initiated
+                application context (Track B no-browse rule) — never from
+                talent-search browsing. */}
+            {employerExtras.existingApplication && (
+              <div className="mb-4">
+                <EvShareRequestSection
+                  candidateUserId={candidateUserId}
+                  candidateName={card.name || 'Candidate'}
+                  applicationContext={`Application ${employerExtras.existingApplication.id} (${employerExtras.existingApplication.status})`}
+                  isDark={false}
+                />
+              </div>
+            )}
             <ProjectedCareerCard
               data={card}
               mode="employer"

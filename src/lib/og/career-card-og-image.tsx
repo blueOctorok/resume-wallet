@@ -183,9 +183,9 @@ function buildOgBodyLines(card: ProjectedCareerCard, isSocial: boolean): string[
     if (lines.length >= maxLines) break
     lines.push(`Verified: ${c.label}`)
   }
-  for (const e of card.employerConfirmations) {
-    if (lines.length >= maxLines) break
-    lines.push(`Employer confirmed: ${e.companyName} — ${e.position}`)
+  // Track B strict visibility: never itemize EV confirmations on share previews.
+  if (card.employmentVerificationAvailable && lines.length < maxLines) {
+    lines.push('Employment verification available on request')
   }
 
   return lines.slice(0, maxLines)
@@ -243,7 +243,8 @@ export function buildCareerCardOgElement(
   opts: { avatarDataUrl?: string | null },
 ) {
   const sectionLabels = card.sections.map((s) => s.label)
-  const employerConfirmed = card.employerConfirmedEmploymentCount
+  // Neutral availability only — no EV counts on public previews (Track B).
+  const employerConfirmed = card.employmentVerificationAvailable
   // Issuer-backed / verified credential count for signature strip (never invent)
   const verifiedCount = card.onChainCredentials?.length ?? 0
   const headline =
@@ -401,26 +402,10 @@ export function buildCareerCardOgElement(
                   border: `1px solid ${teal}55`,
                 }}
               >
-                {employerConfirmed > 0
-                  ? `${employerConfirmed} employer confirmation${employerConfirmed === 1 ? '' : 's'}`
+                {employerConfirmed
+                  ? 'Employment verification available'
                   : `${card.sections.length} block${card.sections.length === 1 ? '' : 's'} on card`}
               </span>
-              {card.employerConfirmedEmploymentCount > 0 ? (
-                <span
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    background: '#312e81',
-                    color: '#a5b4fc',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    border: '1px solid #4c1d95',
-                  }}
-                >
-                  {card.employerConfirmedEmploymentCount} employer confirmation
-                  {card.employerConfirmedEmploymentCount === 1 ? '' : 's'}
-                </span>
-              ) : null}
             </div>
           </div>
         </div>

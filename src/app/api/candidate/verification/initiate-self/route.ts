@@ -11,6 +11,7 @@ import {
   applicantTypeForSource,
   getMergedCandidateEmployments,
 } from '@/lib/candidate-employment-verification'
+import { EV_DISC_AUTH_VERSION } from '@/lib/ev-consent-documents'
 
 function toDateOnly(value: string | null | undefined): string | null {
   const s = typeof value === 'string' ? value.trim() : ''
@@ -28,8 +29,11 @@ function toDateOnly(value: string | null | undefined): string | null {
  * POST /api/candidate/verification/initiate-self
  *
  * Optional career-card boost: email a past employer to confirm dates (voluntary for them).
- * Body: { verificationKey, previousEmployerEmail?, previousEmployerPhone? }
+ * Body: { verificationKey, evAuthorizationId, previousEmployerEmail?, previousEmployerPhone? }
  * verificationKey format: driver:id | developer:id | general:id
+ *
+ * HARD GATE (docs/EV_CONSENT_STACK.md): no outbound EV route without a valid
+ * ev_authorizations artifact for this driver at the current document version.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +53,7 @@ export async function POST(request: NextRequest) {
       claimedEndDate: claimedEndDateOverride,
       correctionOf,
       needsContactResearch,
+      evAuthorizationId,
     } = body as {
       verificationKey?: string
       previousEmployerEmail?: string
@@ -59,6 +64,7 @@ export async function POST(request: NextRequest) {
       claimedEndDate?: string
       correctionOf?: string
       needsContactResearch?: boolean
+      evAuthorizationId?: string
     }
 
     if (!verificationKey || typeof verificationKey !== 'string') {
@@ -66,6 +72,31 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
+
+    // Hard gate: a valid disclosure+authorization artifact must exist before
+    // Provven routes anything outbound (Track B, PROVVEN-EV-DISC-AUTH-B-0.1).
+    if (!evAuthorizationId || typeof evAuthorizationId !== 'string') {
+      return NextResponse.json(
+        { error: 'Authorization required. Review the disclosure and authorize the request first.' },
+        { status: 403 },
+      )
+    }
+    const { data: evAuth } = await supabase
+      .from('ev_authorizations')
+      .select('id, driver_user_id, document_version, status')
+      .eq('id', evAuthorizationId)
+      .maybeSingle()
+    if (
+      !evAuth ||
+      evAuth.driver_user_id !== userId ||
+      evAuth.status !== 'active' ||
+      evAuth.document_version !== EV_DISC_AUTH_VERSION
+    ) {
+      return NextResponse.json(
+        { error: 'Authorization is missing, withdrawn, or outdated. Authorize the request again.' },
+        { status: 403 },
+      )
+    }
 
     const employments = await getMergedCandidateEmployments(supabase, userId)
     const row = employments.find((e) => e.verificationKey === verificationKey)
@@ -153,6 +184,7 @@ export async function POST(request: NextRequest) {
       status: 'VERIFICATION_REQUESTED',
       attempt_count: 0,
       next_attempt_at: new Date().toISOString(),
+      ev_authorization_id: evAuth.id,
       ...(typeof correctionOf === 'string' && correctionOf ? { correction_of: correctionOf } : {}),
     }
 

@@ -243,34 +243,24 @@ export async function buildProjectedCareerCard(
     )
   }
 
+  // Track B strict visibility (docs/EV_CONSENT_STACK.md): the projection
+  // never itemizes EV confirmations. We only count verified, non-hidden
+  // packets — enough for the score and a neutral "available on request" line.
+  // EV material itself reaches an employer solely through a Step 6 grant.
   const [evrResult, attestedFacts] = await Promise.all([
     supabase
       .from('employment_verification_requests')
-      .select(
-        'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at, driver_share_consent, driver_hidden',
-      )
+      .select('id', { count: 'exact', head: true })
       .eq('driver_id', userId)
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
-      .eq('driver_share_consent', 'share')
-      .eq('driver_hidden', false)
-      .order('verified_at', { ascending: false }),
+      .eq('driver_hidden', false),
     loadCardAttestedFacts(supabase, userId),
   ])
 
   if (evrResult.error) {
-    console.warn('[CAREER CARD] EV share filter skipped (apply migration 108):', evrResult.error.message)
+    console.warn('[CAREER CARD] EV count skipped (apply migration 108):', evrResult.error.message)
   }
-  const evrRows = evrResult.error ? [] : evrResult.data
-
-  const employerConfirmations = (evrRows ?? []).map((row) => ({
-    companyName: String(row.previous_employer_name ?? 'Employer'),
-    position: String(row.claimed_position ?? '—'),
-    startDate: String(row.claimed_start_date ?? ''),
-    endDate: row.claimed_end_date != null ? String(row.claimed_end_date) : null,
-    verifiedAt: String(row.verified_at ?? row.created_at ?? ''),
-  }))
-
-  const employerConfirmed = employerConfirmations.length
+  const employerConfirmed = evrResult.error ? 0 : (evrResult.count ?? 0)
 
   const sections: CareerCardSection[] = []
 
@@ -383,7 +373,7 @@ export async function buildProjectedCareerCard(
     contact,
     viewCount: meta.contactMode === 'public' ? meta.viewCount : undefined,
     employerConfirmedEmploymentCount: employerConfirmed,
-    employerConfirmations,
+    employmentVerificationAvailable: employerConfirmed > 0,
     onChainCredentialCount: signals.onChainCredentialCount,
     onChainCredentials: signals.onChainCredentials,
     careerCardScore: signals.careerCardScore,

@@ -22,7 +22,8 @@ export default function CareerCardEmbed({
 }) {
   const fullHref = `/card/${token}`
   const score = card.careerCardScore
-  const employerConfirmed = card.employerConfirmedEmploymentCount
+  // Track B strict visibility: neutral availability only, never counts.
+  const employerConfirmed = card.employmentVerificationAvailable
 
   return (
     <div
@@ -69,13 +70,13 @@ export default function CareerCardEmbed({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {employerConfirmed > 0 ? (
+            {employerConfirmed ? (
               <>
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-full">
                   Verified by Provven
                 </span>
                 <span className="inline-flex items-center rounded-md bg-teal-500/15 dark:bg-teal-400/10 text-teal-800 dark:text-teal-200 px-2 py-0.5 text-xs font-semibold border border-teal-500/25 dark:border-teal-400/20">
-                  {employerConfirmed} employer confirmation{employerConfirmed === 1 ? '' : 's'}
+                  Employment verification available
                 </span>
               </>
             ) : null}

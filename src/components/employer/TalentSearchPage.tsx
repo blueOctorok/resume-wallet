@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Loader2,
   FileText,
-  Shield,
   Users,
   ChevronDown,
   TrendingUp,
@@ -40,7 +39,6 @@ interface Candidate {
   yearsExperience: number | null
   completenessScore: number
   hasResume: boolean
-  verifiedJobsCount: number
   memberSince: string
   hasApplied: boolean
   role: string | null
@@ -680,13 +678,8 @@ function CandidateCard({
                     Resume
                   </span>
                 )}
-                {candidate.verifiedJobsCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-green-500 dark:text-green-400">
-                    <Shield className="w-3 h-3" />
-                    {candidate.verifiedJobsCount} employer
-                    {candidate.verifiedJobsCount === 1 ? '' : 's'} confirmed
-                  </span>
-                )}
+                {/* EV status is never a browse/filter signal in talent search
+                    (Track B clickwrap clause A.3). */}
               </div>
             </div>
 

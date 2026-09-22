@@ -21,13 +21,29 @@ const EMPTY_APPLICANT: EvApplicantIdentity = {
   licenseState: '',
 }
 
+export interface EvShareRequestItem {
+  id: string
+  companyId: string
+  companyName: string
+  applicationContext: string
+  payloadType: 'proof' | 'full'
+  status: 'pending' | 'authorized' | 'declined' | 'revoked' | 'expired'
+  certifiedAt: string
+  createdAt: string
+  /** Active (non-revoked) Step 6 grant id — needed for revocation. */
+  grantId: string | null
+}
+
 interface EmploymentVerificationBlockState {
   applicant: EvApplicantIdentity
   employments: CandidateEmploymentRow[]
   requests: VerificationRequest[]
+  /** Employer Step 6 share requests targeting this driver. */
+  shareRequests: EvShareRequestItem[]
   isLoading: boolean
   error: string | null
   fetch: () => Promise<void>
+  fetchShareRequests: () => Promise<void>
 }
 
 export const useEmploymentVerificationBlockStore = create<EmploymentVerificationBlockState>(
@@ -35,8 +51,20 @@ export const useEmploymentVerificationBlockStore = create<EmploymentVerification
     applicant: EMPTY_APPLICANT,
     employments: [],
     requests: [],
+    shareRequests: [],
     isLoading: false,
     error: null,
+
+    fetchShareRequests: async () => {
+      try {
+        const res = await fetch('/api/candidate/verification/share-requests')
+        if (!res.ok) return
+        const json = (await res.json()) as { shareRequests?: EvShareRequestItem[] }
+        set({ shareRequests: json.shareRequests ?? [] })
+      } catch {
+        // Non-fatal: the Step 6 panel just shows nothing until the next fetch.
+      }
+    },
 
     fetch: async () => {
       if (get().isLoading) return

@@ -67,12 +67,15 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
   },
   {
     id: 'employer-employment-verification',
-    label: 'Employment verification (coming soon)',
-    description: 'Orchestrated previous-employer outreach for DOT-compliant employment checks.',
+    label: 'Employment verification share requests',
+    description:
+      'Ask a named applicant to share their driver-ordered Employment Verification (49 CFR 391.23(d) employment / safety-performance history). The driver must complete a formal acknowledgment before any material is revealed — no browsing of drivers with EV on file.',
     icon: ShieldAlert,
     categoryId: 'drivers',
-    suggestedOrder: 99,
-    installable: false,
+    suggestedOrder: 2,
+    installable: true,
+    complianceNote:
+      'Per-request permissible-purpose certification required. Does not include Clearinghouse / 391.23(e) drug and alcohol results.',
   },
 ]
 

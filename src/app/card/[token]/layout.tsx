@@ -31,9 +31,9 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
     }
   }
 
-  const n = card.employerConfirmedEmploymentCount
   const title = `${card.name} — Provven Career Card`
-  const description = `Verified by Provven career card.${n > 0 ? ` ${n} employer confirmation${n === 1 ? '' : 's'}.` : ''}${card.occupation ? ` ${card.occupation}` : ''}`
+  // Track B strict visibility: no EV counts on public metadata.
+  const description = `Verified by Provven career card.${card.employmentVerificationAvailable ? ' Employment verification available on request.' : ''}${card.occupation ? ` ${card.occupation}` : ''}`
 
   const h = await headers()
   const host =

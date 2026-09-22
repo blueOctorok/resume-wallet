@@ -5,6 +5,7 @@ export type NotificationType =
   | 'application_follow_up'
   | 'candidate_request'
   | 'employment_verification'
+  | 'ev_share_request'
   | 'team_invite'
   | 'new_application'
   | 'consent_signed'

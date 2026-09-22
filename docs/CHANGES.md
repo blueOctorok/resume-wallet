@@ -4,6 +4,49 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV Consent Stack — Track B legal artifacts around the EV block** (2026-09-22)
+
+The employment-verification block now follows the three Track B legal drafts
+(`docs/EV_CONSENT_STACK.md` is the transcription; canonical renderable text +
+versions live in `src/lib/ev-consent-documents.ts`). The DOT papers
+(`docs/AUTH_FORM.md`) are unchanged — the consent stack governs who may route,
+request, and view.
+
+| Artifact | Gate |
+|---|---|
+| Driver disclosure + authorization (`PROVVEN-EV-DISC-AUTH-B-0.1`) | `initiate-self` returns **403** without a valid `ev_authorizations` row (`EvDisclosureAuthorizationModal`: scroll-to-continue disclosure → unchecked box → Authorize & Send). Typed signature is finally persisted (`signed_name`). Corrections re-gate. |
+| Employer share-request clickwrap (`PROVVEN-EV-EMP-SHARE-REQ-0.1`) | `POST /api/employer/ev/share-requests` records the certification and opens a **pending** state only. Shown solely from a candidate-initiated application context in `CareerCardModal` (no talent-search browse). `employer-employment-verification` block is now installable; guard `companyCanRequestEvShare`. |
+| Driver Step 6 acknowledgment (`PROVVEN-EV-SHARE-ACK-6-0.1`) | `EvShareRequestsPanel` in the EV block → respond API creates `ev_share_grants` — **the only thing that unlocks** `GET /api/employer/ev/view/[shareRequestId]` (proof summary only; writes `ev_access_log`; missing/revoked grant = 403). Forward-only revoke endpoint. |
+
+Migration `110_ev_consent_stack.sql`: `ev_authorizations`, `ev_share_requests`,
+`ev_share_grants`, `ev_access_log`, plus
+`employment_verification_requests.ev_authorization_id`. Every artifact stores
+document version + sha256 of the exact text shown + IP/UA + checkbox event id.
+
+**Strict visibility — ungated EV surfaces removed:**
+
+- Projected card: itemized `employerConfirmations` replaced by a neutral
+  `employmentVerificationAvailable` flag ("Employment verification available on
+  request") — card, `VerifiedFactsStrip`, OG images, badge, embed, PDF, layout
+  metadata.
+- Talent search: `verified_jobs_count` no longer returned or rendered (clickwrap
+  clause A.3 no-browse). Same for the employer talent detail API.
+- Public token routes (`driver/public`, `developer/public`): itemized
+  `verifiedEmployments` replaced by the neutral flag; `d/[token]` and
+  `dev-card/[token]` pages updated.
+- The global "I agree to share / Do not share" review buttons are gone — the
+  legacy `driver_share_consent` column stays for history but drives nothing.
+  "Hide" remains the driver's own-card control.
+
+New notification type `ev_share_request` (bell icon + amber chip, deep-link
+`/?onboard=employment-verification`) and an `ev_share` candidate email template.
+
+**Flagged, not built:** the `previous_employer_verified` attestation fact still
+surfaces EV-derived content without a share gate — intersects the Midnight
+attestation pipeline; separate decision.
+
+---
+
 ## **DOT packet controls use Midnight + Hot Embers** (2026-09-21)
 
 Add-row buttons (previous address, licenses, accident, conviction, driving experience),

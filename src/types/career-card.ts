@@ -201,15 +201,6 @@ export interface OnChainCredential {
   verifiedAt: string
 }
 
-/** One row in the career card “employers confirmed employment” trust strip */
-export interface EmployerConfirmation {
-  companyName: string
-  position: string
-  startDate: string
-  endDate: string | null
-  verifiedAt: string
-}
-
 // ── Projected card ───────────────────────────────────────────────────────────
 
 /** Attestation row projected onto the career card Verified strip */
@@ -245,8 +236,12 @@ export interface ProjectedCareerCard {
   viewCount?: number
   /** Past employers who responded on-file (VERIFIED or PARTIALLY_VERIFIED) */
   employerConfirmedEmploymentCount: number
-  /** Itemized confirmations behind employerConfirmedEmploymentCount */
-  employerConfirmations: EmployerConfirmation[]
+  /**
+   * Neutral availability flag (Track B strict visibility — docs/EV_CONSENT_STACK.md).
+   * Itemized EV confirmations are no longer projected; employers get EV
+   * material only through a Step 6 share grant.
+   */
+  employmentVerificationAvailable: boolean
   /** Resume + DOT (and similar) credentials with an on-chain tx hash */
   onChainCredentialCount: number
   /** Itemized on-chain proofs behind onChainCredentialCount */

@@ -108,21 +108,16 @@ export function deriveVerifiedFacts(data: CardData): VerifiedFact[] {
     })
   }
 
-  if (!attestedTypes.has('previous_employer_verified')) {
-    const employerCount = data.employerConfirmedEmploymentCount ?? 0
-    if (employerCount > 0) {
-      const latest = data.employerConfirmations
-        .map((c) => c.verifiedAt)
-        .sort()
-        .at(-1)
-      facts.push({
-        id: 'employment',
-        label: `${employerCount} employer${employerCount === 1 ? '' : 's'} confirmed employment`,
-        provenance: withDate('On file', latest),
-        provenOnMidnight: false,
-        icon: Building2,
-      })
-    }
+  // Track B strict visibility: never itemize or count EV confirmations here.
+  // A neutral availability line only — content requires a Step 6 share grant.
+  if (!attestedTypes.has('previous_employer_verified') && data.employmentVerificationAvailable) {
+    facts.push({
+      id: 'employment',
+      label: 'Employment verification available on request',
+      provenance: 'Shared per employer with driver authorization',
+      provenOnMidnight: false,
+      icon: Building2,
+    })
   }
 
   return facts

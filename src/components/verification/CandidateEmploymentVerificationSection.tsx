@@ -5,6 +5,8 @@ import { useEmploymentVerificationBlockStore } from '@/stores/employment-verific
 import Button from '@/components/ui/Button'
 import DriverAuthorizationForm from './DriverAuthorizationForm'
 import SafetyPerformanceHistoryPaper from './SafetyPerformanceHistoryPaper'
+import EvDisclosureAuthorizationModal from './EvDisclosureAuthorizationModal'
+import EvShareRequestsPanel from './EvShareRequestsPanel'
 import {
   findApplicantVerificationsForRow,
   isDkimVerifiedRequest,
@@ -17,6 +19,17 @@ import { AlertCircle, ClipboardCheck, Loader2, RefreshCw } from 'lucide-react'
 interface CandidateEmploymentVerificationSectionProps {
   userAddress: string | null
   embedded?: boolean
+}
+
+interface SendOverride {
+  email?: string
+  phone?: string
+  companyName?: string
+  address?: string
+  startDate?: string
+  endDate?: string
+  correctionOf?: string
+  needsContactResearch?: boolean
 }
 
 function hasEmployerReply(request?: VerificationRequest): boolean {
@@ -47,6 +60,13 @@ export default function CandidateEmploymentVerificationSection({
   const [refreshing, setRefreshing] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
   const [formPage, setFormPage] = useState<1 | 2>(1)
+  // Send params parked while the driver completes the Track B disclosure +
+  // authorization screens (hard gate — initiate-self 403s without the artifact).
+  const [pendingSend, setPendingSend] = useState<{
+    row: CandidateEmploymentRow
+    signedName: string
+    override: SendOverride
+  } | null>(null)
 
   useEffect(() => {
     if (userAddress) void fetchData()
@@ -78,16 +98,8 @@ export default function CandidateEmploymentVerificationSection({
 
   const initiateVerification = async (
     row: CandidateEmploymentRow,
-    override?: {
-      email?: string
-      phone?: string
-      companyName?: string
-      address?: string
-      startDate?: string
-      endDate?: string
-      correctionOf?: string
-      needsContactResearch?: boolean
-    },
+    evAuthorizationId: string,
+    override?: SendOverride,
   ) => {
     if (!userAddress) return
     setInitiatingKey(row.verificationKey)
@@ -97,6 +109,7 @@ export default function CandidateEmploymentVerificationSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           verificationKey: row.verificationKey,
+          evAuthorizationId,
           previousEmployerEmail: override?.email ?? row.supervisorEmail,
           previousEmployerPhone: override?.phone ?? row.supervisorPhone,
           previousEmployerName: override?.companyName,
@@ -158,7 +171,7 @@ export default function CandidateEmploymentVerificationSection({
 
   const saveReview = async (
     requestId: string,
-    patch: { shareConsent?: 'share' | 'hold'; hidden?: boolean; reviewed?: boolean },
+    patch: { hidden?: boolean; reviewed?: boolean },
   ) => {
     setSavingReview(true)
     try {
@@ -328,28 +341,17 @@ export default function CandidateEmploymentVerificationSection({
         <div className='mb-4 space-y-3 rounded-lg border border-[#173150]/15 bg-white/80 p-3 text-sm text-[#173150]'>
           <p>
             This packet came back. Review Employment Verification, safety history, and any drug
-            and alcohol answers before sharing. If something is wrong, request a correction — the
-            original stays on file.
+            and alcohol answers. If something is wrong, request a correction — the original stays
+            on file.
+          </p>
+          {/* Sharing is no longer a global toggle. Each employer must send a
+              share request, and you authorize (or decline) each one by name in
+              "Employer share requests" below (Track B Step 6). */}
+          <p className='text-xs text-[#173150]/60'>
+            Employers never see this packet automatically. When an employer requests it, you
+            authorize or decline that named employer under Employer share requests below.
           </p>
           <div className='flex flex-wrap gap-2'>
-            <Button
-              type='button'
-              variant={request.driverShareConsent === 'share' ? 'primary' : 'secondary'}
-              size='sm'
-              disabled={savingReview}
-              onClick={() => saveReview(request.id, { shareConsent: 'share' })}
-            >
-              I agree to share
-            </Button>
-            <Button
-              type='button'
-              variant={request.driverShareConsent === 'hold' ? 'primary' : 'secondary'}
-              size='sm'
-              disabled={savingReview}
-              onClick={() => saveReview(request.id, { shareConsent: 'hold' })}
-            >
-              Do not share
-            </Button>
             <Button
               type='button'
               variant='ghost'
@@ -365,22 +367,22 @@ export default function CandidateEmploymentVerificationSection({
               size='sm'
               disabled={initiatingKey !== null}
               onClick={() =>
-                initiateVerification(selected, {
-                  email: request.previousEmployerEmail ?? undefined,
-                  phone: request.previousEmployerPhone ?? undefined,
-                  correctionOf: request.id,
+                // Corrections are a new outbound route — same disclosure +
+                // authorization gate as a first send.
+                setPendingSend({
+                  row: selected,
+                  signedName: applicant.driverName,
+                  override: {
+                    email: request.previousEmployerEmail ?? undefined,
+                    phone: request.previousEmployerPhone ?? undefined,
+                    correctionOf: request.id,
+                  },
                 })
               }
             >
               Request correction
             </Button>
           </div>
-          {request.driverShareConsent === 'share' && (
-            <p className='text-xs text-[#173150]/60'>On your career card. Hide it anytime.</p>
-          )}
-          {request.driverShareConsent === 'hold' && (
-            <p className='text-xs text-[#173150]/60'>Stored here only — not on the career card.</p>
-          )}
         </div>
       )}
 
@@ -441,15 +443,21 @@ export default function CandidateEmploymentVerificationSection({
               request={request}
               sending={initiatingKey === selected.verificationKey}
               declining={decliningKey === selected.verificationKey}
-              onSend={({ email, phone, needsResearch, companyName, address, startDate, endDate }) =>
-                initiateVerification(selected, {
-                  email,
-                  phone,
-                  companyName,
-                  address,
-                  startDate,
-                  endDate,
-                  needsContactResearch: needsResearch,
+              onSend={({ email, phone, signature, needsResearch, companyName, address, startDate, endDate }) =>
+                // Track B gate: park the send and show the disclosure +
+                // authorization screens; the actual route happens on authorize.
+                setPendingSend({
+                  row: selected,
+                  signedName: signature,
+                  override: {
+                    email,
+                    phone,
+                    companyName,
+                    address,
+                    startDate,
+                    endDate,
+                    needsContactResearch: needsResearch,
+                  },
                 })
               }
               onDecline={() => declineVerification(selected)}
@@ -483,6 +491,29 @@ export default function CandidateEmploymentVerificationSection({
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Step 6: employer share requests awaiting this driver's acknowledgment. */}
+      <EvShareRequestsPanel />
+
+      {pendingSend && (
+        <EvDisclosureAuthorizationModal
+          employerTargets={[
+            {
+              companyName:
+                pendingSend.override?.companyName || pendingSend.row.companyName,
+              email: pendingSend.override?.email,
+              phone: pendingSend.override?.phone,
+            },
+          ]}
+          signedName={pendingSend.signedName}
+          onClose={() => setPendingSend(null)}
+          onAuthorized={(evAuthorizationId) => {
+            const { row, override } = pendingSend
+            setPendingSend(null)
+            void initiateVerification(row, evAuthorizationId, override)
+          }}
+        />
       )}
     </div>
   )

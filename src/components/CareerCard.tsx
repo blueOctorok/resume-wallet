@@ -280,25 +280,18 @@ export default function CareerCard({
                 Profile completeness · {data.completenessScore}%
               </p>
               <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
+                {/* Track B strict visibility: no EV counts rendered here. */}
                 {data.verifiedJobsCount > 0 ? (
-                  <>
-                    <span className={cn('font-medium', isDark ? 'text-emerald-400' : 'text-emerald-700')}>
-                      {data.verifiedJobsCount} employer{data.verifiedJobsCount === 1 ? '' : 's'} confirmed employment
-                    </span>
-                    <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
-                      {' · '}
-                      {data.workHistoryCount} work {data.workHistoryCount === 1 ? 'entry' : 'entries'}
-                    </span>
-                  </>
+                  <span className={cn('font-medium', isDark ? 'text-emerald-400' : 'text-emerald-700')}>
+                    Employment verification on file
+                  </span>
                 ) : (
-                  <>
-                    No employer confirmations yet
-                    <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
-                      {' · '}
-                      {data.workHistoryCount} work {data.workHistoryCount === 1 ? 'entry' : 'entries'}
-                    </span>
-                  </>
+                  'No employment verification yet'
                 )}
+                <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                  {' · '}
+                  {data.workHistoryCount} work {data.workHistoryCount === 1 ? 'entry' : 'entries'}
+                </span>
               </p>
               {data.verifiedJobsCount > 0 && (
                 <p
@@ -308,7 +301,7 @@ export default function CareerCard({
                   )}
                 >
                   <ShieldCheck className='w-3.5 h-3.5 flex-shrink-0' aria-hidden />
-                  Confirmed by past employers — stronger than self-reported history alone.
+                  Shared with employers only when you authorize each request.
                 </p>
               )}
             </div>
@@ -650,9 +643,7 @@ export default function CareerCard({
         theme={theme}
         action={
           <span className={`text-sm ${isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-500'}`}>
-            {data.verifiedJobsCount > 0
-              ? `${data.verifiedJobsCount} employer-confirmed`
-              : 'No employer confirmations'}
+            {data.verifiedJobsCount > 0 ? 'Verification on file' : 'No employer confirmations'}
           </span>
         }
       >

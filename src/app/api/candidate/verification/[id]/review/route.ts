@@ -4,7 +4,12 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 /**
  * PATCH /api/candidate/verification/[id]/review
- * Driver review / share / hide after a packet comes back.
+ * Driver review / hide after a packet comes back.
+ *
+ * Sharing is NOT handled here anymore: per-employer Step 6 grants
+ * (docs/EV_CONSENT_STACK.md) replaced the global share/hold toggle. The
+ * legacy driver_share_consent column stays for history but no surface
+ * reads it.
  */
 export async function PATCH(
   request: NextRequest,
@@ -21,16 +26,11 @@ export async function PATCH(
 
     const body = (await request.json()) as {
       reviewed?: boolean
-      shareConsent?: 'share' | 'hold'
       hidden?: boolean
     }
 
     const patch: Record<string, unknown> = {}
     if (body.reviewed === true) patch.driver_reviewed_at = new Date().toISOString()
-    if (body.shareConsent === 'share' || body.shareConsent === 'hold') {
-      patch.driver_share_consent = body.shareConsent
-      patch.driver_reviewed_at = new Date().toISOString()
-    }
     if (typeof body.hidden === 'boolean') patch.driver_hidden = body.hidden
 
     if (Object.keys(patch).length === 0) {
@@ -43,7 +43,7 @@ export async function PATCH(
       .update(patch)
       .eq('id', id)
       .eq('driver_id', userId)
-      .select('id, driver_reviewed_at, driver_share_consent, driver_hidden')
+      .select('id, driver_reviewed_at, driver_hidden')
       .maybeSingle()
 
     if (error) {

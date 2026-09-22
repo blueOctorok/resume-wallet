@@ -130,15 +130,6 @@ interface EmploymentEntry {
   endDate: string
 }
 
-/** Only jobs verified via the email verification flow (employer responded). */
-interface VerifiedEmploymentEntry {
-  companyName: string
-  position: string
-  startDate: string | null
-  endDate: string | null
-  status: string
-}
-
 interface ProfileData {
   success: boolean
   profile: PublicProfile
@@ -146,7 +137,8 @@ interface ProfileData {
   dotApp: DotApp | null
   mvr: Mvr | null
   employmentSummary: EmploymentEntry[] | null
-  verifiedEmployments?: VerifiedEmploymentEntry[] | null
+  /** Neutral flag only — itemized EV never appears on a public link (Track B). */
+  employmentVerificationAvailable?: boolean
   settings: {
     allowConnect: boolean
   }
@@ -272,7 +264,7 @@ export default function PublicDriverProfile() {
     )
   }
 
-  const { profile, resume, dotApp, mvr, employmentSummary, verifiedEmployments, settings } = data
+  const { profile, resume, dotApp, mvr, employmentSummary, employmentVerificationAvailable, settings } = data
   const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Driver'
   const endorsements = profile.cdl.endorsements ?? []
 
@@ -381,48 +373,15 @@ export default function PublicDriverProfile() {
           </div>
         </div>
 
-        {/* Verified Employment — only when employer verified via email */}
-        {verifiedEmployments && verifiedEmployments.length > 0 && (
-          <div className='mb-8'>
-            <div className='mb-4'>
-              <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-                <ShieldCheck className='w-5 h-5 text-green-400' />
-                Verified Employment
-              </h2>
-              <p className='text-sm text-gray-400 mt-1'>
-                Confirmed by previous employers — trust badges on your Career Card
-              </p>
-            </div>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              {verifiedEmployments.map((job, idx) => (
-                <div
-                  key={idx}
-                  className='flex items-start gap-4 rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm p-4 transition-all hover:border-green-500/30 hover:bg-gray-800/70'
-                >
-                  <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/20 border border-green-500/30'>
-                    <CheckCircle className='h-5 w-5 text-green-400' />
-                  </div>
-                  <div className='min-w-0 flex-1'>
-                    <p className='font-semibold text-white'>{job.position}</p>
-                    <p className='text-sm text-teal-600 dark:text-teal-400 font-medium'>{job.companyName}</p>
-                    <p className='mt-1 text-xs text-gray-500'>
-                      {job.startDate
-                        ? new Date(job.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                        : ''}
-                      {job.startDate && job.endDate ? ' – ' : ''}
-                      {job.endDate
-                        ? new Date(job.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                        : job.startDate ? 'Present' : ''}
-                    </p>
-                    {job.status === 'PARTIALLY_VERIFIED' && (
-                      <span className='mt-2 inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400 border border-amber-500/30'>
-                        Partially verified
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Track B strict visibility: neutral availability line only. EV
+            material reaches an employer solely through a Step 6 share grant. */}
+        {employmentVerificationAvailable && (
+          <div className='mb-8 flex items-center gap-3 rounded-xl border border-green-500/30 bg-gray-800/50 p-4'>
+            <ShieldCheck className='h-5 w-5 shrink-0 text-green-400' />
+            <p className='text-sm text-gray-300'>
+              Employment verification available on request — the driver authorizes each employer
+              individually.
+            </p>
           </div>
         )}
 

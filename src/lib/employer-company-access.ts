@@ -114,3 +114,14 @@ export async function companyHasScreeningConsentBlock(
 ): Promise<boolean> {
   return companyHasEmployerBlock(supabase, companyId, 'employer-screening-consent')
 }
+
+/**
+ * EV share capability: company may ask a named applicant to share their
+ * driver-ordered employment verification (docs/EV_CONSENT_STACK.md).
+ */
+export async function companyCanRequestEvShare(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<boolean> {
+  return companyHasEmployerBlock(supabase, companyId, 'employer-employment-verification')
+}

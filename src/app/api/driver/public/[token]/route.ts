@@ -347,22 +347,16 @@ export async function GET(
       }))
     }
 
-    // Verified employment only from verification flow (employer responded via email)
-    const { data: verifiedRows } = await supabase
+    // Track B strict visibility (docs/EV_CONSENT_STACK.md): never itemize EV
+    // results on a public link. Neutral availability flag only — EV material
+    // reaches an employer solely through a Step 6 share grant.
+    const { count: verifiedCount } = await supabase
       .from('employment_verification_requests')
-      .select('previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, status')
+      .select('id', { count: 'exact', head: true })
       .eq('driver_id', userId)
       .eq('applicant_type', 'driver')
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
-      .order('verified_at', { ascending: false })
-
-    const verifiedEmployments = (verifiedRows ?? []).map((r) => ({
-      companyName: r.previous_employer_name,
-      position: r.claimed_position,
-      startDate: r.claimed_start_date ?? null,
-      endDate: r.claimed_end_date ?? null,
-      status: r.status,
-    }))
+      .eq('driver_hidden', false)
 
     return NextResponse.json(
       {
@@ -372,7 +366,7 @@ export async function GET(
         dotApp,
         mvr,
         employmentSummary,
-        verifiedEmployments,
+        employmentVerificationAvailable: (verifiedCount ?? 0) > 0,
         settings: {
           allowConnect: settings.allowConnect,
         },

@@ -15,7 +15,7 @@ export interface CandidateRequestNotificationParams {
   candidateEmail: string
   candidateName: string
   companyName: string
-  requestType: 'mvr_order' | 'psp_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request'
+  requestType: 'mvr_order' | 'psp_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request' | 'ev_share'
   documentType?: string | null
   message?: string | null
   /** Block label from the registry (e.g. "Driver Resume"). Used for block_request emails. */
@@ -178,6 +178,7 @@ const REQUEST_TYPE_LABELS: Record<string, string | ((p: CandidateRequestNotifica
   profile_completion: 'DOT Application Request',
   custom: 'New Request',
   block_request: (p) => p.blockLabel ? `${p.blockLabel} Request` : 'New Request',
+  ev_share: 'Employment Verification Share Request',
 }
 
 function resolveLabel(requestType: string, params: CandidateRequestNotificationParams): string {
@@ -203,6 +204,8 @@ const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationP
   custom: (p) => p.message || 'They have a request for you.',
   block_request: (p) =>
     `They are requesting your ${p.blockLabel || 'data'}. Log in to Provven to complete it.`,
+  ev_share: () =>
+    'They are asking you to share your Employment Verification material. Nothing is revealed unless you complete the formal acknowledgment in your Employment Verification block — you can also decline.',
 }
 
 /**

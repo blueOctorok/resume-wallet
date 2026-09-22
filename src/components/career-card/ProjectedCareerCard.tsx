@@ -1,7 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import { MapPin, Calendar, Mail, Phone, Eye, Plus, Lock, FileWarning, Pencil } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
@@ -46,22 +45,6 @@ export interface GhostSection {
   ctaLabel: string
   /** Optional one-liner explaining why this matters for the selected job */
   reason?: string
-}
-
-const MAX_TRUST_STRIP_ITEMS = 3
-
-function formatTrustDate(iso: string): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-/** Claimed job dates on the employment verification strip */
-function formatClaimedJobRange(start: string, end: string | null): string {
-  const s = start ? formatTrustDate(start) : '—'
-  const e = end ? formatTrustDate(end) : 'Present'
-  return `${s}–${e}`
 }
 
 function CareerCardStrengthRing({ score, isDark }: { score: number; isDark: boolean }) {
@@ -210,21 +193,12 @@ export default function ProjectedCareerCard({
 }: ProjectedCareerCardProps) {
   // Paper document, same as the landing mock — not vault glass.
   const isDark = false
-  const employerList = data.employerConfirmations ?? []
   const sections = data.sections ?? []
-  const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
 
   const employerScreeningReady = (s: string | undefined) => {
     const v = String(s || '').toLowerCase()
     return v === 'completed' || v === 'needs_review'
   }
-
-  const [showAllEmployer, setShowAllEmployer] = useState(false)
-
-  const visibleEmployer =
-    showAllEmployer || employerList.length <= MAX_TRUST_STRIP_ITEMS
-      ? employerList
-      : employerList.slice(0, MAX_TRUST_STRIP_ITEMS)
 
   return (
     <VaultHorizontalVaultShell
@@ -455,8 +429,10 @@ export default function ProjectedCareerCard({
               nothing when there's nothing honestly verifiable */}
           <VerifiedFactsStrip data={data} isDark={isDark} />
 
-          {/* Employer-confirmed employment — trust signal for shared / public card */}
-          {employerCount > 0 && (
+          {/* Track B strict visibility: no itemized EV confirmations on the
+              card. A neutral availability line only — EV material reaches an
+              employer solely through a Step 6 share grant. */}
+          {data.employmentVerificationAvailable && (
             <div
               className={cn(
                 'mt-4 flex items-start gap-3 rounded-xl border px-4 py-3',
@@ -466,52 +442,9 @@ export default function ProjectedCareerCard({
               )}
             >
               <ProvvenMark className='mt-0.5 shrink-0 text-xl' />
-              <div className='min-w-0 flex-1'>
-                <p className={cn('text-sm font-semibold', isDark ? 'text-emerald-100' : 'text-emerald-900')}>
-                  {employerCount} employer{employerCount === 1 ? '' : 's'} confirmed employment
-                </p>
-                <ul className='mt-2 space-y-2'>
-                  {visibleEmployer.map((row, i) => (
-                    <li
-                      key={`${row.companyName}-${row.verifiedAt}-${i}`}
-                      className='flex flex-col gap-0.5 text-xs sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3'
-                    >
-                      <span className={cn('min-w-0', isDark ? 'text-emerald-100/95' : 'text-emerald-900')}>
-                        <span className='font-medium'>{row.companyName}</span>
-                        <span className={cn('font-normal', isDark ? 'text-emerald-200/85' : 'text-emerald-800/90')}>
-                          {' '}
-                          — {row.position}{' '}
-                          <span className={cn(isDark ? 'text-emerald-200/70' : 'text-emerald-800/75')}>
-                            ({formatClaimedJobRange(row.startDate, row.endDate)})
-                          </span>
-                        </span>
-                      </span>
-                      <span
-                        className={cn(
-                          'shrink-0 font-medium whitespace-nowrap',
-                          isDark ? 'text-emerald-300/90' : 'text-emerald-800',
-                        )}
-                      >
-                        Confirmed {formatTrustDate(row.verifiedAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {!showAllEmployer && employerList.length > MAX_TRUST_STRIP_ITEMS ? (
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    className={cn(
-                      'mt-2 -ml-2 h-8',
-                      isDark ? 'text-emerald-300 hover:bg-emerald-500/15' : 'text-emerald-800 hover:bg-emerald-100/90',
-                    )}
-                    onClick={() => setShowAllEmployer(true)}
-                  >
-                    Show all ({employerList.length})
-                  </Button>
-                ) : null}
-              </div>
+              <p className={cn('text-sm font-semibold', isDark ? 'text-emerald-100' : 'text-emerald-900')}>
+                Employment verification available on request
+              </p>
             </div>
           )}
       </div>
