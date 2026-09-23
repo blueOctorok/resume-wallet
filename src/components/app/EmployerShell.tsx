@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore } from '@/stores'
+import type { PageType } from '@/stores/types'
 import CompanyOnboarding from '@/components/app/CompanyOnboarding'
 import MessageInbox from '@/components/messaging/MessageInbox'
+import EmployerTermsGate from '@/components/employer/EmployerTermsGate'
 
 const EmployerHub = dynamic(
   () => import('@/components/EmployerHub').then((mod) => mod.default),
@@ -79,25 +81,21 @@ export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
     }
   }, [currentPage, setCurrentPage])
 
+  let page: ReactNode
+
   // Motor Carrier onboarding — blocking gate for new company owners
   if (currentPage === 'company-setup') {
-    return (
+    page = (
       <CompanyOnboarding
         onComplete={() => setCurrentPage(null)}
       />
     )
-  }
-
-  if (currentPage === 'applicants') {
-    return <ApplicantsPage sessionUserId={sessionUserId} onBack={goBack} />
-  }
-
-  if (currentPage === 'talent-search') {
-    return <TalentSearchPage sessionUserId={sessionUserId} onBack={goBack} />
-  }
-
-  if (currentPage === 'post-job') {
-    return (
+  } else if (currentPage === 'applicants') {
+    page = <ApplicantsPage sessionUserId={sessionUserId} onBack={goBack} />
+  } else if (currentPage === 'talent-search') {
+    page = <TalentSearchPage sessionUserId={sessionUserId} onBack={goBack} />
+  } else if (currentPage === 'post-job') {
+    page = (
       <JobPostingForm
         sessionUserId={sessionUserId}
         onBack={goBack}
@@ -107,23 +105,17 @@ export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
         }}
       />
     )
-  }
-
-  if (currentPage === 'team') {
-    return <TeamManagement sessionUserId={sessionUserId} onBack={goBack} />
-  }
-
-  if (currentPage === 'company-profile') {
-    return (
+  } else if (currentPage === 'team') {
+    page = <TeamManagement sessionUserId={sessionUserId} onBack={goBack} />
+  } else if (currentPage === 'company-profile') {
+    page = (
       <CompanyOnboarding
         onComplete={() => setCurrentPage(null)}
         showBackButton={true}
       />
     )
-  }
-
-  if (currentPage === 'messages') {
-    return (
+  } else if (currentPage === 'messages') {
+    page = (
       <div className='max-w-2xl mx-auto'>
         <MessageInbox
           sessionUserId={sessionUserId}
@@ -132,19 +124,19 @@ export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
         />
       </div>
     )
+  } else {
+    // Default: Employer Hub (when currentPage is null or being reset).
+    page = (
+      <EmployerHub
+        sessionUserId={sessionUserId}
+        onNavigate={(next) => {
+          if (KNOWN_PAGES.has(next)) {
+            setCurrentPage(next as PageType)
+          }
+        }}
+      />
+    )
   }
 
-  // Default: Employer Hub (when currentPage is null or being reset).
-  // onNavigate accepts any string — KNOWN_PAGES validation in the useEffect
-  // above will bounce unknown routes back to the hub.
-  return (
-    <EmployerHub
-      sessionUserId={sessionUserId}
-      onNavigate={(page) => {
-        if (KNOWN_PAGES.has(page)) {
-          setCurrentPage(page)
-        }
-      }}
-    />
-  )
+  return <EmployerTermsGate>{page}</EmployerTermsGate>
 }

@@ -12,6 +12,7 @@ import {
   EV_EMPLOYER_SHARE_REQUEST,
 } from '@/lib/ev-consent-documents'
 import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
+import { companyHasCurrentEmployerTerms } from '@/lib/company-terms'
 
 /**
  * POST /api/employer/ev/share-requests
@@ -59,6 +60,12 @@ export async function POST(request: NextRequest) {
     if (!(await companyCanRequestEvShare(supabase, access.companyId))) {
       return NextResponse.json(
         { error: 'Install the Employment verification share requests block first' },
+        { status: 403 },
+      )
+    }
+    if (!(await companyHasCurrentEmployerTerms(supabase, access.companyId))) {
+      return NextResponse.json(
+        { error: 'Your company must accept the current employer terms before requesting an Employment Verification share' },
         { status: 403 },
       )
     }

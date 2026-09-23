@@ -262,6 +262,15 @@ export async function buildProjectedCareerCard(
   }
   const employerConfirmed = evrResult.error ? 0 : (evrResult.count ?? 0)
 
+  // EV facts are driver-owned until a Step 6 grant. Public share links and the
+  // employer talent card must not advertise "previous employer verified" — that
+  // is itemized EV content, not a public badge. The card keeps the neutral
+  // "available on request" line from employerConfirmed.
+  const cardFacts =
+    meta.contactMode === 'self'
+      ? attestedFacts
+      : attestedFacts.filter((fact) => fact.factType !== 'previous_employer_verified')
+
   const sections: CareerCardSection[] = []
 
   // DOT-first: resume lives on the Resume chip / live packet — never as a
@@ -377,7 +386,7 @@ export async function buildProjectedCareerCard(
     onChainCredentialCount: signals.onChainCredentialCount,
     onChainCredentials: signals.onChainCredentials,
     careerCardScore: signals.careerCardScore,
-    attestedFacts,
+    attestedFacts: cardFacts,
     activeLens: lensRow
       ? { id: lensRow.id, name: lensRow.name, isDefault: lensRow.is_default }
       : undefined,
@@ -418,7 +427,7 @@ async function fetchSectionData(
     case 'driver-psp':
       return fetchPspData(supabase, userId, contactMode)
     case 'driver-cdl-credentials':
-      return fetchCdlData(supabase, userId)
+      return fetchCdlData(supabase, userId, contactMode)
     case 'developer-portfolio':
       return fetchPortfolioData(supabase, userId)
     case 'developer-github':
@@ -665,13 +674,19 @@ async function fetchMvrData(
   }
 }
 
-async function fetchCdlData(supabase: SupabaseClient, userId: string): Promise<CdlData | null> {
+async function fetchCdlData(
+  supabase: SupabaseClient,
+  userId: string,
+  contactMode: ProjectedCareerCardContactMode,
+): Promise<CdlData | null> {
   const row = await getCdlData(supabase, userId)
   if (!row) return null
+  // License number is PII. A share link and the employer talent card show class,
+  // state, and endorsements — the number stays on the candidate's own view.
   return {
     cdlClass: row.cdl_class,
     cdlState: row.cdl_state,
-    cdlNumber: row.cdl_number,
+    cdlNumber: contactMode === 'self' ? row.cdl_number : null,
     cdlExpiration: row.cdl_expiration,
     endorsements: row.endorsements ?? [],
     restrictions: row.restrictions ?? [],

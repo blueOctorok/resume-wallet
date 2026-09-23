@@ -19,7 +19,12 @@ export interface EvDocumentSection {
 
 export interface EvConsentDocument {
   /** Stable id for the screen rendering this document. */
-  id: 'driver-disclosure' | 'driver-authorization' | 'employer-share-request' | 'driver-share-ack'
+  id:
+    | 'driver-disclosure'
+    | 'driver-authorization'
+    | 'employer-share-request'
+    | 'driver-share-ack'
+    | 'employer-terms-ev-schedule'
   /** Document family version — stored on the artifact row. */
   version: string
   title: string
@@ -32,6 +37,8 @@ export interface EvConsentDocument {
 export const EV_DISC_AUTH_VERSION = 'PROVVEN-EV-DISC-AUTH-B-0.1'
 export const EV_EMP_SHARE_REQ_VERSION = 'PROVVEN-EV-EMP-SHARE-REQ-0.1'
 export const EV_SHARE_ACK_VERSION = 'PROVVEN-EV-SHARE-ACK-6-0.1'
+/** DRAFT — pending Frantz Ward review. Accepted at employer registration. */
+export const EV_EMPLOYER_TERMS_VERSION = 'PROVVEN-EMP-TERMS-EV-0.1'
 
 // ── Screen A — driver disclosure (standalone, scroll-to-continue) ────────────
 
@@ -229,6 +236,74 @@ export const EV_SHARE_ACKNOWLEDGMENT: EvConsentDocument = {
   checkboxLabel:
     'I have read this acknowledgment. I authorize Provven to share the material described above with {{employerLegalName}} for the stated hiring-related purpose.',
   primaryCta: 'Authorize Share',
+}
+
+// ── Employer Terms schedule (A.1–A.8) — DRAFT, counsel review pending ────────
+
+export const EV_EMPLOYER_TERMS: EvConsentDocument = {
+  id: 'employer-terms-ev-schedule',
+  version: EV_EMPLOYER_TERMS_VERSION,
+  title: 'Employer Terms — Employment Verification share requests',
+  sections: [
+    {
+      paragraphs: [
+        'DRAFT pending counsel review (Frantz Ward). This schedule is part of the Provven employer terms. Accepting it covers your organization.',
+      ],
+    },
+    {
+      heading: 'Employment Verification share requests',
+      paragraphs: [
+        'Provven may allow you to request that a driver share Employment Verification material associated with that driver’s Provven account. That material, if any, originates from a driver-ordered request that Provven routed to the driver’s prior employer(s). Enabling a share request does not mean Provven is ordering a new consumer report for you in this flow.',
+      ],
+    },
+    {
+      heading: 'Permissible purpose',
+      paragraphs: [
+        'You represent that each Employment Verification share request is solely for a permissible employment purpose — evaluating the named driver for hiring, continued employment, or related FMCSA / DOT safety-sensitive qualification in connection with a specific application or hiring process — and not for marketing, general market research, or building a searchable pool of drivers.',
+        'You will not request Employment Verification material without a legitimate, current hiring-related need tied to that named driver.',
+      ],
+    },
+    {
+      heading: 'No browse / no pool access',
+      paragraphs: [
+        'Provven’s Employment Verification features do not include the right to search, filter, browse, or query a directory of drivers based on verification status, to receive alerts about verified candidates outside a candidate-initiated application, or to access Employment Verification material for a driver who has not applied or otherwise started a share with you.',
+        'Cards reach you through a link the candidate shared, or through a candidate-initiated application. Employment Verification content reaches you only after that application context plus the driver’s separate formal acknowledgment.',
+      ],
+    },
+    {
+      heading: 'Driver acknowledgment is required',
+      paragraphs: [
+        'Submitting a share request does not grant access. You will not receive Employment Verification content until the driver completes Provven’s formal share acknowledgment for your organization and that request. If the driver declines or does not respond, you will not receive the content.',
+      ],
+    },
+    {
+      heading: 'Limited use',
+      paragraphs: [
+        'You will use shared Employment Verification material only for the certified hiring-related purpose, limit internal access to personnel with a need to know, and not redisclose it except as required by law or with the driver’s further authorization.',
+        'Shared material does not by itself satisfy all of your independent obligations under 49 CFR 391.23, including any Clearinghouse or drug and alcohol requirements, which are outside this Employment Verification scope.',
+      ],
+    },
+    {
+      heading: 'No Provven hiring decision',
+      paragraphs: [
+        'Provven does not decide whether you hire the driver. Any adverse employment decision is yours. You are responsible for any adverse-action notices and related processes required by law.',
+      ],
+    },
+    {
+      heading: 'Audit and suspension',
+      paragraphs: [
+        'Provven may log share requests and access events, and may suspend Employment Verification share-request features for accounts that attempt browse or pool behavior, misuse the stated purpose, or circumvent the driver acknowledgment.',
+      ],
+    },
+    {
+      heading: 'How Provven is described',
+      paragraphs: [
+        'Do not describe Provven as your background-check company or as providing access to a database of verified drivers.',
+      ],
+    },
+  ],
+  checkboxLabel:
+    'I have read this Employment Verification schedule and I agree to it on behalf of my organization.',
 }
 
 // ── Rendering / hashing helpers ──────────────────────────────────────────────

@@ -52,6 +52,8 @@ class SimpleRateLimiter {
 // Export singleton instances
 export const uploadRateLimiter = new SimpleRateLimiter()
 export const verificationRateLimiter = new SimpleRateLimiter()
+/** Open employer-access form on public career cards. */
+export const employerAccessRateLimiter = new SimpleRateLimiter()
 
 // Simple usage constants
 export const RATE_LIMITS = {
@@ -62,5 +64,9 @@ export const RATE_LIMITS = {
   VERIFICATION: {
     maxRequests: 50, // Reasonable limit for testing and legitimate use
     windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  },
+  EMPLOYER_ACCESS: {
+    maxRequests: 8,
+    windowMs: 60 * 60 * 1000,
   },
 }

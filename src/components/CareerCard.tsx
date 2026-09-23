@@ -730,7 +730,7 @@ export default function CareerCard({
           <div className="flex flex-wrap gap-3">
             {profile?.share_token && (
               <a
-                href={`/${isDriver ? 'd' : 'dev-card'}/${profile.share_token}`}
+                href={`/card/${profile.share_token}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(

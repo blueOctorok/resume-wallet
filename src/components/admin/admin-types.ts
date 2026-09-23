@@ -132,6 +132,8 @@ export interface AdminCompany {
   suspendedAt: string | null
   suspensionReason: string | null
   createdAt: string
+  /** `admin` or `card_funnel` — how the company row was created. */
+  signupSource?: string
 }
 
 export interface AdminJob {

@@ -9,6 +9,7 @@ Frantz Ward):
 | Disclosure + Authorization to route | `PROVVEN-EV-DISC-AUTH-B-0.1` | Driver | Before any outbound EV send |
 | Employer share-request clickwrap | `PROVVEN-EV-EMP-SHARE-REQ-0.1` | Employer | When requesting to view a driver's EV |
 | Step 6 formal share acknowledgment | `PROVVEN-EV-SHARE-ACK-6-0.1` | Driver | Before any EV content reaches that employer |
+| Employer terms — EV schedule (DRAFT) | `PROVVEN-EMP-TERMS-EV-0.1` | Employer owner/admin | At self-serve signup, or once for existing companies |
 
 These do NOT replace the DOT papers (`docs/AUTH_FORM.md` — driver authorization page +
 Safety Performance History Records Request). The papers are the packet sent to the prior
@@ -98,4 +99,6 @@ Additionally:
 - Per-employer forever vs future consent-once / scope-bound share model.
 - State-specific disclosure inserts / e-sign overlays.
 - Whether EV-derived facts in the attestation pipeline (`previous_employer_verified`)
-  also require a grant — flagged, not built in this pass.
+  also require a grant — **resolved for card projections (2026-09-23):** public and
+  employer career-card projections drop this fact. It remains on the candidate's
+  own card. A future employer surface may show it only through a Step 6 grant.

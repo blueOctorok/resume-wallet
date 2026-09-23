@@ -19,7 +19,7 @@ export const STORMCHAIN_FEATURES = {
       'AI Career Score provides quick assessment',
       'Portfolio projects showcased professionally',
     ],
-    url: '/dev-card/{share_token}',
+    url: '/card/{share_token}',
   },
   careerScore: {
     description:

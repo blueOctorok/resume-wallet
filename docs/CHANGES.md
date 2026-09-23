@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Interested-party funnel — shared card to pending employer** (2026-09-23)
+
+A person who opens a shared career card is treated as a potential employer, not a third portal. Apply `supabase/migrations/111_self_serve_employer_funnel.sql` before this ships — admin company list selects the new columns, and EV share requests 403 until the company has accepted the new terms version.
+
+| Piece | What changed |
+|---|---|
+| CDL number | `fetchCdlData` returns `cdlNumber` only for `contactMode === 'self'`. Public and employer card payloads no longer carry the license number. |
+| EV fact on cards | `previous_employer_verified` is stripped from public and employer projections. The candidate's own card still shows it. Neutral "available on request" line is unchanged. |
+| Pool teaser | `GET /api/career-card/pool-stats?token=` returns state-level counts (CDL class, clean MVR outcomes, non-EV attestations). `PoolTeaserStrip` on `/card/[token]` uses neutral copy — no "verified pool" and no EV aggregates. |
+| Self-serve access | `POST /api/employer/access-request`. Work email creates `companies.status = pending` (`signup_source = card_funnel`, `origin_share_token`) and sends a magic link. Personal email goes to `employer_access_requests` for manual review. |
+| Pending mode | Employer hub, when `status === pending`, renders `PendingCompanyView`: the originating **public** card plus the teaser. Talent search stays off until admin approves (existing Companies tab approve/suspend). Card-funnel rows show a "Card lead" badge. |
+| Employer terms | `PROVVEN-EMP-TERMS-EV-0.1` in `ev-consent-documents.ts`. Checkbox on the access form, `company_terms_acceptances` row, and `EmployerTermsGate` for companies that have not accepted the current version (owner/admin accepts; everyone else waits). `POST /api/employer/ev/share-requests` 403s without that row. |
+| Legacy share URLs | `/d/[token]` and `/dev-card/[token]` are server redirects (next.config already redirected). Deleted `/api/driver/public`, `/api/developer/public`, and the unused `/api/driver/share` + `/api/developer/share` routes. |
+
+**Counsel still open:** teaser sentence wording, employer-terms draft, and a real 391.23(i)/(j) rebuttal workflow (not built).
+
+---
+
 ## **EV Part 3 delivery is Provven only** (2026-09-23)
 
 Part 3 of the driver authorization no longer offers Secure Email, Electronic PDF, U.S. Mail, or Other. Every reply is processed through Provven at the packet's delivery address. The paper copy in `docs/AUTH_FORM.md` matches.

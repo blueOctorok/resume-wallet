@@ -32,7 +32,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.3,
     },
-    // Public career card pages are dynamic (/d/[token]) so we don't list them here
+    // Public career card pages are dynamic (/card/[token]) so we don't list them here
     // but they're still crawlable when linked
   ]
 }

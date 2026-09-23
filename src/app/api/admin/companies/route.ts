@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
         suspension_reason,
         admin_notes,
         onboarding_completed,
+        signup_source,
+        origin_share_token,
         created_at,
         updated_at,
         users!companies_employer_user_id_fkey (
@@ -132,6 +134,7 @@ export async function GET(request: NextRequest) {
         // Timestamps
         createdAt: company.created_at,
         updatedAt: company.updated_at,
+        signupSource: company.signup_source ?? 'admin',
       }
     })
 
@@ -161,10 +164,11 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/admin/companies
  *
- * Creates a new company. This is the ONLY way an employer account comes into
- * existence — self-serve signup and the AI-reviewed access-request queue were
- * both removed. The designated owner gets the role automatically the first time
- * they sign in with this address (see resolveEmployerLink).
+ * Creates a new company from central admin. The shared-card funnel
+ * (`POST /api/employer/access-request`) can also create a pending company;
+ * this route remains the admin path and still defaults status to active.
+ * The designated owner gets the role the first time they sign in
+ * (see resolveEmployerLink).
  *
  * Body:
  *   - companyName: Required

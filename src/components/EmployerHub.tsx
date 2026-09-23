@@ -43,6 +43,7 @@ import BlockCard from '@/components/ui/BlockCard'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
 import DqMonitorSection from '@/components/employer/dq/DqMonitorSection'
+import PendingCompanyView from '@/components/employer/PendingCompanyView'
 
 /** Flip to true to show Activity snapshot, Job postings, and Hiring pipeline again. */
 const SHOW_HUB_OPS_SECTIONS = false
@@ -65,6 +66,8 @@ interface HubCompany {
   state: string | null
   onboardingCompleted: boolean
   companyWalletAddress?: string | null
+  status?: 'pending' | 'active' | 'suspended' | string
+  originShareToken?: string | null
 }
 
 interface HubJobPosting {
@@ -519,6 +522,17 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   // No data yet or needs redirect to company setup (handled by useEffect above)
   if (!data) {
     return null
+  }
+
+  // Self-serve companies stay on the public card they came from until admin
+  // approves. Talent search and outreach are not mounted in this branch.
+  if (data.company?.status === 'pending') {
+    return (
+      <PendingCompanyView
+        companyName={data.company.name}
+        originShareToken={data.company.originShareToken ?? null}
+      />
+    )
   }
 
   // Waiting on admin / Stormi for employer access (row in employer_access_requests)

@@ -288,6 +288,11 @@ export default function CompaniesTab({
                   }`}>
                     {company.status}
                   </span>
+                  {company.signupSource === 'card_funnel' && (
+                    <span className='px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300'>
+                      Card lead
+                    </span>
+                  )}
                   {company.status === 'pending' && (() => {
                     const days = Math.floor((Date.now() - new Date(company.createdAt).getTime()) / 86_400_000)
                     return days >= 7 ? (

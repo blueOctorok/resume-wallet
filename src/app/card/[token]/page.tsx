@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, Send, CheckCircle } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import PoolTeaserStrip from '@/components/career-card/PoolTeaserStrip'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 
 function PublicCardContent() {
@@ -108,6 +109,8 @@ function PublicCardContent() {
           Provven Career Card
         </h2>
       </div>
+
+      <PoolTeaserStrip shareToken={token} onDark />
 
       <ProjectedCareerCard
         data={data}
