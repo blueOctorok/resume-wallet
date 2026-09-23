@@ -230,6 +230,23 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 
 ---
 
+## 🚪 Interested-Party Funnel — third audience, not a third portal (Sep 2026 — Planned)
+
+**Design decision (2026-09-23):** the person who receives a shared `/card/[token]` link but has no Provven account is a first-class **audience**, not a new portal/role. The pool ("more candidates like this one") is the paid employer product — the shared card *teases* it with aggregate counts and gives an instant on-ramp into the existing `EmployerShell`. Principle: **gate the data, not the door.** Employer creation stays admin-approved, but approval controls what a new company can *see*, not whether they can *enter* — the old driver-picks-employer-at-signup problem doesn't apply because this funnel's intent is unambiguous (employer CTA on someone else's card + company name + work-email domain check).
+
+Full layout for non-engineers: `docs/provven-access-model.pdf` (shareable, generated from `docs/provven-access-model.html`) and canvas `provven-access-model.canvas.tsx` (Cursor workspace canvases).
+
+| # | Piece | Status | Notes |
+|---|-------|--------|-------|
+| 1 | **CDL number masking on public projections** | 🔲 Todo | Privacy bug — `fetchSectionData` for `driver-cdl-credentials` in `projected-career-card.ts` returns `cdlNumber` with no `contactMode` gate. Public/anonymous cards must show class/state/endorsements only. Do first, independent of the rest. |
+| 2 | **Pool teaser on `/card/[token]`** | 🔲 Todo | Aggregate anonymized stats ("one of N verified CDL-A drivers within X miles — M clean MVRs") + "Get employer access" CTA. Counts only; never other candidates' profiles. One open stats endpoint + one component. |
+| 3 | **Self-serve pending employers** | 🔲 Todo | Access form (name, company, work email) → auto-create company in `pending` status (existing status machinery) → land in `EmployerShell` **pending mode**: sees the one card they came from + pool stats, no talent search. Work-email domains pass; free-mail domains flagged for manual review. Admin approve unlocks pool / reject suspends — existing admin queue, new lead source. |
+| 4 | **Retire legacy `/d` + `/dev-card` share pages** | 🔲 Todo | Redirect to `/card/[token]`. One public card experience. |
+
+**Deliberately NOT building:** a third portal/role, anonymous or email-gated candidate browsing, blurred candidate rows, any MVR/PSP exposure on public links. Related future work: link-scoped `public` audience for `disclosure_preferences` (extends Phase 2 selective disclosure to anonymous viewers) and the cold public verify page (DEC-2026-06-003) — both out of scope for this track.
+
+---
+
 ## ✅ Completed Work (reference)
 
 ### 🌉 **Storm Apply Bridge — career card for external jobs** (May 2026 — Done)

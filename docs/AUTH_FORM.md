@@ -58,13 +58,11 @@ before sending._
 
 ### Part 3 — Authorization and Delivery Instructions
 
-I authorize my previous employers, contractors (if owner-operator), and trucking schools, as applicable, to release my Safety Performance History and DOT drug and alcohol information, as permitted by 49 CFR § 391.23 and other applicable regulations, directly to me at the address or email listed below. I also authorize release of employment verification information reasonably related to my DOT-regulated work history. A fax, image, or copy of this authorization may be treated as valid as the original.
+I authorize my previous employers, contractors (if owner-operator), and trucking schools, as applicable, to release my Safety Performance History and DOT drug and alcohol information, as permitted by 49 CFR § 391.23 and other applicable regulations, to me through Provven. I also authorize release of employment verification information reasonably related to my DOT-regulated work history. A fax, image, or copy of this authorization may be treated as valid as the original.
 
-**Please provide the requested records directly to the driver. If there are no responsive records, indicate "No Records Found."**
+**Return the requested records through Provven. If there are no responsive records, indicate "No Records Found."**
 
-**Send Records By:** ☐ Secure Email ☐ Electronic PDF ☐ U.S. Mail ☐ Other: ________
-
-**Delivery Destination:** Use the driver email or mailing address listed in Part 1.
+**Delivery:** All records for this packet are processed through Provven. There is no Secure Email, Electronic PDF, U.S. Mail, or other delivery choice. A Provven delivery address is assigned when the packet is sent.
 
 ---
 
@@ -81,7 +79,7 @@ I authorize my previous employers, contractors (if owner-operator), and trucking
 _Driver-retained employer response form_
 
 **Instructions to records holder:** Complete Parts 2–5 and return this form, with any responsive
-records, directly to the driver using the delivery information on page 1.
+records, through Provven using the delivery address on page 1.
 
 ### Part 1 — Driver / Request Identification
 

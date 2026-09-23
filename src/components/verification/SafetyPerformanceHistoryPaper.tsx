@@ -73,7 +73,7 @@ export default function SafetyPerformanceHistoryPaper({
         </p>
         <p className='mt-1 text-sm text-[#173150]/55'>
           Instructions to records holder: Complete Parts 2–5 and return this form, with any
-          responsive records, directly to the driver using the delivery information on page 1.
+          responsive records, through Provven using the delivery address on page 1.
         </p>
       </header>
 

@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV Part 3 delivery is Provven only** (2026-09-23)
+
+Part 3 of the driver authorization no longer offers Secure Email, Electronic PDF, U.S. Mail, or Other. Every reply is processed through Provven at the packet's delivery address. The paper copy in `docs/AUTH_FORM.md` matches.
+
+---
+
 ## **EV Consent Stack — Track B legal artifacts around the EV block** (2026-09-22)
 
 The employment-verification block now follows the three Track B legal drafts

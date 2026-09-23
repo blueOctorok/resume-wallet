@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Provven — Access Model &amp; Interested-Party Funnel</title>
+<style>
+  /* Print-first stylesheet. Brand palette: Midnight #173150, Hot Embers #f15a2b,
+     Ironside #939598, Denim #00608b, Dark Amber #F28A0F, Retro Teal #3F8A8C */
+  @page { size: Letter; margin: 0.55in 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    color: #1f2937;
+    font-size: 10.5px;
+    line-height: 1.45;
+  }
+  .page-break { break-before: page; }
+  .avoid-break { break-inside: avoid; }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    background: #173150;
+    color: #ffffff;
+    padding: 22px 26px 18px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  .doc-header .brand {
+    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: #f15a2b; font-weight: 700; margin-bottom: 6px;
+  }
+  .doc-header h1 { font-size: 21px; font-weight: 700; margin-bottom: 6px; }
+  .doc-header p { font-size: 11px; color: #cbd5e1; max-width: 640px; }
+  .doc-header .meta { margin-top: 10px; font-size: 9px; color: #94a3b8; }
+
+  h2 {
+    font-size: 14px; color: #173150; font-weight: 700;
+    margin: 18px 0 4px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #f15a2b;
+  }
+  .section-sub { font-size: 10px; color: #6b7280; margin-bottom: 8px; }
+
+  /* ---------- Audience cards ---------- */
+  .cols-3 { display: flex; gap: 10px; }
+  .cols-3 > div { flex: 1; }
+  .aud-card {
+    border: 1px solid #d8dee6; border-radius: 7px; overflow: hidden;
+    background: #ffffff;
+  }
+  .aud-card .head {
+    padding: 7px 10px; font-weight: 700; font-size: 10.5px; color: #173150;
+    background: #f1f4f8; border-bottom: 1px solid #d8dee6;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .aud-card.highlight { border-color: #f15a2b; }
+  .aud-card.highlight .head { background: rgba(241, 90, 43, 0.08); color: #173150; }
+  .tag {
+    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 99px; background: #e5e9ef; color: #55606e;
+  }
+  .tag.hot { background: #f15a2b; color: #fff; }
+  .aud-card .body { padding: 8px 10px; font-size: 9.8px; }
+  .aud-card .body p + p { margin-top: 5px; }
+  .muted { color: #6b7280; }
+
+  /* ---------- Callout ---------- */
+  .callout {
+    margin-top: 10px; border-left: 4px solid #f15a2b; background: rgba(241, 90, 43, 0.06);
+    border-radius: 0 6px 6px 0; padding: 8px 12px; font-size: 10px;
+  }
+  .callout strong { color: #173150; }
+  .callout.blue { border-left-color: #00608b; background: rgba(0, 96, 139, 0.06); }
+  .callout.amber { border-left-color: #F28A0F; background: rgba(242, 138, 15, 0.07); }
+
+  /* ---------- Tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 9.6px; }
+  th {
+    text-align: left; background: #173150; color: #fff; font-weight: 600;
+    padding: 5px 8px; font-size: 9.3px;
+  }
+  td { padding: 5px 8px; border-bottom: 1px solid #e5e9ef; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  .row-hot td { background: rgba(241, 90, 43, 0.07) !important; }
+  .row-hot td:first-child { border-left: 3px solid #f15a2b; }
+  .pill {
+    display: inline-block; font-size: 8.4px; font-weight: 700; padding: 1.5px 7px;
+    border-radius: 99px; white-space: nowrap;
+  }
+  .pill.same { background: #e5e9ef; color: #55606e; }
+  .pill.up { background: #f15a2b; color: #fff; }
+  .pill.plus { background: #3F8A8C; color: #fff; }
+  .pill.retire { background: #F28A0F; color: #fff; }
+  code {
+    font-family: Consolas, 'Courier New', monospace; font-size: 9.2px;
+    background: #eef1f5; padding: 1px 4px; border-radius: 3px; color: #173150;
+  }
+
+  /* ---------- Keep / Change / Add ---------- */
+  .kca .head { font-size: 10.5px; }
+  .kca ul { list-style: none; }
+  .kca li { padding: 4px 0 4px 14px; position: relative; font-size: 9.6px; border-bottom: 1px dashed #e5e9ef; }
+  .kca li:last-child { border-bottom: none; }
+  .kca li::before { content: ''; position: absolute; left: 0; top: 9px; width: 6px; height: 6px; border-radius: 2px; }
+  .kca.keep li::before { background: #939598; }
+  .kca.change li::before { background: #F28A0F; }
+  .kca.add li::before { background: #3F8A8C; }
+  .kca .head .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 6px; }
+
+  /* ---------- Journey ---------- */
+  .journey { border: 1px solid #d8dee6; border-radius: 7px; padding: 4px 14px; }
+  .step { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px dashed #e5e9ef; align-items: flex-start; }
+  .step:last-child { border-bottom: none; }
+  .step .num {
+    flex: 0 0 22px; height: 22px; border-radius: 50%; background: #173150; color: #fff;
+    font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .step h4 { font-size: 10.6px; color: #173150; margin-bottom: 2px; }
+  .step p { font-size: 9.6px; color: #4b5563; }
+  .step p em { color: #f15a2b; font-style: normal; font-weight: 600; }
+
+  .stats { display: flex; gap: 10px; margin-top: 10px; }
+  .stat {
+    flex: 1; text-align: center; border: 1px solid #d8dee6; border-radius: 7px; padding: 9px 6px;
+  }
+  .stat .val { font-size: 16px; font-weight: 700; color: #173150; }
+  .stat .val.teal { color: #3F8A8C; }
+  .stat .val.ember { color: #f15a2b; }
+  .stat .lbl { font-size: 8.6px; color: #6b7280; margin-top: 2px; }
+
+  /* ---------- Not building ---------- */
+  .nots { display: flex; flex-wrap: wrap; gap: 8px; }
+  .not-item {
+    flex: 1 1 45%; border: 1px solid #e8d5c4; background: #fdf8f3;
+    border-radius: 6px; padding: 7px 10px; font-size: 9.6px;
+  }
+  .not-item strong { color: #b45309; display: block; font-size: 9.8px; margin-bottom: 1px; }
+
+  .footer {
+    margin-top: 18px; padding-top: 8px; border-top: 1px solid #d8dee6;
+    font-size: 8.6px; color: #939598; display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="doc-header">
+  <div class="brand">Provven</div>
+  <h1>Who Sees What — and How a Shared Card Becomes a New Employer</h1>
+  <p>Three kinds of people touch Provven: candidates (drivers), employers, and the person in between —
+     a <b style="color:#fff">potential employer</b> who receives a shared career-card link but doesn't have an
+     account yet. This plan turns that shared card into our best sales tool, without building a third product.</p>
+  <div class="meta">Access Model &amp; Interested-Party Funnel &nbsp;·&nbsp; September 23, 2026 &nbsp;·&nbsp; Internal planning document</div>
+</div>
+
+<!-- ============ AUDIENCES ============ -->
+<h2>The Three Audiences</h2>
+<div class="cols-3 avoid-break" style="margin-top:8px">
+  <div class="aud-card">
+    <div class="head">Candidate (driver) <span class="tag">No change</span></div>
+    <div class="body">
+      <p>Logs in and sees <b>only their own stuff</b>: their blocks (DOT app, CDL, MVR, resume…), their career card, their share link.</p>
+      <p class="muted">Owns their data. Decides what the share link shows.</p>
+    </div>
+  </div>
+  <div class="aud-card highlight">
+    <div class="head">Potential employer (link viewer) <span class="tag hot">Upgraded</span></div>
+    <div class="body">
+      <p>A recruiter or safety manager clicks a shared card link. <b>No account, no login.</b> Sees one verified candidate — and soon, proof there's a whole pool of them plus a 30-second path to employer access.</p>
+      <p class="muted">The shared card is our sales pitch. Every card a driver shares is a demo of the product.</p>
+    </div>
+  </div>
+  <div class="aud-card">
+    <div class="head">Employer <span class="tag">Small change</span></div>
+    <div class="body">
+      <p>Logs in and sees <b>the whole talent pool</b>: search, career cards, verified facts, screening orders, outreach.</p>
+      <p class="muted">Gains one new state: "pending approval" for brand-new companies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="callout avoid-break">
+  <strong>The big decision — no third portal.</strong> The "show me more candidates like this one" experience already
+  exists: it's the employer portal, and it's what employers pay for. We don't rebuild it for strangers. The shared card
+  <b>teases</b> the pool with counts and gives an instant on-ramp into the portal we already have.
+  Principle: <strong>gate the data, not the door</strong> — let potential employers in instantly; admin approval controls
+  what they can <i>see</i>, not whether they can <i>enter</i>.
+</div>
+
+<!-- ============ ENTRY POINTS ============ -->
+<h2>Every Way a Person Lands on Provven</h2>
+<p class="section-sub">Every door into the site, who walks through it, and whether this plan touches it. Only two rows change.</p>
+<table class="avoid-break">
+  <thead>
+    <tr><th style="width:23%">Entry point</th><th style="width:20%">Who arrives</th><th style="width:9%">Login?</th><th style="width:31%">What they see</th><th style="width:17%">This plan</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>provven.com (home)</td><td>Anyone</td><td>No</td><td>Marketing page → sign in or browse jobs</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Sign-in page</td><td>Candidates &amp; employers</td><td>—</td><td>Email / Google / magic-link login</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Candidate hub <span class="muted">(after login)</span></td><td>Candidate</td><td>Yes</td><td>Their own blocks, files, career card, Stormi</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr class="row-hot"><td><b>Shared career card</b> — <code>/card/…</code></td><td><b>Potential employer</b></td><td><b>No</b></td><td>One candidate's card: verified facts, DOT status, CDL</td><td><span class="pill up">Upgraded — sales surface</span></td></tr>
+    <tr class="row-hot"><td><b>Employer portal</b> <span class="muted">(after login)</span></td><td>Employer team</td><td>Yes</td><td>Talent search, cards, screenings, outreach</td><td><span class="pill plus">+ Pending state</span></td></tr>
+    <tr><td>Job invite — <code>/apply/…</code></td><td>Candidate invited by employer</td><td>No <span class="muted">(login to accept)</span></td><td>Invite landing → join → guided block setup</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Invite setup — <code>/onboard/…</code></td><td>Invited candidate</td><td>Yes</td><td>Installs the requested block</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Team invite — <code>/invite/…</code></td><td>New employer team member</td><td>Yes</td><td>Joins an existing company account</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Employment check — <code>/verify/…</code></td><td>Candidate's former employer</td><td>No <span class="muted">(link is the key)</span></td><td>One-time employment verification questionnaire</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Shared application — <code>/application/…</code></td><td>Anyone with the link</td><td>No</td><td>Snapshot of one job application</td><td><span class="pill same">Unchanged</span></td></tr>
+    <tr><td>Old share links — <code>/d/…</code>, <code>/dev-card/…</code></td><td>Holders of old links</td><td>No</td><td>Legacy profile pages</td><td><span class="pill retire">Retire → /card</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page-break"></div>
+
+<h2>What Stays, What Changes, What's New</h2>
+<div class="cols-3 avoid-break" style="margin-top:8px">
+  <div class="aud-card kca keep">
+    <div class="head"><span><span class="dot" style="background:#939598"></span>Keep as-is</span></div>
+    <div class="body"><ul>
+      <li>Candidate hub + all blocks (DOT app, CDL, MVR, PSP, EV, resume…)</li>
+      <li>Employer portal: talent search, verified facts, screening orders</li>
+      <li>MVR &amp; PSP never shown on public links — stays locked</li>
+      <li>Admin has final say on every new employer (approve / suspend)</li>
+      <li>Connect form for viewers to message the candidate</li>
+    </ul></div>
+  </div>
+  <div class="aud-card kca change">
+    <div class="head"><span><span class="dot" style="background:#F28A0F"></span>Change</span></div>
+    <div class="body"><ul>
+      <li><b>Privacy fix:</b> hide the CDL <i>number</i> on shared cards (keep class, state, endorsements)</li>
+      <li><b>Pool teaser on shared cards:</b> "One of 47 verified CDL-A drivers within 50 miles — 31 clean MVRs." Counts only, never other drivers' profiles</li>
+      <li><b>Pending mode in employer portal:</b> a new company sees the one card they came from + pool stats; full search unlocks on approval</li>
+    </ul></div>
+  </div>
+  <div class="aud-card kca add">
+    <div class="head"><span><span class="dot" style="background:#3F8A8C"></span>Add new</span></div>
+    <div class="body"><ul>
+      <li><b>"Get employer access" button</b> on every shared card — name, company, work email. 30 seconds</li>
+      <li><b>Instant pending accounts.</b> Work-email domains get in immediately; free emails (gmail, yahoo) are flagged for manual review</li>
+      <li><b>Admin queue entries.</b> Approve → full portal. Reject → suspend. Same controls as today, fed by high-intent leads</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ============ JOURNEY ============ -->
+<h2>The Conversion Journey — From Link to Paying Employer</h2>
+<div class="journey avoid-break" style="margin-top:8px">
+  <div class="step">
+    <div class="num">1</div>
+    <div><h4>Clicks the shared card link</h4>
+    <p>Sees one verified candidate — facts strip, DOT status, CDL class. No login wall. <em>The hook: "this data is real and verified."</em></p></div>
+  </div>
+  <div class="step">
+    <div class="num">2</div>
+    <div><h4>Sees the pool teaser</h4>
+    <p>"One of 47 verified CDL-A drivers near Columbus — 31 clean MVRs." Numbers only, no profiles. <em>The pitch: "there are more where this came from."</em></p></div>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <div><h4>Taps "Get employer access"</h4>
+    <p>Name, company, work email. Work domain → instant pending account; free email → manual review first. <em>The close — at peak interest, not a "we'll email you" form.</em></p></div>
+  </div>
+  <div class="step">
+    <div class="num">4</div>
+    <div><h4>Lands in the employer portal immediately (pending mode)</h4>
+    <p>Full view of the candidate they came for, plus pool stats. No waiting room, no cold lead.</p></div>
+  </div>
+  <div class="step">
+    <div class="num">5</div>
+    <div><h4>Admin approves</h4>
+    <p>Full talent search unlocks. Admin keeps the same approve / suspend authority as today.</p></div>
+  </div>
+</div>
+
+<div class="stats avoid-break">
+  <div class="stat"><div class="val">1 card</div><div class="lbl">Max data visible before approval</div></div>
+  <div class="stat"><div class="val teal">0</div><div class="lbl">Candidate profiles browsable anonymously</div></div>
+  <div class="stat"><div class="val ember">~30 sec</div><div class="lbl">From link to pending account</div></div>
+</div>
+
+<div class="callout blue avoid-break">
+  <strong>Why the signup gate can loosen here.</strong> The old problem was drivers picking "employer" on a generic
+  signup screen — ambiguous intent at a shared front door. This funnel is the opposite: the person arrived from a
+  candidate's card, clicked an employer-only button, and entered a company name and work email. Intent is unambiguous —
+  and admin still gates the pool.
+</div>
+
+<!-- ============ NOT BUILDING ============ -->
+<h2>Deliberately NOT Building</h2>
+<div class="nots avoid-break" style="margin-top:8px">
+  <div class="not-item"><strong>A third portal or account type</strong> Two products, three audiences.</div>
+  <div class="not-item"><strong>Anonymous candidate browsing</strong> The pool is the paid product.</div>
+  <div class="not-item"><strong>Blurred candidate previews</strong> Counts sell the pool without exposing anyone.</div>
+  <div class="not-item"><strong>MVR / PSP on public links</strong> Compliance posture unchanged.</div>
+</div>
+
+<!-- ============ BUILD ORDER ============ -->
+<h2>Build Order</h2>
+<table class="avoid-break" style="margin-top:8px">
+  <thead><tr><th style="width:6%">#</th><th style="width:38%">Piece</th><th style="width:44%">Why this order</th><th style="width:12%">Size</th></tr></thead>
+  <tbody>
+    <tr><td><b>1</b></td><td>Hide CDL number on shared cards</td><td>Privacy fix — do it regardless of the rest</td><td>Small</td></tr>
+    <tr><td><b>2</b></td><td>Pool teaser + access button on shared cards</td><td>Starts converting viewers immediately</td><td>Medium</td></tr>
+    <tr><td><b>3</b></td><td>Instant pending accounts + admin queue</td><td>Completes the funnel; reuses existing approval machinery</td><td>Medium</td></tr>
+    <tr><td><b>4</b></td><td>Retire old <code>/d</code> and <code>/dev-card</code> share pages</td><td>Cleanup — one public card experience</td><td>Small</td></tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  <span>Provven — Access Model &amp; Interested-Party Funnel</span>
+  <span>Prepared September 23, 2026</span>
+</div>
+
+</body>
+</html>
