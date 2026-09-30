@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Carrier signup 500** (2026-09-30)
+
+The access form insert failed because `companies.employer_user_id` is still `NOT NULL` (the company is created before anyone has an account) and `allowed_email_domains` was never added on this database. Migration `113_nullable_company_owner.sql` drops the null constraint and adds the column. The paper access form no longer uses `dark:` field styles — those follow the app theme and painted navy inputs on the cream modal.
+
+---
+
 ## **Test superuser for carrier signup** (2026-09-30)
 
 `s.blaha@pacedrivers.com` can submit the carrier access form even though that address already owns Pace. The new company is owned by a `s.blaha+carrier…@pacedrivers.com` alias so the next Pace sign-in does not claim it. Everyone else still gets the "already tied to a company" error.

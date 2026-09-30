@@ -9,6 +9,11 @@ import { isPublicEmailAddress } from '@/lib/employer-domain-match'
 const WORK_EMAIL_ERROR =
   'Use your company email address — personal addresses (Gmail, Yahoo, Outlook.com…) can’t open a carrier account.'
 
+// Paper modal stays cream even when the app is in dark mode, so these fields
+// do not use dark: variants (those follow html.dark and painted navy inputs).
+const fieldClass =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#173150] placeholder:text-slate-400'
+
 /**
  * Shared door for a carrier who isn't Pace. Open from a shared card (shareToken
  * set) or the homepage (no token). Work email only — checked here and again
@@ -74,7 +79,7 @@ export default function EmployerAccessModal({
       <ModalHeader title="Get employer access" subtitle="Work email required" onClose={onClose} />
       {done ? (
         <div className="p-6">
-          <p className="text-sm text-[#173150] dark:text-gray-100">{done}</p>
+          <p className="text-sm text-[#173150]">{done}</p>
           <div className="mt-4">
             <Button type="button" variant="primary" onClick={onClose}>
               Done
@@ -83,7 +88,7 @@ export default function EmployerAccessModal({
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-3 p-6">
-          <p className="text-xs text-slate-600 dark:text-gray-400">
+          <p className="text-xs text-[#173150]/80">
             Use your company email. Personal addresses can’t open an account — drivers must not
             be able to browse other drivers.
           </p>
@@ -93,7 +98,7 @@ export default function EmployerAccessModal({
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#173150] dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            className={fieldClass}
           />
           <input
             required
@@ -101,7 +106,7 @@ export default function EmployerAccessModal({
             placeholder="Company name"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#173150] dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            className={fieldClass}
           />
           <div>
             <input
@@ -110,14 +115,14 @@ export default function EmployerAccessModal({
               placeholder="Work email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#173150] dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+              className={fieldClass}
             />
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-gray-400">
+            <p className="mt-1 text-[11px] text-[#173150]/70">
               Work email — not Gmail, Yahoo, or Outlook.com.
             </p>
             {emailLooksPersonal && <p className="mt-1 text-xs text-red-600">{WORK_EMAIL_ERROR}</p>}
           </div>
-          <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-gray-300">
+          <label className="flex items-start gap-2 text-xs leading-snug text-[#173150]">
             <input
               type="checkbox"
               checked={accepted}
@@ -149,7 +154,7 @@ export default function EmployerAccessModal({
             subtitle={`Version ${EV_EMPLOYER_TERMS.version}`}
             onClose={() => setShowTerms(false)}
           />
-          <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6 text-sm text-[#173150] dark:text-gray-100">
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6 text-sm text-[#173150]">
             {EV_EMPLOYER_TERMS.sections.map((section, i) => (
               <section key={i}>
                 {section.heading && <h3 className="mb-1 font-semibold">{section.heading}</h3>}

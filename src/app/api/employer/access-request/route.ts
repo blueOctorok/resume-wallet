@@ -125,7 +125,19 @@ export async function POST(request: NextRequest) {
 
     if (createError || !company) {
       console.error('[EMPLOYER ACCESS] Create error:', createError)
-      return NextResponse.json({ error: 'Could not start your company account' }, { status: 500 })
+      // Pending companies have no user yet, and they store an email-domain
+      // allowlist. Both require migration 113 (nullable owner + the column).
+      const detail = createError?.message ?? ''
+      const needsSchema =
+        /employer_user_id|allowed_email_domains|not-null|schema cache/i.test(detail)
+      return NextResponse.json(
+        {
+          error: needsSchema
+            ? 'Could not start your company account. Apply migration 113 in Supabase, then try again.'
+            : 'Could not start your company account',
+        },
+        { status: 500 },
+      )
     }
 
     const { error: termsError } = await supabase.from('company_terms_acceptances').insert({
