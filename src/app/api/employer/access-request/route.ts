@@ -6,6 +6,7 @@ import { employerAccessRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
+import { isTestSuperuserEmail, testCarrierAlias } from '@/lib/test-superuser'
 
 /**
  * POST /api/employer/access-request
@@ -93,7 +94,11 @@ export async function POST(request: NextRequest) {
       .ilike('designated_owner_email', email)
       .maybeSingle()
 
-    if (existingOwner) {
+    // Same inbox, different login. See test-superuser.ts.
+    const ownerEmail =
+      existingOwner && isTestSuperuserEmail(email) ? testCarrierAlias(email) : email
+
+    if (existingOwner && ownerEmail === email) {
       return NextResponse.json(
         {
           error: `This email is already tied to ${existingOwner.company_name}. Sign in to continue.`,
@@ -107,13 +112,13 @@ export async function POST(request: NextRequest) {
       .from('companies')
       .insert({
         company_name: companyName,
-        designated_owner_email: email,
+        designated_owner_email: ownerEmail,
         allowed_email_domains: domain ? [domain] : [],
         status: 'pending',
         onboarding_completed: true,
         signup_source: shareToken ? 'card_funnel' : 'homepage',
         origin_share_token: shareToken,
-        email,
+        email: ownerEmail,
       })
       .select('id')
       .single()
@@ -126,7 +131,7 @@ export async function POST(request: NextRequest) {
     const { error: termsError } = await supabase.from('company_terms_acceptances').insert({
       company_id: company.id,
       accepted_by_user_id: null,
-      accepted_email: email,
+      accepted_email: ownerEmail,
       document_version: EV_EMPLOYER_TERMS.version,
       document_sha256: hashEvDocument(EV_EMPLOYER_TERMS),
       ip_address: meta.ipAddress,
@@ -138,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://provven.com'
     const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
+      email: ownerEmail,
       options: { shouldCreateUser: true, emailRedirectTo: appUrl },
     })
     if (otpError) {
@@ -147,20 +152,25 @@ export async function POST(request: NextRequest) {
 
     await sendNewCompanyNotification({
       companyName,
-      ownerEmail: email,
+      ownerEmail,
       ownerWallet: shareToken ? 'card-funnel' : 'homepage',
     })
+
+    const aliasNote =
+      ownerEmail === email
+        ? ''
+        : ` Sign-in address is ${ownerEmail}. It arrives in your inbox, and it stays separate from your Pace login.`
 
     return NextResponse.json({
       success: true,
       outcome: 'pending_created',
-      message: shareToken
+      message: (shareToken
         ? otpError
           ? 'Your company is pending review. Sign in at Provven with this email — you can view the card you came from while we approve full access.'
           : 'Check your email for a sign-in link. Your company is pending review — you can view the card you came from as soon as you sign in.'
         : otpError
           ? 'Your company is pending review. Sign in at Provven with this email once we approve access.'
-          : 'Check your email for a sign-in link. Your company is pending a quick review — Find Drivers opens as soon as we approve you.',
+          : 'Check your email for a sign-in link. Your company is pending a quick review — Find Drivers opens as soon as we approve you.') + aliasNote,
     })
   } catch (error) {
     console.error('[EMPLOYER ACCESS] Unexpected error:', error)

@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Test superuser for carrier signup** (2026-09-30)
+
+`s.blaha@pacedrivers.com` can submit the carrier access form even though that address already owns Pace. The new company is owned by a `s.blaha+carrier…@pacedrivers.com` alias so the next Pace sign-in does not claim it. Everyone else still gets the "already tied to a company" error.
+
+---
+
 ## **Carrier accounts** (2026-09-30)
 
 Lite employer side for everyone who isn't Pace. Apply `supabase/migrations/112_carrier_account.sql` after 111.
