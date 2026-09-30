@@ -43,6 +43,8 @@ export type EmployerNavSnapshot = {
   /** Location · DOT (optional) */
   subtitle: string | null
   memberSinceLabel: string | null
+  /** Active company with no employer blocks — lite Find Drivers shell. */
+  isCarrierAccount: boolean
 }
 
 interface UIState {

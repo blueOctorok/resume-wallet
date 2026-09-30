@@ -3,6 +3,10 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { createNotification } from '@/lib/create-notification'
 import {
+  employerReturnUrl,
+  notifyEmployerCandidateActionComplete,
+} from '@/lib/notify-employer-candidate-action'
+import {
   EV_SHARE_ACK_VERSION,
   EV_SHARE_ACKNOWLEDGMENT,
 } from '@/lib/ev-consent-documents'
@@ -123,12 +127,14 @@ export async function POST(
       .update({ status: 'authorized', updated_at: new Date().toISOString() })
       .eq('id', shareRequestId)
 
-    await createNotification({
-      userId: shareRequest.requesting_user_id,
-      type: 'consent_signed',
-      title: 'Employment verification shared',
-      body: `The driver authorized sharing their Employment Verification proof summary for: ${shareRequest.application_context}.`,
-      data: { shareRequestId, grantId: grant.id },
+    void notifyEmployerCandidateActionComplete(supabase, {
+      kind: 'ev_share_granted',
+      employerUserId: shareRequest.requesting_user_id,
+      companyId: shareRequest.company_id,
+      companyName,
+      candidateUserId: userId,
+      ctaUrl: employerReturnUrl('applicants'),
+      notificationData: { shareRequestId, grantId: grant.id },
     })
 
     console.log(`[EV SHARE RESPOND] Grant ${grant.id} for request ${shareRequestId}`)

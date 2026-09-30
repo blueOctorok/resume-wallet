@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Carrier accounts** (2026-09-30)
+
+Lite employer side for everyone who isn't Pace. Apply `supabase/migrations/112_carrier_account.sql` after 111.
+
+| Piece | What changed |
+|---|---|
+| Discoverability | `users.discoverable_to_employers` (existing non-employers backfilled on). `career_cards` only includes findable drivers. Toggle in the share modal; one-time hub prompt. Talent detail 404s if opted out unless the company already has a relationship. |
+| Door | Homepage "Find drivers" opens the same access form as a shared card (`signup_source` `homepage`). Personal email domains are rejected — no review queue. |
+| Shell | Active company with zero employer blocks is a carrier account: lands on Find Drivers, nav is Find Drivers / Your outreach / Messages. Funnel companies skip company setup (`onboarding_completed` true). |
+| Take the card | PDF + phone/email only after an application, used invite, or request. |
+| Return path | Employer email when a driver messages, applies to a company job, or grants EV. Links use `/go?to=` so sign-in doesn't drop the destination. Chat emails throttled to one per thread per 10 minutes. |
+| Found signal | Hub shows how many carriers viewed this week and up to three states. Stormi gets the same counts, never company names. |
+
+---
+
+## **Carrier Account concept brief (docs only)** (2026-09-29)
+
+No code. Added `docs/provven-carrier-account.html` + `.pdf` — a non-technical brief for leadership. Spine is proof-first: Step 1 the driver's card is built on free proof (EV, license on file, self-reported; MVR/PSP paid and later), Step 2 therefore the employer side can be tiny, Step 3 how a carrier uses it. Proposes that full employer hubs stay Pace-only and every other employer gets a zero-setup "Carrier Account" (find drivers, invite, request, message; MVR ordered per-order only when serious). Roadmap "Interested-Party Funnel" section carries the decision notes and the four build pieces awaiting approval. Driver discoverability opt-in flagged as the must-do-first item: talent search currently exposes every career card, email included.
+
+---
+
 ## **Interested-party funnel — shared card to pending employer** (2026-09-23)
 
 A person who opens a shared career card is treated as a potential employer, not a third portal. Apply `supabase/migrations/111_self_serve_employer_funnel.sql` before this ships — admin company list selects the new columns, and EV share requests 403 until the company has accepted the new terms version.

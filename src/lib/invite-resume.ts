@@ -9,6 +9,8 @@
 export const INVITE_TOKEN_KEY = 'stormchain_invite_token'
 export const AUTH_NEXT_KEY = 'stormchain_auth_next'
 export const ONBOARD_TARGET_KEY = 'storm_onboard_target'
+/** Employer email CTAs land here, then `/` resumes after the sign-in hop. */
+export const RESUME_PATH_KEY = 'stormchain_resume_path'
 
 export function isSafeInternalPath(path: string | null): path is string {
   return Boolean(path && path.startsWith('/') && !path.startsWith('//'))
@@ -49,6 +51,22 @@ export function peekAuthNext(): string | null {
 export function clearAuthNext() {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(AUTH_NEXT_KEY)
+}
+
+export function stashResumePath(path: string) {
+  if (typeof window === 'undefined' || !isSafeInternalPath(path)) return
+  window.localStorage.setItem(RESUME_PATH_KEY, path)
+}
+
+export function peekResumePath(): string | null {
+  if (typeof window === 'undefined') return null
+  const path = window.localStorage.getItem(RESUME_PATH_KEY)
+  return isSafeInternalPath(path) ? path : null
+}
+
+export function clearResumePath() {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(RESUME_PATH_KEY)
 }
 
 /** F5 / toolbar refresh — not an OAuth return. */

@@ -26,6 +26,8 @@ import {
   onboardTokenFromPath,
   peekAuthNext,
   peekInviteToken,
+  peekResumePath,
+  clearResumePath,
 } from '@/lib/invite-resume'
 
 // Shell components — employer vs candidate only.
@@ -233,6 +235,20 @@ const HomeContent = () => {
     router.replace(`/onboard/${pendingToken}`)
   }, [sessionUserId, user, router, searchParams])
 
+  // Employer email CTAs (/go?to=) stash a path before sign-in. Magic links open
+  // a new tab, so this is localStorage, not sessionStorage.
+  const didResumePathRef = useRef(false)
+  useEffect(() => {
+    if (isDocumentReload()) return
+    if (didResumePathRef.current) return
+    if (!sessionUserId && !user) return
+    const path = peekResumePath()
+    if (!path) return
+    didResumePathRef.current = true
+    clearResumePath()
+    router.replace(path)
+  }, [sessionUserId, user, router])
+
   // -------------------------------------------------------
   // Handle onboard redirect (from /onboard/[token] flow)
   // When user logs in via invite, they land here with ?onboard=dot-application
@@ -276,8 +292,11 @@ const HomeContent = () => {
     // 'jobs' intentionally absent — Guided Mode is the unified job-discovery surface.
     // Employer onboard invites for "browse jobs" route through `?guided=1` instead.
     const validOnboardPages: PageType[] = ['dotapp', 'resume', 'storm-resume', 'general-resume', 'developer-resume', 'mvr', 'psp', 'screening-consent', 'portfolio', 'github', 'hunt-desk', 'applications', 'employment-verification']
+    const employerReturnPages: PageType[] = ['talent-search', 'messages', 'applicants']
     const target = onboardAction as PageType
     if (validOnboardPages.includes(target)) {
+      setCurrentPage(target)
+    } else if (userRole === 'employer' && employerReturnPages.includes(target)) {
       setCurrentPage(target)
     }
 

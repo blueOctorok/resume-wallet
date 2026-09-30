@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from './CareerCardModal'
 import { BLOCK_CATEGORIES, getBlocksByCategory } from '@/lib/block-registry'
+import { useUIStore } from '@/stores'
 
 // ============================================================
 // TYPES
@@ -61,6 +62,7 @@ interface TalentSearchPageProps {
 // ============================================================
 
 export default function TalentSearchPage({ sessionUserId, onBack }: TalentSearchPageProps) {
+  const isCarrierAccount = useUIStore((s) => s.employerNavSnapshot?.isCarrierAccount === true)
   const { theme } = useTheme()
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
@@ -218,9 +220,11 @@ export default function TalentSearchPage({ sessionUserId, onBack }: TalentSearch
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Back button */}
-      <div className="mb-6">
-        <BackToHubButton onClick={onBack} />
-      </div>
+      {!isCarrierAccount && (
+        <div className="mb-6">
+          <BackToHubButton onClick={onBack} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -229,7 +233,9 @@ export default function TalentSearchPage({ sessionUserId, onBack }: TalentSearch
             Find Talent
           </h1>
           <p className={`mt-1 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
-            Search for qualified candidates who match your criteria
+            {isCarrierAccount
+              ? 'Invite, request, or message — drivers decide what to share.'
+              : 'Search for qualified candidates who match your criteria'}
           </p>
         </div>
       </div>

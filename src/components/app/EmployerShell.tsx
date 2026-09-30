@@ -69,7 +69,9 @@ const KNOWN_PAGES = new Set([
  * Reads currentPage from UIStore; no page state props needed.
  */
 export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
-  const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()
+  const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId, employerNavSnapshot } =
+    useUIStore()
+  const isCarrierAccount = employerNavSnapshot?.isCarrierAccount === true
 
   const goBack = () => setCurrentPage(null)
 
@@ -78,8 +80,13 @@ export default function EmployerShell({ sessionUserId }: EmployerShellProps) {
   useEffect(() => {
     if (currentPage && !KNOWN_PAGES.has(currentPage)) {
       setCurrentPage(null)
+      return
     }
-  }, [currentPage, setCurrentPage])
+    const hiddenForCarrier = new Set(['post-job', 'team', 'company-profile', 'company-setup'])
+    if (isCarrierAccount && currentPage && hiddenForCarrier.has(currentPage)) {
+      setCurrentPage('talent-search')
+    }
+  }, [currentPage, setCurrentPage, isCarrierAccount])
 
   let page: ReactNode
 

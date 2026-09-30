@@ -172,6 +172,8 @@ export function useHubContext(): HubContext {
     })),
     cardViewsThisWeek: stats?.careerCardViewsThisWeek,
     cardViewsTotal: stats?.careerCardViewsTotal,
+    distinctCompaniesThisWeek: stats?.distinctCompaniesThisWeek,
+    viewerStates: stats?.viewerStates,
     profileCompleteness: stats?.profileCompleteness,
     daysSinceLastVisit,
     incompleteBlocks,

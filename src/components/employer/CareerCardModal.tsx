@@ -60,6 +60,7 @@ interface EmployerTalentExtras {
   hasActiveDriverOwnedPsp?: boolean
   driverOwnedMvrStatus?: string | null
   driverOwnedPspStatus?: string | null
+  hasRelationship?: boolean
 }
 
 interface CareerCardModalProps {
@@ -162,6 +163,7 @@ export default function CareerCardModal({
         hasActiveDriverOwnedPsp: Boolean(data.hasActiveDriverOwnedPsp),
         driverOwnedMvrStatus: data.driverOwnedMvrStatus ?? null,
         driverOwnedPspStatus: data.driverOwnedPspStatus ?? null,
+        hasRelationship: data.hasRelationship === true,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
@@ -649,6 +651,39 @@ export default function CareerCardModal({
                   applicationContext={`Application ${employerExtras.existingApplication.id} (${employerExtras.existingApplication.status})`}
                   isDark={false}
                 />
+              </div>
+            )}
+            {employerExtras.hasRelationship && (
+              <div className="mb-4 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 text-ironside">
+                  Continue in your own process
+                </p>
+                <p className="text-sm text-[#173150]">
+                  {[card.contact?.email, card.contact?.phone].filter(Boolean).join(' · ') ||
+                    'Contact is on the card they shared with you.'}
+                </p>
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void (async () => {
+                        const res = await fetch(`/api/employer/talent/${candidateUserId}/pdf`)
+                        if (!res.ok) return
+                        const blob = await res.blob()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = 'provven-career-card.pdf'
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      })()
+                    }}
+                  >
+                    Download card PDF
+                  </Button>
+                </div>
               </div>
             )}
             <ProjectedCareerCard

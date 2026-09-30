@@ -6,9 +6,11 @@
  * (the actual employer flow in the app).
  */
 
+import { useState } from 'react'
 import { ArrowRight, BadgeCheck, FileText, Gauge, IdCard, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GOLD_CTA, headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
+import EmployerAccessModal from '@/components/employer/EmployerAccessModal'
 
 const POINTS = [
   {
@@ -91,23 +93,11 @@ interface EmployersSectionProps {
 }
 
 /**
- * New employer accounts are provisioned by Provven (mailto) — not self-serve signup.
- * Existing members use Employer login → /sign-in; role routing lands them in EmployerShell.
- *
- * DPPA / FCRA: an employer account can order MVR/PSP, so "reasonable procedures"
- * mean we verify the carrier before anyone can order.
+ * New carriers request access with a work email. Existing members use Employer
+ * login → /sign-in; role routing lands them in EmployerShell.
  */
-// Hiring leads go to Pace ops (not a brand inbox — those aren't set up yet).
-const CONTACT_EMAIL =
-  process.env.NEXT_PUBLIC_EMPLOYER_CONTACT_EMAIL || 's.blaha@pacedrivers.com'
-
-const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-  'Hiring on Provven'
-)}&body=${encodeURIComponent(
-  `Company:\nDOT number:\nYour name and role:\nWhat you're hiring for:\n\nWe'll get back to you to set up your account.`
-)}`
-
 export default function EmployersSection({ isDark, onLogIn }: EmployersSectionProps) {
+  const [showAccess, setShowAccess] = useState(false)
   return (
     <section
       id='employers'
@@ -141,30 +131,20 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
             </ul>
 
             <div className='reveal-item mt-9' style={{ transitionDelay: '260ms' }}>
-              {/* Real <a href=mailto> — window.location mailto often does nothing on WSL/Linux */}
-              <a
-                href={MAILTO}
+              <button
+                type='button'
+                onClick={() => setShowAccess(true)}
                 className={cn(
                   'group inline-flex h-auto items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold transition-all duration-200',
                   GOLD_CTA,
                 )}
               >
-                I&rsquo;m hiring &mdash; talk to us
+                Find drivers
                 <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
-              </a>
+              </button>
               <p className={cn('mt-3 text-sm', mutedText(isDark))}>
-                Email{' '}
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className={cn(
-                    'font-medium underline underline-offset-2',
-                    isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]',
-                  )}
-                >
-                  {CONTACT_EMAIL}
-                </a>
-                {' '}
-                — we verify the carrier before anyone can order an MVR or PSP.
+                Company email only. We approve the account before you can search — no setup, and it
+                doesn&rsquo;t replace the screening tools you already use.
               </p>
               <button
                 type='button'
@@ -186,6 +166,7 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
           </div>
         </div>
       </LandingContainer>
+      {showAccess && <EmployerAccessModal onClose={() => setShowAccess(false)} />}
     </section>
   )
 }

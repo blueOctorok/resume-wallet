@@ -483,6 +483,9 @@ export type EmployerCandidateActionEmailKind =
   | 'psp_consent'
   | 'block_completed'
   | 'invite_completed'
+  | 'candidate_message'
+  | 'application_received'
+  | 'ev_share_granted'
 
 const EMPLOYER_ACTION_EMAIL_COPY: Record<
   EmployerCandidateActionEmailKind,
@@ -537,6 +540,28 @@ const EMPLOYER_ACTION_EMAIL_COPY: Record<
         ? `<strong>${n}</strong> completed <strong>${block}</strong> from your outreach invite for <strong>${c}</strong>.`
         : `<strong>${n}</strong> completed the step from your outreach invite for <strong>${c}</strong>.`,
     ctaLabel: 'View Outreach',
+  },
+  candidate_message: {
+    subject: (n) => `${n} sent you a message`,
+    title: (n) => `${n} sent a message`,
+    preheader: 'A driver replied on Provven',
+    lead: (n) => `<strong>${n}</strong> sent you a message. Open Provven to reply.`,
+    ctaLabel: 'View the message',
+  },
+  application_received: {
+    subject: (n) => `${n} applied`,
+    title: (n) => `${n} applied`,
+    preheader: 'A driver submitted an application',
+    lead: (n, c) => `<strong>${n}</strong> applied to a role at <strong>${c}</strong>.`,
+    ctaLabel: 'View outreach',
+  },
+  ev_share_granted: {
+    subject: (n) => `${n} shared employment verification`,
+    title: () => `Employment verification shared`,
+    preheader: 'A driver authorized their employment verification proof',
+    lead: (n) =>
+      `<strong>${n}</strong> authorized sharing their employment verification proof summary. The proof stays on Provven — this email does not include it.`,
+    ctaLabel: 'View the card',
   },
 }
 

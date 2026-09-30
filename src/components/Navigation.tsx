@@ -506,6 +506,23 @@ export default function Navigation({
       {/* Employer shortcuts — EmployerShell reads currentPage from UIStore */}
       {userRole === 'employer' && (
         <>
+          {employerNavSnapshot?.isCarrierAccount ? (
+            <>
+              <button type='button' onClick={() => goToPage('talent-search')} className={navDropdownItemClass(isDark)}>
+                <Search className='w-4 h-4' />
+                Find Drivers
+              </button>
+              <button type='button' onClick={() => goToPage('applicants')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+                <Users className='w-4 h-4' />
+                Your outreach
+              </button>
+              <button type='button' onClick={() => goToPage('messages')} className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}>
+                <MessageSquare className='w-4 h-4' />
+                Messages
+              </button>
+            </>
+          ) : (
+            <>
           <button type='button' onClick={() => { handleNavigation('hub'); setIsHubDropdownOpen(false) }} className={navDropdownItemClass(isDark)}>
             <LayoutDashboard className='w-4 h-4' />
             Dashboard
@@ -530,6 +547,8 @@ export default function Navigation({
             <Shield className='w-4 h-4' />
             Team
           </button>
+            </>
+          )}
         </>
       )}
     </>

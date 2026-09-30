@@ -153,6 +153,8 @@ interface HubData {
   stats: HubStats
   pipeline: HubPipeline
   memberSince?: string
+  employerBlockCount?: number
+  isCarrierAccount?: boolean
 }
 
 interface EmployerHubProps {
@@ -216,6 +218,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       verified: Boolean(data.company.verified),
       subtitle,
       memberSinceLabel: data.memberSince ? `Member since ${formatDate(data.memberSince)}` : null,
+      isCarrierAccount: data.isCarrierAccount === true,
     })
   }, [data, setEmployerNavSnapshot])
 
@@ -418,6 +421,11 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
     // Company exists but owner hasn't completed onboarding form
     if (data.company && !data.company.onboardingCompleted && data.userRole === 'owner') {
       onNavigate('company-setup')
+      return
+    }
+    // Carrier accounts have nothing on the agency dashboard. Land on search.
+    if (data.isCarrierAccount && data.company?.status === 'active') {
+      onNavigate('talent-search')
     }
   }, [data, loading, onNavigate])
 

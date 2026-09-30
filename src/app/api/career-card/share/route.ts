@@ -26,21 +26,24 @@ export async function GET(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
     const { data: user } = await supabase
       .from('users')
-      .select('share_token, share_settings, share_views_count')
+      .select('share_token, share_settings, share_views_count, discoverable_to_employers, discoverable_prompt_seen_at')
       .eq('id', userId)
       .single()
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    const row = user as Record<string, unknown>
     return NextResponse.json({
       success: true,
-      shareToken: (user as Record<string, unknown>).share_token as string | null ?? null,
-      shareSettings: (user as Record<string, unknown>).share_settings ?? {
+      shareToken: (row.share_token as string | null) ?? null,
+      shareSettings: row.share_settings ?? {
         showContact: false,
         allowConnect: true,
       },
-      shareViewsCount: (user as Record<string, unknown>).share_views_count ?? 0,
+      shareViewsCount: row.share_views_count ?? 0,
+      discoverableToEmployers: row.discoverable_to_employers === true,
+      discoverablePromptSeen: row.discoverable_prompt_seen_at != null,
     })
   } catch (error) {
     console.error('[CAREER CARD SHARE] GET error:', error)
@@ -126,25 +129,42 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { shareSettings } = body
+    const { shareSettings, discoverableToEmployers, markPromptSeen } = body as {
+      shareSettings?: { showContact?: boolean; allowConnect?: boolean }
+      discoverableToEmployers?: boolean
+      markPromptSeen?: boolean
+    }
 
-    if (!shareSettings || typeof shareSettings !== 'object') {
-      return NextResponse.json({ error: 'shareSettings object is required' }, { status: 400 })
+    const patch: Record<string, unknown> = {}
+    if (shareSettings && typeof shareSettings === 'object') {
+      patch.share_settings = shareSettings
+    }
+    if (typeof discoverableToEmployers === 'boolean') {
+      patch.discoverable_to_employers = discoverableToEmployers
+      patch.discoverable_prompt_seen_at = new Date().toISOString()
+    } else if (markPromptSeen === true) {
+      patch.discoverable_prompt_seen_at = new Date().toISOString()
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ share_settings: shareSettings })
-      .eq('id', userId)
+    const { error: updateError } = await supabase.from('users').update(patch).eq('id', userId)
 
     if (updateError) {
       console.error('[CAREER CARD SHARE] Settings update error:', updateError)
       return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, shareSettings })
+    return NextResponse.json({
+      success: true,
+      shareSettings: patch.share_settings ?? shareSettings ?? null,
+      discoverableToEmployers:
+        typeof patch.discoverable_to_employers === 'boolean' ? patch.discoverable_to_employers : undefined,
+    })
   } catch (error) {
     console.error('[CAREER CARD SHARE] PATCH error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

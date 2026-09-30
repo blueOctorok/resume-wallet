@@ -125,3 +125,49 @@ export async function companyCanRequestEvShare(
 ): Promise<boolean> {
   return companyHasEmployerBlock(supabase, companyId, 'employer-employment-verification')
 }
+
+/** How many employer product blocks this company has installed. Zero = carrier account. */
+export async function countEmployerBlocks(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from('employer_hub_blocks')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+  return count ?? 0
+}
+
+/**
+ * A relationship is an application, a used invite, or any non-cancelled request.
+ * It keeps a driver visible to a company after they opt out of search.
+ */
+export async function hasEmployerCandidateRelationship(
+  supabase: SupabaseClient,
+  companyId: string,
+  candidateUserId: string,
+): Promise<boolean> {
+  const { count: requestCount } = await supabase
+    .from('candidate_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('candidate_user_id', candidateUserId)
+    .neq('status', 'cancelled')
+  if ((requestCount ?? 0) > 0) return true
+
+  const { count: inviteCount } = await supabase
+    .from('application_invites')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('used_by_user_id', candidateUserId)
+  if ((inviteCount ?? 0) > 0) return true
+
+  const { data: application } = await supabase
+    .from('applications')
+    .select('id, job_postings!inner(company_id)')
+    .eq('applicant_user_id', candidateUserId)
+    .eq('job_postings.company_id', companyId)
+    .limit(1)
+    .maybeSingle()
+  return Boolean(application)
+}

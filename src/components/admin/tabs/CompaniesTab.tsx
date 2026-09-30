@@ -288,9 +288,9 @@ export default function CompaniesTab({
                   }`}>
                     {company.status}
                   </span>
-                  {company.signupSource === 'card_funnel' && (
+                  {(company.signupSource === 'card_funnel' || company.signupSource === 'homepage') && (
                     <span className='px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300'>
-                      Card lead
+                      {company.signupSource === 'homepage' ? 'Homepage lead' : 'Card lead'}
                     </span>
                   )}
                   {company.status === 'pending' && (() => {

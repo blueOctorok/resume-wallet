@@ -151,6 +151,10 @@ export interface DriverHubStats {
   careerCardViewsThisWeek: number
   /** All-time employer opens (talent search / pipeline) — Stormi context */
   careerCardViewsTotal?: number
+  /** Distinct companies whose members opened the card this week. Aggregate only. */
+  distinctCompaniesThisWeek?: number
+  /** Up to three company states from those views. Never a company name. */
+  viewerStates?: string[]
   /** At least one complete screening_consent_bundles row (any company) */
   hasScreeningConsentBundle?: boolean
   /** Unsuperseded attestations rows (Verified by Storm credentials) */

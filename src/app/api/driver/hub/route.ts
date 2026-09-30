@@ -484,7 +484,7 @@ export async function GET(request: NextRequest) {
     const profileCompleteness = calculateProfileCompleteness(profile, resumes, dotApplications, mvrRecords, pspRecords)
 
     const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString()
-    const [{ count: cardViewsWeek }, { count: cardViewsTotal }] = await Promise.all([
+    const [{ count: cardViewsWeek }, { count: cardViewsTotal }, { data: weekViewRows }] = await Promise.all([
       supabase
         .from('career_card_views')
         .select('*', { count: 'exact', head: true })
@@ -494,7 +494,40 @@ export async function GET(request: NextRequest) {
         .from('career_card_views')
         .select('*', { count: 'exact', head: true })
         .eq('candidate_user_id', user.id),
+      supabase
+        .from('career_card_views')
+        .select('viewer_user_id')
+        .eq('candidate_user_id', user.id)
+        .gte('viewed_at', weekAgoIso)
+        .not('viewer_user_id', 'is', null),
     ])
+
+    const viewerIds = [
+      ...new Set(
+        (weekViewRows ?? [])
+          .map((row) => row.viewer_user_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ]
+    let distinctCompaniesThisWeek = 0
+    let viewerStates: string[] = []
+    if (viewerIds.length > 0) {
+      const { data: memberRows } = await supabase
+        .from('company_members')
+        .select('company_id, companies(address_state)')
+        .in('user_id', viewerIds)
+        .eq('is_active', true)
+      const companyIds = new Set<string>()
+      const states = new Set<string>()
+      for (const row of memberRows ?? []) {
+        if (row.company_id) companyIds.add(row.company_id as string)
+        const joined = row.companies as { address_state?: string | null } | { address_state?: string | null }[] | null
+        const state = Array.isArray(joined) ? joined[0]?.address_state : joined?.address_state
+        if (state) states.add(state)
+      }
+      distinctCompaniesThisWeek = companyIds.size
+      viewerStates = [...states].slice(0, 3)
+    }
 
     // Calculate total spent from transactions (more reliable than payments table)
     const totalSpent = transactions
@@ -529,6 +562,8 @@ export async function GET(request: NextRequest) {
       totalTransactions: transactions.length,
       careerCardViewsThisWeek: cardViewsWeek ?? 0,
       careerCardViewsTotal: cardViewsTotal ?? 0,
+      distinctCompaniesThisWeek,
+      viewerStates,
       hasScreeningConsentBundle,
       attestationCount: attestationCount ?? 0,
     }

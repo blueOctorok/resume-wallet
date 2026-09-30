@@ -10,6 +10,7 @@ import {
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import { resolveCompanyDqForCandidate } from '@/lib/dq-file-load'
 import { stripTier3FromFormData } from '@/lib/employer-pii'
+import { hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
 import type { MvrData, PspData } from '@/types/career-card'
 
 /**
@@ -69,11 +70,16 @@ export async function GET(
 
     const { data: candidate } = await supabase
       .from('users')
-      .select('id, created_at, share_token, share_settings')
+      .select('id, created_at, share_token, share_settings, discoverable_to_employers')
       .eq('id', userId)
       .single()
 
     if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+    }
+
+    const related = await hasEmployerCandidateRelationship(supabase, companyId, userId)
+    if (candidate.discoverable_to_employers !== true && !related) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
@@ -86,6 +92,11 @@ export async function GET(
       shareSettings,
       contactMode: 'employer',
     })
+
+    // Contact leaves Provven only after the driver has a relationship with this company.
+    if (!related) {
+      card.contact = undefined
+    }
 
     let companyMvrData: MvrData | null = null
     const { data: companyMvr } = await supabase
@@ -274,6 +285,7 @@ export async function GET(
         companyWalletAddress: companyWalletRow?.wallet_address ?? null,
       },
       card,
+      hasRelationship: related,
       installedBlockTypes,
       installedEmployerBlocks,
       pendingRequests: pendingRequests || [],

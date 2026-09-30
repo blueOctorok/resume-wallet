@@ -5,12 +5,13 @@ import { useEffect, useCallback, useRef } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore } from '@/stores'
+import { useAuthStore, useUIStore, useDriverHubStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
 import Button from '@/components/ui/Button'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import BuildBoard from '@/components/hub/BuildBoard'
+import DiscoverabilityPrompt from '@/components/hub/DiscoverabilityPrompt'
 
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
 function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
@@ -37,6 +38,31 @@ function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
         </Button>
       </div>
     </div>
+  )
+}
+
+/** Aggregate proof that approved carriers are looking. Never names a company. */
+function FoundSignal({ isDark }: { isDark: boolean }) {
+  const stats = useDriverHubStore((s) => s.stats)
+  const loading = useDriverHubStore((s) => s.isLoading)
+  if (loading || !stats) return null
+  const companies = stats.distinctCompaniesThisWeek ?? 0
+  const states = stats.viewerStates ?? []
+  const copy =
+    companies > 0
+      ? `${companies} carrier${companies === 1 ? '' : 's'} viewed your card this week${
+          states.length ? ` · ${states.join(', ')}` : ''
+        }`
+      : 'No views yet — carriers search by state and CDL class. Add yours.'
+  return (
+    <p
+      className={cn(
+        'rounded-xl border px-4 py-3 text-sm',
+        isDark ? 'border-gray-700 bg-gray-800/60 text-gray-200' : 'border-slate-200 bg-white text-slate-700',
+      )}
+    >
+      {copy}
+    </p>
   )
 }
 
@@ -107,6 +133,8 @@ export default function CandidateHub() {
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>
       <ReturnToApplyBanner isDark={isDark} />
+      <DiscoverabilityPrompt isDark={isDark} />
+      <FoundSignal isDark={isDark} />
       <BuildBoard />
     </div>
   )

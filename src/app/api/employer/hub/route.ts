@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { countEmployerBlocks } from '@/lib/employer-company-access'
 
 /**
  * GET /api/employer/hub
@@ -238,6 +239,10 @@ export async function GET(request: NextRequest) {
       a.status === 'archived' && new Date(a.applied_at) >= thisMonth
     ).length
 
+    const employerBlockCount = await countEmployerBlocks(supabase, company.id)
+    const companyStatus = company.status ?? 'active'
+    const isCarrierAccount = companyStatus === 'active' && employerBlockCount === 0
+
     const stats = {
       activeJobs: jobPostings.filter(j => j.isActive).length,
       totalJobs: jobPostings.length,
@@ -271,6 +276,8 @@ export async function GET(request: NextRequest) {
         originShareToken: company.origin_share_token ?? null,
         signupSource: company.signup_source ?? 'admin',
       },
+      employerBlockCount,
+      isCarrierAccount,
       userRole,
       jobPostings,
       applicants,

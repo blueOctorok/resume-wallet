@@ -10,6 +10,9 @@ export type EmployerCandidateActionKind =
   | 'psp_consent'
   | 'block_completed'
   | 'invite_completed'
+  | 'candidate_message'
+  | 'application_received'
+  | 'ev_share_granted'
 
 export interface NotifyEmployerCandidateActionParams {
   kind: EmployerCandidateActionKind
@@ -23,6 +26,25 @@ export interface NotifyEmployerCandidateActionParams {
   notificationTitle?: string
   notificationBody?: string
   notificationData?: Record<string, unknown>
+  /** Skip the email (in-app notification still sends). Used to throttle chat bursts. */
+  skipEmail?: boolean
+  /** Caller already wrote the in-app notification (message threads do). */
+  skipInApp?: boolean
+}
+
+const messageEmailAt = new Map<string, number>()
+
+/** One email per thread per 10 minutes. In-app notifications are not throttled. */
+export function shouldEmailCandidateMessage(threadId: string): boolean {
+  const now = Date.now()
+  const last = messageEmailAt.get(threadId) ?? 0
+  if (now - last < 10 * 60 * 1000) return false
+  messageEmailAt.set(threadId, now)
+  return true
+}
+
+export function employerReturnUrl(page: 'talent-search' | 'messages' | 'applicants'): string {
+  return `${appBase()}/go?to=${encodeURIComponent(`/?onboard=${page}`)}`
 }
 
 async function resolveEmployerUserId(
@@ -106,7 +128,7 @@ export async function notifyEmployerCandidateActionComplete(
     const title = params.notificationTitle ?? defaults.title
     const body = params.notificationBody ?? defaults.body
 
-    if (empUser?.email?.trim()) {
+    if (empUser?.email?.trim() && !params.skipEmail) {
       await sendEmployerCandidateActionCompleteEmail({
         kind: params.kind,
         employerEmail: empUser.email.trim(),
@@ -123,19 +145,21 @@ export async function notifyEmployerCandidateActionComplete(
       })
     }
 
-    await createNotification({
-      userId: notifyUserId,
-      type: 'consent_signed',
-      title,
-      body,
-      data: {
-        kind: params.kind,
-        candidateUserId: params.candidateUserId,
-        companyId: params.companyId ?? undefined,
-        ...params.notificationData,
-      },
-      actionUrl: ctaUrl,
-    })
+    if (!params.skipInApp) {
+      await createNotification({
+        userId: notifyUserId,
+        type: 'consent_signed',
+        title,
+        body,
+        data: {
+          kind: params.kind,
+          candidateUserId: params.candidateUserId,
+          companyId: params.companyId ?? undefined,
+          ...params.notificationData,
+        },
+        actionUrl: ctaUrl,
+      })
+    }
   } catch (err) {
     console.warn('[EMPLOYER ACTION NOTIFY] Non-fatal error:', err)
   }
@@ -167,6 +191,21 @@ function defaultNotificationCopy(
       return {
         title: 'Invite completed',
         body: `${candidateName} finished the requested step from your outreach invite.`,
+      }
+    case 'candidate_message':
+      return {
+        title: `${candidateName} sent a message`,
+        body: `${candidateName} replied. Open Provven to continue.`,
+      }
+    case 'application_received':
+      return {
+        title: `${candidateName} applied`,
+        body: `${candidateName} submitted an application for ${companyName}.`,
+      }
+    case 'ev_share_granted':
+      return {
+        title: `${candidateName} shared employment verification`,
+        body: `${candidateName} authorized sharing their employment verification proof.`,
       }
     case 'block_completed':
     default:

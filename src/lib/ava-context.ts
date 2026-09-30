@@ -36,6 +36,8 @@ export interface HubContext {
   /** Employer talent/pipeline opens of this candidate's career card */
   cardViewsThisWeek?: number
   cardViewsTotal?: number
+  distinctCompaniesThisWeek?: number
+  viewerStates?: string[]
   /** Driver hub API completeness (0–100) */
   profileCompleteness?: number
   /**
@@ -189,6 +191,12 @@ export function buildStormiSystemPrompt(
     parts.push('\n## Engagement & profile signals (use to motivate — do not fabricate numbers)')
     if (hubContext?.cardViewsThisWeek !== undefined) {
       parts.push(`- **Career card views (last 7 days):** ${hubContext.cardViewsThisWeek}`)
+    }
+    if (hubContext?.distinctCompaniesThisWeek !== undefined) {
+      const states = hubContext.viewerStates?.length ? ` States: ${hubContext.viewerStates.join(', ')}.` : ''
+      parts.push(
+        `- **Carriers who viewed this week (count only, never name them):** ${hubContext.distinctCompaniesThisWeek}.${states} Use this to nudge the next empty block. Do not invent company names.`,
+      )
     }
     if (hubContext?.cardViewsTotal !== undefined) {
       parts.push(`- **Career card views (all time):** ${hubContext.cardViewsTotal}`)

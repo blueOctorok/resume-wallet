@@ -4,6 +4,10 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { getCdlData, getDevGithub, getDevPortfolio } from '@/lib/block-data'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import {
+  employerReturnUrl,
+  notifyEmployerCandidateActionComplete,
+} from '@/lib/notify-employer-candidate-action'
 
 export async function POST(request: NextRequest) {
   try {
@@ -295,6 +299,29 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single()
+
+    if (!appError && jobPostingId) {
+      const { data: postedJob } = await adminSupabaseForBlocks
+        .from('job_postings')
+        .select('company_id, companies(company_name)')
+        .eq('id', jobPostingId)
+        .maybeSingle()
+      const postedCompanyId = postedJob?.company_id as string | null | undefined
+      const postedJoin = postedJob?.companies as { company_name?: string } | { company_name?: string }[] | null
+      const postedCompanyName = Array.isArray(postedJoin)
+        ? postedJoin[0]?.company_name
+        : postedJoin?.company_name
+      if (postedCompanyId) {
+        void notifyEmployerCandidateActionComplete(adminSupabaseForBlocks, {
+          kind: 'application_received',
+          companyId: postedCompanyId,
+          companyName: postedCompanyName || employerName || 'Your company',
+          candidateUserId: user.id,
+          candidateDisplayName: applicantName,
+          ctaUrl: employerReturnUrl('applicants'),
+        })
+      }
+    }
 
     if (appError) {
       console.error('[APPLICATION SUBMIT] Error creating application:', appError)

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import {
+  employerReturnUrl,
+  notifyEmployerCandidateActionComplete,
+  shouldEmailCandidateMessage,
+} from '@/lib/notify-employer-candidate-action'
 
 /**
  * GET /api/messages/[threadId]
@@ -244,6 +249,34 @@ export async function POST(
       data: { threadId, senderId: user.id, senderName },
       action_url: null, // client navigates via data.threadId
     })
+
+    // Candidate → employer: email so a carrier can work from their inbox.
+    if (user.role !== 'employer') {
+      const { data: membership } = await supabase
+        .from('company_members')
+        .select('company_id, companies(company_name)')
+        .eq('user_id', otherId)
+        .eq('is_active', true)
+        .maybeSingle()
+      const companyId = membership?.company_id as string | undefined
+      const companyJoin = membership?.companies as { company_name?: string } | { company_name?: string }[] | null
+      const companyName = Array.isArray(companyJoin)
+        ? companyJoin[0]?.company_name
+        : companyJoin?.company_name
+      if (companyId) {
+        void notifyEmployerCandidateActionComplete(supabase, {
+          kind: 'candidate_message',
+          employerUserId: otherId,
+          companyId,
+          companyName: companyName || 'Your company',
+          candidateUserId: user.id,
+          candidateDisplayName: senderName,
+          ctaUrl: employerReturnUrl('messages'),
+          skipEmail: !shouldEmailCandidateMessage(threadId),
+          skipInApp: true,
+        })
+      }
+    }
 
     return NextResponse.json({
       message: {

@@ -63,6 +63,8 @@ export default function CareerCardShareModal({
   const isDark = isDarkTheme(theme)
 
   const [shareToken, setShareToken] = useState<string | null>(null)
+  const [discoverable, setDiscoverable] = useState(false)
+  const [savingDiscoverable, setSavingDiscoverable] = useState(false)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [copiedField, setCopiedField] = useState<'link' | 'post' | null>(null)
@@ -75,6 +77,7 @@ export default function CareerCardShareModal({
       if (res.ok) {
         const data = await res.json()
         setShareToken(data.shareToken ?? null)
+        setDiscoverable(data.discoverableToEmployers === true)
       }
     } catch {
       /* ignore */
@@ -91,6 +94,23 @@ export default function CareerCardShareModal({
 
   const fullUrl = shareToken ? profileUrlFromToken(shareToken) : ''
   const caption = fullUrl ? linkedInCaption(fullUrl) : ''
+
+  const setFindable = async (next: boolean) => {
+    setSavingDiscoverable(true)
+    setDiscoverable(next)
+    try {
+      const res = await fetch(SHARE_API, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discoverableToEmployers: next }),
+      })
+      if (!res.ok) setDiscoverable(!next)
+    } catch {
+      setDiscoverable(!next)
+    } finally {
+      setSavingDiscoverable(false)
+    }
+  }
 
   const generateToken = async () => {
     if (!sessionUserId) return
@@ -245,6 +265,31 @@ export default function CareerCardShareModal({
                     <Copy className='h-4 w-4' aria-hidden />
                   )}
                   {copiedField === 'post' ? 'Copied' : 'Copy post'}
+                </Button>
+              </div>
+
+              <div
+                className={cn(
+                  'mt-4 flex items-start justify-between gap-3 border-t pt-3',
+                  isDark ? 'border-gray-700/80' : 'border-slate-200',
+                )}
+              >
+                <div>
+                  <p className={cn('text-xs font-semibold', isDark ? 'text-gray-200' : 'text-slate-800')}>
+                    Let approved carriers find my card
+                  </p>
+                  <p className={cn('mt-0.5 text-xs', isDark ? 'text-gray-400' : 'text-slate-500')}>
+                    Off means you only show up for carriers you already applied to or accepted.
+                  </p>
+                </div>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant={discoverable ? 'primary' : 'secondary'}
+                  isLoading={savingDiscoverable}
+                  onClick={() => void setFindable(!discoverable)}
+                >
+                  {discoverable ? 'On' : 'Off'}
                 </Button>
               </div>
 

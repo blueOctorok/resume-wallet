@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Provven — Lead with Proof. Keep It Simple.</title>
+<style>
+  /* Print-first stylesheet. Brand palette: Midnight #173150, Hot Embers #f15a2b,
+     Ironside #939598, Denim #00608b, Dark Amber #F28A0F, Retro Teal #3F8A8C */
+  @page { size: Letter; margin: 0.55in 0.6in; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #1f2937; font-size: 10.8px; line-height: 1.5; }
+  .page-break { break-before: page; }
+  .avoid-break { break-inside: avoid; }
+
+  .doc-header { background: #173150; color: #fff; padding: 24px 28px 20px; border-radius: 8px; margin-bottom: 18px; }
+  .doc-header .brand { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #f15a2b; font-weight: 700; margin-bottom: 6px; }
+  .doc-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; line-height: 1.25; }
+  .doc-header p { font-size: 11.5px; color: #cbd5e1; max-width: 660px; }
+  .doc-header .meta { margin-top: 12px; font-size: 9px; color: #94a3b8; }
+
+  h2 { font-size: 14.5px; color: #173150; font-weight: 700; margin: 20px 0 5px; padding-bottom: 4px; border-bottom: 2px solid #f15a2b; }
+  .section-sub { font-size: 10.2px; color: #6b7280; margin-bottom: 9px; }
+  p + p { margin-top: 6px; }
+
+  .callout { margin-top: 10px; border-left: 4px solid #f15a2b; background: rgba(241,90,43,0.06); border-radius: 0 6px 6px 0; padding: 9px 13px; font-size: 10.4px; }
+  .callout strong { color: #173150; }
+  .callout.blue { border-left-color: #00608b; background: rgba(0,96,139,0.06); }
+  .callout.amber { border-left-color: #F28A0F; background: rgba(242,138,15,0.07); }
+  .callout.teal { border-left-color: #3F8A8C; background: rgba(63,138,140,0.07); }
+
+  .cols-2 { display: flex; gap: 12px; margin-top: 8px; }
+  .cols-2 > div { flex: 1; }
+  .card { border: 1px solid #d8dee6; border-radius: 7px; overflow: hidden; background: #fff; }
+  .card .head { padding: 8px 11px; font-weight: 700; font-size: 11px; color: #173150; background: #f1f4f8; border-bottom: 1px solid #d8dee6; display: flex; justify-content: space-between; align-items: center; }
+  .card.highlight { border-color: #f15a2b; }
+  .card.highlight .head { background: rgba(241,90,43,0.08); }
+  .card .body { padding: 9px 11px; font-size: 10.2px; }
+  .card .body ul { padding-left: 15px; }
+  .card .body li + li { margin-top: 3px; }
+  .tag { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 99px; background: #e5e9ef; color: #55606e; }
+  .tag.hot { background: #f15a2b; color: #fff; }
+  .tag.blue { background: #00608b; color: #fff; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
+  th { text-align: left; background: #173150; color: #fff; padding: 6px 9px; font-weight: 600; font-size: 9.6px; }
+  td { padding: 6px 9px; border-bottom: 1px solid #e5e9ef; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  td.k { font-weight: 700; color: #173150; width: 22%; }
+  .free { color: #3F8A8C; font-weight: 700; }
+  .paid { color: #F28A0F; font-weight: 700; }
+
+  /* Journey steps */
+  .steps { display: flex; gap: 6px; margin-top: 10px; }
+  .step { flex: 1; border: 1px solid #d8dee6; border-radius: 7px; padding: 8px 9px; background: #fff; position: relative; }
+  .step .n { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #173150; color: #fff; font-size: 9.5px; font-weight: 700; text-align: center; line-height: 18px; margin-bottom: 5px; }
+  .step.paid .n { background: #F28A0F; }
+  .step h4 { font-size: 10.2px; color: #173150; margin-bottom: 3px; }
+  .step p { font-size: 9.4px; color: #4b5563; }
+
+  /* Ladder */
+  .ladder { margin-top: 8px; }
+  .rung { display: flex; gap: 10px; align-items: flex-start; padding: 7px 10px; border: 1px solid #d8dee6; border-radius: 6px; background: #fff; }
+  .rung + .rung { margin-top: 5px; }
+  .rung .lvl { min-width: 96px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding-top: 2px; }
+  .rung.strong .lvl { color: #3F8A8C; }
+  .rung.medium .lvl { color: #00608b; }
+  .rung.base .lvl { color: #939598; }
+  .rung.later .lvl { color: #F28A0F; }
+  .rung .txt { font-size: 10px; }
+  .rung .txt strong { color: #173150; }
+
+  ul.plain { padding-left: 16px; margin-top: 6px; }
+  ul.plain li + li { margin-top: 4px; }
+
+  .footer { margin-top: 22px; padding-top: 8px; border-top: 1px solid #d8dee6; font-size: 8.8px; color: #6b7280; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="brand">Provven · Concept Brief</div>
+  <h1>Lead with proof. Keep it simple.<br/>For drivers and employers.</h1>
+  <p>The driver's card is finished and trustworthy before anyone finds it. Because of that, the employer side can be almost nothing — a place to look, a way to say "I'm interested," and no to-do list.</p>
+  <div class="meta">Prepared September 29, 2026 · Internal · Companion to "Provven Access Model" brief</div>
+</div>
+
+<h2>The idea in one paragraph</h2>
+<p>Provven's job is to give a driver the strongest, most trustworthy resume possible <strong>before</strong> any employer ever sees it — built from proof that costs the driver nothing. If we do that well, everything else gets simpler. Employers don't need to build anything with us; they show up, find a driver, and reach out. Paid steps like a driving-record check happen later, ordered by the employer, only when both sides are serious. We handle what matters at each step and nothing more.</p>
+
+<div class="callout">
+  <strong>Two rules for every decision in this brief:</strong> lead with the strongest free proof, and never ask a driver or an employer to do something that isn't needed yet.
+</div>
+
+<h2>Step 1 — The driver's card is built on free proof</h2>
+<p class="section-sub">Strongest first. Paid proof waits until an employer is serious.</p>
+
+<div class="ladder">
+  <div class="rung strong">
+    <div class="lvl">Strong · Free</div>
+    <div class="txt"><strong>Verified employment.</strong> Provven confirms past employers directly and stamps the card. Driver-owned, shown to any employer the driver chooses. This is the opening move — it's what makes a stranger trust the card.</div>
+  </div>
+  <div class="rung medium">
+    <div class="lvl">Good · Free</div>
+    <div class="txt"><strong>Driver's license on file (coming).</strong> Driver photographs their CDL; we read it and stamp the card "license on file." Honest label: a document the driver uploaded, one rung below Verified. <em>Option:</em> run it through a state-record license check (about a dollar each) and it becomes true third-party proof — the cheapest real verification in trucking.</div>
+  </div>
+  <div class="rung base">
+    <div class="lvl">Baseline · Free</div>
+    <div class="txt"><strong>The card itself.</strong> Experience, endorsements, equipment, references, DOT application — everything the driver enters, cleanly presented. Never labeled "verified."</div>
+  </div>
+  <div class="rung later">
+    <div class="lvl">Strong · Paid · Later</div>
+    <div class="txt"><strong>Driving record (MVR) and PSP.</strong> Ordered by the employer, with the driver's consent, when they're serious about one driver. Paid per order, right from the card. Every hiring company runs its own driving-record check anyway — the regulations require it — so this is never a cost of being found. A driver may buy their own to strengthen the card; we assume that's rare. <strong>Never shown publicly.</strong></div>
+  </div>
+</div>
+
+<div class="callout teal">
+  <strong>What the driver has to do:</strong> fill in the card, confirm past employers, snap a photo of their license. That's the whole to-do list. No payments, no paperwork they don't need yet.
+</div>
+
+<h2>Step 2 — Because the card is strong, the employer side can be tiny</h2>
+<p class="section-sub">Same login, same driver cards. Very different footprint.</p>
+<div class="cols-2">
+  <div class="card highlight">
+    <div class="head">Carrier Account <span class="tag hot">Everyone else</span></div>
+    <div class="body">
+      <ul>
+        <li><strong>Gets in:</strong> name, company, work email, agree to terms. Approved after a quick check.</li>
+        <li><strong>Setup:</strong> none. No company profile, no tools to install, no team to manage.</li>
+        <li><strong>Sees:</strong> Find Drivers, the driver's card, their own outreach and messages.</li>
+        <li><strong>Can do:</strong> show interest / invite to apply, request more from a driver, message.</li>
+        <li><strong>Pays:</strong> nothing to start. Per order if they ever run a screening.</li>
+        <li><strong>Leaves:</strong> whenever. Comes back through a link in their email — no password.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <div class="head">Hub <span class="tag blue">Pace · By invitation</span></div>
+    <div class="body">
+      <ul>
+        <li><strong>Gets in:</strong> we set it up together.</li>
+        <li><strong>Setup:</strong> full — company profile, team, screening tools, job postings.</li>
+        <li><strong>Sees:</strong> dashboard, DQ file monitor, screening orders, applicants, jobs, team.</li>
+        <li><strong>Can do:</strong> everything a Carrier Account can, plus order screenings in volume and run DQ files.</li>
+        <li><strong>Pays:</strong> on volume.</li>
+        <li><strong>Unchanged</strong> by this proposal.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="callout blue">
+  <strong>Why we stop offering hubs to everyone:</strong> they're a hard sell before a carrier has found a single driver, they have many moving pieces, and drivers were ending up in employer accounts by mistake. Pace's hub works because we built it for them. If another carrier ever wants one, that's a human conversation — and we want it to be rare.
+</div>
+
+<div class="page-break"></div>
+
+<h2>Step 3 — How a carrier actually uses it</h2>
+<p class="section-sub">Come in cold, look, act, leave, come back when something happens. Paid step is last and optional.</p>
+<div class="steps">
+  <div class="step"><div class="n">1</div><h4>Discover</h4><p>Clicks a driver's shared card link, or hits "Find drivers" on our homepage.</p></div>
+  <div class="step"><div class="n">2</div><h4>Quick sign-up</h4><p>Name, company, work email, agree to terms. Approved after a quick check.</p></div>
+  <div class="step"><div class="n">3</div><h4>Find drivers</h4><p>Lands straight on the search. Filters by state, CDL class, endorsements, experience.</p></div>
+  <div class="step"><div class="n">4</div><h4>Act</h4><p>Show interest, invite to apply, request a missing piece, or message the driver.</p></div>
+  <div class="step"><div class="n">5</div><h4>Driver says yes</h4><p>Verified employment and the full card unlock for that carrier.</p></div>
+  <div class="step paid"><div class="n">6</div><h4>Get serious</h4><p>Order the MVR with consent, per order, from the card. Optional.</p></div>
+</div>
+
+<div class="callout teal">
+  <strong>Why "come and go" works:</strong> email is the return path. When a driver accepts an invite or replies, the carrier gets an email with a link that drops them right back on that driver. They don't have to remember we exist — we remind them at the exact moment there's a reason to come back.
+</div>
+
+<h2>Guardrails we keep</h2>
+<table>
+  <tr><td class="k">Drivers stay in control</td><td>Drivers choose whether they can be found by employers, and what shows on their card. No driver is listed without opting in.</td></tr>
+  <tr><td class="k">No driver-turned-employer</td><td>An email already registered as a driver can't open a Carrier Account. Personal email domains (Gmail, Yahoo…) go to manual review; company domains are approved quickly.</td></tr>
+  <tr><td class="k">Screenings stay private</td><td>MVR and PSP results are never on a public link and never visible to a carrier who hasn't ordered them with consent.</td></tr>
+  <tr><td class="k">Honest labels</td><td>Only facts we confirmed with a third party wear "Verified." Uploaded documents say "on file." Self-entered information is never called verified.</td></tr>
+  <tr><td class="k">Not a directory</td><td>We don't advertise or sell a "database of drivers." Carriers find individuals and reach out one at a time; drivers decide who sees what.</td></tr>
+  <tr><td class="k">Pace untouched</td><td>Nothing about the Pace hub changes.</td></tr>
+</table>
+
+<h2>What it takes</h2>
+<table>
+  <tr><th>Piece</th><th>What it is</th><th>Size</th></tr>
+  <tr><td class="k">Driver opt-in</td><td>A "Let employers find me" switch for drivers, with control over what shows. Existing drivers get a one-time prompt.</td><td>Small–Medium</td></tr>
+  <tr><td class="k">License on file block</td><td>Already in the works. Optional state-record check to be priced.</td><td>In progress</td></tr>
+  <tr><td class="k">Homepage door</td><td>Replace "email us" with the same quick sign-up form the shared-card link already uses.</td><td>Small</td></tr>
+  <tr><td class="k">Carrier Account view</td><td>Approved companies without hub tools land on Find Drivers with a short menu. Hub screens never appear for them.</td><td>Medium</td></tr>
+  <tr><td class="k">Email return path</td><td>Notify the carrier by email when a driver accepts, replies, or shares — with a link straight back.</td><td>Small</td></tr>
+</table>
+<p style="margin-top:8px;">Most of this reuses what's already built for the shared-card sign-up. The largest new piece is the driver opt-in, and it's the one that matters most.</p>
+
+<h2>Decisions we'd like from you</h2>
+<ul class="plain">
+  <li><strong>License check.</strong> Worth eating roughly a dollar per driver to turn "license on file" into true verification on the free card?</li>
+  <li><strong>Pricing.</strong> Free to look and reach out, pay only per screening order — or a modest fee for Carrier Accounts once they've made a few contacts?</li>
+  <li><strong>Existing drivers.</strong> When we add the "let employers find me" switch, should current drivers default to on (and be told) or off (and be asked)?</li>
+  <li><strong>Counsel review.</strong> Carrier terms language and the public "one of N drivers in your state" line still need a legal pass (already flagged).</li>
+</ul>
+
+<div class="footer">
+  <span>Provven · Concept Brief · Lead with proof, keep it simple</span>
+  <span>Internal — not for distribution to carriers or drivers</span>
+</div>
+
+</body>
+</html>

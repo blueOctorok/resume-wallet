@@ -13,7 +13,8 @@ import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
  * Open form on a shared career card.
  *   - Work-email domain → company created as pending, terms recorded, magic
  *     link sent. Admin still approves before talent search unlocks.
- *   - Personal email domain → review queue only. No company row yet.
+ *   - Personal email domain → rejected. Drivers must not browse other drivers.
+ *   - shareToken optional: homepage door omits it (signup_source homepage).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const name = String(body.name ?? '').trim()
     const companyName = String(body.companyName ?? '').trim()
     const email = String(body.email ?? '').trim().toLowerCase()
-    const shareToken = String(body.shareToken ?? '').trim()
+    const shareToken = String(body.shareToken ?? '').trim() || null
     const termsAccepted = body.termsAccepted === true
 
     if (!name || !companyName || !email || !email.includes('@')) {
@@ -77,7 +78,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (isPublicEmailDomain(domain)) {
-      return await queueManualReview(supabase, { name, companyName, email, shareToken })
+      return NextResponse.json(
+        {
+          error:
+            'Use your company email address — personal addresses (Gmail, Yahoo, Outlook.com…) can’t open a carrier account.',
+        },
+        { status: 400 },
+      )
     }
 
     const { data: existingOwner } = await supabase
@@ -103,9 +110,9 @@ export async function POST(request: NextRequest) {
         designated_owner_email: email,
         allowed_email_domains: domain ? [domain] : [],
         status: 'pending',
-        onboarding_completed: false,
-        signup_source: 'card_funnel',
-        origin_share_token: shareToken || null,
+        onboarding_completed: true,
+        signup_source: shareToken ? 'card_funnel' : 'homepage',
+        origin_share_token: shareToken,
         email,
       })
       .select('id')
@@ -141,65 +148,22 @@ export async function POST(request: NextRequest) {
     await sendNewCompanyNotification({
       companyName,
       ownerEmail: email,
-      ownerWallet: 'card-funnel',
+      ownerWallet: shareToken ? 'card-funnel' : 'homepage',
     })
 
     return NextResponse.json({
       success: true,
       outcome: 'pending_created',
-      message: otpError
-        ? 'Your company is pending review. Sign in at Provven with this email — you can view the card you came from while we approve full access.'
-        : 'Check your email for a sign-in link. Your company is pending review — you can view the card you came from as soon as you sign in.',
+      message: shareToken
+        ? otpError
+          ? 'Your company is pending review. Sign in at Provven with this email — you can view the card you came from while we approve full access.'
+          : 'Check your email for a sign-in link. Your company is pending review — you can view the card you came from as soon as you sign in.'
+        : otpError
+          ? 'Your company is pending review. Sign in at Provven with this email once we approve access.'
+          : 'Check your email for a sign-in link. Your company is pending a quick review — Find Drivers opens as soon as we approve you.',
     })
   } catch (error) {
     console.error('[EMPLOYER ACCESS] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
-
-async function queueManualReview(
-  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
-  input: { name: string; companyName: string; email: string; shareToken: string },
-) {
-  const [firstName, ...rest] = input.name.split(/\s+/)
-  const { error } = await supabase.from('employer_access_requests').insert({
-    wallet_address: `funnel:${input.email}`,
-    email: input.email,
-    name: input.name,
-    first_name: firstName || input.name,
-    last_name: rest.join(' ') || null,
-    company_name: input.companyName,
-    description: `Card-funnel request${input.shareToken ? ` from share token ${input.shareToken}` : ''}. Personal email — manual review. Terms ${EV_EMPLOYER_TERMS.version} accepted on the form.`,
-    status: 'pending',
-  })
-
-  if (error) {
-    // One pending row per email (wallet_address is unique). A repeat submit
-    // should not look like a failure.
-    if (error.code === '23505') {
-      return NextResponse.json({
-        success: true,
-        outcome: 'manual_review',
-        message: 'We already have your request and will follow up within one business day.',
-      })
-    }
-    console.error('[EMPLOYER ACCESS] Manual review insert failed:', error)
-    return NextResponse.json(
-      { error: 'Could not submit your request. Please try again.' },
-      { status: 500 },
-    )
-  }
-
-  await sendNewCompanyNotification({
-    companyName: input.companyName,
-    ownerEmail: input.email,
-    ownerWallet: 'manual-review',
-  })
-
-  return NextResponse.json({
-    success: true,
-    outcome: 'manual_review',
-    message:
-      "Thanks — personal email addresses are reviewed before an account is created. We'll follow up within one business day.",
-  })
 }
