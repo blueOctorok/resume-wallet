@@ -38,15 +38,18 @@ export function PspReportPdf({ parsed, meta }: PspReportPdfProps) {
 
   return (
     <StormPdfDocument title={`Provven PSP — ${meta.candidateName}`}>
-      <StormPdfPage wrap>
+      <StormPdfPage
+        wrap
+        footer={
+          <StormPdfFooter
+            orderId={meta.stormOrderId}
+            verifiedTxHash={meta.verifiedTxHash}
+            verifiedExplorerUrl={meta.verifiedExplorerUrl}
+            vendorReference={parsed.remoteOrderNumber}
+          />
+        }
+      >
         <Text style={stormPdfStyles.pre}>{reportBody}</Text>
-
-        <StormPdfFooter
-          orderId={meta.stormOrderId}
-          verifiedTxHash={meta.verifiedTxHash}
-          verifiedExplorerUrl={meta.verifiedExplorerUrl}
-          vendorReference={parsed.remoteOrderNumber}
-        />
       </StormPdfPage>
     </StormPdfDocument>
   )

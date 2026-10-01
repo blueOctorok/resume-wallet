@@ -8,7 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCdlData, getDriverEmployment, getMvrData, getPspData } from '@/lib/block-data'
 import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
 import { getBlockDefinition } from '@/lib/block-registry'
-import { getDqItemDefinition } from '@/lib/dq-file-registry'
+import { getDqItemDefinition, type DqItemId } from '@/lib/dq-file-registry'
 import type { DqItemStatus } from '@/lib/dq-file-status'
 import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
 import { loadPspDotProjection } from '@/lib/psp-form2-projection'
@@ -85,7 +85,7 @@ export interface DqCoachSnapshot {
     hasEmail: boolean
   }
   blocks: string[]
-  dqItems: Array<{ id: string; label: string; status: DqItemStatus }>
+  dqItems: Array<{ id: DqItemId; label: string; status: DqItemStatus }>
   cdl: {
     number: string | null
     state: string | null
@@ -108,6 +108,8 @@ export interface DqCoachSnapshot {
     licenseClass: string | null
     licenseExpiration: string | null
     hasDiscrepancyAlert: boolean
+    /** The DMV's own reason lines behind a discrepancy, e.g. "Order parameter Last Name (DOE) did not match". */
+    mismatchAlerts: string[]
     accidents: Array<{ date: string; nature: string }>
     convictions: Array<{ date: string; violation: string; state: string }>
   } | null
@@ -283,6 +285,7 @@ export async function buildDqCoachSnapshot(
               null,
             hasDiscrepancyAlert:
               mvrProj?.parsed.filledCode?.trim().toLowerCase() === 'discrepancy',
+            mismatchAlerts: mvrProj?.parsed.mismatchAlerts ?? [],
             accidents: (mvrProj?.mvrAccidents ?? []).map((a) => ({
               date: a.date,
               nature: a.nature,
@@ -607,7 +610,7 @@ If the MVR or PSP lists accidents, convictions, or crashes and the DOT applicati
 
 Residence state ≠ CDL/MVR license state is often legal — info, not an identity fail.
 
-mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity issue. That is separate from profile name vs the name on the report.
+mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity issue. That is separate from profile name vs the name on the report. When mvr.mismatchAlerts is non-empty, those are the DMV's own words for what did not match (e.g. last name, date of birth) — tell the driver exactly which field so they can fix it on the profile or application. Rephrase them plainly; do not quote "Order parameter".
 
 Write like a safety clerk talking to a driver. Never say filledCode, Accio, CRA, XML, Form 1, Form 2, Form 3, or vendor field names. Point the driver to Section 1, 2, or 3 if they need to open a part of the application.
 

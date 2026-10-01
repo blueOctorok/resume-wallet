@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 
@@ -21,12 +21,16 @@ import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { fetchEmployerAccessibleMvrOrder } from '@/lib/employer-screening-order-access'
 import { parseAccioMvrResult } from '@/lib/accio-xml-parser'
 import { MvrReportPdf } from '@/lib/pdf/MvrReportPdf'
+import type { MvrReportParty } from '@/lib/pdf/MvrReportFcraCover'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export const runtime = 'nodejs'
 // Reports rarely change once filled, but cache headers are a downstream call.
 export const dynamic = 'force-dynamic'
+
+const MVR_ORDER_COLUMNS =
+  'id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, ordered_by_user_id, completed_at'
 
 interface MvrOrderRow {
   id: string
@@ -35,7 +39,71 @@ interface MvrOrderRow {
   result_outcome: string | null
   result_xml: string | null
   ordered_by_company_id: string | null
+  ordered_by_user_id: string | null
   completed_at: string | null
+}
+
+interface ProfileRow {
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+}
+
+interface CompanyRow {
+  company_name: string | null
+  address_street: string | null
+  address_city: string | null
+  address_state: string | null
+  address_zip: string | null
+  phone: string | null
+}
+
+/**
+ * "Prepared for" = the party the consumer report was furnished to. For an
+ * employer order that's the company; for a candidate self-order it's the
+ * candidate (they own the report and may later share it — P3.4-C).
+ */
+async function resolvePreparedFor(
+  supabase: SupabaseClient,
+  order: MvrOrderRow,
+  candidateName: string,
+): Promise<MvrReportParty> {
+  if (order.ordered_by_company_id) {
+    const { data } = await supabase
+      .from('companies')
+      .select('company_name, address_street, address_city, address_state, address_zip, phone')
+      .eq('id', order.ordered_by_company_id)
+      .maybeSingle()
+    const company = data as CompanyRow | null
+    if (company?.company_name) {
+      const cityLine = [company.address_city, company.address_state].filter(Boolean).join(', ')
+      return {
+        name: company.company_name,
+        addressLines: [
+          company.address_street ?? '',
+          [cityLine, company.address_zip].filter(Boolean).join(' '),
+        ].filter(Boolean),
+        phone: company.phone,
+      }
+    }
+  }
+  return { name: candidateName, addressLines: ['Candidate-initiated report'] }
+}
+
+async function resolveRequestedBy(
+  supabase: SupabaseClient,
+  order: MvrOrderRow,
+): Promise<MvrReportParty | null> {
+  if (!order.ordered_by_user_id || order.ordered_by_user_id === order.driver_user_id) return null
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('first_name, last_name, email')
+    .eq('user_id', order.ordered_by_user_id)
+    .maybeSingle()
+  const profile = data as ProfileRow | null
+  const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
+  if (!name && !profile?.email) return null
+  return { name: name || 'Employer user', email: profile?.email ?? null }
 }
 
 export async function GET(
@@ -69,16 +137,17 @@ export async function GET(
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
 
-      const { data, error } = await fetchEmployerAccessibleMvrOrder(
-        supabase,
-        'id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at',
-        { companyId: ctx.companyId, candidateUserId: employerCandidateUserId, orderId },
-      )
+      const { data, error } = await fetchEmployerAccessibleMvrOrder(supabase, MVR_ORDER_COLUMNS, {
+        companyId: ctx.companyId,
+        candidateUserId: employerCandidateUserId,
+        orderId,
+      })
 
       if (error || !data) {
         return NextResponse.json({ error: 'MVR order not found' }, { status: 404 })
       }
-      mvrOrder = data as MvrOrderRow
+      // Helper returns an untyped row; the select above pins the shape.
+      mvrOrder = data as unknown as MvrOrderRow
     } else {
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -92,7 +161,7 @@ export async function GET(
 
       const { data, error } = await supabase
         .from('mvr_orders')
-        .select('id, driver_user_id, status, result_outcome, result_xml, ordered_by_company_id, completed_at')
+        .select(MVR_ORDER_COLUMNS)
         .eq('id', orderId)
         .eq('driver_user_id', user.id)
         .single()
@@ -125,6 +194,10 @@ export async function GET(
     }
 
     const parsed = parseAccioMvrResult(mvrOrder.result_xml)
+    const [preparedFor, requestedBy] = await Promise.all([
+      resolvePreparedFor(supabase, mvrOrder, candidateName),
+      resolveRequestedBy(supabase, mvrOrder),
+    ])
 
     // MvrReportPdf composes <StormPdfDocument> at the root, which renders to
     // react-pdf's <Document>. The outer prop type isn't DocumentProps (it's
@@ -137,6 +210,8 @@ export async function GET(
         generatedAtIso: new Date().toISOString(),
         outcome: (mvrOrder.result_outcome as ScreeningOutcome) ?? null,
         profilePhone: profile?.phone ?? null,
+        preparedFor,
+        requestedBy,
       },
     }) as unknown as React.ReactElement<DocumentProps>
     const buffer = await renderToBuffer(element)

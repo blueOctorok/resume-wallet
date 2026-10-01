@@ -129,7 +129,40 @@ export interface ParsedMvrResult {
   filledCode?: string
   heldForReview?: boolean
   heldForReleaseForm?: boolean
-  
+
+  /**
+   * The state DMV's own report, verbatim (XML entities decoded, layout
+   * preserved). This is the ground truth the carrier is entitled to see.
+   *
+   * Every other field on this interface is a *projection* of this text (or of
+   * Accio's structured tags, which are themselves a projection of it), and
+   * projections lose data — a MA clear date, a state disclaimer, a medical
+   * restriction, an examiner specialty. For months we chased those gaps one
+   * regex at a time and were always one state behind Key Background, who
+   * simply print this block. So: every MVR surface renders `dmvRecordText`
+   * in full, and the structured fields above are the readable summary layered
+   * on top. The summary may be incomplete; the record may not be missing.
+   */
+  dmvRecordText?: string
+
+  /**
+   * Identity mismatch alerts Accio prints in the NOTES section, e.g.
+   * "Order parameter Date of Birth (01-01-1987) did not match". These are the
+   * *reason* a report comes back `filledCode="discrepancy"` — without them the
+   * UI can only say "Discrepancy" and the carrier has to call to ask on what.
+   */
+  mismatchAlerts?: string[]
+
+  /** DMV's "Report Clear: YES/NO" flag from the text header. */
+  reportClear?: boolean
+
+  /**
+   * Name exactly as the DMV holds it (e.g. "HULME, DAVID P"). Can differ from
+   * `subject` (which echoes what *we* sent in the order) — that difference is
+   * often what a mismatch alert is about, so keep both.
+   */
+  dmvRecordName?: string
+
   // Raw Data
   rawXml?: string
 }
@@ -177,6 +210,20 @@ export interface Suspension {
   reason?: string
   endDate?: string
   state?: string
+  /**
+   * Date the action was cleared (the "CLR/DATE" column on the DMV text table).
+   * Distinct from `endDate`: a suspension can be cleared early by paying a fine
+   * while its scheduled end stays blank. Lives ONLY in the text block — Accio's
+   * `<mvr_violation>` has no reinstatement tag for these — so it's attached by
+   * `attachSuspensionActionsFromText`. An open-looking suspension that was
+   * actually cleared is exactly the kind of thing that gets a carrier on the
+   * phone.
+   */
+  clearedDate?: string
+  /** ACD code (e.g. "D56" = failure to pay fines). */
+  acdCode?: string
+  /** AAMVA Violation Dictionary code (e.g. "DE15"). */
+  avdCode?: string
 }
 
 export interface AdditionalDriverInfo {
@@ -459,6 +506,19 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         ? extractXmlValue(mvrSubOrder.content, 'text')
         : extractXmlValue(xml, 'text')
       if (mvrTextBlock) {
+        // Keep the DMV record itself. Everything below this line is a lossy
+        // summary of it — see the `dmvRecordText` doc comment.
+        result.dmvRecordText = mvrTextBlock
+        result.dmvRecordName = extractDmvRecordNameFromText(mvrTextBlock)
+        result.reportClear = extractReportClearFromText(mvrTextBlock)
+        const alerts = extractMismatchAlertsFromText(mvrTextBlock)
+        if (alerts.length > 0) result.mismatchAlerts = alerts
+
+        // Clear dates for suspensions exist only in the text table.
+        if (result.suspensions.length > 0) {
+          result.suspensions = attachSuspensionActionsFromText(result.suspensions, mvrTextBlock)
+        }
+
         const characteristics = extractPersonalCharacteristicsFromText(mvrTextBlock)
         // Compute age from DOB (subject.dateOfBirth = YYYYMMDD) so it stays
         // current — using the text's "AGE: 56" would go stale.
@@ -513,6 +573,16 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       }
     } catch (textParseError) {
       console.warn('[ACCIO PARSER] Could not parse personal/asof/cdl from text block:', textParseError)
+    }
+
+    // Parity tripwire. The verbatim record is now the contract with carriers;
+    // a filled MVR with structured data but no text block means we'd render a
+    // summary with nothing underneath it. Say so loudly instead of silently.
+    if (!result.dmvRecordText && (result.licenses?.length || result.violations?.length)) {
+      console.warn(
+        `[MVR PARITY] Order ${result.orderNumber || '?'}: structured MVR data present but no DMV <text> block — ` +
+          'report will lack the verbatim record.',
+      )
     }
 
     return result
@@ -938,6 +1008,8 @@ function extractClassifiedMvrEvents(xml: string): {
           reason: description,
           endDate: reinstatementDate,
           state,
+          acdCode: acdCode || stateCode,
+          avdCode: extractXmlValue(violationXml, 'avd_code'),
         })
         break
       case 'additional':
@@ -1293,6 +1365,152 @@ function extractCdlStatusFromText(text: string): string | undefined {
 }
 
 /**
+ * "Name:     HULME, DAVID P                    Report Clear:NO" → "HULME, DAVID P".
+ * Anchored to line start so "Medical Examiner Name:" can't match; capture stops
+ * at the 2+ space column gap before the next field.
+ */
+function extractDmvRecordNameFromText(text: string): string | undefined {
+  const m = text.match(/^\s*Name\s*:[ \t]*([^\n]+?)(?=[ \t]{2,}\S|[ \t]*$)/im)
+  const v = m?.[1]?.trim()
+  return v && !/^_+$/.test(v) ? v : undefined
+}
+
+/** "Report Clear: NO" → false, "Report Clear: YES" → true, absent → undefined. */
+function extractReportClearFromText(text: string): boolean | undefined {
+  const m = text.match(/Report\s+Clear\s*:[ \t]*(YES|NO)\b/i)
+  if (!m) return undefined
+  return m[1].toUpperCase() === 'YES'
+}
+
+/**
+ * Accio's NOTES section prints identity mismatches between what we ordered
+ * and what the DMV holds:
+ *
+ *   **** MA-Mismatch Alerts: ****
+ *   Order parameter Date of Birth (01-01-1987) did not match
+ *   Order parameter Last name (SMITH) did not match
+ *   ____________________________________
+ *
+ * Returns each alert line (trimmed) up to the next underscore rule.
+ */
+function extractMismatchAlertsFromText(text: string): string[] {
+  const m = text.match(/\*{2,}[^\n]*Mismatch\s+Alerts[^\n]*\*{2,}[ \t]*\n([\s\S]*?)(?:\n_{20,}|$)/i)
+  if (!m) return []
+  return m[1]
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !/^_+$/.test(line))
+}
+
+/**
+ * Accio normalizes state suspension/withdrawal tables into one fixed-column
+ * layout (seen on MA, IL and others):
+ *
+ *   ACTIONS     ORD/DATE    EFF/DATE    CLR/DATE    END/DATE    CODE    AVD
+ *   ____________________________________________________________________
+ *   SUSPENSION              08/17/26    09/03/26                D56     DE15
+ *               DESCRIPTION: FAILURE TO PAY FINES
+ *
+ * Columns are often blank, so tokens can't be split positionally by count —
+ * instead each token is assigned to whichever header column starts closest to
+ * the token's own index (same trick as the NC medical table). Rows are matched
+ * back to structured suspensions by effective date, which is the date Accio
+ * puts in `<violation_date>`.
+ */
+interface SuspensionActionRow {
+  effDate?: string
+  clrDate?: string
+  endDate?: string
+  code?: string
+  avd?: string
+}
+
+const SUSPENSION_TABLE_HEADER_RE = /^(ACTIONS\s+ORD\/DATE\s+EFF\/DATE\s+CLR\/DATE\s+END\/DATE\s+CODE\s+AVD)[ \t]*$/im
+
+function extractSuspensionActionRowsFromText(text: string): SuspensionActionRow[] {
+  const headerMatch = SUSPENSION_TABLE_HEADER_RE.exec(text)
+  if (!headerMatch) return []
+  const header = headerMatch[1]
+
+  const columns: Array<[keyof SuspensionActionRow | 'ordDate' | 'action', number]> = [
+    ['action', 0],
+    ['ordDate', header.indexOf('ORD/DATE')],
+    ['effDate', header.indexOf('EFF/DATE')],
+    ['clrDate', header.indexOf('CLR/DATE')],
+    ['endDate', header.indexOf('END/DATE')],
+    ['code', header.indexOf('CODE')],
+    ['avd', header.indexOf('AVD')],
+  ]
+
+  // Body = lines after the header up to the next rule, skipping the rule that
+  // directly follows the header and the indented DESCRIPTION continuation lines.
+  const afterHeader = text.slice(headerMatch.index + headerMatch[0].length)
+  const rows: SuspensionActionRow[] = []
+  let seenBody = false
+  for (const line of afterHeader.split('\n')) {
+    if (/^_{20,}\s*$/.test(line)) {
+      if (seenBody) break
+      continue
+    }
+    if (!line.trim()) continue
+    if (/^\s+DESCRIPTION\s*:/i.test(line)) continue
+    seenBody = true
+
+    const row: SuspensionActionRow = {}
+    const tokenRe = /\S+/g
+    let t: RegExpExecArray | null
+    while ((t = tokenRe.exec(line)) !== null) {
+      let best: typeof columns[number] | null = null
+      let bestDist = Infinity
+      for (const col of columns) {
+        const dist = Math.abs(t.index - col[1])
+        if (dist < bestDist) {
+          bestDist = dist
+          best = col
+        }
+      }
+      if (!best || best[0] === 'action' || best[0] === 'ordDate') continue
+      if (t[0] === '-') continue // Accio's "no value" marker
+      row[best[0]] = t[0]
+    }
+    if (row.effDate || row.clrDate || row.endDate) rows.push(row)
+  }
+  return rows
+}
+
+/** "08/17/26" or "08/17/2026" → "20260817" to match Accio's structured dates. */
+function slashDateToYmd(value?: string): string | undefined {
+  if (!value) return undefined
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/)
+  if (!m) return undefined
+  const [, mm, dd, yy] = m
+  // Two-digit years on driving records are either recent or decades old;
+  // pivot at 70 so "26" → 2026 and "95" → 1995.
+  const year = yy.length === 4 ? yy : Number(yy) < 70 ? `20${yy}` : `19${yy}`
+  return `${year}${mm.padStart(2, '0')}${dd.padStart(2, '0')}`
+}
+
+function attachSuspensionActionsFromText(suspensions: Suspension[], text: string): Suspension[] {
+  const rows = extractSuspensionActionRowsFromText(text)
+  if (rows.length === 0) return suspensions
+
+  // Consume rows as they're matched so two same-day actions each get their own.
+  const unmatched = [...rows]
+  return suspensions.map((s) => {
+    const idx = unmatched.findIndex((r) => slashDateToYmd(r.effDate) === s.date)
+    if (idx < 0) return s
+    const [row] = unmatched.splice(idx, 1)
+    return {
+      ...s,
+      clearedDate: slashDateToYmd(row.clrDate) ?? s.clearedDate,
+      endDate: s.endDate ?? slashDateToYmd(row.endDate),
+      acdCode: s.acdCode ?? row.code,
+      avdCode: s.avdCode ?? row.avd,
+    }
+  })
+}
+
+/**
  * Text-block license fallback for states that don't emit `<mvr_license>` XML.
  *
  * Parses the LICENSE AND PERMIT INFORMATION section (the underscore-delimited
@@ -1542,6 +1760,11 @@ export function mvrResultToJsonb(result: ParsedMvrResult): Record<string, unknow
       details: result.suspensions || []
     },
     additionalDriverInfo: result.additionalDriverInfo || [],
+    // `dmvRecordText` is deliberately NOT stored here — it already lives in
+    // `mvr_orders.result_xml`, and every renderer re-parses that on demand.
+    mismatchAlerts: result.mismatchAlerts || [],
+    reportClear: result.reportClear,
+    dmvRecordName: result.dmvRecordName,
     medical: {
       certExpiration: result.medicalCertExpiration,
       certIssueDate: result.medicalCertIssueDate,

@@ -100,6 +100,13 @@ function reconstructParsedMvr(
     medicalCertExpiration: medical?.certExpiration as string | undefined,
     medicalCertStatus: medical?.certStatus as string | undefined,
     fees: parsedData.fees as ParsedMvrResult['fees'],
+    // Parity fields (2026-10-01). Absent on rows parsed before the backfill
+    // (`scripts/backfill-mvr-parity-fields.ts`), so each falls back to "unknown".
+    mismatchAlerts: Array.isArray(parsedData.mismatchAlerts)
+      ? (parsedData.mismatchAlerts as string[])
+      : undefined,
+    reportClear: typeof parsedData.reportClear === 'boolean' ? parsedData.reportClear : undefined,
+    dmvRecordName: parsedData.dmvRecordName as string | undefined,
   }
 }
 

@@ -423,6 +423,7 @@ describe('parseAccioMvrResult — unrecognized violation_type telemetry', () => 
     <subOrder type="MVR" filledStatus="filled" filledCode="clear">
       <dlnum>C11111111</dlnum>
       <dlstate>OH</dlstate>
+      <text>OHIO Driver Record</text>
       <mvr_violation>
         <violation_type>${violationType}</violation_type>
         <description>SOMETHING THE DMV SENT</description>
@@ -482,5 +483,187 @@ describe('parseAccioMvrResult — clean records report no accidents', () => {
     const parsed = parseAccioMvrResult(CLEAN_XML)
     expect(parsed.accidentCount).toBe(0)
     expect(parsed.accidents).toEqual([])
+  })
+})
+
+/**
+ * MA fixture modeled on the Oct 2026 Key-vs-Provven parity incident (PII
+ * replaced). Key's report showed the suspension *cleared* on 09/03/26, the
+ * state's "VALID LICENSE ... OVERRIDES" disclaimer, the DMV's name-on-record,
+ * and "Report Clear: NO" — all of which exist only in the text block Storm was
+ * discarding. Our report implied an open suspension on a driver Pace was hiring.
+ */
+describe('parseAccioMvrResult — verbatim DMV record is preserved (MA parity)', () => {
+  const MA_TEXT = `________________________________________________________________________________
+MASSACHUSETTS Driver Record - E335 Order Date: 09/30/2026
+________________________________________________________________________________
+                                            Bill Code:
+Host Used: Online                           Reference:REVGRP:67396:935098
+License:  S12345678
+Name:     DOE, JOHN Q                       Report Clear:NO
+Address:
+City, St:
+As of:
+________________________________________________________________________________
+Sex :           Weight:             DOB     :                          AGE:
+Eyes:           Height:             Iss Date: 09/03/2026
+Hair:                               Exp Date: 08/01/2029
+________________________________________________________________________________
+                                                   STATUS: VALID
+________________________________________________________________________________
+Violations/Convictions And Failures to Appear And Accidents
+________________________________________________________________________________
+                              ** NONE TO REPORT ***
+________________________________________________________________________________
+ Suspensions/Revocations
+________________________________________________________________________________
+ACTIONS     ORD/DATE    EFF/DATE    CLR/DATE    END/DATE    CODE    AVD
+________________________________________________________________________________
+SUSPENSION              08/17/26    09/03/26                D56     DE15
+            DESCRIPTION: FAILURE TO PAY FINES
+________________________________________________________________________________
+ License and Permit Information
+________________________________________________________________________________
+License: COMMERCIAL     Issue:09/03/2026  Expire:08/01/2029  Status:VALID
+       Class:A      ANY COMBO VEH &gt; 26,001 LBS GVWR.  TOWING A VEH &gt; 10,000 LBS
+________________________________________________________________________________
+ Miscellaneous State Data
+________________________________________________________________________________
+A VALID LICENSE INDICATES VALID PRIVILEGES TO DRIVE WITH THAT LICENSE TYPE AND
+OVERRIDES ANY REPORTED PRIOR ACTIONS INCLUDING SUSPENSIONS, CANCELLATIONS AND
+DISQUALIFICATIONS.
+END OF DRIVING RECORD`
+
+  const MA_XML = `<ScreeningResults>
+  <completeOrder number="17908022306810144" remote_number="67396">
+    <subOrder remote_number="935098" description=" Motor Vehicle Report" filledStatus="filled" filledCode="hits">
+      <dlnum>S12345678</dlnum>
+      <dlstate>MA</dlstate>
+      <text>
+${MA_TEXT}</text>
+      <mvr_violation>
+        <violation_type>SUSPENSION</violation_type>
+        <description>FAILURE TO PAY FINES</description>
+        <violation_date>20260817</violation_date>
+        <state_code>D56</state_code>
+        <avd_code>DE15</avd_code>
+        <acd_code>D56</acd_code>
+      </mvr_violation>
+      <mvr_license>
+        <license_issue_date>20260903</license_issue_date>
+        <license_expiration_date>20290801</license_expiration_date>
+        <license_class>ANY COMBO VEH &gt; 26,001 LBS GVWR.  TOWING A VEH &gt; 10,000 LBS</license_class>
+        <license_code>A</license_code>
+        <license_type>COMMERCIAL</license_type>
+        <license_status>VALID</license_status>
+      </mvr_license>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  const parsed = parseAccioMvrResult(MA_XML)
+
+  it('keeps the entire DMV record verbatim, with entities decoded', () => {
+    expect(parsed.dmvRecordText).toBeDefined()
+    // Every line the DMV sent is present — including the ones no structured field covers.
+    expect(parsed.dmvRecordText).toContain('OVERRIDES ANY REPORTED PRIOR ACTIONS INCLUDING SUSPENSIONS')
+    expect(parsed.dmvRecordText).toContain('Reference:REVGRP:67396:935098')
+    expect(parsed.dmvRecordText).toContain('END OF DRIVING RECORD')
+    expect(parsed.dmvRecordText).toContain('ANY COMBO VEH > 26,001 LBS GVWR')
+    expect(parsed.dmvRecordText).not.toContain('&gt;')
+    // Layout preserved: the fixed-width suspension table row survives intact.
+    expect(parsed.dmvRecordText).toContain(
+      'SUSPENSION              08/17/26    09/03/26                D56     DE15',
+    )
+  })
+
+  it('reads the DMV name-on-record and Report Clear flag from the header', () => {
+    expect(parsed.dmvRecordName).toBe('DOE, JOHN Q')
+    expect(parsed.reportClear).toBe(false)
+  })
+
+  it('attaches the text-table clear date and codes to the structured suspension', () => {
+    expect(parsed.suspensions).toHaveLength(1)
+    const [s] = parsed.suspensions!
+    expect(s.date).toBe('20260817')
+    expect(s.clearedDate).toBe('20260903')
+    expect(s.endDate).toBeUndefined()
+    expect(s.acdCode).toBe('D56')
+    expect(s.avdCode).toBe('DE15')
+  })
+
+  it('has no mismatch alerts on a clean-identity report', () => {
+    expect(parsed.mismatchAlerts).toBeUndefined()
+  })
+
+  it('serializes the small header facts but not the full text into JSONB', () => {
+    const jsonb = mvrResultToJsonb(parsed) as Record<string, unknown>
+    expect(jsonb.reportClear).toBe(false)
+    expect(jsonb.dmvRecordName).toBe('DOE, JOHN Q')
+    expect(jsonb.mismatchAlerts).toEqual([])
+    expect(jsonb).not.toHaveProperty('dmvRecordText')
+  })
+})
+
+describe('parseAccioMvrResult — mismatch alerts explain a discrepancy', () => {
+  const DISCREPANCY_XML = `<ScreeningResults>
+  <completeOrder number="17900000000000001" remote_number="66965">
+    <subOrder type="MVR" filledStatus="filled" filledCode="discrepancy">
+      <dlnum>36358638</dlnum>
+      <dlstate>TX</dlstate>
+      <text>
+____________________________________________________________________________________________________
+   NOTES
+____________________________________________________________________________________________________
+**** MA-Mismatch Alerts: ****
+Order parameter Last name (SMITH) did not match
+Order parameter Date of Birth (01-01-1987) did not match
+____________________________________________________________________________________________________
+Report Clear: NO
+                                         Bill Code:
+Host Used: Online                        Reference:66965-933510
+License: 36358638
+Name: SMYTHE, JOHN JR
+Address: 1 MAIN ST
+      </text>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  const parsed = parseAccioMvrResult(DISCREPANCY_XML)
+
+  it('lists each alert line so the UI can say what did not match', () => {
+    expect(parsed.mismatchAlerts).toEqual([
+      'Order parameter Last name (SMITH) did not match',
+      'Order parameter Date of Birth (01-01-1987) did not match',
+    ])
+  })
+
+  it('still captures the DMV name-on-record when the header has no column gap', () => {
+    expect(parsed.dmvRecordName).toBe('SMYTHE, JOHN JR')
+    expect(parsed.reportClear).toBe(false)
+  })
+
+  it('withdrawal rows with "-" codes do not get a bogus ACD code', () => {
+    const xml = `<ScreeningResults><completeOrder number="2" remote_number="2">
+    <subOrder type="MVR" filledStatus="filled" filledCode="hits">
+      <dlnum>X1</dlnum><dlstate>IL</dlstate>
+      <text>
+ACTIONS     ORD/DATE    EFF/DATE    CLR/DATE    END/DATE    CODE    AVD
+________________________________________________________________________________
+WITHDRAWAL              11/01/23    10/21/25                -       DH02
+            DESCRIPTION: FAILED TO MAINTAIN MEDICAL CERTIFIC
+WITHDRAWAL              08/05/23    10/21/25                -       DH02
+            DESCRIPTION: FAILED TO MAINTAIN MEDICAL CERTIFIC
+________________________________________________________________________________
+      </text>
+      <mvr_violation><violation_type>DRIVER SUSPENSION</violation_type><description>FAILED TO MAINTAIN MEDICAL CERTIFIC</description><violation_date>20231101</violation_date></mvr_violation>
+      <mvr_violation><violation_type>DRIVER SUSPENSION</violation_type><description>FAILED TO MAINTAIN MEDICAL CERTIFIC</description><violation_date>20230805</violation_date></mvr_violation>
+    </subOrder></completeOrder></ScreeningResults>`
+    const p = parseAccioMvrResult(xml)
+    expect(p.suspensions).toHaveLength(2)
+    expect(p.suspensions!.map((s) => s.clearedDate)).toEqual(['20251021', '20251021'])
+    expect(p.suspensions!.every((s) => s.acdCode === undefined)).toBe(true)
+    expect(p.suspensions!.every((s) => s.avdCode === 'DH02')).toBe(true)
   })
 })

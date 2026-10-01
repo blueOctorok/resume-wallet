@@ -57,8 +57,13 @@ export const stormPdfStyles = StyleSheet.create({
     fontSize: 9,
     color: STORM_COLORS.body,
     fontFamily: 'Helvetica',
-    lineHeight: 1.4,
+    // lineHeight deliberately lives on `pageBody`, not here — see StormPdfPage.
   },
+  // fontSize is repeated here on purpose: react-pdf resolves a unitless
+  // lineHeight against the declaring node's own fontSize (default 18 if
+  // absent) and inherits the absolute result, so without it every line
+  // would be 25pt tall instead of 12.6pt.
+  pageBody: { fontSize: 9, lineHeight: 1.4 },
 
   // Header
   headerRow: {
@@ -321,12 +326,23 @@ export interface StormPdfPageProps {
   children: React.ReactNode
   /** When true, long content flows onto additional LETTER pages. */
   wrap?: boolean
+  /** Fixed footer (normally `<StormPdfFooter>`). Passed separately — see note below. */
+  footer?: React.ReactNode
 }
 
-export function StormPdfPage({ children, wrap }: StormPdfPageProps) {
+/**
+ * Body content is wrapped in `pageBody` (lineHeight 1.4) and the footer is
+ * rendered as a *sibling* of that wrapper. This is a workaround for a
+ * @react-pdf/renderer 4.x bug: when a `<Text render={…}>` (page numbers)
+ * sits anywhere under an ancestor with `lineHeight`, the dynamic-text pass
+ * drops every other Text in the fixed footer — only the last one survived.
+ * Keeping the footer outside the lineHeight scope sidesteps it.
+ */
+export function StormPdfPage({ children, wrap, footer }: StormPdfPageProps) {
   return (
     <Page size="LETTER" style={stormPdfStyles.page} wrap={wrap}>
-      {children}
+      <View style={stormPdfStyles.pageBody}>{children}</View>
+      {footer}
     </Page>
   )
 }

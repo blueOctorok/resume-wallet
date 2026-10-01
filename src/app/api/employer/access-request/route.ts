@@ -6,7 +6,7 @@ import { employerAccessRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
-import { isTestSuperuserEmail, testCarrierAlias } from '@/lib/test-superuser'
+import { isTestCarrierInbox, isTestSuperuserEmail, testCarrierAlias } from '@/lib/test-superuser'
 
 /**
  * POST /api/employer/access-request
@@ -68,7 +68,11 @@ export async function POST(request: NextRequest) {
       .ilike('email', email)
       .maybeSingle()
 
-    if (existingUser && isCandidateSurfaceRole(existingUser.role)) {
+    // Test inbox is already a candidate. The company is owned by a plus-alias
+    // below, so this login stays a driver and the code still lands in Gmail.
+    const useTestInbox = isTestCarrierInbox(email)
+
+    if (!useTestInbox && existingUser && isCandidateSurfaceRole(existingUser.role)) {
       return NextResponse.json(
         {
           error:
@@ -78,7 +82,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (isPublicEmailDomain(domain)) {
+    if (!useTestInbox && isPublicEmailDomain(domain)) {
       return NextResponse.json(
         {
           error:
@@ -96,7 +100,9 @@ export async function POST(request: NextRequest) {
 
     // Same inbox, different login. See test-superuser.ts.
     const ownerEmail =
-      existingOwner && isTestSuperuserEmail(email) ? testCarrierAlias(email) : email
+      useTestInbox || (existingOwner && isTestSuperuserEmail(email))
+        ? testCarrierAlias(email)
+        : email
 
     if (existingOwner && ownerEmail === email) {
       return NextResponse.json(
@@ -113,7 +119,9 @@ export async function POST(request: NextRequest) {
       .insert({
         company_name: companyName,
         designated_owner_email: ownerEmail,
-        allowed_email_domains: domain ? [domain] : [],
+        // Don't write gmail.com onto the allowlist. Empty means this test
+        // company has no domain rule; a real carrier still gets its work domain.
+        allowed_email_domains: useTestInbox ? [] : domain ? [domain] : [],
         status: 'pending',
         onboarding_completed: true,
         signup_source: shareToken ? 'card_funnel' : 'homepage',
@@ -171,7 +179,9 @@ export async function POST(request: NextRequest) {
     const aliasNote =
       ownerEmail === email
         ? ''
-        : ` Sign-in address is ${ownerEmail}. It arrives in your inbox, and it stays separate from your Pace login.`
+        : useTestInbox
+          ? ` Sign-in address is ${ownerEmail}. The code arrives in the stormchaintest inbox, and that login stays separate from the driver account.`
+          : ` Sign-in address is ${ownerEmail}. It arrives in your inbox, and it stays separate from your Pace login.`
 
     return NextResponse.json({
       success: true,

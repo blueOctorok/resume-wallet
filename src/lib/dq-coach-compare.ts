@@ -118,6 +118,16 @@ function bothDiffer(
   return { left, right }
 }
 
+/**
+ * "Order parameter Last Name (DOE) did not match" → "last name".
+ * Only the field name is kept — the submitted value is dropped so the flag
+ * never echoes PII. Unrecognized lines return '' and are filtered out.
+ */
+function mismatchAlertField(line: string): string {
+  const m = /Order parameter\s+(.+?)\s*\(/i.exec(line)
+  return m ? m[1].trim().toLowerCase() : ''
+}
+
 function warn(title: string, detail: string): DqCoachFlag {
   return {
     severity: 'warn',
@@ -280,10 +290,13 @@ export function collectDiscrepancyFlags(snapshot: DqCoachSnapshot): DqCoachFlag[
   }
 
   if (mvr?.hasDiscrepancyAlert) {
+    const fields = mvr.mismatchAlerts.map(mismatchAlertField).filter(Boolean)
     flags.push(
       warn(
         'MVR came back with a discrepancy',
-        'The motor vehicle report flagged a violation or an identity mismatch. Open it and review it before a carrier does.',
+        fields.length > 0
+          ? `The DMV could not match what was ordered on: ${fields.join(', ')}. Check those on your profile and application, then open the report.`
+          : 'The motor vehicle report flagged a violation or an identity mismatch. Open it and review it before a carrier does.',
       ),
     )
   }

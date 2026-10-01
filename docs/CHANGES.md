@@ -4,6 +4,47 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR report parity with Key — verbatim DMV record, FCRA framing** (2026-10-01)
+
+**Why this kept happening.** For months Pace compared our MVR PDF to Key Background Screening's and found missing details (discrepancy reasons, suspension clear dates, license class descriptions). Both reports come from the *same* Accio XML. Key prints the DMV's `<text>` block verbatim; Storm parsed it into a fixed schema and threw the text away. Every parity fix was a new regex for one state's layout — always one state behind. This change stops projecting and keeps the record.
+
+Diff against the D. Hulme pair (`docs/(Confidential) Pre-Employment Motor Vehicle Record {Key,Provven} - D. Hulme.pdf`, MA, Key order 67396):
+
+| Key showed | Provven showed before | Now |
+|---|---|---|
+| `**** MA-Mismatch Alerts ****` with the field that didn't match | status chip "discrepancy", no reason | Amber callout listing each alert line |
+| Suspension `CLR/DATE 09/03/26`, codes `D56 / DE15` | effective date + reason only | Cleared / End / Codes columns |
+| License `Type COMMERCIAL`, `Class A — ANY COMBO VEH > 26,001 LBS …` | class letter only | Type + class description |
+| `Report Clear: NO`, DMV name `DOE, JOHN Q` | — | "DMV report clear" + "Name on DMV record" |
+| Full DMV record text | — | **Full DMV Record — {State}** section, verbatim, Courier |
+| Prepared for / CRA / component status / FCRA notice / Summary of Rights | — | FCRA cover + appendix |
+
+| File | What changed |
+|---|---|
+| `src/lib/accio-xml-parser.ts` | `ParsedMvrResult` gains `dmvRecordText` (verbatim, not persisted — it lives in `result_xml`), `mismatchAlerts`, `reportClear`, `dmvRecordName`. `Suspension` gains `clearedDate`, `acdCode`, `avdCode`, read from the Accio-normalized `ACTIONS ORD/DATE EFF/DATE CLR/DATE END/DATE CODE AVD` text table by nearest-column assignment and matched to structured suspensions by effective date. `[MVR PARITY]` warning fires when structured data exists but no `<text>` block does. |
+| `src/lib/pdf/MvrReportPdf.tsx` | Rewritten around the verbatim record. DOB masked `MM/DD/XXXX`, SSN `XXX-XX-1234`, every `YYYYMMDD`/ISO date rendered `MM/DD/YYYY`. Table rows `wrap={false}` so a row never splits across pages. |
+| `src/lib/pdf/MvrReportFcraCover.tsx` (new) | Prepared for / Consumer reporting agency (Key) / Requested by, Report Summary table, FCRA notice. **`FCRA_NOTICE` copy is adapted from Key's notice and `MvrOrderForm.tsx` — needs legal review before it's treated as final.** |
+| `src/lib/pdf/FcraSummaryOfRights.tsx` (new) | CFPB Appendix K "Summary of Your Rights" as a second page. |
+| `src/app/api/mvr/[orderId]/pdf/route.ts` | Resolves `preparedFor` from `companies` (falls back to the candidate for self-ordered reports) and `requestedBy` from `user_profiles` when the orderer isn't the driver. |
+| `src/lib/pdf/StormPdfChrome.tsx` + `PspReportPdf.tsx` | **Pre-existing footer bug fixed:** the footer only ever printed "provven.com" — order id, vendor ref, FCRA line and `Page X of Y` were silently dropped on every MVR *and* PSP PDF. Cause: a `@react-pdf/renderer` 4.x bug where a `<Text render={…}>` under any ancestor with `lineHeight` drops its sibling Texts. `StormPdfPage` now takes the footer as a `footer` prop rendered outside the `lineHeight` wrapper. |
+| `src/lib/accio-xml-parser.test.ts`, `src/lib/pdf/MvrReportPdf.test.tsx` | Guard the contract: every line of the DMV text must appear in the PDF; alerts, clear date, codes, masking, and a real `renderToBuffer` are asserted. 37 tests. |
+
+**Previous MVRs.** The PDF route re-parses `result_xml` on every request, so all 284 completed orders rendered the full record the moment this shipped (every completed order has XML with a `<text>` block; the 33 without one are `expired`/`needs_review`). Stored `mvr_results.parsed_data` was backfilled the same day with `scripts/backfill-mvr-parity-fields.ts --apply`: 1,252 rows patched, 105 gained `mismatchAlerts` (exactly the discrepancy count — zero discrepancies left without a stored reason), 33 gained suspension clear dates, invariant held, 0 errors. Dry-run by default; patches only the new keys.
+
+**Stormi knows the reason now.** `reconstructParsedMvr` (`mvr-form1-projection.ts`) carries `mismatchAlerts` / `reportClear` / `dmvRecordName` out of `parsed_data`; the dq-coach snapshot exposes `mvr.mismatchAlerts`; the deterministic flag says *which field* the DMV couldn't match ("last name, date of birth") with the submitted value stripped so the flag never echoes PII; the LLM prompt is told to name the field in plain words. Also fixed a pre-existing tsc error in `dq-coach.ts` (`dqItems[].id` is now `DqItemId`).
+
+**Seen in the backfill log, not fixed:** `classifyMvrViolationCategory` doesn't recognize `violation_type` `DOWNGRADE` (ACD `W00`) or `CANCELLATION` — both file under `additionalDriverInfo`. They still appear in the verbatim record, so nothing is lost on the PDF, but they're candidates for the suspension/withdrawal bucket.
+
+**Pre-existing, untouched:** `src/app/api/psp/**` has two tsc errors that predate this work.
+
+---
+
+## **Test carrier inbox** (2026-09-30)
+
+`stormchaintest@gmail.com` is allowed through the carrier access form. It is already a candidate login, so the company is owned by `stormchaintest+carrier…@gmail.com`. Gmail delivers that plus-address to the same inbox. The company allowlist is left empty so this does not open Gmail for every carrier.
+
+---
+
 ## **Carrier signup 500** (2026-09-30)
 
 The access form insert failed because `companies.employer_user_id` is still `NOT NULL` (the company is created before anyone has an account) and `allowed_email_domains` was never added on this database. Migration `113_nullable_company_owner.sql` drops the null constraint and adds the column. The paper access form no longer uses `dark:` field styles — those follow the app theme and painted navy inputs on the cream modal.

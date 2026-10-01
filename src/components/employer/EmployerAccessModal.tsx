@@ -5,6 +5,7 @@ import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { isPublicEmailAddress } from '@/lib/employer-domain-match'
+import { isTestCarrierInbox } from '@/lib/test-superuser'
 
 const WORK_EMAIL_ERROR =
   'Use your company email address — personal addresses (Gmail, Yahoo, Outlook.com…) can’t open a carrier account.'
@@ -35,12 +36,13 @@ export default function EmployerAccessModal({
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
 
-  const emailLooksPersonal = email.includes('@') && isPublicEmailAddress(email)
+  const emailLooksPersonal =
+    email.includes('@') && isPublicEmailAddress(email) && !isTestCarrierInbox(email)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (isPublicEmailAddress(email)) {
+    if (isPublicEmailAddress(email) && !isTestCarrierInbox(email)) {
       setError(WORK_EMAIL_ERROR)
       return
     }
