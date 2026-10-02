@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Google-only accounts could not enter the email code** (2026-10-02)
+
+`stormchaintest@gmail.com` signed up with Google and has no email identity. `signInWithOtp` then emails a **recovery** code (`user_recovery_requested` at 15:29:55Z). The sign-in screen verified it as type `email`, so Auth returned 403 `otp_expired` — "Token has expired or is invalid" — seven seconds later. The code was fresh. The `contentscript.js` MaxListeners lines are a wallet extension, not this app.
+
+`SignInScreen` now tries `email`, then `magiclink`, then `recovery`, and stops on any error other than a wrong-type miss. A miss does not consume the real code. The verify button also stops spinning after a rejected code. Needs a deploy before the next code will work; resend after that.
+
+---
+
 ## **MVR report parity with Key — verbatim DMV record, FCRA framing** (2026-10-01)
 
 **Why this kept happening.** For months Pace compared our MVR PDF to Key Background Screening's and found missing details (discrepancy reasons, suspension clear dates, license class descriptions). Both reports come from the *same* Accio XML. Key prints the DMV's `<text>` block verbatim; Storm parsed it into a fixed schema and threw the text away. Every parity fix was a new regex for one state's layout — always one state behind. This change stops projecting and keeps the record.
