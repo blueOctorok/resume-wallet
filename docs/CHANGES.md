@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Sign-in code 403s because Auth stored it with no expiry** (2026-10-06)
+
+The digits-only email landed (five `POST /auth/v1/verify` 403s, not three). The code was not burned. `generateLink` writes `auth.one_time_tokens.expires_at` as null — Auth's switch that fills that column is off — and the 6-digit verify path treats a null expiry as already expired. The row stays, so every type (`magiclink`, `email`, `invite`, `signup`, `recovery`) fails the same way. PostgREST cannot patch it: the `auth` schema is not exposed (`PGRST106`).
+
+Verify now hashes the code the way Auth does (SHA-224 of the lowercased email plus the digits) and sends only that hash. That path checks `recovery_sent_at`, which `generateLink` does set, and ignores the null expiry. The browser calls `POST /api/auth/verify-email-code`, then `setSession`. Needs a deploy. The code mailed at 15:28 UTC is still the live one until the mailer OTP window (usually one hour) runs out; after that, request a new email and use the subject line.
+
 ## **Employer sign-in code was burned by the email link** (2026-10-06)
 
 `s.blaha@veree.io` got "Token has expired" within a minute. Auth shows why: the hiring form's Supabase email included a magic link, something at `72.152.84.99` (not the browser) opened it at 15:09 and completed signup, and the 6-digit code was already dead. Log in then sent a second code, and the three `403`s are the client trying `email` / `magiclink` / `recovery` against the old digits. The `bootstrap-autofill-overlay.js` error is a password-manager extension.

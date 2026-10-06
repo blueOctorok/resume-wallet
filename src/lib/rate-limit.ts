@@ -75,4 +75,8 @@ export const RATE_LIMITS = {
     maxRequests: 8,
     windowMs: 60 * 60 * 1000,
   },
+  VERIFY_EMAIL_CODE: {
+    maxRequests: 20,
+    windowMs: 60 * 60 * 1000,
+  },
 }

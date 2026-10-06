@@ -1,41 +1,40 @@
-import type { EmailOtpType } from '@supabase/supabase-js'
-
 /**
- * The 6-digit code's type depends on how it was minted (signup, invite,
- * magic link, recovery). A lookup with the wrong type returns otp_expired
- * and does not consume the real code, so try each until one matches.
+ * Exchanges the emailed digits for a session.
+ *
+ * The browser must not call verify with the raw digits. That door treats a
+ * missing expires_at as already expired. The API hashes the code and uses
+ * the door that checks when the code was sent.
  */
-const OTP_TYPES: EmailOtpType[] = ['magiclink', 'email', 'invite', 'signup', 'recovery']
-
-type OtpClient = {
+type SessionClient = {
   auth: {
-    verifyOtp: (args: {
-      email: string
-      token: string
-      type: EmailOtpType
-    }) => Promise<{ error: { code?: string; message: string } | null }>
+    setSession: (tokens: {
+      access_token: string
+      refresh_token: string
+    }) => Promise<{ error: { message: string } | null }>
   }
-}
-
-function isWrongType(error: { code?: string; message: string }): boolean {
-  return error.code === 'otp_expired' || /expired or is invalid/i.test(error.message)
 }
 
 export async function verifyEmailOtp(
-  supabase: OtpClient,
+  supabase: SessionClient,
   email: string,
   token: string,
 ): Promise<{ error: { message: string } | null }> {
-  let last: { message: string } | null = null
-  for (const type of OTP_TYPES) {
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: token.trim(),
-      type,
-    })
-    if (!error) return { error: null }
-    last = error
-    if (!isWrongType(error)) break
+  const res = await fetch('/api/auth/verify-email-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), token }),
+  })
+  const json = (await res.json()) as {
+    error?: string
+    access_token?: string
+    refresh_token?: string
   }
-  return { error: last }
+  if (!res.ok || !json.access_token || !json.refresh_token) {
+    return { error: { message: json.error || 'That code does not match. Request a new one.' } }
+  }
+  const { error } = await supabase.auth.setSession({
+    access_token: json.access_token,
+    refresh_token: json.refresh_token,
+  })
+  return { error: error ? { message: error.message } : null }
 }
