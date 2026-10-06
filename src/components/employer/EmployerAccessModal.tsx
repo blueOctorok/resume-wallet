@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { isPublicEmailAddress } from '@/lib/employer-domain-match'
 import { isTestCarrierInbox } from '@/lib/test-superuser'
+import { createClient } from '@/utils/supabase/client'
+import { verifyEmailOtp } from '@/lib/verify-email-otp'
 
 const WORK_EMAIL_ERROR =
   'Use your company email address — personal addresses (Gmail, Yahoo, Outlook.com…) can’t open a carrier account.'
@@ -34,7 +36,10 @@ export default function EmployerAccessModal({
   const [showTerms, setShowTerms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<string | null>(null)
+  const [codeEmail, setCodeEmail] = useState<string | null>(null)
+  const [companyLabel, setCompanyLabel] = useState('')
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
 
   const emailLooksPersonal =
     email.includes('@') && isPublicEmailAddress(email) && !isTestCarrierInbox(email)
@@ -68,7 +73,8 @@ export default function EmployerAccessModal({
         setError(json.error || 'Could not submit. Please try again.')
         return
       }
-      setDone(json.message as string)
+      setCompanyLabel(typeof json.companyName === 'string' ? json.companyName : companyName.trim())
+      setCodeEmail(typeof json.email === 'string' ? json.email : email.trim())
     } catch {
       setError('Could not submit. Please try again.')
     } finally {
@@ -78,16 +84,76 @@ export default function EmployerAccessModal({
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md" paper>
-      <ModalHeader title="Get employer access" subtitle="Work email required" onClose={onClose} />
-      {done ? (
-        <div className="p-6">
-          <p className="text-sm text-[#173150]">{done}</p>
-          <div className="mt-4">
-            <Button type="button" variant="primary" onClick={onClose}>
-              Done
-            </Button>
-          </div>
-        </div>
+      <ModalHeader
+        title={codeEmail ? 'Enter your code' : 'Get employer access'}
+        subtitle={codeEmail ? 'Employer account' : 'Work email required'}
+        onClose={onClose}
+      />
+      {codeEmail ? (
+        <form
+          className="space-y-3 p-6"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setError(null)
+            if (code.trim().length < 6) {
+              setError('Enter the 6-digit code from your email.')
+              return
+            }
+            setVerifying(true)
+            const { error: verifyError } = await verifyEmailOtp(createClient(), codeEmail, code)
+            if (verifyError) {
+              setError(verifyError.message)
+              setVerifying(false)
+              return
+            }
+            window.location.assign('/')
+          }}
+        >
+          <p className="text-sm text-[#173150]">
+            This opens the employer account for {companyLabel}. We sent a code to {codeEmail}.
+            Type it here — this is not the driver login, and there is no link to click.
+          </p>
+          <p className="text-xs text-[#173150]/70">
+            Find Drivers stays closed until Provven approves the company. You can still sign in
+            and see the employer view.
+          </p>
+          <input
+            required
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="6-digit code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className={fieldClass}
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <Button type="submit" variant="primary" isLoading={verifying} disabled={verifying}>
+            Open employer account
+          </Button>
+          <button
+            type="button"
+            className="text-xs text-[#173150]/70 underline"
+            onClick={async () => {
+              setError(null)
+              setSubmitting(true)
+              try {
+                const res = await fetch('/api/auth/email-code', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: codeEmail }),
+                })
+                const json = await res.json()
+                if (!res.ok) setError(json.error || 'Could not resend the code.')
+              } catch {
+                setError('Could not resend the code.')
+              } finally {
+                setSubmitting(false)
+              }
+            }}
+          >
+            {submitting ? 'Sending…' : 'Resend code'}
+          </button>
+        </form>
       ) : (
         <form onSubmit={submit} className="space-y-3 p-6">
           <p className="text-xs text-[#173150]/80">

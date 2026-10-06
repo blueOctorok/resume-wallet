@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { domainFromEmail, isPublicEmailDomain } from '@/lib/employer-domain-match'
 import { isCandidateSurfaceRole } from '@/lib/employer-account-guard'
@@ -7,6 +8,7 @@ import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
 import { isTestCarrierInbox, isTestSuperuserEmail, testCarrierAlias } from '@/lib/test-superuser'
+import { sendSignInCode } from '@/lib/send-signin-code'
 
 /**
  * POST /api/employer/access-request
@@ -17,6 +19,20 @@ import { isTestCarrierInbox, isTestSuperuserEmail, testCarrierAlias } from '@/li
  *   - Personal email domain → rejected. Drivers must not browse other drivers.
  *   - shareToken optional: homepage door omits it (signup_source homepage).
  */
+/** Code-only email, then the modal collects the digits. No second trip to Log in. */
+async function sendCode(admin: SupabaseClient, email: string, companyName: string) {
+  const sent = await sendSignInCode(admin, email)
+  if (sent.ok === false) {
+    return NextResponse.json({ error: sent.error }, { status: 502 })
+  }
+  return NextResponse.json({
+    success: true,
+    outcome: 'code_sent',
+    email,
+    companyName,
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const meta = getRequestMeta(request)
@@ -104,14 +120,10 @@ export async function POST(request: NextRequest) {
         ? testCarrierAlias(email)
         : email
 
+    // Company already exists for this address. Don't make them leave for Log in —
+    // send a fresh code and let the same form finish sign-in.
     if (existingOwner && ownerEmail === email) {
-      return NextResponse.json(
-        {
-          error: `This email is already tied to ${existingOwner.company_name}. Sign in to continue.`,
-          outcome: 'already_exists',
-        },
-        { status: 409 },
-      )
+      return sendCode(supabase, ownerEmail, existingOwner.company_name)
     }
 
     const { data: company, error: createError } = await supabase
@@ -161,39 +173,13 @@ export async function POST(request: NextRequest) {
       console.error('[EMPLOYER ACCESS] Terms insert failed:', termsError)
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://provven.com'
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: ownerEmail,
-      options: { shouldCreateUser: true, emailRedirectTo: appUrl },
-    })
-    if (otpError) {
-      console.error('[EMPLOYER ACCESS] Magic link failed:', otpError.message)
-    }
-
     await sendNewCompanyNotification({
       companyName,
       ownerEmail,
       ownerWallet: shareToken ? 'card-funnel' : 'homepage',
     })
 
-    const aliasNote =
-      ownerEmail === email
-        ? ''
-        : useTestInbox
-          ? ` Sign-in address is ${ownerEmail}. The code arrives in the stormchaintest inbox, and that login stays separate from the driver account.`
-          : ` Sign-in address is ${ownerEmail}. It arrives in your inbox, and it stays separate from your Pace login.`
-
-    return NextResponse.json({
-      success: true,
-      outcome: 'pending_created',
-      message: (shareToken
-        ? otpError
-          ? 'Your company is pending review. Sign in at Provven with this email — you can view the card you came from while we approve full access.'
-          : 'Check your email for a sign-in link. Your company is pending review — you can view the card you came from as soon as you sign in.'
-        : otpError
-          ? 'Your company is pending review. Sign in at Provven with this email once we approve access.'
-          : 'Check your email for a sign-in link. Your company is pending a quick review — Find Drivers opens as soon as we approve you.') + aliasNote,
-    })
+    return sendCode(supabase, ownerEmail, companyName)
   } catch (error) {
     console.error('[EMPLOYER ACCESS] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

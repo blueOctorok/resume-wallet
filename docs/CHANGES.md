@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer sign-in code was burned by the email link** (2026-10-06)
+
+`s.blaha@veree.io` got "Token has expired" within a minute. Auth shows why: the hiring form's Supabase email included a magic link, something at `72.152.84.99` (not the browser) opened it at 15:09 and completed signup, and the 6-digit code was already dead. Log in then sent a second code, and the three `403`s are the client trying `email` / `magiclink` / `recovery` against the old digits. The `bootstrap-autofill-overlay.js` error is a password-manager extension.
+
+The hiring form now stays open and takes the code itself, then opens the employer account. Codes are minted with `generateLink` and mailed by us as digits only — the action link is never sent, so Outlook has nothing to prefetch. Log in uses the same sender (`POST /api/auth/email-code`). Submitting the form again for a company that already exists sends a fresh code instead of "sign in to continue." Find Drivers still waits on admin approval.
+
+---
+
 ## **Google-only accounts could not enter the email code** (2026-10-02)
 
 `stormchaintest@gmail.com` signed up with Google and has no email identity. `signInWithOtp` then emails a **recovery** code (`user_recovery_requested` at 15:29:55Z). The sign-in screen verified it as type `email`, so Auth returned 403 `otp_expired` — "Token has expired or is invalid" — seven seconds later. The code was fresh. The `contentscript.js` MaxListeners lines are a wallet extension, not this app.

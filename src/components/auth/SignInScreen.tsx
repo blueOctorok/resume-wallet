@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/client'
+import { verifyEmailOtp } from '@/lib/verify-email-otp'
 import LoadingScreen from '@/components/LoadingScreen'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -25,22 +25,6 @@ import {
  */
 function safeNext(next: string | null): string {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
-}
-
-/**
- * signInWithOtp does not always mint an `email` code.
- * - First-time address → signup confirmation (`email`). That verify works today.
- * - Returning email user → magic link (`magiclink`).
- * - Google-only account (no email identity) → recovery code (`recovery`).
- *   stormchaintest@gmail.com is this case: Auth logged user_recovery_requested,
- *   then verify with type `email` 7s later returned otp_expired.
- * A miss on the wrong type does not consume the real code, so try them in order
- * and stop on any error that is not "wrong/expired token".
- */
-const OTP_VERIFY_TYPES: EmailOtpType[] = ['email', 'magiclink', 'recovery']
-
-function isWrongOtpType(error: { code?: string; message: string }): boolean {
-  return error.code === 'otp_expired' || /expired or is invalid/i.test(error.message)
 }
 
 function authCallbackUrl(next: string): string {
@@ -158,18 +142,18 @@ export default function SignInScreen() {
 
     setIsSendingCode(true)
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        // shouldCreateUser: first-time emails get an Auth user (candidate hub by
-        // default). Employer accounts are provisioned separately and already exist.
-        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(postAuthPath) },
+      const res = await fetch('/api/auth/email-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
       })
-      if (otpError) {
-        setError(otpError.message)
+      const json = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        setError(json.error || 'Could not send a code. Please try again.')
         return
       }
       setCodeSent(true)
-      setInfo('We emailed you a 6-digit code. Enter it below to sign in.')
+      setInfo('We emailed you a 6-digit code. Enter it below. There is no link to click.')
     } catch {
       setError('Could not send a code. Please try again.')
     } finally {
@@ -190,17 +174,7 @@ export default function SignInScreen() {
     setIsVerifying(true)
     setInfo(null)
     try {
-      const address = email.trim()
-      let verifyError: { code?: string; message: string } | null = null
-      for (const type of OTP_VERIFY_TYPES) {
-        const { error } = await supabase.auth.verifyOtp({ email: address, token, type })
-        if (!error) {
-          verifyError = null
-          break
-        }
-        verifyError = error
-        if (!isWrongOtpType(error)) break
-      }
+      const { error: verifyError } = await verifyEmailOtp(supabase, email.trim(), token)
       if (verifyError) {
         setError(verifyError.message)
         setIsVerifying(false)

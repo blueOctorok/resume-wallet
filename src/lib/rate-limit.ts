@@ -54,6 +54,8 @@ export const uploadRateLimiter = new SimpleRateLimiter()
 export const verificationRateLimiter = new SimpleRateLimiter()
 /** Open employer-access form on public career cards. */
 export const employerAccessRateLimiter = new SimpleRateLimiter()
+/** Passwordless email codes from Log in and the employer access form. */
+export const emailCodeRateLimiter = new SimpleRateLimiter()
 
 // Simple usage constants
 export const RATE_LIMITS = {
@@ -66,6 +68,10 @@ export const RATE_LIMITS = {
     windowMs: 24 * 60 * 60 * 1000, // 24 hours
   },
   EMPLOYER_ACCESS: {
+    maxRequests: 8,
+    windowMs: 60 * 60 * 1000,
+  },
+  EMAIL_CODE: {
     maxRequests: 8,
     windowMs: 60 * 60 * 1000,
   },
