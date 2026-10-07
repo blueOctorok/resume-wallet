@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { isPublicEmailDomain, normalizeDomainInput } from '@/lib/employer-domain-match'
+import {
+  COMPANY_ACCOUNT_TIERS,
+  isCompanyAccountTier,
+  toCompanyAccountTier,
+} from '@/lib/company-account-tier'
 
 /**
  * GET /api/admin/companies/[id]
@@ -164,6 +169,7 @@ export async function GET(
         dotNumber: company.dot_number,
         mcNumber: company.mc_number,
         status: company.status,
+        accountTier: toCompanyAccountTier(company.account_tier),
         description: company.description,
         email: company.email,
         phone: company.phone,
@@ -234,6 +240,7 @@ export async function GET(
  *   - Approve: { action: 'approve' }
  *   - Suspend: { action: 'suspend', reason: '...' }
  *   - Reactivate: { action: 'reactivate' }
+ *   - Tier: { action: 'set_tier', accountTier: 'carrier' | 'agency' }
  *   - Update fields: { companyName, adminNotes, allowedEmailDomains, etc. }
  *
  * `allowedEmailDomains` is editable here and NOT on any employer-facing route.
@@ -415,6 +422,31 @@ export async function PATCH(
         success: true,
         message: 'Company reactivated',
       })
+    }
+
+    // Tier decides which hub the company sees. Agency gets every block
+    // auto-provisioned on its next hub load; dropping to carrier leaves
+    // installed blocks alone (paid artifacts hang off them).
+    if (action === 'set_tier') {
+      const { accountTier } = body
+      if (!isCompanyAccountTier(accountTier)) {
+        return NextResponse.json(
+          { error: `accountTier must be one of: ${COMPANY_ACCOUNT_TIERS.join(', ')}` },
+          { status: 400 }
+        )
+      }
+
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ account_tier: accountTier })
+        .eq('id', id)
+
+      if (updateError) {
+        console.error('[ADMIN COMPANIES] Set tier error:', updateError)
+        return NextResponse.json({ error: 'Failed to update tier' }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, message: `Company is now a ${accountTier} account` })
     }
 
     // Handle field updates

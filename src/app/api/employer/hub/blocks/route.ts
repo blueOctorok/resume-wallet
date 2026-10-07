@@ -9,10 +9,14 @@ import { capabilityDeniedMessage } from '@/lib/employer-permissions'
 /**
  * GET /api/employer/hub/blocks — installed employer blocks.
  *
- * Employer blocks are preinstalled: every installable block is auto-provisioned
- * for the company on first load (idempotent — only missing rows are inserted).
- * Real DB rows are required because order-time API guards (companyCanOrderMvr,
- * companyCanOrderPsp, …) read employer_hub_blocks.
+ * Agency tier: every installable block is auto-provisioned on first load
+ * (idempotent — only missing rows are inserted). Real DB rows are required
+ * because order-time API guards (companyCanOrderMvr, companyCanOrderPsp, …)
+ * read employer_hub_blocks.
+ *
+ * Carrier tier: nothing is seeded. Blocks arrive one at a time, when the
+ * carrier first uses that product. Seeding here is what used to turn every
+ * carrier into a full agency on its first page load.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -40,9 +44,10 @@ export async function GET(request: NextRequest) {
 
     let blocks = existing ?? []
     const installedTypes = new Set(blocks.map((b) => b.block_type))
-    const missing = getInstallableEmployerBlockDefinitions().filter(
-      (def) => !installedTypes.has(def.id),
-    )
+    const missing =
+      access.accountTier === 'agency'
+        ? getInstallableEmployerBlockDefinitions().filter((def) => !installedTypes.has(def.id))
+        : []
 
     if (missing.length > 0) {
       const basePosition = blocks.length

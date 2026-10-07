@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { countEmployerBlocks } from '@/lib/employer-company-access'
+import { toCompanyAccountTier } from '@/lib/company-account-tier'
 
 /**
  * GET /api/employer/hub
@@ -240,8 +241,8 @@ export async function GET(request: NextRequest) {
     ).length
 
     const employerBlockCount = await countEmployerBlocks(supabase, company.id)
-    const companyStatus = company.status ?? 'active'
-    const isCarrierAccount = companyStatus === 'active' && employerBlockCount === 0
+    const accountTier = toCompanyAccountTier(company.account_tier)
+    const isCarrierAccount = accountTier === 'carrier'
 
     const stats = {
       activeJobs: jobPostings.filter(j => j.isActive).length,
@@ -275,6 +276,7 @@ export async function GET(request: NextRequest) {
         status: company.status ?? 'active',
         originShareToken: company.origin_share_token ?? null,
         signupSource: company.signup_source ?? 'admin',
+        accountTier,
       },
       employerBlockCount,
       isCarrierAccount,

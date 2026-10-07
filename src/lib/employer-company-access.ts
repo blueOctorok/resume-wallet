@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { can } from '@/lib/employer-permissions'
+import { toCompanyAccountTier, type CompanyAccountTier } from '@/lib/company-account-tier'
 
 export interface EmployerCompanyAccess {
   employerUserId: string
@@ -7,6 +8,7 @@ export interface EmployerCompanyAccess {
   /** Always concrete — never undefined, so a caller can't be bypassed by a missing role. */
   companyRole: string
   canManageEmployerBlocks: boolean
+  accountTier: CompanyAccountTier
 }
 
 /**
@@ -50,6 +52,7 @@ export async function getEmployerCompanyAccess(
       companyId: membership.company_id,
       companyRole,
       canManageEmployerBlocks: can(companyRole, 'manageCompany'),
+      accountTier: await readAccountTier(supabase, membership.company_id),
     }
   }
 
@@ -57,7 +60,7 @@ export async function getEmployerCompanyAccess(
   // an implicit owner link.
   const { data: legacy } = await supabase
     .from('companies')
-    .select('id')
+    .select('id, account_tier')
     .eq('employer_user_id', user.id)
     .maybeSingle()
 
@@ -67,10 +70,23 @@ export async function getEmployerCompanyAccess(
       companyId: legacy.id,
       companyRole: 'owner',
       canManageEmployerBlocks: can('owner', 'manageCompany'),
+      accountTier: toCompanyAccountTier(legacy.account_tier),
     }
   }
 
   return null
+}
+
+async function readAccountTier(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<CompanyAccountTier> {
+  const { data } = await supabase
+    .from('companies')
+    .select('account_tier')
+    .eq('id', companyId)
+    .maybeSingle()
+  return toCompanyAccountTier(data?.account_tier)
 }
 
 export async function companyHasEmployerBlock(
@@ -126,7 +142,7 @@ export async function companyCanRequestEvShare(
   return companyHasEmployerBlock(supabase, companyId, 'employer-employment-verification')
 }
 
-/** How many employer product blocks this company has installed. Zero = carrier account. */
+/** How many employer product blocks this company has installed. */
 export async function countEmployerBlocks(
   supabase: SupabaseClient,
   companyId: string,

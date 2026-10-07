@@ -293,6 +293,20 @@ export default function CompaniesTab({
                       {company.signupSource === 'homepage' ? 'Homepage lead' : 'Card lead'}
                     </span>
                   )}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      company.accountTier === 'agency'
+                        ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    }`}
+                    title={
+                      company.accountTier === 'agency'
+                        ? 'Full suite: jobs, applicants, team, every screening block preinstalled'
+                        : 'Find Drivers only. Screening blocks install on first use.'
+                    }
+                  >
+                    {company.accountTier === 'agency' ? 'Agency' : 'Carrier'}
+                  </span>
                   {company.status === 'pending' && (() => {
                     const days = Math.floor((Date.now() - new Date(company.createdAt).getTime()) / 86_400_000)
                     return days >= 7 ? (
@@ -409,6 +423,34 @@ export default function CompaniesTab({
                     Reactivate
                   </button>
                 )}
+                <button
+                  onClick={async () => {
+                    const next = company.accountTier === 'agency' ? 'carrier' : 'agency'
+                    const confirmed = confirm(
+                      next === 'agency'
+                        ? `Make "${company.name}" an agency account?\n\nThey get the full hub and every screening block is installed on their next visit.`
+                        : `Make "${company.name}" a carrier account?\n\nTheir hub becomes Find Drivers / Your outreach / Messages. Installed blocks stay.`
+                    )
+                    if (!confirmed) return
+                    await fetch(`/api/admin/companies/${company.id}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-wallet-address': sessionUserId || '',
+                      },
+                      body: JSON.stringify({ action: 'set_tier', accountTier: next }),
+                    })
+                    fetchData()
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    isDarkTheme(theme)
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  title={company.accountTier === 'agency' ? 'Switch to carrier tier' : 'Switch to agency tier'}
+                >
+                  {company.accountTier === 'agency' ? 'To carrier' : 'To agency'}
+                </button>
                 <button
                   onClick={() => {
                     const notes = prompt('Admin notes:', company.adminNotes || '')

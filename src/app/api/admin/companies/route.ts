@@ -7,6 +7,11 @@ import {
   CANDIDATE_CANNOT_BECOME_EMPLOYER,
   isCandidateSurfaceRole,
 } from '@/lib/employer-account-guard'
+import {
+  COMPANY_ACCOUNT_TIERS,
+  isCompanyAccountTier,
+  toCompanyAccountTier,
+} from '@/lib/company-account-tier'
 
 /**
  * GET /api/admin/companies
@@ -55,6 +60,7 @@ export async function GET(request: NextRequest) {
         onboarding_completed,
         signup_source,
         origin_share_token,
+        account_tier,
         created_at,
         updated_at,
         users!companies_employer_user_id_fkey (
@@ -135,6 +141,7 @@ export async function GET(request: NextRequest) {
         createdAt: company.created_at,
         updatedAt: company.updated_at,
         signupSource: company.signup_source ?? 'admin',
+        accountTier: toCompanyAccountTier(company.account_tier),
       }
     })
 
@@ -191,6 +198,8 @@ export async function POST(request: NextRequest) {
       designatedOwnerEmail, 
       allowedEmailDomains,
       status = 'active',
+      // Admin-created companies are the full-suite customers unless told otherwise.
+      accountTier = 'agency',
       adminNotes,
       email,
       phone,
@@ -201,6 +210,13 @@ export async function POST(request: NextRequest) {
     if (!companyName || !designatedOwnerEmail) {
       return NextResponse.json(
         { error: 'companyName and designatedOwnerEmail are required' },
+        { status: 400 }
+      )
+    }
+
+    if (!isCompanyAccountTier(accountTier)) {
+      return NextResponse.json(
+        { error: `accountTier must be one of: ${COMPANY_ACCOUNT_TIERS.join(', ')}` },
         { status: 400 }
       )
     }
@@ -327,6 +343,7 @@ export async function POST(request: NextRequest) {
         allowed_email_domains: normalizedDomains,
         employer_user_id: employerUserId, // May be null if user hasn't signed up yet
         status: status,
+        account_tier: accountTier,
         approved_at: status === 'active' ? new Date().toISOString() : null,
         admin_notes: adminNotes || null,
         email: email || null,

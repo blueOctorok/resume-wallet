@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import type { CompanyAccountTier } from '@/lib/company-account-tier'
 
 export type TabId =
   | 'companies'
@@ -134,6 +135,8 @@ export interface AdminCompany {
   createdAt: string
   /** `admin` or `card_funnel` — how the company row was created. */
   signupSource?: string
+  /** carrier = Find Drivers only; agency = full suite. See company-account-tier.ts. */
+  accountTier: CompanyAccountTier
 }
 
 export interface AdminJob {

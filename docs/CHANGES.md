@@ -4,6 +4,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Carrier tier is a stored fact, not a block count** (2026-10-06)
+
+`s.blaha@veree.io` signed in and got Pace's full agency dashboard — jobs, applicants, kanban, all empty. The carrier view (Find Drivers / Your outreach / Messages) already existed, but the hub decided "carrier" as `status === 'active' && employerBlockCount === 0`, and `GET /api/employer/hub/blocks` auto-installs every employer block on first load, even while pending. stars got its four blocks at 15:53:27 UTC, ten seconds before approval, and was an agency by the time it was active. Tier was derived from state a page load mutates, so it flipped on its own.
+
+Apply `supabase/migrations/114_company_account_tier.sql`.
+
+| Piece | What changed |
+|---|---|
+| Schema | `companies.account_tier` — `carrier` (default) or `agency`. Backfill: `signup_source = 'admin'` → agency. Auto-provisioned blocks are removed from carriers that have never ordered anything (no MVR, PSP, consent bundle, or EV share rows); each removal is written to `employer_block_audit`. |
+| Admin-only columns | **Pre-existing hole, now closed.** `companies` RLS lets an owner update their own row, and RLS is row-level — so from the browser an owner could already set `status = 'active'` or `verified = true`, and would have been able to set `account_tier = 'agency'`. `companies_guard_admin_columns` (BEFORE UPDATE trigger) refuses changes to `account_tier`, `status`, `verified`, `approved_*`, `suspended_*`, `suspension_reason`, `allowed_email_domains`, `admin_notes` unless `auth.role()` is the service role or null (API routes, migrations, SQL editor). |
+| `src/lib/company-account-tier.ts` | Type, guard, and `toCompanyAccountTier`. Missing column falls back to `agency` so a code deploy ahead of the migration changes nothing. |
+| `/api/employer/hub` | `isCarrierAccount = accountTier === 'carrier'`. Block count no longer decides. Returns `company.accountTier`. |
+| `/api/employer/hub/blocks` GET | Auto-provision only for agencies. Carriers get blocks one at a time, when first used. |
+| `getEmployerCompanyAccess` | Carries `accountTier`. |
+| Admin | Companies list/detail return `accountTier`; `PATCH { action: 'set_tier' }`; create defaults to `agency`. Companies tab shows a Carrier/Agency pill and a "To carrier" / "To agency" button. Dropping to carrier leaves installed blocks alone. |
+
+Pace is `agency` because it was admin-provisioned, not because of its name. Next: the first order from a driver's card installs that one block (roadmap piece 7).
+
 ## **Sign-in code 403s because Auth stored it with no expiry** (2026-10-06)
 
 The digits-only email landed (five `POST /auth/v1/verify` 403s, not three). The code was not burned. `generateLink` writes `auth.one_time_tokens.expires_at` as null — Auth's switch that fills that column is off — and the 6-digit verify path treats a null expiry as already expired. The row stays, so every type (`magiclink`, `email`, `invite`, `signup`, `recovery`) fails the same way. PostgREST cannot patch it: the `auth` schema is not exposed (`PGRST106`).
