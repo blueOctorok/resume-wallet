@@ -7,8 +7,8 @@ import Button from '@/components/ui/Button'
 const SHARE_API = '/api/career-card/share'
 
 /**
- * One-time ask: existing drivers were backfilled as findable, new sign-ups
- * default off. Either way they answer once, then this strip stays gone.
+ * One-time notice. New sign-ups are findable (migration 115). This strip
+ * tells them that and lets them hide. Either answer marks the prompt seen.
  */
 export default function DiscoverabilityPrompt({ isDark }: { isDark: boolean }) {
   const [visible, setVisible] = useState(false)
@@ -57,14 +57,14 @@ export default function DiscoverabilityPrompt({ isDark }: { isDark: boolean }) {
       )}
     >
       <p className={cn('text-sm font-medium', isDark ? 'text-gray-100' : 'text-slate-900')}>
-        Approved carriers can now find drivers on Provven. Want to be findable?
+        Carriers on Provven can find your card. You can hide it if you would rather they only see you after you apply.
       </p>
       <div className='flex flex-wrap gap-2'>
         <Button type='button' variant='primary' size='sm' isLoading={saving} onClick={() => void answer(true)}>
-          Yes, find me
+          Stay findable
         </Button>
         <Button type='button' variant='secondary' size='sm' disabled={saving} onClick={() => void answer(false)}>
-          Not now
+          Hide me
         </Button>
       </div>
     </div>

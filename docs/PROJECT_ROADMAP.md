@@ -258,7 +258,9 @@ Full layout for non-engineers: `docs/provven-access-model.pdf` (shareable, gener
 | 7 | **Card-level first order installs the block** | ⏳ Next | The "gradually want more" path: a carrier opens a driver's card, sees "Order MVR" with a price, first order installs `employer-mvr-orders` for the company and "Your orders" appears on their hub. Nothing on the carrier hub changes until they have bought something. |
 | 8 | **Carrier "Your outreach" by driver, not by job** | ⏳ Later | Carrier nav currently reuses `ApplicantsPage` (organized by job posting). A carrier has no jobs; this should list drivers invited / requested / messaged with the status of each. |
 
-**Open from the 2026-10-06 review:** discovery is wide (1,299 of 1,374 candidates discoverable after the migration-112 backfill) and admin approval is the only gate. Middle ground not built yet: pending companies see counts + blurred cards, contact actions unlock on approval. Also, `/api/employer/talent/search` does not check `companies.status` — only the UI hides search while pending.
+**Discoverability default flipped 2026-10-07.** Migration 112 left post-cutover sign-ups hidden until they opted in. Migration 115 defaults `discoverable_to_employers` on and backfills the unanswered hidden rows, so a self-serve candidate shows in every employer hub, Pace included. Explicit "Hide me" still removes them. Apply `115_discoverable_by_default.sql`.
+
+**Open from the 2026-10-06 review:** admin approval is the only gate between a work email and the pool. Middle ground not built yet: pending companies see counts + blurred cards, contact actions unlock on approval. Also, `/api/employer/talent/search` does not check `companies.status` — only the UI hides search while pending.
 
 **Deliberately NOT building:** a third portal/role, anonymous or email-gated candidate browsing, blurred candidate rows, any MVR/PSP exposure on public links. Related future work: link-scoped `public` audience for `disclosure_preferences` (extends Phase 2 selective disclosure to anonymous viewers) and the cold public verify page (DEC-2026-06-003) — both out of scope for this track.
 

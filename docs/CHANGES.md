@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Self-serve candidates are findable by default** (2026-10-07)
+
+A person who signed up on their own after migration 112 had `discoverable_to_employers` default false, so Pace's Find Talent (and every other employer hub) never listed them until they tapped "Yes, find me." Provven and Pace are the same company; those candidates should be in the pool. Apply `supabase/migrations/115_discoverable_by_default.sql`.
+
+The column default is now true. The 85 candidates currently hidden never answered the prompt, and all 85 have a name, so the backfill puts them in `career_cards` as soon as the migration runs. Rows where someone already answered are left alone (none are hidden today). The hub strip now says they are findable and offers "Hide me" instead of asking them to opt in. Contact details still stay off the card until that employer has a relationship with them.
+
 ## **Carrier tier is a stored fact, not a block count** (2026-10-06)
 
 `s.blaha@veree.io` signed in and got Pace's full agency dashboard — jobs, applicants, kanban, all empty. The carrier view (Find Drivers / Your outreach / Messages) already existed, but the hub decided "carrier" as `status === 'active' && employerBlockCount === 0`, and `GET /api/employer/hub/blocks` auto-installs every employer block on first load, even while pending. stars got its four blocks at 15:53:27 UTC, ten seconds before approval, and was an agency by the time it was active. Tier was derived from state a page load mutates, so it flipped on its own.
