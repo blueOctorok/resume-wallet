@@ -39,17 +39,31 @@ export const MVR_FORM1_LOCK_PATHS: readonly DotFieldPath[] = [
   'currentLicenses.0.expirationDate',
 ] as const
 
-export interface DotFieldProvenanceEntry {
-  path: DotFieldPath
-  source: 'mvr'
-  mvrResultId: string
-  orderId: string | null
-  accioOrderNumber: string | null
-  /** ISO timestamp of the MVR result / order completion used for this lock. */
-  asOf: string
-  /** Canonical value projected from MVR (server re-applies this on save). */
-  value: string
-}
+/**
+ * Who last wrote a Form 1 lock path.
+ * User-typed values have no entry. A license photo outranks those.
+ * An MVR outranks the license, even when the string is identical —
+ * the source change is the point.
+ */
+export type DotFieldProvenanceEntry =
+  | {
+      path: DotFieldPath
+      source: 'mvr'
+      mvrResultId: string
+      orderId: string | null
+      accioOrderNumber: string | null
+      /** ISO timestamp of the MVR result / order completion used for this lock. */
+      asOf: string
+      /** Canonical value projected from MVR (server re-applies this on save). */
+      value: string
+    }
+  | {
+      path: DotFieldPath
+      source: 'license'
+      /** When the driver confirmed the scan. */
+      asOf: string
+      value: string
+    }
 
 export interface DotForm1FieldProvenance {
   version: 1
@@ -183,7 +197,8 @@ export function projectLockedFieldsOntoForm1(
   }
   let next = base
   for (const entry of Object.values(provenance.fields)) {
-    if (!entry || entry.source !== 'mvr') continue
+    if (!entry) continue
+    if (entry.source !== 'mvr' && entry.source !== 'license') continue
     next = setForm1ValueAtPath(next, entry.path, entry.value)
   }
   return { ...next, _fieldProvenance: provenance }
@@ -225,16 +240,30 @@ export function mergeMvrPrefillIntoForm1(
   const existingMailing = (base.currentMailing as Record<string, unknown> | undefined) ?? {}
   const mvrMailing = (mvrForm1.currentMailing as Record<string, unknown> | undefined) ?? {}
   if (mvrMailing && typeof mvrMailing === 'object') {
+    const fromLicense = existingMailing._source === 'license'
     const mailing = { ...existingMailing }
+    let wrote = false
     for (const key of ['street', 'city', 'state', 'zipCode'] as const) {
-      if (!String(mailing[key] ?? '').trim() && String(mvrMailing[key] ?? '').trim()) {
-        mailing[key] = mvrMailing[key]
+      const mvrVal = String(mvrMailing[key] ?? '').trim()
+      if (!mvrVal) continue
+      const existingVal = String(mailing[key] ?? '').trim()
+      // A license address loses to the MVR even when the street is the same.
+      // An address the driver typed, with no license stamp, is only filled when blank.
+      if (!existingVal || fromLicense) {
+        mailing[key] = mvrVal
+        wrote = true
       }
     }
+    if (wrote) mailing._source = 'mvr'
     merged.currentMailing = mailing
   }
 
-  return projectLockedFieldsOntoForm1(merged, provenance) as Form1WithProvenance
+  const prior = (base as Form1WithProvenance)._fieldProvenance
+  const overlaid: DotForm1FieldProvenance = {
+    version: 1,
+    fields: { ...(prior?.fields ?? {}), ...provenance.fields },
+  }
+  return projectLockedFieldsOntoForm1(merged, overlaid) as Form1WithProvenance
 }
 
 /**
@@ -435,14 +464,16 @@ export function getLockedPaths(
   const locked = new Set<DotFieldPath>()
   if (!provenance?.fields) return locked
   for (const [path, entry] of Object.entries(provenance.fields)) {
-    if (entry?.source === 'mvr' && isDotFieldPath(path)) {
+    if ((entry?.source === 'mvr' || entry?.source === 'license') && isDotFieldPath(path)) {
       locked.add(path)
     }
   }
   return locked
 }
 
-export function formatMvrFieldBadge(entry: DotFieldProvenanceEntry): string {
+export function formatMvrFieldBadge(
+  entry: Extract<DotFieldProvenanceEntry, { source: 'mvr' }>,
+): string {
   const order = entry.accioOrderNumber ? `Accio order #${entry.accioOrderNumber}` : 'your MVR'
   const asOf = entry.asOf ? new Date(entry.asOf).toLocaleDateString() : null
   return asOf

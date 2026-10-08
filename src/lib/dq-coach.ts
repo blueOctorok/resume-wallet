@@ -387,6 +387,56 @@ function employmentGapFlags(
   return flags
 }
 
+function profileReady(snapshot: DqCoachSnapshot): boolean {
+  return Boolean(snapshot.profile.name && snapshot.profile.hasPhone && snapshot.profile.hasEmail)
+}
+
+function licenseScanFlag(status: DqItemStatus): DqCoachFlag {
+  const finishing = status === 'in_progress'
+  return {
+    severity: 'warn',
+    title: finishing ? 'Finish your license photos' : 'Photograph your license',
+    detail: finishing
+      ? 'Both sides need to be saved and confirmed. A confirmed license replaces what you typed on the DOT application.'
+      : 'A confirmed license replaces what you typed on the DOT application. An MVR replaces the license, even when the values match, and that record is the verified one.',
+    target: 'license',
+  }
+}
+
+/**
+ * After the profile, the driver needs one source that can fill the DOT license
+ * fields. The photo is the one they can do themselves. An MVR an employer
+ * already asked for comes first, and the photo stays the next step in the list.
+ */
+function licenseOrMvrNext(snapshot: DqCoachSnapshot): DqCoachReview['next'] {
+  const license = snapshot.dqItems.find((item) => item.id === 'dl_images')
+  const mvr = snapshot.dqItems.find((item) => item.id === 'mvr')
+  const licenseStarted = license?.status === 'in_progress'
+  const mvrInMotion =
+    mvr != null && ['requested', 'failed', 'in_progress'].includes(mvr.status)
+
+  if (mvrInMotion && !licenseStarted) {
+    return {
+      title:
+        mvr.status === 'failed'
+          ? 'Retry your MVR'
+          : mvr.status === 'requested'
+            ? 'An employer asked for your MVR'
+            : 'Finish your MVR',
+      detail:
+        'The MVR is the verified record and it fills the DOT application. Photographing the license fills the same empty fields and stays on the file.',
+      target: 'mvr',
+    }
+  }
+
+  if (license && (license.status === 'missing' || license.status === 'in_progress')) {
+    const flag = licenseScanFlag(license.status)
+    return { title: flag.title, detail: flag.detail, target: 'license' }
+  }
+
+  return null
+}
+
 export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   const flags: DqCoachFlag[] = collectDiscrepancyFlags(snapshot)
   const discrepancyNext = nextFromDiscrepancies(flags)
@@ -422,8 +472,13 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   }
 
   // One card per live DQ hole. Placeholders stay in the packet list, not Next.
+  // The license photo is live: it is the step a driver can do before anyone orders an MVR.
   for (const item of snapshot.dqItems) {
     if (!getDqItemDefinition(item.id).blocksOverallCompletion) continue
+    if (item.id === 'dl_images' && (item.status === 'missing' || item.status === 'in_progress')) {
+      flags.push(licenseScanFlag(item.status))
+      continue
+    }
     if (
       item.status === 'complete' ||
       item.status === 'processing' ||
@@ -493,26 +548,27 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   )
   const next = discrepancyNext
     ? discrepancyNext
-    : priority
+    : !profileReady(snapshot)
       ? {
-          title:
-            priority.status === 'requested'
-              ? `An employer asked for ${priority.label}`
-              : priority.status === 'failed'
-                ? `Retry ${priority.label}`
-                : priority.status === 'in_progress'
-                  ? `Finish ${priority.label}`
-                  : `Add ${priority.label}`,
-          detail: 'This is the next hole in a complete DQ file.',
-          target: DQ_TO_TARGET[priority.id] ?? null,
+          title: 'Finish your profile',
+          detail: 'Name, phone, and email go on the career card before the rest of the file.',
+          target: 'profile' as DqCoachTarget,
         }
-      : snapshot.profile.name
-        ? null
-        : {
-            title: 'Finish your profile',
-            detail: 'Name and contact feed every block and the career card.',
-            target: 'profile' as DqCoachTarget,
-          }
+      : licenseOrMvrNext(snapshot) ??
+        (priority
+          ? {
+              title:
+                priority.status === 'requested'
+                  ? `An employer asked for ${priority.label}`
+                  : priority.status === 'failed'
+                    ? `Retry ${priority.label}`
+                    : priority.status === 'in_progress'
+                      ? `Finish ${priority.label}`
+                      : `Add ${priority.label}`,
+              detail: 'This is the next hole in a complete DQ file.',
+              target: DQ_TO_TARGET[priority.id] ?? null,
+            }
+          : null)
 
   return {
     watching: 'Checking your file for unfinished work and anything that does not match.',
@@ -539,10 +595,14 @@ export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoa
     flags.push(flag)
   }
   // Discrepancies are the floor — the model must not bury them under "add PSP".
+  // Profile, then a license photo, stay pinned the same way. The model was
+  // skipping the scan because it used to be a placeholder.
   const floorNext = nextFromDiscrepancies(flags)
+  const pinned =
+    base.next?.target === 'profile' || base.next?.target === 'license' ? base.next : null
   return {
     watching: extra.watching || base.watching,
-    next: floorNext ?? extra.next ?? base.next,
+    next: floorNext ?? pinned ?? extra.next ?? base.next,
     flags: flags.slice(0, 16),
   }
 }
@@ -602,6 +662,7 @@ Write a JSON object only (no markdown) with:
 - flags: { severity: "warn"|"info", title, detail, target } — only unfinished work and real mismatches. Include target so the driver can open that page. At most 6 flags.
 - Do not list completed items as action flags. Those already live on the career card.
 - dqItems is the full DQ packet, including pieces not built in product yet (coming_soon / needs_key / needs_gov). You may name them as not available yet. Do not give them a target or treat them as the driver's next click.
+- dl_images IS built. Target is license. It is a real to-do, not a placeholder.
 
 Your job:
 1. What is not done (missing / in-progress DQ tiles, empty required profile fields).
@@ -618,7 +679,8 @@ mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity 
 Write like a safety clerk talking to a driver. Never say filledCode, Accio, CRA, XML, Form 1, Form 2, Form 3, or vendor field names. Point the driver to Section 1, 2, or 3 if they need to open a part of the application.
 
 Rules:
-- Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven".
+- Order for next, after any identity mismatch: (1) profile if name, phone, or email is missing, (2) photograph the license (target license) when dl_images is not complete and the MVR is not complete. An MVR that is already complete satisfies that step. Trust on the DOT application is typed values, then the license photo, then the MVR. The photo replaces what the driver typed and stays on file. The MVR replaces the photo, even when the values match, and that record is the verified one. Never call the photo verified, proven, or a Midnight proof.
+- Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven". A photographed license is on file.
 - Do not invent violations, crashes, employers, or dates.
 - Be specific (names, state codes, dates from the snapshot).
 - List each missing DQ item as its own flag. Do not collapse them into watching.

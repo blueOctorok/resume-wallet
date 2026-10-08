@@ -77,6 +77,39 @@ describe('dot-field-provenance', () => {
     expect((projected._fieldProvenance as { version: number }).version).toBe(1)
   })
 
+  it('replaces a license stamp with the MVR even when the name matches', () => {
+    const provenance = buildMvrForm1Provenance(
+      { ...mvrForm1, middleName: '' },
+      { mvrResultId: 'res-1', asOf: '2026-07-01T00:00:00.000Z' },
+    )
+    const existing = {
+      firstName: 'Jane',
+      middleName: 'Quincy',
+      _fieldProvenance: {
+        version: 1 as const,
+        fields: {
+          firstName: {
+            path: 'firstName' as const,
+            source: 'license' as const,
+            asOf: '2026-06-01T00:00:00.000Z',
+            value: 'Jane',
+          },
+          middleName: {
+            path: 'middleName' as const,
+            source: 'license' as const,
+            asOf: '2026-06-01T00:00:00.000Z',
+            value: 'Quincy',
+          },
+        },
+      },
+    }
+    const merged = mergeMvrPrefillIntoForm1(existing, { ...mvrForm1, middleName: '' }, provenance)
+    expect(merged.firstName).toBe('Jane')
+    expect(merged._fieldProvenance?.fields?.firstName?.source).toBe('mvr')
+    expect(merged.middleName).toBe('Quincy')
+    expect(merged._fieldProvenance?.fields?.middleName?.source).toBe('license')
+  })
+
   it('merge preserves existing SSN and soft-fills empty phone', () => {
     const provenance = buildMvrForm1Provenance(mvrForm1, {
       mvrResultId: 'res-1',

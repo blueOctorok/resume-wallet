@@ -88,12 +88,14 @@ describe('softFillForm1FromLicense', () => {
     expect(filled).not.toContain('First name')
   })
 
-  it('does not replace a license number the driver already typed', () => {
+  it('replaces a license number the driver typed and stamps the license as the source', () => {
     const { form1 } = softFillForm1FromLicense(
       { currentLicenses: [{ licenseNumber: 'KEEPME', state: '', typeClass: '', endorsements: '', expirationDate: '' }] },
       fields,
     )
-    expect((form1.currentLicenses as Array<{ licenseNumber: string; state: string }>)[0].licenseNumber).toBe('KEEPME')
-    expect((form1.currentLicenses as Array<{ state: string }>)[0].state).toBe('OH')
+    const license = (form1.currentLicenses as Array<{ licenseNumber: string; state: string }>)[0]
+    expect(license.licenseNumber).toBe('D1234567')
+    expect(license.state).toBe('OH')
+    expect(form1._fieldProvenance?.fields?.['currentLicenses.0.licenseNumber']?.source).toBe('license')
   })
 })

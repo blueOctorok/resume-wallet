@@ -1,9 +1,11 @@
 /**
- * Write a confirmed license scan into the places that were still empty.
+ * Write a confirmed license scan onto the DOT application.
  *
- * A filled field, and any path an MVR has locked, is left alone. The scan is
- * the first fill for someone who does not have a record pull yet. It does not
- * correct or override the DMV record.
+ * Trust order on Form 1 identity and license fields:
+ *   what the driver typed  <  the license photo  <  the MVR
+ *
+ * The photo replaces typed values and locks them. An MVR replaces the photo
+ * later, even when the string is the same. An MVR lock is never overwritten.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -14,9 +16,10 @@ import {
 import { ensureHubBlockInstalled, getCdlData, saveCdlData } from '@/lib/block-data'
 import {
   getForm1ValueAtPath,
-  getLockedPaths,
   isDotFieldPath,
   setForm1ValueAtPath,
+  type DotFieldPath,
+  type DotForm1FieldProvenance,
   type Form1WithProvenance,
 } from '@/lib/dot-field-provenance'
 
@@ -44,22 +47,32 @@ export function softFillForm1FromLicense(
   form1: Record<string, unknown> | null | undefined,
   fields: LicenseScanFields,
 ): LicenseSoftFillResult {
-  const locked = getLockedPaths(
-    (form1 as Form1WithProvenance | null | undefined)?._fieldProvenance,
-  )
+  const prior = (form1 as Form1WithProvenance | null | undefined)?._fieldProvenance
   let next: Record<string, unknown> = { ...(form1 ?? {}) }
+  const stamped: DotForm1FieldProvenance['fields'] = { ...(prior?.fields ?? {}) }
   const filled: string[] = []
+  const asOf = new Date().toISOString()
 
   for (const [path, key] of FORM1_PATHS) {
-    if (isDotFieldPath(path) && locked.has(path)) continue
+    if (isDotFieldPath(path) && prior?.fields?.[path]?.source === 'mvr') continue
     const incoming = formValue(fields, key)
     if (!incoming) continue
-    if (getForm1ValueAtPath(next, path).trim()) continue
+    const current = getForm1ValueAtPath(next, path).trim()
+    const already =
+      isDotFieldPath(path) &&
+      prior?.fields?.[path]?.source === 'license' &&
+      prior.fields[path]?.value === incoming &&
+      current === incoming
+    if (already) continue
     next = setForm1ValueAtPath(next, path, incoming)
+    if (isDotFieldPath(path)) {
+      stamped[path] = { path, source: 'license', asOf, value: incoming }
+    }
     filled.push(labelFor(key))
   }
 
   next = softFillMailing(next, fields, filled)
+  next._fieldProvenance = { version: 1, fields: stamped }
   return { form1: next, filled }
 }
 
@@ -91,6 +104,7 @@ function softFillMailing(
   filled: string[],
 ): Record<string, unknown> {
   const current = (form1.currentMailing ?? {}) as Record<string, unknown>
+  if (current._source === 'mvr') return form1
   const next = { ...current }
   let changed = false
   const pairs: Array<[string, string]> = [
@@ -100,12 +114,15 @@ function softFillMailing(
     ['zipCode', fields.postalCode],
   ]
   for (const [key, value] of pairs) {
-    if (!value.trim()) continue
-    if (String(next[key] ?? '').trim()) continue
-    next[key] = value.trim()
-    changed = true
+    const incoming = value.trim()
+    if (!incoming) continue
+    if (String(next[key] ?? '').trim() === incoming && next._source === 'license') continue
+    if (String(next[key] ?? '').trim() !== incoming) changed = true
+    next[key] = incoming
   }
-  if (!changed) return form1
+  if (!changed && next._source === 'license') return form1
+  if (!pairs.some(([, value]) => value.trim())) return form1
+  next._source = 'license'
   if (!String(next.yearsAtAddress ?? '').trim()) next.yearsAtAddress = ''
   filled.push('Mailing address')
   return { ...form1, currentMailing: next }
@@ -123,22 +140,32 @@ export async function applyConfirmedLicenseScan(
     await ensureHubBlockInstalled(supabase, userId, 'driver-cdl-credentials')
   }
 
-  const cdlFilled = await fillEmptyCdl(supabase, userId, fields)
-  filled.push(...cdlFilled)
-
   const profileFilled = await fillEmptyProfile(supabase, userId, fields)
   filled.push(...profileFilled)
 
-  const dotFilled = await fillDotApplication(supabase, userId, fields)
+  const { filled: dotFilled, form1 } = await fillDotApplication(supabase, userId, fields)
   filled.push(...dotFilled)
+
+  const cdlFilled = await fillCdlFromLicense(supabase, userId, fields, form1)
+  filled.push(...cdlFilled)
 
   return { filled }
 }
 
-async function fillEmptyCdl(
+function sameList(current: string[] | null | undefined, next: string[]): boolean {
+  if (!current || current.length !== next.length) return false
+  return current.every((item, index) => item === next[index])
+}
+
+function licenseOwns(form1: Form1WithProvenance | null, path: DotFieldPath): boolean {
+  return form1?._fieldProvenance?.fields?.[path]?.source === 'license'
+}
+
+async function fillCdlFromLicense(
   supabase: SupabaseClient,
   userId: string,
   fields: LicenseScanFields,
+  form1: Form1WithProvenance | null,
 ): Promise<string[]> {
   const existing = await getCdlData(supabase, userId)
   const patch: Parameters<typeof saveCdlData>[2] = {}
@@ -151,20 +178,32 @@ async function fillEmptyCdl(
   ) => {
     if (!value) return
     const current = existing?.[column]
-    if (typeof current === 'string' && current.trim()) return
+    if (typeof current === 'string' && current.trim() === value) return
     patch[column] = value
     filled.push(label)
   }
 
-  assign('cdl_number', fields.licenseNumber, 'CDL number')
-  assign('cdl_state', fields.state, 'CDL state')
-  assign('cdl_class', fields.licenseClass, 'CDL class')
-  assign('cdl_expiration', fields.expirationDate, 'CDL expiration')
-  if (fields.endorsements.length > 0 && !(existing?.endorsements?.length)) {
+  if (licenseOwns(form1, 'currentLicenses.0.licenseNumber')) {
+    assign('cdl_number', fields.licenseNumber, 'CDL number')
+  }
+  if (licenseOwns(form1, 'currentLicenses.0.state')) {
+    assign('cdl_state', fields.state, 'CDL state')
+  }
+  if (licenseOwns(form1, 'currentLicenses.0.typeClass')) {
+    assign('cdl_class', fields.licenseClass, 'CDL class')
+  }
+  if (licenseOwns(form1, 'currentLicenses.0.expirationDate')) {
+    assign('cdl_expiration', fields.expirationDate, 'CDL expiration')
+  }
+  if (
+    fields.endorsements.length > 0 &&
+    licenseOwns(form1, 'currentLicenses.0.endorsements') &&
+    !sameList(existing?.endorsements, fields.endorsements)
+  ) {
     patch.endorsements = fields.endorsements
     filled.push('CDL endorsements')
   }
-  if (fields.restrictions.length > 0 && !(existing?.restrictions?.length)) {
+  if (fields.restrictions.length > 0 && !sameList(existing?.restrictions, fields.restrictions)) {
     patch.restrictions = fields.restrictions
     filled.push('CDL restrictions')
   }
@@ -217,7 +256,7 @@ async function fillDotApplication(
   supabase: SupabaseClient,
   userId: string,
   fields: LicenseScanFields,
-): Promise<string[]> {
+): Promise<{ filled: string[]; form1: Form1WithProvenance | null }> {
   const { data: app, error } = await supabase
     .from('driver_applications')
     .select('id, application_data')
@@ -226,7 +265,7 @@ async function fillDotApplication(
 
   if (error) {
     console.warn('[LICENSE] DOT load failed:', error.message)
-    return []
+    return { filled: [], form1: null }
   }
 
   const applicationData = (app?.application_data ?? {}) as {
@@ -235,7 +274,7 @@ async function fillDotApplication(
     form3?: unknown
   }
   const { form1, filled } = softFillForm1FromLicense(applicationData.form1, fields)
-  if (filled.length === 0) return []
+  if (filled.length === 0) return { filled: [], form1 }
 
   const next = {
     ...applicationData,
@@ -251,9 +290,9 @@ async function fillDotApplication(
       .eq('id', app.id)
     if (updateError) {
       console.warn('[LICENSE] DOT update failed:', updateError.message)
-      return []
+      return { filled: [], form1: null }
     }
-    return filled.map((label) => `DOT ${label}`)
+    return { filled: filled.map((label) => `DOT ${label}`), form1 }
   }
 
   const { error: insertError } = await supabase.from('driver_applications').insert({
@@ -264,8 +303,8 @@ async function fillDotApplication(
   })
   if (insertError) {
     console.warn('[LICENSE] DOT create failed:', insertError.message)
-    return []
+    return { filled: [], form1: null }
   }
   await ensureHubBlockInstalled(supabase, userId, 'driver-dot-application')
-  return filled.map((label) => `DOT ${label}`)
+  return { filled: filled.map((label) => `DOT ${label}`), form1 }
 }

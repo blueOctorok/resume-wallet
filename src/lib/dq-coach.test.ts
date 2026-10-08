@@ -44,7 +44,7 @@ function snapshot(partial: Partial<DqCoachSnapshot> = {}): DqCoachSnapshot {
       mismatchAlerts: [],
       accidents: [],
       convictions: [],
-      ...partial.mvr,
+      ...(partial.mvr ?? {}),
     },
     psp: null,
     dot: null,
@@ -214,6 +214,80 @@ describe('heuristicDqReview discrepancies', () => {
       }),
     )
     expect(flags.some((f) => f.title === 'MVR accidents missing on DOT')).toBe(true)
+  })
+
+  it('puts the license photo next once the profile is filled and neither source is on file', () => {
+    const review = heuristicDqReview(
+      snapshot({
+        profile: {
+          name: 'Sam Blaha',
+          city: 'Cleveland',
+          state: 'OH',
+          dateOfBirth: '1982-09-18',
+          phone: '(216) 314-6034',
+          hasPhone: true,
+          hasEmail: true,
+        },
+        mvr: null,
+        dqItems: [
+          { id: 'dl_images', label: 'Driver license (front & back)', status: 'missing' },
+          { id: 'mvr', label: 'Motor Vehicle Record', status: 'missing' },
+        ],
+      }),
+    )
+    expect(review.next?.target).toBe('license')
+    expect(review.next?.title).toMatch(/photograph your license/i)
+    const steps = buildDqActionSteps(review)
+    expect(steps[0]?.target).toBe('license')
+    expect(steps.some((step) => step.target === 'mvr')).toBe(true)
+  })
+
+  it('finishes the profile before the license photo, and still lists the photo', () => {
+    const review = heuristicDqReview(
+      snapshot({
+        profile: {
+          name: null,
+          city: null,
+          state: null,
+          dateOfBirth: null,
+          phone: null,
+          hasPhone: false,
+          hasEmail: false,
+        },
+        mvr: null,
+        dqItems: [
+          { id: 'dl_images', label: 'Driver license (front & back)', status: 'missing' },
+        ],
+      }),
+    )
+    expect(review.next?.target).toBe('profile')
+    expect(buildDqActionSteps(review).some((step) => step.target === 'license')).toBe(true)
+  })
+
+  it('keeps the license photo as Next when the model suggests something else', () => {
+    const base = heuristicDqReview(
+      snapshot({
+        profile: {
+          name: 'Sam Blaha',
+          city: 'Cleveland',
+          state: 'OH',
+          dateOfBirth: '1982-09-18',
+          phone: '(216) 314-6034',
+          hasPhone: true,
+          hasEmail: true,
+        },
+        mvr: null,
+        dqItems: [
+          { id: 'dl_images', label: 'Driver license (front & back)', status: 'missing' },
+        ],
+      }),
+    )
+    const merged = mergeDqReviews(base, {
+      watching: 'Looks fine.',
+      next: { title: 'Add PSP', detail: 'Missing.', target: 'psp' },
+      flags: [],
+    })
+    expect(merged.next?.target).toBe('license')
   })
 
   it('keeps the mismatch as Next when the model suggests something else', () => {

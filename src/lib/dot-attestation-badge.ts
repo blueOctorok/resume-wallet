@@ -138,7 +138,7 @@ export function matchEmploymentAttestation(
 
 /** Form 1 locked field badge — upgrade when MVR attestation matches. */
 export function resolveMvrFieldDotBadge(
-  entry: DotFieldProvenanceEntry,
+  entry: Extract<DotFieldProvenanceEntry, { source: 'mvr' }>,
   attestations: AttestationBadgeSummary[] = [],
 ): DotBadgeResult {
   const issuerText = formatMvrFieldBadge(entry)

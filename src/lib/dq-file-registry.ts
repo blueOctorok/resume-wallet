@@ -49,6 +49,15 @@ export interface DqItemDefinition {
 
 export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
   {
+    id: 'dl_images',
+    label: 'Driver license (front & back)',
+    description: 'Photos of both sides of the license. Reading the card fills empty DOT license fields. On file — not a verified record.',
+    source: 'driver_upload',
+    blocksOverallCompletion: true,
+    employerEmptyHint: 'Driver has not put a license on file yet.',
+    driverEmptyHint: 'Photograph the front and back. That fills empty license fields on your DOT application.',
+  },
+  {
     id: 'mvr',
     label: 'Motor Vehicle Record',
     description: 'State DMV pull via integrated CRA (Key / Accio). Driver-owned — visible on every employer DQ monitor.',
@@ -96,15 +105,6 @@ export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
     blocksOverallCompletion: true,
     employerEmptyHint: 'Initiate employment verification with prior employers.',
     driverEmptyHint: 'Employment history is verified by your hiring employer.',
-  },
-  {
-    id: 'dl_images',
-    label: 'Driver license (front & back)',
-    description: 'Photos of both sides of the commercial driver license.',
-    source: 'driver_upload',
-    blocksOverallCompletion: false,
-    employerEmptyHint: 'Driver has not put a license on file yet.',
-    driverEmptyHint: 'Photograph the front and back of your license.',
   },
   {
     id: 'med_card',

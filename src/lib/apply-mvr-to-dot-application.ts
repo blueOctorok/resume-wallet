@@ -5,7 +5,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { saveCdlData } from '@/lib/block-data'
 import {
+  getForm1ValueAtPath,
   mergeMvrPrefillIntoForm1,
   mergeMvrRowsIntoForm2,
   type Form1WithProvenance,
@@ -58,6 +60,45 @@ export function applyProjectionToApplicationData(
   }
 }
 
+function classLetter(typeClass: string): string {
+  const match = typeClass.match(/[A-C]/i)
+  return match ? match[0].toUpperCase() : typeClass.trim()
+}
+
+/** MVR-owned license fields replace whatever the photo or the driver put on the CDL block. */
+async function writeCdlFromMvr(
+  supabase: SupabaseClient,
+  userId: string,
+  form1: Form1WithProvenance,
+): Promise<void> {
+  const fields = form1._fieldProvenance?.fields
+  if (!fields) return
+  const patch: Parameters<typeof saveCdlData>[2] = {}
+  const take = (path: keyof typeof fields, write: (value: string) => void) => {
+    if (fields[path]?.source !== 'mvr') return
+    const value = getForm1ValueAtPath(form1, path).trim()
+    if (value) write(value)
+  }
+  take('currentLicenses.0.licenseNumber', (value) => {
+    patch.cdl_number = value
+  })
+  take('currentLicenses.0.state', (value) => {
+    patch.cdl_state = value
+  })
+  take('currentLicenses.0.typeClass', (value) => {
+    patch.cdl_class = classLetter(value)
+  })
+  take('currentLicenses.0.expirationDate', (value) => {
+    patch.cdl_expiration = value
+  })
+  take('currentLicenses.0.endorsements', (value) => {
+    const list = value.split(',').map((item) => item.trim()).filter(Boolean)
+    if (list.length > 0) patch.endorsements = list
+  })
+  if (Object.keys(patch).length === 0) return
+  await saveCdlData(supabase, userId, patch)
+}
+
 /**
  * Load MVR projection and merge into driver_applications for this user.
  * No-op if no application row or no MVR. Non-throwing for webhook use.
@@ -108,6 +149,8 @@ export async function applyMvrProjectionToDriverApplication(
     console.warn('[MVR→DOT] Failed to update application:', updateError.message)
     return { applied: false, reason: 'update_error' }
   }
+
+  await writeCdlFromMvr(supabase, userId, next.form1)
 
   console.log('[MVR→DOT] Applied projection to application', app.id, {
     lockedFields: Object.keys(proj.form1Provenance.fields).length,

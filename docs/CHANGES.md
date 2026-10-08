@@ -10,6 +10,10 @@ Organic drivers can photograph the front and back of their license with any phon
 
 This is not a state-record check and it does not create a Midnight proof. The photo is the card the driver handed us. A proof still has to cite a DMV pull.
 
+The file board and the DQ watcher now treat the photo as a real to-do, sitting with the MVR at the top of the packet. After name, phone, and email, the next click is the license photo when neither the photo nor an MVR is on file. An MVR an employer already asked for stays first, and the photo stays the step after it.
+
+On the DOT application the trust order is what the driver typed, then the license photo, then the MVR. Confirming the scan replaces typed identity and license fields and locks them as on file. An MVR replaces those fields afterward, even when the text is the same, and the source becomes the MVR. A field the MVR does not have stays on the license. Employment history is a different ladder: the prior employer's verification replaces what the driver typed, and a license has no jobs on it. The profile name is still only filled when blank, so a wrong record pull cannot rename the account.
+
 Apply `supabase/migrations/116_block_driver_license.sql` before the page can save photos.
 
 | Piece | What changed |
