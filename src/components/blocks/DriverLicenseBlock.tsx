@@ -73,7 +73,7 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
           status={status}
         >
           <p className='text-sm text-gray-600 dark:text-gray-400'>
-            Photograph the front, then the back, with a phone or a computer camera. You can also choose a photo you already took. We read the barcode on the back and fill empty license fields on your DOT application. Anything already filled, including a record from an MVR, stays as it is.
+            Photograph the front, then the back, with a phone or a computer camera. You can also choose a photo you already took. We read the barcode on the back. Confirming replaces what you typed on the DOT application. An MVR replaces the license, even when the values match.
           </p>
 
           <div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>

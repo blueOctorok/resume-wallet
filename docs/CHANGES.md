@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Back to Hub control** (2026-10-08)
+
+The shared back control was a gray outline sitting on the next panel's top edge when a page forgot to add a gap. It is now a Midnight / Hot Embers pill on its own row, with space under it, so the following card starts below the control. Horizontal headers (resume builders, inbox thread, career card, hunt desk) opt out of that space with `mb-0`.
+
+---
+
 ## **Driver license on file** (2026-10-08)
 
 Organic drivers can photograph the front and back of their license with any phone camera or a computer webcam, or choose a photo already on the device. Phones open the rear camera. Computers get the normal file dialog so a webcam shot and a saved photo are both available. The back barcode (AAMVA PDF417) is decoded in the app, the driver reviews the fields, and confirming writes them into empty CDL, profile, and DOT Form 1 spots. A field that already has a value, and any path an MVR has locked, is left alone. The DQ file item `dl_images` tracks it. The career card says **License on file**.

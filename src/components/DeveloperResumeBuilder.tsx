@@ -2079,7 +2079,7 @@ export default function DeveloperResumeBuilder({
       >
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between'>
-            {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={onBack} />}
+            {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={onBack} className='mb-0 shrink-0' />}
 
             <div className='flex items-center gap-3'>
               {saveMessage && (

@@ -111,7 +111,7 @@ export default function DriverCareerCardSection({
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <BackToHubButton onClick={onBack} />
+          <BackToHubButton onClick={onBack} className='mb-0 shrink-0' />
           <div>
             <h2 className={`text-xl font-bold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
               My Career Card

@@ -666,6 +666,7 @@ export default function ResumeBuilder({
               <BackToHubButton
                 onClick={handleBack}
                 label={onBack ? 'Back to Hub' : 'Back'}
+                className='mb-0 shrink-0'
               />
             )}
 

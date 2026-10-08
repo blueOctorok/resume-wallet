@@ -165,7 +165,7 @@ export default function MessageThread({ threadId, sessionUserId, onBack }: Messa
     <div className={`flex flex-col h-full rounded-2xl overflow-hidden border ${borderCls} ${cardBg}`}>
       {/* Header */}
       <div className={`flex items-center gap-3 px-4 py-3 border-b ${borderCls} ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-        <BackToHubButton onClick={onBack} label='Back to Inbox' />
+        <BackToHubButton onClick={onBack} label='Back to Inbox' className='mb-0 shrink-0' />
 
         <Avatar
           name={thread.otherParticipant.name}

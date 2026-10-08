@@ -414,7 +414,7 @@ export default function GeneralResumeBuilder({
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between gap-4 flex-wrap'>
-        {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={handleBack} />}
+        {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={handleBack} className='mb-0 shrink-0' />}
         <div className='flex items-center gap-2'>
           {saveSuccess && (
             <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>

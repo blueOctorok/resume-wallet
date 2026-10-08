@@ -169,7 +169,7 @@ export default function CandidateHuntDesk({ onBack, userAddress }: CandidateHunt
     <div className='max-w-[1600px] mx-auto px-3 sm:px-4 pb-12 relative z-0'>
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6'>
         <div className='flex items-center gap-3 min-w-0'>
-          <BackToHubButton onClick={onBack} />
+          <BackToHubButton onClick={onBack} className='mb-0 shrink-0' />
         </div>
         <div className='flex flex-wrap gap-2'>
           <Button type='button' variant='secondary' size='sm' onClick={() => setCurrentPage('jobs')}>
