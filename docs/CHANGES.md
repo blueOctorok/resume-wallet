@@ -4,6 +4,10 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **License photo choice** (2026-10-08)
+
+Clicking the front or back of the license no longer opens the camera or file picker immediately. A modal asks first: use the camera, or upload a photo already on the device. The camera choice is what requests camera access.
+
 ## **Back to Hub control** (2026-10-08)
 
 The shared back control was a gray outline sitting on the next panel's top edge when a page forgot to add a gap. It is now a Midnight / Hot Embers pill on its own row, with space under it, so the following card starts below the control. Horizontal headers (resume builders, inbox thread, career card, hunt desk) opt out of that space with `mb-0`.

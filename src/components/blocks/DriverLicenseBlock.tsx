@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Camera, IdCard } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Camera, IdCard, Upload } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
 import { emptyLicenseFields, type LicenseScanFields } from '@/lib/aamva-license'
 import { getBlockDefinition } from '@/lib/block-registry'
@@ -34,6 +35,7 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
   const confirm = useLicenseBlockStore((s) => s.confirm)
 
   const [draft, setDraft] = useState<LicenseScanFields>(emptyLicenseFields())
+  const [photoSide, setPhotoSide] = useState<'front' | 'back' | null>(null)
 
   useEffect(() => {
     void load()
@@ -81,13 +83,13 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
               label='Front'
               previewUrl={scan?.frontUrl ?? null}
               disabled={isSaving}
-              onFile={(file) => void uploadSide('front', file)}
+              onOpen={() => setPhotoSide('front')}
             />
             <SideCapture
               label='Back'
               previewUrl={scan?.backUrl ?? null}
               disabled={isSaving}
-              onFile={(file) => void uploadSide('back', file)}
+              onOpen={() => setPhotoSide('back')}
             />
           </div>
 
@@ -136,27 +138,20 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
           ) : null}
         </BlockCard>
       </HubSectionPanel>
+      {photoSide ? (
+        <LicensePhotoModal
+          side={photoSide}
+          disabled={isSaving}
+          onClose={() => setPhotoSide(null)}
+          onFile={(file) => {
+            const side = photoSide
+            setPhotoSide(null)
+            void uploadSide(side, file)
+          }}
+        />
+      ) : null}
     </div>
   )
-}
-
-/**
- * Phones and tablets get the rear-camera hint. Computers do not: `capture`
- * there can hide the file picker, and a laptop photo is often a webcam shot
- * or a picture already saved.
- */
-function usePrefersRearCamera(): boolean {
-  const [coarsePointer, setCoarsePointer] = useState(false)
-
-  useEffect(() => {
-    const query = window.matchMedia('(pointer: coarse)')
-    const sync = () => setCoarsePointer(query.matches)
-    sync()
-    query.addEventListener('change', sync)
-    return () => query.removeEventListener('change', sync)
-  }, [])
-
-  return coarsePointer
 }
 
 function splitCodes(codes: string[]): string[] {
@@ -167,17 +162,20 @@ function SideCapture({
   label,
   previewUrl,
   disabled,
-  onFile,
+  onOpen,
 }: {
   label: string
   previewUrl: string | null
   disabled: boolean
-  onFile: (file: File) => void
+  onOpen: () => void
 }) {
-  const rearCamera = usePrefersRearCamera()
-
   return (
-    <label className='flex cursor-pointer flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800'>
+    <button
+      type='button'
+      disabled={disabled}
+      onClick={onOpen}
+      className='flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800'
+    >
       <span className='flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100'>
         <Camera className='h-4 w-4 text-teal-600 dark:text-teal-400' />
         {label}
@@ -188,24 +186,67 @@ function SideCapture({
         <img src={previewUrl} alt={`${label} of license`} className='h-28 w-full rounded-lg object-cover' />
       ) : (
         <span className='flex h-28 items-center justify-center px-3 text-center text-xs text-gray-500 dark:text-gray-400'>
-          Take a photo or choose one
+          Add a photo
         </span>
       )}
-      <input
-        type='file'
-        accept='image/*'
-        // Rear camera on a phone (iOS or Android). Left off on a computer so
-        // the dialog can offer the webcam or a photo already on disk.
-        capture={rearCamera ? 'environment' : undefined}
-        disabled={disabled}
-        className='sr-only'
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) onFile(file)
-          event.target.value = ''
-        }}
+    </button>
+  )
+}
+
+function LicensePhotoModal({
+  side,
+  disabled,
+  onClose,
+  onFile,
+}: {
+  side: 'front' | 'back'
+  disabled: boolean
+  onClose: () => void
+  onFile: (file: File) => void
+}) {
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const take = (file: File | undefined, input: HTMLInputElement) => {
+    input.value = ''
+    if (file) onFile(file)
+  }
+
+  return (
+    <Modal onClose={onClose} maxWidth='max-w-md' panelShape='block'>
+      <ModalHeader
+        variant='block'
+        title={side === 'front' ? 'Front of the license' : 'Back of the license'}
+        subtitle='Use the camera, or choose a photo you already have.'
+        onClose={onClose}
       />
-    </label>
+      <div className='flex flex-col gap-3 p-4'>
+        <Button onClick={() => cameraRef.current?.click()} disabled={disabled}>
+          <Camera className='h-4 w-4' />
+          Use camera
+        </Button>
+        <Button variant='secondary' onClick={() => fileRef.current?.click()} disabled={disabled}>
+          <Upload className='h-4 w-4' />
+          Upload a photo
+        </Button>
+        {/* capture opens the rear camera and asks the device for camera access.
+            The upload input leaves capture off so a saved photo stays available. */}
+        <input
+          ref={cameraRef}
+          type='file'
+          accept='image/*'
+          capture='environment'
+          className='sr-only'
+          onChange={(event) => take(event.target.files?.[0], event.target)}
+        />
+        <input
+          ref={fileRef}
+          type='file'
+          accept='image/*'
+          className='sr-only'
+          onChange={(event) => take(event.target.files?.[0], event.target)}
+        />
+      </div>
+    </Modal>
   )
 }
 
