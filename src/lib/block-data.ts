@@ -184,6 +184,48 @@ async function upsert<T extends Record<string, unknown>>(
 
 // ── READS ───────────────────────────────────────────────────────────────────
 
+export interface LicenseScanRow {
+  id: string
+  user_id: string
+  front_storage_path: string | null
+  back_storage_path: string | null
+  barcode_status: 'unread' | 'read' | 'failed'
+  parsed_fields: unknown
+  confirmed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function getLicenseScan(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LicenseScanRow | null> {
+  const { data, error } = await supabase
+    .from('block_driver_license')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    console.warn('[block-data] block_driver_license read failed:', error.message)
+    return null
+  }
+  return data as LicenseScanRow | null
+}
+
+export async function saveLicenseScan(
+  supabase: SupabaseClient,
+  userId: string,
+  data: Partial<Omit<LicenseScanRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>>,
+): Promise<void> {
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('block_driver_license')
+    .upsert({ user_id: userId, ...data, updated_at: now }, { onConflict: 'user_id' })
+  if (error) {
+    throw new Error(`block_driver_license write failed: ${error.message}`)
+  }
+}
+
 export async function getCdlData(supabase: SupabaseClient, userId: string): Promise<CdlRow | null> {
   const { data } = await supabase
     .from('block_driver_cdl')

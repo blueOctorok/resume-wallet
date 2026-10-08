@@ -207,6 +207,9 @@ export function useJourneyProgress(): JourneyProgress {
     employmentVerificationPending: evRequests.some(
       (r) => r.status === 'VERIFICATION_REQUESTED' || r.status === 'VERIFICATION_IN_PROGRESS',
     ),
+    licenseOnFile: hubStore.dqFile?.items.some(
+      (item) => item.id === 'dl_images' && item.status === 'complete',
+    ) === true,
   }
 
   const blockTypes = installedBlocks.map((b) => b.blockType)

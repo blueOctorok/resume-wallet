@@ -38,6 +38,7 @@ export type PageType =
   | 'ask-ai'
   | 'employment-verification'
   | 'screening-consent'
+  | 'license'
   | null
 
 // Candidate encompasses all non-employer roles (driver, developer, pilot, etc.)

@@ -23,6 +23,7 @@ export type DqCoachTarget =
   | 'psp'
   | 'screening-consent'
   | 'employment-verification'
+  | 'license'
   | null
 
 export interface DqCoachFlag {
@@ -154,6 +155,7 @@ const TARGETS = new Set<string>([
   'psp',
   'screening-consent',
   'employment-verification',
+  'license',
 ])
 
 function formatPersonName(first?: string | null, last?: string | null): string | null {
@@ -184,6 +186,7 @@ const DQ_TO_TARGET: Record<string, DqCoachTarget> = {
   dot_application: 'dotapp',
   cdlis_consent: 'screening-consent',
   employment_verification: 'employment-verification',
+  dl_images: 'license',
 }
 
 export async function buildDqCoachSnapshot(
@@ -595,7 +598,7 @@ export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot): string {
 
 Write a JSON object only (no markdown) with:
 - watching: one sentence on what you compared
-- next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification
+- next: { title, detail, target } or null. target is one of: profile, dotapp, mvr, psp, screening-consent, employment-verification, license
 - flags: { severity: "warn"|"info", title, detail, target } — only unfinished work and real mismatches. Include target so the driver can open that page. At most 6 flags.
 - Do not list completed items as action flags. Those already live on the career card.
 - dqItems is the full DQ packet, including pieces not built in product yet (coming_soon / needs_key / needs_gov). You may name them as not available yet. Do not give them a target or treat them as the driver's next click.

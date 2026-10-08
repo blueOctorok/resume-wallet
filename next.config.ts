@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  // pdf.js (via pdf-parse) breaks when webpack bundles it into the route.
+  serverExternalPackages: ['pdf-parse', 'zxing-wasm'],
+
   /** Allow embedding the compact career card on third-party sites (Notion, portfolios, etc.) */
   async headers() {
     return [

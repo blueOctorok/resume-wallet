@@ -22,6 +22,11 @@ import type {
 import { computeDotVerifiedCoverage } from '@/lib/dot-verified-coverage'
 import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
+import {
+  mergeResumePrefillIntoDot,
+  onlyFilledProfileFields,
+} from '@/lib/resume-to-dot-prefill'
+import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 // Dynamic imports for code-splitting
 const PersonalInfoForm1 = dynamic(
@@ -652,34 +657,48 @@ export default function DotApplicationFlow({
     async (prefillData: {
       form1Data?: unknown; form2Data?: unknown; form3Data?: unknown; stats?: unknown
     }) => {
-      if (prefillData.form1Data) dotApp.setForm1Data(prefillData.form1Data)
-      if (prefillData.form2Data) dotApp.setForm2Data(prefillData.form2Data)
-      if (prefillData.form3Data) dotApp.setForm3Data(prefillData.form3Data)
+      // Read the store here, not from the render closure, so a resume can't
+      // merge against a stale draft and wipe an MVR value that just landed.
+      const draft = useDotApplicationStore.getState()
+      const merged = mergeResumePrefillIntoDot(
+        {
+          form1: draft.form1Data,
+          form2: draft.form2Data,
+          form3: draft.form3Data,
+        },
+        {
+          form1Data: (prefillData.form1Data as Partial<DotForm1Data> | null) ?? null,
+          form2Data: (prefillData.form2Data as Partial<DotForm2Data> | null) ?? null,
+          form3Data: (prefillData.form3Data as Partial<DotForm3Data> | null) ?? null,
+        },
+      )
+      if (merged.form1Data) draft.setForm1Data(merged.form1Data as DotForm1Data)
+      if (merged.form2Data) draft.setForm2Data(merged.form2Data as DotForm2Data)
+      if (merged.form3Data) draft.setForm3Data(merged.form3Data as DotForm3Data)
 
-      // Fire-and-forget profile sync
       if (sessionUserId) {
         try {
           const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
-          const profileData = {
-            ...(prefillData.form1Data ? form1ToProfile(prefillData.form1Data) : {}),
-            ...(prefillData.form2Data ? form2ToProfile(prefillData.form2Data) : {}),
-            ...(prefillData.form3Data ? form3ToProfile(prefillData.form3Data) : {}),
-          }
+          const profileData = onlyFilledProfileFields({
+            ...(merged.form1Data ? form1ToProfile(merged.form1Data as DotForm1Data) : {}),
+            ...(merged.form2Data ? form2ToProfile(merged.form2Data as DotForm2Data) : {}),
+            ...(merged.form3Data ? form3ToProfile(merged.form3Data as DotForm3Data) : {}),
+          })
           fetch('/api/driver/profile', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({ profileData, source: 'dot_prefill' }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileData, source: 'dot_prefill' }),
           }).catch((err) => console.warn('⚠️ [DOT] Prefill profile sync non-fatal:', err))
         } catch (err) {
           console.warn('⚠️ [DOT] Prefill profile sync error (non-fatal):', err)
         }
       }
 
-      dotApp.setHasPrefilled(true)
-      dotApp.setShowPrefillUpload(false)
-      dotApp.setSubmissionError(null)
-      dotApp.setCurrentForm(1)
-      dotApp.incrementFormResetKey()
+      draft.setHasPrefilled(true)
+      draft.setShowPrefillUpload(false)
+      draft.setSubmissionError(null)
+      draft.setCurrentForm(1)
+      draft.incrementFormResetKey()
     },
     [sessionUserId]
   )
@@ -910,13 +929,7 @@ export default function DotApplicationFlow({
       {/* AI prefill upload */}
       {dotApp.showPrefillUpload && !dotApp.isApplicationCompleted && (
         <div className='mb-8'>
-          <ResumeUploadWithPrefill
-            onPrefillSuccess={handlePrefillSuccess}
-            onPrefillError={(error) => dotApp.setSubmissionError(`AI Prefill Error: ${error}`)}
-            onIpfsHashReady={() => {
-              // IPFS hash storage handled by DriverShell's resumeUploadEvent
-            }}
-          />
+          <ResumeUploadWithPrefill onPrefillSuccess={handlePrefillSuccess} />
           <div className='text-center mt-6'>
             <button
               onClick={() => {
@@ -989,7 +1002,7 @@ export default function DotApplicationFlow({
                   : 'bg-green-50 border-green-200 text-green-800'
               }`}
             >
-              <span>✨ Forms prefilled with AI! Review and complete any missing fields.</span>
+              <span>Filled from your resume. The file was not saved — review anything still blank.</span>
               <button
                 onClick={() => dotApp.setShowPrefillUpload(true)}
                 className={`text-xs underline ml-4 ${

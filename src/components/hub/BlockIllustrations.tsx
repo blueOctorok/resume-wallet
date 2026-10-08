@@ -214,6 +214,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'driver-psp':             PspIllustration,
   'driver-screening-consent': ScreeningConsentIllustration,
   'driver-cdl-credentials': CdlIllustration,
+  'driver-license':         CdlIllustration,
   'developer-portfolio':    PortfolioIllustration,
   'developer-github':       GithubIllustration,
   'developer-projects':     ProjectsIllustration,

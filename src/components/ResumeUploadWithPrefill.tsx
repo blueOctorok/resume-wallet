@@ -1,430 +1,208 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { useState } from 'react'
-import {
-  Upload,
-  FileText,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Sparkles,
-  Brain,
-} from 'lucide-react'
-import { calculateFileHash } from '@/lib/hash-utils'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { Upload, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
+import Button from '@/components/ui/Button'
 
 interface ResumeUploadWithPrefillProps {
   onPrefillSuccess?: (formData: {
-    form1Data: any
-    form2Data: any
-    form3Data: any
-    stats: any
+    form1Data?: unknown
+    form2Data?: unknown
+    form3Data?: unknown
+    stats?: unknown
   }) => void
-  onPrefillError?: (error: string) => void
-  onIpfsHashReady?: (ipfsHash: string) => void // Callback to store IPFS hash in parent
 }
 
+const MAX_BYTES = 5 * 1024 * 1024
+
+/**
+ * Read a resume to fill the DOT application. The file is not uploaded to storage
+ * and no resumes row is created — the request body is the only place it exists.
+ */
 export default function ResumeUploadWithPrefill({
   onPrefillSuccess,
-  onPrefillError,
-  onIpfsHashReady,
 }: ResumeUploadWithPrefillProps) {
   const { theme } = useTheme()
   const { notifyResumeUploadEvent } = useAssistantBridge()
   const [file, setFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadStatus, setUploadStatus] = useState<
-    'idle' | 'uploading' | 'extracting' | 'success' | 'error'
-  >('idle')
+  const [isReading, setIsReading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [ipfsHash, setIpfsHash] = useState('')
-  const [extractedStats, setExtractedStats] = useState<any>(null)
-  const [extractedData, setExtractedData] = useState<any>(null) // Store extracted data for preview
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      // Validate file type
-      if (
-        !selectedFile.type.includes('pdf') &&
-        !selectedFile.type.includes('doc') &&
-        !selectedFile.type.includes('docx') &&
-        !selectedFile.type.includes('text')
-      ) {
-        setErrorMessage('Please select a PDF, DOC, DOCX, or TXT file')
-        setFile(null)
-        return
-      }
+  const dark = isDarkTheme(theme)
 
-      // Validate file size (10MB limit)
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        setErrorMessage('File size must be less than 10MB')
-        setFile(null)
-        return
-      }
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0]
+    if (!selected) return
 
-      setFile(selectedFile)
-      setErrorMessage('')
-      setUploadStatus('idle')
-      setExtractedStats(null)
+    const name = selected.name.toLowerCase()
+    const isPdf = selected.type === 'application/pdf' || name.endsWith('.pdf')
+    const isText = selected.type.startsWith('text/') || name.endsWith('.txt')
+    if (!isPdf && !isText) {
+      setErrorMessage('Use a PDF or a .txt file. We read it once and do not keep it.')
+      setFile(null)
+      return
     }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!file) {
-      setErrorMessage('Please select a file')
+    if (selected.size > MAX_BYTES) {
+      setErrorMessage('File must be under 5MB.')
+      setFile(null)
       return
     }
 
-    setIsUploading(true)
-    setUploadStatus('uploading')
+    setFile(selected)
+    setErrorMessage('')
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!file) {
+      setErrorMessage('Choose a file first.')
+      return
+    }
+
+    setIsReading(true)
     setErrorMessage('')
 
     try {
-      console.log('[PREFILL] Step 1: Uploading to storage...')
-      const fileHash = await calculateFileHash(file)
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
-      formData.append('fileHash', fileHash)
+      const body = new FormData()
+      body.append('file', file)
 
-      const uploadRes = await fetch('/api/resumes/upload', {
+      const res = await fetch('/api/driver/prefill-from-resume', {
         method: 'POST',
         credentials: 'include',
-        body: formData,
+        body,
       })
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}))
-        throw new Error(err.error || err.message || 'Upload failed')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          typeof data.message === 'string'
+            ? data.message
+            : typeof data.error === 'string'
+              ? data.error
+              : 'Could not read that resume.',
+        )
       }
-      const uploadData = await uploadRes.json()
-      const storagePath = uploadData.resume?.storagePath ?? uploadData.resume?.ipfsHash ?? ''
-      setIpfsHash(storagePath)
-
-      if (onIpfsHashReady) {
-        onIpfsHashReady(storagePath)
-      }
-
-      console.log('[PREFILL] Storage upload successful:', storagePath)
-
-      // AI prefill is being rebuilt with Claude — resume is uploaded to IPFS successfully
-      // Prefill extraction will return as a composable hub block
-      setUploadStatus('success')
 
       notifyResumeUploadEvent?.({
         type: 'analysis_ready',
         step: 'prefill',
-        data: { ipfsHash: storagePath },
-        message: '✅ Resume uploaded successfully! AI extraction is being upgraded and will return soon.',
+        message: 'Filled your DOT application from the resume. The file was not saved.',
+      })
+
+      onPrefillSuccess?.({
+        form1Data: data.form1Data,
+        form2Data: data.form2Data,
+        form3Data: data.form3Data,
+        stats: data.stats,
       })
     } catch (error) {
-      console.error('❌ [PREFILL] Error:', error)
-      setUploadStatus('error')
-      const errorMsg =
-        error instanceof Error
-          ? error.message
-          : 'Upload or extraction failed. Please try again.'
-      setErrorMessage(errorMsg)
-
-      if (onPrefillError) {
-        onPrefillError(errorMsg)
-      }
+      const message = error instanceof Error ? error.message : 'Could not read that resume.'
+      setErrorMessage(message)
     } finally {
-      setIsUploading(false)
+      setIsReading(false)
     }
   }
-
-  const resetForm = () => {
-    setFile(null)
-    setUploadStatus('idle')
-    setErrorMessage('')
-    setIpfsHash('')
-    setExtractedStats(null)
-  }
-
-  const getStatusMessage = () => {
-    switch (uploadStatus) {
-      case 'uploading':
-        return {
-          icon: <Loader2 className='w-5 h-5 animate-spin' />,
-          text: 'Uploading...',
-          color: 'text-blue-600',
-        }
-      case 'extracting':
-        return {
-          icon: <Brain className='w-5 h-5 animate-pulse' />,
-          text: '🤖 AI is reading your resume... This may take 20-40 seconds.',
-          color: 'text-purple-600',
-        }
-      case 'success':
-        return {
-          icon: <Sparkles className='w-5 h-5' />,
-          text: extractedStats
-            ? `✓ Found ${extractedStats.extracted} fields from your resume!`
-            : '✓ Resume processed successfully!',
-          color: 'text-green-600',
-        }
-      default:
-        return null
-    }
-  }
-
-  const status = getStatusMessage()
 
   return (
     <div
-      className={`w-full max-w-2xl mx-auto p-6 rounded-lg shadow-lg border-2 ${
-        isDarkTheme(theme)
-          ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
-          : 'bg-white/80 backdrop-blur-xl border-teal-700/20'
+      className={`mx-auto w-full max-w-2xl rounded-lg border-2 p-6 shadow-lg ${
+        dark
+          ? 'border-teal-500 bg-teal-200/20 backdrop-blur-xl'
+          : 'border-teal-700/20 bg-white/80 backdrop-blur-xl'
       }`}
     >
       <div className='mb-6'>
-        <div className='flex items-center gap-3 mb-2'>
-          <Sparkles
-            className={`w-6 h-6 ${isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}
-          />
-          <h2
-            className={`text-2xl font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
-          >
-            AI Resume Prefill
+        <div className='mb-2 flex items-center gap-3'>
+          <Sparkles className={dark ? 'h-6 w-6 text-teal-400' : 'h-6 w-6 text-teal-800'} />
+          <h2 className={`text-2xl font-semibold ${dark ? 'text-white' : 'text-teal-800'}`}>
+            Fill from a resume
           </h2>
         </div>
-        <p
-          className={`text-sm ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-600'}`}
-        >
-          Upload your resume and let AI automatically fill out your driver
-          application. Supports PDF, DOCX, and TXT files.
+        <p className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>
+          We read the file to fill your DOT application, then throw it away. Nothing is saved
+          from the upload. Your Provven resume is built from this application and your MVR.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className='space-y-6'>
-        {/* File Upload Area */}
         <div className='space-y-4'>
           <label
-            className={`block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}
+            className={`block text-sm font-medium ${dark ? 'text-gray-300' : 'text-gray-700'}`}
+            htmlFor='resume-file-prefill'
           >
-            Resume File *
+            Resume file
           </label>
-
-          <div className='relative'>
-            <input
-              type='file'
-              accept='.pdf,.doc,.docx,.txt'
-              onChange={handleFileChange}
-              className='hidden'
-              id='resume-file-prefill'
-              disabled={isUploading}
-            />
-
-            <label
-              htmlFor='resume-file-prefill'
-              className={`
-                flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
-                transition-all duration-200
-                ${
-                  file
-                    ? isDarkTheme(theme)
-                      ? 'border-teal-500 bg-teal-600/10'
-                      : 'border-green-400 bg-green-50'
-                    : isDarkTheme(theme)
-                      ? 'border-gray-600 hover:border-teal-500/50 bg-gray-800/50'
-                      : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-                }
-                ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
-            >
-              {file ? (
-                <div
-                  className={`flex flex-col items-center ${
-                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-green-700'
-                  }`}
-                >
-                  <CheckCircle className='w-8 h-8 mb-2' />
-                  <span className='font-medium'>{file.name}</span>
-                  <span
-                    className={`text-sm ${
-                      isDarkTheme(theme) ? 'text-gray-400' : 'text-green-600'
-                    }`}
-                  >
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
-                </div>
-              ) : (
-                <div
-                  className={`flex flex-col items-center ${
-                    isDarkTheme(theme) ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
-                  }`}
-                >
-                  <Upload className='w-8 h-8 mb-2' />
-                  <span className='font-medium'>
-                    Click to upload or drag and drop
-                  </span>
-                  <span
-                    className={`text-sm ${
-                      isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'
-                    }`}
-                  >
-                    PDF, DOC, DOCX, or TXT (max 10MB)
-                  </span>
-                </div>
-              )}
-            </label>
-          </div>
+          <input
+            type='file'
+            accept='.pdf,.txt,application/pdf,text/plain'
+            onChange={handleFileChange}
+            className='hidden'
+            id='resume-file-prefill'
+            disabled={isReading}
+          />
+          <label
+            htmlFor='resume-file-prefill'
+            className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+              file
+                ? dark
+                  ? 'border-teal-500 bg-teal-600/10'
+                  : 'border-green-400 bg-green-50'
+                : dark
+                  ? 'border-gray-600 bg-gray-800/50 hover:border-teal-500/50'
+                  : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+            } ${isReading ? 'cursor-not-allowed opacity-50' : ''}`}
+          >
+            {file ? (
+              <div className={`flex flex-col items-center ${dark ? 'text-teal-400' : 'text-green-700'}`}>
+                <CheckCircle className='mb-2 h-8 w-8' />
+                <span className='font-medium'>{file.name}</span>
+                <span className={`text-sm ${dark ? 'text-gray-400' : 'text-green-600'}`}>
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </span>
+              </div>
+            ) : (
+              <div className={`flex flex-col items-center ${dark ? 'text-teal-400' : 'text-teal-800'}`}>
+                <Upload className='mb-2 h-8 w-8' />
+                <span className='font-medium'>Choose a PDF or text file</span>
+                <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Max 5MB. Not stored.
+                </span>
+              </div>
+            )}
+          </label>
         </div>
 
-        {/* Status Message */}
-        {status && (
+        {isReading && (
           <div
-            className={`flex items-center p-3 rounded-md border ${
-              uploadStatus === 'success'
-                ? isDarkTheme(theme)
-                  ? 'bg-green-900/20 border-green-500/50'
-                  : 'bg-green-50 border-green-200'
-                : isDarkTheme(theme)
-                  ? 'bg-blue-900/20 border-blue-500/50'
-                  : 'bg-blue-50 border-blue-200'
+            className={`flex items-center rounded-md border p-3 ${
+              dark ? 'border-blue-500/50 bg-blue-900/20' : 'border-blue-200 bg-blue-50'
             }`}
           >
-            <div className={status.color}>{status.icon}</div>
-            <span
-              className={`ml-2 text-sm font-medium ${
-                uploadStatus === 'success'
-                  ? isDarkTheme(theme)
-                    ? 'text-green-400'
-                    : 'text-green-700'
-                  : isDarkTheme(theme)
-                    ? 'text-blue-400'
-                    : 'text-blue-700'
-              }`}
-            >
-              {status.text}
+            <Loader2 className='h-5 w-5 animate-spin text-blue-500' />
+            <span className={`ml-2 text-sm font-medium ${dark ? 'text-blue-300' : 'text-blue-700'}`}>
+              Reading your resume. This can take half a minute. The file is not saved.
             </span>
           </div>
         )}
 
-        {/* Extracted Fields Preview */}
-        {extractedStats && extractedStats.fieldNames.length > 0 && (
-          <div
-            className={`p-3 rounded-md border ${
-              isDarkTheme(theme)
-                ? 'bg-purple-900/20 border-purple-500/50'
-                : 'bg-purple-50 border-purple-200'
-            }`}
-          >
-            <div className='flex items-start gap-2'>
-              <Brain
-                className={`w-5 h-5 mt-0.5 ${
-                  isDarkTheme(theme) ? 'text-purple-400' : 'text-purple-600'
-                }`}
-              />
-              <div>
-                <p
-                  className={`text-sm font-medium ${
-                    isDarkTheme(theme) ? 'text-purple-400' : 'text-purple-700'
-                  }`}
-                >
-                  Extracted Information:
-                </p>
-                <p
-                  className={`text-xs mt-1 ${
-                    isDarkTheme(theme) ? 'text-purple-300' : 'text-purple-600'
-                  }`}
-                >
-                  {extractedStats.fieldNames.join(', ')}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
         {errorMessage && (
           <div
-            className={`flex items-center p-3 rounded-md border ${
-              isDarkTheme(theme)
-                ? 'bg-red-900/20 border-red-500/50'
-                : 'bg-red-50 border-red-200'
+            className={`flex items-center rounded-md border p-3 ${
+              dark ? 'border-red-500/50 bg-red-900/20' : 'border-red-200 bg-red-50'
             }`}
           >
-            <AlertCircle
-              className={`w-5 h-5 mr-2 ${
-                isDarkTheme(theme) ? 'text-red-400' : 'text-red-500'
-              }`}
-            />
-            <span
-              className={`text-sm ${
-                isDarkTheme(theme) ? 'text-red-400' : 'text-red-700'
-              }`}
-            >
-              {errorMessage}
-            </span>
+            <AlertCircle className={`mr-2 h-5 w-5 ${dark ? 'text-red-400' : 'text-red-500'}`} />
+            <span className={`text-sm ${dark ? 'text-red-300' : 'text-red-700'}`}>{errorMessage}</span>
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className='flex gap-3'>
-          <button
-            type='submit'
-            disabled={!file || isUploading}
-            className={`
-              flex-1 flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-              transition-all duration-200
-              ${
-                !file || isUploading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : isDarkTheme(theme)
-                    ? 'bg-teal-600 text-white hover:bg-teal-500'
-                    : 'bg-teal-700 hover:bg-teal-700/90'
-              }
-            `}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                {uploadStatus === 'extracting'
-                  ? 'AI Extracting...'
-                  : 'Uploading...'}
-              </>
-            ) : (
-              <>
-                <Sparkles className='w-4 h-4 mr-2' />
-                Upload & Prefill with AI
-              </>
-            )}
-          </button>
-
-          {uploadStatus === 'success' && (
-            <button
-              type='button'
-              onClick={resetForm}
-              className={`px-4 py-3 border rounded-md shadow-sm text-sm font-medium transition-all duration-200 ${
-                isDarkTheme(theme)
-                  ? 'border-teal-500/30 text-teal-600 dark:text-teal-400 bg-transparent hover:bg-teal-600/10'
-                  : 'border-teal-700/30 text-teal-800 dark:text-teal-300 bg-white hover:bg-teal-700/5'
-              }`}
-            >
-              Upload Another
-            </button>
-          )}
-        </div>
+        <Button type='submit' disabled={!file || isReading} isLoading={isReading} className='w-full'>
+          <Sparkles className='h-4 w-4' />
+          Read resume and fill application
+        </Button>
       </form>
-
-      {/* IPFS Hash Display (for debugging) */}
-      {ipfsHash && (
-        <div className='mt-4 pt-4 border-t border-gray-200'>
-          <p
-            className={`text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}
-          >
-            IPFS Hash: <code className='font-mono'>{ipfsHash}</code>
-          </p>
-        </div>
-      )}
     </div>
   )
 }
-

@@ -103,8 +103,8 @@ export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
     description: 'Photos of both sides of the commercial driver license.',
     source: 'driver_upload',
     blocksOverallCompletion: false,
-    employerEmptyHint: 'Needs driver upload (coming soon).',
-    driverEmptyHint: 'Upload coming soon — your employer will ask for DL photos.',
+    employerEmptyHint: 'Driver has not put a license on file yet.',
+    driverEmptyHint: 'Photograph the front and back of your license.',
   },
   {
     id: 'med_card',

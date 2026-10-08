@@ -25,6 +25,7 @@ const PACKET_PAGE: Partial<Record<string, PageType | 'profile'>> = {
   dot_application: 'dotapp',
   cdlis_consent: 'screening-consent',
   employment_verification: 'employment-verification',
+  dl_images: 'license',
 }
 
 function packetChip(status: DqItemStatus | 'todo', live: boolean): { label: string; className: string } {
@@ -71,6 +72,7 @@ export default function BuildBoard() {
           label: 'Profile',
           hint: profileDone ? null : 'Name, contact, and location',
           live: true,
+          shipped: true,
           status: profileStatus,
         },
         ...DQ_ITEM_DEFINITIONS.map((def) => {
@@ -80,6 +82,7 @@ export default function BuildBoard() {
             label: def.label,
             hint: def.cfrNote ?? null,
             live: def.blocksOverallCompletion,
+            shipped: def.blocksOverallCompletion || def.id === 'dl_images',
             status: (resolved?.status ?? (def.blocksOverallCompletion ? 'missing' : 'coming_soon')) as DqItemStatus,
           }
         }),
@@ -113,7 +116,7 @@ export default function BuildBoard() {
           </p>
           <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-8'>
             {packet.map((row) => {
-              const chip = packetChip(row.status, row.live)
+              const chip = packetChip(row.status, row.shipped)
               const page = PACKET_PAGE[row.id]
               const actionLabel =
                 row.id === 'dot_application' && row.status === 'complete' ? 'Edit' : 'Open'
@@ -145,7 +148,7 @@ export default function BuildBoard() {
                     >
                       {chip.label}
                     </span>
-                    {page && row.live ? (
+                    {page && row.shipped ? (
                       <button
                         type='button'
                         onClick={open}

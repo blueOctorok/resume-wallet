@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-export type DocumentBucket = 'resumes' | 'dot-applications' | 'screening-reports'
+export type DocumentBucket = 'resumes' | 'dot-applications' | 'screening-reports' | 'license-images'
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600
 

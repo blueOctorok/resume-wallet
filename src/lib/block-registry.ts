@@ -388,6 +388,22 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     completionField: null,
     requiredEmployerBlocks: null,
   },
+  {
+    id: 'driver-license',
+    label: 'Driver license',
+    description: 'Front and back of your license, read from the card and kept on file',
+    icon: 'IdCard',
+    categoryId: 'drivers',
+    suggestedFor: ['driver', 'cdl', 'license', 'id', 'identification'],
+    complexity: 'simple',
+    appearsOnCareerCard: false,
+    pageRoute: 'license',
+    dataTables: ['block_driver_license'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    requiredEmployerBlocks: null,
+  },
 
   // ── Developers ─────────────────────────────────────────────────────────────
   {
@@ -517,6 +533,13 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     borderHover: { dark: 'border-retro-teal/40', light: 'border-retro-teal/50' },
     glowColor:   'rgba(63,138,140,0.18)',
     badgeColor:  'bg-retro-teal',
+  },
+  'driver-license': {
+    iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
+    iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
+    borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
+    glowColor:   'rgba(241,90,43,0.18)',
+    badgeColor:  'bg-teal-500',
   },
   'driver-cdl-credentials': {
     iconBg:      { dark: 'bg-emerald-500/15',   light: 'bg-emerald-50' },

@@ -1,6 +1,7 @@
 import { getBlockDefinition } from '@/lib/block-registry'
 import {
   getCdlData,
+  getLicenseScan,
   getDevPortfolio,
   getDevGithub,
   saveDevGithub,
@@ -679,7 +680,10 @@ async function fetchCdlData(
   userId: string,
   contactMode: ProjectedCareerCardContactMode,
 ): Promise<CdlData | null> {
-  const row = await getCdlData(supabase, userId)
+  const [row, license] = await Promise.all([
+    getCdlData(supabase, userId),
+    getLicenseScan(supabase, userId),
+  ])
   if (!row) return null
   // License number is PII. A share link and the employer talent card show class,
   // state, and endorsements — the number stays on the candidate's own view.
@@ -690,6 +694,7 @@ async function fetchCdlData(
     cdlExpiration: row.cdl_expiration,
     endorsements: row.endorsements ?? [],
     restrictions: row.restrictions ?? [],
+    licenseOnFile: Boolean(license?.confirmed_at),
   }
 }
 

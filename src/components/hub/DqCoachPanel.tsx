@@ -17,6 +17,7 @@ const TARGET_PAGE: Record<Exclude<DqCoachTarget, null>, PageType | 'profile'> = 
   psp: 'psp',
   'screening-consent': 'screening-consent',
   'employment-verification': 'employment-verification',
+  license: 'license',
 }
 
 const THINKING_LINES = [

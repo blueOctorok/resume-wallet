@@ -132,6 +132,7 @@ Block data lives in `block_*` tables (e.g. `block_driver_cdl`, `block_education`
 | Table | Owned by | Shared across |
 |---|---|---|
 | `block_driver_cdl` | `driver-resume`, `driver-dot-application`, `driver-cdl-credentials` | Driver blocks that need CDL info |
+| `block_driver_license` | `driver-license` | Front/back photos and the barcode read. On file only — not attested. Confirm soft-fills empty `block_driver_cdl` fields. |
 | `block_driver_employment` | `driver-resume` | Driver employment history (CDL resume / DOT) |
 | `block_driver_mvr` | `driver-mvr` | Employer MVR requests |
 | `block_driver_emergency` | `driver-dot-application` | — |
@@ -156,6 +157,7 @@ Block data lives in `block_*` tables (e.g. `block_driver_cdl`, `block_education`
 | Emergency contact | `block_driver_emergency` | |
 | Driving experience | `block_driver_experience` | |
 | MVR data | `block_driver_mvr` | |
+| License photos + barcode read | `block_driver_license` | On file only. Not attested. |
 | References | `block_references` | JSONB `entries` array |
 | GitHub data | `block_dev_github` | |
 | Portfolio links | `block_dev_portfolio` | |

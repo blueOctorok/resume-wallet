@@ -138,7 +138,10 @@ export default function DqFileSection({
   const isDark = isDarkTheme(theme)
 
   const live = dqFile.items.filter((i) => i.blocksOverallCompletion)
-  const placeholders = dqFile.items.filter((i) => !i.blocksOverallCompletion)
+  const rest = dqFile.items.filter((i) => !i.blocksOverallCompletion)
+  const comingStatuses = new Set(['needs_driver', 'needs_key', 'needs_gov', 'needs_employer', 'coming_soon'])
+  const onFile = rest.filter((i) => !comingStatuses.has(i.status))
+  const placeholders = rest.filter((i) => comingStatuses.has(i.status))
 
   const body = (
     <div className="space-y-4">
@@ -155,6 +158,9 @@ export default function DqFileSection({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {live.map((item) => (
+          <DqItemBox key={item.id} item={item} isDark={isDark} />
+        ))}
+        {onFile.map((item) => (
           <DqItemBox key={item.id} item={item} isDark={isDark} />
         ))}
       </div>

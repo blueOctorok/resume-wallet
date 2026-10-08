@@ -109,6 +109,15 @@ export interface DqPendingRequestInput {
   createdAt?: string | null
 }
 
+/** Front/back license photos. Absent until migration 116 is applied. */
+export interface DqLicenseScanInput {
+  id: string
+  hasFront: boolean
+  hasBack: boolean
+  confirmedAt?: string | null
+  updatedAt?: string | null
+}
+
 export interface ResolveCompanyDqInput {
   mvrOrders: DqScreeningOrderInput[]
   pspOrders: DqScreeningOrderInput[]
@@ -117,6 +126,7 @@ export interface ResolveCompanyDqInput {
   employmentVerifications: DqEmploymentVerificationInput[]
   /** ISO date when the company hired this driver — enables 30-day EV clock. */
   hireDate?: string | null
+  licenseScan?: DqLicenseScanInput | null
 }
 
 export interface ResolveDriverDqInput {
@@ -128,6 +138,7 @@ export interface ResolveDriverDqInput {
   dotApplications: DqDotApplicationInput[]
   employmentVerifications: DqEmploymentVerificationInput[]
   pendingRequests: DqPendingRequestInput[]
+  licenseScan?: DqLicenseScanInput | null
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -195,6 +206,26 @@ function mapOrderStatus(order: DqScreeningOrderInput | null): {
     status: 'in_progress',
     updatedAt: orderTimestamp(order),
     artifactRef: { kind: 'order', id: order.id },
+  }
+}
+
+function resolveDlImages(
+  scan: DqLicenseScanInput | null | undefined,
+): Pick<DqItemStatusResult, 'status' | 'updatedAt' | 'artifactRef'> {
+  if (!scan || (!scan.hasFront && !scan.hasBack)) {
+    return { status: 'missing', updatedAt: null, artifactRef: null }
+  }
+  if (scan.hasFront && scan.hasBack && scan.confirmedAt) {
+    return {
+      status: 'complete',
+      updatedAt: scan.confirmedAt,
+      artifactRef: { kind: 'license_scan', id: scan.id },
+    }
+  }
+  return {
+    status: 'in_progress',
+    updatedAt: scan.updatedAt ?? null,
+    artifactRef: { kind: 'license_scan', id: scan.id },
   }
 }
 
@@ -373,6 +404,18 @@ export function resolveCompanyDqFile(input: ResolveCompanyDqInput): DqFileSnapsh
   for (const def of DQ_ITEM_DEFINITIONS) {
     const emptyHint = def.employerEmptyHint
 
+    if (def.id === 'dl_images') {
+      const mapped = resolveDlImages(input.licenseScan)
+      items.push(
+        baseItem(def, {
+          ...mapped,
+          emptyHint,
+          sourceChip: mapped.status === 'missing' ? dqSourceChipLabel(def.source) : null,
+        }),
+      )
+      continue
+    }
+
     if (!def.blocksOverallCompletion) {
       const status = placeholderStatus(def)
       items.push(
@@ -526,6 +569,18 @@ export function resolveDriverDqFile(input: ResolveDriverDqInput): DqFileSnapshot
 
   for (const def of DQ_ITEM_DEFINITIONS) {
     const emptyHint = def.driverEmptyHint
+
+    if (def.id === 'dl_images') {
+      const mapped = resolveDlImages(input.licenseScan)
+      items.push(
+        baseItem(def, {
+          ...mapped,
+          emptyHint,
+          sourceChip: mapped.status === 'missing' ? dqSourceChipLabel(def.source) : null,
+        }),
+      )
+      continue
+    }
 
     if (!def.blocksOverallCompletion) {
       const status = placeholderStatus(def)

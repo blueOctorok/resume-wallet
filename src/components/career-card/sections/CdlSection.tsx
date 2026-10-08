@@ -31,6 +31,11 @@ export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionP
         <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
           CDL Credentials
         </h3>
+        {data.licenseOnFile ? (
+          <span className={cn('ml-auto text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            License on file
+          </span>
+        ) : null}
       </div>
 
       <div className='grid grid-cols-2 gap-3'>

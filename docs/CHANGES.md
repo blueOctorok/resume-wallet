@@ -4,6 +4,37 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Driver license on file** (2026-10-08)
+
+Organic drivers can photograph the front and back of their license with any phone camera or a computer webcam, or choose a photo already on the device. Phones open the rear camera. Computers get the normal file dialog so a webcam shot and a saved photo are both available. The back barcode (AAMVA PDF417) is decoded in the app, the driver reviews the fields, and confirming writes them into empty CDL, profile, and DOT Form 1 spots. A field that already has a value, and any path an MVR has locked, is left alone. The DQ file item `dl_images` tracks it. The career card says **License on file**.
+
+This is not a state-record check and it does not create a Midnight proof. The photo is the card the driver handed us. A proof still has to cite a DMV pull.
+
+Apply `supabase/migrations/116_block_driver_license.sql` before the page can save photos.
+
+| Piece | What changed |
+|---|---|
+| `driver-license` block | Photo capture from any phone or computer camera, or a photo already on the device. Review, then confirm. File board opens it. |
+| `block_driver_license` + `license-images` bucket | Private photos, barcode status, confirmed fields. |
+| DOT / CDL / profile | Soft-fill of empty fields only. |
+
+---
+
+## **Resume upload fills the DOT app and is not stored** (2026-10-07)
+
+"Upload resume to prefill" was saving the PDF through `/api/resumes/upload` and then stopping. The comment in the uploader said AI extraction would come back later, so the button never called `onPrefillSuccess`. The file landed in Storage and `resumes`, and the application stayed empty.
+
+The button now posts the file to `POST /api/driver/prefill-from-resume`. That route reads the PDF (or a `.txt`) in memory, asks the model for structured fields, and returns Form 1 / 2 / 3 values. It does not write Storage or a `resumes` row. The browser merges those values into the open draft: a field that already has a value stays (so an MVR name or license is not replaced), verified employers stay, and accident rows stay. Blank profile fields are omitted on the follow-up profile sync so an empty CDL number cannot null out one that is already saved.
+
+The career-card resume is still the one generated from the DOT application and the MVR. The separate STORM Resume "Upload" tab still stores a file; that path was left alone.
+
+| Piece | What changed |
+|---|---|
+| `POST /api/driver/prefill-from-resume` | In-memory read. Same daily parse quota as the old stored-PDF parser. |
+| `src/lib/resume-to-dot-prefill.ts` | Maps extraction onto the three forms and merges into the draft. |
+| `ResumeUploadWithPrefill` | Sends the file, then hands the forms to the DOT flow. Copy says the file is not kept. |
+| `next.config.ts` | `pdf-parse` is a server external package so the PDF reader is not webpack-bundled. |
+
 ## **Self-serve candidates are findable by default** (2026-10-07)
 
 A person who signed up on their own after migration 112 had `discoverable_to_employers` default false, so Pace's Find Talent (and every other employer hub) never listed them until they tapped "Yes, find me." Provven and Pace are the same company; those candidates should be in the pool. Apply `supabase/migrations/115_discoverable_by_default.sql`.

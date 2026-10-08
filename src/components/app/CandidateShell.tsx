@@ -25,6 +25,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'mvr',
   'psp',
   'screening-consent',
+  'license',
   'portfolio',
   'github',
   // 'jobs' intentionally omitted — legacy nav targets get redirected to
@@ -72,6 +73,16 @@ const StormResumeBlock = dynamic(
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading STORM Resume…' fullScreen={false} />
+    ),
+  },
+)
+
+const DriverLicenseBlock = dynamic(
+  () => import('@/components/blocks/DriverLicenseBlock'),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading license…' fullScreen={false} />
     ),
   },
 )
@@ -283,6 +294,10 @@ export default function CandidateShell() {
 
     if (currentPage === 'employment-verification') {
       return <EmploymentVerificationBlock />
+    }
+
+    if (currentPage === 'license') {
+      return <DriverLicenseBlock onBack={goBack} />
     }
 
     if (currentPage === 'mvr') {

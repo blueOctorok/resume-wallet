@@ -11,6 +11,8 @@ import {
   type ResolveCompanyDqInput,
   type ResolveDriverDqInput,
 } from '@/lib/dq-file-status'
+import { getLicenseScan } from '@/lib/block-data'
+import { toDqLicenseScan } from '@/lib/license-scan-view'
 import { fetchAllInChunks } from '@/lib/supabase-in-chunks'
 
 function displayName(
@@ -126,6 +128,7 @@ export async function loadCompanyDqInput(
       createdAt: r.created_at,
     })),
     hireDate: hireDate ?? null,
+    licenseScan: toDqLicenseScan(await getLicenseScan(supabase, candidateUserId)),
   }
 }
 
@@ -292,7 +295,16 @@ export async function loadDqMonitorList(
   }
 
   // MVR/PSP: all pulls for the driver (portable). Consent / EV: this company only.
-  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows] =
+  type LicenseRow = {
+    id: string
+    user_id: string
+    front_storage_path: string | null
+    back_storage_path: string | null
+    confirmed_at: string | null
+    updated_at: string | null
+  }
+
+  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows, licenseRows] =
     await Promise.all([
       fetchAllInChunks<ProfileRow>(candidateIds, 'profiles', (chunk) =>
         supabase
@@ -337,6 +349,13 @@ export async function loadDqMonitorList(
           .in('driver_id', chunk)
           .limit(1000),
       ),
+      fetchAllInChunks<LicenseRow>(candidateIds, 'license_scans', (chunk) =>
+        supabase
+          .from('block_driver_license')
+          .select('id, user_id, front_storage_path, back_storage_path, confirmed_at, updated_at')
+          .in('user_id', chunk)
+          .limit(1000),
+      ),
     ])
 
   const profileById = new Map(
@@ -366,6 +385,7 @@ export async function loadDqMonitorList(
   const consentByUser = groupBy(consentBundles, 'driver_user_id')
   const dotByUser = groupBy(dotApps, 'user_id')
   const evByUser = groupBy(evRows, 'driver_id')
+  const licenseByUser = new Map(licenseRows.map((row) => [row.user_id, row]))
 
   const rows: DqMonitorCandidateRow[] = []
 
@@ -375,6 +395,7 @@ export async function loadDqMonitorList(
     const consents = consentByUser.get(userId) ?? []
     const dots = dotByUser.get(userId) ?? []
     const evs = evByUser.get(userId) ?? []
+    const license = licenseByUser.get(userId)
 
     const snapshot = resolveCompanyDqFile({
       mvrOrders: mvr.map((o) => ({
@@ -414,6 +435,15 @@ export async function loadDqMonitorList(
         updatedAt: r.updated_at,
         createdAt: r.created_at,
       })),
+      licenseScan: license
+        ? {
+            id: license.id,
+            hasFront: Boolean(license.front_storage_path),
+            hasBack: Boolean(license.back_storage_path),
+            confirmedAt: license.confirmed_at,
+            updatedAt: license.updated_at,
+          }
+        : null,
     })
 
     const profile = profileById.get(userId)
@@ -536,6 +566,7 @@ export async function loadDriverDqSnapshot(
       status: r.status,
       createdAt: r.created_at,
     })),
+    licenseScan: toDqLicenseScan(await getLicenseScan(supabase, driverUserId)),
   }
 
   return resolveDriverDqFile(input)

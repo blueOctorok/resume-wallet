@@ -67,6 +67,8 @@ function deriveBlockStatus(
     pspRecords: Array<{ orderStatus?: string }>
     portfolio: { portfolioUrl: string | null } | null
     github: { username: string | null } | null
+    licenseOnFile?: boolean
+    licenseStarted?: boolean
   },
 ): 'complete' | 'in-progress' | 'empty' {
   switch (blockType) {
@@ -99,6 +101,8 @@ function deriveBlockStatus(
       return hubStore.portfolio?.portfolioUrl ? 'complete' : 'empty'
     case 'developer-github':
       return hubStore.github?.username ? 'complete' : 'empty'
+    case 'driver-license':
+      return hubStore.licenseOnFile ? 'complete' : hubStore.licenseStarted ? 'in-progress' : 'empty'
     case 'general-resume':
       return hubStore.resumes.some((r) => r.sourceRole === 'general') ? 'complete' : 'empty'
     default:
@@ -115,9 +119,20 @@ export function useHubContext(): HubContext {
   const pspRecords = useDriverHubStore((s) => s.pspRecords)
   const portfolio = useDriverHubStore((s) => s.portfolio)
   const github = useDriverHubStore((s) => s.github)
+  const dqFile = useDriverHubStore((s) => s.dqFile)
   const stats = useDriverHubStore((s) => s.stats)
+  const licenseItem = dqFile?.items.find((item) => item.id === 'dl_images')
 
-  const hubStore = { resumes, dotApplications, mvrRecords, pspRecords, portfolio, github }
+  const hubStore = {
+    resumes,
+    dotApplications,
+    mvrRecords,
+    pspRecords,
+    portfolio,
+    github,
+    licenseOnFile: licenseItem?.status === 'complete',
+    licenseStarted: licenseItem?.status === 'in_progress',
+  }
 
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState<number | null | undefined>(undefined)
   useEffect(() => {

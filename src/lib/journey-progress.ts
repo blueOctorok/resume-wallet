@@ -122,6 +122,8 @@ export interface BlockProgressData {
   employmentVerificationPending?: boolean
   /** Candidate has at least one Verified by Storm attestation issued */
   hasVerifiedAttestation?: boolean
+  /** Both license photos saved and the driver confirmed the barcode read. */
+  licenseOnFile?: boolean
 }
 
 // ===== BLOCK → JOURNEY STEP MAP =====
@@ -325,6 +327,22 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
   'driver-cdl-credentials': {
     // No active journey step — CDL credentials are informational
     resolve: () => [],
+  },
+
+  'driver-license': {
+    resolve: (d) => [{
+      id: 'driver-license',
+      label: 'License on file',
+      description: 'Photograph your license so empty DOT fields can be filled from the card',
+      status: d.licenseOnFile ? 'complete' : 'pending',
+      action: !d.licenseOnFile ? { label: 'Add your license', target: 'license' } : undefined,
+    }],
+    nextAction: (d) => !d.licenseOnFile ? {
+      label: 'Add your license',
+      description: 'A photo of the card fills empty license fields. It stays on file until a record pull verifies it.',
+      target: 'license',
+      priority: 'high',
+    } : null,
   },
 
   'developer-portfolio': {

@@ -101,6 +101,8 @@ export interface CdlData {
   cdlExpiration: string | null
   endorsements: string[]
   restrictions: string[]
+  /** True when the driver confirmed photos of the card. Display-only — not a DMV proof. */
+  licenseOnFile?: boolean
 }
 
 export interface PortfolioData {
