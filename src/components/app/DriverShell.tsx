@@ -355,12 +355,7 @@ export default function DriverShell({
           onClose={() => setIsMvrManagementOpen(false)}
           sessionUserId={sessionUserId}
           onOrderNew={() => setCurrentPage('mvr')}
-          onCompleteOrder={(paymentTxHash) => {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('pendingMvrPayment', paymentTxHash)
-            }
-            setCurrentPage('mvr')
-          }}
+          onCompleteOrder={() => setCurrentPage('mvr')}
           onViewMvr={(orderId) => {
             setSelectedMvrOrderId(orderId)
             setIsMvrModalOpen(true)

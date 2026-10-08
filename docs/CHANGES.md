@@ -4,6 +4,66 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **USDC sweep — last Base-era payment code removed** (2026-10-08)
+
+D1–D5 removed the wallet, contracts, and payment buttons, but the *server-side* USDC paths they called were left behind. Three of them were still reachable and one was a hole: `POST /api/ai/credits` granted Stormi credits for any `txHash` string the client sent, with no verification. Everything money-related now goes through Stripe (`screening-stripe-payment.ts`) or a company-sponsored `waived` row; nothing reads `amount_usdc` or a tx hash anymore.
+
+| File | Change |
+|---|---|
+| `src/app/api/mvr/payment/route.ts`, `src/app/api/psp/payment/route.ts` | **Deleted.** USDC payment recorders with no callers. |
+| `src/app/api/ai/credits/route.ts` | `POST` **deleted** (unverified credit grant). `GET` stays. `addCredits` removed from `ava-usage.ts` until a Stripe flow needs it; `STORMI_CREDIT_PACKS.priceUsdc` → `priceUsd`. |
+| `src/lib/pricing.ts` | **Deleted.** "1 free upload/week then $1 USDC" — `FREE_UPLOADS_PER_WEEK` was already `999`, so it never charged. |
+| `src/app/api/resumes/upload/route.ts` | Eligibility check, `paymentTxHash`, 402 block, `recordPaidUpload`, `is_paid`, and the `GET` eligibility endpoint removed. |
+| `src/app/api/resumes/create/route.ts`, `ResumeUploadWithVerification.tsx`, `UploadResumeModal.tsx`, `ResumeDashboard.tsx`, `stores/types.ts`, `DriverHub.tsx` | `isPaid` / `wasPaid` / `costUSDC` / `eligibility` fields and the "Payment: … USDC" / "Paid / Free Tier" rows removed. `resumes.is_paid` column stays in the DB (always `false`); drop it in a later migration. |
+| `src/app/api/driver/hub/route.ts` | Raw `payments` table dump (leaked `amount_usdc` + `tx_hash`, no consumer) removed. Phantom "paid resume" transactions in `USDC` removed. `stats.totalSpentUSDC` → `totalSpentUsd` (it was already summing USD vendor fees). |
+| `src/app/api/mvr/check-status/route.ts`, `MvrManagementModal.tsx`, `DriverShell.tsx` | Payment rows return `provider` + `amountCents`; the modal shows `$X.XX` for Stripe rows and "No charge" otherwise. The tx-hash line and the dead `pendingMvrPayment` localStorage hand-off are gone — "Complete Order Now" just opens the MVR page, where the Stripe credit is found automatically. |
+| `supabase/migrations/117_payments_stripe.sql` | `amount_usdc` made nullable with default `0` and commented as legacy, so new inserts (`screening-stripe-payment.ts`, `resolve-waived-screening-payment.ts`) stop writing it. **Still not applied to production.** |
+
+**Not touched (Pace-critical, needs confirmation):** `api/employer/screenings/order` (USDC error string + `amount_usdc: 0` insert), `api/employer/mvr/order` (comments), `employer-block-registry.ts` `pricingNote: 'Per-order USDC pricing at checkout.'` (employer-visible copy), `CandidateOutreach.tsx` and `place-screening-order.ts` comments, and the `paymentTxHash` lookup branch in `resolve-waived-screening-payment.ts` that only those routes can reach.
+
+## **PSP is employer-ordered only** (2026-10-08)
+
+Self-initiated PSP orders are removed. A PSP gives the driver nothing they can disclose: there is no PSP fact type (`dot-attestation-badge.ts`: "PSP stays issuer-only"), every PSP lands in `needs_review`, and FMCSA sells drivers their own record for $10. It is a pre-employment tool — the employer orders it, the driver owns the result. Self-bought **MVRs stay**, and they produce the same proofs as a Pace-ordered one: `getMvrAttestationContext` reads the latest *driver-owned* MVR, which a self-order is.
+
+| File | Change |
+|---|---|
+| `src/app/api/psp/order/route.ts` | **Deleted.** |
+| `src/app/api/psp/consent/route.ts` | `GET ?self=1` removed; `POST` now requires `requestId` (no "Self-Request" consents). |
+| `src/components/PspOrderForm.tsx` | Self-order form removed (−400 lines). Keeps the employer three-step consent wizard; with no request it shows status or an "ordered by employers" card (`HubSectionPanel` + `BlockCard`, amber). |
+| `src/lib/screening-stripe-payment.ts`, `ScreeningPayGate.tsx`, `/api/screening/checkout` | Narrowed to `PaidScreeningKind = 'mvr'`. `STRIPE_PRICE_PSP` dropped. |
+| `src/lib/journey-progress.ts`, `src/lib/driver-next-action.ts` | PSP step no longer says "Order PSP" or surfaces as a driver next action. |
+| `src/lib/dq-file-status.ts` | Driver lens: PSP with no order and no request is `needs_employer` (was `missing`), so the DQ coach stops telling drivers to "open it to start". Still counts toward the full DQ packet. |
+| `src/components/hub/BuildBoard.tsx` | `needs_employer` chip reads "Employer orders" instead of "To do". |
+| `src/lib/dq-file-registry.ts` | PSP driver hint rewritten. |
+
+Addendum to DEC-2026-10-001 recorded in the decision log.
+
+## **Stripe for driver-initiated MVR orders** (2026-10-08)
+
+DEC-2026-10-001. Who starts the order decides who pays. A screening a company requests (Pace or anyone else) is billed to that company by the vendor and keeps using the `$0 waived` payment row. A screening the driver starts from their own hub now goes through Stripe Checkout before Accio is called. *(Originally shipped for MVR and PSP; PSP self-order was removed the same day — see the entry above.)*
+
+**Root cause.** `resolveScreeningPayment` created a waived row whenever no payment was supplied, and the self-serve routes never supplied one. A driver could decline an employer's consent request, open the MVR block, and trigger a real pull for free — which is exactly what happened in October.
+
+**Flow.** Pay first, then fill the form. `ScreeningPayGate` wraps the self-order form in `MvrOrderForm` / `PspOrderForm`: it asks `GET /api/screening/checkout?kind=` whether the driver already holds an unused paid session, shows the Stripe price if not, and `POST` opens Checkout. Stripe sends the driver back to `/?onboard=mvr|psp`, the gate re-checks, and the form appears. The paid session is a *credit* — the order route spends it via `payment_id`; a failed or cancelled order releases it. The SSN never crosses the redirect.
+
+**Server gate.** `/api/mvr/order` and `/api/psp/order` call `findDriverScreeningCredit` and return `402 { paymentRequired: true }` without one. The legacy `paymentTxHash` / wallet-ownership checks in those two routes were removed. Company-sponsored paths (`/api/candidate/fulfill-screening`, `/api/employer/**`, bundle placement) are untouched.
+
+**Settlement.** `/api/stripe/webhook` verifies the raw-body signature (route added to the middleware exclusion list) and marks the row `COMPLETED` on `checkout.session.completed`. The credit lookup also retrieves pending sessions younger than 24h straight from Stripe, so a slow webhook or local dev without one never blocks a driver who paid.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/117_payments_stripe.sql` | `payments.provider` (default `waived`; USDC rows backfilled to `legacy`), `stripe_session_id` (unique), `stripe_payment_intent_id`, `amount_cents`, `currency`. **Not applied to production yet.** |
+| `src/lib/stripe.ts` | Lazy server Stripe client. |
+| `src/lib/screening-stripe-payment.ts` | `createScreeningCheckout`, `settleScreeningCheckout`, `findDriverScreeningCredit`, `getScreeningPrice`. |
+| `src/app/api/screening/checkout/route.ts` | GET credit status + price; POST open Checkout. |
+| `src/app/api/stripe/webhook/route.ts` | Signature-verified settlement. |
+| `src/components/screening/ScreeningPayGate.tsx` | Pay-first card (`HubSectionPanel` + `BlockCard`). |
+| `MvrOrderForm.tsx`, `PspOrderForm.tsx` | Self-order form wrapped in the gate. |
+| `/api/mvr/order`, `/api/psp/order` | Require a Stripe credit; USDC remnants removed. |
+| `src/middleware.ts` | Exclude `api/stripe/webhook`. |
+
+**Env.** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MVR`, `STRIPE_PRICE_PSP` (see `VERCEL_ENV_CHECKLIST.md`). Without them the gate shows "Payments are not configured yet" and self-serve orders are refused — nothing falls back to free.
+
 ## **License photo choice** (2026-10-08)
 
 Clicking the front or back of the license no longer opens the camera or file picker immediately. A modal asks first: use the camera, or upload a photo already on the device. The camera choice is what requests camera access.

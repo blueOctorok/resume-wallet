@@ -14,10 +14,10 @@ interface ScreeningReportOnFileCardProps {
 }
 
 /**
- * Shown in place of the MVR/PSP self-order form when the driver already has
- * an active order of that kind. Ordering again would be a duplicate vendor
+ * Shown on the MVR / PSP block page when the driver already has an active
+ * order of that kind. For MVR, ordering again would be a duplicate vendor
  * charge — the server guard rejects it anyway (screening-validation.ts), this
- * card just stops the attempt from being offered.
+ * card just stops the attempt from being offered. For PSP it is simply status.
  */
 export default function ScreeningReportOnFileCard({ kind, lock, onBack }: ScreeningReportOnFileCardProps) {
   const { theme } = useTheme()

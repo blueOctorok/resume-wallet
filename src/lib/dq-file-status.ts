@@ -650,11 +650,14 @@ export function resolveDriverDqFile(input: ResolveDriverDqInput): DqFileSnapshot
             break
           }
         }
+        // No PSP and no request: nothing the driver can do — PSP is employer-ordered
+        // only (DEC-2026-10-001). `needs_employer` keeps the coach from nudging them to "start" it.
         items.push(
           baseItem(def, {
             ...mapped,
+            status: mapped.status === 'missing' ? 'needs_employer' : mapped.status,
             emptyHint,
-            sourceChip: mapped.status === 'missing' ? 'Employer may order' : null,
+            sourceChip: mapped.status === 'missing' ? 'Employer orders this' : null,
           }),
         )
         break

@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
-import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadDocument, getSignedDocumentUrl } from '@/lib/document-storage'
@@ -49,17 +48,11 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Resume Upload API: Rate limit passed')
 
-    // 4. Check pricing eligibility
-    console.log('💰 Resume Upload API: Checking pricing eligibility')
-    const eligibility = await checkUploadEligibility(user.id)
-    console.log('💰 Resume Upload API: Eligibility:', eligibility)
-
-    // 5. Parse form data (expecting file hash from client)
+    // 4. Parse form data (expecting file hash from client)
     const formData = await req.formData()
     const file = formData.get('file') as File
     const title = formData.get('title') as string
     const fileHash = formData.get('fileHash') as string
-    const paymentTxHash = formData.get('paymentTxHash') as string | null
 
     if (!file || !fileHash) {
       return NextResponse.json(
@@ -144,38 +137,14 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Resume Upload API: No duplicate file hash found - proceeding with storage upload')
 
-    // 8. Check payment requirement (only check if not duplicate)
-    if (eligibility.requiresPayment && !paymentTxHash) {
-      console.log('💳 Resume Upload API: Payment required')
-      return NextResponse.json(
-        {
-          error: 'Payment required',
-          message: 'You have used your free upload this week.',
-          costUSDC: eligibility.costUSDC,
-          uploadsThisWeek: eligibility.uploadsThisWeek,
-          nextFreeUpload: eligibility.nextFreeUpload,
-        },
-        { status: 402 }
-      )
-    }
-
-    // 9. Verify payment if required (TODO: Add Base Pay verification)
-    if (eligibility.requiresPayment && paymentTxHash) {
-      console.log('💳 Resume Upload API: Verifying payment')
-      // TODO: Verify the transaction on Base network
-      // For now, trust the txHash (add verification later)
-      await recordPaidUpload(user.id, paymentTxHash, eligibility.costUSDC)
-      console.log('✅ Resume Upload API: Payment recorded')
-    }
-
-    // 10. Upload to Supabase Storage (only reached if not duplicate and payment verified)
+    // 8. Upload to Supabase Storage (only reached if not duplicate)
     console.log('[RESUME UPLOAD] Uploading to Supabase Storage')
     const { storagePath } = await uploadDocument(user.id, 'resumes', file, file.name, file.type)
     const documentUrl = await getSignedDocumentUrl('resumes', storagePath)
 
     console.log('[RESUME UPLOAD] Storage upload complete:', storagePath)
 
-    // 11. Save to database (WITH FILE HASH + IPFS HASH) - only reached if IPFS upload succeeded
+    // 9. Save to database (with file hash) - only reached if storage upload succeeded
     console.log('💾 Resume Upload API: Saving to database')
 
     const { data: resume, error: resumeError } = await supabase
@@ -197,7 +166,6 @@ export async function POST(req: NextRequest) {
         mime_type: file.type,
         is_public: false,
         verification_status: 'PENDING',
-        is_paid: eligibility.requiresPayment,
       })
       .select('id, created_at')
       .single()
@@ -215,7 +183,7 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Resume Upload API: Database save complete:', resume.id)
 
-    // 12. Return success with all data needed for blockchain step
+    // 10. Return success
     return NextResponse.json({
       success: true,
       resume: {
@@ -231,12 +199,6 @@ export async function POST(req: NextRequest) {
         storagePath,
         documentUrl,
         createdAt: resume.created_at,
-        wasPaid: eligibility.requiresPayment,
-        costUSDC: eligibility.requiresPayment ? eligibility.costUSDC : 0,
-      },
-      eligibility: {
-        uploadsThisWeek: eligibility.uploadsThisWeek + 1,
-        nextFreeUpload: eligibility.nextFreeUpload,
       },
       // Data needed for blockchain verification step
       blockchainData: {
@@ -261,25 +223,6 @@ export async function POST(req: NextRequest) {
         error: 'Upload failed',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
-    )
-  }
-}
-
-// GET endpoint to check upload eligibility
-export async function GET(req: NextRequest) {
-  try {
-    const userId = await getStormUserIdFromRequest(req)
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const eligibility = await checkUploadEligibility(userId)
-    return NextResponse.json(eligibility)
-  } catch (error) {
-    console.error('❌ Resume Upload API: Eligibility check error:', error)
-    return NextResponse.json(
-      { error: 'Failed to check eligibility' },
       { status: 500 }
     )
   }

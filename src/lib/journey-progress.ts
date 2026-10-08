@@ -302,26 +302,17 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     },
   },
 
+  // PSP is employer-ordered only (DEC-2026-10-001) — no "order" nudge for drivers.
   'driver-psp': {
     resolve: (d) => [{
       id: 'driver-psp',
       label: 'PSP Report',
-      description: 'Order your FMCSA crash and inspection history',
+      description: 'FMCSA crash and inspection history, ordered by an employer',
       status: d.pspComplete ? 'complete' : d.hasPspOrder ? 'in_progress' : 'pending',
-      action: !d.pspComplete
-        ? { label: d.hasPspOrder ? 'View PSP status' : 'Order PSP', target: 'psp' }
-        : undefined,
+      action: d.hasPspOrder && !d.pspComplete ? { label: 'View PSP status', target: 'psp' } : undefined,
       isOptional: true,
     }],
-    nextAction: (d) => {
-      if (d.pspComplete || d.hasPspOrder) return null
-      return {
-        label: 'Order PSP',
-        description: 'Add federal safety history for carriers that require it',
-        target: 'psp',
-        priority: 'medium',
-      }
-    },
+    nextAction: () => null,
   },
 
   'driver-cdl-credentials': {

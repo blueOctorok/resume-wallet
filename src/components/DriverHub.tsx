@@ -56,7 +56,6 @@ interface HubResume {
   createdAt: string
   fileSize: number
   resumeType: 'uploaded' | 'built'
-  isPaid: boolean
 }
 
 interface HubDotApplication {
@@ -99,15 +98,6 @@ interface HubJobApplication {
   companyName: string
 }
 
-interface HubPayment {
-  id: string
-  type: string
-  amountUSDC: string
-  txHash: string | null
-  status: string
-  createdAt: string
-}
-
 interface HubTransaction {
   id: string
   type: string
@@ -132,7 +122,7 @@ interface HubStats {
   pendingApplications: number
   viewedApplications: number
   contactedApplications: number
-  totalSpentUSDC: number
+  totalSpentUsd: number
   totalTransactions: number
 }
 
@@ -145,7 +135,6 @@ interface HubData {
   dotApplications: HubDotApplication[]
   mvrRecords: HubMvrRecord[]
   jobApplications: HubJobApplication[]
-  payments: HubPayment[]
   transactions: HubTransaction[]
   stats: HubStats
   memberSince?: string
@@ -600,7 +589,6 @@ export default function DriverHub({
     dotApplications: [],
     mvrRecords: [],
     jobApplications: [],
-    payments: [],
     transactions: [],
     stats: {
       profileCompleteness: 0,
@@ -616,7 +604,7 @@ export default function DriverHub({
       pendingApplications: 0,
       viewedApplications: 0,
       contactedApplications: 0,
-      totalSpentUSDC: 0,
+      totalSpentUsd: 0,
       totalTransactions: 0,
     },
   }

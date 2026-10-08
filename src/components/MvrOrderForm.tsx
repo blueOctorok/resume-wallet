@@ -9,6 +9,7 @@ import Button from './ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { useScreeningOrderLock } from '@/hooks/use-screening-order-lock'
 import ScreeningReportOnFileCard from '@/components/screening/ScreeningReportOnFileCard'
+import ScreeningPayGate from '@/components/screening/ScreeningPayGate'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { useUIStore } from '@/stores'
 import LoadingScreen from './LoadingScreen'
@@ -261,8 +262,9 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           </div>
         )}
 
-        {/* Form */}
+        {/* Form — driver-initiated, so the Stripe gate comes first */}
         {!success && (
+          <ScreeningPayGate kind='mvr'>
           <form onSubmit={handleSubmit} className='space-y-4'>
             {/* Personal Information */}
             <div className={`${cardClass} p-5`}>
@@ -558,6 +560,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                     : 'Submit MVR Order'}
             </button>
           </form>
+          </ScreeningPayGate>
         )}
       </div>
     </div>

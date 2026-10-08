@@ -34,9 +34,6 @@ interface ResumeUploadWithVerificationProps {
       ipfsHash: string
       ipfsUrl: string
       databaseId: string
-      wasPaid: boolean
-      costUSDC: number
-      eligibility: any
       blockchainData: any
     }
   }) => void
@@ -314,9 +311,6 @@ export default function ResumeUploadWithVerification({
         ipfsHash: uploadData.resume.ipfsHash,
         documentUrl: uploadData.resume.documentUrl,
         ipfsUrl: uploadData.resume.documentUrl ?? uploadData.resume.ipfsUrl,
-        wasPaid: uploadData.resume.wasPaid,
-        costUSDC: uploadData.resume.costUSDC,
-        eligibility: uploadData.eligibility,
       })
       notifyResumeUploadEvent?.({
         type: 'upload_complete',
@@ -324,8 +318,6 @@ export default function ResumeUploadWithVerification({
         data: {
           resumeId: uploadData.resume.id,
           ipfsHash: uploadData.resume.ipfsHash,
-          wasPaid: uploadData.resume.wasPaid,
-          costUSDC: uploadData.resume.costUSDC,
         },
         message: '✅ Resume uploaded successfully.',
       })
@@ -335,9 +327,6 @@ export default function ResumeUploadWithVerification({
         documentUrl: uploadData.resume.documentUrl,
         ipfsUrl: uploadData.resume.documentUrl ?? uploadData.resume.ipfsUrl,
         databaseId: uploadData.resume.id,
-        wasPaid: uploadData.resume.wasPaid,
-        costUSDC: uploadData.resume.costUSDC,
-        eligibility: uploadData.eligibility,
         blockchainData: null,
       }
 
@@ -712,14 +701,6 @@ export default function ResumeUploadWithVerification({
             </div>
             <div>
               <strong>Database ID:</strong> {finalResult.databaseId}
-            </div>
-            <div>
-              <strong>Payment:</strong>{' '}
-              {finalResult.wasPaid ? `$${finalResult.costUSDC} USDC` : 'Free'}
-            </div>
-            <div>
-              <strong>Uploads This Week:</strong>{' '}
-              {finalResult.eligibility?.uploadsThisWeek || 0}
             </div>
           </div>
         </div>

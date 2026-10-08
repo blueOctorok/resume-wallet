@@ -42,10 +42,9 @@ export async function POST(req: NextRequest) {
         source_role: 'driver',
         structured_data: structuredData,
         verification_status: 'PENDING',
-        is_paid: false,
         is_public: false,
       })
-      .select('id, created_at, title, filename, ipfs_hash, verification_status, resume_type, is_paid, file_size')
+      .select('id, created_at, title, filename, ipfs_hash, verification_status, resume_type, file_size')
       .single()
 
     if (resumeError) {
@@ -77,7 +76,6 @@ export async function POST(req: NextRequest) {
         createdAt: resume.created_at,
         fileSize: resume.file_size,
         resumeType: resume.resume_type,
-        isPaid: resume.is_paid,
       },
     })
   } catch (error) {

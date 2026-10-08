@@ -30,7 +30,6 @@ interface ResumeRecord {
   blockchain_resume_id?: string
   created_at?: string
   is_public?: boolean
-  is_paid?: boolean
   file_size?: number
   mime_type?: string
   resume_type?: 'uploaded' | 'built' | 'developer_built'
@@ -977,10 +976,6 @@ function ResumeDetail({
               <InfoRow label='File Size' value={formatFileSize(resume.file_size)} />
               <InfoRow label='MIME Type' value={resume.mime_type} />
             </div>
-            <InfoRow
-              label='Payment'
-              value={resume.is_paid ? 'Paid' : 'Free Tier'}
-            />
           </div>
 
           <div className='flex flex-wrap gap-2'>

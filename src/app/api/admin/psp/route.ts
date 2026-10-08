@@ -12,7 +12,7 @@ import {
  * List PSP (FMCSA crash & inspection) orders. Mirrors the MVR admin list.
  *
  * Each row exposes `orderedBy` so admins can distinguish:
- *   - candidate self-orders (USDC payment)
+ *   - historical candidate self-orders (PSP is employer-ordered only since 2026-10-08)
  *   - employer-initiated orders (CRA-isolated, scoped by ordered_by_company_id)
  */
 export async function GET(request: NextRequest) {

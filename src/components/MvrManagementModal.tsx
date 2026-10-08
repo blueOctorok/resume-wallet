@@ -11,16 +11,24 @@ interface MvrManagementModalProps {
   onClose: () => void
   sessionUserId: string | null
   onOrderNew: () => void
-  onCompleteOrder: (paymentTxHash: string) => void
+  onCompleteOrder: () => void
   onViewMvr: (orderId: string) => void
 }
 
 interface Payment {
   id: string
-  txHash: string
-  amount: string
+  /** stripe = driver paid at checkout; waived = company-sponsored; legacy = pre-Stripe. */
+  provider: 'stripe' | 'waived' | 'legacy'
+  amountCents: number | null
   status: string
   createdAt: string
+}
+
+function formatPaymentAmount(payment: Payment): string {
+  if (payment.provider === 'stripe' && payment.amountCents != null) {
+    return `$${(payment.amountCents / 100).toFixed(2)}`
+  }
+  return 'No charge'
 }
 
 interface Order {
@@ -332,7 +340,7 @@ export default function MvrManagementModal({
                       </p>
                       <button
                         onClick={() => {
-                          onCompleteOrder(orphanedPayments[0].txHash)
+                          onCompleteOrder()
                           onClose()
                         }}
                         className={`px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 shadow-lg ${
@@ -389,7 +397,7 @@ export default function MvrManagementModal({
                                 <div className="flex justify-between items-start gap-2 mb-3">
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <span className={`text-sm sm:text-base font-bold ${!isDarkTheme(theme) ? 'text-gray-900' : 'text-white'}`}>
-                                      No charge
+                                      {formatPaymentAmount(payment)}
                                     </span>
                                     {isOrphaned && (
                                       <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 whitespace-nowrap flex-shrink-0">
@@ -412,14 +420,6 @@ export default function MvrManagementModal({
                                   </span>
                                 </div>
                                 <div className={`text-xs space-y-1.5 ${!isDarkTheme(theme) ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-medium">Tx:</span>
-                                    <code className={`px-1.5 py-0.5 rounded font-mono text-[10px] truncate ${
-                                      !isDarkTheme(theme) ? 'bg-gray-200' : 'bg-gray-900/50 border border-gray-700'
-                                    }`}>
-                                      {payment.txHash.slice(0, 6)}...{payment.txHash.slice(-4)}
-                                    </code>
-                                  </div>
                                   <div className="flex items-center gap-1.5">
                                     <Clock className="h-3.5 w-3.5" />
                                     <span>{new Date(payment.createdAt).toLocaleString()}</span>

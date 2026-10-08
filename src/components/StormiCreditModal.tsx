@@ -2,7 +2,7 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 /**
- * StormiCreditModal — placeholder until Stripe credit packs ship (D3 removed USDC).
+ * StormiCreditModal — placeholder until Stripe credit packs ship.
  */
 
 import { X, Sparkles } from 'lucide-react'

@@ -24,7 +24,7 @@ import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
  *   - dotApplications: All DOT application submissions
  *   - mvrRecords: All MVR orders and results
  *   - jobApplications: Summary of job applications
- *   - payments: All payment records
+ *   - transactions: Screening orders as a spend history
  *   - stats: Computed statistics for quick view
  */
 export async function GET(request: NextRequest) {
@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
         portfolio: null,
         github: null,
         jobApplications: [],
-        payments: [],
         screeningConsentBundles: [],
         dqFile: null,
         stats: {
@@ -74,7 +73,7 @@ export async function GET(request: NextRequest) {
           pendingApplications: 0,
           viewedApplications: 0,
           contactedApplications: 0,
-          totalSpentUSDC: 0,
+          totalSpentUsd: 0,
           totalTransactions: 0,
           careerCardViewsThisWeek: 0,
           careerCardViewsTotal: 0,
@@ -102,7 +101,6 @@ export async function GET(request: NextRequest) {
       pspOrdersResult,
       pspResultsResult,
       jobAppsResult,
-      paymentsResult,
       portfolioRow,
       githubRow,
       candidateRequestsPendingResult,
@@ -128,7 +126,7 @@ export async function GET(request: NextRequest) {
       // 10. Driver resumes only
       supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, storage_path, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
+        .select('id, title, filename, ipfs_hash, storage_path, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role')
         .eq('user_id', user.id)
         .in('source_role', ['driver', 'developer', 'general'])
         .order('created_at', { ascending: false }),
@@ -184,18 +182,11 @@ export async function GET(request: NextRequest) {
         .eq('applicant_user_id', user.id)
         .order('applied_at', { ascending: false }),
 
-      // 15. All payments
-      supabase
-        .from('payments')
-        .select('id, type, amount_usdc, tx_hash, status, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
-
-      // 16. Developer portfolio (for My Files when user has developer-portfolio block)
+      // 15. Developer portfolio (for My Files when user has developer-portfolio block)
       getDevPortfolio(supabase, user.id),
-      // 17. Developer GitHub (for My Files + journey when user has developer-github block)
+      // 16. Developer GitHub (for My Files + journey when user has developer-github block)
       getDevGithub(supabase, user.id),
-      // 18. Employer screening requests still in flight (PSP+MVR wizard not finished)
+      // 17. Employer screening requests still in flight (PSP+MVR wizard not finished)
       supabase
         .from('candidate_requests')
         .select(
@@ -312,7 +303,6 @@ export async function GET(request: NextRequest) {
           createdAt: resume.created_at,
           fileSize: resume.file_size,
           resumeType: resume.resume_type || 'uploaded',
-          isPaid: resume.is_paid,
         }
       }),
     )
@@ -400,8 +390,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Build transaction history from actual orders/purchases (not just payments table)
-    // This is more reliable since payments table may not have been populated
+    // Spend history derived from screening orders (vendor fee + currency on the order row).
     const transactions: Array<{
       id: string
       type: string
@@ -437,19 +426,6 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // Add paid resume transactions
-    resumes.filter(r => r.isPaid).forEach(resume => {
-      transactions.push({
-        id: `resume-${resume.id}`,
-        type: 'RESUME_UPLOAD',
-        description: `Resume Upload - ${resume.title || resume.filename}`,
-        amount: null, // Could add resume pricing if stored
-        currency: 'USDC',
-        status: 'COMPLETED',
-        createdAt: resume.createdAt,
-      })
-    })
-
     // Sort by date, newest first
     transactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -461,16 +437,6 @@ export async function GET(request: NextRequest) {
       viewCount: app.view_count || 0,
       jobTitle: (app.job_postings as any)?.title || 'Unknown Position',
       companyName: (app.job_postings as any)?.companies?.company_name || 'Unknown Company',
-    }))
-
-    // Process payments
-    const payments = (paymentsResult.data || []).map(payment => ({
-      id: payment.id,
-      type: payment.type,
-      amountUSDC: payment.amount_usdc,
-      txHash: payment.tx_hash,
-      status: payment.status,
-      createdAt: payment.created_at,
     }))
 
     // Fallback display name when profile first/last are missing (e.g. after submit)
@@ -529,7 +495,6 @@ export async function GET(request: NextRequest) {
       viewerStates = [...states].slice(0, 3)
     }
 
-    // Calculate total spent from transactions (more reliable than payments table)
     const totalSpent = transactions
       .filter(t => t.status === 'COMPLETED' && t.amount !== null)
       .reduce((sum, t) => sum + (t.amount || 0), 0)
@@ -558,7 +523,7 @@ export async function GET(request: NextRequest) {
       viewedApplications: jobApplications.filter(a => a.viewCount > 0).length,
       /** Employer marked the application as contacted (simplified pipeline). */
       contactedApplications: jobApplications.filter(a => a.status === 'contacted').length,
-      totalSpentUSDC: totalSpent,
+      totalSpentUsd: totalSpent,
       totalTransactions: transactions.length,
       careerCardViewsThisWeek: cardViewsWeek ?? 0,
       careerCardViewsTotal: cardViewsTotal ?? 0,
@@ -596,8 +561,7 @@ export async function GET(request: NextRequest) {
       portfolio,
       github,
       jobApplications,
-      payments, // Keep for backwards compatibility
-      transactions, // New: derived from actual orders/purchases
+      transactions,
       stats,
       memberSince: user.created_at,
       pendingEmployerScreening,

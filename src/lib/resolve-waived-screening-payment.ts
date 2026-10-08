@@ -15,8 +15,13 @@ type ResolvePaymentResult =
   | { ok: false; error: string; status: number }
 
 /**
- * USDC payments were removed in D3. When paymentTxHash is omitted, upsert a
- * synthetic waived payment row so duplicate checks and audit trails still work.
+ * Company-sponsored screening payments. When paymentTxHash is omitted (the
+ * only path the employer UI uses), upsert a synthetic $0 waived row so duplicate
+ * checks and audit trails still work. The sponsoring company is billed per pull
+ * by the vendor, so no card is taken here.
+ *
+ * Driver-initiated orders do NOT use this — they require a Stripe credit
+ * (screening-stripe-payment.ts, DEC-2026-10-001).
  */
 export async function resolveScreeningPayment(
   supabase: SupabaseClient,
@@ -29,7 +34,7 @@ export async function resolveScreeningPayment(
 
     const { data: exactPayment, error: exactError } = await supabase
       .from('payments')
-      .select('id, status, amount_usdc, user_id, tx_hash, company_id, created_at')
+      .select('id, status, user_id, tx_hash, company_id, created_at')
       .eq('tx_hash', paymentTxHash)
       .eq('type', paymentType)
       .order('created_at', { ascending: false })
@@ -42,7 +47,7 @@ export async function resolveScreeningPayment(
       const legacyHash = paymentTxHash.substring(0, 66)
       const { data: legacyPayment, error: legacyError } = await supabase
         .from('payments')
-        .select('id, status, amount_usdc, user_id, tx_hash, company_id, created_at')
+        .select('id, status, user_id, tx_hash, company_id, created_at')
         .eq('tx_hash', legacyHash)
         .eq('type', paymentType)
         .order('created_at', { ascending: false })
@@ -98,7 +103,6 @@ export async function resolveScreeningPayment(
       tx_hash: syntheticTxHash,
       type: paymentType,
       status: 'COMPLETED',
-      amount_usdc: 0,
       user_id: userId,
       company_id: companyId,
     })

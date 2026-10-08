@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Now filter for MVR_ORDER type
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
-      .select('id, tx_hash, amount_usdc, status, created_at, type')
+      .select('id, provider, amount_cents, status, created_at, type')
       .eq('user_id', user.id)
       .eq('type', 'MVR_ORDER')
       .order('created_at', { ascending: false })
@@ -131,8 +131,8 @@ export async function GET(request: NextRequest) {
       paymentPending: hasOrphanedPayments,
       payments: payments?.map(p => ({
         id: p.id,
-        txHash: p.tx_hash,
-        amount: p.amount_usdc,
+        provider: p.provider,
+        amountCents: p.amount_cents,
         status: p.status,
         createdAt: p.created_at,
       })) || [],

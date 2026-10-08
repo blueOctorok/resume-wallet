@@ -54,10 +54,11 @@ export interface StormiResumeParseCheck {
   credits: number
 }
 
+/** Planned Stripe credit packs — prices in USD; checkout not wired yet (StormiCreditModal). */
 export const STORMI_CREDIT_PACKS = {
-  starter: { messages: 50, priceUsdc: '1.00' },
-  standard: { messages: 200, priceUsdc: '3.00' },
-  pro: { messages: 500, priceUsdc: '5.00' },
+  starter: { messages: 50, priceUsd: '1.00' },
+  standard: { messages: 200, priceUsd: '3.00' },
+  pro: { messages: 500, priceUsd: '5.00' },
 } as const
 
 export type StormiCreditPackId = keyof typeof STORMI_CREDIT_PACKS
@@ -307,19 +308,6 @@ export async function saveJobMatchCache(
     .eq('user_id', userId)
 
   if (error) throw new Error(`saveJobMatchCache failed: ${error.message}`)
-}
-
-export async function addCredits(supabase: SupabaseClient, userId: string, amount: number): Promise<void> {
-  const usage = await getOrCreateUsage(supabase, userId)
-  const { error } = await supabase
-    .from('ava_chat_usage')
-    .update({
-      credits: usage.credits + amount,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', userId)
-
-  if (error) throw new Error(`addCredits failed: ${error.message}`)
 }
 
 export function getDailyRemaining(usage: StormiUsage): number {

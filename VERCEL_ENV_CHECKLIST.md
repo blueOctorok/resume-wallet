@@ -39,8 +39,13 @@ ATTESTATION_JWT_PRIVATE_KEY=        # Phase 2: HS256 secret for signed attestati
 ATTESTATION_ISSUER=storm           # JWT iss claim (optional; default storm)
 ATTESTATION_BACKEND=midnight      # Production flipped 2026-08-13 (Preprod). Omit on Preview to stay JWT.
 # MIDNIGHT_* — Phase 3 (see docs/midnight)
-# STRIPE_* — add when Stripe Checkout ships
+# Stripe — driver-initiated MVR orders (DEC-2026-10-001). Company-sponsored orders never charge; PSP is employer-only.
+STRIPE_SECRET_KEY=                 # sk_live_... (sk_test_... on Preview)
+STRIPE_WEBHOOK_SECRET=             # whsec_... for endpoint https://provven.com/api/stripe/webhook (event: checkout.session.completed)
+STRIPE_PRICE_MVR=                  # price_... one-time Price for a self-ordered MVR
 ```
+
+Stripe setup: Dashboard → Products → create "MVR (self-order)" with a one-time price, copy the Price ID. Developers → Webhooks → add endpoint above, select `checkout.session.completed`, copy the signing secret. Local dev: `stripe listen --forward-to localhost:3000/api/stripe/webhook` (optional — the app also confirms paid sessions directly when the driver returns).
 
 ## Removed — delete from Vercel if still present
 

@@ -146,7 +146,7 @@ const initialStats: DriverHubStats = {
   validMvrRecords: 0,
   totalJobApplications: 0,
   pendingApplications: 0,
-  totalSpentUSDC: 0,
+  totalSpentUsd: 0,
   careerCardViewsThisWeek: 0,
   careerCardViewsTotal: 0,
   hasScreeningConsentBundle: false,

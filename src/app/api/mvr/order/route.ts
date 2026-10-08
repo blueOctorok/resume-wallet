@@ -5,7 +5,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
-import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
+import { findDriverScreeningCredit } from '@/lib/screening-stripe-payment'
 import {
   finalizeScreeningOrderReservation,
   releaseScreeningOrderReservation,
@@ -26,12 +26,14 @@ import {
  *   includeFmcsaCrashInspection?: boolean (include FMCSA crash/inspection report)
  * }
  * 
+ * Driver-initiated: requires an unused Stripe Checkout payment (DEC-2026-10-001).
+ * Company-sponsored orders go through /api/candidate/fulfill-screening instead.
+ *
  * Creates an MVR order with Accio and stores it in mvr_orders table
  */
 export async function POST(request: NextRequest) {
   try {
     const { 
-      paymentTxHash, // Optional — omitted when USDC billing removed (D3)
       dlNumber, 
       dlState, 
       mvrSearchType = 'standard',
@@ -82,49 +84,16 @@ export async function POST(request: NextRequest) {
 
     const user = { id: userRow.id, email: userRow.email }
 
-    const paymentResult = await resolveScreeningPayment(supabaseService, {
-      paymentTxHash,
-      paymentType: 'MVR_ORDER',
-      userId: user.id,
-    })
-    if (!paymentResult.ok) {
-      return NextResponse.json({ error: paymentResult.error }, { status: paymentResult.status })
+    // Driver pays before Accio is called. The credit is the paid Checkout session
+    // no order has used yet; the reservation below spends it via payment_id.
+    const credit = await findDriverScreeningCredit(supabaseService, user.id, 'mvr')
+    if (!credit) {
+      return NextResponse.json(
+        { error: 'Payment is required before ordering an MVR.', paymentRequired: true },
+        { status: 402 },
+      )
     }
-
-    const payment = { id: paymentResult.paymentId }
-    const storedPaymentTxHash = paymentResult.resolvedTxHash ?? paymentTxHash ?? null
-
-    if (paymentTxHash) {
-      const walletNorm = normalizeWalletAddress(sessionUserId)
-      const { data: paymentRow } = await supabaseService
-        .from('payments')
-        .select('user_id')
-        .eq('id', payment.id)
-        .maybeSingle()
-
-      const { data: sameWalletRows } = await supabaseService
-        .from('users')
-        .select('id, wallet_address')
-        .ilike('wallet_address', walletNorm)
-
-      const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
-      if (paymentRow?.user_id && !userIdsForWallet.has(paymentRow.user_id)) {
-        const { data: paymentUserRecord } = await supabaseService
-          .from('users')
-          .select('wallet_address')
-          .eq('id', paymentRow.user_id)
-          .maybeSingle()
-        const payWalletNorm = paymentUserRecord?.wallet_address
-          ? normalizeWalletAddress(paymentUserRecord.wallet_address)
-          : ''
-        if (!(payWalletNorm && payWalletNorm === walletNorm)) {
-          return NextResponse.json(
-            { error: 'Payment does not belong to this wallet address.' },
-            { status: 403 }
-          )
-        }
-      }
-    }
+    const payment = { id: credit.paymentId }
 
     // Validate Accio credentials
     const accioAccount = process.env.ACCIO_ACCOUNT
@@ -140,7 +109,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[MVR ORDER] Starting MVR order for wallet:', sessionUserId, 'payment:', storedPaymentTxHash ?? 'waived')
+    console.log('[MVR ORDER] Starting MVR order for user:', sessionUserId, 'payment:', payment.id)
 
     // Resolve name from user_profiles for fallback personal info
     const { data: userProfile } = await supabaseService
@@ -152,7 +121,7 @@ export async function POST(request: NextRequest) {
     // 2. Get driver application data for personal info
     const { data: dotApplication } = await supabaseService
       .from('driver_applications')
-      .select('application_data')
+      .select('application_data, is_complete')
       .eq('user_id', user.id)
       .eq('is_complete', true)
       .order('created_at', { ascending: false })
@@ -289,7 +258,6 @@ export async function POST(request: NextRequest) {
       dlState: n.dlState,
       expiresAtIso,
       paymentId: payment.id,
-      paymentTxHash: storedPaymentTxHash,
       mvrSearchType,
     })
     if (reservation.ok === false) {

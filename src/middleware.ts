@@ -37,10 +37,11 @@ export const config = {
      *   - api/webhooks/* + api/mvr/webhook + api/psp/webhook — Accio (Pace) XML
      *     callbacks, authenticated by their own contract, not Supabase cookies.
      *   - api/github/callback — GitHub OAuth callback (own state handshake).
+     *   - api/stripe/webhook — Stripe signs the raw body; no user session.
      *
      * Also skip Next.js internals, the image optimizer, favicon, and static
      * assets.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mvr/webhook|api/psp/webhook|api/github/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mvr/webhook|api/psp/webhook|api/github/callback|api/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

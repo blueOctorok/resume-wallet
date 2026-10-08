@@ -14,13 +14,13 @@ The Foundation Reset's first arc is **complete**: Phase 1 (Web2 cleanup), Web3 d
 | **Web3 demolition** | Delete STORM ERC-20, Base-Sepolia registries, USDC + company wallet + `@account-kit`, and move documents IPFS → Supabase Storage. | ✅ **DONE (D1–D5)** |
 | **Phase 2 — Selective-disclosure UX** | Carrier-facing fact panels (license class, endorsements, restrictions, med cert, prior employer) instead of PDFs. Candidate disclosure toggles per audience. Backed by signed JWT attestations behind `attestationService` interface. **This is the moat.** | ✅ **SHIPPED (P2.1–P2.7)** |
 | **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active — P3.9 Vercel Production on mainnet (2026-09-04). Local batch proving 677 READY facts.** |
-| **Payments (Stripe)** | Greenfield Checkout (one-time) + Subscriptions, added **when a paying non-Pace customer exists**. *Not* a USDC→Stripe conversion — USDC is being deleted in demolition, so there's nothing to migrate. | ⏸ **Deferred** |
+| **Payments (Stripe)** | Checkout (one-time) for **driver-initiated MVR** orders shipped 2026-10-08 (DEC-2026-10-001) — company-sponsored orders stay uncharged; PSP is employer-ordered only (no self-serve). Employer subscriptions and Pace billing remain deferred. | 🟡 **Partial — self-serve screening live; migration 117 + `STRIPE_*` env pending in prod** |
 
 ### Pre-flight decisions (resolved 2026-05-22)
 
 - **Auth provider:** ✅ **Supabase Auth** (DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; one vendor surface. Custom sign-in UI built with Storm's `@/components/ui` primitives. **Shipped.**
 - **STORM token:** ✅ **Option B** (DEC-2026-05-005) — drop Base Sepolia ERC-20, preserve optionality to reissue as a Midnight-native shielded token in Phase 3. The off-chain `storm_points` ledger is **deferred until a real reward concept exists** (STORM never reached a real user, so there's nothing to migrate now).
-- **Payment shape:** ✅ **Stripe Checkout (one-time) + Subscriptions** (DEC-2026-05-006) — locked shape, but now a **deferred greenfield add, not a USDC conversion**. Pace stays on free admin placement; billing is enforced only for new/non-Pace customers when Stripe lands.
+- **Payment shape:** ✅ **Stripe Checkout (one-time) + Subscriptions** (DEC-2026-05-006). Checkout is live for driver-started MVR (DEC-2026-10-001; PSP is employer-only); Pace stays on free admin placement; subscriptions still deferred.
 
 Atomic per-step execution: [`docs/midnight/EXECUTION_CHECKLIST.md`](midnight/EXECUTION_CHECKLIST.md) (auth track collapsed to a DONE table; active work is the demolition `D1–D5` steps). Strategic-level breakdown: [`docs/midnight/PHASE_1_PLAN.md`](midnight/PHASE_1_PLAN.md).
 
@@ -444,7 +444,7 @@ Shipped baseline (above). Optional later: stronger 3D flip, per-job saved orders
 | Remove EmployerVerificationSection | ✅ Done | Removed from `EmployerHub` |
 | Talent Search: registry filters | ✅ Done | Category + `getBlocksByCategory` checkboxes → `blockTypes` param |
 | Polish job posting flow | 🔲 Todo | UX pass |
-| Subscription system | 🔲 Todo | Free tier limits + Pro USDC |
+| Subscription system | 🔲 Todo | Free tier limits + Pro via Stripe Subscriptions (DEC-2026-05-006) |
 | Stormi for employers | ✅ Done | Shared `StormiChatPanel` on employer hub; `buildEmployerStormiSystemPrompt` + `employerContext`; `/api/ai/chat` `audience: employer` + role gate |
 | Sponsored job posts | 🔲 Future | Visibility boost |
 | Candidate match scoring | 🔲 Future | AvA + blocks |
@@ -460,11 +460,11 @@ Shipped baseline (above). Optional later: stronger 3D flip, per-job saved orders
 | `ava_chat_usage` table | ✅ Done | Per-user daily free counter + purchased credits. Self-resetting on first request of each new day |
 | Daily free tier (10/day) | ✅ Done | 10 messages/day per wallet, powered by Sonnet 4.6 |
 | Paid credits (Haiku 4.5) | ✅ Done | After daily limit, use purchased credits. Model switches to Haiku 4.5 (25x cheaper) |
-| USDC credit packs | ✅ Done | Starter ($1/50msg), Standard ($3/200msg), Pro ($5/500msg) via Base Sepolia USDC |
+| Credit packs | 🔲 Re-do on Stripe | Starter ($1/50msg), Standard ($3/200msg), Pro ($5/500msg) were USDC; purchase route deleted 2026-10-08 (it trusted a client tx hash). Pack sizes kept in `STORMI_CREDIT_PACKS` for the Stripe rebuild. |
 | Auth gate | ✅ Done | `x-wallet-address` required on all chat requests — no anonymous abuse |
 | Usage badge in UI | ✅ Done | "7/10 free today" or "200 credits" badge in AvA chat header |
 | Out-of-credits UX | ✅ Done | Inline refill prompt + disabled input when daily limit hit and no credits |
-| StormiCreditModal | ✅ Done | USDC payment modal (same pattern as MvrPaymentButton) |
+| StormiCreditModal | 🟡 Placeholder | Shows "coming soon" until Stripe credit packs ship |
 | Dynamic career lanes | ✅ Done | System prompt auto-derives lane boundaries from block registry — scales to any future career category |
 | Content guardrails | ✅ Done | No medical/legal/financial advice; all other topics allowed |
 | Context-advantage pitch | ✅ Done | Welcome copy emphasizes "AvA already knows your career" vs generic AI |

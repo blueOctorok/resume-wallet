@@ -75,7 +75,7 @@ export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
     cfrNote: '§391.23',
     blocksOverallCompletion: true,
     employerEmptyHint: 'No PSP on this driver’s file yet.',
-    driverEmptyHint: 'Complete screening consent to order your PSP (agency-sponsored).',
+    driverEmptyHint: 'Ordered by an employer when they request it — sign their screening consent and it lands here.',
   },
   {
     id: 'dot_application',

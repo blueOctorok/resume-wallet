@@ -22,7 +22,6 @@ const DRIVER_STEP_PRIORITY = [
   'driver-dot-application',
   'driver-screening-consent',
   'driver-mvr',
-  'driver-psp',
   'storm-resume',
   'driver-resume',
 ] as const
@@ -32,7 +31,6 @@ const LABELS: Record<string, string> = {
   'driver-dot-application': 'Start your DOT application',
   'driver-screening-consent': 'Sign screening consent',
   'driver-mvr': 'Order your MVR',
-  'driver-psp': 'Order your PSP report',
   'storm-resume': 'Build your resume',
   'driver-resume': 'Build your resume',
 }
@@ -41,7 +39,6 @@ const CONTINUE_LABELS: Record<string, string> = {
   'driver-dot-application': 'Continue your DOT application',
   'driver-screening-consent': 'Finish screening consent',
   'driver-mvr': 'Check your MVR',
-  'driver-psp': 'Check your PSP report',
 }
 
 function isActionable(step: JourneyStep): boolean {
@@ -55,8 +52,9 @@ export function getDriverNextAction(journey: JourneyProgress): DriverNextAction 
     const step = byId.get(id)
     if (!step || !isActionable(step)) continue
 
-    // MVR/PSP "in progress" is waiting on the CRA — not something to click
-    if ((id === 'driver-mvr' || id === 'driver-psp') && step.status === 'in_progress') {
+    // MVR "in progress" is waiting on the CRA — not something to click.
+    // PSP is employer-ordered and never a driver action (DEC-2026-10-001).
+    if (id === 'driver-mvr' && step.status === 'in_progress') {
       continue
     }
 
@@ -77,7 +75,7 @@ export function getDriverNextAction(journey: JourneyProgress): DriverNextAction 
   // Fallback: any other actionable non-optional step with a page target
   for (const step of journey.steps) {
     if (!isActionable(step) || step.isOptional) continue
-    if (step.id === 'wallet' || step.id === 'referral' || step.id === 'find-jobs') continue
+    if (step.id === 'wallet' || step.id === 'referral' || step.id === 'find-jobs' || step.id === 'driver-psp') continue
     if (!step.action?.target && step.id !== 'profile') continue
     return {
       id: step.id,

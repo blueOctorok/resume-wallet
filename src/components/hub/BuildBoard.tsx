@@ -38,6 +38,10 @@ function packetChip(status: DqItemStatus | 'todo', live: boolean): { label: stri
   if (status === 'requested' || status === 'failed') {
     return { label: status === 'failed' ? 'Retry' : 'Requested', className: 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/20' }
   }
+  if (status === 'needs_employer') {
+    // Live item the driver cannot start themselves (PSP) — not a "to do" for them.
+    return { label: 'Employer orders', className: 'bg-stone-100 text-ironside ring-1 ring-ironside/15' }
+  }
   if (!live) {
     return { label: 'Not built yet', className: 'bg-stone-100 text-ironside ring-1 ring-ironside/15' }
   }

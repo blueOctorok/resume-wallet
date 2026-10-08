@@ -15,9 +15,6 @@ interface UploadResumeModalProps {
       ipfsHash: string
       ipfsUrl: string
       databaseId: string
-      wasPaid: boolean
-      costUSDC: number
-      eligibility: unknown
       blockchainData: unknown
     }
   }) => void

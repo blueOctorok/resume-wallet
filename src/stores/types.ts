@@ -81,7 +81,6 @@ export interface ResumeData {
   createdAt: string
   fileSize: number | null
   resumeType: string
-  isPaid: boolean
   sourceRole?: 'driver' | 'developer' | 'general'
 }
 
@@ -147,7 +146,7 @@ export interface DriverHubStats {
   validMvrRecords: number
   totalJobApplications: number
   pendingApplications: number
-  totalSpentUSDC: number
+  totalSpentUsd: number
   /** Employer opens of this candidate's card (talent search / pipeline), last 7 days */
   careerCardViewsThisWeek: number
   /** All-time employer opens (talent search / pipeline) — Stormi context */

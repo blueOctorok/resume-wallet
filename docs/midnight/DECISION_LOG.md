@@ -6,6 +6,41 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-10-001 — Driver-initiated MVR / PSP orders are paid through Stripe; company-sponsored orders stay uncharged
+
+**Date:** 2026-10-08
+**Status:** Accepted
+**Decided by:** Owner
+
+### Context
+
+Since USDC was removed (D3), the self-serve MVR and PSP routes created a `$0 waived` payment row whenever no payment was supplied — which was always. A driver could open the MVR block on their own hub and trigger a real vendor pull at no cost. In October a candidate declined Pace's consent request, then ordered an MVR and a PSP himself; Pace was confused about what had been consented to and who had paid for the pulls. Stripe had been deferred under DEC-2026-05-006 until a paying non-Pace customer existed; this is the trigger.
+
+### Decision
+
+1. **Who starts the order decides who pays.** A screening requested by a company (Pace or any other) is billed to that company per pull by the vendor; the order keeps using the waived row. A screening the driver starts from their own hub is paid by the driver through Stripe Checkout before Accio is called.
+2. **Pay first, then fill the form.** The paid Checkout session is a *credit* — one `payments` row (`provider = 'stripe'`, `status = 'COMPLETED'`) no live order has used. `/api/mvr/order` and `/api/psp/order` return `402` without one. A failed or cancelled order releases the credit. This keeps the SSN out of any redirect round-trip.
+3. **Prices live in Stripe, not code.** `STRIPE_PRICE_MVR` / `STRIPE_PRICE_PSP` are Stripe Price IDs; the UI reads the amount from Stripe.
+4. **Settlement is dual.** The Stripe webhook marks the row paid, and the credit lookup also asks Stripe directly for recent pending sessions, so a slow webhook (or local dev without one) never blocks a driver who has paid.
+5. **Interaction gate unchanged.** A card checkout is a normal web payment; it is not a wallet, token, or gas (DEC-2026-05-001 is about the chain).
+
+### Addendum (same day) — PSP is employer-ordered only
+
+Self-initiated PSP is removed entirely rather than charged for. Reasoning: no PSP fact type exists, so a driver-owned PSP yields nothing selectively disclosable; every PSP returns `needs_review`; FMCSA sells drivers their own record for $10; and PSP is by definition a *pre-employment* tool. Drivers see an explanation card on the PSP block and are never nudged to "order" it. Self-ordered **MVR stays** because it produces the same proofs as a company-ordered one (`getMvrAttestationContext` reads the latest driver-owned MVR). Revisit if a "clean PSP" fact is ever built.
+
+### Consequences
+
+- Drivers who turn down an employer's sponsored screening and then order themselves see a real price. That is the intended friction.
+- `payments` gains `provider`, `stripe_session_id`, `stripe_payment_intent_id`, `amount_cents`, `currency` (migration 117). `amount_usdc` is a legacy column kept at `0` for new rows.
+- Employer subscriptions and Pace billing remain deferred (DEC-2026-05-006 still governs those).
+
+### Related
+
+- DEC-2026-05-006 (Stripe shape; Pace billing deferred)
+- DEC-2026-05-011 (Storm is the candidate's agent — the driver owns the report either way)
+
+---
+
 ## DEC-2026-08-004 — Drop Key/Accio issuer signature from the plan; Midnight predicate + CRA citation is the shipping honesty bar
 
 **Date:** 2026-08-18
