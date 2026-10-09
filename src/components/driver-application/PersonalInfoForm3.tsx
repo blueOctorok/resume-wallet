@@ -286,31 +286,43 @@ export default function PersonalInfoForm3({
     })
   }
 
-  // Sync form data to parent component
-  // Don't sync on initial mount if initialData is null (reset scenario)
-  // But DO sync after user makes any changes
+  // Sync local edits up to the store. Depend ONLY on formData. The parent hands
+  // whatever we send straight back as `initialData`, so listing it here with a
+  // freshly built payload object is a guaranteed React #185 loop (2026-10-09).
+  // Same pattern as PersonalInfoForm2. The employers array is already sorted in
+  // state by the ordering effect below, so the payload needs no extra sort.
   const initialMountRef = useRef(true)
-  const employerProvenanceRef = useRef<DotForm3EmployerProvenance | null>(null)
-  employerProvenanceRef.current =
-    (initialData as { _employerProvenance?: DotForm3EmployerProvenance } | null)
-      ?._employerProvenance ?? null
+  const onDataChangeRef = useRef(onDataChange)
+  const initialDataRef = useRef(initialData)
+  const lastSyncedJsonRef = useRef('')
+  onDataChangeRef.current = onDataChange
+  initialDataRef.current = initialData
 
   useEffect(() => {
     // On initial mount with no data, don't sync the empty form state
-    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+    const initial = initialDataRef.current
+    if (initialMountRef.current && (!initial || Object.keys(initial).length === 0)) {
       initialMountRef.current = false
       return
     }
-    // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
-    const provenance = employerProvenanceRef.current
-    const employers = orderHistoryEntries(formData.employers ?? [])
-    onDataChange?.(
-      provenance
-        ? { ...formData, employers, _employerProvenance: provenance }
-        : { ...formData, employers },
-    )
-  }, [formData, onDataChange, initialData])
+
+    const provenance =
+      (initial as { _employerProvenance?: DotForm3EmployerProvenance } | null)
+        ?._employerProvenance ?? null
+    const payload = provenance ? { ...formData, _employerProvenance: provenance } : formData
+
+    // Skip no-op syncs so a parent that echoes the payload back cannot re-trigger us.
+    let json = ''
+    try {
+      json = JSON.stringify(payload)
+    } catch {
+      json = ''
+    }
+    if (json && json === lastSyncedJsonRef.current) return
+    lastSyncedJsonRef.current = json
+    onDataChangeRef.current?.(payload)
+  }, [formData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
@@ -405,6 +417,7 @@ export default function PersonalInfoForm3({
   // Jobs are added in whatever order the driver remembers them. Reorder the
   // stored list newest-first so "Most recent", the saved application, and the
   // preview all read the same sequence. Blank cards stay at the bottom.
+  // Returns `prev` untouched when nothing moves, so this cannot loop.
   useEffect(() => {
     setFormData((prev) => {
       const ordered = orderHistoryEntries(prev.employers)

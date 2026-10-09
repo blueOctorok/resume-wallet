@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: DOT Section 3 crashed the hub with React #185** (2026-10-09)
+
+A recruiter's candidate finished Section 2 (the 49 CFR 391.15 "past 3 years, check all that apply" step), pressed Continue, and hit "Something went wrong in Candidate Hub — Minified React error #185". Continue from that step mounts Section 3, and Section 3 was looping.
+
+**Root cause (shipped in `26be711`, same day):** the Section 3 sync effect built a fresh `{ ...formData, employers: sorted }` object on every run and listed `initialData` as a dependency. `DotApplicationFlow` stores that object and passes it straight back as `initialData`, so each run produced a new object, which re-ran the effect, which produced another new object. Before that commit the effect passed `formData` itself, so the echo was the same reference and the effect settled. Section 2 had hit the identical loop earlier and already carried the fix.
+
+| File | Change |
+|---|---|
+| `PersonalInfoForm3.tsx` | Sync effect depends only on `formData`; `onDataChange` and `initialData` are read through refs; a JSON snapshot skips no-op syncs. The payload is `formData` as-is — the ordering effect already keeps `employers` sorted in state, so re-sorting in the sync was redundant. |
+
+Verified with a throwaway jsdom test that echoes `onDataChange` back as `initialData`: old code hangs the runner, fixed code renders. Test not kept.
+
+**zknight.io in the candidate's address bar:** code already rewrites retired origins in outbound links (`src/lib/app-url.ts`, `src/lib/messaging.ts`), and there are no `zknight` strings left in `src/`. A browser sitting on `zknight.io` means the host still serves the app instead of redirecting. Per `VERCEL_ENV_CHECKLIST.md` step 8, set `zknight.io` / `www.zknight.io` on the Vercel project to **Redirect to provven.com** (permanent), and drop `zknight.io` from the Supabase Auth redirect allow-list so magic links cannot land there. Not a repo change.
+
 ## **Carriers see the career card; the DOT file is a request** (2026-10-09)
 
 A company that is not on the agency tier can read the career card and nothing deeper in the qualification file. Opening the full DOT application returns 403 until that driver accepts a "DQ file" request from that company. Agency accounts (Pace is one; the switch is `companies.account_tier`, not the company name) still open the file directly.
