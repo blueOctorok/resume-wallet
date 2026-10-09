@@ -220,7 +220,13 @@ export async function POST(
 
     // Deep-link: route to the block's page so the candidate lands right on it
     const blockPageRoute = blockDef?.pageRoute
-    const actionUrl = blockPageRoute ? `/?onboard=${blockPageRoute}` : null
+    // A DQ-file ask is an accept/decline, not a form to fill out. Land in the inbox.
+    const actionUrl =
+      effectiveTargetBlockType === 'driver-dot-application'
+        ? '/?onboard=inbox'
+        : blockPageRoute
+          ? `/?onboard=${blockPageRoute}`
+          : null
 
     const requestLabels: Record<string, string> = {
       mvr_order: 'Background Check & MVR Request',
@@ -232,9 +238,12 @@ export async function POST(
       block_request: blockDef ? `${blockDef.label} Request` : 'New Request',
     }
     const notifTitle = requestLabels[requestType] || 'New Request'
-    const notifBody = blockDef
-      ? `${companyName} has requested your ${blockDef.label}.${message ? ` Message: "${message}"` : ''}`
-      : `${companyName} has sent you a ${requestLabels[requestType]?.toLowerCase() || 'request'}.${message ? ` Message: "${message}"` : ''}`
+    const notifBody =
+      effectiveTargetBlockType === 'driver-dot-application'
+        ? `${companyName} asked to open your driver qualification file. Nothing is shared until you accept.`
+        : blockDef
+          ? `${companyName} has requested your ${blockDef.label}.${message ? ` Message: "${message}"` : ''}`
+          : `${companyName} has sent you a ${requestLabels[requestType]?.toLowerCase() || 'request'}.${message ? ` Message: "${message}"` : ''}`
 
     // In-app notification — includes deep-link so bell click routes to the block
     createNotification({

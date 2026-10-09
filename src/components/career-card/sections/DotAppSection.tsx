@@ -20,6 +20,11 @@ interface DotAppSectionProps {
   /** Required to fetch the full DOT app for preview (self + employer) */
   userId?: string
   sessionUserId?: string
+  /**
+   * Employer mode only. False until this company is an agency or the driver
+   * has accepted their request. Omitted for the driver's own card.
+   */
+  employerCanViewFull?: boolean
 }
 
 export default function DotAppSection({
@@ -29,6 +34,7 @@ export default function DotAppSection({
   onAction,
   userId,
   sessionUserId,
+  employerCanViewFull,
 }: DotAppSectionProps) {
   const setShowPrefillUpload = useDotApplicationStore((s) => s.setShowPrefillUpload)
   const isEmpty = !data.id || data.status === 'empty'
@@ -47,10 +53,12 @@ export default function DotAppSection({
     onAction?.()
   }
 
-  // Owner: View (complete) or Continue (in progress). Employer: View when complete.
+  // A carrier sees the summary. The full file stays closed until they are allowed in.
+  const employerLocked = mode === 'employer' && employerCanViewFull !== true
+  // Owner: View (complete) or Continue (in progress). Employer: View when complete and allowed.
   const showAction =
     (isCareerCardOwnerMode(mode) && !isEmpty && Boolean(handleAction)) ||
-    (mode === 'employer' && canPreview)
+    (mode === 'employer' && canPreview && !employerLocked)
 
   const coverage: DotVerifiedCoverage | null =
     typeof data.verifiedPercent === 'number' &&
@@ -143,6 +151,11 @@ export default function DotAppSection({
                 </div>
               )}
             </div>
+            {employerLocked && (
+              <p className={cn('mt-2 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                Request the DQ file to open it. This summary is what you can see until they share.
+              </p>
+            )}
             {coverage && (
               <div className='mt-3'>
                 <DotVerifiedMeter coverage={coverage} isDark={isDark} variant='compact' />

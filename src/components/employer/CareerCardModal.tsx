@@ -61,6 +61,8 @@ interface EmployerTalentExtras {
   driverOwnedMvrStatus?: string | null
   driverOwnedPspStatus?: string | null
   hasRelationship?: boolean
+  /** Agency, or this driver already accepted a DQ-file share. */
+  canViewDotApplication?: boolean
 }
 
 interface CareerCardModalProps {
@@ -164,6 +166,7 @@ export default function CareerCardModal({
         driverOwnedMvrStatus: data.driverOwnedMvrStatus ?? null,
         driverOwnedPspStatus: data.driverOwnedPspStatus ?? null,
         hasRelationship: data.hasRelationship === true,
+        canViewDotApplication: data.canViewDotApplication === true,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
@@ -381,6 +384,8 @@ export default function CareerCardModal({
   const buildBlockAction = (blockId: string): ReactNode => {
     const def = getBlockDefinition(blockId)
     if (!def?.employerRequestable) return null
+    // Already allowed in — the section shows View instead of another ask.
+    if (blockId === 'driver-dot-application' && employerExtras?.canViewDotApplication) return null
 
     const employerBlocks = employerExtras?.installedEmployerBlocks ?? []
     if (!employerCanRequest(def, employerBlocks)) return null
@@ -690,6 +695,7 @@ export default function CareerCardModal({
               data={card}
               mode="employer"
               sessionUserId={sessionUserId}
+              employerCanViewDotApp={employerExtras?.canViewDotApplication === true}
               footerSlot={footerActions}
               demoteEmployerScreeningDetails
               onEmployerViewCompanyMvr={

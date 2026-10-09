@@ -14,6 +14,7 @@ import {
   parseCertifications,
 } from '@/lib/cdl-certifications'
 import { MonthYearPicker, parseDateToNumber } from '@/components/ui/MonthYearPicker'
+import { historyGroupOf, orderHistoryEntries } from '@/lib/history-entry-order'
 import { resolveEmploymentDotBadge, type AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 import type { DotForm3EmployerProvenance } from '@/lib/employment-form3-provenance'
 import {
@@ -67,8 +68,8 @@ const HISTORY_SECTIONS: Array<{
     group: 'drivingSchool',
     seedType: 'drivingSchool',
     label: 'CDL / School',
-    required: true,
-    description: 'Where you earned your CDL and which classes or endorsements you hold. College or high school is optional.',
+    required: false,
+    description: 'Add a driving school only if you attended one. College or high school is optional too.',
     addActions: [
       { type: 'drivingSchool', label: 'Add driving school' },
       { type: 'school', label: 'Add college or high school' },
@@ -98,14 +99,9 @@ const HISTORY_SECTIONS: Array<{
   },
 ]
 
-// Which section an entry renders under. Legacy 'school' entries merge into the
-// CDL/School section; entries with no type fall back to the old isUnemployment flag.
-const entryGroupOf = (entry: { type?: HistoryEntryType; isUnemployment?: boolean }): HistoryGroup => {
-  const type = entry.type || (entry.isUnemployment ? 'unemployment' : 'employment')
-  if (type === 'school' || type === 'drivingSchool') return 'drivingSchool'
-  if (type === 'unemployment' || type === 'military') return type
-  return 'employment'
-}
+// Which section an entry renders under. Shared with the date sort so the form,
+// the saved application, and the preview agree.
+const entryGroupOf = historyGroupOf
 
 // Blank entry factory — shared by the section add buttons and the auto-seed
 // effect that keeps required sections populated with a ready-to-fill card.
@@ -143,8 +139,8 @@ const blankHistoryEntry = (type: HistoryEntryType) => ({
 const entryCardKey = (entry: { id?: string; _evrKey?: string }, index: number) =>
   entry.id || entry._evrKey || `emp-${index}`
 
-// Education is no longer its own step — the required CDL / School section in
-// Employment History already documents schooling for the 10-year timeline.
+// Education is no longer its own step — the optional CDL / School section in
+// Employment History documents schooling for the 10-year timeline.
 const STEPS = [
   {
     id: 1,
@@ -308,8 +304,11 @@ export default function PersonalInfoForm3({
     // After initial mount, or if we have initialData, always sync
     initialMountRef.current = false
     const provenance = employerProvenanceRef.current
+    const employers = orderHistoryEntries(formData.employers ?? [])
     onDataChange?.(
-      provenance ? { ...formData, _employerProvenance: provenance } : formData,
+      provenance
+        ? { ...formData, employers, _employerProvenance: provenance }
+        : { ...formData, employers },
     )
   }, [formData, onDataChange, initialData])
 
@@ -383,10 +382,10 @@ export default function PersonalInfoForm3({
     }
   }, [initialData])
 
-  // Required history sections (Employment, CDL/School) always show a
-  // ready-to-fill card — if a group has no entry (fresh form, hydrated draft
-  // from before CDL/School was required, or the driver removed the last one),
-  // seed a blank entry so the section never collapses to nothing.
+  // Required history sections (Employment) always show a ready-to-fill card —
+  // if the group has no entry (fresh form, or the driver removed the last one),
+  // seed a blank entry so the section never collapses to nothing. CDL / School
+  // is optional: many drivers never attended one.
   // Runs after the hydrate effect above, so functional updates see merged data.
   useEffect(() => {
     setFormData((prev) => {
@@ -400,6 +399,20 @@ export default function PersonalInfoForm3({
         ...prev,
         employers: [...prev.employers, ...missing.map((section) => blankHistoryEntry(section.seedType))],
       }
+    })
+  }, [formData.employers])
+
+  // Jobs are added in whatever order the driver remembers them. Reorder the
+  // stored list newest-first so "Most recent", the saved application, and the
+  // preview all read the same sequence. Blank cards stay at the bottom.
+  useEffect(() => {
+    setFormData((prev) => {
+      const ordered = orderHistoryEntries(prev.employers)
+      const unchanged =
+        ordered.length === prev.employers.length &&
+        ordered.every((entry, index) => entry === prev.employers[index])
+      if (unchanged) return prev
+      return { ...prev, employers: ordered }
     })
   }, [formData.employers])
 
@@ -531,13 +544,23 @@ export default function PersonalInfoForm3({
           if (!employer.toDate)
             newErrors[`employer${index}ToDate`] = 'End date is required (use "Present" if still unemployed)'
         } else if (isSchoolEntry) {
-          // School entries need name and dates
-          if (!employer.name.trim())
-            newErrors[`employer${index}Name`] = 'School name is required'
-          if (!employer.fromDate)
-            newErrors[`employer${index}FromDate`] = 'Start date is required'
-          if (!employer.toDate)
-            newErrors[`employer${index}ToDate`] = 'End date is required'
+          // Optional section. A blank card — including one auto-seeded while
+          // CDL school was required — must not block the step. Once the driver
+          // starts the card, name and dates are required so the timeline is complete.
+          const schoolStarted = Boolean(
+            employer.name.trim() ||
+            employer.fromDate ||
+            employer.toDate ||
+            (employer.courseOfStudy || '').trim(),
+          )
+          if (schoolStarted) {
+            if (!employer.name.trim())
+              newErrors[`employer${index}Name`] = 'School name is required'
+            if (!employer.fromDate)
+              newErrors[`employer${index}FromDate`] = 'Start date is required'
+            if (!employer.toDate)
+              newErrors[`employer${index}ToDate`] = 'End date is required'
+          }
         } else if (isMilitaryEntry) {
           // Military entries need branch and dates
           if (!employer.militaryBranch && !employer.name.trim())
@@ -1258,9 +1281,9 @@ export default function PersonalInfoForm3({
         <p
           className={`text-sm mt-4 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}
         >
-          Start with your most recent position and work backwards. Include
-          complete mailing addresses with street number, city, state, zip for
-          all entries.
+          Add each job whenever you think of it. The list lines them up from most
+          recent to oldest. Include complete mailing addresses with street
+          number, city, state, zip for all entries.
         </p>
       </div>
 
@@ -1487,7 +1510,7 @@ export default function PersonalInfoForm3({
                           handleInputChange('employers', { toDate: value }, index)
                         }}
                         placeholder="Select end date"
-                        allowPresent={groupPos === 0}
+                        allowPresent
                         error={!!errors[`employer${index}ToDate`] || dateOrderError}
                         theme={theme}
                         minDate={employer.fromDate}
@@ -1843,7 +1866,7 @@ export default function PersonalInfoForm3({
         )
       })}
 
-            {isEmptyOptional ? (
+            {isEmptyOptional && section.addActions.length === 1 ? (
               /* Dashed placeholder — the whole card is the add button. Greyed +
                  dotted signals "not filled in, and that's fine". */
               <button
@@ -1865,6 +1888,27 @@ export default function PersonalInfoForm3({
                   </div>
                 </div>
               </button>
+            ) : isEmptyOptional ? (
+              /* Several ways to add (driving school vs college). Each is its own
+                 button so skipping driving school does not hide the other. */
+              <div className='rounded-xl border-2 border-dashed border-stone-300 bg-stone-50/60 p-5'>
+                <p className='mb-3 text-xs text-gray-400'>
+                  Optional — skip it if this doesn&apos;t apply. It won&apos;t hold up your application.
+                </p>
+                <div className='flex flex-wrap gap-2'>
+                  {section.addActions.map((action) => (
+                    <button
+                      key={action.type}
+                      type='button'
+                      onClick={() => addHistoryEntry(action.type)}
+                      className='inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-[#173150]/50 hover:text-[#173150]'
+                    >
+                      <Plus className='h-4 w-4' />
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className='flex flex-wrap gap-2'>
                 {section.addActions.map((action) => (

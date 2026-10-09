@@ -26,8 +26,8 @@ export const EMPLOYER_BLOCK_DEFINITIONS: EmployerBlockDefinition[] = [
   // All installable blocks are auto-provisioned for every company.
   //
   // NOT here (by design):
-  //   - DOT application — a core block auto-installed on every driver hub;
-  //     employers never request it.
+  //   - DOT application — requested from the candidate registry (DQ file),
+  //     not an employer product block. Agency accounts open it without asking.
   //   - Portfolio requests — developer outreach retired (drivers-only wedge).
   //   - Resume — a byproduct of the DOT application, not a request type.
   //

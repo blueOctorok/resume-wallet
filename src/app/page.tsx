@@ -291,7 +291,7 @@ const HomeContent = () => {
     // Cast directly — these already match PageType values in CandidateShell.
     // 'jobs' intentionally absent — Guided Mode is the unified job-discovery surface.
     // Employer onboard invites for "browse jobs" route through `?guided=1` instead.
-    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'storm-resume', 'general-resume', 'developer-resume', 'mvr', 'psp', 'screening-consent', 'portfolio', 'github', 'hunt-desk', 'applications', 'employment-verification', 'license']
+    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'storm-resume', 'general-resume', 'developer-resume', 'mvr', 'psp', 'screening-consent', 'portfolio', 'github', 'hunt-desk', 'applications', 'employment-verification', 'license', 'inbox']
     const employerReturnPages: PageType[] = ['talent-search', 'messages', 'applicants']
     const target = onboardAction as PageType
     if (validOnboardPages.includes(target)) {

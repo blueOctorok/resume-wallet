@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { companyCanViewDotApplication, getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { redactDotAppForEmployer } from '@/lib/redact-dot-app'
 
 /**
@@ -39,6 +39,25 @@ export async function GET(
 
     if (!isSelf && !companyAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Career card is open. The full file is not, unless this company is an
+    // agency or this driver already accepted their request to see it.
+    if (!isSelf && companyAccess) {
+      const allowed = await companyCanViewDotApplication(
+        supabase,
+        companyAccess.companyId,
+        userId,
+      )
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error: 'Request this driver qualification file before opening it.',
+            requestRequired: true,
+          },
+          { status: 403 },
+        )
+      }
     }
 
     const applicationId = request.nextUrl.searchParams.get('applicationId')
@@ -96,12 +115,21 @@ export async function GET(
 
     const redacted = redactDotAppForEmployer(appData)
 
+    // The application itself has no company. This copy is addressed to whoever
+    // is reading it, so two carriers never share one stamped name.
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name')
+      .eq('id', companyAccess!.companyId)
+      .maybeSingle()
+
     return NextResponse.json({
       id: app.id,
       isComplete: app.is_complete,
       currentStep: app.current_step,
       createdAt: app.created_at,
       updatedAt: app.updated_at,
+      addressedToCompany: company?.company_name?.trim() || null,
       ...redacted,
     })
   } catch (err) {

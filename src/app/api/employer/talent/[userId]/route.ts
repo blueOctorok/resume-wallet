@@ -10,7 +10,7 @@ import {
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import { resolveCompanyDqForCandidate } from '@/lib/dq-file-load'
 import { stripTier3FromFormData } from '@/lib/employer-pii'
-import { hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
+import { companyCanViewDotApplication, hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
 import type { MvrData, PspData } from '@/types/career-card'
 
 /**
@@ -289,6 +289,7 @@ export async function GET(
       installedBlockTypes,
       installedEmployerBlocks,
       pendingRequests: pendingRequests || [],
+      canViewDotApplication: await companyCanViewDotApplication(supabase, companyId, userId),
       existingApplication,
       hasBgcheckConsent: !!bgcheckConsent,
       bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,

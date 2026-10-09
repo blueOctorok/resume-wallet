@@ -12,6 +12,7 @@
 import type { UnifiedDriverProfile, UnifiedEmployment, UnifiedEducation } from '@/types/driver-profile'
 import { mvrFlagToYesNo } from '@/types/driver-profile'
 import { parseCertifications } from '@/lib/cdl-certifications'
+import { orderHistoryEntries } from '@/lib/history-entry-order'
 
 // =====================================================
 // FORM 1 DATA TYPES
@@ -405,8 +406,9 @@ export function profileToForm2(profile: UnifiedDriverProfile): Partial<DotForm2D
 // =====================================================
 
 export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile> {
-  // Defensive checks - form3Data might exist but have undefined arrays
-  const employers = data?.employers || []
+  // Defensive checks - form3Data might exist but have undefined arrays.
+  // Newest job first, even for drafts saved before the form sorted itself.
+  const employers = orderHistoryEntries(data?.employers || [])
   const educationData = data?.education || []
   const isSchoolEntry = (emp: DotForm3Employer) =>
     emp.type === 'school' || emp.type === 'drivingSchool'
@@ -432,7 +434,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       subjectToDrugTest: emp.safetySensitiveFunction === 'yes',
     }))
 
-  // The required CDL / School section in the history timeline replaced the old
+  // The optional CDL / School section in the history timeline replaced the old
   // standalone Education step, so those entries are the education source now.
   const education: UnifiedEducation[] = [
     ...employers
@@ -495,7 +497,7 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
     _source: 'self',
   }))
 
-  // Education prefills the required CDL / School section of the history
+  // Education prefills the optional CDL / School section of the history
   // timeline — Form 3 no longer has a separate Education step. Dates are blank
   // because profile education only stores a year; the driver fills them in.
   const schools: DotForm3Employer[] = profile.education.map(edu => ({

@@ -306,11 +306,13 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'dotapp',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_driver_emergency', 'block_driver_experience', 'block_education', 'block_references'],
-    // Not employer-requestable: the DOT app is a core block auto-installed on
-    // every driver hub — it's the driver's built-in first to-do, so employers
-    // never need to invite someone to fill it out.
-    employerRequestable: false,
-    requestLabel: null,
+    // Every company may ask to open the file the driver already has.
+    // requiredEmployerBlocks stays null so the ask is not tied to a product
+    // block. Agency accounts skip the ask (see dotApplicationViewAllowed).
+    // completionField stays null: a finished application is not the same as
+    // this driver sharing it with this company.
+    employerRequestable: true,
+    requestLabel: 'DQ file',
     completionField: null,
     requiredEmployerBlocks: null,
     /** Drivers-wedge spine — always installed, pinned first, not pickable/removable. */

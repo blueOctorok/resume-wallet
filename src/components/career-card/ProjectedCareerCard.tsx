@@ -94,6 +94,8 @@ interface ProjectedCareerCardProps {
   onConnect?: () => void
   /** Used by DotAppSection to fetch the full DOT preview (self mode only) */
   sessionUserId?: string
+  /** Employer mode. True when this company may open the full DOT application. */
+  employerCanViewDotApp?: boolean
   /** Employer talent modal: recruit / messaging row below sections */
   footerSlot?: ReactNode
   /**
@@ -171,6 +173,7 @@ export default function ProjectedCareerCard({
   onAddFeature,
   onConnect,
   sessionUserId,
+  employerCanViewDotApp,
   footerSlot,
   ghostSections,
   onGhostAction,
@@ -471,6 +474,7 @@ export default function ProjectedCareerCard({
                 isDark={isDark}
                 userId={data.userId}
                 sessionUserId={sessionUserId}
+                employerCanViewDotApp={employerCanViewDotApp}
                 shareToken={data.shareToken}
                 onAction={
                   allowNav && onNavigateToBlock
@@ -789,6 +793,7 @@ function SectionRenderer({
   onAction,
   userId,
   sessionUserId,
+  employerCanViewDotApp,
   shareToken,
 }: {
   section: CareerCardSection
@@ -797,6 +802,7 @@ function SectionRenderer({
   onAction?: () => void
   userId?: string
   sessionUserId?: string
+  employerCanViewDotApp?: boolean
   shareToken?: string | null
 }) {
   switch (section.blockType as SectionBlockType) {
@@ -822,6 +828,7 @@ function SectionRenderer({
           onAction={onAction}
           userId={userId}
           sessionUserId={sessionUserId}
+          employerCanViewFull={employerCanViewDotApp}
         />
       )
     case 'driver-screening-consent':

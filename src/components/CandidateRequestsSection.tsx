@@ -157,6 +157,17 @@ function getRequestVisualConfig(request: CandidateRequest): RequestVisualConfig 
     return REQUEST_TYPE_CONFIG.mvr_order ?? DEFAULT_REQUEST_VISUAL
   }
 
+  if (request.targetBlockType === 'driver-dot-application') {
+    return {
+      icon: ClipboardCheck,
+      label: 'DQ file request',
+      description:
+        'This company wants to open the qualification file you already have. Nothing is shared until you accept, and your own copy stays unnamed.',
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10',
+    }
+  }
+
   if (request.requestType === 'block_request') {
     const def = request.targetBlockType ? getBlockDefinition(request.targetBlockType) : undefined
     let icon: LucideIcon = MessageSquare
@@ -566,8 +577,25 @@ export default function CandidateRequestsSection({
             {['pending', 'viewed'].includes(selectedRequest.status) && (
               <div className='p-6 border-t border-inherit'>
                 <div className='flex gap-3'>
+                  {selectedRequest.targetBlockType === 'driver-dot-application' && (
+                    <button
+                      type='button'
+                      onClick={() => updateRequestStatus(selectedRequest.id, 'completed')}
+                      disabled={updating}
+                      className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50'
+                    >
+                      {updating ? (
+                        <Loader2 className='w-4 h-4 animate-spin' />
+                      ) : (
+                        <Check className='w-4 h-4' />
+                      )}
+                      Share my DQ file
+                    </button>
+                  )}
+
                   {(selectedRequest.requestType === 'document_upload' ||
                     (selectedRequest.requestType === 'block_request' &&
+                      selectedRequest.targetBlockType !== 'driver-dot-application' &&
                       !isMvrBgcheckConsentFlow(selectedRequest) &&
                       !isPspFmcsaConsentFlow(selectedRequest))) &&
                     onNavigateToResume && (

@@ -4,6 +4,53 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Carriers see the career card; the DOT file is a request** (2026-10-09)
+
+A company that is not on the agency tier can read the career card and nothing deeper in the qualification file. Opening the full DOT application returns 403 until that driver accepts a "DQ file" request from that company. Agency accounts (Pace is one; the switch is `companies.account_tier`, not the company name) still open the file directly.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-app-access.ts` | The rule: agency, or a completed `candidate_requests` row for `driver-dot-application`. |
+| `src/lib/employer-company-access.ts` | `companyCanViewDotApplication` looks up the tier and that row. |
+| `src/app/api/employer/talent/[userId]/dot-app/route.ts` | 403 with `requestRequired` when the rule fails. The driver's own view is unchanged. |
+| `src/app/api/employer/talent/[userId]/route.ts` | Returns `canViewDotApplication` so the card can hide View. |
+| `src/lib/block-registry.ts` | DOT application is employer-requestable as "DQ file". No employer block is required to ask. A finished application does not count as shared. |
+| `CareerCardModal.tsx`, `DotAppSection.tsx` | Carriers see the summary plus "Request DQ file". View appears after access is granted. |
+| `CandidateRequestsSection.tsx` | The driver's action is "Share my DQ file", which marks the request completed. |
+| Request notification + email | Says the company asked to open the file, and the bell lands on the inbox. |
+
+## **DOT application is addressed per company, not stored with one** (2026-10-09)
+
+The driver fills one application before any carrier is involved, and the same file can be shared with more than one company. The company name is not a field on the saved application — writing it there would stick the first carrier's name on every later share. The driver's own preview and PDF stay unnamed. A company's preview says "Application for employment with {their name}", looked up from the company that is reading it.
+
+| File | Change |
+|---|---|
+| `src/app/api/employer/talent/[userId]/dot-app/route.ts` | Employer response adds `addressedToCompany`. The driver's own response does not. |
+| `DotAppPreviewContent.tsx` | Renders that line only when the name is present. |
+| `dot-application-pdf.ts` | Header uses the same sentence when a company name is passed. The driver's PDF export still passes none. |
+
+## **DOT Section 3 — jobs sort themselves** (2026-10-09)
+
+Drivers add jobs in the order they remember them, not newest-first. The form now reorders the history list by end date (newest first) as soon as a date is set. "Present" counts as this month, so a current job lands at the top. A card with no date stays at the bottom, which is where a job they just added sits until they pick a month. Sections stay in place: jobs, then CDL/school, then unemployment, then military.
+
+This is a date sort, not an AI pass — the month is already on the card, so there is nothing to infer.
+
+| File | Change |
+|---|---|
+| `src/lib/history-entry-order.ts` | `orderHistoryEntries` / `compareHistoryByRecency`. |
+| `src/lib/month-year.ts` | `parseDateToNumber` moved here so the sort does not import a client component. `MonthYearPicker` re-exports it. |
+| `PersonalInfoForm3.tsx` | Effect writes the sorted list back into form state, so "Most recent", save, and the coverage breakdown match. Any card can be "Present" — that used to be limited to whichever card happened to be first. |
+| `dot-form-mapper.ts`, `DotAppPreviewContent.tsx` | Profile projection and the application preview sort too, including drafts saved before this change. |
+
+## **DOT Section 3 — CDL school is optional** (2026-10-09)
+
+Drivers who never attended a CDL school were stuck on Section 3. The CDL / School group was `required`, so the form always seeded a blank driving-school card and `validateStep` refused to continue until name and dates were filled.
+
+| File | Change |
+|---|---|
+| `src/components/driver-application/PersonalInfoForm3.tsx` | CDL / School `required: false`. New forms show the dashed "add if it applies" placeholder instead of a forced card. A card that is still blank — including one saved while the section was required — no longer fails validation. Name and dates are still required once the driver starts filling the card. |
+| `src/lib/dot-form-mapper.ts` | Comments only. Empty school entries were already dropped (`emp.name` filter). |
+
 ## **USDC sweep — last Base-era payment code removed** (2026-10-08)
 
 D1–D5 removed the wallet, contracts, and payment buttons, but the *server-side* USDC paths they called were left behind. Three of them were still reachable and one was a hole: `POST /api/ai/credits` granted Stormi credits for any `txHash` string the client sent, with no verification. Everything money-related now goes through Stripe (`screening-stripe-payment.ts`) or a company-sponsored `waived` row; nothing reads `amount_usdc` or a tx hash anymore.

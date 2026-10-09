@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { can } from '@/lib/employer-permissions'
 import { toCompanyAccountTier, type CompanyAccountTier } from '@/lib/company-account-tier'
+import { dotApplicationViewAllowed } from '@/lib/dot-app-access'
 
 export interface EmployerCompanyAccess {
   employerUserId: string
@@ -129,6 +130,32 @@ export async function companyHasScreeningConsentBlock(
   companyId: string,
 ): Promise<boolean> {
   return companyHasEmployerBlock(supabase, companyId, 'employer-screening-consent')
+}
+
+/**
+ * Full DOT application. Agency tier opens it directly. A carrier opens it
+ * only after this driver marks that company's DQ-file request completed.
+ */
+export async function companyCanViewDotApplication(
+  supabase: SupabaseClient,
+  companyId: string,
+  candidateUserId: string,
+): Promise<boolean> {
+  const accountTier = await readAccountTier(supabase, companyId)
+  const { data: share } = await supabase
+    .from('candidate_requests')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('candidate_user_id', candidateUserId)
+    .eq('target_block_type', 'driver-dot-application')
+    .eq('status', 'completed')
+    .limit(1)
+    .maybeSingle()
+
+  return dotApplicationViewAllowed({
+    accountTier,
+    driverAcceptedShare: Boolean(share),
+  })
 }
 
 /**

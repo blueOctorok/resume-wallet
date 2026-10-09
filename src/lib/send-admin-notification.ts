@@ -203,7 +203,9 @@ const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationP
       : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
   block_request: (p) =>
-    `They are requesting your ${p.blockLabel || 'data'}. Log in to Provven to complete it.`,
+    p.blockLabel === 'DOT Application'
+      ? 'They asked to open your driver qualification file. Nothing is shared until you accept.'
+      : `They are requesting your ${p.blockLabel || 'data'}. Log in to Provven to complete it.`,
   ev_share: () =>
     'They are asking you to share your Employment Verification material. Nothing is revealed unless you complete the formal acknowledgment in your Employment Verification block — you can also decline.',
 }

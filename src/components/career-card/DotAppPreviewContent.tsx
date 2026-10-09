@@ -8,6 +8,7 @@ import type {
   Form2WithProvenance,
 } from '@/lib/dot-field-provenance'
 import { computeDotVerifiedCoverage } from '@/lib/dot-verified-coverage'
+import { orderHistoryEntries } from '@/lib/history-entry-order'
 import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,11 @@ export interface DotAppPreviewData {
   createdAt: string
   /** Field paths the API withheld. Empty for the driver's own view. */
   redactedFields?: readonly string[]
+  /**
+   * Set only on a company's copy. The driver's own application is not addressed
+   * to anyone — the same file can be shared with more than one carrier.
+   */
+  addressedToCompany?: string | null
 }
 
 type FieldTone = 'verified' | 'self' | null
@@ -162,6 +168,11 @@ export default function DotAppPreviewContent({
             {data.isComplete ? 'Complete' : 'In Progress'} · Submitted {fmt(data.createdAt)}
           </span>
         </div>
+        {data.addressedToCompany ? (
+          <p className='text-sm font-medium text-[#173150]'>
+            Application for employment with {data.addressedToCompany}
+          </p>
+        ) : null}
         <DotVerifiedMeter coverage={coverage} isDark={isDark} />
         <div
           className={cn(
@@ -526,7 +537,7 @@ export default function DotAppPreviewContent({
           {f3.employers && f3.employers.length > 0 && (
             <DotSection title='Employment History (10 Years)'>
               <CardStack>
-                {f3.employers
+                {orderHistoryEntries(f3.employers)
                   .filter((e) => !e.isUnemployment)
                   .map((emp, i) => {
                     const source = (emp as { _source?: 'verified' | 'self' })._source

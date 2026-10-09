@@ -125,7 +125,7 @@ export function generateDotApplicationPDF(
   pdf.setTextColor(...COLORS.light)
   
   if (options.companyName) {
-    pdf.text(`For: ${options.companyName}`, margin, y)
+    pdf.text(`Application for employment with ${options.companyName}`, margin, y)
     y += 5
   }
   
