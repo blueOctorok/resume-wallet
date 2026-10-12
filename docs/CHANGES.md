@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Shared DOT application: company stamp, numbered sections, employer PDF export** (2026-10-12)
+
+When a driver accepted Stars' request and the recruiter opened the file, the company name was there in the data but rendered as one plain line, and the whole thing read as a form dump. There was also no way for the employer to take it with them.
+
+**On screen.** A masthead now leads: "Driver Qualification File · 49 CFR 391.21", the applicant's name, status pill and submitted date, and — on a shared copy only — an ember "Prepared for {Company} · Shared by the driver through Provven" stamp. The verified-% meter sits in its own card with the color legend and the withheld-fields note. Sections are numbered (CSS counter, so conditional sections never leave gaps) with an ember rule. Modal subtitle says "Shared with {Company}" for the employer. The meter caveat is third-person on an employer copy; the default speaks to the driver. Date-only strings are read as local dates — `new Date('2026-10-20')` is UTC midnight and printed Oct 19 in US timezones. Redacted DOB no longer renders as "—" (the withheld note covers it).
+
+**Export.** The Download PDF button shows for employers too, hitting a new route that runs the same access check, redaction, view log, and company lookup as the preview, then stamps the company on the cover and every footer.
+
+**Generator rewrite.** `dot-application-pdf.ts` read a schema that never existed (`cdlNumber`, `employmentHistory`, `violations`, `form1Data`), so every DOT PDF — driver, admin — came out nearly blank. It now reads `DotForm1Data/2/3`, orders history with `orderHistoryEntries`, and uses the brand palette. The admin export also passed `applicationData.form1Data` instead of `form1`; fixed.
+
+| File | Change |
+|---|---|
+| `src/lib/load-dot-app-for-viewer.ts` | New. One loader for who may read, which copy, log view, stamp company. Shared by preview and PDF routes. |
+| `src/app/api/employer/talent/[userId]/dot-app/route.ts` | Thin wrapper over the loader. Same response shape. |
+| `src/app/api/employer/talent/[userId]/dot-app/pdf/route.ts` | New. Employer PDF, stamped and redacted. |
+| `src/lib/dot-application-pdf.ts` | Rewritten against the real form schema. Cover band, numbered sections, framed cards, footer with page numbers. |
+| `src/app/api/driver-applications/[id]/export-pdf/route.ts`, `src/app/api/admin/dot-apps/[id]/export/route.ts` | New generator signature; admin `form1Data` → `form1`. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | Masthead, Prepared-for stamp, numbered sections, meter card, local-date `fmt`. |
+| `src/components/career-card/DotAppPreviewModal.tsx` | Audience-aware subtitle; Download PDF for employers via the new route. |
+
 ## **Employer asks show on the career card, not only in the settings bell** (2026-10-12)
 
 A driver who was asked for their DOT application only saw it as a dot on the settings gear. The ask now sits in a banner directly above the career card: "Pace Drivers wants to see your DOT application" with Share. Share marks that request accepted, which is the same action as "Share my DQ file" in the inbox.

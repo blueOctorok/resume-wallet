@@ -65,20 +65,27 @@ export default function DotAppPreviewModal({
     }
   }, [isOpen, userId, sessionUserId, applicationId])
 
+  const isSelf = sessionUserId === userId
+
   const downloadPdf = async () => {
     const id = previewData?.id
-    if (!id || !sessionUserId) return
+    if (!id || !sessionUserId || !userId) return
     setPdfLoading(true)
     try {
-      const res = await fetch(`/api/driver-applications/${id}/export-pdf`)
+      // Driver: their own unaddressed copy. Employer: the redacted copy stamped
+      // with their company — same access check as the preview they're looking at.
+      const url = isSelf
+        ? `/api/driver-applications/${id}/export-pdf`
+        : `/api/employer/talent/${userId}/dot-app/pdf?applicationId=${encodeURIComponent(id)}`
+      const res = await fetch(url)
       if (!res.ok) throw new Error('PDF failed')
       const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
+      const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = `DOT_Application.pdf`
+      a.href = objectUrl
+      a.download = 'DQ_File.pdf'
       a.click()
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(objectUrl)
     } catch {
       setPdfError('Could not generate PDF. Try again.')
     } finally {
@@ -87,6 +94,12 @@ export default function DotAppPreviewModal({
   }
 
   if (!isOpen) return null
+
+  const subtitle = previewData?.addressedToCompany
+    ? `Shared with ${previewData.addressedToCompany}`
+    : isSelf
+      ? 'Your driver qualification file'
+      : 'Driver qualification file'
 
   // DOT preview is a legal packet — cream paper + midnight ink, same as the form.
   // Never follow app Dark: that paints dark type on a navy modal (unreadable).
@@ -102,21 +115,24 @@ export default function DotAppPreviewModal({
     >
       <ModalHeader
         title='DOT Application'
-        subtitle='Your completed driver qualification file'
+        subtitle={subtitle}
         onClose={onClose}
         paper={paper}
       />
-      {/* Owner-only: the export route is scoped to the application's own user, so
-          showing this to an employer just produces a 404. */}
-      {!loading && !fetchError && previewData?.id && sessionUserId === userId && (
-        <div className='flex items-center gap-2 border-b border-ironside/20 bg-[#fbf8f1] px-4 py-3 sm:px-7'>
+      {!loading && !fetchError && previewData?.id && (
+        <div className='flex items-center justify-between gap-3 border-b border-ironside/20 bg-[#fbf8f1] px-4 py-3 sm:px-7'>
+          <p className='text-xs text-[#5c6166]'>
+            {isSelf
+              ? 'Export your own copy. Nothing is withheld.'
+              : 'Export this copy. It carries your company name and the same redactions as this view.'}
+          </p>
           <Button
             type='button'
             variant='primary'
             size='sm'
             isLoading={pdfLoading}
             onClick={() => void downloadPdf()}
-            className='gap-1.5'
+            className='shrink-0 gap-1.5'
           >
             <Download className='h-4 w-4' aria-hidden />
             Download PDF

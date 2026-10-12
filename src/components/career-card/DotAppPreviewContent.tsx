@@ -31,10 +31,20 @@ type FieldTone = 'verified' | 'self' | null
 
 // ── Primitive helpers ──────────────────────────────────────────────────────────
 
-function fmt(d?: string) {
-  return d
-    ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    : '—'
+/**
+ * Empty → undefined so `DotField` hides the row like any other blank field.
+ * Date-only strings ("2026-10-20") are read as local dates: `new Date` treats
+ * them as UTC midnight, which prints the previous day in US timezones.
+ */
+function fmt(d?: string): string | undefined {
+  if (!d) return undefined
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(d)
+  return isNaN(date.getTime())
+    ? d
+    : date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function DotField({
@@ -61,6 +71,11 @@ function CardStack({ children }: { children: React.ReactNode }) {
   return <div className='flex flex-col gap-4'>{children}</div>
 }
 
+/**
+ * Numbered section. The number comes from a CSS counter (`dot-section`, reset on
+ * the root) rather than a prop: sections render conditionally, so hand-numbering
+ * would leave gaps and threading an index through 13 call sites is noise.
+ */
 function DotSection({
   title,
   children,
@@ -69,12 +84,42 @@ function DotSection({
   children: React.ReactNode
 }) {
   return (
-    <section className='border-b border-ironside/15 px-4 py-6 sm:px-7'>
-      <h3 className='mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-[#173150]'>
-        {title}
-      </h3>
+    <section className='px-4 py-7 [counter-increment:dot-section] sm:px-7'>
+      <div className='mb-5 flex items-center gap-3'>
+        <span
+          aria-hidden
+          className='flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#173150] text-xs font-bold text-white before:content-[counter(dot-section)]'
+        />
+        <h3 className='text-xs font-semibold uppercase tracking-[0.14em] text-[#173150]'>{title}</h3>
+        <span className='h-px flex-1 bg-gradient-to-r from-[#f15a2b]/70 via-ironside/25 to-transparent' />
+      </div>
       {children}
     </section>
+  )
+}
+
+function StatusPill({ isComplete }: { isComplete: boolean }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+        isComplete ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
+      )}
+    >
+      {isComplete ? <CheckCircle className='h-3.5 w-3.5' aria-hidden /> : <Clock className='h-3.5 w-3.5' aria-hidden />}
+      {isComplete ? 'Complete' : 'In progress'}
+    </span>
+  )
+}
+
+/** The company stamp. Only a shared copy has one; the driver's file is addressed to no one. */
+function PreparedForStamp({ company }: { company: string }) {
+  return (
+    <div className='rounded-xl border-2 border-[#f15a2b] bg-white px-4 py-3 text-right shadow-sm sm:min-w-56'>
+      <p className='text-[10px] font-bold uppercase tracking-[0.18em] text-[#f15a2b]'>Prepared for</p>
+      <p className='mt-0.5 break-words text-lg font-semibold leading-tight text-[#173150]'>{company}</p>
+      <p className='mt-1 text-[11px] text-[#5c6166]'>Shared by the driver through Provven</p>
+    </div>
   )
 }
 
@@ -150,61 +195,70 @@ export default function DotAppPreviewContent({
   const f1 = data.form1
   const f2 = data.form2
   const f3 = data.form3
-  const form1Prov = f1 as Form1WithProvenance | null
-  const form2Prov = f2 as Form2WithProvenance | null
-  const coverage = computeDotVerifiedCoverage(form1Prov, form2Prov, f3 as Record<string, unknown> | null)
+  // Provenance types are a superset view of the same JSON; TS wants the hop via unknown.
+  const form1Prov = f1 as unknown as Form1WithProvenance | null
+  const form2Prov = f2 as unknown as Form2WithProvenance | null
+  const baseCoverage = computeDotVerifiedCoverage(form1Prov, form2Prov, f3 as unknown as Record<string, unknown> | null)
+  // The default caveat speaks to the driver ("your MVR", "by you"). A carrier reading
+  // their copy needs the same fact in the third person.
+  const coverage =
+    data.addressedToCompany && baseCoverage.totalCount > 0
+      ? {
+          ...baseCoverage,
+          caveat:
+            "Verified fields come from the driver's MVR/PSP (Accio) or a prior employer's confirmation. Other fields are self-certified by the driver — not issuer-verified.",
+        }
+      : baseCoverage
+
+  const applicantName = [f1?.firstName, f1?.lastName].filter(Boolean).join(' ')
 
   return (
-    <div className='bg-[#fbf8f1] text-[#173150]'>
-      {/* Status + verified-% meter */}
-      <div className='space-y-4 border-b border-ironside/15 px-4 py-5 sm:px-7'>
-        <div className='flex items-center gap-3'>
-          {data.isComplete ? (
-            <CheckCircle className='h-4 w-4 shrink-0 text-emerald-600' />
-          ) : (
-            <Clock className='h-4 w-4 shrink-0 text-amber-600' />
-          )}
-          <span className='text-sm text-[#173150]'>
-            {data.isComplete ? 'Complete' : 'In Progress'} · Submitted {fmt(data.createdAt)}
-          </span>
-        </div>
-        {data.addressedToCompany ? (
-          <p className='text-sm font-medium text-[#173150]'>
-            Application for employment with {data.addressedToCompany}
-          </p>
-        ) : null}
-        <DotVerifiedMeter coverage={coverage} isDark={isDark} />
-        <div
-          className={cn(
-            'flex flex-wrap gap-3 text-[10px]',
-            'text-[#5c6166]',
-          )}
-        >
-          <span className='inline-flex items-center gap-1'>
-            <span className='h-2 w-2 rounded-full bg-emerald-600' />
-            Green = issuer-backed (MVR / PSP)
-          </span>
-          <span className='inline-flex items-center gap-1'>
-            <span className='h-2 w-2 rounded-full bg-amber-500' />
-            Amber = self-certified by driver
-          </span>
-        </div>
-        {data.redactedFields && data.redactedFields.length > 0 && (
-          // Say the fields are withheld rather than letting them render as blanks,
-          // which reads like an incomplete application instead of a policy.
-          <p
-            className={cn(
-              'flex items-start gap-1.5 text-[11px]',
-              'text-[#5c6166]',
+    <div className='divide-y divide-ironside/15 bg-[#fbf8f1] text-[#173150] [counter-reset:dot-section]'>
+      {/* Masthead: what this is, whose it is, and who it was prepared for */}
+      <div className='px-4 py-6 sm:px-7'>
+        <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+          <div className='min-w-0'>
+            <p className='text-[10px] font-semibold uppercase tracking-[0.18em] text-[#5c6166]'>
+              Driver Qualification File · 49 CFR 391.21
+            </p>
+            {applicantName && (
+              <h2 className='mt-1 break-words text-2xl font-semibold leading-tight text-[#173150]'>
+                {applicantName}
+              </h2>
             )}
-          >
-            <EyeOff className='mt-0.5 h-3 w-3 shrink-0' aria-hidden />
-            <span>
-              SSN, date of birth, and street address are withheld. Provven decrypts them only
-              to place a screening the driver has authorized.
+            <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5c6166]'>
+              <StatusPill isComplete={data.isComplete} />
+              <span>Submitted {fmt(data.createdAt)}</span>
+            </div>
+          </div>
+          {data.addressedToCompany && <PreparedForStamp company={data.addressedToCompany} />}
+        </div>
+
+        {/* Verified-% meter in its own card so it reads as a summary, not as part of the form */}
+        <div className='mt-6 space-y-3 rounded-xl border border-ironside/20 bg-white p-4 sm:p-5'>
+          <DotVerifiedMeter coverage={coverage} isDark={isDark} />
+          <div className='flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#5c6166]'>
+            <span className='inline-flex items-center gap-1.5'>
+              <span className='h-2 w-2 rounded-full bg-emerald-600' />
+              Issuer-backed (MVR / PSP)
             </span>
-          </p>
-        )}
+            <span className='inline-flex items-center gap-1.5'>
+              <span className='h-2 w-2 rounded-full bg-amber-500' />
+              Self-certified by driver
+            </span>
+          </div>
+          {data.redactedFields && data.redactedFields.length > 0 && (
+            // Say the fields are withheld rather than letting them render as blanks,
+            // which reads like an incomplete application instead of a policy.
+            <p className='flex items-start gap-1.5 border-t border-ironside/15 pt-3 text-[11px] text-[#5c6166]'>
+              <EyeOff className='mt-0.5 h-3 w-3 shrink-0' aria-hidden />
+              <span>
+                SSN, date of birth, and street address are withheld. Provven decrypts them only
+                to place a screening the driver has authorized.
+              </span>
+            </p>
+          )}
+        </div>
       </div>
 
       {/* ── Form 1: Personal / License / Medical ── */}
@@ -308,7 +362,13 @@ export default function DotAppPreviewContent({
               <FieldGrid>
                 <DotField
                   label='Valid Medical Certificate?'
-                  value={f1.medicalQualification.hasValidMedicalCertificate}
+                  value={
+                    f1.medicalQualification.hasValidMedicalCertificate === 'yes'
+                      ? 'Yes'
+                      : f1.medicalQualification.hasValidMedicalCertificate === 'no'
+                        ? 'No'
+                        : f1.medicalQualification.hasValidMedicalCertificate
+                  }
                 />
                 <DotField
                   label='Certificate Expiration'

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { generateDotApplicationPDF } from '@/lib/dot-application-pdf'
+import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 /**
  * GET /api/admin/dot-apps/[id]/export
@@ -53,16 +54,14 @@ export async function GET(
       : 'Applicant'
 
     // Check if this came from an invite (to get company name)
-    let companyName: string | undefined
     const { data: invite } = await supabase
       .from('application_invites')
       .select('companies(company_name)')
       .eq('driver_application_id', id)
-      .single()
-    
-    if (invite?.companies) {
-      companyName = (invite.companies as any).company_name
-    }
+      .maybeSingle()
+    // PostgREST types a to-one join as an array; pick the first row either way.
+    const joinedCompany = invite?.companies as { company_name: string } | { company_name: string }[] | null | undefined
+    const companyName = (Array.isArray(joinedCompany) ? joinedCompany[0] : joinedCompany)?.company_name
 
     if (format === 'json') {
       // Return raw JSON data
@@ -83,23 +82,18 @@ export async function GET(
       })
     }
 
-    // Generate PDF
-    const applicationData = app.application_data || {}
+    // Generate PDF. Stored shape is { form1, form2, form3 } — the old `form1Data`
+    // keys never existed here, which is why admin exports came out blank.
+    const applicationData = (app.application_data || {}) as Record<string, unknown>
     const pdfBuffer = generateDotApplicationPDF(
       {
-        form1Data: applicationData.form1Data,
-        form2Data: applicationData.form2Data,
-        form3Data: applicationData.form3Data,
+        form1: (applicationData.form1 as DotForm1Data | undefined) ?? null,
+        form2: (applicationData.form2 as DotForm2Data | undefined) ?? null,
+        form3: (applicationData.form3 as DotForm3Data | undefined) ?? null,
         createdAt: app.created_at,
-        completedAt: app.updated_at,
-        verificationStatus: app.verification_status,
-        blockchainTxHash: app.blockchain_tx_hash,
+        isComplete: Boolean(app.is_complete),
       },
-      {
-        includeBlockchainInfo: true,
-        companyName,
-        candidateName,
-      }
+      { companyName, candidateName },
     )
 
     // Create filename

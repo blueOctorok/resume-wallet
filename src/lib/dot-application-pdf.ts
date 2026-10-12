@@ -1,378 +1,553 @@
 /**
- * DOT Application PDF Generator
- * Generates a professional PDF of a completed DOT driver application
- * for export to ATS systems like Bullhorn
+ * Driver Qualification File as PDF.
+ *
+ * One generator for the driver's own copy, the employer's copy, and admin.
+ * The employer copy is already redacted by the caller (redactDotAppForEmployer)
+ * and carries `companyName`, which is printed on the cover and every footer.
  */
 
 import { jsPDF } from 'jspdf'
+import type { DotForm1Data, DotForm2Data, DotForm3Data, DotForm3Employer } from '@/lib/dot-form-mapper'
+import { historyGroupOf, orderHistoryEntries } from '@/lib/history-entry-order'
 
-// Colors
-const COLORS = {
-  primary: [156,119,64] as [number, number, number], // teal-600
-  dark: [17, 24, 39] as [number, number, number], // gray-900
-  text: [55, 65, 81] as [number, number, number], // gray-700
-  light: [107, 114, 128] as [number, number, number], // gray-500
-  border: [229, 231, 235] as [number, number, number], // gray-200
+type Rgb = [number, number, number]
+
+const MIDNIGHT: Rgb = [23, 49, 80]
+const EMBER: Rgb = [241, 90, 43]
+const IRONSIDE: Rgb = [147, 149, 152]
+const INK_MUTED: Rgb = [92, 97, 102]
+const RULE: Rgb = [226, 222, 212]
+
+export interface DotApplicationPdfInput {
+  form1: DotForm1Data | null
+  form2: DotForm2Data | null
+  form3: DotForm3Data | null
+  createdAt?: string | null
+  isComplete?: boolean
 }
 
-interface ApplicationData {
-  form1Data?: any // Personal info, CDL, residency
-  form2Data?: any // Driving record, violations, accidents
-  form3Data?: any // Employment history
-  createdAt?: string
-  completedAt?: string
-  verificationStatus?: string
-  blockchainTxHash?: string
-}
-
-interface ExportOptions {
-  includeBlockchainInfo?: boolean
-  companyName?: string
+export interface DotApplicationPdfOptions {
   candidateName?: string
+  /** The company this copy is prepared for. Absent on the driver's own copy. */
+  companyName?: string | null
+  /** Printed under the cover when the caller withheld identifiers. */
+  withheldNote?: string | null
+}
+
+interface Field {
+  label: string
+  value?: string | number | boolean | null
 }
 
 /**
- * Generate a PDF of a DOT driver application
+ * Date-only strings ("2026-10-20") are parsed by `new Date` as UTC midnight, so
+ * formatting them in a US timezone prints the day before. Read them as local.
  */
+function fmtDate(raw?: string | null): string {
+  if (!raw) return ''
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw)
+  const d = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(raw)
+  return isNaN(d.getTime())
+    ? raw
+    : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function yesNo(value?: string | boolean | null): string {
+  if (value == null || value === '') return ''
+  return value === true || value === 'yes' || value === 'true' ? 'Yes' : 'No'
+}
+
+function joinParts(parts: Array<string | undefined | null>): string {
+  return parts.filter((p) => p && String(p).trim()).join(', ')
+}
+
+function historyHeading(entry: DotForm3Employer): string {
+  switch (historyGroupOf(entry)) {
+    case 'unemployment':
+      return 'Unemployment'
+    case 'drivingSchool':
+      return entry.name || 'School'
+    case 'military':
+      return entry.name || 'Military service'
+    default:
+      return entry.positionHeld ? `${entry.positionHeld} — ${entry.name}` : entry.name
+  }
+}
+
 export function generateDotApplicationPDF(
-  applicationData: ApplicationData,
-  options: ExportOptions = {}
+  input: DotApplicationPdfInput,
+  options: DotApplicationPdfOptions = {},
 ): Buffer {
   const pdf = new jsPDF('p', 'mm', 'a4')
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const margin = 15
-  const contentWidth = pageWidth - margin * 2
+  const pageW = pdf.internal.pageSize.getWidth()
+  const pageH = pdf.internal.pageSize.getHeight()
+  const margin = 16
+  const contentW = pageW - margin * 2
+  // Footer rule sits at pageH-13; content may run to just above it.
+  const bottomLimit = pageH - 17
   let y = margin
+  let sectionNumber = 0
+  // Extra left/right padding while drawing inside a framed card.
+  let inset = 0
 
-  const { form1Data, form2Data, form3Data } = applicationData
+  const { form1: f1, form2: f2, form3: f3 } = input
+  const applicantName =
+    options.candidateName?.trim() ||
+    joinParts([f1?.firstName, f1?.lastName]).replace(', ', ' ') ||
+    'Applicant'
 
-  // Helper: Check page break
-  function checkPageBreak(neededHeight: number) {
-    if (y + neededHeight > pageHeight - margin) {
+  // ── Layout helpers ─────────────────────────────────────────────────────────
+
+  const ensureRoom = (needed: number) => {
+    if (y + needed > bottomLimit) {
       pdf.addPage()
       y = margin
-      return true
     }
-    return false
   }
 
-  // Helper: Draw section header
-  function drawSectionHeader(title: string) {
-    checkPageBreak(15)
-    y += 5
+  const sectionHeader = (title: string) => {
+    sectionNumber += 1
+    ensureRoom(18)
+    y += 6
+    pdf.setFillColor(...MIDNIGHT)
+    pdf.roundedRect(margin, y - 4.5, 7, 7, 1.2, 1.2, 'F')
     pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(11)
-    pdf.setTextColor(...COLORS.primary)
-    pdf.text(title.toUpperCase(), margin, y)
-    y += 2
-    pdf.setDrawColor(...COLORS.primary)
+    pdf.setFontSize(8)
+    pdf.setTextColor(255, 255, 255)
+    pdf.text(String(sectionNumber), margin + 3.5, y + 0.4, { align: 'center' })
+    pdf.setFontSize(10.5)
+    pdf.setTextColor(...MIDNIGHT)
+    pdf.text(title.toUpperCase(), margin + 10, y + 0.5)
+    y += 4
+    pdf.setDrawColor(...EMBER)
     pdf.setLineWidth(0.5)
-    pdf.line(margin, y, pageWidth - margin, y)
+    pdf.line(margin, y, margin + 22, y)
+    pdf.setDrawColor(...RULE)
+    pdf.setLineWidth(0.3)
+    pdf.line(margin + 22, y, pageW - margin, y)
     y += 6
   }
 
-  // Helper: Draw field
-  function drawField(label: string, value: string | undefined | null, width: number = contentWidth) {
-    if (!value) return
+  /** Label over value, laid out in columns. Empty values are skipped. */
+  const fieldRow = (fields: Field[], columns = 3) => {
+    const present = fields
+      .map((f) => ({ label: f.label, value: f.value == null ? '' : String(f.value).trim() }))
+      .filter((f) => f.value)
+    if (present.length === 0) return
+    const colW = (contentW - inset * 2) / columns
+    for (let i = 0; i < present.length; i += columns) {
+      const row = present.slice(i, i + columns)
+      const wrapped = row.map((f) => pdf.splitTextToSize(f.value, colW - 4) as string[])
+      const lines = Math.max(...wrapped.map((w) => w.length))
+      const rowH = 4 + lines * 4.2 + 2.5
+      ensureRoom(rowH)
+      row.forEach((f, idx) => {
+        const x = margin + inset + idx * colW
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(...INK_MUTED)
+        pdf.text(f.label.toUpperCase(), x, y)
+        pdf.setFontSize(10)
+        pdf.setTextColor(...MIDNIGHT)
+        pdf.text(wrapped[idx], x, y + 4.2)
+      })
+      y += rowH
+    }
+  }
+
+  const paragraph = (text: string, color: Rgb = MIDNIGHT, size = 9.5) => {
+    const lines = pdf.splitTextToSize(text, contentW) as string[]
+    ensureRoom(lines.length * 4.4 + 2)
     pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(9)
-    pdf.setTextColor(...COLORS.light)
-    pdf.text(label, margin, y)
+    pdf.setFontSize(size)
+    pdf.setTextColor(...color)
+    pdf.text(lines, margin, y)
+    y += lines.length * 4.4 + 2
+  }
+
+  /**
+   * Framed group — one license, one accident, one employer.
+   * `meta` prints right-aligned on the heading line (dates); `tag` goes in ember after it.
+   */
+  const card = (draw: () => void, heading?: string, meta?: string, tag?: string) => {
+    ensureRoom(heading ? 24 : 16) // start the card on a fresh page if only a sliver is left
+    const startY = y
+    const startPage = pdf.getNumberOfPages()
+    inset = 4
     y += 4
-    pdf.setFontSize(10)
-    pdf.setTextColor(...COLORS.dark)
-    const lines = pdf.splitTextToSize(value, width)
-    for (const line of lines) {
-      checkPageBreak(5)
-      pdf.text(line, margin, y)
-      y += 4
-    }
-    y += 2
-  }
-
-  // Helper: Draw inline fields (side by side)
-  function drawInlineFields(fields: Array<{ label: string; value: string | undefined | null }>) {
-    const validFields = fields.filter(f => f.value)
-    if (validFields.length === 0) return
-    
-    checkPageBreak(12)
-    const fieldWidth = contentWidth / validFields.length
-    let x = margin
-    
-    for (const field of validFields) {
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(9)
-      pdf.setTextColor(...COLORS.light)
-      pdf.text(field.label, x, y)
+    if (heading) {
+      pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(10)
-      pdf.setTextColor(...COLORS.dark)
-      pdf.text(field.value || '', x, y + 4)
-      x += fieldWidth
+      pdf.setTextColor(...MIDNIGHT)
+      pdf.text(heading, margin + inset, y + 1)
+      let rightX = pageW - margin - inset
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8.5)
+      if (meta) {
+        pdf.setTextColor(...INK_MUTED)
+        pdf.text(meta, rightX, y + 1, { align: 'right' })
+        rightX -= pdf.getTextWidth(meta) + 3
+      }
+      if (tag) {
+        pdf.setTextColor(...EMBER)
+        pdf.text(tag, rightX, y + 1, { align: 'right' })
+      }
+      y += 7
     }
-    y += 10
+    draw()
+    inset = 0
+    y += 1
+    // Only frame cards that fit on one page; a card that broke across pages gets a rule instead.
+    if (pdf.getNumberOfPages() === startPage) {
+      pdf.setDrawColor(...RULE)
+      pdf.setLineWidth(0.3)
+      pdf.roundedRect(margin, startY, contentW, y - startY, 2, 2, 'S')
+    } else {
+      pdf.setDrawColor(...RULE)
+      pdf.line(margin, y, pageW - margin, y)
+    }
+    y += 4
   }
 
-  // ===== HEADER =====
-  pdf.setFont('helvetica', 'bold')
-  pdf.setFontSize(18)
-  pdf.setTextColor(...COLORS.dark)
-  pdf.text('DOT Driver Application', margin, y)
-  
-  y += 6
-  pdf.setFont('helvetica', 'normal')
-  pdf.setFontSize(10)
-  pdf.setTextColor(...COLORS.light)
-  
-  if (options.companyName) {
-    pdf.text(`Application for employment with ${options.companyName}`, margin, y)
-    y += 5
-  }
-  
-  const applicantName = options.candidateName || 
-    (form1Data?.firstName && form1Data?.lastName 
-      ? `${form1Data.firstName} ${form1Data.lastName}` 
-      : 'Applicant')
-  pdf.text(`Applicant: ${applicantName}`, margin, y)
-  y += 5
-  
-  if (applicationData.createdAt) {
-    pdf.text(`Date: ${new Date(applicationData.createdAt).toLocaleDateString()}`, margin, y)
-    y += 5
-  }
-
-  // Submitted badge (not issuer verification — DEC-2026-07-001)
-  if (applicationData.completedAt || applicationData.form3Data) {
-    y += 2
-    pdf.setFillColor(219, 234, 254) // blue-100
-    pdf.roundedRect(margin, y, 42, 8, 2, 2, 'F')
+  /** Question on the left, answer on the right, hairline under. */
+  const answerRow = (question: string, answer: string, detail?: string, highlight = false) => {
+    const detailLines = detail?.trim() ? (pdf.splitTextToSize(detail.trim(), contentW - 8) as string[]) : []
+    const rowH = 6.5 + detailLines.length * 4.2
+    ensureRoom(rowH)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(9.5)
+    pdf.setTextColor(...MIDNIGHT)
+    pdf.text(question, margin + 2, y)
     pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(8)
-    pdf.setTextColor(30, 64, 175) // blue-800
-    pdf.text('✓ SUBMITTED', margin + 3, y + 5.5)
-    y += 12
-  }
-
-  y += 5
-
-  // ===== SECTION 1: PERSONAL INFORMATION =====
-  if (form1Data) {
-    drawSectionHeader('Personal Information')
-    
-    drawInlineFields([
-      { label: 'First Name', value: form1Data.firstName },
-      { label: 'Middle Name', value: form1Data.middleName },
-      { label: 'Last Name', value: form1Data.lastName },
-    ])
-    
-    drawInlineFields([
-      { label: 'Date of Birth', value: form1Data.dateOfBirth },
-      { label: 'SSN (Last 4)', value: form1Data.ssn ? `***-**-${form1Data.ssn.slice(-4)}` : undefined },
-      { label: 'Phone', value: form1Data.phone },
-    ])
-    
-    drawField('Email', form1Data.email)
-    
-    if (form1Data.address) {
-      const fullAddress = [
-        form1Data.address,
-        form1Data.city,
-        form1Data.state,
-        form1Data.zipCode
-      ].filter(Boolean).join(', ')
-      drawField('Address', fullAddress)
-    }
-    
-    // Emergency Contact
-    if (form1Data.emergencyContact?.name) {
-      y += 2
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(9)
-      pdf.setTextColor(...COLORS.text)
-      pdf.text('Emergency Contact', margin, y)
-      y += 5
-      drawInlineFields([
-        { label: 'Name', value: form1Data.emergencyContact.name },
-        { label: 'Relationship', value: form1Data.emergencyContact.relationship },
-        { label: 'Phone', value: form1Data.emergencyContact.phone },
-      ])
-    }
-  }
-
-  // ===== SECTION 2: CDL INFORMATION =====
-  if (form1Data?.cdlNumber || form1Data?.cdlClass) {
-    drawSectionHeader('Commercial Driver License')
-    
-    drawInlineFields([
-      { label: 'CDL Number', value: form1Data.cdlNumber },
-      { label: 'State', value: form1Data.cdlState },
-      { label: 'Class', value: form1Data.cdlClass },
-    ])
-    
-    drawInlineFields([
-      { label: 'Expiration', value: form1Data.cdlExpiration },
-    ])
-    
-    if (form1Data.endorsements?.length > 0) {
-      drawField('Endorsements', form1Data.endorsements.join(', '))
-    }
-    
-    if (form1Data.restrictions?.length > 0) {
-      drawField('Restrictions', form1Data.restrictions.join(', '))
-    }
-  }
-
-  // ===== SECTION 3: DRIVING RECORD =====
-  if (form2Data) {
-    drawSectionHeader('Driving Record')
-    
-    // Accidents
-    const accidents = form2Data.accidents || []
-    if (accidents.length > 0) {
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(10)
-      pdf.setTextColor(...COLORS.text)
-      pdf.text(`Accidents (${accidents.length})`, margin, y)
-      y += 5
-      
-      for (const accident of accidents) {
-        checkPageBreak(20)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(9)
-        pdf.setTextColor(...COLORS.dark)
-        const accidentLine = [
-          accident.date,
-          accident.location,
-          accident.description
-        ].filter(Boolean).join(' - ')
-        const lines = pdf.splitTextToSize(`• ${accidentLine}`, contentWidth - 5)
-        for (const line of lines) {
-          pdf.text(line, margin + 3, y)
-          y += 4
-        }
-        y += 2
-      }
-    } else {
-      drawField('Accidents', 'None reported')
-    }
-    
-    // Violations
-    const violations = form2Data.violations || []
-    if (violations.length > 0) {
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(10)
-      pdf.setTextColor(...COLORS.text)
-      pdf.text(`Traffic Violations (${violations.length})`, margin, y)
-      y += 5
-      
-      for (const violation of violations) {
-        checkPageBreak(20)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(9)
-        pdf.setTextColor(...COLORS.dark)
-        const violationLine = [
-          violation.date,
-          violation.state,
-          violation.violation
-        ].filter(Boolean).join(' - ')
-        const lines = pdf.splitTextToSize(`• ${violationLine}`, contentWidth - 5)
-        for (const line of lines) {
-          pdf.text(line, margin + 3, y)
-          y += 4
-        }
-        y += 2
-      }
-    } else {
-      drawField('Traffic Violations', 'None reported')
-    }
-  }
-
-  // ===== SECTION 4: EMPLOYMENT HISTORY =====
-  if (form3Data?.employmentHistory?.length > 0) {
-    drawSectionHeader('Employment History (Last 10 Years)')
-    
-    for (const job of form3Data.employmentHistory) {
-      checkPageBreak(30)
-      
-      // Company name and dates
-      pdf.setFont('helvetica', 'bold')
-      pdf.setFontSize(10)
-      pdf.setTextColor(...COLORS.dark)
-      pdf.text(job.companyName || job.employerName || 'Employer', margin, y)
-      
-      const dates = [job.startDate, job.endDate || 'Present'].filter(Boolean).join(' - ')
+    if (highlight) pdf.setTextColor(...EMBER)
+    else pdf.setTextColor(...INK_MUTED)
+    pdf.text(answer, pageW - margin - 2, y, { align: 'right' })
+    if (detailLines.length) {
       pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(9)
-      pdf.setTextColor(...COLORS.light)
-      const datesWidth = pdf.getTextWidth(dates)
-      pdf.text(dates, pageWidth - margin - datesWidth, y)
-      y += 5
-      
-      // Position and location
-      if (job.position || job.title) {
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(9)
-        pdf.setTextColor(...COLORS.text)
-        pdf.text(job.position || job.title, margin, y)
-        y += 4
-      }
-      
-      if (job.location || job.city) {
-        pdf.setTextColor(...COLORS.light)
-        pdf.text(job.location || `${job.city}, ${job.state}`, margin, y)
-        y += 4
-      }
-      
-      // Supervisor
-      if (job.supervisorName) {
-        pdf.setTextColor(...COLORS.light)
-        pdf.text(`Supervisor: ${job.supervisorName} ${job.supervisorPhone ? `(${job.supervisorPhone})` : ''}`, margin, y)
-        y += 4
-      }
-      
-      // Reason for leaving
-      if (job.reasonForLeaving) {
-        pdf.setTextColor(...COLORS.light)
-        pdf.text(`Reason for leaving: ${job.reasonForLeaving}`, margin, y)
-        y += 4
-      }
-      
-      y += 4
+      pdf.setFontSize(8.5)
+      pdf.setTextColor(...INK_MUTED)
+      pdf.text(detailLines, margin + 2, y + 4.4)
     }
+    y += rowH
+    pdf.setDrawColor(...RULE)
+    pdf.setLineWidth(0.2)
+    pdf.line(margin, y - 2, pageW - margin, y - 2)
   }
 
-  // ===== SECTION 5: MEDICAL CERTIFICATION =====
-  if (form1Data?.medicalExamDate || form1Data?.medicalExaminerName) {
-    drawSectionHeader('Medical Certification')
-    
-    drawInlineFields([
-      { label: 'Exam Date', value: form1Data.medicalExamDate },
-      { label: 'Expiration', value: form1Data.medicalExamExpiration },
-    ])
-    
-    drawInlineFields([
-      { label: 'Medical Examiner', value: form1Data.medicalExaminerName },
-      { label: 'Examiner Phone', value: form1Data.medicalExaminerPhone },
-    ])
+  // A "Yes" is the answer a safety clerk has to read, so it is the one in ember.
+  const yesNoRow = (question: string, value?: string | boolean | null, detail?: string) => {
+    const answer = yesNo(value) || '—'
+    answerRow(question, answer, detail, answer === 'Yes')
   }
 
-  // ===== FOOTER =====
-  checkPageBreak(25)
-  y = pageHeight - 20
-  
-  pdf.setDrawColor(...COLORS.border)
-  pdf.line(margin, y, pageWidth - margin, y)
-  y += 5
-  
+  const emptyNote = (text: string) => paragraph(text, INK_MUTED, 9)
+
+  // ── Cover band ─────────────────────────────────────────────────────────────
+
+  pdf.setFillColor(...MIDNIGHT)
+  pdf.rect(0, 0, pageW, 46, 'F')
+  pdf.setFillColor(...EMBER)
+  pdf.rect(0, 46, pageW, 1.2, 'F')
+
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(8)
-  pdf.setTextColor(...COLORS.light)
-  pdf.text('Generated by Provven — Driver Qualification Platform', margin, y)
-  
-  const dateStr = new Date().toLocaleDateString()
-  const dateWidth = pdf.getTextWidth(dateStr)
-  pdf.text(dateStr, pageWidth - margin - dateWidth, pageHeight - 15)
+  pdf.setTextColor(...IRONSIDE)
+  pdf.text('DRIVER QUALIFICATION FILE  ·  49 CFR 391.21', margin, 15)
 
-  // Return as buffer
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(20)
+  pdf.setTextColor(255, 255, 255)
+  pdf.text(applicantName, margin, 26)
+
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(9.5)
+  pdf.setTextColor(...IRONSIDE)
+  const status = input.isComplete ? 'Complete' : 'In progress'
+  const submitted = fmtDate(input.createdAt)
+  pdf.text(submitted ? `${status}  ·  Submitted ${submitted}` : status, margin, 33)
+
+  if (options.companyName) {
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(8)
+    pdf.setTextColor(...EMBER)
+    pdf.text('PREPARED FOR', pageW - margin, 22, { align: 'right' })
+    pdf.setFontSize(14)
+    pdf.setTextColor(255, 255, 255)
+    pdf.text(options.companyName, pageW - margin, 29.5, { align: 'right' })
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(8)
+    pdf.setTextColor(...IRONSIDE)
+    pdf.text('Shared by the driver through Provven', pageW - margin, 35, { align: 'right' })
+  }
+
+  y = 56
+  if (options.withheldNote) {
+    paragraph(options.withheldNote, INK_MUTED, 8.5)
+  }
+
+  // ── 1. Personal information ────────────────────────────────────────────────
+
+  if (f1) {
+    sectionHeader('Personal information')
+    fieldRow([
+      { label: 'First name', value: f1.firstName },
+      { label: 'Middle name', value: f1.middleName },
+      { label: 'Last name', value: f1.lastName },
+    ])
+    fieldRow([
+      { label: 'Phone', value: f1.phone },
+      { label: 'Email', value: f1.email },
+      { label: 'Date of birth', value: fmtDate(f1.dateOfBirth) },
+    ])
+    fieldRow([
+      { label: 'Position applied for', value: f1.positionAppliedFor },
+      { label: 'Date available', value: fmtDate(f1.dateAvailableForWork) },
+      { label: 'Legal right to work', value: yesNo(f1.hasLegalRightToWork) },
+    ])
+    if (f1.currentMailing) {
+      const m = f1.currentMailing
+      fieldRow(
+        [
+          { label: 'Current address', value: joinParts([m.street, m.city, m.state, m.zipCode]) },
+          { label: 'Years at address', value: m.yearsAtAddress },
+        ],
+        2,
+      )
+    }
+    if (f1.previousAddresses?.length) {
+      for (const a of f1.previousAddresses) {
+        fieldRow(
+          [
+            { label: 'Previous address', value: joinParts([a.street, a.city, a.state, a.zipCode]) },
+            { label: 'Dates', value: [a.fromDate, a.toDate].filter(Boolean).join(' – ') },
+          ],
+          2,
+        )
+      }
+    }
+
+    // ── 2. Licenses ──
+    if (f1.currentLicenses?.length || f1.previousLicenses?.length) {
+      sectionHeader("Driver's licenses")
+      for (const lic of f1.currentLicenses ?? []) {
+        card(() =>
+          fieldRow([
+            { label: 'State', value: lic.state },
+            { label: 'License #', value: lic.licenseNumber },
+            { label: 'Class', value: lic.typeClass },
+            { label: 'Endorsements', value: lic.endorsements },
+            { label: 'Expires', value: fmtDate(lic.expirationDate) },
+          ]),
+        )
+      }
+      for (const lic of f1.previousLicenses ?? []) {
+        card(
+          () =>
+            fieldRow([
+              { label: 'State', value: lic.state },
+              { label: 'License #', value: lic.licenseNumber },
+              { label: 'Class', value: lic.typeClass },
+              { label: 'Expired', value: fmtDate(lic.expirationDate) },
+              { label: 'No longer held because', value: lic.reasonNoLongerHeld },
+            ]),
+          'Previous license',
+        )
+      }
+    }
+
+    // ── 3. Disqualification history ──
+    if (f1.disqualificationHistory) {
+      const d = f1.disqualificationHistory
+      sectionHeader('License disqualification history')
+      yesNoRow('License suspended or revoked?', d.hasLicenseSuspension, d.licenseSuspensionDetails)
+      yesNoRow('Disqualifying offense?', d.hasDisqualifyingOffense, d.disqualifyingOffenseDetails)
+      yesNoRow('Out-of-service violation?', d.hasOutOfServiceViolation, d.outOfServiceViolationDetails)
+      yesNoRow('Mobile device violation?', d.hasMobileDeviceViolation, d.mobileDeviceViolationDetails)
+    }
+
+    // ── 4. Medical ──
+    if (f1.medicalQualification) {
+      const m = f1.medicalQualification
+      sectionHeader('Medical qualification')
+      fieldRow([
+        { label: 'Valid medical certificate', value: yesNo(m.hasValidMedicalCertificate) },
+        { label: 'Certificate expires', value: fmtDate(m.medicalCertificateExpiration) },
+        { label: 'Filed with state', value: yesNo(m.hasFiledWithState) },
+      ])
+      fieldRow([
+        { label: 'Exam date', value: fmtDate(m.medicalExamDate) },
+        { label: 'Examiner', value: m.medicalExaminerName },
+        { label: 'Examiner phone', value: m.medicalExaminerPhone },
+      ])
+      fieldRow([
+        { label: 'Registry ID', value: m.medicalExaminerRegistryId },
+        { label: 'Examiner type', value: m.medicalExaminerType },
+      ])
+      yesNoRow('Medical variance?', m.hasMedicalVariance, m.medicalVarianceDetails)
+      yesNoRow('Chronic conditions?', m.hasChronicConditions, m.chronicConditionsDetails)
+    }
+  }
+
+  // ── 5–8. Driving record ────────────────────────────────────────────────────
+
+  if (f2) {
+    if (f2.drivingExperience?.length) {
+      sectionHeader('Driving experience')
+      for (const exp of f2.drivingExperience) {
+        answerRow(exp.equipmentType || 'Equipment', `${exp.yearsOfExperience || '—'} yrs`)
+      }
+    }
+
+    sectionHeader('Accident history — past 5 years')
+    if (f2.hasNoAccidents || !f2.accidents?.length) {
+      emptyNote('No accidents reported.')
+    } else {
+      for (const acc of f2.accidents) {
+        card(() =>
+          fieldRow([
+            { label: 'Date', value: fmtDate(acc.date) },
+            { label: 'Nature', value: acc.nature },
+            { label: 'Fatalities', value: acc.fatalities },
+            { label: 'Injuries', value: acc.injuries },
+            { label: 'Chemical spills', value: acc.chemicalSpills },
+            { label: 'At fault', value: acc.atFault },
+          ]),
+        )
+      }
+    }
+
+    sectionHeader('Traffic convictions — past 3 years')
+    if (f2.hasNoConvictions || !f2.convictions?.length) {
+      emptyNote('No convictions reported.')
+    } else {
+      for (const c of f2.convictions) {
+        card(() =>
+          fieldRow([
+            { label: 'Date convicted', value: fmtDate(c.dateConvicted) },
+            { label: 'Violation', value: c.violation },
+            { label: 'State', value: c.stateOfViolation },
+            { label: 'Penalty', value: c.penalty },
+          ]),
+        )
+      }
+    }
+
+    sectionHeader('License actions and federal disclosures')
+    yesNoRow('Denied a license, permit, or privilege?', f2.deniedLicense, f2.deniedLicenseExplain)
+    yesNoRow('License, permit, or privilege suspended or revoked?', f2.suspendedLicense, f2.suspendedLicenseExplain)
+    if (f2.drugTestPositive) {
+      yesNoRow(
+        'Positive or refused pre-employment drug/alcohol test — 49 CFR 40.25 (2 yrs)?',
+        f2.drugTestPositive,
+        f2.drugTestPositiveExplain,
+      )
+    }
+    if (f2.cfr391ConvictedYesNo) {
+      const offenses = f2.cfr391ConvictedOffenses?.length
+        ? `Offenses: ${f2.cfr391ConvictedOffenses.join('; ')}${f2.cfr391ConvictedExplain ? ` — ${f2.cfr391ConvictedExplain}` : ''}`
+        : f2.cfr391ConvictedExplain
+      yesNoRow('Disqualifying conviction — 49 CFR 391.15 (3 yrs)?', f2.cfr391ConvictedYesNo, offenses)
+    }
+  }
+
+  // ── 9–11. History, education, signature ────────────────────────────────────
+
+  if (f3) {
+    if (f3.employers?.length) {
+      sectionHeader('Employment and history — past 10 years')
+      for (const emp of orderHistoryEntries(f3.employers)) {
+        const dates = [emp.fromDate, emp.toDate || 'Present'].filter(Boolean).join(' – ')
+        const tag = emp._source === 'verified' ? 'Confirmed by employer' : undefined
+        const group = historyGroupOf(emp)
+        card(() => {
+          if (group === 'employment') {
+            fieldRow([
+              { label: 'Address', value: emp.address },
+              { label: 'Phone', value: emp.phone },
+              { label: 'Reason for leaving', value: emp.reasonForLeaving },
+              { label: 'Subject to FMCSR', value: yesNo(emp.subjectToFMCSR) },
+              { label: 'Safety-sensitive function', value: yesNo(emp.safetySensitiveFunction) },
+              { label: 'Salary', value: emp.salary },
+            ])
+            if (emp.duties) fieldRow([{ label: 'Duties', value: emp.duties }], 1)
+          } else {
+            fieldRow([
+              { label: 'Course of study', value: emp.courseOfStudy },
+              { label: 'Address', value: emp.address },
+              { label: 'Phone', value: emp.phone },
+              { label: 'Notes', value: emp.gapsInEmployment },
+            ])
+          }
+        }, historyHeading(emp), dates, tag)
+      }
+    }
+
+    if (f3.education?.length) {
+      sectionHeader('Education and training')
+      for (const edu of f3.education) {
+        card(() =>
+          fieldRow([
+            { label: 'Type', value: edu.schoolType },
+            { label: 'School / location', value: edu.nameAndLocation },
+            { label: 'Course of study', value: edu.courseOfStudy },
+            { label: 'Years completed', value: edu.yearsCompleted },
+            { label: 'Graduated', value: yesNo(edu.graduated) },
+            { label: 'Details', value: edu.details },
+          ]),
+        )
+      }
+    }
+
+    if (f3.applicantSignature || f3.applicantNamePrinted) {
+      sectionHeader('Certification and electronic signature')
+      fieldRow([
+        { label: 'Signed as', value: f3.applicantSignature },
+        { label: 'Printed name', value: f3.applicantNamePrinted },
+        { label: 'Signature date', value: fmtDate(f3.signatureDate) },
+      ])
+      fieldRow([
+        {
+          label: 'Signed at',
+          value: f3.signedAt ? new Date(f3.signedAt).toLocaleString('en-US') : '',
+        },
+        { label: 'Previous road test', value: yesNo(f3.hasPreviousRoadTest) },
+        { label: 'Holds valid CDL', value: yesNo(f3.hasValidCDL) },
+      ])
+      const acks = [
+        f3.fcraAcknowledgement && 'FCRA rights acknowledged',
+        f3.safetyPerformanceHistoryAcknowledgement && 'Safety performance history acknowledged',
+        f3.safetyPerformanceInquiryConsent && 'Consents to safety performance inquiry',
+        f3.roadTestAcknowledgement && 'Road test acknowledged',
+      ].filter((a): a is string => Boolean(a))
+      if (acks.length) paragraph(acks.join('  ·  '), INK_MUTED, 8.5)
+    }
+  }
+
+  // ── Footer on every page ───────────────────────────────────────────────────
+
+  const pageCount = pdf.getNumberOfPages()
+  const footerLeft = options.companyName
+    ? `${applicantName}  ·  Prepared for ${options.companyName}`
+    : applicantName
+  for (let p = 1; p <= pageCount; p += 1) {
+    pdf.setPage(p)
+    const fy = pageH - 9
+    pdf.setDrawColor(...RULE)
+    pdf.setLineWidth(0.3)
+    pdf.line(margin, fy - 4, pageW - margin, fy - 4)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(7.5)
+    pdf.setTextColor(...INK_MUTED)
+    pdf.text(footerLeft, margin, fy)
+    pdf.setTextColor(...EMBER)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('provven.com', pageW / 2, fy, { align: 'center' })
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...INK_MUTED)
+    pdf.text(`Page ${p} of ${pageCount}`, pageW - margin, fy, { align: 'right' })
+  }
+
   return Buffer.from(pdf.output('arraybuffer'))
 }

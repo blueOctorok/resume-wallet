@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { generateDotApplicationPDF } from '@/lib/dot-application-pdf'
+import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 /**
  * GET /api/driver-applications/[id]/export-pdf
- * Owner-only PDF export (same generator as admin export).
+ * Owner-only PDF export (same generator as admin and employer exports).
+ * No company stamp — this is the driver's own unaddressed copy.
  */
 export async function GET(
   request: NextRequest,
@@ -32,9 +34,6 @@ export async function GET(
     }
 
     const ad = (app.application_data || {}) as Record<string, unknown>
-    const form1Data = (ad.form1 ?? ad.form1Data) as Record<string, unknown> | undefined
-    const form2Data = (ad.form2 ?? ad.form2Data) as Record<string, unknown> | undefined
-    const form3Data = (ad.form3 ?? ad.form3Data) as Record<string, unknown> | undefined
 
     const { data: userProfile } = await supabase
       .from('user_profiles')
@@ -49,18 +48,13 @@ export async function GET(
 
     const pdfBuffer = generateDotApplicationPDF(
       {
-        form1Data,
-        form2Data,
-        form3Data,
+        form1: (ad.form1 as DotForm1Data | undefined) ?? null,
+        form2: (ad.form2 as DotForm2Data | undefined) ?? null,
+        form3: (ad.form3 as DotForm3Data | undefined) ?? null,
         createdAt: app.created_at,
-        completedAt: app.updated_at,
-        verificationStatus: app.verification_status,
-        blockchainTxHash: app.blockchain_tx_hash,
+        isComplete: Boolean(app.is_complete),
       },
-      {
-        includeBlockchainInfo: true,
-        candidateName,
-      },
+      { candidateName },
     )
 
     const safe = candidateName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 40)
