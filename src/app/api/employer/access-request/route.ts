@@ -4,7 +4,11 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { domainFromEmail, isPublicEmailDomain } from '@/lib/employer-domain-match'
 import { isCandidateSurfaceRole } from '@/lib/employer-account-guard'
 import { employerAccessRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
-import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
+import {
+  sendCompanyJoinRequestNotification,
+  sendNewCompanyNotification,
+} from '@/lib/send-admin-notification'
+import { TEAM_ADMIN_ROLES } from '@/lib/employer-permissions'
 import { EV_EMPLOYER_TERMS } from '@/lib/ev-consent-documents'
 import { getRequestMeta, hashEvDocument } from '@/lib/ev-share'
 import { isTestCarrierInbox, isTestSuperuserEmail, testCarrierAlias } from '@/lib/test-superuser'
@@ -17,6 +21,8 @@ import { sendSignInCode } from '@/lib/send-signin-code'
  *   - Work-email domain → company created as pending, terms recorded, magic
  *     link sent. Admin still approves before talent search unlocks.
  *   - Personal email domain → rejected. Drivers must not browse other drivers.
+ *   - Domain already on a company's allowlist → rejected (409), team admins
+ *     emailed. One company per work domain.
  *   - shareToken optional: homepage door omits it (signup_source homepage).
  */
 /** Code-only email, then the modal collects the digits. No second trip to Log in. */
@@ -31,6 +37,59 @@ async function sendCode(admin: SupabaseClient, email: string, companyName: strin
     email,
     companyName,
   })
+}
+
+interface DomainOwningCompany {
+  id: string
+  company_name: string
+  designated_owner_email: string | null
+}
+
+/** Oldest non-rejected company whose allowlist contains this domain. */
+async function findCompanyOwningDomain(
+  admin: SupabaseClient,
+  domain: string,
+): Promise<DomainOwningCompany | null> {
+  const { data } = await admin
+    .from('companies')
+    .select('id, company_name, designated_owner_email')
+    .contains('allowed_email_domains', [domain])
+    .neq('status', 'rejected')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return data ?? null
+}
+
+/** Email the owner/admins so they can add the colleague via Team → Invite. */
+async function notifyTeamAdminsOfJoinRequest(
+  admin: SupabaseClient,
+  company: DomainOwningCompany,
+  requesterName: string,
+  requesterEmail: string,
+) {
+  const { data: members } = await admin
+    .from('company_members')
+    .select('user_id')
+    .eq('company_id', company.id)
+    .eq('is_active', true)
+    .in('role', [...TEAM_ADMIN_ROLES])
+  const userIds = (members ?? []).map((m) => m.user_id as string)
+
+  const { data: users } = userIds.length
+    ? await admin.from('users').select('email').in('id', userIds)
+    : { data: [] }
+  const emails = new Set((users ?? []).map((u) => String(u.email ?? '').toLowerCase()).filter(Boolean))
+  // Pending companies have no members yet; the designated owner is the only contact.
+  if (company.designated_owner_email) emails.add(company.designated_owner_email.toLowerCase())
+
+  const sent = await sendCompanyJoinRequestNotification({
+    companyName: company.company_name,
+    teamAdminEmails: [...emails],
+    requesterName,
+    requesterEmail,
+  })
+  if (!sent.ok) console.warn('[EMPLOYER ACCESS] Join-request email not sent:', sent.error)
 }
 
 export async function POST(request: NextRequest) {
@@ -124,6 +183,22 @@ export async function POST(request: NextRequest) {
     // send a fresh code and let the same form finish sign-in.
     if (existingOwner && ownerEmail === email) {
       return sendCode(supabase, ownerEmail, existingOwner.company_name)
+    }
+
+    // A company already owns this work domain. Never mint a second one — that
+    // is how a colleague of an existing carrier ends up alone in a duplicate
+    // company. Tell them to get invited, and tell the admins they asked.
+    if (!useTestInbox && domain) {
+      const domainOwner = await findCompanyOwningDomain(supabase, domain)
+      if (domainOwner) {
+        void notifyTeamAdminsOfJoinRequest(supabase, domainOwner, name, email)
+        return NextResponse.json(
+          {
+            error: `@${domain} is already registered to ${domainOwner.company_name} on Provven. Ask your team's account owner to invite you — we've let them know you asked.`,
+          },
+          { status: 409 },
+        )
+      }
     }
 
     const { data: company, error: createError } = await supabase

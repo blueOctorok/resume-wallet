@@ -87,6 +87,72 @@ export async function sendNewCompanyNotification(
   return { ok: true }
 }
 
+// ─── Employer: Someone from your domain tried to sign up ──────────────────────
+
+export interface CompanyJoinRequestNotificationParams {
+  companyName: string
+  /** Owner + admin addresses of the company that already owns the domain. */
+  teamAdminEmails: string[]
+  requesterName: string
+  requesterEmail: string
+}
+
+/**
+ * Sent to a company's owner/admins when a colleague uses the homepage door
+ * with an email on the company's domain allowlist. We refuse to create a second
+ * company for that domain; the admins add the colleague through Team → Invite.
+ */
+export async function sendCompanyJoinRequestNotification(
+  params: CompanyJoinRequestNotificationParams
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isMessagingConfigured()) {
+    console.warn('[JOIN REQUEST] PINGRAM_API_KEY not set, skipping send')
+    return { ok: false, error: 'Email not configured' }
+  }
+  const { companyName, teamAdminEmails, requesterName, requesterEmail } = params
+  if (teamAdminEmails.length === 0) {
+    return { ok: false, error: 'No team admins to notify' }
+  }
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      Someone with a <strong>${companyName}</strong> email address tried to create a new employer account on Provven. Your company already exists, so no second account was made.
+    </p>
+    ${detailsBox(`
+      ${detailRow('Name', requesterName)}
+      ${detailRow('Email', requesterEmail)}
+    `)}
+    ${infoBox(`
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">
+        If they belong on your team, open <strong>Team</strong> in your employer hub and invite this address. If you don't recognize them, no action is needed.
+      </p>
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: `${requesterName} asked to join ${companyName}`,
+    headerEyebrow: companyName,
+    headerTitle: `${requesterName} wants to join your team`,
+    bodyHtml,
+    ctaLabel: 'Open Team settings',
+    ctaUrl: `${APP_URL}/`,
+    footerNote: `You're receiving this because you manage ${companyName} on Provven.`,
+  })
+
+  const result = await sendEmail({
+    type: 'employer_join_request',
+    to: teamAdminEmails,
+    subject: `[Provven] ${requesterName} wants to join ${companyName}`,
+    html,
+  })
+  if (!result.ok) {
+    console.error('[JOIN REQUEST] Send failed:', result.error)
+    return { ok: false, error: result.error }
+  }
+  console.log('[JOIN REQUEST] Sent. Pingram id:', result.id)
+  return { ok: true }
+}
+
 // ─── Employer: Owner Provisioning Invite ──────────────────────────────────────
 
 export interface EmployerOwnerInviteParams {

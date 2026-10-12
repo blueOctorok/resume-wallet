@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: homepage employer door created a second company for an existing domain** (2026-10-12)
+
+A Pace recruiter signed up through the homepage "carrier account" form with her `@pacedrivers.com` address and ended up as the lone owner of a brand-new "Pace Drivers" carrier company, next to the real Pace Drivers agency.
+
+**Root cause.** `/api/employer/access-request` checked whether the email was a driver, a consumer domain, or already a company's *designated owner* — but never whether an existing company already claimed the email's **domain**. `companies.allowed_email_domains` is the company boundary (migration 104) and the Team → Invite path enforces it; the self-serve signup path, written later, skipped it. Any colleague of an existing carrier who typed the company name into the homepage form got a duplicate.
+
+**Fix.** Before inserting a company, the route looks for the oldest non-rejected company whose `allowed_email_domains` contains the signup domain. If one exists it returns **409** with "@pacedrivers.com is already registered to Pace Drivers… ask your team's account owner to invite you" and emails the company's owner/admins (`sendCompanyJoinRequestNotification`) with the requester's name and address so they can invite from Team. No auto-join: a matching domain proves employment, not which role the person should have. The owner re-entry path (designated owner coming back through the homepage) runs first and is unchanged.
+
+| File | Change |
+|---|---|
+| `src/app/api/employer/access-request/route.ts` | `findCompanyOwningDomain` + `notifyTeamAdminsOfJoinRequest`; 409 instead of a duplicate company. |
+| `src/lib/send-admin-notification.ts` | `sendCompanyJoinRequestNotification` — "X wants to join your team" to owner/admins. |
+
+**Data cleanup (manual, central admin):** invite `metro@pacedrivers.com` to the real Pace Drivers first, then delete the duplicate carrier company (`78b8d3e3…`). Deleting first would leave her login with no company.
+
 ## **Signed-in footer matches the landing footer** (2026-10-12)
 
 Two misses before this landed. The first pass was a gray hairline and a ghost link that vanished on the midnight canvas. The second used `HubSectionPanel`, which read as another hub section, not a footer. It is now the landing footer's treatment: `SealDivider` (ember hairline + diamond), wordmark and small print on the left, a link row on the right — Driver survey (ember, Retro Teal check once submitted), Privacy, Terms, support email.
