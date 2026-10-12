@@ -43,6 +43,7 @@ import VerificationsTab from './tabs/VerificationsTab'
 import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
 import ToolsTab from './tabs/ToolsTab'
+import SurveysTab from './tabs/SurveysTab'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import CreateCompanyModal from './modals/CreateCompanyModal'
 
@@ -202,6 +203,7 @@ function AdminDashboardContent() {
         { id: 'mvr', label: 'MVR Orders', icon: <Car className='w-4 h-4' /> },
         { id: 'psp', label: 'PSP Orders', icon: <ShieldCheck className='w-4 h-4' /> },
         { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
+        { id: 'surveys', label: 'Surveys', icon: <ClipboardList className='w-4 h-4' /> },
         { id: 'devProjects', label: 'Projects', icon: <FolderGit2 className='w-4 h-4' /> },
       ],
     },
@@ -295,6 +297,8 @@ function AdminDashboardContent() {
         return <PspTab key={refreshKey} {...tabProps} />
       case 'verifications':
         return <VerificationsTab key={refreshKey} {...tabProps} />
+      case 'surveys':
+        return <SurveysTab key={refreshKey} {...tabProps} />
       case 'devProjects':
         return <DevProjectsTab key={refreshKey} {...tabProps} />
       case 'users':

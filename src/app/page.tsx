@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
+import AppFooter from '@/components/app/AppFooter'
 import StormBackground from '@/components/StormBackground'
 import LoadingScreen from '@/components/LoadingScreen'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
@@ -475,9 +476,12 @@ const HomeContent = () => {
                 `driver` / `developer` are legacy role labels only — both use
                 CandidateShell. DriverShell and DeveloperShell are not mounted. */}
             {user && isCandidateSurface && !isRoleLoading && (
-              <ErrorBoundary section='Candidate Hub'>
-                <CandidateShell />
-              </ErrorBoundary>
+              <>
+                <ErrorBoundary section='Candidate Hub'>
+                  <CandidateShell />
+                </ErrorBoundary>
+                <AppFooter />
+              </>
             )}
 
             {/* Role still unknown after fetch — wait, don't guess a shell */}

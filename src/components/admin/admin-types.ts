@@ -16,6 +16,7 @@ export type TabId =
   | 'bgcheckRequests'
   | 'devProjects'
   | 'verifications'
+  | 'surveys'
   | 'tools'
 
 /** Who placed a screening order (MVR / PSP). Drives FCRA isolation in the UI. */

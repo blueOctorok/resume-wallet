@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Driver survey in the app footer, reviewed in central admin** (2026-10-12)
+
+Drivers fill out the focus-group survey from `Driver_Survey_draft.pdf` inside Provven. The phone scripts in that PDF stay with the employee; the in-app form is the 14 questions. Answers are stored on the driver's login (`driver_surveys.user_id`), and central admin has a Surveys tab that shows who submitted and what they picked.
+
+The entry point is a new signed-in footer, "Outside your application", for work that is real but not part of the qualification file. It is hidden while the DOT application is open. Survey is the first item. Later non-vital items go in the same strip.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/118_driver_surveys.sql` | One row per driver. Service role only; the API checks the session. **Not applied to production.** |
+| `src/lib/driver-survey.ts` | Questions, scales, and validation. Stored values are stable keys (`easy`, `15_30`), not the label text, so a wording tweak does not rewrite old rows. |
+| `src/app/api/driver/survey/route.ts` | GET/POST for the signed-in driver. Resubmitting updates the same row and keeps the original submit time. |
+| `src/app/api/admin/surveys/route.ts` | Admin list with name and email from `user_profiles`. |
+| `src/components/app/AppFooter.tsx` | Footer link plus the survey form. |
+| `src/components/admin/tabs/SurveysTab.tsx` | Central admin review. |
+| `src/app/page.tsx` | Footer renders under the candidate shell only. |
+
 ## **DOT submit moved off server actions; old submit path was unauthenticated** (2026-10-12)
 
 A driver pressed the final Submit on the DOT application (mobile) and got "An error occurred in the Server Components render… a digest property is included". That is Next.js's production mask for a server action that threw. Submit was the only step still using server actions: `src/lib/supabase-client-db.ts` was a `'use server'` module, so `checkDuplicateApplicationHash` and `completeDriverApplicationClient` were public POST endpoints.
