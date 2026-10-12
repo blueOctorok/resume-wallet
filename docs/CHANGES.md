@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer career card: Request all on the name, Request on each section** (2026-10-12)
+
+The company view of a candidate stacked every ask into one strip labeled "Request DQ file". That name is the qualification-file ask, and it sat above the card instead of on the thing being asked for.
+
+Request all now sits on the same row as the candidate's name. It sends every ask still open: the qualification file, plus one screening ask when this company can request MVR or PSP. MVR and PSP are one consent on the server, so Request all sends that once — a second post would come back as a duplicate, and a pending ask lights the button on both rows. Accepting the file is what opens everything the driver has already finished. Screening consent is a separate step; it does not reveal an MVR or PSP that was never ordered.
+
+Each section carries its own Request. Order stays beside MVR and PSP, because that is the paid pull and it is a different action from the ask. The old Requests strip is gone. CDL stays as-is: those fields are already on the card, and there is no separate share to request.
+
+| File | Change |
+|---|---|
+| `src/components/employer/CareerCardModal.tsx` | Request all in the card header. Section actions instead of the Requests strip. Screening pending state shared across MVR, PSP, and consent. |
+| `src/components/career-card/ProjectedCareerCard.tsx` | `employerHeaderAction` and `employerSectionActions`. |
+| `src/components/career-card/sections/DotAppSection.tsx` | Request sits on the file row. Locked copy no longer says "DQ file". |
+| `src/components/career-card/sections/MvrSection.tsx` | Employer ask on the row. |
+| `src/components/career-card/sections/PspSection.tsx` | Employer ask on the row. |
+
 ## **Central admin: licenses on file** (2026-10-12)
 
 Driver license scans (`block_driver_license`) never reached central admin. Five are on file. CDL credentials on the user popup only showed number and state, even though class, expiration, endorsements, and restrictions were already in the response.

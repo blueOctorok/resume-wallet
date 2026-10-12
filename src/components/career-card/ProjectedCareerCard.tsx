@@ -96,6 +96,10 @@ interface ProjectedCareerCardProps {
   sessionUserId?: string
   /** Employer mode. True when this company may open the full DOT application. */
   employerCanViewDotApp?: boolean
+  /** Employer talent modal: sits on the same row as the candidate's name. */
+  employerHeaderAction?: ReactNode
+  /** Employer talent modal: request control for a section, keyed by block type. */
+  employerSectionActions?: Record<string, ReactNode>
   /** Employer talent modal: recruit / messaging row below sections */
   footerSlot?: ReactNode
   /**
@@ -174,6 +178,8 @@ export default function ProjectedCareerCard({
   onConnect,
   sessionUserId,
   employerCanViewDotApp,
+  employerHeaderAction,
+  employerSectionActions,
   footerSlot,
   ghostSections,
   onGhostAction,
@@ -363,14 +369,19 @@ export default function ProjectedCareerCard({
                   />
                 </button>
               ) : (
-                <h1
-                  className={cn(
-                    'font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
-                    isDark ? 'text-white' : 'text-[#173150]',
-                  )}
-                >
-                  {data.name}
-                </h1>
+                <div className='flex items-center justify-between gap-3'>
+                  <h1
+                    className={cn(
+                      'min-w-0 font-display text-2xl sm:text-3xl font-semibold tracking-tight truncate',
+                      isDark ? 'text-white' : 'text-[#173150]',
+                    )}
+                  >
+                    {data.name}
+                  </h1>
+                  {mode === 'employer' && employerHeaderAction ? (
+                    <div className='shrink-0'>{employerHeaderAction}</div>
+                  ) : null}
+                </div>
               )}
               {data.occupation && (
                 <p className={cn('text-sm font-medium mt-0.5', isDark ? 'text-teal-300' : 'text-ironside')}>
@@ -475,6 +486,7 @@ export default function ProjectedCareerCard({
                 userId={data.userId}
                 sessionUserId={sessionUserId}
                 employerCanViewDotApp={employerCanViewDotApp}
+                employerAction={employerSectionActions?.[section.blockType]}
                 shareToken={data.shareToken}
                 onAction={
                   allowNav && onNavigateToBlock
@@ -794,6 +806,7 @@ function SectionRenderer({
   userId,
   sessionUserId,
   employerCanViewDotApp,
+  employerAction,
   shareToken,
 }: {
   section: CareerCardSection
@@ -803,6 +816,7 @@ function SectionRenderer({
   userId?: string
   sessionUserId?: string
   employerCanViewDotApp?: boolean
+  employerAction?: ReactNode
   shareToken?: string | null
 }) {
   switch (section.blockType as SectionBlockType) {
@@ -829,6 +843,7 @@ function SectionRenderer({
           userId={userId}
           sessionUserId={sessionUserId}
           employerCanViewFull={employerCanViewDotApp}
+          employerAction={employerAction}
         />
       )
     case 'driver-screening-consent':
@@ -848,6 +863,7 @@ function SectionRenderer({
           isDark={isDark}
           sessionUserId={sessionUserId}
           onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
+          employerAction={employerAction}
         />
       )
     case 'driver-psp':
@@ -858,6 +874,7 @@ function SectionRenderer({
           isDark={isDark}
           sessionUserId={sessionUserId}
           onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
+          employerAction={employerAction}
         />
       )
     case 'driver-cdl-credentials':

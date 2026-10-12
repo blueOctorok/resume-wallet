@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ClipboardList, Clock, Upload } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,8 @@ interface DotAppSectionProps {
    * has accepted their request. Omitted for the driver's own card.
    */
   employerCanViewFull?: boolean
+  /** Employer mode: ask sitting on this row. */
+  employerAction?: ReactNode
 }
 
 export default function DotAppSection({
@@ -35,6 +37,7 @@ export default function DotAppSection({
   userId,
   sessionUserId,
   employerCanViewFull,
+  employerAction,
 }: DotAppSectionProps) {
   const setShowPrefillUpload = useDotApplicationStore((s) => s.setShowPrefillUpload)
   const isEmpty = !data.id || data.status === 'empty'
@@ -132,28 +135,33 @@ export default function DotAppSection({
                     : ''}
                 </p>
               </div>
-              {showAction && (
-                <div className='flex shrink-0 flex-wrap items-center gap-1.5'>
-                  {!isComplete && isCareerCardOwnerMode(mode) && onAction ? (
-                    <Button type='button' variant='secondary' size='sm' onClick={openPrefillUpload}>
-                      <Upload className='h-3.5 w-3.5' aria-hidden />
-                      Upload resume
-                    </Button>
+              {(showAction || employerAction) && (
+                <div className='flex shrink-0 flex-wrap items-center justify-end gap-1.5'>
+                  {employerAction}
+                  {showAction ? (
+                    <>
+                      {!isComplete && isCareerCardOwnerMode(mode) && onAction ? (
+                        <Button type='button' variant='secondary' size='sm' onClick={openPrefillUpload}>
+                          <Upload className='h-3.5 w-3.5' aria-hidden />
+                          Upload resume
+                        </Button>
+                      ) : null}
+                      <Button
+                        type='button'
+                        variant={isComplete ? 'secondary' : 'primary'}
+                        size='sm'
+                        onClick={handleAction}
+                      >
+                        {isComplete ? 'View' : 'Continue'}
+                      </Button>
+                    </>
                   ) : null}
-                  <Button
-                    type='button'
-                    variant={isComplete ? 'secondary' : 'primary'}
-                    size='sm'
-                    onClick={handleAction}
-                  >
-                    {isComplete ? 'View' : 'Continue'}
-                  </Button>
                 </div>
               )}
             </div>
             {employerLocked && (
               <p className={cn('mt-2 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Request the DQ file to open it. This summary is what you can see until they share.
+                Request this file to open it. This summary is what you can see until they share.
               </p>
             )}
             {coverage && (

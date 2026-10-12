@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { FileWarning, Clock, Loader2 } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
@@ -37,6 +37,8 @@ interface PspSectionProps {
   isDark: boolean
   onNavigateToOrder?: () => void
   sessionUserId?: string | null
+  /** Employer mode: ask sitting on this row. */
+  employerAction?: ReactNode
 }
 
 export default function PspSection({
@@ -45,6 +47,7 @@ export default function PspSection({
   isDark,
   onNavigateToOrder,
   sessionUserId,
+  employerAction,
 }: PspSectionProps) {
   const [open, setOpen] = useState(false)
 
@@ -107,10 +110,15 @@ export default function PspSection({
             </span>
           ) : null}
         </div>
-        {showSelfButton && (
-          <Button type="button" variant={isComplete ? 'secondary' : 'primary'} size="sm" onClick={handlePrimary}>
-            {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
-          </Button>
+        {(showSelfButton || employerAction) && (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            {employerAction}
+            {showSelfButton && (
+              <Button type="button" variant={isComplete ? 'secondary' : 'primary'} size="sm" onClick={handlePrimary}>
+                {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

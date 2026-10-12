@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Car, Clock, Loader2 } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
@@ -37,6 +37,8 @@ interface MvrSectionProps {
   isDark: boolean
   onNavigateToOrder?: () => void
   sessionUserId?: string | null
+  /** Employer mode: ask sitting on this row. */
+  employerAction?: ReactNode
 }
 
 export default function MvrSection({
@@ -45,6 +47,7 @@ export default function MvrSection({
   isDark,
   onNavigateToOrder,
   sessionUserId,
+  employerAction,
 }: MvrSectionProps) {
   const [showMvrViewer, setShowMvrViewer] = useState(false)
 
@@ -109,15 +112,20 @@ export default function MvrSection({
             </span>
           ) : null}
         </div>
-        {showSelfButton && (
-          <Button
-            type='button'
-            variant={isComplete ? 'secondary' : 'primary'}
-            size='sm'
-            onClick={handlePrimaryClick}
-          >
-            {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
-          </Button>
+        {(showSelfButton || employerAction) && (
+          <div className='flex shrink-0 flex-wrap items-center justify-end gap-1.5'>
+            {employerAction}
+            {showSelfButton && (
+              <Button
+                type='button'
+                variant={isComplete ? 'secondary' : 'primary'}
+                size='sm'
+                onClick={handlePrimaryClick}
+              >
+                {isComplete ? 'View' : pending ? 'Continue' : 'Order'}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

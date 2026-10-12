@@ -26,7 +26,7 @@ import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import EvShareRequestSection from '@/components/employer/EvShareRequestSection'
 import { useUIStore } from '@/stores'
-import { getRequestableBlocks, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
+import { getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import type { EmployerCredentialFact } from '@/lib/employer-credential-facts'
 
@@ -63,6 +63,20 @@ interface EmployerTalentExtras {
   hasRelationship?: boolean
   /** Agency, or this driver already accepted a DQ-file share. */
   canViewDotApplication?: boolean
+}
+
+const SCREENING_REQUEST_BLOCKS = ['driver-mvr', 'driver-psp', 'driver-screening-consent']
+
+function isScreeningRequestBlock(blockType: string): boolean {
+  return SCREENING_REQUEST_BLOCKS.includes(blockType)
+}
+
+function isScreeningPipelineRequest(request: PendingCandidateRequest): boolean {
+  if (request.request_type === 'mvr_order' || request.request_type === 'psp_order') return true
+  return (
+    request.request_type === 'block_request' &&
+    isScreeningRequestBlock(request.target_block_type ?? '')
+  )
 }
 
 interface CareerCardModalProps {
@@ -257,15 +271,10 @@ export default function CareerCardModal({
         (r.target_block_type === 'storm-resume' ||
           (r.request_type === 'document_upload' && r.document_type === 'resume'))) ||
       (blockType === 'driver-resume' && r.request_type === 'document_upload' && r.document_type === 'resume') ||
-      (blockType === 'driver-mvr' &&
-        (r.request_type === 'mvr_order' ||
-          (r.request_type === 'block_request' && r.target_block_type === 'driver-mvr'))) ||
-      (blockType === 'driver-psp' &&
-        (r.request_type === 'psp_order' ||
-          (r.request_type === 'block_request' && r.target_block_type === 'driver-psp'))) ||
-      (blockType === 'driver-screening-consent' &&
-        r.request_type === 'block_request' &&
-        r.target_block_type === 'driver-screening-consent') ||
+      // MVR, PSP, and screening consent are one pipeline on the server
+      // (every one of them is stored as a screening-consent request). A pending
+      // ask from any of them has to light up all three, or the second click 409s.
+      (isScreeningRequestBlock(blockType) && isScreeningPipelineRequest(r)) ||
       (blockType === 'driver-dot-application' && r.request_type === 'profile_completion')
     ) || null
 
@@ -378,8 +387,6 @@ export default function CareerCardModal({
   // Every block with employerRequestable: true gets a "Request {label}" button
   // automatically. No manual wiring needed when a new block is added.
 
-  const requestableBlocks = getRequestableBlocks()
-
   /** Build an action node for a requestable block — returns null if not applicable */
   const buildBlockAction = (blockId: string): ReactNode => {
     const def = getBlockDefinition(blockId)
@@ -410,7 +417,7 @@ export default function CareerCardModal({
 
     const actionButton = (
       <ActionButton
-        label={`Request ${def.requestLabel}`}
+        label="Request"
         loading={requestLoading === blockId}
         resendLoading={resendLoading === blockId}
         isPending={!!pending}
@@ -561,15 +568,85 @@ export default function CareerCardModal({
     </>
   )
 
-  const requestActionNodes =
-    card && employerExtras
-      ? requestableBlocks
-          .map((block) => {
-            const node = buildBlockAction(block.id)
-            return node ? <span key={block.id}>{node}</span> : null
-          })
-          .filter(Boolean)
-      : []
+  // Row buttons live on the section they ask for. Screening consent has no
+  // card section, so it rides on MVR (then PSP) when those rows have no ask of their own.
+  const employerSectionActions: Record<string, ReactNode> = {}
+  if (card && employerExtras) {
+    const dotAction = buildBlockAction('driver-dot-application')
+    const mvrAction = buildBlockAction('driver-mvr')
+    const pspAction = buildBlockAction('driver-psp')
+    const consentAction =
+      !mvrAction && !pspAction ? buildBlockAction('driver-screening-consent') : null
+    if (dotAction) employerSectionActions['driver-dot-application'] = dotAction
+    if (mvrAction) employerSectionActions['driver-mvr'] = mvrAction
+    else if (consentAction) employerSectionActions['driver-mvr'] = consentAction
+    if (pspAction) employerSectionActions['driver-psp'] = pspAction
+  }
+
+  const shareAskOpen = Boolean(employerSectionActions['driver-dot-application']) &&
+    !getPendingRequestForBlock('driver-dot-application')
+  const screeningAskOpen =
+    Boolean(employerSectionActions['driver-mvr'] || employerSectionActions['driver-psp']) &&
+    !getPendingRequestForBlock('driver-mvr')
+  const shareAskPending =
+    Boolean(employerSectionActions['driver-dot-application']) &&
+    Boolean(getPendingRequestForBlock('driver-dot-application'))
+  const screeningAskPending =
+    Boolean(employerSectionActions['driver-mvr'] || employerSectionActions['driver-psp']) &&
+    Boolean(getPendingRequestForBlock('driver-mvr'))
+  const requestAllOpen = shareAskOpen || screeningAskOpen
+  const requestAllPending = !requestAllOpen && (shareAskPending || screeningAskPending)
+
+  const requestAll = async () => {
+    // One screening post covers MVR and PSP. The server stores both as the
+    // same consent request, so a second post would come back as a duplicate.
+    const screeningBlock = employerSectionActions['driver-mvr']
+      ? 'driver-mvr'
+      : 'driver-psp'
+    const blockTypes = [
+      shareAskOpen ? 'driver-dot-application' : null,
+      screeningAskOpen ? screeningBlock : null,
+    ].filter((id): id is string => Boolean(id))
+    if (blockTypes.length === 0) return
+    try {
+      setRequestLoading('all')
+      for (const blockType of blockTypes) {
+        const response = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildEmployerRequestBody(blockType)),
+        })
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Failed to create request')
+        }
+      }
+      await fetchCareerCard()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create request')
+    } finally {
+      setRequestLoading(null)
+    }
+  }
+
+  const requestAllButton = requestAllOpen ? (
+    <Button
+      type="button"
+      variant="primary"
+      size="sm"
+      isLoading={requestLoading === 'all'}
+      onClick={() => { void requestAll() }}
+      title="Ask for everything this company can request. When they accept the file, you see what they've already finished."
+    >
+      <Send className="h-3.5 w-3.5" aria-hidden />
+      Request all
+    </Button>
+  ) : requestAllPending ? (
+    <span className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-50 px-3 py-1.5 text-sm font-medium text-yellow-800">
+      <Clock className="h-3.5 w-3.5" aria-hidden />
+      Requested
+    </span>
+  ) : null
 
   // ── Modal shell ───────────────────────────────────────────────────────────
 
@@ -634,14 +711,6 @@ export default function CareerCardModal({
         )}
         {!loading && !error && card && employerExtras && (
           <>
-            {requestActionNodes.length > 0 && (
-              <div className="mb-4 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider mb-2 text-ironside">
-                  Requests
-                </p>
-                <div className="flex flex-wrap items-center gap-2">{requestActionNodes}</div>
-              </div>
-            )}
             <div className="mb-4">
               <CredentialFactsPanel facts={verifiedFacts} theme="light" />
             </div>
@@ -696,6 +765,8 @@ export default function CareerCardModal({
               mode="employer"
               sessionUserId={sessionUserId}
               employerCanViewDotApp={employerExtras?.canViewDotApplication === true}
+              employerHeaderAction={requestAllButton}
+              employerSectionActions={employerSectionActions}
               footerSlot={footerActions}
               demoteEmployerScreeningDetails
               onEmployerViewCompanyMvr={
