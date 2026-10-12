@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Central admin: drop the wallet-reset key, checkbox to delete** (2026-10-12)
+
+`ADMIN_API_KEY` only unlocked the Tools tab's "reset wallet" form, a leftover from when identity was a wallet address. Deleting a person already goes through the signed-in admin session (`ADMIN_EMAILS` → `requireAdmin`). The key, the route, and the Tools tab are gone.
+
+Delete confirm no longer asks you to type `DELETE`. The same modal (users, resumes, DOT apps, and the rest) has a checkbox; Delete stays disabled until it is checked. The box resets when the target changes so a previous confirm cannot apply to the next row.
+
+| File | Change |
+|---|---|
+| `src/app/api/admin/reset-wallet/route.ts` | Deleted. |
+| `src/components/admin/AdminResetWallet.tsx`, `tabs/ToolsTab.tsx` | Deleted. Tools removed from the sidebar. |
+| `src/components/admin/modals/DeleteConfirmModal.tsx` | Checkbox instead of the typed confirm. |
+| `.env.local`, `VERCEL_ENV_CHECKLIST.md`, `docs/SECURITY_ROTATION_CHECKLIST.md` | `ADMIN_API_KEY` removed. Delete it from Vercel too. |
+
 ## **Fix: homepage employer door created a second company for an existing domain** (2026-10-12)
 
 A Pace recruiter signed up through the homepage "carrier account" form with her `@pacedrivers.com` address and ended up as the lone owner of a brand-new "Pace Drivers" carrier company, next to the real Pace Drivers agency.

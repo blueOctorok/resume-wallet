@@ -1,9 +1,10 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import React, { useState } from 'react'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import type { DeleteTarget } from '@/components/admin/admin-types'
 
 interface DeleteConfirmModalProps {
@@ -23,12 +24,18 @@ export default function DeleteConfirmModal({
   deleting,
   error,
 }: DeleteConfirmModalProps) {
-  const [confirmText, setConfirmText] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+
+  // The modal stays mounted between deletes, so a checked box from the last
+  // target must not carry over to the next one.
+  useEffect(() => {
+    setConfirmed(false)
+  }, [target?.type, target?.id])
 
   if (!target) return null
 
   const handleClose = () => {
-    setConfirmText('')
+    setConfirmed(false)
     onClose()
   }
 
@@ -55,53 +62,38 @@ export default function DeleteConfirmModal({
           Are you sure you want to delete <strong>{target.name}</strong>? This
           action cannot be undone.
         </p>
-        <div className='mb-4'>
-          <label
-            className={`block text-sm mb-1 ${
-              isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'
-            }`}
-          >
-            Type DELETE to confirm
-          </label>
+        <label
+          className={`mb-4 flex items-start gap-3 text-sm cursor-pointer ${
+            isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
+          }`}
+        >
           <input
-            type='text'
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${
-              isDarkTheme(theme)
-                ? 'bg-gray-800 border-gray-700 text-white'
-                : 'bg-white border-gray-300 text-gray-900'
-            } focus:outline-none focus:ring-2 focus:ring-red-500`}
-            placeholder='DELETE'
+            type='checkbox'
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            disabled={deleting}
+            className='mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500'
           />
-        </div>
+          <span>Yes, permanently delete this.</span>
+        </label>
         {error && (
           <p className='mb-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2'>
             {error}
           </p>
         )}
         <div className='flex gap-3'>
-          <button
-            onClick={handleClose}
-            className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-              isDarkTheme(theme)
-                ? 'bg-gray-700 text-white hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
+          <Button variant='secondary' className='flex-1' onClick={handleClose} disabled={deleting}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant='danger'
+            className='flex-1'
             onClick={onConfirm}
-            disabled={confirmText !== 'DELETE' || deleting}
-            className='flex-1 px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed'
+            disabled={!confirmed}
+            isLoading={deleting}
           >
-            {deleting ? (
-              <Loader2 className='w-4 h-4 animate-spin mx-auto' />
-            ) : (
-              'Delete'
-            )}
-          </button>
+            Delete
+          </Button>
         </div>
       </div>
     </Modal>

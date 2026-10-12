@@ -16,7 +16,6 @@ NEXT_PUBLIC_APP_URL=               # Production: https://provven.com (no trailin
 SUPABASE_SERVICE_ROLE_KEY=
 AVA_BRAIN=                         # Anthropic API key for the AI assistant
 ADMIN_EMAILS=                      # Comma-separated admin emails (replaces ADMIN_WALLETS)
-ADMIN_API_KEY=                     # Legacy admin routes (reset-wallet, etc.)
 CRON_SECRET=                       # Reconcile-screenings cron
 PINGRAM_API_KEY=                   # Pingram secret key (pingram_sk_...) — email + SMS
 PINGRAM_FROM_EMAIL=                # e.g. provven@verify.provven.com — MUST be a Pingram-verified domain
@@ -50,6 +49,7 @@ Stripe setup: Dashboard → Products → create "MVR (self-order)" with a one-ti
 ## Removed — delete from Vercel if still present
 
 ```
+ADMIN_API_KEY                     # Was the wallet-reset tool. Admin is ADMIN_EMAILS + session now.
 RESEND_API_KEY
 RESEND_FROM_EMAIL
 NEXT_PUBLIC_ALCHEMY_API_KEY
@@ -123,7 +123,7 @@ Do these in order. Steps 1–3 bring the site up on the new domain; 4–7 stop a
 ## Security Notes
 
 - **SUPABASE_SERVICE_ROLE_KEY**: Full database access — very sensitive
-- **ADMIN_API_KEY**: Protects legacy admin routes — use a strong random value
+- **ADMIN_EMAILS**: Who can open central admin. A shared API key is not used.
 - **ACCIO_***: CRA screening credentials — treat as production secrets
 
 ## After Changing Variables

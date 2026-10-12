@@ -41,14 +41,6 @@
     3. Update Vercel environment variables
     4. Revoke old key
 
-- [ ] `ADMIN_API_KEY` - Admin authentication key
-  - **Action**: Generate new secure random key
-  - **Steps**:
-    1. Generate new key (e.g., `openssl rand -hex 32`)
-    2. Update `.env.local`
-    3. Update Vercel environment variables
-    4. Update any scripts/tools using this key
-
 #### API Keys
 - [ ] `T_BACKEND_API_KEY` - AI service API key
   - **Action**: Request new key from T Backend team

@@ -10,7 +10,6 @@ import {
   ClipboardList,
   ClipboardCheck,
   UserCircle,
-  Settings,
   Search,
   RefreshCw,
   AlertTriangle,
@@ -42,7 +41,6 @@ import PspTab from './tabs/PspTab'
 import VerificationsTab from './tabs/VerificationsTab'
 import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
-import ToolsTab from './tabs/ToolsTab'
 import SurveysTab from './tabs/SurveysTab'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import CreateCompanyModal from './modals/CreateCompanyModal'
@@ -127,7 +125,7 @@ function AdminDashboardContent() {
     }
   }, [sessionUserId])
 
-  // Handle delete — supports force-delete for admin wallets (prompts confirmation)
+  // Shared delete for every admin tab. The modal's checkbox is the confirm.
   const handleDelete = async () => {
     if (!deleteTarget || !sessionUserId) return
 
@@ -212,7 +210,6 @@ function AdminDashboardContent() {
       label: 'System',
       tabs: [
         { id: 'users', label: 'All Users', icon: <Users className='w-4 h-4' /> },
-        { id: 'tools', label: 'Tools', icon: <Settings className='w-4 h-4' /> },
       ],
     },
   ]
@@ -303,8 +300,6 @@ function AdminDashboardContent() {
         return <DevProjectsTab key={refreshKey} {...tabProps} />
       case 'users':
         return <UsersTab key={refreshKey} {...tabProps} />
-      case 'tools':
-        return <ToolsTab theme={adminUiTheme} sessionUserId={sessionUserId || ''} />
       default:
         return null
     }
@@ -379,48 +374,46 @@ function AdminDashboardContent() {
           </div>
 
           {/* Search & Refresh */}
-          {activeTab !== 'tools' && (
-            <div className='flex flex-col sm:flex-row gap-3'>
-              <div className='relative flex-1'>
-                <Search
-                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                    isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
-                  }`}
-                />
-                <input
-                  type='text'
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                  placeholder='Search...'
-                  className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                    isDarkTheme(theme)
-                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  } focus:outline-none focus:ring-2 focus:ring-teal-500`}
-                />
-              </div>
-              <button
-                onClick={() => setRefreshKey((k) => k + 1)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  isDarkTheme(theme)
-                    ? 'bg-gray-700 text-white hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          <div className='flex flex-col sm:flex-row gap-3'>
+            <div className='relative flex-1'>
+              <Search
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                  isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'
                 }`}
-              >
-                <RefreshCw className='w-4 h-4' />
-                Refresh
-              </button>
+              />
+              <input
+                type='text'
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1)
+                }}
+                placeholder='Search...'
+                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+                  isDarkTheme(theme)
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:outline-none focus:ring-2 focus:ring-teal-500`}
+              />
             </div>
-          )}
+            <button
+              onClick={() => setRefreshKey((k) => k + 1)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                isDarkTheme(theme)
+                  ? 'bg-gray-700 text-white hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <RefreshCw className='w-4 h-4' />
+              Refresh
+            </button>
+          </div>
 
           {/* Tab Content */}
           <div className={cardClass}>{renderActiveTab()}</div>
 
           {/* Pagination */}
-          {activeTab !== 'tools' && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className='flex items-center justify-between'>
               <p className={`text-sm ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                 Page {currentPage} of {totalPages} ({totalCount} total)
