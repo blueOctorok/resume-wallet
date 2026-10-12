@@ -4,6 +4,10 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Signed-in footer matches the landing footer** (2026-10-12)
+
+Two misses before this landed. The first pass was a gray hairline and a ghost link that vanished on the midnight canvas. The second used `HubSectionPanel`, which read as another hub section, not a footer. It is now the landing footer's treatment: `SealDivider` (ember hairline + diamond), wordmark and small print on the left, a link row on the right — Driver survey (ember, Retro Teal check once submitted), Privacy, Terms, support email.
+
 ## **Driver survey in the app footer, reviewed in central admin** (2026-10-12)
 
 Drivers fill out the focus-group survey from `Driver_Survey_draft.pdf` inside Provven. The phone scripts in that PDF stay with the employee; the in-app form is the 14 questions. Answers are stored on the driver's login (`driver_surveys.user_id`), and central admin has a Surveys tab that shows who submitted and what they picked.

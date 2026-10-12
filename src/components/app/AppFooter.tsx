@@ -1,9 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
-import { ClipboardList } from 'lucide-react'
+import Link from 'next/link'
+import { ClipboardList, CheckCircle } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
+import { SealDivider, mutedText } from '@/components/landing/landing-shared'
+import { SITE_LEGAL } from '@/lib/site-legal'
+import { useTheme } from '@/contexts/ThemeContext'
+import { isDarkTheme } from '@/lib/theme-storage'
 import { useCurrentPage } from '@/stores/ui-store'
 import { useDriverSurveyStore } from '@/stores/driver-survey-store'
 import {
@@ -221,10 +227,13 @@ function SurveyForm() {
 }
 
 /**
- * Signed-in footer for work that is real but not part of the qualification file.
- * Hidden during the DOT application so it does not sit inside that flow.
+ * Signed-in footer. Same heritage treatment as the landing footer (gold
+ * hairline, wordmark, small print) plus a link row for work that is real but
+ * not part of the qualification file. Hidden during the DOT application.
  */
 export default function AppFooter() {
+  const { theme } = useTheme()
+  const isDark = isDarkTheme(theme)
   const currentPage = useCurrentPage()
   const load = useDriverSurveyStore((state) => state.load)
   const open = useDriverSurveyStore((state) => state.open)
@@ -240,17 +249,41 @@ export default function AppFooter() {
 
   return (
     <>
-      <footer className='mt-10 border-t border-gray-200 pt-4 dark:border-gray-700'>
-        <p className='text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400'>
-          Outside your application
-        </p>
-        <Button variant='ghost' size='sm' className='mt-1 -ml-3' onClick={open}>
-          <ClipboardList className='mr-1.5 h-4 w-4' />
-          Driver survey
-          {submittedAt && (
-            <span className='ml-2 text-xs text-gray-500 dark:text-gray-400'>Submitted</span>
-          )}
-        </Button>
+      <footer className='mt-16 pb-10'>
+        <SealDivider isDark={isDark} className='mb-6' />
+        <div
+          className={`flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left ${mutedText(isDark)}`}
+        >
+          <div className='flex flex-col items-center gap-1 sm:items-start'>
+            <p className='text-base'>
+              <ProvvenWordmark tone='auto' isDark={isDark} />
+            </p>
+            <p className='text-[11px]'>
+              © {new Date().getFullYear()} Provven · The career card you own · Built on Midnight
+            </p>
+          </div>
+
+          <nav className='flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs'>
+            <button
+              type='button'
+              onClick={open}
+              className='inline-flex items-center gap-1.5 text-ember underline-offset-2 hover:underline'
+            >
+              <ClipboardList className='h-3.5 w-3.5' />
+              Driver survey
+              {submittedAt && <CheckCircle className='h-3.5 w-3.5 text-retro-teal' aria-label='Submitted' />}
+            </button>
+            <Link href='/privacy' className='underline-offset-2 hover:underline'>
+              Privacy Policy
+            </Link>
+            <Link href='/terms' className='underline-offset-2 hover:underline'>
+              Terms of Service
+            </Link>
+            <a href={`mailto:${SITE_LEGAL.contactEmail}`} className='underline-offset-2 hover:underline'>
+              {SITE_LEGAL.contactEmail}
+            </a>
+          </nav>
+        </div>
       </footer>
       {isOpen && <SurveyForm />}
     </>
