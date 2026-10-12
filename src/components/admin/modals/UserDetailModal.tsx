@@ -134,6 +134,22 @@ export default function UserDetailModal({
                         {user.profile.cdl_state || '-'}
                       </div>
                       <div>
+                        <span className='opacity-60'>Class:</span>{' '}
+                        {user.profile.cdl_class || '-'}
+                      </div>
+                      <div>
+                        <span className='opacity-60'>Expires:</span>{' '}
+                        {user.profile.cdl_expiration || '-'}
+                      </div>
+                      <div>
+                        <span className='opacity-60'>Endorsements:</span>{' '}
+                        {user.profile.endorsements?.length ? user.profile.endorsements.join(', ') : '-'}
+                      </div>
+                      <div>
+                        <span className='opacity-60'>Restrictions:</span>{' '}
+                        {user.profile.restrictions?.length ? user.profile.restrictions.join(', ') : '-'}
+                      </div>
+                      <div>
                         <span className='opacity-60'>Phone:</span>{' '}
                         {user.profile.phone || '-'}
                       </div>
@@ -146,6 +162,39 @@ export default function UserDetailModal({
                           : '-'}
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {user.license && (
+                <div className='mb-6'>
+                  <div className='flex items-center justify-between mb-3'>
+                    <h4 className={`font-semibold ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
+                      License on file
+                    </h4>
+                    <button
+                      onClick={() =>
+                        handleDeleteAndClose({
+                          type: 'license',
+                          id: user.license!.userId,
+                          name: `${user.user.displayName || 'this driver'}'s license`,
+                        })
+                      }
+                      className='text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+                    >
+                      Delete license
+                    </button>
+                  </div>
+                  <div className={`p-4 rounded-lg text-sm ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                    <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                      <div><span className='opacity-60'>Number:</span> {user.license.licenseNumber || '-'}</div>
+                      <div><span className='opacity-60'>State:</span> {user.license.state || '-'}</div>
+                      <div><span className='opacity-60'>Class:</span> {user.license.licenseClass || '-'}</div>
+                      <div><span className='opacity-60'>Expires:</span> {user.license.expirationDate || '-'}</div>
+                    </div>
+                    <p className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Photos and the full barcode read are on the Licenses tab.
+                    </p>
                   </div>
                 </div>
               )}

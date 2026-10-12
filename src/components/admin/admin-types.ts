@@ -16,6 +16,7 @@ export type TabId =
   | 'devProjects'
   | 'verifications'
   | 'surveys'
+  | 'licenses'
 
 /** Who placed a screening order (MVR / PSP). Drives FCRA isolation in the UI. */
 export type ScreeningOrderedBy =
@@ -205,6 +206,7 @@ export interface UserDetail {
   devProjects: DevProject[]
   resumes: Resume[]
   dotApps: DotApp[]
+  license: AdminLicense | null
 }
 
 export interface DotApp {
@@ -284,6 +286,29 @@ export interface VerificationRow {
   createdAt: string
 }
 
+/** A driver license kept on file (photos + barcode read). Not a DMV record. */
+export interface AdminLicense {
+  userId: string
+  name: string | null
+  email: string | null
+  status: 'empty' | 'in-progress' | 'complete'
+  barcodeStatus: 'unread' | 'read' | 'failed'
+  licenseNumber: string | null
+  state: string | null
+  licenseClass: string | null
+  expirationDate: string | null
+  endorsements: string[]
+  restrictions: string[]
+  dateOfBirth: string | null
+  address: string | null
+  confirmedAt: string | null
+  updatedAt: string
+  hasFront: boolean
+  hasBack: boolean
+  frontUrl?: string | null
+  backUrl?: string | null
+}
+
 export interface Profile {
   id: string
   user_id: string
@@ -293,6 +318,10 @@ export interface Profile {
   phone: string | null
   cdl_number: string | null
   cdl_state: string | null
+  cdl_class?: string | null
+  cdl_expiration?: string | null
+  endorsements?: string[]
+  restrictions?: string[]
   last_updated_from: string | null
   updated_at: string
   sessionUserId: string

@@ -107,6 +107,7 @@ export default function CandidatesTab({
             devProjects: data.devProjects || [],
             resumes: data.resumes || [],
             dotApps: data.dotApps || [],
+            license: data.license ?? null,
           })
         }
       } catch (err) {

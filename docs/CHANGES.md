@@ -4,6 +4,35 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Central admin: licenses on file** (2026-10-12)
+
+Driver license scans (`block_driver_license`) never reached central admin. Five are on file. CDL credentials on the user popup only showed number and state, even though class, expiration, endorsements, and restrictions were already in the response.
+
+Candidates → Licenses lists every scan: driver, number, state, class, expiration, and whether the driver confirmed it. View opens the barcode fields and the front and back photos. Delete removes the scan and its photos. It does not clear CDL credentials the driver saved separately. The same summary is on the user popup.
+
+| File | Change |
+|---|---|
+| `src/lib/admin-license.ts` | List, one-record (signed photos), and delete. |
+| `src/app/api/admin/licenses/` | GET list, GET one, DELETE. |
+| `src/components/admin/tabs/LicensesTab.tsx` | New tab. |
+| `src/app/api/admin/users/[id]/route.ts`, user popup | License summary plus the rest of the CDL fields. |
+
+## **Fix: team invite said "Invalid or expired" to a person who had just been added** (2026-10-12)
+
+Metro was invited to Pace Drivers as `metro@pacedrivers.com`, clicked Accept in the email, entered her sign-in code, and the invite page told her the invitation was invalid. Her `company_members` row shows `accepted_at` half a second after her `users` row was created — she was on the team before she ever saw the Accept button.
+
+**Root cause.** Two things accept a team invite. `/api/auth/sync` runs on every new session (it is in the root layout) and, for a user with no role yet, `resolveEmployerLink` finds the pending invite by verified email and accepts it. That is correct. But the invite page then sends the user back to `/invite/[token]`, whose POST looked for the row with `accepted_at IS NULL` and returned 404 when it was gone. If the page's GET ran after sync instead, it returned 410 under an "Invalid Invitation" heading. Both told a new teammate that a successful join had failed. Same pattern for every person added since sync started accepting invites.
+
+**Fix.** `/api/employer/team/accept-invite` is now idempotent. GET and POST load the row by token with no `accepted_at` filter. Accepted by the session user → success (`acceptedByYou` / `alreadyAccepted`), display name still recorded. Accepted by a different account → 409/410 with a message that says so. POST also bootstraps the `users` row itself (`ensureUserRow`) instead of 404ing if sync has not landed yet. The page heading and button read "You're on the team" / "Continue to {company}" in that case. The invite email no longer says "sign in with your wallet"; it names the address the invite went to.
+
+| File | Change |
+|---|---|
+| `src/app/api/employer/team/accept-invite/route.ts` | Session-aware GET; idempotent POST; `ensureUserRow`; shared `finalizeUser`. |
+| `src/app/invite/[token]/page.tsx` | `acceptedByYou` copy. |
+| `src/lib/send-team-invite-email.ts` | Sign-in instruction names the invited address. |
+
+Metro's account needs nothing — she is a Pace recruiter. She can sign in at provven.com with `metro@pacedrivers.com`.
+
 ## **Central admin: remove the Access Requests archive** (2026-10-12)
 
 The Access Requests tab listed `employer_access_requests`, the old self-serve queue. Approving those rows was already removed. Live signups write a pending `companies` row, which the Companies tab approves. The table currently holds three `auto_approved` rows from May 2026 and zero pending ones, so the tab and the employer-hub "waiting for approval" screen were both unreachable.

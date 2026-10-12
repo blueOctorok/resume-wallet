@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
 import { deleteAuthUser } from '@/lib/delete-auth-user'
+import { getAdminLicense } from '@/lib/admin-license'
 import {
   getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation,
   getDevGithub, getDevPortfolio, getDevProfile,
@@ -39,7 +40,7 @@ export async function GET(
       userProfile,
       cdl, employment, mvr, skills, education,
       devGithub, devPortfolio, devProfileData,
-      devProjects, resumes, dotApps, mvrOrders,
+      devProjects, resumes, dotApps, mvrOrders, license,
     ] = await Promise.all([
       supabase.from('user_profiles').select('*').eq('user_id', id).maybeSingle().then(r => r.data),
       getCdlData(supabase, id),
@@ -62,6 +63,7 @@ export async function GET(
       supabase.from('mvr_orders')
         .select('id, status, dl_state, created_at')
         .eq('driver_user_id', id).order('created_at', { ascending: false }).then(r => r.data),
+      getAdminLicense(supabase, id),
     ])
 
     // Compose driver profile from block data (same shape the frontend expects)
@@ -108,6 +110,7 @@ export async function GET(
       resumes: resumes || [],
       dotApps: dotApps || [],
       mvrOrders: mvrOrders || [],
+      license,
     })
   } catch (error) {
     console.error('[ADMIN USER DETAIL] Unexpected error:', error)

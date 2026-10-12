@@ -21,6 +21,8 @@ interface InviteData {
   email: string
   expiresAt: string
   isExpired: boolean
+  /** Sign-in already accepted this invite for the current session user. */
+  acceptedByYou: boolean
   company: {
     name: string
     logoUrl: string | null
@@ -182,7 +184,9 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
         ) : (
           <>
             <UserCheck className='w-5 h-5' />
-            Accept &amp; Join {invite.company.name}
+            {invite.acceptedByYou
+              ? `Continue to ${invite.company.name}`
+              : `Accept & Join ${invite.company.name}`}
           </>
         )}
       </button>
@@ -299,7 +303,7 @@ export default function InvitePage() {
             )}
           </div>
           <h1 className={`text-2xl font-bold mt-4 ${isDarkTheme(theme) ? 'text-white' : 'text-gray-900'}`}>
-            Join {invite?.company.name}
+            {invite?.acceptedByYou ? `You're on the ${invite.company.name} team` : `Join ${invite?.company.name}`}
           </h1>
           {invite?.company.verified && (
             <div className='flex items-center justify-center gap-1 mt-1'>

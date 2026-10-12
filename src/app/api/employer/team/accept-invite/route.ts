@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { createClient as createServerSupabase } from '@/utils/supabase/server'
+import { ensureUserRow } from '@/lib/user-bootstrap'
 import {
   CANDIDATE_CANNOT_BECOME_EMPLOYER,
   isCandidateSurfaceRole,
@@ -8,17 +10,28 @@ import {
 
 /**
  * POST /api/employer/team/accept-invite
- * 
+ *
  * Accepts a team invitation using the invite token.
- * Links the authenticated user to the pending membership.
+ *
+ * Two things accept invites, and both are legitimate:
+ *   1. /api/auth/sync → resolveEmployerLink, silently, the moment a new user's
+ *      session is created, keyed on the verified email.
+ *   2. This route, when the invitee presses Accept on /invite/[token].
+ *
+ * The invite email sends people to the page, the page sends them to sign-in,
+ * and sign-in triggers (1). So by the time (2) runs the row is usually already
+ * accepted — by the same person. That must read as success, not "invalid".
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getStormUserIdFromRequest(request)
+    // Read the session directly (not getStormUserIdFromRequest) because the
+    // verified email is needed too, for bootstrapping the users row below.
+    const { data: authData } = await (await createServerSupabase()).auth.getUser()
+    const authUser = authData.user
     const body = await request.json()
     const { inviteToken, displayName } = body
 
-    if (!userId) {
+    if (!authUser) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -31,15 +44,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, email, wallet_address, role')
-      .eq('id', userId)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    // /api/auth/sync normally creates the users row, but it runs from a client
+    // hook and can land after this request. Bootstrapping here removes that race.
+    const user = await ensureUserRow(supabase, authUser.id, authUser.email)
 
     if (isCandidateSurfaceRole(user.role)) {
       return NextResponse.json(
@@ -52,12 +59,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the pending invite
     const { data: invite } = await supabase
       .from('company_members')
       .select(`
         id,
         company_id,
+        user_id,
         role,
         invite_email,
         invite_expires_at,
@@ -67,14 +74,33 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('invite_token', inviteToken)
-      .is('accepted_at', null)
       .maybeSingle()
 
     if (!invite) {
       return NextResponse.json(
-        { error: 'Invalid or expired invitation' },
+        { error: 'This invitation link is not valid. Ask your team admin to send a new one.' },
         { status: 404 }
       )
+    }
+
+    const company = invite.companies as { company_name?: string } | null
+
+    // Already accepted. Same person → finish what sync started (name) and say yes.
+    if (invite.accepted_at) {
+      if (invite.user_id !== user.id) {
+        return NextResponse.json(
+          { error: 'This invitation has already been used by a different account.' },
+          { status: 409 }
+        )
+      }
+      await finalizeUser(supabase, user.id, displayName)
+      return NextResponse.json({
+        success: true,
+        alreadyAccepted: true,
+        message: 'You are already on this team',
+        company: { id: invite.company_id, name: company?.company_name },
+        role: invite.role,
+      })
     }
 
     // Check if invite has expired
@@ -164,17 +190,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user role to employer and set name if provided
-    const userUpdate: Record<string, unknown> = { role: 'employer' }
-    if (displayName?.trim()) {
-      userUpdate.name = displayName.trim()
-    }
-    await supabase
-      .from('users')
-      .update(userUpdate)
-      .eq('id', user.id)
-
-    const company = invite.companies as any
+    await finalizeUser(supabase, user.id, displayName)
 
     return NextResponse.json({
       success: true,
@@ -195,11 +211,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/** Role flip + optional display name. Safe to run on an already-employer row. */
+async function finalizeUser(
+  supabase: Awaited<ReturnType<typeof getAdminSupabaseClient>>,
+  userId: string,
+  displayName: unknown
+) {
+  const userUpdate: Record<string, unknown> = { role: 'employer' }
+  if (typeof displayName === 'string' && displayName.trim()) {
+    userUpdate.name = displayName.trim()
+  }
+  await supabase.from('users').update(userUpdate).eq('id', userId)
+}
+
 /**
  * GET /api/employer/team/accept-invite?token=xxx
- * 
- * Gets information about an invitation without accepting it.
- * Can be used to show invite details before accepting.
+ *
+ * Invitation details for the /invite/[token] page. Session-aware: an invite
+ * that sync already accepted for the current user still renders as theirs.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -215,11 +244,11 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Find the invite
     const { data: invite } = await supabase
       .from('company_members')
       .select(`
         id,
+        user_id,
         role,
         invite_email,
         invite_expires_at,
@@ -235,23 +264,29 @@ export async function GET(request: NextRequest) {
 
     if (!invite) {
       return NextResponse.json(
-        { error: 'Invalid invitation' },
+        { error: 'This invitation link is not valid. Ask your team admin to send a new one.' },
         { status: 404 }
       )
     }
 
-    // Check if already accepted
-    if (invite.accepted_at) {
+    const sessionUserId = await getStormUserIdFromRequest(request)
+    const acceptedByYou = Boolean(invite.accepted_at && sessionUserId && invite.user_id === sessionUserId)
+
+    if (invite.accepted_at && !acceptedByYou) {
       return NextResponse.json(
-        { error: 'This invitation has already been accepted' },
+        { error: 'This invitation has already been used.' },
         { status: 410 }
       )
     }
 
-    // Check if expired
-    const isExpired = new Date(invite.invite_expires_at) < new Date()
+    // An accepted invite does not expire out from under its owner.
+    const isExpired = !acceptedByYou && new Date(invite.invite_expires_at) < new Date()
 
-    const company = invite.companies as any
+    const company = invite.companies as {
+      company_name?: string
+      logo_url?: string | null
+      verified?: boolean
+    } | null
 
     return NextResponse.json({
       success: true,
@@ -260,6 +295,7 @@ export async function GET(request: NextRequest) {
         email: invite.invite_email,
         expiresAt: invite.invite_expires_at,
         isExpired,
+        acceptedByYou,
         company: {
           name: company?.company_name,
           logoUrl: company?.logo_url,

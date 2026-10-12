@@ -18,6 +18,7 @@ import {
   ChevronRight,
   FolderGit2,
   Car,
+  IdCard,
   ShieldCheck,
   Building2,
   Briefcase,
@@ -40,6 +41,7 @@ import VerificationsTab from './tabs/VerificationsTab'
 import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
 import SurveysTab from './tabs/SurveysTab'
+import LicensesTab from './tabs/LicensesTab'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import CreateCompanyModal from './modals/CreateCompanyModal'
 
@@ -130,6 +132,7 @@ function AdminDashboardContent() {
         verification: `/api/admin/verifications/${deleteTarget.id}`,
         mvr: `/api/admin/mvr/${deleteTarget.id}`,
         psp: `/api/admin/psp/${deleteTarget.id}`,
+        license: `/api/admin/licenses/${deleteTarget.id}`,
         bgcheckRequest: `/api/admin/bgcheck-requests/${deleteTarget.id}`,
         application: `/api/admin/applications/${deleteTarget.id}`,
         outreach: `/api/admin/outreach/${deleteTarget.id}`,
@@ -182,6 +185,7 @@ function AdminDashboardContent() {
         { id: 'dotApps', label: 'DOT Apps', icon: <ClipboardList className='w-4 h-4' /> },
         { id: 'resumes', label: 'Resumes', icon: <FileText className='w-4 h-4' /> },
         { id: 'mvr', label: 'MVR Orders', icon: <Car className='w-4 h-4' /> },
+        { id: 'licenses', label: 'Licenses', icon: <IdCard className='w-4 h-4' /> },
         { id: 'psp', label: 'PSP Orders', icon: <ShieldCheck className='w-4 h-4' /> },
         { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
         { id: 'surveys', label: 'Surveys', icon: <ClipboardList className='w-4 h-4' /> },
@@ -271,6 +275,8 @@ function AdminDashboardContent() {
         return <ResumesTab key={refreshKey} {...tabProps} />
       case 'mvr':
         return <MvrTab key={refreshKey} {...tabProps} />
+      case 'licenses':
+        return <LicensesTab key={refreshKey} {...tabProps} />
       case 'psp':
         return <PspTab key={refreshKey} {...tabProps} />
       case 'verifications':

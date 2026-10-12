@@ -46,7 +46,7 @@ export async function sendTeamInviteEmail(
     ${infoBox(`
       <p style="margin:0;font-size:13px;color:#7d5e33;line-height:1.5;">
         <strong>What happens next?</strong><br>
-        Click the button below and sign in with your wallet. You'll automatically be added to ${companyName}'s team with ${roleDisplay} access.
+        Click the button below and sign in with <strong>${to}</strong> — the address this invite was sent to. You'll be added to ${companyName}'s team with ${roleDisplay} access.
       </p>
     `)}
     ${fallbackLink(inviteUrl)}

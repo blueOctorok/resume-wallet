@@ -75,6 +75,7 @@ export default function UsersTab({
             devProjects: data.devProjects || [],
             resumes: data.resumes || [],
             dotApps: data.dotApps || [],
+            license: data.license ?? null,
           })
         }
       } catch (err) {
