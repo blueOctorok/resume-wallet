@@ -8,8 +8,8 @@ import { hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
 /**
  * GET /api/employer/talent/[userId]/pdf
  *
- * Employer projection of the career card, only after a relationship exists
- * (application, used invite, or request). The QR points at the live public card.
+ * Employer projection of the career card, only after a mutual relationship exists
+ * (application, used invite, or accepted request). The QR points at the live public card.
  */
 export async function GET(
   request: NextRequest,

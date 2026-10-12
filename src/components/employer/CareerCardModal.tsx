@@ -730,11 +730,14 @@ export default function CareerCardModal({
             {employerExtras.hasRelationship && (
               <div className="mb-4 rounded-xl border border-stone-200 bg-white px-3 py-2.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider mb-1 text-ironside">
-                  Continue in your own process
+                  Connected
                 </p>
                 <p className="text-sm text-[#173150]">
                   {[card.contact?.email, card.contact?.phone].filter(Boolean).join(' · ') ||
                     'Contact is on the card they shared with you.'}
+                </p>
+                <p className="mt-1 text-xs text-ironside">
+                  {card.name.split(' ')[0]} applied, used your invite, or accepted a request — so you can take it from here.
                 </p>
                 <div className="mt-2">
                   <Button

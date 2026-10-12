@@ -182,21 +182,24 @@ export async function countEmployerBlocks(
 }
 
 /**
- * A relationship is an application, a used invite, or any non-cancelled request.
- * It keeps a driver visible to a company after they opt out of search.
+ * A relationship takes both sides: the driver applied, used this company's
+ * invite, or accepted a request from it. A request the company sent and the
+ * driver has not answered (pending, viewed, declined, expired) is one-sided
+ * and grants nothing — not contact, not the PDF, not visibility after the
+ * driver hides from search.
  */
 export async function hasEmployerCandidateRelationship(
   supabase: SupabaseClient,
   companyId: string,
   candidateUserId: string,
 ): Promise<boolean> {
-  const { count: requestCount } = await supabase
+  const { count: acceptedRequestCount } = await supabase
     .from('candidate_requests')
     .select('id', { count: 'exact', head: true })
     .eq('company_id', companyId)
     .eq('candidate_user_id', candidateUserId)
-    .neq('status', 'cancelled')
-  if ((requestCount ?? 0) > 0) return true
+    .eq('status', 'completed')
+  if ((acceptedRequestCount ?? 0) > 0) return true
 
   const { count: inviteCount } = await supabase
     .from('application_invites')

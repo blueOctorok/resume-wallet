@@ -19,6 +19,7 @@ import { getDriverNextAction } from '@/lib/driver-next-action'
 import { peekInviteToken } from '@/lib/invite-resume'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import EmployerAskBanner from '@/components/career-card/EmployerAskBanner'
 import Button from '@/components/ui/Button'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
@@ -319,6 +320,8 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
           {resumeError}
         </p>
       )}
+
+      {sessionUserId && <EmployerAskBanner sessionUserId={sessionUserId} isDark={isDark} />}
 
       {/* Section taps deep-link into the matching block (DOT empty state → Start application) */}
       <ProjectedCareerCard

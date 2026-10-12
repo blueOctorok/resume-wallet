@@ -4,6 +4,33 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer asks show on the career card, not only in the settings bell** (2026-10-12)
+
+A driver who was asked for their DOT application only saw it as a dot on the settings gear. The ask now sits in a banner directly above the career card: "Pace Drivers wants to see your DOT application" with Share. Share marks that request accepted, which is the same action as "Share my DQ file" in the inbox.
+
+The banner is every employer-to-driver notice, not just the file. A still-pending request stays up even after the bell item is marked read — reading a notification is not answering it. Messages, application updates, screening, and employment-verification notices show while they are unread, and clicking one opens the same place the bell would. The settings dot stays.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/EmployerAskBanner.tsx` | Banner. Pending requests plus unread employer notifications. |
+| `src/components/app/CareerCardView.tsx` | Renders the banner above the card. |
+
+## **Employer access needs both sides: a pending request no longer reveals contact** (2026-10-12)
+
+On Barry's card, a recruiter who had only *sent* a qualification-file request could already see `blahasam@gmail.com` under "Continue in your own process" and on the card, and download the card PDF — while the file itself was still locked.
+
+**Root cause.** `hasEmployerCandidateRelationship` counted any non-cancelled `candidate_requests` row as a relationship. A pending, viewed, declined, or expired request is the company asking; the driver has not answered. That one function gates contact on the card, the handoff box, the PDF download, and whether a driver who hid from search stays visible to the company.
+
+**Rule now.** A relationship takes both sides — the driver applied to this company's job, used its invite, or accepted (`status = 'completed'`) a request from it. Dating-app model: both have to swipe right. One-sided requests grant nothing beyond the public card.
+
+| File | Change |
+|---|---|
+| `src/lib/employer-company-access.ts` | `hasEmployerCandidateRelationship` counts only `completed` requests. |
+| `src/components/employer/CareerCardModal.tsx` | Handoff box is titled "Connected" and says why it opened. |
+| `src/app/api/employer/talent/[userId]/pdf/route.ts` | Doc comment. |
+
+Still open-sided and worth a look: `MessagingButton` in the same modal takes a *pending* request as its context, so a recruiter can message a driver who has not accepted anything.
+
 ## **Employer career card: Request all on the name, Request on each section** (2026-10-12)
 
 The company view of a candidate stacked every ask into one strip labeled "Request DQ file". That name is the qualification-file ask, and it sat above the card instead of on the thing being asked for.
