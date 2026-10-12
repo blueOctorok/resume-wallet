@@ -1,5 +1,6 @@
-'use server'
-
+// Server-only helper. Not a `'use server'` module — that directive would expose
+// this as a public server-action endpoint. Import from API routes and server
+// libs only; never from a client component.
 import { createClient } from '@supabase/supabase-js'
 
 export async function getAdminSupabaseClient() {

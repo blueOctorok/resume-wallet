@@ -582,34 +582,21 @@ export default function DotApplicationFlow({
         return
       }
 
-      const combinedData = { form1: dotApp.form1Data, form2: dotApp.form2Data, form3: dotApp.form3Data }
-      const { hashJson } = await import('@/lib/hash-utils')
-      const applicationHash = await hashJson(combinedData)
-
-      const { checkDuplicateApplicationHash } = await import('@/lib/supabase-client-db')
-      const dupCheck = await checkDuplicateApplicationHash(sessionUserId, applicationHash)
-      if (dupCheck.exists) {
-        // Same content as the saved row — already submitted. Show success, not an error.
-        dotApp.completeApplication()
-        setShowEmploymentVerification(false)
-        return
-      }
-
-      // No IPFS — Phase 1 dropped Pinata; content hash is enough for duplicate detection.
-      // Phase 3 Midnight attestations go through attestationService later, not this submit path.
-      const { completeDriverApplicationClient } = await import('@/lib/supabase-client-db')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dbResult = await completeDriverApplicationClient(
-        sessionUserId,
-        combinedData as any,
-        undefined,
-        applicationHash,
-      )
-
-      if (!dbResult.success) {
-        dotApp.setSubmissionError('Failed to save application to database: ' + dbResult.error)
-        dotApp.setIsSubmitting(false)
-        return
+      // Plain API route, not a server action: survives a deploy between page load
+      // and submit, and the server resolves the user from the session. Idempotent,
+      // so a resubmit of unchanged data is a success, not a duplicate error.
+      const completeResponse = await fetch('/api/driver-applications/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          form1Data: dotApp.form1Data,
+          form2Data: dotApp.form2Data,
+          form3Data: dotApp.form3Data,
+        }),
+      })
+      if (!completeResponse.ok) {
+        const body = (await completeResponse.json().catch(() => null)) as { error?: string } | null
+        throw new Error(body?.error || 'Failed to save application')
       }
 
       // Sync DOT data to block tables (for career cards / talent search)

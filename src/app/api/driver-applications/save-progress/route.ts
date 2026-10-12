@@ -1,49 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { saveDriverApplicationClient } from '@/lib/supabase-client-db'
+import { saveDriverApplication } from '@/lib/driver-application-db'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { loadMvrDotProjection } from '@/lib/mvr-form1-projection'
-import { applyProjectionToApplicationData } from '@/lib/apply-mvr-to-dot-application'
-import { loadPspDotProjection } from '@/lib/psp-form2-projection'
-import { applyPspProjectionToApplicationData } from '@/lib/apply-psp-to-dot-application'
 import {
-  loadEmploymentForm3Projection,
-  applyEmploymentProjectionToForm3,
-} from '@/lib/employment-form3-projection'
-import type { Form1WithProvenance, Form2WithProvenance } from '@/lib/dot-field-provenance'
-import type { Form3WithProvenance } from '@/lib/employment-form3-provenance'
-
-/** Re-project MVR → PSP → EVR onto application_data (order preserves prior stamps). */
-function reprojectScreeningOntoApp(
-  applicationData: {
-    form1?: Form1WithProvenance | null
-    form2?: Form2WithProvenance | null
-    form3?: Form3WithProvenance | Record<string, unknown> | null
-  },
-  mvr: Awaited<ReturnType<typeof loadMvrDotProjection>>,
-  psp: Awaited<ReturnType<typeof loadPspDotProjection>>,
-  employment: Awaited<ReturnType<typeof loadEmploymentForm3Projection>>,
-) {
-  let form1 = applicationData.form1 ?? null
-  let form2 = applicationData.form2 ?? null
-  let form3 = (applicationData.form3 as Form3WithProvenance | null) ?? null
-
-  if (mvr && (form1 || form2)) {
-    const next = applyProjectionToApplicationData({ form1, form2, form3 }, mvr)
-    form1 = next.form1
-    form2 = next.form2
-  }
-  if (psp && (form1 || form2)) {
-    const next = applyPspProjectionToApplicationData({ form1, form2, form3 }, psp)
-    form1 = next.form1 as Form1WithProvenance | null
-    form2 = next.form2
-  }
-  // Form 3 EVR projection runs even when form3 is empty — injects verified rows
-  if (employment) {
-    form3 = applyEmploymentProjectionToForm3(form3, employment)
-  }
-  return { form1, form2, form3 }
-}
+  reprojectScreeningOntoApp,
+  type DotApplicationData,
+} from '@/lib/reproject-screening-onto-app'
 
 /**
  * GET — load saved application. Re-projects MVR + PSP locked Form 2 rows from live results.
@@ -72,18 +34,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ application: null })
     }
 
-    const applicationData = (data.application_data ?? {}) as {
-      form1?: Form1WithProvenance | null
-      form2?: Form2WithProvenance | null
-      form3?: Form3WithProvenance | null
-    }
-
-    const [mvr, psp, employment] = await Promise.all([
-      loadMvrDotProjection(supabase, userId),
-      loadPspDotProjection(supabase, userId),
-      loadEmploymentForm3Projection(supabase, userId),
-    ])
-    const next = reprojectScreeningOntoApp(applicationData, mvr, psp, employment)
+    const next = await reprojectScreeningOntoApp(
+      supabase,
+      userId,
+      (data.application_data ?? {}) as Partial<DotApplicationData>,
+    )
 
     return NextResponse.json({
       application: {
@@ -118,28 +73,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
-    const [mvr, psp, employment] = await Promise.all([
-      loadMvrDotProjection(supabase, userId),
-      loadPspDotProjection(supabase, userId),
-      loadEmploymentForm3Projection(supabase, userId),
-    ])
-
-    const projected = reprojectScreeningOntoApp(
-      {
-        form1: (form1Data as Form1WithProvenance) ?? null,
-        form2: (form2Data as Form2WithProvenance) ?? null,
-        form3: form3Data,
-      },
-      mvr,
-      psp,
-      employment,
-    )
-
-    const applicationData = {
-      form1: projected.form1 || null,
-      form2: projected.form2 || null,
-      form3: projected.form3 || null,
-    }
+    const projected = await reprojectScreeningOntoApp(supabase, userId, {
+      form1: form1Data ?? null,
+      form2: form2Data ?? null,
+      form3: form3Data ?? null,
+    })
 
     console.log('[SAVE PROGRESS] Saving application progress:', {
       userId,
@@ -147,18 +85,9 @@ export async function POST(request: NextRequest) {
       hasForm1: !!projected.form1,
       hasForm2: !!projected.form2,
       hasForm3: !!projected.form3,
-      lockedFields: mvr ? Object.keys(mvr.form1Provenance.fields).length : 0,
-      pspCrashes: psp?.crashCount ?? 0,
-      pspInspections: psp?.inspectionCount ?? 0,
-      verifiedEmployers: employment?.verifiedCount ?? 0,
     })
 
-    const result = await saveDriverApplicationClient(
-      '',
-      applicationData as unknown as Parameters<typeof saveDriverApplicationClient>[1],
-      currentStep,
-      userId,
-    )
+    const result = await saveDriverApplication(supabase, userId, projected, currentStep)
 
     return NextResponse.json({
       success: true,

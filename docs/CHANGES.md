@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT submit moved off server actions; old submit path was unauthenticated** (2026-10-12)
+
+A driver pressed the final Submit on the DOT application (mobile) and got "An error occurred in the Server Components render… a digest property is included". That is Next.js's production mask for a server action that threw. Submit was the only step still using server actions: `src/lib/supabase-client-db.ts` was a `'use server'` module, so `checkDuplicateApplicationHash` and `completeDriverApplicationClient` were public POST endpoints.
+
+Supabase logs show no DB errors in the window and the payload is ~3 KB, so the most likely trigger is a long-lived phone tab calling a server-action id from a build that two Friday deploys had replaced. Could not confirm without the Vercel digest. Fixed structurally rather than chasing the digest:
+
+| File | Change |
+|---|---|
+| `src/app/api/driver-applications/complete/route.ts` | New. Session-authenticated submit. Re-applies MVR/PSP/EVR locks, hashes the stored data, marks complete. Idempotent — resubmitting unchanged data succeeds instead of needing a duplicate check. |
+| `src/lib/driver-application-db.ts` | New, replaces `supabase-client-db.ts`. Plain server lib: `saveDriverApplication`, `completeDriverApplication`, both take a resolved `userId`. Dropped unused `get`/`getAll`/`delete` functions and the 150-line unused `DriverApplicationData` interface. |
+| `src/lib/reproject-screening-onto-app.ts` | New. The MVR → PSP → EVR re-projection helper, lifted out of `save-progress` so submit and progress saves share it. |
+| `save-progress/route.ts` | Uses the shared helper and new lib. |
+| `DotApplicationFlow.tsx` | Submit is one `fetch` to the new route. Client-side hash + duplicate pre-check removed. |
+| `src/utils/supabase/admin.ts` | Dropped `'use server'`. It only had server-side importers; the directive made the admin-client factory a reachable action endpoint for no reason. |
+| `src/lib/supabase-client-db.ts` | Deleted. |
+
+**Security note:** the old server actions took `userAddress` from the client and ran with the service-role client, with no session check. Anyone with a user's UUID could have marked or deleted that user's application. Closed by routing through `getStormUserIdFromRequest`. Repo now has zero `'use server'` modules.
+
+Driver impact: data from the failed submit is intact (progress saves use API routes). After deploy, the driver reopens the app and presses Submit again.
+
 ## **Fix: DOT Section 3 crashed the hub with React #185** (2026-10-09)
 
 A recruiter's candidate finished Section 2 (the 49 CFR 391.15 "past 3 years, check all that apply" step), pressed Continue, and hit "Something went wrong in Candidate Hub — Minified React error #185". Continue from that step mounts Section 3, and Section 3 was looping.
