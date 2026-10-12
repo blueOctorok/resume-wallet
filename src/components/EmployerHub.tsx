@@ -130,19 +130,10 @@ interface HubPipeline {
   archived: number
 }
 
-interface EmployerAccessPendingInfo {
-  companyName: string
-  status: string
-  submittedAt: string
-  reviewNote?: string | null
-}
-
 interface HubData {
   success: boolean
   isNewUser: boolean
   needsCompanySetup?: boolean
-  /** Pending Stormi / admin employer access — show waiting state instead of company-setup loop */
-  employerAccessPending?: EmployerAccessPendingInfo | null
   /** DB `users.ava_auto_welcome_employer_at` — cross-device Stormi auto-welcome idempotency */
   avaAutoWelcomeEmployerDone?: boolean
   company: HubCompany | null
@@ -248,7 +239,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   const employerStormiContext = useMemo((): EmployerHubContext | null => {
     if (!data) return null
     return {
-      needsCompanySetup: Boolean(data.needsCompanySetup) && !data.employerAccessPending,
+      needsCompanySetup: Boolean(data.needsCompanySetup),
       hasCompany: Boolean(data.company),
       companyName: data.company?.name ?? null,
       activeJobs: data.stats.activeJobs,
@@ -412,7 +403,6 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {
     if (!data || loading) return
-    if (data.employerAccessPending) return
     // No company at all — owner needs to create one
     if (data.needsCompanySetup) {
       onNavigate('company-setup')
@@ -540,34 +530,6 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
         companyName={data.company.name}
         originShareToken={data.company.originShareToken ?? null}
       />
-    )
-  }
-
-  // Waiting on admin / Stormi for employer access (row in employer_access_requests)
-  if (data.employerAccessPending && !data.company) {
-    const p = data.employerAccessPending
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <HubSectionPanel isDark={isDark} accent="amber" className="max-w-lg w-full">
-          <BlockCard
-            variant="embed"
-            paper
-            icon={Clock}
-            title="Employer access pending"
-            description={`Your request to join ${p.companyName} is in the queue. Provven admin will approve it.`}
-          >
-            <p className={`mb-4 text-center text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}
-              {p.submittedAt ? ` · Submitted ${new Date(p.submittedAt).toLocaleString()}` : ''}
-            </p>
-            <div className="flex justify-center">
-              <Button variant="secondary" onClick={() => fetchHubData()}>
-                Refresh status
-              </Button>
-            </div>
-          </BlockCard>
-        </HubSectionPanel>
-      </div>
     )
   }
 

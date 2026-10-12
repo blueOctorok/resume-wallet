@@ -2,7 +2,7 @@
  * Single source of truth for employer email-domain policy.
  *
  * Three divergent public-domain lists used to live in this file, in
- * /api/employer/team, and in AccessRequestsTab, so the same address was judged
+ * /api/employer/team, and in the old access-request review tab, so the same address was judged
  * differently depending on the path (@proton.me and @googlemail.com blocked by
  * one and allowed by another; @gmx.com, @zoho.com and @yandex.com the reverse).
  * Everything now imports from here.

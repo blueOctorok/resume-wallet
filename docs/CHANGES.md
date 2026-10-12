@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Central admin: remove the Access Requests archive** (2026-10-12)
+
+The Access Requests tab listed `employer_access_requests`, the old self-serve queue. Approving those rows was already removed. Live signups write a pending `companies` row, which the Companies tab approves. The table currently holds three `auto_approved` rows from May 2026 and zero pending ones, so the tab and the employer-hub "waiting for approval" screen were both unreachable.
+
+The table stays. Deleting a user still clears `employer_access_requests.reviewed_by` so that foreign key does not block the delete.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/AccessRequestsTab.tsx` | Deleted. Sidebar entry and badge fetch removed. |
+| `src/app/api/admin/employer-requests/` | Deleted. Nothing else called it. |
+| `src/app/api/employer/hub/route.ts`, `EmployerHub.tsx` | No longer look up a pending access-request row. |
+
 ## **Central admin: drop the wallet-reset key, checkbox to delete** (2026-10-12)
 
 `ADMIN_API_KEY` only unlocked the Tools tab's "reset wallet" form, a leftover from when identity was a wallet address. Deleting a person already goes through the signed-in admin session (`ADMIN_EMAILS` → `requireAdmin`). The key, the route, and the Tools tab are gone.

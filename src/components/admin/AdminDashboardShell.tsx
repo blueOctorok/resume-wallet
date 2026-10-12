@@ -21,13 +21,11 @@ import {
   ShieldCheck,
   Building2,
   Briefcase,
-  UserPlus,
   Send,
 } from 'lucide-react'
 import type { TabId, SidebarSection, DeleteTarget } from './admin-types'
 import { getCardClass } from './admin-styles'
 
-import AccessRequestsTab from './tabs/AccessRequestsTab'
 import CompaniesTab from './tabs/CompaniesTab'
 import JobsTab from './tabs/JobsTab'
 import ApplicationsTab from './tabs/ApplicationsTab'
@@ -77,7 +75,6 @@ function AdminDashboardContent() {
   const [showCreateCompanyModal, setShowCreateCompanyModal] = useState(false)
 
   // Badge counts for sidebar
-  const [accessRequestsBadge, setAccessRequestsBadge] = useState(0)
   const [companyPendingBadge, setCompanyPendingBadge] = useState(0)
 
   // A key that increments to force tab re-fetch after delete or create
@@ -87,18 +84,9 @@ function AdminDashboardContent() {
   const fetchBadgeCounts = useCallback(async () => {
     if (!sessionUserId || !isAdmin) return
     try {
-      const [reqRes, compRes] = await Promise.all([
-        fetch('/api/admin/employer-requests?status=all', {
-          headers: { 'x-wallet-address': sessionUserId },
-        }),
-        fetch('/api/admin/companies?status=all', {
-          headers: { 'x-wallet-address': sessionUserId },
-        }),
-      ])
-      const reqData = await reqRes.json()
-      if (reqData.success && reqData.stats) {
-        setAccessRequestsBadge((reqData.stats.pending || 0) + (reqData.stats.flagged || 0))
-      }
+      const compRes = await fetch('/api/admin/companies?status=all', {
+        headers: { 'x-wallet-address': sessionUserId },
+      })
       const compData = await compRes.json()
       if (compData.success && compData.stats) {
         setCompanyPendingBadge(compData.stats.pending || 0)
@@ -175,11 +163,6 @@ function AdminDashboardContent() {
       id: 'employers',
       label: 'Employers',
       tabs: [
-        {
-          id: 'accessRequests',
-          label: `Access Requests${accessRequestsBadge > 0 ? ` (${accessRequestsBadge})` : ''}`,
-          icon: <UserPlus className='w-4 h-4' />,
-        },
         {
           id: 'companies',
           label: `Companies${companyPendingBadge > 0 ? ` (${companyPendingBadge})` : ''}`,
@@ -264,8 +247,6 @@ function AdminDashboardContent() {
 
   function renderActiveTab() {
     switch (activeTab) {
-      case 'accessRequests':
-        return <AccessRequestsTab key={refreshKey} {...tabProps} />
       case 'companies':
         return (
           <CompaniesTab

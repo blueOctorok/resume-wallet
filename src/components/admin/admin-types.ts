@@ -3,7 +3,6 @@ import type { CompanyAccountTier } from '@/lib/company-account-tier'
 
 export type TabId =
   | 'companies'
-  | 'accessRequests'
   | 'jobs'
   | 'applications'
   | 'outreach'
@@ -325,28 +324,4 @@ export interface Resume {
   created_at: string
   sessionUserId: string
   ownerName: string
-}
-
-export interface AccessRequest {
-  id: string
-  wallet_address: string
-  email: string | null
-  name: string
-  company_name: string
-  description: string | null
-  status: string
-  ai_decision: string | null
-  ai_reason: string | null
-  ai_confidence: number | null
-  created_at: string
-}
-
-export interface AccessRequestsStats {
-  pending: number
-  approved: number
-  rejected: number
-  flagged: number
-  auto_approved: number
-  blocked: number
-  total: number
 }
