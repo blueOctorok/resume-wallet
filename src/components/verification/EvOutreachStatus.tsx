@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, Download, Loader2, MailWarning, Search } from 'lucide-react'
+import { CheckCircle2, Download, Loader2, MailWarning, MessageSquare, Phone, Search } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
 import type {
@@ -38,8 +38,11 @@ export default function EvOutreachStatus({ request, attempts }: EvOutreachStatus
   const resend = useEmploymentVerificationBlockStore((s) => s.resend)
   const researchContact = useEmploymentVerificationBlockStore((s) => s.researchContact)
   const setContact = useEmploymentVerificationBlockStore((s) => s.setContact)
+  const setOutreachPrefs = useEmploymentVerificationBlockStore((s) => s.setOutreachPrefs)
 
   const [manualEmail, setManualEmail] = useState('')
+  const [manualPhone, setManualPhone] = useState('')
+  const [phoneType, setPhoneType] = useState<'office' | 'mobile'>('office')
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const busy = actingOnRequestId === request.id
@@ -63,16 +66,22 @@ export default function EvOutreachStatus({ request, attempts }: EvOutreachStatus
         <ol className='space-y-1.5'>
           {attempts.map((a) => {
             const pill = DELIVERY_PILL[a.deliveryStatus]
+            const failedLabel = a.method === 'sms' ? 'Text failed' : a.method === 'phone' ? 'Call failed' : pill.label
+            const label = a.deliveryStatus === 'failed' ? failedLabel : a.method === 'sms' && a.deliveryStatus === 'delivered' ? 'Text delivered' : pill.label
             return (
               <li key={a.id} className='flex flex-wrap items-center gap-2'>
                 <span className='font-medium'>
                   #{a.attemptNumber} · {shortDate(a.sentAt)}
                 </span>
+                {a.method === 'phone' ? <Phone className='h-3 w-3 text-ironside' /> : null}
+                {a.method === 'sms' ? <MessageSquare className='h-3 w-3 text-ironside' /> : null}
                 <span className='truncate text-[#173150]/60'>{a.contactEmail ?? a.contactPhone ?? '—'}</span>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${pill.className}`}>
-                  {pill.label}
+                  {label}
                 </span>
-                {a.triggeredBy === 'cron' && <span className='text-[10px] text-ironside'>auto follow-up</span>}
+                {a.triggeredBy === 'cron' && (
+                  <span className='text-[10px] text-ironside'>{a.method === 'email' ? 'auto follow-up' : 'auto touch'}</span>
+                )}
               </li>
             )
           })}
@@ -110,12 +119,25 @@ export default function EvOutreachStatus({ request, attempts }: EvOutreachStatus
             <div className='space-y-1'>
               <p className='font-medium'>FMCSA registry match</p>
               {research.fmcsa.map((c) => (
-                <p key={c.dotNumber} className='text-[#173150]/75'>
-                  {c.legalName}
-                  {c.dbaName ? ` (dba ${c.dbaName})` : ''} · USDOT {c.dotNumber}
-                  {c.phone ? ` · ${c.phone}` : ''}
-                  {c.address ? ` · ${c.address}` : ''}
-                </p>
+                <div key={c.dotNumber} className='flex flex-wrap items-center gap-2 text-[#173150]/75'>
+                  <span>
+                    {c.legalName}
+                    {c.dbaName ? ` (dba ${c.dbaName})` : ''} · USDOT {c.dotNumber}
+                    {c.phone ? ` · ${c.phone}` : ''}
+                    {c.address ? ` · ${c.address}` : ''}
+                  </span>
+                  {c.phone ? (
+                    <Button
+                      type='button'
+                      size='sm'
+                      variant='secondary'
+                      disabled={busy}
+                      onClick={() => run(() => setContact(request.id, { phone: c.phone ?? '', phoneType: 'office' }))}
+                    >
+                      Save office number
+                    </Button>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : null}
@@ -166,6 +188,32 @@ export default function EvOutreachStatus({ request, attempts }: EvOutreachStatus
             >
               Save & send
             </Button>
+            <input
+              type='tel'
+              value={manualPhone}
+              onChange={(e) => setManualPhone(e.target.value)}
+              placeholder='(555) 555-0100'
+              className='min-w-[10rem] rounded-lg border border-ironside/40 bg-white px-3 py-1.5 text-xs'
+            />
+            <select
+              value={phoneType}
+              onChange={(e) => setPhoneType(e.target.value === 'mobile' ? 'mobile' : 'office')}
+              className='rounded-lg border border-ironside/40 bg-white px-2 py-1.5 text-xs'
+            >
+              <option value='office'>Office</option>
+              <option value='mobile'>Mobile</option>
+            </select>
+            <Button
+              type='button'
+              size='sm'
+              variant='secondary'
+              disabled={busy || !manualPhone.trim()}
+              onClick={() =>
+                run(() => setContact(request.id, { phone: manualPhone.trim(), phoneType }))
+              }
+            >
+              Save phone
+            </Button>
             <Button
               type='button'
               size='sm'
@@ -200,6 +248,32 @@ export default function EvOutreachStatus({ request, attempts }: EvOutreachStatus
               Send now ({MAX_ATTEMPTS - request.attemptCount} left)
             </Button>
           )}
+        </div>
+      )}
+
+      {request.previousEmployerPhone && (
+        <div className='flex flex-wrap items-center justify-between gap-2 border-t border-[#173150]/10 pt-3'>
+          <span className='text-[#173150]/70'>
+            {request.voiceOptOut && request.smsOptOut
+              ? 'Calls and texts are off. Emails still go out.'
+              : `One ${request.previousEmployerPhoneType === 'mobile' ? 'text' : 'call'} goes out after the second email.`}
+          </span>
+          <Button
+            type='button'
+            size='sm'
+            variant='ghost'
+            disabled={busy}
+            onClick={() =>
+              run(() =>
+                setOutreachPrefs(request.id, {
+                  voiceOptOut: !(request.voiceOptOut && request.smsOptOut),
+                  smsOptOut: !(request.voiceOptOut && request.smsOptOut),
+                }),
+              )
+            }
+          >
+            {request.voiceOptOut && request.smsOptOut ? 'Allow call and text' : "Don't call or text this employer"}
+          </Button>
         </div>
       )}
 

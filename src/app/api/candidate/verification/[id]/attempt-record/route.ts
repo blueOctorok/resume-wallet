@@ -3,6 +3,7 @@ import React from 'react'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { requireAdmin } from '@/lib/admin-auth'
 import { buildAttemptRecord } from '@/lib/evr-attempt-record'
 import { EvrAttemptRecordPdf } from '@/lib/pdf/EvrAttemptRecordPdf'
 import {
@@ -29,29 +30,31 @@ export async function GET(
 ) {
   try {
     const userId = await getStormUserIdFromRequest(request)
-    if (!userId) {
+    const admin = await requireAdmin(request)
+    // Central admin is signed in with an ADMIN_EMAILS session, so the same
+    // PDF the driver downloads is available from the Verifications tab.
+    if (!userId && !admin.authorized) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
     const { id } = await params
     const supabase = await getAdminSupabaseClient()
 
-    const [{ data: reqRow }, { data: attemptRows }, { data: profile }] = await Promise.all([
-      supabase
-        .from('employment_verification_requests')
-        .select('*')
-        .eq('id', id)
-        .eq('driver_id', userId)
-        .maybeSingle(),
+    let packetQuery = supabase.from('employment_verification_requests').select('*').eq('id', id)
+    if (!admin.authorized && userId) packetQuery = packetQuery.eq('driver_id', userId)
+    const { data: reqRow } = await packetQuery.maybeSingle()
+    if (!reqRow) {
+      return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
+    }
+
+    const ownerId = String(reqRow.driver_id)
+    const [{ data: attemptRows }, { data: profile }] = await Promise.all([
       supabase
         .from('verification_attempts')
         .select('*')
         .eq('verification_request_id', id)
         .order('attempt_number', { ascending: true }),
-      supabase.from('user_profiles').select('first_name, last_name').eq('user_id', userId).maybeSingle(),
+      supabase.from('user_profiles').select('first_name, last_name').eq('user_id', ownerId).maybeSingle(),
     ])
-    if (!reqRow) {
-      return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
-    }
 
     const verificationRequest = rowToVerificationRequest(reqRow as VerificationRequestRow, 'Self-Initiated')
     const attempts = ((attemptRows ?? []) as VerificationAttemptRow[]).map(rowToVerificationAttempt)

@@ -85,6 +85,8 @@ export interface VerificationRequest {
   previousEmployerName: string
   previousEmployerEmail: string | null
   previousEmployerPhone: string | null
+  /** office → scripted call, mobile → SMS. Null is treated as office. */
+  previousEmployerPhoneType?: 'office' | 'mobile' | null
   previousEmployerAddress: string | null
   
   // Driver's claimed employment details (snapshot)
@@ -106,6 +108,8 @@ export interface VerificationRequest {
   // Contact research (FMCSA + web search) — proposals the driver confirms
   contactResearchStatus?: ContactResearchStatus
   contactResearch?: EvrContactResearchSummary | null
+  voiceOptOut?: boolean
+  smsOptOut?: boolean
   
   // Verification results
   verifiedAt: string | null
@@ -173,8 +177,8 @@ export type AttemptTrigger = 'driver' | 'cron' | 'admin'
 export interface VerificationAttempt {
   id: string
   verificationRequestId: string
-  attemptNumber: number // 1, 2, or 3
-  method: 'email' | 'phone' | 'portal' | 'fax' | 'mail'
+  attemptNumber: number
+  method: 'email' | 'phone' | 'portal' | 'fax' | 'mail' | 'sms'
   
   // Contact details used
   contactEmail: string | null
@@ -215,6 +219,7 @@ export interface VerificationRequestRow {
   previous_employer_name: string
   previous_employer_email: string | null
   previous_employer_phone: string | null
+  previous_employer_phone_type?: 'office' | 'mobile' | null
   previous_employer_address: string | null
   claimed_position: string
   claimed_start_date: string
@@ -259,6 +264,8 @@ export interface VerificationRequestRow {
   outreach_exhausted_at?: string | null
   contact_research_status?: ContactResearchStatus
   contact_research?: EvrContactResearchSummary | null
+  voice_opt_out?: boolean | null
+  sms_opt_out?: boolean | null
 }
 
 export interface VerificationAttemptRow {
@@ -300,6 +307,7 @@ export function rowToVerificationRequest(
     previousEmployerName: row.previous_employer_name,
     previousEmployerEmail: row.previous_employer_email,
     previousEmployerPhone: row.previous_employer_phone,
+    previousEmployerPhoneType: row.previous_employer_phone_type ?? null,
     previousEmployerAddress: row.previous_employer_address,
     claimedPosition: row.claimed_position,
     claimedStartDate: row.claimed_start_date,
@@ -323,6 +331,8 @@ export function rowToVerificationRequest(
     outreachExhaustedAt: row.outreach_exhausted_at ?? null,
     contactResearchStatus: row.contact_research_status ?? 'not_requested',
     contactResearch: row.contact_research ?? null,
+    voiceOptOut: Boolean(row.voice_opt_out),
+    smsOptOut: Boolean(row.sms_opt_out),
     answers: row.dates_correct ? {
       datesCorrect: row.dates_correct,
       correctedStartDate: row.corrected_start_date || undefined,

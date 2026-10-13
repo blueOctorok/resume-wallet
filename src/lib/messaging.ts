@@ -37,6 +37,14 @@ export type SendSmsParams = {
   message: string
 }
 
+export type SendVoiceParams = {
+  type: string
+  /** E.164 phone */
+  to: string
+  /** Text Pingram speaks. One-way; the callee cannot talk back. */
+  message: string
+}
+
 const DEFAULT_FROM_EMAIL = 'provven@verify.provven.com'
 const DEFAULT_FROM_NAME = 'Provven'
 
@@ -168,6 +176,39 @@ export async function sendSms(params: SendSmsParams): Promise<MessagingResult> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[MESSAGING] SMS send failed:', err)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Place a one-way TTS call via Pingram. Not a conversation — the message is
+ * read aloud and the call ends. Requires a Pingram voice number on the account.
+ */
+export async function sendVoiceMessage(params: SendVoiceParams): Promise<MessagingResult> {
+  const pingram = getClient()
+  if (!pingram) {
+    console.warn('[MESSAGING] PINGRAM_API_KEY not set, skipping call')
+    return { ok: false, error: 'Voice not configured' }
+  }
+
+  try {
+    const res = await pingram.send({
+      type: params.type,
+      to: { number: params.to },
+      call: { message: params.message },
+    })
+
+    const trackingId =
+      res && typeof res === 'object' && 'trackingId' in res ? String(res.trackingId ?? '') : ''
+    if (!trackingId) {
+      console.error('[MESSAGING] Pingram call: no trackingId', res)
+      return { ok: false, error: 'Pingram call: empty response' }
+    }
+    console.log('[MESSAGING] Call placed type=%s to=%s id=%s', params.type, params.to, trackingId)
+    return { ok: true, id: trackingId }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[MESSAGING] Call failed:', err)
     return { ok: false, error: message }
   }
 }

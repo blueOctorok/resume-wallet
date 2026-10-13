@@ -52,17 +52,23 @@ interface EmploymentVerificationBlockState {
   fetchShareRequests: () => Promise<void>
   resend: (requestId: string) => Promise<ActionResult>
   researchContact: (requestId: string) => Promise<ActionResult>
-  setContact: (requestId: string, contact: { email?: string; phone?: string }) => Promise<ActionResult>
+  setContact: (requestId: string, contact: { email?: string; phone?: string; phoneType?: 'office' | 'mobile' }) => Promise<ActionResult>
+  setOutreachPrefs: (requestId: string, prefs: { voiceOptOut: boolean; smsOptOut: boolean }) => Promise<ActionResult>
 }
 
 export const useEmploymentVerificationBlockStore = create<EmploymentVerificationBlockState>(
   (set, get) => {
     // All three outreach actions are "POST, then refetch" — one helper keeps them identical.
-    const postAndRefresh = async (requestId: string, url: string, body?: unknown): Promise<ActionResult> => {
+    const postAndRefresh = async (
+      requestId: string,
+      url: string,
+      body?: unknown,
+      method: 'POST' | 'PATCH' = 'POST',
+    ): Promise<ActionResult> => {
       set({ actingOnRequestId: requestId })
       try {
         const res = await fetch(url, {
-          method: 'POST',
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body ?? {}),
         })
@@ -132,6 +138,8 @@ export const useEmploymentVerificationBlockStore = create<EmploymentVerification
         postAndRefresh(requestId, `/api/candidate/verification/${requestId}/research-contact`),
       setContact: (requestId, contact) =>
         postAndRefresh(requestId, `/api/candidate/verification/${requestId}/set-contact`, contact),
+      setOutreachPrefs: (requestId, prefs) =>
+        postAndRefresh(requestId, `/api/candidate/verification/${requestId}/outreach-prefs`, prefs, 'PATCH'),
     }
   },
 )

@@ -18,12 +18,20 @@ import type { EvrAttemptRecord } from '@/lib/evr-attempt-record'
 const fmt = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('en-US', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' }) + ' UTC' : '—'
 
-const DELIVERY_LABEL: Record<EvrAttemptRecord['attempts'][number]['deliveryStatus'], string> = {
-  sent: 'Sent',
-  delivered: 'Delivered',
-  opened: 'Opened',
-  clicked: 'Link clicked',
-  failed: 'Bounced / failed',
+function deliveryLabel(attempt: EvrAttemptRecord['attempts'][number]): string {
+  if (attempt.deliveryStatus === 'failed' && attempt.method === 'phone') return 'Call failed'
+  if (attempt.deliveryStatus === 'failed' && attempt.method === 'sms') return 'Text failed'
+  if (attempt.deliveryStatus === 'delivered' && attempt.method === 'sms') return 'Text delivered'
+  if (attempt.deliveryStatus === 'sent' && attempt.method === 'phone') return 'Call placed'
+  if (attempt.deliveryStatus === 'sent' && attempt.method === 'sms') return 'Text sent'
+  const generic: Record<typeof attempt.deliveryStatus, string> = {
+    sent: 'Sent',
+    delivered: 'Delivered',
+    opened: 'Opened',
+    clicked: 'Link clicked',
+    failed: 'Bounced / failed',
+  }
+  return generic[attempt.deliveryStatus]
 }
 
 const COL = { n: 28, when: 120, to: 150, status: 90, by: 60 } as const
@@ -103,7 +111,7 @@ export function EvrAttemptRecordPdf({ record, hash }: { record: EvrAttemptRecord
                   <Text style={[stormPdfStyles.tableCell, { width: COL.when }]}>{fmt(a.sentAt)}</Text>
                   <Text style={[stormPdfStyles.tableCell, { width: COL.to }]}>{a.to ?? '—'}</Text>
                   <Text style={[stormPdfStyles.tableCell, { width: COL.status }]}>
-                    {DELIVERY_LABEL[a.deliveryStatus]}
+                    {deliveryLabel(a)}
                   </Text>
                   <Text style={[stormPdfStyles.tableCell, { width: COL.by }]}>{a.triggeredBy}</Text>
                   <Text style={[stormPdfStyles.tableCell, { flex: 1 }]}>

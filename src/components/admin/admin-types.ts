@@ -308,6 +308,15 @@ export interface BgcheckRequest {
   consentId: string | null
 }
 
+export interface VerificationAttemptSummary {
+  attemptNumber: number
+  method: string
+  deliveryStatus: string | null
+  sentAt: string
+  contactEmail: string | null
+  triggeredBy: string | null
+}
+
 export interface VerificationRow {
   id: string
   driverId: string
@@ -317,12 +326,27 @@ export interface VerificationRow {
   applicantType: string
   previousEmployerName: string
   previousEmployerEmail: string | null
+  previousEmployerPhone: string | null
   claimedPosition: string
   claimedStartDate: string | null
   claimedEndDate: string | null
   status: string
   attemptCount: number
   createdAt: string
+  contactResearchStatus: string | null
+  outreachExhaustedAt: string | null
+  lastAttemptAt: string | null
+  nextAttemptAt: string | null
+  lastDeliveryStatus: string | null
+  attempts: VerificationAttemptSummary[]
+}
+
+export interface VerificationOutreachSummary {
+  total: number
+  byStatus: Record<string, number>
+  exhaustedRate: number
+  bounceRate: number
+  replyRateByAttempt: { attemptNumber: number; sent: number; replied: number; rate: number }[]
 }
 
 /** A driver license kept on file (photos + barcode read). Not a DMV record. */

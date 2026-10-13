@@ -4,7 +4,19 @@ import type { WebhookEvent } from 'pingram'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { processEvrDeliveryEvent } from '@/lib/evr-outreach'
 
-const EVR_EVENTS = new Set(['EMAIL_DELIVERED', 'EMAIL_OPEN', 'EMAIL_CLICK', 'EMAIL_FAILED'])
+const EVR_EVENTS = new Set([
+  'EMAIL_DELIVERED',
+  'EMAIL_OPEN',
+  'EMAIL_CLICK',
+  'EMAIL_FAILED',
+  'SMS_DELIVERED',
+  'SMS_FAILED',
+  'SMS_UNSUBSCRIBE',
+  'SMS_INBOUND',
+  'CALL_FAILED',
+  'CALL_UNSUBSCRIBE',
+  'VOICE_INBOUND',
+])
 
 /**
  * POST /api/webhooks/pingram/events
@@ -61,7 +73,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = await getAdminSupabaseClient()
-    const result = await processEvrDeliveryEvent(supabase, event)
+    // The typed event has no SMS body. Pull a text field off the raw payload when one is present.
+    const rawBody = JSON.parse(raw) as { message?: unknown; body?: unknown; text?: unknown }
+    const inboundText = [rawBody.message, rawBody.body, rawBody.text].find((v) => typeof v === 'string') as
+      | string
+      | undefined
+    const result = await processEvrDeliveryEvent(supabase, { ...event, inboundText: inboundText ?? null })
     return NextResponse.json({ success: true, matched: result.matched })
   } catch (error) {
     console.error('[PINGRAM EVENTS] unexpected:', error)

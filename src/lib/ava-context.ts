@@ -54,6 +54,15 @@ export interface HubContext {
   /** Unsuperseded rows in attestations — Verified by Storm credentials issued. */
   attestationCount?: number
   totalInstalledBlockCount?: number
+  /**
+   * Employment-verification outreach the driver still has to touch.
+   * Counts come from the EV block store. Zero means "say nothing."
+   */
+  evOutreach?: {
+    needsContact: number
+    exhausted: number
+    awaitingReply: number
+  }
 }
 
 /** When a user clicks "Ask Stormi" on a specific block, include this */
@@ -218,6 +227,25 @@ export function buildStormiSystemPrompt(
       parts.push(
         `- **Verified by Provven credentials issued:** ${hubContext.attestationCount} (third-party facts only — MVR, CDL class, employer verification).`,
       )
+    }
+    if (hubContext?.evOutreach && (hubContext.evOutreach.needsContact > 0 || hubContext.evOutreach.exhausted > 0 || hubContext.evOutreach.awaitingReply > 0)) {
+      const ev = hubContext.evOutreach
+      parts.push('- **Employment verification outreach:**')
+      if (ev.needsContact > 0) {
+        parts.push(
+          `  - ${ev.needsContact} packet${ev.needsContact === 1 ? '' : 's'} need a confirmed employer contact (a bounce, or no email on file). Tell them to open the Employment verification block and choose "Use & send" or type the address. Do not tell them a looked-up address was already emailed.`,
+        )
+      }
+      if (ev.exhausted > 0) {
+        parts.push(
+          `  - ${ev.exhausted} packet${ev.exhausted === 1 ? '' : 's'} received no reply after the full cadence. Tell them to download the attempt record from that block and take it to the hiring carrier. Frame it as proof of a good-faith effort, not a failure.`,
+        )
+      }
+      if (ev.awaitingReply > 0 && ev.needsContact === 0) {
+        parts.push(
+          `  - ${ev.awaitingReply} packet${ev.awaitingReply === 1 ? '' : 's'} are waiting on the previous employer. Follow-ups go out on their own around day 3 and day 7. Do not nag them to resend.`,
+        )
+      }
     }
     if (hubContext?.incompleteBlocks && hubContext.incompleteBlocks.length > 0) {
       const lines = hubContext.incompleteBlocks

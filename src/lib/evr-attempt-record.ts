@@ -75,7 +75,10 @@ export function buildAttemptRecord(
   generatedAt = new Date().toISOString(),
 ): { record: EvrAttemptRecord; hash: string } {
   const ordered = [...attempts].sort((a, b) => a.attemptNumber - b.attemptNumber)
-  const delivered = ordered.filter((a) => a.deliveryStatus !== 'sent' && a.deliveryStatus !== 'failed').length
+  const emails = ordered.filter((a) => a.method === 'email')
+  const calls = ordered.filter((a) => a.method === 'phone')
+  const texts = ordered.filter((a) => a.method === 'sms')
+  const delivered = emails.filter((a) => a.deliveryStatus !== 'sent' && a.deliveryStatus !== 'failed').length
 
   const record: EvrAttemptRecord = {
     recordVersion: 1,
@@ -107,12 +110,21 @@ export function buildAttemptRecord(
       failureCode: a.failureCode,
       triggeredBy: a.triggeredBy,
     })),
-    statement:
-      `Acting as ${driverName}'s agent under a signed authorization, Provven sent ${ordered.length} ` +
-      `employment verification request${ordered.length === 1 ? '' : 's'} to ${request.previousEmployerName}` +
-      `${request.previousEmployerEmail ? ` at ${request.previousEmployerEmail}` : ''}. ` +
-      `${delivered} ${delivered === 1 ? 'was' : 'were'} confirmed delivered by the mail provider. ` +
-      'No verification response was received through the secure reply link or by email reply.',
+    statement: [
+      `Acting as ${driverName}'s agent under a signed authorization, Provven sent ${emails.length} ` +
+        `employment verification email${emails.length === 1 ? '' : 's'} to ${request.previousEmployerName}` +
+        `${request.previousEmployerEmail ? ` at ${request.previousEmployerEmail}` : ''}. ` +
+        `${delivered} ${delivered === 1 ? 'was' : 'were'} confirmed delivered by the mail provider.`,
+      calls.length
+        ? `${calls.length} automated call${calls.length === 1 ? '' : 's'} ${calls.length === 1 ? 'was' : 'were'} placed.`
+        : '',
+      texts.length
+        ? `${texts.length} text message${texts.length === 1 ? '' : 's'} ${texts.length === 1 ? 'was' : 'were'} sent.`
+        : '',
+      'No verification response was received through the secure reply link or by email reply. A call or text is a routing attempt, not a verification.',
+    ]
+      .filter(Boolean)
+      .join(' '),
   }
 
   return { record, hash: sha256Hex(canonicalJson(record)) }

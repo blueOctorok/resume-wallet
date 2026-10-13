@@ -8,6 +8,7 @@ import type {
   SimpleModeContext,
 } from '@/lib/ava-context'
 import { useAuthStore } from '@/stores'
+import { useEmploymentVerificationBlockStore } from '@/stores/employment-verification-block-store'
 import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import type { StormiAutoWelcomeMode } from '@/lib/ava-auto-welcome'
 import type { StormiConversationTurn } from '@/lib/ava-conversation'
@@ -121,6 +122,8 @@ export function useHubContext(): HubContext {
   const github = useDriverHubStore((s) => s.github)
   const dqFile = useDriverHubStore((s) => s.dqFile)
   const stats = useDriverHubStore((s) => s.stats)
+  const evRequests = useEmploymentVerificationBlockStore((s) => s.requests)
+  const fetchEv = useEmploymentVerificationBlockStore((s) => s.fetch)
   const licenseItem = dqFile?.items.find((item) => item.id === 'dl_images')
 
   const hubStore = {
@@ -135,6 +138,11 @@ export function useHubContext(): HubContext {
   }
 
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState<number | null | undefined>(undefined)
+  // Stormi reads the EV store. Load it once per mount so a driver who has not
+  // opened the block yet still gets a contact or exhausted nudge.
+  useEffect(() => {
+    void fetchEv()
+  }, [fetchEv])
   useEffect(() => {
     const key = 'storm_candidate_hub_last_visit_ts'
     try {
@@ -195,6 +203,22 @@ export function useHubContext(): HubContext {
     verifiedBlockCount,
     attestationCount: stats?.attestationCount ?? 0,
     totalInstalledBlockCount: installedBlocks.length,
+    evOutreach: {
+      needsContact: evRequests.filter(
+        (r) =>
+          r.contactResearchStatus === 'pending' ||
+          r.contactResearchStatus === 'not_found' ||
+          (!r.previousEmployerEmail &&
+            (r.status === 'VERIFICATION_REQUESTED' || r.status === 'VERIFICATION_IN_PROGRESS')),
+      ).length,
+      exhausted: evRequests.filter((r) => r.status === 'ATTEMPTS_EXHAUSTED').length,
+      awaitingReply: evRequests.filter(
+        (r) =>
+          (r.status === 'VERIFICATION_REQUESTED' || r.status === 'VERIFICATION_IN_PROGRESS') &&
+          Boolean(r.previousEmployerEmail) &&
+          r.contactResearchStatus !== 'pending',
+      ).length,
+    },
   }
 }
 

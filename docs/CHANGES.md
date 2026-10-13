@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV outreach follow-ups and a dark Pingram call/text touch** (2026-10-13)
+
+Phase 1 follow-ups, plus one scripted call or text between email 2 and email 3. The call is one-way text-to-speech through Pingram, not a conversation. It ships **off** (`EVR_VOICE_SMS_ENABLED` unset) until counsel signs off. A personal admin bot is not code: central admin already opens for an `ADMIN_EMAILS` session, and the Verifications tab is the queue that bot works. There is no EV service token.
+
+**Apply `supabase/migrations/120_evr_outreach_touches.sql`** (and 119, if that one is still pending). Add `SMS_DELIVERED`, `SMS_FAILED`, `SMS_UNSUBSCRIBE`, `SMS_INBOUND`, `CALL_FAILED`, `CALL_UNSUBSCRIBE`, `VOICE_INBOUND` to the Pingram events webhook.
+
+| File | Change |
+|---|---|
+| `src/lib/evr-metrics.ts` | Reply rate by email number, bounce rate, exhausted rate. |
+| `src/app/api/admin/verifications/route.ts`, `VerificationsTab.tsx` | Filters (in cadence / needs contact / exhausted), summary strip, delivery and research columns, expandable attempts, attempt-record link. Admins can download the record. |
+| `src/lib/ava-context.ts`, `src/lib/ava-chat.ts` | `evOutreach` counts. Stormi nudges on a missing contact or an exhausted packet, and stays quiet while a reply is simply pending. |
+| `src/app/api/candidate/verification/[id]/set-contact/route.ts` | `phoneType` office or mobile. Default office. |
+| `supabase/migrations/120_evr_outreach_touches.sql` | `attempt_number` cap lifted (timeline order, not the email cap). `sms` method. `previous_employer_phone_type`, `voice_opt_out`, `sms_opt_out`, `last_touch_at`. |
+| `src/lib/messaging.ts` | `sendVoiceMessage` via `pingram.send({ call: { message } })`. |
+| `src/lib/evr-touch-script.ts`, `src/lib/evr-outreach.ts` | Day-5 touch. Office → call, mobile → SMS. Does not increment `attempt_count`. Email bounce still pauses the cadence; a failed call does not. |
+| `src/app/api/webhooks/pingram/events/route.ts` | SMS and call events, including unsubscribe and inbound notify. |
+| `src/components/verification/EvOutreachStatus.tsx`, outreach-prefs route, EV store | Timeline rows for calls and texts. "Don't call or text this employer." |
+| `src/lib/evr-attempt-record.ts`, `EvrAttemptRecordPdf.tsx` | Statement counts emails, calls, and texts. A call or text is labeled as routing, not a verification. |
+| `docs/EV_OUTREACH_PLAN.md` | Phase 2 rewritten around Pingram. Personal admin bot documented as outside the app. |
+
 ## **EV outreach Phase 1: automated cadence, delivery tracking, contact research, attempt record** (2026-10-13)
 
 Driver-initiated employment verification was a single email with a manual "Send again" button and no idea whether anything arrived. Research (Superunit 2026: trucking EV completes 49% with phone + email; our email-only estimate was 10–15%) showed the leak is operational, not legal. Phase 1 keeps Provven as the **driver's agent only** (no CRA posture — employer-paid EV stays with Accio, DEC-2026-05-011) and automates the parts that cost nothing: a day 0 / 3 / 7 cadence through Pingram, Pingram delivery webhooks, FMCSA carrier lookup when the driver has no contact, and a hashed good-faith attempt record when nobody answers. Voice follow-up is Phase 2 (not started; TCPA / state AI-disclosure notes in the research canvas).

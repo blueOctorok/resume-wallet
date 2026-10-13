@@ -65,34 +65,36 @@ Goal: get from one email to a real cadence with proof of what happened, using to
 - [ ] Confirm `CRON_SECRET` is set so the hourly cron is authenticated
 - [ ] Smoke: submit a packet with no contact → research runs → "Confirm contact" appears on the tile
 
-### Phase 1 follow-ups (small, do before Phase 2)
+### Phase 1 follow-ups (shipped 2026-10-13)
 
-- [ ] **Admin view of exhausted packets** — which carriers never answer. This is the data that tells us whether Phase 2 or Phase 3 is worth it.
-- [ ] **Stormi nudges** — "Your packet to X bounced, confirm a contact" and "No reply after 3 tries — download your attempt record" (`ava-context.ts`). The notifications exist; Stormi doesn't narrate them yet.
-- [ ] **Phone-only contacts** — `set-contact` saves a phone but can't act on it. Phase 2 consumes this.
-- [ ] **Measure.** Log completion rate by attempt number from `verification_attempts` so we can compare against the 49% / 28%-in-1–3-touches benchmarks.
+- [x] **Admin Verifications tab** — delivery, research status, exhausted date, expandable attempts, attempt-record download, and a summary (reply rate by email 1/2/3, bounce rate, exhausted rate). This is the surface a personal admin bot works from. No separate ops token.
+- [x] **Stormi nudges** — `evOutreach` counts on hub context. Needs-contact and exhausted get a nudge. A packet that is simply waiting does not.
+- [x] **Phone type** — office or mobile on `set-contact`. Office is the default, including FMCSA numbers the driver saves.
+- [x] **Measurement** — the admin summary above. The cron log still emits send counts.
 
 ---
 
-## Phase 2 — Voice follow-up pilot (not started)
+## Phase 2 — Scripted Pingram call + text (shipped dark, 2026-10-13)
 
-Goal: add the channel that moves trucking EV from ~15% to ~49%. Phone is the only lever left on the outreach layer.
+Pingram can place a one-way text-to-speech call (`call: { message }`) and send SMS. It cannot hold a conversation. Phase 2 uses that, behind `EVR_VOICE_SMS_ENABLED` (default off).
 
-**Pingram has no conversational voice**, so this needs a voice-agent provider (candidates to evaluate: Retell, Vapi, Bland, or Twilio + a realtime LLM). Pick one that gives us a transcript and a structured post-call payload.
+| What | How |
+|---|---|
+| When | Two days after email 2 (day 5), once per packet (`last_touch_at`) |
+| Office number, or a number with no type | One scripted call. First sentence says it is an automated message from Provven on behalf of the driver |
+| Mobile number | One SMS with the secure link and STOP |
+| Bookkeeping | A `verification_attempts` row (`method` `phone` or `sms`). Does **not** increment `attempt_count`, so the three-email cap stays an email cap |
+| Driver control | "Don't call or text this employer" sets `voice_opt_out` and `sms_opt_out` |
+| Webhooks | `SMS_DELIVERED`, `SMS_FAILED`, `CALL_FAILED`, unsubscribe, `SMS_INBOUND`, `VOICE_INBOUND`. An email bounce still pauses the cadence. A failed call does not |
+| Record | The attempt-record statement counts emails, calls, and texts separately, and says a call or text is not a verification |
 
-| Step | What | Guardrail |
-|---|---|---|
-| 2.1 | Call placement after the 2nd unanswered email (day 3), to the FMCSA-listed or driver-confirmed number | Only numbers from FMCSA or the driver — never a web-scraped guess |
-| 2.2 | Script: disclose "automated assistant calling on behalf of [driver]" in the first sentence, every call | TCPA treats AI voice as artificial; ME / UT / CA require AI disclosure |
-| 2.3 | Goal of the call is **routing**, not verification: get the right person's email or confirm the one we have, then send the secure link | Phone-confirmed facts are **not** DKIM-confirmed → never produce an attestation from a call |
-| 2.4 | Recording: default off; enable only where one-party consent applies, or announce recording | All-party states (CA, FL, IL, MD, MA, MT, NH, PA, WA, …) |
-| 2.5 | Call outcome → `verification_attempts` row with `method = 'phone'`, transcript summary, structured outcome (`reached`, `voicemail`, `wrong_number`, `gave_email`, `refused`) | `method` CHECK already allows `phone` |
-| 2.6 | Attempt record PDF gains call rows | `EvrAttemptRecordPdf` already iterates attempts generically |
-| 2.7 | Driver UI: call appears in the timeline; driver can opt a packet out of calls | Candidate-controlled, always |
+**Apply `supabase/migrations/120_evr_outreach_touches.sql`.** Register the new Pingram events on `/api/webhooks/pingram/events`. Leave `EVR_VOICE_SMS_ENABLED` unset until counsel signs off on artificial-voice calls to office lines and SMS to driver-marked mobiles.
 
-**Exit criteria:** 50 pilot calls, measured lift in completion vs. email-only cohort, zero compliance incidents. If lift < 10 points, stop and skip to Phase 3.
+**Not this phase:** a live two-way phone agent. Grok Voice (`wss://api.x.ai/v1/realtime`) is the later upgrade if the exhausted rate stays above ~40% after this touch. Same rules: disclose up front, routing only, no attestation from a call.
 
-**Cost model to confirm before building:** ~$0.10–0.20/min for voice agents; a 2-minute call × 2 attempts ≈ $0.40–0.80 per packet.
+### Personal admin bot (configured outside the app)
+
+Central admin is gated on a logged-in email in `ADMIN_EMAILS`. A bot attached to that inbox signs in with the magic link, and the Verifications tab is its queue. It is not a module in this repo, and there is no EV-only service token. Confirming a looked-up employer email stays the driver's "Use & send" click.
 
 ---
 
@@ -111,7 +113,7 @@ Goal: when the driver's agent path exhausts, give the hiring carrier a one-click
 
 **Trigger to build:** first carrier asks, or exhausted-packet rate from the Phase 1 admin view stays above ~40% after Phase 2.
 
-**Explicitly not doing:** HireRight DAC / Cisive Driver iQ direct integrations. Both require the integrating party to be a CRA subscriber and contribute records back. That is the CRA business model we are deliberately not entering.
+**HireRight DAC and Cisive Driver iQ stay out.** Cisive is the CRA. Driver iQ's previous-employment database is sold to motor carriers for their hiring file. A driver can request a copy of their own report from Cisive. Provven cannot query it for them. Accio EV remains the employer-paid order when a carrier wants a CRA to run it.
 
 ---
 
@@ -137,7 +139,7 @@ No outreach code depends on these; they decide what the verified result unlocks.
 | Contact research | FMCSA + web search, driver confirms | Free, official, no leak of the employment claim to a guessed address |
 | Exhaustion | 7 days after 3rd send | The last email needs a chance to be answered |
 | Bounce | Pause + research, not burn attempts | Three emails into a dead mailbox is zero attempts |
-| Voice | Phase 2, separate provider, routing-only | Pingram has no conversational voice; calls can't produce attestations |
+| Voice | Pingram scripted call + SMS, flag off until counsel | One-way TTS is already in Pingram. A conversation is a later Grok Voice upgrade. Neither produces an attestation |
 | Vendor dispatch | Employer-side Accio order | Database layer belongs to a CRA |
 
 ---
@@ -146,9 +148,11 @@ No outreach code depends on these; they decide what the verified result unlocks.
 
 ```
 src/lib/
-  evr-outreach.ts              cadence, sender, delivery-event processor      (P1)
+  evr-outreach.ts              cadence, sender, day-5 touch, delivery events (P1, P2)
+  evr-touch-script.ts          call script + SMS text                         (P2)
+  evr-metrics.ts               admin reply / bounce / exhausted rates         (P1 follow-up)
   evr-contact-research.ts      FMCSA + Claude web-search                      (P1)
-  evr-attempt-record.ts        canonical JSON + sha256                        (P1)
+  evr-attempt-record.ts        canonical JSON + sha256                        (P1, P2 counts)
   evr-delivery.ts              evr-<id>@verify.provven.com alias              (P0)
   evr-inbound.ts               reply matching + DKIM                          (P0)
   send-verification-email.ts   outbound email                                 (P0, P1 subject)
@@ -158,6 +162,7 @@ src/app/api/candidate/verification/
   initiate-self, resend, decline, status, ev-authorization,
   share-requests, share-grants                                                (P0; P1 refactor)
   [id]/research-contact, [id]/set-contact, [id]/attempt-record                (P1)
+  [id]/outreach-prefs                                                         (P2)
 src/app/api/webhooks/pingram/   inbound (P0), events (P1)
 src/app/api/cron/evr-outreach/  hourly cadence                                (P1)
 src/components/verification/
@@ -165,5 +170,5 @@ src/components/verification/
   SafetyPerformanceHistoryPaper, EvDisclosureAuthorizationModal,
   EvShareRequestsPanel                                                        (P0)
   EvOutreachStatus                                                            (P1)
-supabase/migrations/ 106 (DKIM), 109 (decline), 110 (consent stack), 119 (outreach)
+supabase/migrations/ 106 (DKIM), 109 (decline), 110 (consent stack), 119 (outreach), 120 (touches)
 ```

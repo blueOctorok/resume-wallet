@@ -12,7 +12,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
  * POST /api/candidate/verification/[id]/set-contact
- * Body: { email?: string, phone?: string }
+ * Body: { email?: string, phone?: string, phoneType?: 'office' | 'mobile' }
  *
  * Driver confirms (or types) the employer contact after research or a bounce.
  * Saves it, clears the research flag, and sends the next attempt right away
@@ -29,15 +29,19 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
     const { id } = await params
-    const body = (await request.json()) as { email?: string; phone?: string }
+    const body = (await request.json()) as { email?: string; phone?: string; phoneType?: string }
     const email = body.email?.trim().toLowerCase() || null
     const phone = body.phone?.trim() || null
+    const phoneType = body.phoneType === 'mobile' ? 'mobile' : body.phoneType === 'office' ? 'office' : null
 
     if (!email && !phone) {
       return NextResponse.json({ error: 'Provide an email or phone number.' }, { status: 400 })
     }
     if (email && !EMAIL_RE.test(email)) {
       return NextResponse.json({ error: 'That email address does not look valid.' }, { status: 400 })
+    }
+    if (body.phoneType && !phoneType) {
+      return NextResponse.json({ error: 'Phone type must be office or mobile.' }, { status: 400 })
     }
 
     const supabase = await getAdminSupabaseClient()
@@ -58,7 +62,7 @@ export async function POST(
       .from('employment_verification_requests')
       .update({
         ...(email ? { previous_employer_email: email } : {}),
-        ...(phone ? { previous_employer_phone: phone } : {}),
+        ...(phone ? { previous_employer_phone: phone, previous_employer_phone_type: phoneType ?? 'office' } : {}),
         contact_research_status: 'not_requested',
         updated_at: new Date().toISOString(),
       })
@@ -82,7 +86,7 @@ export async function POST(
       message: send.ok
         ? `Contact saved. Request sent to ${email}.`
         : send.code === 'no_contact'
-          ? 'Phone saved. We need an email to send the packet; a phone-based attempt is coming in a later phase.'
+          ? 'Phone saved. After the second email we place one call to an office number, or one text to a mobile number, if that channel is turned on.'
           : send.error,
     })
   } catch (error) {
