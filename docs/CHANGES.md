@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin company cards: member labels and invite field** (2026-10-13)
+
+Company cards on the central admin Companies tab were printing the stored role. `company_members.role` still says `recruiter` for a team member (legacy value; `getDisplayRole` maps it, plus `hr_manager` / `hiring_manager` / `interviewer`, to "Team member"). The badge now uses that label, same as the employer team page. Invite still only renders after the member list is opened. The email field was sharing a row with the role menu and Invite button inside a grid card, so it collapsed to a few characters; it now takes the full card width, with role and Invite on the row below.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/CompaniesTab.tsx` | `getDisplayRole` on member badges. Invite email is full width. Role menu reads `INVITEABLE_ROLES`. |
+
 ## **TypeScript gate is on: `strictNullChecks` + `ignoreBuildErrors: false`** (2026-10-13)
 
 `next.config.ts` had `typescript.ignoreBuildErrors: true` and `tsconfig.json` had no null checking, so production builds never typechecked. `src/` carried 117 errors under the old config and 213 under `strictNullChecks`. Both are now zero, the build fails on type errors, and `npx vitest run` (257 tests) is green.

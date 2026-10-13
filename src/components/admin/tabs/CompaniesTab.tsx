@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import type { AdminTabProps, AdminCompany, CompanyMember } from '@/components/admin/admin-types'
 import { getEmployerBlockDefinition } from '@/lib/employer-block-registry'
+import { getDisplayRole, INVITEABLE_ROLES } from '@/lib/employer-roles'
 import InviteShareLink from '@/components/ui/InviteShareLink'
 
 interface CompaniesTabProps extends AdminTabProps {
@@ -547,7 +548,7 @@ export default function CompaniesTab({
                                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                     : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
                               }`}>
-                                {member.role}
+                                {getDisplayRole(member.role)}
                               </span>
                               {member.isPending && (
                                 <span className='px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'>
@@ -589,36 +590,41 @@ export default function CompaniesTab({
                     <p className={`text-xs font-medium ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
                       Invite a teammate
                     </p>
-                    <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-                      <input
-                        type='email'
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder='metro@pacedrivers.com'
-                        className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${
-                          isDarkTheme(theme)
-                            ? 'border-gray-600 bg-gray-900 text-white placeholder-gray-500'
-                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
-                        }`}
-                      />
+                    {/* Email gets its own row. Sharing a row with the role menu
+                        and Invite button squeezed it to a few characters inside
+                        a grid card. */}
+                    <input
+                      type='email'
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder='teammate@company.com'
+                      className={`w-full rounded-lg border px-3 py-2 text-sm ${
+                        isDarkTheme(theme)
+                          ? 'border-gray-600 bg-gray-900 text-white placeholder-gray-500'
+                          : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                      }`}
+                    />
+                    <div className='flex gap-2'>
                       <select
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value)}
-                        className={`rounded-lg border px-2 py-2 text-sm ${
+                        className={`min-w-0 flex-1 rounded-lg border px-2 py-2 text-sm ${
                           isDarkTheme(theme)
                             ? 'border-gray-600 bg-gray-900 text-white'
                             : 'border-gray-300 bg-white text-gray-900'
                         }`}
                       >
-                        <option value='recruiter'>Team member</option>
-                        <option value='admin'>Admin</option>
-                        <option value='viewer'>Viewer</option>
+                        {INVITEABLE_ROLES.map((role) => (
+                          <option key={role.value} value={role.value}>
+                            {role.label}
+                          </option>
+                        ))}
                       </select>
                       <button
                         type='button'
                         onClick={() => handleInviteCompanyMember(company.id)}
                         disabled={inviting}
-                        className='inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50'
+                        className='inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50'
                       >
                         {inviting ? <Loader2 className='h-4 w-4 animate-spin' /> : <UserPlus className='h-4 w-4' />}
                         Invite
