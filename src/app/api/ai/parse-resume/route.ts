@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const updatedUsage = await getOrCreateUsage(supabase, user.id)
+    const updatedUsage = await getOrCreateUsage(supabase, userId)
 
     return NextResponse.json({
       success: true,

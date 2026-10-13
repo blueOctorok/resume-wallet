@@ -5,6 +5,11 @@ import { getBlockDefinition } from '@/lib/block-registry'
 import { isRecruiterStatus, mapRecruiterStatusColumn } from '@/lib/employer-recruiter-pipeline'
 import { isInviteStatus } from '@/components/employer/outreach/types'
 import { syncOutreachInvitesForCompany } from '@/lib/sync-outreach-invite-status'
+import {
+  DOT_BLOCK,
+  completeDotOutreachInvitesIfApplicationDone,
+} from '@/lib/complete-dot-outreach-invites'
+import { resolveStormUserIdByEmail } from '@/lib/resolve-candidate-by-email'
 import { normalizeToE164 } from '@/lib/phone-e164'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { getAppBaseUrl } from '@/lib/app-url'
@@ -12,6 +17,15 @@ import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import crypto from 'crypto'
 
 const RECRUITER_NOTES_MAX = 8000
+
+/** Columns the board needs for one invite row. Shared by list, create, and the post-create re-read. */
+const INVITE_SELECT = `
+  id, token, candidate_email, candidate_phone, candidate_name, status, type, target_block_type,
+  job_posting_id, view_count, expires_at, created_at, updated_at, used_at, used_by_user_id,
+  driver_application_id, email_sent_at, sms_sent_at, recruiter_status, recruiter_notes,
+  job_postings(title),
+  users!application_invites_used_by_user_id_fkey(email)
+`
 
 type InviteDbRow = {
   id: string
@@ -144,15 +158,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('application_invites')
-      .select(`
-        id, token, candidate_email, candidate_phone, candidate_name, status, type,
-        target_block_type,
-        job_posting_id, view_count, expires_at, created_at, updated_at,
-        used_at, used_by_user_id, driver_application_id, email_sent_at, sms_sent_at,
-        recruiter_status, recruiter_notes,
-        job_postings(title),
-        users!application_invites_used_by_user_id_fkey(email)
-      `)
+      .select(INVITE_SELECT)
       .eq('company_id', ctx.companyId)
       .order('updated_at', { ascending: false })
 
@@ -298,7 +304,7 @@ export async function POST(request: NextRequest) {
       phoneToStore = normalized
     }
 
-    const { data: invite, error } = await supabase
+    const { data: created, error } = await supabase
       .from('application_invites')
       .insert({
         company_id: ctx.companyId,
@@ -314,20 +320,33 @@ export async function POST(request: NextRequest) {
         welcome_message: welcomeMessage || null,
         expires_at: expiresAt.toISOString(),
       })
-      .select(
-        `
-        id, token, candidate_email, candidate_phone, candidate_name, status, type, target_block_type,
-        job_posting_id, view_count, expires_at, created_at, updated_at, used_at, used_by_user_id,
-        driver_application_id, email_sent_at, sms_sent_at, recruiter_status, recruiter_notes,
-        job_postings(title),
-        users!application_invites_used_by_user_id_fkey(email)
-      `,
-      )
+      .select(INVITE_SELECT)
       .single()
 
     if (error) {
       console.error('[EMPLOYER INVITES] Create error:', error)
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
+    }
+
+    let invite = created
+
+    // A driver who already submitted a DOT application has nothing left to do.
+    // Complete the card on creation so the recruiter opens the file instead of
+    // waiting on a resubmit. Re-read so the response carries the final state.
+    if (targetBlockType === DOT_BLOCK) {
+      const driverId: string | null =
+        candidateUserId || (candidateEmail ? await resolveStormUserIdByEmail(supabase, candidateEmail) : null)
+      if (driverId) {
+        const { completed } = await completeDotOutreachInvitesIfApplicationDone(supabase, driverId)
+        if (completed > 0) {
+          const { data: refreshed } = await supabase
+            .from('application_invites')
+            .select(INVITE_SELECT)
+            .eq('id', created.id)
+            .single()
+          if (refreshed) invite = refreshed
+        }
+      }
     }
 
     const baseUrl = getAppBaseUrl(request)
@@ -559,7 +578,7 @@ export async function PATCH(request: NextRequest) {
     //   - pending  : restore-from-archive — ONLY when currently cancelled or expired,
     //                so we never re-open a real "completed" or "in_progress" invite.
     const allowedStatuses = ['cancelled', 'pending']
-    if (!allowedStatuses.includes(status)) {
+    if (!status || !allowedStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
     if (status === 'pending' && !['cancelled', 'expired'].includes(existing.status)) {

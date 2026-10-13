@@ -50,6 +50,7 @@ interface DqMonitorSectionProps {
 export default function DqMonitorSection({ sessionUserId }: DqMonitorSectionProps) {
   const isDark = false
   const [candidates, setCandidates] = useState<MonitorCandidate[]>([])
+  const [includesSelfServe, setIncludesSelfServe] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +69,7 @@ export default function DqMonitorSection({ sessionUserId }: DqMonitorSectionProp
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load drivers')
       setCandidates(data.candidates ?? [])
+      setIncludesSelfServe(Boolean(data.includesSelfServe))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     } finally {
@@ -102,7 +104,11 @@ export default function DqMonitorSection({ sessionUserId }: DqMonitorSectionProp
           paper
           icon={ClipboardList}
           title="Drivers — DQ monitor"
-          description="Candidates you’re working. Click a name for their DQ file checklist."
+          description={
+            includesSelfServe
+              ? 'Drivers who signed up on their own, plus anyone you’re already working. Click a name to open their file.'
+              : 'Candidates you’re working. Click a name for their DQ file checklist.'
+          }
           headerActions={
             <Button
               type="button"
@@ -134,7 +140,9 @@ export default function DqMonitorSection({ sessionUserId }: DqMonitorSectionProp
               <ClipboardList className="mx-auto mb-2 h-8 w-8 text-ironside" />
               <p className="text-sm font-medium text-[#173150]">No drivers yet</p>
               <p className="mt-1 text-xs text-ironside">
-                Invite a candidate, open talent search, or order a screening — they’ll appear here.
+                {includesSelfServe
+                  ? 'Drivers who sign up on their own appear here. A driver invited by another company stays on that company’s roster.'
+                  : 'Invite a candidate, open talent search, or order a screening — they’ll appear here.'}
               </p>
             </div>
           )}

@@ -90,9 +90,6 @@ interface Reference {
 }
 
 interface ResumeBuilderProps {
-  user?: {
-    address?: string
-  } | null
   onBack?: () => void
   onSave?: (resumeId: string) => void
   existingResumeId?: string
@@ -131,7 +128,6 @@ const SKILL_CATEGORIES: { value: 'equipment' | 'route' | 'technology' | 'safety'
 ]
 
 export default function ResumeBuilder({
-  user,
   onBack,
   onSave,
   existingResumeId,

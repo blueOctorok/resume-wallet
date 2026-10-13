@@ -11,7 +11,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
  * Uses `env(safe-area-inset-bottom)` so it sits above Safari's URL bar.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type ReactElement } from 'react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSimpleModeStore, type MobileGuidedTab } from '@/stores/simple-mode-store'
@@ -54,7 +54,7 @@ function CardIcon() {
   )
 }
 
-const ICONS: Record<MobileGuidedTab, () => JSX.Element> = {
+const ICONS: Record<MobileGuidedTab, () => ReactElement> = {
   jobs: JobsIcon,
   job: JobIcon,
   card: CardIcon,

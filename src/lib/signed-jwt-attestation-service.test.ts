@@ -111,7 +111,8 @@ describe('createSignedJwtAttestationService', () => {
     })
 
     const attestation = await service.proveFact(sampleInput)
-    expect(attestation.proof.kind).toBe('signed_jwt')
+    // Narrow the ProofArtifact union so the JWT-only fields are typed below.
+    if (attestation.proof.kind !== 'signed_jwt') throw new Error('expected signed_jwt proof')
     expect(attestation.proof.issuer).toBe(TEST_ISSUER)
 
     const result = await service.verifyAttestation(attestation)
@@ -140,6 +141,7 @@ describe('createSignedJwtAttestationService', () => {
       candidateUserId: CANDIDATE_ID,
       factType: 'cdl_class_a',
     })
+    if (attestation.proof.kind !== 'signed_jwt') throw new Error('expected signed_jwt proof')
 
     const tampered = {
       ...attestation,

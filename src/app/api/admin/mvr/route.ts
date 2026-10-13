@@ -86,9 +86,7 @@ export async function GET(request: NextRequest) {
         return [id, p ? [p.first_name, p.last_name].filter(Boolean).join(' ') || null : null]
       })
     )
-    const resultByOrderId = new Map(
-      (results || []).map((r: { mvr_order_id: string }) => [r.mvr_order_id, r])
-    )
+    const resultByOrderId = new Map((results || []).map((r) => [r.mvr_order_id, r]))
 
     const matchingUserIds = hasSearch
       ? new Set(await resolveUserIdsMatchingSearch(supabase, search))

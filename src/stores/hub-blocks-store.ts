@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import { shallow } from 'zustand/shallow'
-import { BLOCK_DEFINITIONS, getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
+import { getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import type { BlockDefinition } from '@/lib/block-registry'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
@@ -439,17 +438,3 @@ export const useStormiAutoWelcomeCandidateDone = () =>
 
 export const useWalkthroughDismissed = () =>
   useHubBlocksStore((s) => s.walkthroughDismissed)
-
-/**
- * Returns block definitions the user has NOT yet installed.
- * Uses shallow equality so a new array reference from .filter()
- * doesn't cause an infinite re-render loop.
- */
-export const useAvailableBlocks = () =>
-  useHubBlocksStore(
-    (s) => {
-      const installedTypes = new Set(s.installedBlocks.map((b) => b.blockType))
-      return BLOCK_DEFINITIONS.filter((b) => !installedTypes.has(b.id))
-    },
-    shallow
-  )

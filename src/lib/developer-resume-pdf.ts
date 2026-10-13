@@ -89,7 +89,7 @@ export async function generateDeveloperResumePDF(
   }
 
   // Links line
-  const links = []
+  const links: string[] = []
   if (personalInfo.githubUrl) links.push(`GitHub: ${personalInfo.githubUrl}`)
   if (personalInfo.linkedinUrl)
     links.push(`LinkedIn: ${personalInfo.linkedinUrl}`)
@@ -324,7 +324,7 @@ export async function generateDeveloperResumePDF(
       }
 
       // Links
-      const projectLinks = []
+      const projectLinks: string[] = []
       if (project.liveUrl) projectLinks.push(`Live: ${project.liveUrl}`)
       if (project.repoUrl) projectLinks.push(`Repo: ${project.repoUrl}`)
       if (projectLinks.length > 0) {
@@ -468,7 +468,7 @@ export function generateDeveloperResumePDFBuffer(
     y += 5
   }
 
-  const links = []
+  const links: string[] = []
   if (personalInfo.githubUrl) links.push(`GitHub: ${personalInfo.githubUrl}`)
   if (personalInfo.linkedinUrl)
     links.push(`LinkedIn: ${personalInfo.linkedinUrl}`)

@@ -6,6 +6,7 @@
     "skipLibCheck": true,
     "strict": false,
     "noImplicitAny": false,
+    "strictNullChecks": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "ESNext",
@@ -24,5 +25,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "midnight"]
 }

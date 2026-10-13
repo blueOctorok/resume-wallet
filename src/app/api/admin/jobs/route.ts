@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import { joinedRow } from '@/lib/supabase-join'
 
 /**
  * GET /api/admin/jobs
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       jobs: (jobs || []).map(job => {
-        const company = job.companies as { id: string; company_name: string; dot_number: string | null } | null
+        const company = joinedRow(job.companies)
         return {
           id: job.id,
           title: job.title,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
-import { resolveCompanyDqForCandidate, loadEngagedCandidateIds } from '@/lib/dq-file-load'
+import { resolveCompanyDqForCandidate, loadDqMonitorCandidateIds } from '@/lib/dq-file-load'
 
 /**
  * GET /api/employer/dq-monitor/[userId]
@@ -30,13 +30,11 @@ export async function GET(
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    // Belonging to *a* company was the only check, so any member of any company
-    // could read any candidate's email and phone by guessing a user id, with no
-    // application, invite, request, or order between them. Reuse the same engaged
-    // set the roster is built from, so the UI is unaffected: the detail modal only
-    // ever opens for someone already on that list.
-    const engagedIds = await loadEngagedCandidateIds(supabase, ctx.companyId)
-    if (!engagedIds.includes(candidateUserId)) {
+    // Same set the roster is built from, including an agency's self-serve
+    // drivers. A member of some other company still cannot open a person
+    // who is not on their list.
+    const { ids } = await loadDqMonitorCandidateIds(supabase, ctx.companyId)
+    if (!ids.includes(candidateUserId)) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 

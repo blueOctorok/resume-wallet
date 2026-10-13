@@ -60,9 +60,8 @@ const EmploymentVerificationForm = dynamic(
 )
 
 interface DotApplicationFlowProps {
-  sessionUserId: string
-  /** Raw user object for form sessionUserId prop (may differ from normalized address) */
-  userAddress: string | undefined
+  /** Null while the auth store is still hydrating; every effect below guards on it. */
+  sessionUserId: string | null
   onBack: () => void
 }
 
@@ -85,7 +84,6 @@ interface DotApplicationFlowProps {
  */
 export default function DotApplicationFlow({
   sessionUserId,
-  userAddress,
   onBack,
 }: DotApplicationFlowProps) {
   const { theme } = useTheme()
@@ -404,10 +402,11 @@ export default function DotApplicationFlow({
           })
         }
 
-        if (dotData.employmentHistory?.length > 0) {
+        const employmentHistory = dotData.employmentHistory ?? []
+        if (employmentHistory.length > 0) {
           dotApp.setForm3Data((prev: Record<string, unknown>) => ({
             ...prev,
-            employers: dotData.employmentHistory.map((emp: Record<string, unknown>) => ({
+            employers: employmentHistory.map((emp: Record<string, unknown>) => ({
               name: emp.company || emp.companyName || '',
               phone: emp.supervisorPhone || '',
               email: emp.supervisorEmail || '',
@@ -425,19 +424,20 @@ export default function DotApplicationFlow({
           }))
         }
 
-        if (dotData.drivingRecord?.violations?.length > 0 || dotData.drivingRecord?.accidents?.length > 0) {
+        const drivingRecord = dotData.drivingRecord
+        if (drivingRecord && (drivingRecord.violations?.length || drivingRecord.accidents?.length)) {
           dotApp.setForm2Data((prev: Record<string, unknown>) => ({
             ...prev,
-            accidents: dotData.drivingRecord.accidents?.map((acc: Record<string, unknown>) => ({
+            accidents: drivingRecord.accidents?.map((acc: Record<string, unknown>) => ({
               date: acc.date || '', nature: acc.description || '',
               fatalities: acc.fatalities || '', injuries: acc.injuries || '', atFault: '',
             })) || [],
-            hasNoAccidents: !dotData.drivingRecord.accidents?.length,
-            convictions: dotData.drivingRecord.violations?.map((viol: Record<string, unknown>) => ({
+            hasNoAccidents: !drivingRecord.accidents?.length,
+            convictions: drivingRecord.violations?.map((viol: Record<string, unknown>) => ({
               dateConvicted: viol.date || '', violation: viol.violation || '',
               stateOfViolation: viol.location || '', penalty: viol.fine || '',
             })) || [],
-            hasNoConvictions: !dotData.drivingRecord.violations?.length,
+            hasNoConvictions: !drivingRecord.violations?.length,
           }))
         }
 
@@ -798,7 +798,7 @@ export default function DotApplicationFlow({
     if (dotApp.isApplicationCompleted && showEmploymentVerification) {
       return (
         <EmploymentVerificationForm
-          userAddress={userAddress}
+          userAddress={sessionUserId ?? undefined}
           onComplete={() => {
             setShowEmploymentVerification(false)
             onBack()
@@ -820,7 +820,7 @@ export default function DotApplicationFlow({
         ?._rowProvenance ?? null
     const formProps = {
       onNavigateToForm: handleFormNavigation,
-      sessionUserId: userAddress,
+      sessionUserId: sessionUserId ?? undefined,
       onSaveProgress: saveAllFormsToProfile,
     }
 
@@ -1009,7 +1009,7 @@ export default function DotApplicationFlow({
       <ProfileConflictModal
         isOpen={dotApp.showProfileConflictModal}
         conflict={dotApp.profileConflict}
-        userAddress={sessionUserId ?? null}
+        userAddress={sessionUserId}
         onKeepExisting={() => {
           dotApp.setShowProfileConflictModal(false)
           dotApp.setProfileConflict(null)

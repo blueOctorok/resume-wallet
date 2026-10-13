@@ -18,6 +18,20 @@ export interface DriverApplicationRecord {
   updated_at: string
 }
 
+/** Id of the user's submitted application, or null if they haven't finished one. */
+export async function findCompletedDriverApplicationId(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('driver_applications')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_complete', true)
+    .maybeSingle()
+  return (data?.id as string | undefined) ?? null
+}
+
 /** Upsert the one application row per user with the latest form data. */
 export async function saveDriverApplication(
   supabase: SupabaseClient,

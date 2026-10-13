@@ -12,6 +12,7 @@ import {
   type ResolveDriverDqInput,
 } from '@/lib/dq-file-status'
 import { getLicenseScan } from '@/lib/block-data'
+import { toCompanyAccountTier } from '@/lib/company-account-tier'
 import { toDqLicenseScan } from '@/lib/license-scan-view'
 import { fetchAllInChunks } from '@/lib/supabase-in-chunks'
 
@@ -142,6 +143,124 @@ export async function resolveCompanyDqForCandidate(
   return resolveCompanyDqFile(input)
 }
 
+/**
+ * Agency roster rule. A driver who signed up on their own belongs on the
+ * platform agency's monitor. A driver another company invited does not —
+ * that company brought them in, so they stay on that roster.
+ *
+ * Direct work with *this* company (an application, this company's own invite,
+ * a request, an order) still counts. The exclusion only gates the automatic add.
+ */
+export function belongsOnSelfServeDqRoster(input: {
+  role: string | null | undefined
+  invitedByAnotherCompany: boolean
+  isCompanyStaff: boolean
+}): boolean {
+  if (input.role === 'employer' || input.role === 'admin') return false
+  if (input.isCompanyStaff) return false
+  if (input.invitedByAnotherCompany) return false
+  return true
+}
+
+const ROSTER_PAGE = 1000
+
+async function eachPage<T>(
+  label: string,
+  fetchPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += ROSTER_PAGE) {
+    const { data, error } = await fetchPage(from, from + ROSTER_PAGE - 1)
+    if (error) {
+      console.error(`[DQ ROSTER] ${label}:`, error.message)
+      break
+    }
+    if (!data?.length) break
+    out.push(...data)
+    if (data.length < ROSTER_PAGE) break
+  }
+  return out
+}
+
+/**
+ * Drivers who created their own account, for an agency monitor.
+ * Anyone claimed by a different company's invite is left out.
+ */
+async function loadSelfServeCandidateIds(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<string[]> {
+  const [invites, staff, users] = await Promise.all([
+    eachPage<{ used_by_user_id: string | null; candidate_user_id: string | null }>(
+      'other-company invites',
+      (from, to) =>
+        supabase
+          .from('application_invites')
+          .select('used_by_user_id, candidate_user_id')
+          .neq('company_id', companyId)
+          .in('status', ['pending', 'viewed', 'in_progress', 'completed'])
+          .order('id', { ascending: true })
+          .range(from, to),
+    ),
+    eachPage<{ user_id: string | null }>('company staff', (from, to) =>
+      supabase
+        .from('company_members')
+        .select('user_id')
+        .eq('is_active', true)
+        .not('accepted_at', 'is', null)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    eachPage<{ id: string; role: string | null }>('users', (from, to) =>
+      supabase.from('users').select('id, role').order('id', { ascending: true }).range(from, to),
+    ),
+  ])
+
+  const invitedElsewhere = new Set<string>()
+  for (const invite of invites) {
+    if (invite.used_by_user_id) invitedElsewhere.add(invite.used_by_user_id)
+    if (invite.candidate_user_id) invitedElsewhere.add(invite.candidate_user_id)
+  }
+  const staffIds = new Set(staff.map((row) => row.user_id).filter((id): id is string => Boolean(id)))
+
+  return users
+    .filter((user) =>
+      belongsOnSelfServeDqRoster({
+        role: user.role,
+        invitedByAnotherCompany: invitedElsewhere.has(user.id),
+        isCompanyStaff: staffIds.has(user.id),
+      }),
+    )
+    .map((user) => user.id)
+}
+
+/**
+ * Who appears on this company's DQ monitor.
+ * Every company sees people it is already working.
+ * An agency (the full-suite tier — Pace is one; the switch is account_tier,
+ * not the company name) also sees drivers who signed up on their own.
+ */
+export async function loadDqMonitorCandidateIds(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<{ ids: string[]; includesSelfServe: boolean }> {
+  const engaged = await loadEngagedCandidateIds(supabase, companyId)
+
+  const { data: company } = await supabase
+    .from('companies')
+    .select('account_tier')
+    .eq('id', companyId)
+    .maybeSingle()
+  const includesSelfServe = toCompanyAccountTier(company?.account_tier) === 'agency'
+  if (!includesSelfServe) return { ids: engaged, includesSelfServe }
+
+  const selfServe = await loadSelfServeCandidateIds(supabase, companyId)
+  return { ids: Array.from(new Set([...engaged, ...selfServe])), includesSelfServe }
+}
+
 /** Union of candidate user IDs this company is engaged with. */
 export async function loadEngagedCandidateIds(
   supabase: SupabaseClient,
@@ -250,9 +369,9 @@ export interface DqMonitorCandidateRow {
 export async function loadDqMonitorList(
   supabase: SupabaseClient,
   companyId: string,
-): Promise<DqMonitorCandidateRow[]> {
-  const candidateIds = await loadEngagedCandidateIds(supabase, companyId)
-  if (candidateIds.length === 0) return []
+): Promise<{ rows: DqMonitorCandidateRow[]; includesSelfServe: boolean }> {
+  const { ids: candidateIds, includesSelfServe } = await loadDqMonitorCandidateIds(supabase, companyId)
+  if (candidateIds.length === 0) return { rows: [], includesSelfServe }
 
   type ProfileRow = {
     user_id: string
@@ -466,7 +585,7 @@ export async function loadDqMonitorList(
     return a.name.localeCompare(b.name)
   })
 
-  return rows
+  return { rows, includesSelfServe }
 }
 
 /** Driver-lens snapshot for hub mirror. */

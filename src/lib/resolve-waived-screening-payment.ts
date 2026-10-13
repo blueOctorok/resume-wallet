@@ -30,8 +30,6 @@ export async function resolveScreeningPayment(
   const { paymentTxHash, paymentType, userId, companyId = null, candidateUserId = null } = input
 
   if (paymentTxHash) {
-    let payment = null
-
     const { data: exactPayment, error: exactError } = await supabase
       .from('payments')
       .select('id, status, user_id, tx_hash, company_id, created_at')
@@ -41,9 +39,8 @@ export async function resolveScreeningPayment(
       .limit(1)
       .maybeSingle()
 
-    if (exactPayment) {
-      payment = exactPayment
-    } else if (paymentTxHash.length > 66) {
+    let payment = exactPayment
+    if (!exactPayment && paymentTxHash.length > 66) {
       const legacyHash = paymentTxHash.substring(0, 66)
       const { data: legacyPayment, error: legacyError } = await supabase
         .from('payments')
@@ -57,7 +54,7 @@ export async function resolveScreeningPayment(
       if (legacyError && !legacyPayment) {
         console.error('[SCREENING PAYMENT] legacy lookup error:', legacyError)
       }
-    } else if (exactError) {
+    } else if (!exactPayment && exactError) {
       console.error('[SCREENING PAYMENT] lookup error:', exactError)
       return { ok: false, error: 'Failed to verify payment. Please try again.', status: 500 }
     }

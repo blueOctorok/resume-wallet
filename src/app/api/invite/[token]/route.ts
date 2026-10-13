@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
-import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
+import {
+  DOT_BLOCK,
+  completeDotOutreachInvitesIfApplicationDone,
+} from '@/lib/complete-dot-outreach-invites'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   normalizeStormEmail,
@@ -218,6 +221,13 @@ export async function POST(
     if (claimUserId && targetBlock && getBlockDefinition(targetBlock)) {
       await ensureHubBlockInstalled(supabase, claimUserId, targetBlock)
 
+      // Driver already submitted a DOT application → the recruiter's ask is
+      // already satisfied. Complete the card now instead of waiting for a
+      // resubmit that will never come.
+      if (targetBlock === DOT_BLOCK) {
+        await completeDotOutreachInvitesIfApplicationDone(supabase, claimUserId)
+      }
+
       if (screeningBlocks.includes(targetBlock)) {
         const requestType =
           targetBlock === 'driver-mvr' ? 'mvr_order'
@@ -270,107 +280,6 @@ export async function POST(
 
   } catch (error) {
     console.error('[INVITE START] Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-/**
- * PATCH /api/invite/[token]
- * Mark invite as completed when candidate finishes the application
- * 
- * Body:
- *   driverApplicationId - The completed application ID
- */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
-  try {
-    const { token } = await params
-    const body = await request.json()
-    const { driverApplicationId } = body
-    const sessionUserId = await getStormUserIdFromRequest(request)
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
-    }
-
-    const supabase = await getAdminSupabaseClient()
-
-    // Get the invite
-    const { data: invite, error: fetchError } = await supabase
-      .from('application_invites')
-      .select(
-        'id, status, company_id, created_by_user_id, target_block_type, used_by_user_id, candidate_name',
-      )
-      .eq('token', token)
-      .single()
-
-    if (fetchError || !invite) {
-      return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
-    }
-
-    if (invite.status === 'completed') {
-      return NextResponse.json({ success: true, inviteId: invite.id, alreadyCompleted: true })
-    }
-
-    const userId = sessionUserId
-
-    const candidateUserId = userId ?? (invite.used_by_user_id as string | null)
-
-    // Update invite to completed
-    const updateData: Record<string, unknown> = {
-      status: 'completed',
-    }
-    if (driverApplicationId) {
-      updateData.driver_application_id = driverApplicationId
-    }
-    if (userId && !invite.used_by_user_id) {
-      updateData.used_by_user_id = userId
-      updateData.used_at = new Date().toISOString()
-    }
-
-    const { error: updateError } = await supabase
-      .from('application_invites')
-      .update(updateData)
-      .eq('id', invite.id)
-
-    if (updateError) {
-      console.error('[INVITE COMPLETE] Update error:', updateError)
-      return NextResponse.json({ error: 'Failed to update invite' }, { status: 500 })
-    }
-
-    if (candidateUserId && invite.created_by_user_id) {
-      const blockDef = invite.target_block_type
-        ? getBlockDefinition(invite.target_block_type as string)
-        : undefined
-      const { data: company } = await supabase
-        .from('companies')
-        .select('company_name')
-        .eq('id', invite.company_id)
-        .maybeSingle()
-      const companyName =
-        (company as { company_name?: string } | null)?.company_name?.trim() || 'Your company'
-
-      void notifyEmployerCandidateActionComplete(supabase, {
-        kind: 'invite_completed',
-        employerUserId: invite.created_by_user_id as string,
-        companyId: invite.company_id as string,
-        companyName,
-        candidateUserId,
-        candidateDisplayName: (invite.candidate_name as string | null) ?? undefined,
-        blockLabel: blockDef?.label ?? null,
-        notificationData: { inviteId: invite.id, targetBlockType: invite.target_block_type },
-      })
-    }
-
-    return NextResponse.json({
-      success: true,
-      inviteId: invite.id,
-    })
-
-  } catch (error) {
-    console.error('[INVITE COMPLETE] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

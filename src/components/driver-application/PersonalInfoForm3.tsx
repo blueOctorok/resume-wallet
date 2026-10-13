@@ -1158,8 +1158,9 @@ export default function PersonalInfoForm3({
           let totalHistoryYears = 0
           let hasCurrentUnemployment = false
           
-          formData.employers.forEach(emp => {
-            if (!emp.fromDate || !emp.toDate) return
+          // for..of (not forEach) so TS tracks the mostRecentEndDate assignment below
+          for (const emp of formData.employers) {
+            if (!emp.fromDate || !emp.toDate) continue
             
             // Parse dates to find total span and most recent end
             const parseSimple = (dateStr: string) => {
@@ -1190,13 +1191,13 @@ export default function PersonalInfoForm3({
                 mostRecentEndDate = to
               }
             }
-          })
+          }
           
           // Check if there's a gap at the end (no coverage up to today)
           // If currently unemployed, there's NO gap - they've accounted for present
-          const hasRecentGap = !hasCurrentUnemployment && mostRecentEndDate && mostRecentEndDate < today
-          const gapMonths = hasRecentGap 
-            ? Math.round((today.getTime() - mostRecentEndDate!.getTime()) / (1000 * 60 * 60 * 24 * 30))
+          const hasRecentGap = !hasCurrentUnemployment && mostRecentEndDate !== null && mostRecentEndDate < today
+          const gapMonths = hasRecentGap && mostRecentEndDate
+            ? Math.round((today.getTime() - mostRecentEndDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
             : 0
           
           // Format the gap period for display

@@ -3,6 +3,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
+import { joinedRow } from '@/lib/supabase-join'
 
 /**
  * GET /api/employer/candidate-data/[candidateId]
@@ -73,7 +74,7 @@ export async function GET(
         applicationId: item.application_id,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        createdByName: (item.creator as { email: string } | null)?.email || null,
+        createdByName: joinedRow(item.creator)?.email || null,
       })),
     })
 

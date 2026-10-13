@@ -276,10 +276,8 @@ export async function GET(request: NextRequest) {
       share_token_created_at: user.share_token_created_at ?? null,
       share_views_count: user.share_views_count ?? 0,
     }
-    const profile =
-      userProfile
-        ? { ...userProfile, ...driverProfile }
-        : driverProfile
+    // Identity fields are optional when no user_profiles row exists yet.
+    const profile = { ...(userProfile ?? {}), ...driverProfile }
 
     if (dotAppsResult.error) {
       console.error('[DRIVER HUB] DOT apps query error:', dotAppsResult.error.message)
@@ -540,12 +538,10 @@ export async function GET(request: NextRequest) {
       ? { username: githubRow.username ?? null }
       : null
 
-    let dqFile = null
-    try {
-      dqFile = await loadDriverDqSnapshot(supabase, user.id)
-    } catch (e) {
+    const dqFile = await loadDriverDqSnapshot(supabase, user.id).catch((e: unknown) => {
       console.warn('[DRIVER HUB] dqFile load:', e)
-    }
+      return null
+    })
 
     return NextResponse.json({
       success: true,

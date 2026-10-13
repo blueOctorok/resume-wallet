@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
+import { joinedRow } from '@/lib/supabase-join'
 
 const APPLICATION_PIPELINE_STATUSES = ['submitted', 'contacted', 'archived'] as const
 
@@ -148,14 +149,9 @@ export async function GET(request: NextRequest) {
     for (const c of cdlRows ?? []) cdlMap.set(c.user_id, c)
 
     const applicants = (applications || []).map((app) => {
-      const applicantUser = app.users as {
-        id: string
-        wallet_address?: string
-        email?: string
-        role?: string
-      } | null
+      const applicantUser = joinedRow(app.users)
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
-      const jobPosting = app.job_postings as Record<string, unknown>
+      const jobPosting = joinedRow(app.job_postings)
       const cdl = cdlMap.get(app.applicant_user_id)
 
       const up = upMap.get(app.applicant_user_id)

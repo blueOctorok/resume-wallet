@@ -195,20 +195,19 @@ export async function GET(
       .eq('company_id', companyId)
 
     const jobIds = (companyJobs || []).map((j) => j.id)
-    let existingApplication = null
-
-    if (jobIds.length > 0) {
-      const { data: app } = await supabase
-        .from('applications')
-        .select('id, job_posting_id, status, created_at')
-        .eq('applicant_user_id', userId)
-        .in('job_posting_id', jobIds)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      existingApplication = app
-    }
+    const existingApplication =
+      jobIds.length > 0
+        ? (
+            await supabase
+              .from('applications')
+              .select('id, job_posting_id, status, created_at')
+              .eq('applicant_user_id', userId)
+              .in('job_posting_id', jobIds)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single()
+          ).data
+        : null
 
     const { data: companyWalletRow } = await supabase
       .from('companies')

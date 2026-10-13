@@ -636,7 +636,6 @@ export default function DriverHub({
               size="xl"
               color="teal"
               uploadEndpoint="/api/driver/avatar"
-              sessionUserId={userAddress}
               onSuccess={(url) =>
                 setHubData(prev =>
                   prev?.profile
@@ -865,7 +864,7 @@ export default function DriverHub({
       {/* ============================================================ */}
       <div className='mb-6'>
         <ShareProfileCard
-          sessionUserId={userAddress}
+          sessionUserId={userAddress ?? undefined}
           driverName={profileName || (data.displayNameFallback ?? '') || undefined}
           onViewCareerCard={() => onNavigate('career-card')}
         />
@@ -1615,7 +1614,6 @@ export default function DriverHub({
       <UploadResumeModal
         isOpen={showUploadResumeModal}
         onClose={() => setShowUploadResumeModal(false)}
-        user={userAddress ? { address: userAddress } : null}
         onUploadComplete={() => fetchHubData()}
       />
     </div>

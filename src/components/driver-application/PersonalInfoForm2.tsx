@@ -210,9 +210,7 @@ export default function PersonalInfoForm2({
     if (
       index !== undefined &&
       (field === 'accidents' || field === 'convictions' || field === 'inspections') &&
-      isIssuerRow(
-        (formData as Record<string, Array<{ _source?: string }>>)[field]?.[index],
-      )
+      isIssuerRow(formData[field][index])
     ) {
       const fillingEmptyConvictionState =
         field === 'convictions' &&
@@ -522,6 +520,7 @@ export default function PersonalInfoForm2({
           atFault: '',
           _source: 'self' as const,
           _mvrKey: undefined as string | undefined,
+          _pspKey: undefined as string | undefined,
         },
       ],
     }))
@@ -565,6 +564,7 @@ export default function PersonalInfoForm2({
   const fillTestData = () => {
     // Smart fill: only fill EMPTY fields, preserve existing data
     setFormData((prev) => ({
+      ...prev,
       // Driving Experience - add test data only if empty
       drivingExperience: prev.drivingExperience?.length > 0 && prev.drivingExperience.some(exp => exp.equipmentType || exp.yearsOfExperience)
         ? prev.drivingExperience
@@ -592,6 +592,7 @@ export default function PersonalInfoForm2({
               atFault: 'no',
               _source: 'self' as const,
               _mvrKey: undefined as string | undefined,
+              _pspKey: undefined as string | undefined,
             },
           ],
       hasNoAccidents: prev.hasNoAccidents ?? false,

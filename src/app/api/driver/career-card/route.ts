@@ -107,69 +107,69 @@ export async function GET(request: NextRequest) {
     } : null
 
     // Developer profile from block tables (if no driver profile)
-    let developerProfile = null
-    if (!driverProfile) {
+    async function loadDeveloperProfile() {
       const [devProfile, devGithub, devPortfolio] = await Promise.all([
         getDevProfile(supabase, userId),
         getDevGithub(supabase, userId),
         getDevPortfolio(supabase, userId),
       ])
-      if (devProfile || devGithub || devPortfolio) {
-        developerProfile = {
-          professional_summary: userProfile?.professional_summary ?? devProfile?.bio ?? null,
-          years_experience: devProfile?.years_experience ?? null,
-          employment_history: devProfile?.employment_history ?? [],
-          github_url: devGithub?.username ? `https://github.com/${devGithub.username}` : null,
-          linkedin_url: devPortfolio?.linkedin_url ?? null,
-          portfolio_url: devPortfolio?.portfolio_url ?? null,
-          skills: [],
-          education: [],
-          share_token: null,
-          share_settings: null,
-        }
+      if (!devProfile && !devGithub && !devPortfolio) return null
+      return {
+        professional_summary: userProfile?.professional_summary ?? devProfile?.bio ?? null,
+        years_experience: devProfile?.years_experience ?? null,
+        employment_history: devProfile?.employment_history ?? [],
+        github_url: devGithub?.username ? `https://github.com/${devGithub.username}` : null,
+        linkedin_url: devPortfolio?.linkedin_url ?? null,
+        portfolio_url: devPortfolio?.portfolio_url ?? null,
+        skills: [],
+        education: [],
+        share_token: null,
+        share_settings: null,
       }
     }
 
+    const developerProfile = driverProfile ? null : await loadDeveloperProfile()
+
     // Resume
-    let resume = null
-    if (careerCard.resume_id) {
-      const { data: res } = await supabase
-        .from('resumes')
-        .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
-        .eq('id', careerCard.resume_id)
-        .single()
-      resume = res
-    }
+    const resume = careerCard.resume_id
+      ? (
+          await supabase
+            .from('resumes')
+            .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
+            .eq('id', careerCard.resume_id)
+            .single()
+        ).data
+      : null
 
     // DOT application
-    let driverApplication = null
-    if (careerCard.driver_application_id) {
-      const { data: da } = await supabase
-        .from('driver_applications')
-        .select('id, verification_status, is_complete, created_at, blockchain_tx_hash')
-        .eq('id', careerCard.driver_application_id)
-        .single()
-      driverApplication = da
-    }
+    const driverApplication = careerCard.driver_application_id
+      ? (
+          await supabase
+            .from('driver_applications')
+            .select('id, verification_status, is_complete, created_at, blockchain_tx_hash')
+            .eq('id', careerCard.driver_application_id)
+            .single()
+        ).data
+      : null
 
     // MVR
-    let mvrData = null
-    if (careerCard.latest_mvr_id) {
+    async function loadMvr(mvrOrderId: string) {
       const { data: mvr } = await supabase
         .from('mvr_orders')
         .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
-        .eq('id', careerCard.latest_mvr_id)
+        .eq('id', mvrOrderId)
         .single()
+      if (!mvr) return null
 
-      if (mvr) {
-        const { data: mvrResults } = await supabase
-          .from('mvr_results')
-          .select('id, license_status, license_class, total_points, violation_count, accident_count')
-          .eq('mvr_order_id', mvr.id)
-          .single()
-        mvrData = { order: mvr, results: mvrResults, wasOrderedByEmployer: !!mvr.ordered_by_company_id }
-      }
+      const { data: mvrResults } = await supabase
+        .from('mvr_results')
+        .select('id, license_status, license_class, total_points, violation_count, accident_count')
+        .eq('mvr_order_id', mvr.id)
+        .single()
+      return { order: mvr, results: mvrResults, wasOrderedByEmployer: !!mvr.ordered_by_company_id }
     }
+
+    const mvrData = careerCard.latest_mvr_id ? await loadMvr(careerCard.latest_mvr_id) : null
 
     // Employment verifications
     const { data: verifications } = await supabase

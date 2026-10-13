@@ -519,7 +519,6 @@ export default function DeveloperHub({
             size="xl"
             color="indigo"
             uploadEndpoint="/api/developer/avatar"
-            sessionUserId={userAddress || ''}
             onSuccess={(url) =>
               setProfile(prev => prev ? { ...prev, avatarUrl: url } : prev)
             }
@@ -707,7 +706,7 @@ export default function DeveloperHub({
 
 
       {/* Career Card */}
-      <ShareProfileCard userAddress={userAddress} userRole='developer' />
+      <ShareProfileCard userAddress={userAddress ?? undefined} userRole='developer' />
 
       {/* Employment Verification - Developer only (resume / profile data) */}
       <div className="mb-6">
@@ -1188,7 +1187,6 @@ export default function DeveloperHub({
       <UploadResumeModal
         isOpen={showUploadResumeModal}
         onClose={() => setShowUploadResumeModal(false)}
-        user={userAddress ? { address: userAddress } : null}
         onUploadComplete={() => fetchResumes()}
       />
     </div>

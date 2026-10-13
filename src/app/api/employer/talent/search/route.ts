@@ -22,6 +22,24 @@ import { getBlockDefinition } from '@/lib/block-registry'
  *   - offset: Pagination offset (default 0)
  *   - blockTypes: Comma-separated hub block_type ids — candidate must have all listed blocks installed
  */
+interface TalentCandidateRow {
+  user_id: string
+  full_name: string | null
+  email: string | null
+  city: string | null
+  state: string | null
+  years_experience: number | null
+  cdl_class: string | null
+  endorsements: string[] | null
+  completeness_score: number | null
+  has_mvr: boolean
+  has_driver_app: boolean
+  has_resume: boolean
+  verified_jobs_count: number
+  member_since: string
+  role: string | null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getStormUserIdFromRequest(request)
@@ -90,23 +108,7 @@ export async function GET(request: NextRequest) {
     const pMinExperience = minExpNum !== null && !Number.isNaN(minExpNum) ? minExpNum : null
 
     // Call the search_talent() function, or fall back to direct view query if RPC fails
-    let candidates: Array<{
-      user_id: string
-      full_name: string | null
-      email: string | null
-      city: string | null
-      state: string | null
-      years_experience: number | null
-      cdl_class: string | null
-      endorsements: string[] | null
-      completeness_score: number | null
-      has_mvr: boolean
-      has_driver_app: boolean
-      has_resume: boolean
-      verified_jobs_count: number
-      member_since: string
-      role: string | null
-    }> | null = null
+    let candidates: TalentCandidateRow[] | null = null
 
     // Note: p_cdl_class and p_endorsements must be TEXT[] (not VARCHAR[]) to match
     // the text[] columns in career_cards. The function was updated in migration 029.
@@ -175,9 +177,9 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      candidates = viewData as typeof candidates
+      candidates = viewData as TalentCandidateRow[] | null
     } else {
-      candidates = rpcData as typeof candidates
+      candidates = rpcData as TalentCandidateRow[] | null
       console.log('[TALENT SEARCH] RPC returned', candidates?.length ?? 0, 'candidates')
     }
 

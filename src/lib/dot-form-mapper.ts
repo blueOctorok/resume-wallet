@@ -18,6 +18,14 @@ import { orderHistoryEntries } from '@/lib/history-entry-order'
 // FORM 1 DATA TYPES
 // =====================================================
 
+export interface DotForm1License {
+  state: string
+  licenseNumber: string
+  typeClass: string
+  endorsements: string
+  expirationDate: string
+}
+
 export interface DotForm1Data {
   employingCarrier?: {
     name: string
@@ -43,28 +51,18 @@ export interface DotForm1Data {
     zipCode: string
     yearsAtAddress?: string
   }
+  // Shapes below mirror what PersonalInfoForm1 actually collects. Previous
+  // addresses record years lived there (391.21 asks for three years of
+  // residency), not from/to dates.
   previousAddresses?: Array<{
     street: string
     city: string
     state: string
     zipCode: string
-    fromDate: string
-    toDate: string
+    yearsAtAddress: string
   }>
-  currentLicenses: Array<{
-    state: string
-    licenseNumber: string
-    typeClass: string
-    endorsements: string
-    expirationDate: string
-  }>
-  previousLicenses?: Array<{
-    state: string
-    licenseNumber: string
-    typeClass: string
-    expirationDate: string
-    reasonNoLongerHeld: string
-  }>
+  currentLicenses: Array<DotForm1License>
+  previousLicenses?: Array<DotForm1License>
   disqualificationHistory?: {
     hasLicenseSuspension: string
     licenseSuspensionDetails: string

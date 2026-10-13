@@ -124,7 +124,10 @@ export function detectOutreachAttention(
   // 4. Stuck pending — last resort, low-signal fallback.
   for (const f of files) {
     const docStatus = hubDocStatusFromScreeningOrder(f.status)
-    if (docStatus === 'processing' || docStatus === 'pending') {
+    // `hubDocStatusFromScreeningOrder` maps a pending order to 'in-progress',
+    // never 'pending' — comparing against 'pending' meant stale pending orders
+    // never raised this alert.
+    if (docStatus === 'processing' || docStatus === 'in-progress') {
       const age = hoursSince(f.orderedAt)
       if (age !== null && age > STALE_PENDING_HOURS) {
         const hours = Math.floor(age)

@@ -317,7 +317,7 @@ export async function POST(request: NextRequest) {
           companyId: postedCompanyId,
           companyName: postedCompanyName || employerName || 'Your company',
           candidateUserId: user.id,
-          candidateDisplayName: applicantName,
+          candidateDisplayName: applicantName ?? undefined,
           ctaUrl: employerReturnUrl('applicants'),
         })
       }

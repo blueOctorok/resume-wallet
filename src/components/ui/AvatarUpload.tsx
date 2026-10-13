@@ -11,7 +11,6 @@ interface AvatarUploadProps {
   color?: AvatarColor
   /** API endpoint that accepts multipart/form-data with a 'file' field */
   uploadEndpoint: string
-  sessionUserId: string
   onSuccess?: (newUrl: string) => void
   className?: string
   /**
@@ -40,7 +39,6 @@ export default function AvatarUpload({
   size = 'lg',
   color = 'teal',
   uploadEndpoint,
-  sessionUserId,
   onSuccess,
   className = '',
   persistentUploadHint = false,

@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
 
     // Write to block tables directly
-    const writes: Promise<void>[] = []
+    const writes: PromiseLike<void>[] = []
 
     // Dev profile fields
     const devProfileFields: Record<string, unknown> = {}

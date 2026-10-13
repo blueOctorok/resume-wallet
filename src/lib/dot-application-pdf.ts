@@ -321,7 +321,7 @@ export function generateDotApplicationPDF(
         fieldRow(
           [
             { label: 'Previous address', value: joinParts([a.street, a.city, a.state, a.zipCode]) },
-            { label: 'Dates', value: [a.fromDate, a.toDate].filter(Boolean).join(' – ') },
+            { label: 'Years there', value: a.yearsAtAddress },
           ],
           2,
         )
@@ -349,8 +349,8 @@ export function generateDotApplicationPDF(
               { label: 'State', value: lic.state },
               { label: 'License #', value: lic.licenseNumber },
               { label: 'Class', value: lic.typeClass },
+              { label: 'Endorsements', value: lic.endorsements },
               { label: 'Expired', value: fmtDate(lic.expirationDate) },
-              { label: 'No longer held because', value: lic.reasonNoLongerHeld },
             ]),
           'Previous license',
         )

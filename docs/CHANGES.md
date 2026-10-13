@@ -4,6 +4,84 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **TypeScript gate is on: `strictNullChecks` + `ignoreBuildErrors: false`** (2026-10-13)
+
+`next.config.ts` had `typescript.ignoreBuildErrors: true` and `tsconfig.json` had no null checking, so production builds never typechecked. `src/` carried 117 errors under the old config and 213 under `strictNullChecks`. Both are now zero, the build fails on type errors, and `npx vitest run` (257 tests) is green.
+
+Most fixes were type-only. These were real bugs the compiler had been hiding:
+
+| Bug | Where | Effect |
+|---|---|---|
+| `user.id` referenced after the variable was renamed `userId` | `api/ai/interview-prep-quiz`, `api/ai/parse-resume`, `api/candidate/bgcheck-consent` | `ReferenceError` on the success path, after the Stormi credit was already consumed. |
+| Stuck-pending alert compared against `'pending'` | `lib/outreach-attention.ts` | Document status is `'in-progress'`, so the alert never fired. |
+| DOT PDF printed `fromDate/toDate` and `reasonNoLongerHeld` | `lib/dot-application-pdf.ts` | Form 1 stores `yearsAtAddress` and license `endorsements`; those PDF columns were always blank. |
+| `fillTestData` rebuilt Form 2 state without `...prev` | `PersonalInfoForm2.tsx` | Dropped `inspections` / `hasNoInspections` on every test fill. |
+| Admin DOT search passed `app.sessionUserId` | `api/admin/dot-apps` | Field is `legacyWalletAddress`; wallet search matched nothing. |
+| MVR detail modal read `order.sessionUserId` | `admin/tabs/MvrTab.tsx` | API returns `legacyWalletAddress`; Wallet cell always `-`. |
+| `EmployerHub` rendered `data.company.id` with a nullable company | `EmployerHub.tsx` | Null company with no setup flag now routes to setup instead of throwing. |
+
+Dead code removed: `components/ResumeUpload.tsx` (IPFS-era, referenced an undefined `createAuthToken`), `useAvailableBlocks` in the hub-blocks store, the `user` prop threaded through `ResumeBuilder` / `StormResumeBlock` / `GeneralResumeBlock` / `DeveloperResumeBlock` / `ResumeUploadWithVerification` / `UploadResumeModal` (every component destructured it and none read it — `SessionUser` has no `address`), `AvatarUpload.sessionUserId` (unused; upload rides the Supabase cookie), and `DotApplicationFlow.userAddress` (duplicate of `sessionUserId`).
+
+Patterns worth knowing, since they'll come up again:
+
+- **`let x = null` infers type `null`.** Later assignments are errors and property reads become `never`. Annotate (`let x: Row | null = null`) or restructure into a `const` with a ternary.
+- **`as typeof x` after `x = null` means `as null`.** `typeof` in a type position reads the *narrowed* type at that spot. Name the type instead (`TalentCandidateRow`, `MvrResultRow`, `PspResultRow`).
+- **Supabase to-one joins type as arrays** without generated DB types. New `lib/supabase-join.ts` → `joinedRow(value)` normalizes `T | T[] | null` to `T | null`. Use it instead of per-field casts.
+- **`const arr = []` is `never[]`.** Annotate (`const links: string[] = []`).
+- **Assignments inside `forEach` callbacks aren't tracked** for narrowing. Use `for...of`.
+- **Discriminated-union narrowing on `!r.ok`** only works under `strictNullChecks` — which is part of why it was worth turning on.
+
+| File | Change |
+|---|---|
+| `tsconfig.json` | `strictNullChecks: true`; `midnight/` excluded (own package). |
+| `next.config.ts` | `ignoreBuildErrors: false`. |
+| `src/lib/supabase-join.ts` | New `joinedRow` helper. Used in `admin/jobs`, `candidate/requests`, `developer/hub`, `employer/applicants`, `employer/candidate-data`, `user/profile`. |
+| `src/lib/fact-registry.ts` | `ShippedFactDefinition` type; `listShippedFacts` returns it. |
+| `src/lib/dot-field-provenance.ts` | `MvrFieldProvenanceEntry` named type (replaces two inline `Extract<>`s). |
+| `src/lib/dot-form-mapper.ts` | `DotForm1License` exported; `previousAddresses.yearsAtAddress`, `previousLicenses` typed. |
+| `src/components/admin/admin-types.ts` | `MvrDetailOrder` / `MvrDetailResult` / `MvrDetail` for the detail modal. |
+| `src/lib/process-mvr-accio-webhook.ts` | `notifyScreeningReportDelivered` skipped when `driver_user_id` is null (it aborted internally anyway; now explicit). |
+| Tests | `dot-attestation-badge`, `dot-field-provenance`, `signed-jwt-attestation-service` updated to the current union types. |
+
+## **DOT outreach cards now move to Completed when the driver submits** (2026-10-13)
+
+Pace reported Brad Haggerton finished his DOT application link, saw the confirmation page, and his card stayed on Viewed with no email to the recruiter. Every DOT invite on the board was in the same state: 15 viewed, 6 pending, zero completed.
+
+**Root cause.** The step that marks an invite completed lived in `PATCH /api/invite/[token]` and nothing in the codebase's history ever called it. Screening invites (`driver-screening-consent`, MVR, PSP) complete through `syncOutreachInviteForDriver`, which deliberately skips `driver-dot-application`. So the DOT submit saved the application and stopped. This was never a regression: before 2026-10-12, exactly two DOT invites had ever been sent (2026-07-20, both expired). The 1,324 completed cards since May are all consent invites. The outreach bot started sending DOT invites yesterday and hit a path that was never finished.
+
+**Fix — three entry points, one helper.** `completeDotOutreachInvites(supabase, driverUserId, applicationId)` finds every open DOT invite this driver claimed, or that was addressed to their email and never claimed, and sets `status = 'completed'`, `driver_application_id`, `used_by_user_id`, then sends the recruiter the `invite_completed` email + bell notification — one per company even if the driver got two links. Idempotent. It runs from:
+
+1. **Submit** (`POST /api/driver-applications/complete`) — the normal path.
+2. **Claim** (`POST /api/invite/[token]`) — driver opens a link but already has a submitted application. Completes immediately instead of waiting on a resubmit that never comes. (This is what Brad's second link hit.)
+3. **Create** (`POST /api/employer/invites`) — recruiter invites a driver who already has a submitted application. The card is born Completed with the file attached; the response carries the final state so the board doesn't flash Pending first.
+
+The never-called PATCH handler is removed.
+
+**Backfill.** 12 invites from 2026-10-12 flipped to Completed with the application attached: 11 claimed (both of Brad's, plus nine others) and one unclaimed-but-email-matched (`casper255373`, app submitted in September). No notifications were sent for the backfill.
+
+| File | Change |
+|---|---|
+| `src/lib/complete-dot-outreach-invites.ts` | New. `completeDotOutreachInvites` + `completeDotOutreachInvitesIfApplicationDone`. Exports `DOT_BLOCK`. |
+| `src/lib/driver-application-db.ts` | `findCompletedDriverApplicationId`. |
+| `src/app/api/driver-applications/complete/route.ts` | Calls the helper after `completeDriverApplication`. |
+| `src/app/api/invite/[token]/route.ts` | Claim completes against an existing app. Removed the PATCH handler and its imports. |
+| `src/app/api/employer/invites/route.ts` | Create completes against an existing app and re-reads the row. Hoisted the duplicated select into `INVITE_SELECT`. |
+
+## **Agency DQ monitor includes drivers who signed up on their own** (2026-10-12)
+
+Pace's monitor only listed drivers the company had already touched (an application, a Pace invite, a request, an order). A driver who logged in on their own never appeared, so Pace couldn't see their file until someone reached out.
+
+Agency accounts now also list every non-employer who created their own account. A driver invited by a different company stays off that list — that company brought them in. The switch is `companies.account_tier = 'agency'`, the same one that already lets Pace open a DOT file without a share request. A carrier (Stars) still sees only people it is working.
+
+Opening the file from the monitor is the same view as the career card, so the copy is stamped "Prepared for {this company}".
+
+| File | Change |
+|---|---|
+| `src/lib/dq-file-load.ts` | `loadDqMonitorCandidateIds` unions engaged drivers with self-serve signups for agencies. `belongsOnSelfServeDqRoster` is the rule. |
+| `src/app/api/employer/dq-monitor/route.ts` | Returns `includesSelfServe`. |
+| `src/app/api/employer/dq-monitor/[userId]/route.ts` | Detail uses the same id set, so a self-serve row can be opened. |
+| `src/components/employer/dq/DqMonitorSection.tsx` | Roster description for agency accounts. |
+
 ## **Shared DOT application: company stamp, numbered sections, employer PDF export** (2026-10-12)
 
 When a driver accepted Stars' request and the recruiter opened the file, the company name was there in the data but rendered as one plain line, and the whole thing read as a form dump. There was also no way for the employer to take it with them.

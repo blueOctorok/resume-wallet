@@ -110,7 +110,7 @@ export async function createCompanyMemberInvite(
   const domainCheck = checkEmailAgainstCompanyDomains({
     allowedDomains: company.allowed_email_domains,
     email,
-    companyName: company.company_name,
+    companyName: company.company_name ?? '',
     legacyCompanyEmail: company.email || company.designated_owner_email,
   })
 

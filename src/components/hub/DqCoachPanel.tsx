@@ -10,8 +10,8 @@ import { useDqCoachStore } from '@/stores/dq-coach-store'
 import { buildDqActionSteps, type DqCoachTarget } from '@/lib/dq-coach'
 import type { PageType } from '@/stores/types'
 
-const TARGET_PAGE: Record<Exclude<DqCoachTarget, null>, PageType | 'profile'> = {
-  profile: 'profile',
+// 'profile' opens the profile-setup modal rather than a page, so it isn't mapped here.
+const TARGET_PAGE: Record<Exclude<DqCoachTarget, null | 'profile'>, PageType> = {
   dotapp: 'dotapp',
   mvr: 'mvr',
   psp: 'psp',

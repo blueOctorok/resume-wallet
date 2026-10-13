@@ -197,7 +197,7 @@ export function generateStyledResumePDF(data: ResumeData): Buffer {
     const textStartY = y
     pdf.setFillColor(...lightAccentBg)
     
-    const cdlParts = []
+    const cdlParts: string[] = []
     if (cdlClass) cdlParts.push(`Class ${cdlClass}`)
     if (data.cdlInfo.cdlState) cdlParts.push(data.cdlInfo.cdlState)
     if (endorsements.length > 0) cdlParts.push(`Endorsements: ${endorsements.join(', ')}`)

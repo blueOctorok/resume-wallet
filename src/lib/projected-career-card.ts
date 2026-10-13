@@ -285,20 +285,23 @@ export async function buildProjectedCareerCard(
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
 
-    let sectionData = await fetchSectionData(
+    const fetched = await fetchSectionData(
       supabase,
       userId,
       blockType as SectionBlockType,
       avatarUrl,
       meta.contactMode,
     )
+    let sectionData: CareerCardSection['data']
     let needsSetup = false
-    if (!sectionData) {
+    if (fetched) {
+      sectionData = fetched
+    } else {
       // Resume: only show when a real artifact exists (no empty hero).
       if (resumeBlockTypes.has(blockType)) continue
       const fallback = EMPTY_SECTION_DATA[blockType]
       if (!fallback) continue
-      sectionData = fallback as typeof sectionData
+      sectionData = fallback as CareerCardSection['data']
       needsSetup = true
     }
 

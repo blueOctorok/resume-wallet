@@ -69,7 +69,9 @@ export async function GET(
       if (error || !data) {
         return NextResponse.json({ error: 'PSP order not found' }, { status: 404 })
       }
-      pspOrder = data as PspOrderRow
+      // The access helper returns a wide record on purpose (select is caller-chosen);
+      // the select string above matches PspOrderRow exactly.
+      pspOrder = data as unknown as PspOrderRow
     } else {
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -91,7 +93,9 @@ export async function GET(
       if (error || !data) {
         return NextResponse.json({ error: 'PSP order not found' }, { status: 404 })
       }
-      pspOrder = data as PspOrderRow
+      // The access helper returns a wide record on purpose (select is caller-chosen);
+      // the select string above matches PspOrderRow exactly.
+      pspOrder = data as unknown as PspOrderRow
     }
 
     if (!pspOrder.result_xml) {

@@ -21,6 +21,7 @@ import {
   type DotForm1FieldProvenance,
 } from '@/lib/dot-field-provenance'
 import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
+import type { DotForm1Data } from '@/lib/dot-form-mapper'
 import {
   DotFieldError,
   DotValidationBanner,
@@ -67,6 +68,19 @@ const EMPTY_MEDICAL_QUALIFICATION = {
   medicalExaminerType: '',
 }
 
+/**
+ * Form 1 state. Same shape as the saved `DotForm1Data`, but the sections this
+ * form always renders are required here — the saved type leaves them optional
+ * because older applications may lack them.
+ */
+type Form1State = DotForm1Data &
+  Required<
+    Pick<
+      DotForm1Data,
+      'socialSecurity' | 'previousAddresses' | 'previousLicenses' | 'disqualificationHistory' | 'medicalQualification'
+    >
+  >
+
 interface PersonalInfoForm1Props {
   onNavigateToForm?: (formNumber: number) => void
   onDataChange?: (data: any) => void
@@ -96,7 +110,7 @@ export default function PersonalInfoForm1({
   const isLocked = (path: DotFieldPath) => lockedPaths.has(path)
   const lockEntry = (path: DotFieldPath) => fieldProvenance?.fields?.[path] ?? null
   const lockedInputClass = DOT_PAPER_LOCKED
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Form1State>({
     // Applicant Information
     firstName: '',
     middleName: '',
@@ -470,7 +484,7 @@ export default function PersonalInfoForm1({
       }
 
       // DOT 49 CFR 391.15 disclosures
-      const history = formData.disqualificationHistory || {}
+      const history = formData.disqualificationHistory
 
       if (!history.hasLicenseSuspension) {
         newErrors.hasLicenseSuspension =

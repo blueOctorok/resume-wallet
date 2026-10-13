@@ -179,7 +179,7 @@ const GitHubPage = dynamic(
  * Each block's `pageRoute` in the registry maps to one of the cases below.
  */
 export default function CandidateShell() {
-  const { user, sessionUserId } = useAuthStore()
+  const { sessionUserId } = useAuthStore()
   const {
     currentPage,
     setCurrentPage,
@@ -246,8 +246,7 @@ export default function CandidateShell() {
     if (currentPage === 'dotapp') {
       return (
         <DotApplicationFlow
-          sessionUserId={sessionUserId ?? ''}
-          userAddress={sessionUserId}
+          sessionUserId={sessionUserId}
           onBack={goBack}
         />
       )
@@ -257,7 +256,6 @@ export default function CandidateShell() {
       return (
         <div className='max-w-4xl mx-auto space-y-6'>
           <ResumeBuilder
-            user={user}
             onBack={goBack}
             existingResumeId={editingResumeId}
             onSave={() => goBack()}
@@ -267,13 +265,12 @@ export default function CandidateShell() {
     }
 
     if (currentPage === 'storm-resume') {
-      return <StormResumeBlock user={user} onBack={goBack} />
+      return <StormResumeBlock onBack={goBack} />
     }
 
     if (currentPage === 'developer-resume') {
       return (
         <DeveloperResumeBlock
-          user={user}
           onBack={goBack}
           existingResumeId={editingResumeId}
           onSave={goBack}
@@ -284,7 +281,6 @@ export default function CandidateShell() {
     if (currentPage === 'general-resume') {
       return (
         <GeneralResumeBlock
-          user={user}
           onBack={goBack}
           existingResumeId={editingResumeId}
           onSave={goBack}

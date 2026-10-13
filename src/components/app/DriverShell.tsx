@@ -197,8 +197,7 @@ export default function DriverShell({
   if (currentPage === 'dotapp') {
     return (
       <DotApplicationFlow
-        sessionUserId={sessionUserId ?? ''}
-        userAddress={sessionUserId}
+        sessionUserId={sessionUserId}
         onBack={handleNavigateToHub}
       />
     )
@@ -214,7 +213,6 @@ export default function DriverShell({
           // Drivers: Resume Builder only (upload is via hub modal)
           <>
             <ResumeBuilder
-              user={user}
               existingResumeId={editingResumeId}
               onBack={() => {
                 setCurrentPage(null)
@@ -235,7 +233,6 @@ export default function DriverShell({
             <ResumeTabSelector activeTab={resumeTab} onTabChange={setResumeTab} theme={theme} />
             {resumeTab === 'upload' && (
               <ResumeUploadWithVerification
-                user={user}
                 onBack={() => setCurrentPage(null)}
                 onUploadComplete={(payload) => {
                   hubStore.setHasResume(true)
@@ -252,7 +249,6 @@ export default function DriverShell({
             )}
             {resumeTab === 'create' && (
               <ResumeBuilder
-                user={user}
                 existingResumeId={editingResumeId}
                 onBack={() => {
                   setCurrentPage(null)

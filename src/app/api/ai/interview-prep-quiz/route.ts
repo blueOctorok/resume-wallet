@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const updated = await getOrCreateUsage(supabase, user.id)
+    const updated = await getOrCreateUsage(supabase, userId)
     const dailyRemaining = isUnlimited
       ? 999
       : Math.max(0, 10 - updated.dailyUsed)

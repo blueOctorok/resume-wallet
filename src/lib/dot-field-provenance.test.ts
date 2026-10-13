@@ -44,7 +44,9 @@ describe('dot-field-provenance', () => {
       asOf: '2026-07-01T00:00:00.000Z',
     })
     expect(provenance.fields.firstName?.value).toBe('Jane')
-    expect(provenance.fields['currentLicenses.0.state']?.accioOrderNumber).toBe('ACC-9')
+    const licenseState = provenance.fields['currentLicenses.0.state']
+    expect(licenseState?.source).toBe('mvr')
+    expect(licenseState?.source === 'mvr' ? licenseState.accioOrderNumber : null).toBe('ACC-9')
     expect(getLockedPaths(provenance).has('dateOfBirth')).toBe(true)
   })
 

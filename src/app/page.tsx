@@ -468,7 +468,7 @@ const HomeContent = () => {
             {/* ── Employer ── */}
             {user && userRole === 'employer' && !isRoleLoading && (
               <ErrorBoundary section='Employer Hub'>
-                <EmployerShell sessionUserId={sessionUserId} />
+                <EmployerShell sessionUserId={user.userId} />
               </ErrorBoundary>
             )}
 

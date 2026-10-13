@@ -6,17 +6,14 @@
  * (issuer_signed OR predicateEnforced).
  */
 
-import {
-  formatAttestationVerificationLine,
-  type AttestationProvenanceTier,
-} from '@/lib/attestation-fact-ui'
+import { formatAttestationVerificationLine } from '@/lib/attestation-fact-ui'
 import {
   formatMvrFieldBadge,
   formatMvrRowBadge,
-  type DotFieldProvenanceEntry,
+  type MvrFieldProvenanceEntry,
 } from '@/lib/dot-field-provenance'
 import { formatVerifiedEmployerBadge } from '@/lib/employment-form3-provenance'
-import type { FactType } from '@/lib/attestation-service'
+import type { AttestationProvenanceTier, FactType } from '@/lib/attestation-service'
 
 export type AttestationProofKind = 'signed_jwt' | 'midnight_zk' | string
 
@@ -138,7 +135,7 @@ export function matchEmploymentAttestation(
 
 /** Form 1 locked field badge — upgrade when MVR attestation matches. */
 export function resolveMvrFieldDotBadge(
-  entry: Extract<DotFieldProvenanceEntry, { source: 'mvr' }>,
+  entry: MvrFieldProvenanceEntry,
   attestations: AttestationBadgeSummary[] = [],
 ): DotBadgeResult {
   const issuerText = formatMvrFieldBadge(entry)

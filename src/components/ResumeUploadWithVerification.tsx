@@ -22,7 +22,6 @@ interface UploadStep {
 }
 
 interface ResumeUploadWithVerificationProps {
-  user?: any
   onBack?: () => void
   /**
    * When true, skip outer card chrome — parent uses BlockCard (e.g. STORM Resume).
@@ -40,7 +39,6 @@ interface ResumeUploadWithVerificationProps {
 }
 
 export default function ResumeUploadWithVerification({
-  user,
   onBack,
   embedInParent = false,
   onUploadComplete,

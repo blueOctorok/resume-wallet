@@ -237,6 +237,45 @@ export interface MvrRow {
   resultStatus: string | null
 }
 
+/** Shape of `/api/admin/mvr/[id]` — only the fields the detail modal renders. */
+export interface MvrDetailOrder {
+  driverName: string | null
+  legacyWalletAddress: string | null
+  status: string
+  dlState: string | null
+  accioOrderNumber: string | null
+  orderedAt: string | null
+  completedAt: string | null
+  expiresAt: string | null
+  feeAmount: number | null
+  feeCurrency: string | null
+  errorMessage: string | null
+  orderXml: string | null
+  resultXml: string | null
+}
+
+export interface MvrDetailResult {
+  licenseStatus: string | null
+  licenseClass: string | null
+  licenseState: string | null
+  licenseExpirationDate: string | null
+  totalPoints: number | null
+  violationCount: number | null
+  accidentCount: number | null
+  suspensionCount: number | null
+  cdlEndorsements: string[]
+  cdlRestrictions: string[]
+  violations: unknown[]
+  accidents: unknown[]
+  suspensions: unknown[]
+  parsedData: unknown
+}
+
+export interface MvrDetail {
+  order: MvrDetailOrder
+  results: MvrDetailResult[]
+}
+
 export interface PspRow {
   id: string
   driverUserId: string

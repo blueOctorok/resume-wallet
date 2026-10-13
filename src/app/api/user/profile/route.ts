@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { isSupabaseNetworkError } from '@/lib/supabase-errors'
+import { joinedRow } from '@/lib/supabase-join'
 
 export async function POST(request: Request) {
   try {
@@ -74,7 +75,9 @@ export async function POST(request: Request) {
 
     console.log('[PROFILE API] User found:', profile.id, 'Role:', profile.role)
 
-    let company = null
+    // `companies(*)` from the membership join comes back untyped; both branches
+    // yield a companies row.
+    let company: Record<string, unknown> | null = null
     if (profile?.role === 'employer') {
       const { data: ownedCompany, error: ownerError } = await supabase
         .from('companies')
@@ -93,12 +96,10 @@ export async function POST(request: Request) {
           .eq('is_active', true)
           .maybeSingle()
 
-        if (membership?.companies) {
-          company = membership.companies
-          console.log(
-            '[PROFILE API] Found company via membership:',
-            (membership.companies as { company_name?: string }).company_name,
-          )
+        const memberCompany = joinedRow(membership?.companies)
+        if (memberCompany) {
+          company = memberCompany
+          console.log('[PROFILE API] Found company via membership:', memberCompany.company_name)
         } else {
           console.log('[PROFILE API] No company found for employer:', profile.id)
         }

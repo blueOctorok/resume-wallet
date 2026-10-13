@@ -115,6 +115,16 @@ function reconstructParsedMvr(
  * Falls back only to legacy self-order results (no company pull) — employer-paid
  * MVRs must not lock DOT Form 1 (FCRA / company-private report).
  */
+interface MvrResultRow {
+  id: string
+  parsed_data: Record<string, unknown> | null
+  license_number: string | null
+  license_state: string | null
+  license_expiration_date: string | null
+  received_at: string | null
+  mvr_order_id?: string | null
+}
+
 export async function loadMvrDotProjection(
   supabase: SupabaseClient,
   userId: string,
@@ -129,15 +139,7 @@ export async function loadMvrDotProjection(
     .limit(1)
     .maybeSingle()
 
-  let mvrResult: {
-    id: string
-    parsed_data: Record<string, unknown> | null
-    license_number: string | null
-    license_state: string | null
-    license_expiration_date: string | null
-    received_at: string | null
-    mvr_order_id?: string | null
-  } | null = null
+  let mvrResult: MvrResultRow | null = null
 
   let orderId: string | null = null
   let accioOrderNumber: string | null = null
@@ -157,7 +159,7 @@ export async function loadMvrDotProjection(
       .eq('result_status', 'parsed')
       .maybeSingle()
 
-    mvrResult = byOrder as typeof mvrResult
+    mvrResult = byOrder as MvrResultRow | null
   } else {
     // Legacy rows without ordered_by_company_id on the order — still require a
     // driver-owned (or unscoped) order link so company pulls never win.
@@ -173,7 +175,7 @@ export async function loadMvrDotProjection(
 
     for (const row of latest ?? []) {
       if (!row.mvr_order_id) {
-        mvrResult = row as typeof mvrResult
+        mvrResult = row as MvrResultRow
         break
       }
       const { data: linkedOrder } = await supabase
@@ -182,7 +184,7 @@ export async function loadMvrDotProjection(
         .eq('id', row.mvr_order_id)
         .maybeSingle()
       if (linkedOrder && isDriverOwnedScreeningOrder(linkedOrder)) {
-        mvrResult = row as typeof mvrResult
+        mvrResult = row as MvrResultRow
         orderId = linkedOrder.id
         accioOrderNumber = linkedOrder.accio_order_number
         asOf = linkedOrder.completed_at ?? row.received_at ?? new Date().toISOString()

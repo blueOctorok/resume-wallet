@@ -247,7 +247,7 @@ export async function processMvrAccioWebhookCompletion(
     ).catch((err) => console.warn('[MVR PROCESS] Outreach invite sync non-fatal:', err))
   }
 
-  if (becameTerminal) {
+  if (becameTerminal && mvrOrder.driver_user_id) {
     void notifyScreeningReportDelivered(supabase, {
       kind: 'mvr',
       previousStatus: previousOrderStatus,

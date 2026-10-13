@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { joinedRow } from '@/lib/supabase-join'
 
 /**
  * GET /api/candidate/requests
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       requests: (requests || []).map(r => {
-        const company = r.company as { id: string; company_name: string; logo_url: string | null; employer_user_id: string | null } | null
+        const company = joinedRow(r.company)
         return {
           id: r.id,
           requestType: r.request_type,

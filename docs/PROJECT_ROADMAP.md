@@ -224,7 +224,7 @@ Current state: `career-card-pdf.ts` generates a 2-page PDF (visual page + ATS te
 | **Phase 3 — Annual compliance forms** | 🔲 Todo | Annual certificate of violations (simple form). Annual MVR review trigger (re-order via Accio + reviewer field). |
 | **Phase 4 — DOT app PDF format** | 🔲 Todo | Rework export to match standard DOT form layout carriers expect. |
 | **Phase 5 — Resume PDF rework** | 🔲 Todo | Generate a real resume (not career card export) from block data, with QR code footer linking to career card. |
-| **Phase 6 — Agency dashboard** | 🚧 **In progress** | **First slice shipped (2026-08-04):** Employer hub **Drivers — DQ monitor** (roster by name → person detail → DQ checklist). Shared registry + company/driver lenses (`dq-file-registry.ts` / `dq-file-status.ts`). Driver hub **Your DQ progress** mirror. Live status for MVR, PSP, DOT, CDLIS consent, employment verification; placeholders for DL photos, med card, criminal BG, drug screen, Clearinghouse, CDLIS inquiry. **Still todo:** multi-company share links for carriers, hire-date 30-day EV clock UI wiring, Key product orders, document upload blocks (Phase 2). Never Pace-special-cased — any company with screening blocks gets the monitor. |
+| **Phase 6 — Agency dashboard** | 🚧 **In progress** | **First slice shipped (2026-08-04):** Employer hub **Drivers — DQ monitor** (roster by name → person detail → DQ checklist). Shared registry + company/driver lenses (`dq-file-registry.ts` / `dq-file-status.ts`). Driver hub **Your DQ progress** mirror. Live status for MVR, PSP, DOT, CDLIS consent, employment verification; placeholders for DL photos, med card, criminal BG, drug screen, Clearinghouse, CDLIS inquiry. **Still todo:** multi-company share links for carriers, hire-date 30-day EV clock UI wiring, Key product orders, document upload blocks (Phase 2). Never Pace-special-cased — any company with screening blocks gets the monitor. **2026-10-12:** an agency also sees drivers who signed up on their own; a driver invited by another company stays on that company's roster. Carriers still see only people they are working. |
 | **Phase 7 — CDL verification API** | 🔲 Future | Investigate Accio/SambaSafety CDLIS lookup. Turns self-reported CDL into confirmed CDL. |
 | **Phase 8 — FMCSA Clearinghouse** | 🔲 Future | Requires employer credentials. Facilitate query through Pace's Clearinghouse account. |
 | **Phase 9 — DQ file API** | 🔲 Future | External API for carriers to pull driver-owned DQ files with consent. The long-term product. **Will use `AttestationService` interface from Foundation Reset Phase 2 for all returned facts.** |
@@ -1409,7 +1409,7 @@ AvA could flag discrepancies:
 - **App Router** - Better performance and SEO
 - **Server Components** - Faster initial page loads
 - **API Routes** - Built-in backend endpoints
-- **TypeScript** - Catches bugs before runtime
+- **TypeScript** - Catches bugs before runtime. Enforced since 2026-10-13: `strictNullChecks` is on and `next build` fails on type errors (`ignoreBuildErrors: false`). Keep `npx tsc --noEmit -p .` at zero.
 
 **Why Tailwind 4?**
 

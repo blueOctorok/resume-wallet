@@ -56,7 +56,7 @@ export default function GitHubContributionGraph({
 
   // Generate available years (last 5 years)
   const availableYears = useMemo(() => {
-    const years = []
+    const years: number[] = []
     for (let y = currentYear; y >= currentYear - 4; y--) {
       years.push(y)
     }

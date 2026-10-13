@@ -52,7 +52,6 @@ interface DeveloperShellProps {
 export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
   const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()
   const { hasCompletedJourneyStep } = usePreferencesStore()
-  const { user } = useAuthStore()
 
   const goBack = () => setCurrentPage(null)
   
@@ -106,7 +105,6 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     return (
       <div className='max-w-4xl mx-auto space-y-6'>
         <ResumeBuilder
-          user={user}
           onBack={goBack}
           onSave={() => {
             goBack()

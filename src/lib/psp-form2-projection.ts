@@ -51,6 +51,13 @@ function reconstructParsedPsp(parsedData: Record<string, unknown>): ParsedPspRes
  * Prefer a terminal driver-owned PSP order's result.
  * Falls back to latest psp_results row for the user with parsed_data.
  */
+interface PspResultRow {
+  id: string
+  parsed_data: Record<string, unknown> | null
+  received_at: string | null
+  psp_order_id?: string | null
+}
+
 export async function loadPspDotProjection(
   supabase: SupabaseClient,
   userId: string,
@@ -65,12 +72,7 @@ export async function loadPspDotProjection(
     .limit(1)
     .maybeSingle()
 
-  let pspResult: {
-    id: string
-    parsed_data: Record<string, unknown> | null
-    received_at: string | null
-    psp_order_id?: string | null
-  } | null = null
+  let pspResult: PspResultRow | null = null
 
   let orderId: string | null = null
   let accioOrderNumber: string | null = null
@@ -91,7 +93,7 @@ export async function loadPspDotProjection(
       .limit(1)
       .maybeSingle()
 
-    pspResult = byOrder as typeof pspResult
+    pspResult = byOrder as PspResultRow | null
   } else {
     const { data: latest } = await supabase
       .from('psp_results')
@@ -102,7 +104,7 @@ export async function loadPspDotProjection(
       .limit(1)
       .maybeSingle()
 
-    pspResult = latest as typeof pspResult
+    pspResult = latest as PspResultRow | null
     asOf = pspResult?.received_at ?? new Date().toISOString()
     orderId = pspResult?.psp_order_id ?? null
   }

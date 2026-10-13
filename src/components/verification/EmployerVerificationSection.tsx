@@ -1,7 +1,7 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   ClipboardCheck,
@@ -790,7 +790,7 @@ function AnswerRow({
   if (value === null || value === undefined) return null
 
   let textColor = isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'
-  let icon = null
+  let icon: ReactNode = null
 
   if (value === 'na') {
     textColor = isDarkTheme(theme) ? 'text-gray-500' : 'text-gray-400'

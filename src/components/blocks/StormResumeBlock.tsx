@@ -48,11 +48,10 @@ function readInitialPanelFromStore(): StormResumePanel {
 }
 
 interface StormResumeBlockProps {
-  user?: { address?: string } | null
   onBack: () => void
 }
 
-export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps) {
+export default function StormResumeBlock({ onBack }: StormResumeBlockProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const resumes = useResumes()
@@ -125,7 +124,6 @@ export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps
 
         {panel === 'upload' && (
           <ResumeUploadWithVerification
-            user={user}
             embedInParent
             onUploadComplete={() => {
               void afterHubMutation()
@@ -136,7 +134,6 @@ export default function StormResumeBlock({ user, onBack }: StormResumeBlockProps
         {panel === 'driver' && (
           <div className='-mx-5 -mb-6 sm:-mx-6 sm:-mb-7 overflow-hidden border-t border-slate-200/80 dark:border-gray-700/50'>
             <ResumeBuilder
-              user={user}
               onBack={onBack}
               existingResumeId={editingResumeId}
               hideHubBackButton

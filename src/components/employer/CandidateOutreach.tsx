@@ -141,7 +141,6 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
     if (!canvas) return
     void QRCode.toCanvas(canvas, url, {
       width: 240,
-      margin: 2,
       ...PROVVEN_QR_OPTS,
     }).then(() => stampProvvenMarkOnCanvas(canvas))
   }, [url])
@@ -198,7 +197,8 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
   const canShare = typeof navigator !== 'undefined' && Boolean(navigator.share)
   const canCopyImage =
     typeof navigator !== 'undefined' &&
-    Boolean(navigator.clipboard?.write && typeof ClipboardItem !== 'undefined')
+    typeof navigator.clipboard?.write === 'function' &&
+    typeof ClipboardItem !== 'undefined'
 
   const muted = false ? 'text-gray-400' : 'text-gray-500'
   const sub = false ? 'text-gray-500' : 'text-gray-600'

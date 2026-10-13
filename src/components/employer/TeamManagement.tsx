@@ -21,6 +21,7 @@ import Button from '@/components/ui/Button'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { INVITEABLE_ROLES, getDisplayRole } from '@/lib/employer-roles'
 import UserIdentity from '@/components/ui/UserIdentity'
+import type { AvatarColor } from '@/components/ui/Avatar'
 import InviteShareLink from '@/components/ui/InviteShareLink'
 
 interface TeamMember {
@@ -43,10 +44,10 @@ interface TeamManagementProps {
 }
 
 // Map role to avatar color for visual distinction
-function getRoleColor(role: string): 'purple' | 'blue' | 'teal' | 'gray' {
+function getRoleColor(role: string): AvatarColor {
   switch (role) {
     case 'owner': return 'purple'
-    case 'admin': return 'blue'
+    case 'admin': return 'indigo'
     case 'viewer': return 'gray'
     default: return 'teal'
   }

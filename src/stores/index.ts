@@ -80,7 +80,6 @@ export {
   useHubBlocksStore,
   useInstalledBlocks,
   useHubOnboarding,
-  useAvailableBlocks,
   useWalkthroughDismissed,
 } from './hub-blocks-store'
 

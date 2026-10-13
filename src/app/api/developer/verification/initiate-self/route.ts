@@ -8,6 +8,7 @@ import {
 import { sendVerificationEmailAndTrack } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { getDevProfile } from '@/lib/block-data'
+import type { UnifiedEmployment } from '@/types/driver-profile'
 
 /** Normalize resume date string to PostgreSQL DATE (YYYY-MM-DD). Returns null for empty/unparseable. */
 function toDateOnly(value: string | null | undefined): string | null {
@@ -60,8 +61,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const employmentHistory = devProfile.employment_history || []
-    const employment = employmentHistory.find((e: { id?: string }) => e.id === employmentId)
+    // block_dev_profile stores employment_history as untyped JSONB; entries are
+    // written by the resume builder in the UnifiedEmployment shape.
+    const employmentHistory = (devProfile.employment_history || []) as unknown as UnifiedEmployment[]
+    const employment = employmentHistory.find((e) => e.id === employmentId)
 
     if (!employment) {
       return NextResponse.json(

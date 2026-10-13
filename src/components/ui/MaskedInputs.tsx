@@ -179,7 +179,6 @@ export const CurrencyInput = forwardRef<HTMLInputElement, MaskedInputProps>(
           thousandsSeparator: ',',
           radix: '.',
           scale: 2,
-          signed: false,
           padFractionalZeros: false,
           normalizeZeros: true,
           min: 0,

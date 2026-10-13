@@ -7,6 +7,7 @@
 
 import { ParsedMvrResult } from './accio-xml-parser'
 import { formatPhoneForDotForm } from './mvr-display-sanitize'
+import type { DotForm1License } from './dot-form-mapper'
 
 /**
  * Convert YYYYMMDD date format to YYYY-MM-DD
@@ -95,7 +96,7 @@ export function mapMvrToForm1Data(mvrResult: ParsedMvrResult): any {
   const dateOfBirth = subject?.dateOfBirth ? formatDate(subject.dateOfBirth) : ''
 
   // Build current licenses array (MVR typically has one primary license)
-  const currentLicenses = []
+  const currentLicenses: DotForm1License[] = []
   
   if (mvrResult.licenseNumber || primaryLicense) {
     const licenseExpiration = primaryLicense?.expirationDate 

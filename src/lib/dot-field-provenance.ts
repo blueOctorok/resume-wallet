@@ -65,6 +65,9 @@ export type DotFieldProvenanceEntry =
       value: string
     }
 
+/** The MVR-locked variant — the only one that carries Accio order identifiers. */
+export type MvrFieldProvenanceEntry = Extract<DotFieldProvenanceEntry, { source: 'mvr' }>
+
 export interface DotForm1FieldProvenance {
   version: 1
   fields: Partial<Record<DotFieldPath, DotFieldProvenanceEntry>>
@@ -308,7 +311,9 @@ export function mergeMvrRowsIntoForm2(
       if (row._source === 'mvr') return false
       return Boolean(row.dateConvicted?.trim() || row.violation?.trim())
     })
-    .map((row) => ({ ...row, _source: (row._source === 'psp' ? 'psp' : 'self') as const }))
+    .map((row) =>
+      row._source === 'psp' ? row : { ...row, _source: 'self' as const },
+    )
 
   const accidents = [...mvrAccidents, ...keepAccidents]
   const convictions = [...mvrConvictions, ...keepConvictions]
@@ -472,7 +477,7 @@ export function getLockedPaths(
 }
 
 export function formatMvrFieldBadge(
-  entry: Extract<DotFieldProvenanceEntry, { source: 'mvr' }>,
+  entry: MvrFieldProvenanceEntry,
 ): string {
   const order = entry.accioOrderNumber ? `Accio order #${entry.accioOrderNumber}` : 'your MVR'
   const asOf = entry.asOf ? new Date(entry.asOf).toLocaleDateString() : null

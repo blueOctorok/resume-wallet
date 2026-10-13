@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       ? (enrichedApps ?? []).filter(
           (app) =>
             matchingUserIds?.has(app.user_id) ||
-            anyFieldMatchesSearch(search, app.applicantName, app.email, app.sessionUserId),
+            anyFieldMatchesSearch(search, app.applicantName, app.email, app.legacyWalletAddress),
         )
       : enrichedApps ?? []
 

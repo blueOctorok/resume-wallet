@@ -301,7 +301,6 @@ export default function ProjectedCareerCard({
                     color='teal'
                     round
                     uploadEndpoint='/api/user/avatar'
-                    sessionUserId={sessionUserId}
                     persistentUploadHint
                     onSuccess={onAvatarUploadSuccess}
                     title='Add or change profile photo'

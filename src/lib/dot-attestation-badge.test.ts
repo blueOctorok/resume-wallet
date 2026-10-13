@@ -7,7 +7,7 @@ import {
   resolveEmploymentDotBadge,
   type AttestationBadgeSummary,
 } from '@/lib/dot-attestation-badge'
-import type { DotFieldProvenanceEntry } from '@/lib/dot-field-provenance'
+import type { MvrFieldProvenanceEntry } from '@/lib/dot-field-provenance'
 
 const jwtMvr = (pull: string | null): AttestationBadgeSummary => ({
   factType: 'mvr_clean_36_months',
@@ -32,7 +32,7 @@ const midnightMvrIssuerSigned = (pull: string | null): AttestationBadgeSummary =
   provenanceTier: 'issuer_signed',
 })
 
-const entry = (order: string | null, accio: string | null): DotFieldProvenanceEntry => ({
+const entry = (order: string | null, accio: string | null): MvrFieldProvenanceEntry => ({
   path: 'firstName',
   source: 'mvr',
   mvrResultId: 'res-1',

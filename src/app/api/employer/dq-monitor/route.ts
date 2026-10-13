@@ -23,12 +23,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    const candidates = await loadDqMonitorList(supabase, ctx.companyId)
+    const { rows, includesSelfServe } = await loadDqMonitorList(supabase, ctx.companyId)
 
     return NextResponse.json({
       success: true,
       companyId: ctx.companyId,
-      candidates,
+      includesSelfServe,
+      candidates: rows,
     })
   } catch (error) {
     console.error('[DQ MONITOR] List error:', error)

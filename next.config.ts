@@ -2,9 +2,10 @@ import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Temporarily disable TypeScript checking for deployment
+  // Type errors fail the build. `src/` is at zero under strictNullChecks (2026-10-13);
+  // keep it that way — do not flip this back on to ship.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 
   // pdf.js (via pdf-parse) breaks when webpack bundles it into the route.

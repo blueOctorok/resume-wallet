@@ -534,7 +534,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   }
 
   // While redirecting to company-setup, show nothing (prevents flash of hub content)
-  if (data.needsCompanySetup || (data.company && !data.company.onboardingCompleted && data.userRole === 'owner')) {
+  if (data.needsCompanySetup || !data.company || (!data.company.onboardingCompleted && data.userRole === 'owner')) {
     return null
   }
 

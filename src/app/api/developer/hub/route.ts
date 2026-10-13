@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getDevGithub, getDevPortfolio, getDevProfile, getSkills, getEducation } from '@/lib/block-data'
+import { joinedRow } from '@/lib/supabase-join'
 
 /**
  * GET /api/developer/hub
@@ -112,17 +113,14 @@ export async function GET(request: NextRequest) {
 
     // Process job applications
     const jobApplications = (jobAppsResult.data || []).map((app) => {
-      const jobPosting = app.job_postings as {
-        title: string
-        companies: { company_name: string } | null
-      } | null
+      const jobPosting = joinedRow(app.job_postings)
       return {
         id: app.id,
         status: app.status,
         appliedAt: app.applied_at,
         viewCount: app.view_count || 0,
         jobTitle: jobPosting?.title || 'Unknown Position',
-        companyName: jobPosting?.companies?.company_name || 'Unknown Company',
+        companyName: joinedRow(jobPosting?.companies)?.company_name || 'Unknown Company',
       }
     })
 
@@ -142,7 +140,7 @@ export async function GET(request: NextRequest) {
       if (userProfile?.headline || devProfile?.bio) profileCompleteness += 15
       if (skills.length > 0) profileCompleteness += 15
       if (devGithub?.username) profileCompleteness += 20
-      if (devProfile?.job_types?.length > 0 || devProfile?.work_styles?.length > 0)
+      if ((devProfile?.job_types?.length ?? 0) > 0 || (devProfile?.work_styles?.length ?? 0) > 0)
         profileCompleteness += 10
     }
     if (totalProjects > 0) profileCompleteness += 25

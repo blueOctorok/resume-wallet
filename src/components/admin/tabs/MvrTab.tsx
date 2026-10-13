@@ -4,13 +4,8 @@ import { isDarkTheme } from '@/lib/theme-storage'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Eye, Trash2, Loader2 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
-import type { AdminTabProps, MvrRow } from '@/components/admin/admin-types'
+import type { AdminTabProps, MvrDetail, MvrRow } from '@/components/admin/admin-types'
 import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin-styles'
-
-interface MvrDetail {
-  order: Record<string, unknown>
-  results: Array<Record<string, unknown>>
-}
 
 export default function MvrTab({
   theme,
@@ -209,17 +204,17 @@ export default function MvrTab({
                   <div>
                     <h4 className={`font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-200' : 'text-gray-700'}`}>Order</h4>
                     <div className={`p-4 rounded-lg text-sm grid grid-cols-2 md:grid-cols-3 gap-2 ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                      <div><span className='opacity-70'>Driver:</span> {String(selectedMvrDetail.order.driverName || selectedMvrDetail.order.sessionUserId || '-')}</div>
-                      <div><span className='opacity-70'>Wallet:</span> <code className='text-xs'>{String(selectedMvrDetail.order.sessionUserId || '-')}</code></div>
-                      <div><span className='opacity-70'>Status:</span> {String(selectedMvrDetail.order.status)}</div>
-                      <div><span className='opacity-70'>DL State:</span> {String(selectedMvrDetail.order.dlState)}</div>
-                      <div><span className='opacity-70'>Accio #:</span> {String(selectedMvrDetail.order.accioOrderNumber || '-')}</div>
-                      <div><span className='opacity-70'>Ordered:</span> {selectedMvrDetail.order.orderedAt ? new Date(selectedMvrDetail.order.orderedAt as string).toLocaleString() : '-'}</div>
-                      <div><span className='opacity-70'>Completed:</span> {selectedMvrDetail.order.completedAt ? new Date(selectedMvrDetail.order.completedAt as string).toLocaleString() : '-'}</div>
-                      <div><span className='opacity-70'>Expires:</span> {selectedMvrDetail.order.expiresAt ? new Date(selectedMvrDetail.order.expiresAt as string).toLocaleDateString() : '-'}</div>
+                      <div><span className='opacity-70'>Driver:</span> {selectedMvrDetail.order.driverName || selectedMvrDetail.order.legacyWalletAddress || '-'}</div>
+                      <div><span className='opacity-70'>Wallet:</span> <code className='text-xs'>{selectedMvrDetail.order.legacyWalletAddress || '-'}</code></div>
+                      <div><span className='opacity-70'>Status:</span> {selectedMvrDetail.order.status}</div>
+                      <div><span className='opacity-70'>DL State:</span> {selectedMvrDetail.order.dlState || '-'}</div>
+                      <div><span className='opacity-70'>Accio #:</span> {selectedMvrDetail.order.accioOrderNumber || '-'}</div>
+                      <div><span className='opacity-70'>Ordered:</span> {selectedMvrDetail.order.orderedAt ? new Date(selectedMvrDetail.order.orderedAt).toLocaleString() : '-'}</div>
+                      <div><span className='opacity-70'>Completed:</span> {selectedMvrDetail.order.completedAt ? new Date(selectedMvrDetail.order.completedAt).toLocaleString() : '-'}</div>
+                      <div><span className='opacity-70'>Expires:</span> {selectedMvrDetail.order.expiresAt ? new Date(selectedMvrDetail.order.expiresAt).toLocaleDateString() : '-'}</div>
                       <div><span className='opacity-70'>Fee:</span> {selectedMvrDetail.order.feeAmount != null ? `${selectedMvrDetail.order.feeAmount} ${selectedMvrDetail.order.feeCurrency || 'USD'}` : '-'}</div>
                       {selectedMvrDetail.order.errorMessage && (
-                        <div className='col-span-full text-red-500'><span className='opacity-70'>Error:</span> {String(selectedMvrDetail.order.errorMessage)}</div>
+                        <div className='col-span-full text-red-500'><span className='opacity-70'>Error:</span> {selectedMvrDetail.order.errorMessage}</div>
                       )}
                     </div>
                   </div>
@@ -235,22 +230,22 @@ export default function MvrTab({
                         </h4>
                         <div className={`p-4 rounded-lg text-sm space-y-3 ${isDarkTheme(theme) ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                           <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
-                            <div><span className='opacity-70'>License status:</span> {String(res.licenseStatus ?? '-')}</div>
-                            <div><span className='opacity-70'>Class:</span> {String(res.licenseClass ?? '-')}</div>
-                            <div><span className='opacity-70'>State:</span> {String(res.licenseState ?? '-')}</div>
-                            <div><span className='opacity-70'>Expiration:</span> {res.licenseExpirationDate ? new Date(res.licenseExpirationDate as string).toLocaleDateString() : '-'}</div>
+                            <div><span className='opacity-70'>License status:</span> {res.licenseStatus ?? '-'}</div>
+                            <div><span className='opacity-70'>Class:</span> {res.licenseClass ?? '-'}</div>
+                            <div><span className='opacity-70'>State:</span> {res.licenseState ?? '-'}</div>
+                            <div><span className='opacity-70'>Expiration:</span> {res.licenseExpirationDate ? new Date(res.licenseExpirationDate).toLocaleDateString() : '-'}</div>
                             <div><span className='opacity-70'>Total points:</span> {res.totalPoints != null ? res.totalPoints : '-'}</div>
                             <div><span className='opacity-70'>Violations:</span> {res.violationCount != null ? res.violationCount : '-'}</div>
                             <div><span className='opacity-70'>Accidents:</span> {res.accidentCount != null ? res.accidentCount : '-'}</div>
                             <div><span className='opacity-70'>Suspensions:</span> {res.suspensionCount != null ? res.suspensionCount : '-'}</div>
                           </div>
-                          {Array.isArray(res.cdlEndorsements) && (res.cdlEndorsements as string[]).length > 0 && (
-                            <div><span className='opacity-70'>CDL Endorsements:</span> {(res.cdlEndorsements as string[]).join(', ')}</div>
+                          {res.cdlEndorsements.length > 0 && (
+                            <div><span className='opacity-70'>CDL Endorsements:</span> {res.cdlEndorsements.join(', ')}</div>
                           )}
-                          {Array.isArray(res.cdlRestrictions) && (res.cdlRestrictions as string[]).length > 0 && (
-                            <div><span className='opacity-70'>CDL Restrictions:</span> {(res.cdlRestrictions as string[]).join(', ')}</div>
+                          {res.cdlRestrictions.length > 0 && (
+                            <div><span className='opacity-70'>CDL Restrictions:</span> {res.cdlRestrictions.join(', ')}</div>
                           )}
-                          {Array.isArray(res.violations) && (res.violations as unknown[]).length > 0 && (
+                          {res.violations.length > 0 && (
                             <div>
                               <span className='opacity-70'>Violations detail:</span>
                               <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-40 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -258,7 +253,7 @@ export default function MvrTab({
                               </pre>
                             </div>
                           )}
-                          {Array.isArray(res.accidents) && (res.accidents as unknown[]).length > 0 && (
+                          {res.accidents.length > 0 && (
                             <div>
                               <span className='opacity-70'>Accidents:</span>
                               <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -266,7 +261,7 @@ export default function MvrTab({
                               </pre>
                             </div>
                           )}
-                          {Array.isArray(res.suspensions) && (res.suspensions as unknown[]).length > 0 && (
+                          {res.suspensions.length > 0 && (
                             <div>
                               <span className='opacity-70'>Suspensions:</span>
                               <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-32 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -274,7 +269,7 @@ export default function MvrTab({
                               </pre>
                             </div>
                           )}
-                          {res.parsedData && (
+                          {res.parsedData != null && (
                             <div>
                               <span className='opacity-70'>Parsed data (full):</span>
                               <pre className={`mt-1 p-2 rounded text-xs overflow-x-auto max-h-48 ${isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -311,12 +306,12 @@ export default function MvrTab({
                       </div>
                       {mvrDetailShowXml === 'order' && selectedMvrDetail.order.orderXml && (
                         <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                          {String(selectedMvrDetail.order.orderXml)}
+                          {selectedMvrDetail.order.orderXml}
                         </pre>
                       )}
                       {mvrDetailShowXml === 'result' && selectedMvrDetail.order.resultXml && (
                         <pre className={`p-3 rounded text-xs overflow-x-auto max-h-64 whitespace-pre-wrap ${isDarkTheme(theme) ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                          {String(selectedMvrDetail.order.resultXml)}
+                          {selectedMvrDetail.order.resultXml}
                         </pre>
                       )}
                     </div>

@@ -402,8 +402,13 @@ export function getFactDefinition(factType: FactType): FactDefinition | undefine
   return FACT_REGISTRY[factType as ShippedFactType]
 }
 
-export function listShippedFacts(): FactDefinition[] {
-  return ACTIVE_CARD_FACTS.map((id) => FACT_REGISTRY[id])
+/** A registry entry whose `factType` is known to be one of the shipped facts (not the wider `FactType`). */
+export type ShippedFactDefinition = FactDefinition & { factType: ShippedFactType }
+
+export function listShippedFacts(): ShippedFactDefinition[] {
+  // The registry is keyed by ShippedFactType, so every entry we pull out here
+  // carries one — the intersection just lets callers rely on that.
+  return ACTIVE_CARD_FACTS.map((id) => ({ ...FACT_REGISTRY[id], factType: id }))
 }
 
 /**

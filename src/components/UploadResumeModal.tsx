@@ -7,8 +7,6 @@ import ResumeUploadWithVerification from './ResumeUploadWithVerification'
 interface UploadResumeModalProps {
   isOpen: boolean
   onClose: () => void
-  /** User object with at least { address: string } for the upload flow */
-  user: { address: string } | null
   onUploadComplete?: (payload: {
     resume: unknown
     finalResult: {
@@ -23,7 +21,6 @@ interface UploadResumeModalProps {
 export default function UploadResumeModal({
   isOpen,
   onClose,
-  user,
   onUploadComplete,
 }: UploadResumeModalProps) {
   if (!isOpen) return null
@@ -38,7 +35,6 @@ export default function UploadResumeModal({
       <ModalHeader title="Upload Resume" onClose={onClose} />
       <div className='p-4 sm:p-6'>
         <ResumeUploadWithVerification
-          user={user ?? undefined}
           onBack={onClose}
           onUploadComplete={handleUploadComplete}
         />

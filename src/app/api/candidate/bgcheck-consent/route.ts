@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       type: 'consent_signed',
       title: 'Background check consent signed',
       body: `${driverName} signed step 1 of the screening flow for ${companyName || 'your company'}. FMCSA/CDLIS steps may still be pending.`,
-      data: { requestId, driverUserId: user.id, companyName },
+      data: { requestId, driverUserId: userId, companyName },
     }).catch(err => console.error('[BGCHECK CONSENT] Employer notification error:', err))
   }
 

@@ -17,14 +17,12 @@ const DeveloperResumeBuilder = dynamic(
 )
 
 interface DeveloperResumeBlockProps {
-  user?: { address?: string } | null
   onBack: () => void
   existingResumeId?: string
   onSave?: () => void
 }
 
 export default function DeveloperResumeBlock({
-  user,
   onBack,
   existingResumeId,
   onSave,

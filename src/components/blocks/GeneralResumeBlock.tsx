@@ -16,14 +16,12 @@ const GeneralResumeBuilder = dynamic(
 )
 
 interface GeneralResumeBlockProps {
-  user?: { address?: string } | null
   onBack: () => void
   existingResumeId?: string
   onSave?: () => void
 }
 
 export default function GeneralResumeBlock({
-  user,
   onBack,
   existingResumeId,
   onSave,

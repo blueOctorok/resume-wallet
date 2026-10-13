@@ -186,8 +186,9 @@ function getRequestVisualConfig(request: CandidateRequest): RequestVisualConfig 
     }
   }
 
-  const base = REQUEST_TYPE_CONFIG[request.requestType as keyof typeof REQUEST_TYPE_CONFIG]
-  if (base?.icon) return base
+  if (request.requestType in REQUEST_TYPE_CONFIG) {
+    return REQUEST_TYPE_CONFIG[request.requestType as keyof typeof REQUEST_TYPE_CONFIG]
+  }
 
   return DEFAULT_REQUEST_VISUAL
 }
@@ -381,7 +382,7 @@ export default function CandidateRequestsSection({
                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.color}`}>
                               {statusConfig.label}
                             </span>
-                            {isExpiringSoon(request.expiresAt) && (
+                            {isExpiringSoon(request.expiresAt ?? null) && (
                               <span className='px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-600'>
                                 Expires soon
                               </span>

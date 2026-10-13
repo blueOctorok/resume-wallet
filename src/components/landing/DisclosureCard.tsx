@@ -89,7 +89,7 @@ function useLiveDemo(enabled: boolean) {
   const [factsOn, setFactsOn] = useState(enabled ? 0 : VERIFIED_FACTS.length)
   const [stamped, setStamped] = useState(enabled ? 0 : VERIFIED_FACTS.length)
   const [unlocked, setUnlocked] = useState(0)
-  const [share, setShare] = useState(SHARE_TARGETS[0])
+  const [share, setShare] = useState<string>(SHARE_TARGETS[0])
   const [caret, setCaret] = useState(false)
   const [seamPulse, setSeamPulse] = useState(0)
 
