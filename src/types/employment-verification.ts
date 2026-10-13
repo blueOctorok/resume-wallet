@@ -100,6 +100,12 @@ export interface VerificationRequest {
   attemptCount: number
   lastAttemptAt: string | null
   nextAttemptAt: string | null
+  /** Set by the cadence cron once the final attempt has gone unanswered. */
+  outreachExhaustedAt?: string | null
+
+  // Contact research (FMCSA + web search) — proposals the driver confirms
+  contactResearchStatus?: ContactResearchStatus
+  contactResearch?: EvrContactResearchSummary | null
   
   // Verification results
   verifiedAt: string | null
@@ -134,7 +140,35 @@ export interface VerificationRequest {
   finalizedAt: string | null
 }
 
+// ===== CONTACT RESEARCH =====
+
+export type ContactResearchStatus = 'not_requested' | 'pending' | 'found' | 'not_found'
+
+/** Client-safe mirror of `EvrContactResearch` in src/lib/evr-contact-research.ts (that module is server-only). */
+export interface EvrContactResearchSummary {
+  researchedAt: string
+  fmcsa: {
+    dotNumber: number
+    legalName: string
+    dbaName: string | null
+    phone: string | null
+    address: string | null
+    state: string | null
+    matchScore: number
+  }[]
+  emailCandidates: {
+    email: string
+    sourceUrl: string | null
+    confidence: 'high' | 'medium' | 'low'
+    note: string | null
+  }[]
+  sources: string[]
+}
+
 // ===== VERIFICATION ATTEMPT =====
+
+export type AttemptDeliveryStatus = 'sent' | 'delivered' | 'opened' | 'clicked' | 'failed'
+export type AttemptTrigger = 'driver' | 'cron' | 'admin'
 
 export interface VerificationAttempt {
   id: string
@@ -158,6 +192,13 @@ export interface VerificationAttempt {
   // Automated tracking
   emailOpenedAt: string | null
   linkClickedAt: string | null
+
+  // Delivery tracking (Pingram webhooks)
+  deliveryStatus: AttemptDeliveryStatus
+  deliveredAt: string | null
+  failedAt: string | null
+  failureCode: string | null
+  triggeredBy: AttemptTrigger
   
   createdAt: string
 }
@@ -215,6 +256,9 @@ export interface VerificationRequestRow {
   driver_share_consent?: 'share' | 'hold' | null
   driver_hidden?: boolean
   correction_of?: string | null
+  outreach_exhausted_at?: string | null
+  contact_research_status?: ContactResearchStatus
+  contact_research?: EvrContactResearchSummary | null
 }
 
 export interface VerificationAttemptRow {
@@ -232,6 +276,11 @@ export interface VerificationAttemptRow {
   email_opened_at: string | null
   link_clicked_at: string | null
   created_at: string
+  delivery_status?: AttemptDeliveryStatus | null
+  delivered_at?: string | null
+  failed_at?: string | null
+  failure_code?: string | null
+  triggered_by?: AttemptTrigger | null
 }
 
 // ===== CONVERSION HELPERS =====
@@ -271,6 +320,9 @@ export function rowToVerificationRequest(
     driverShareConsent: row.driver_share_consent ?? null,
     driverHidden: Boolean(row.driver_hidden),
     correctionOf: row.correction_of ?? null,
+    outreachExhaustedAt: row.outreach_exhausted_at ?? null,
+    contactResearchStatus: row.contact_research_status ?? 'not_requested',
+    contactResearch: row.contact_research ?? null,
     answers: row.dates_correct ? {
       datesCorrect: row.dates_correct,
       correctedStartDate: row.corrected_start_date || undefined,
@@ -310,6 +362,11 @@ export function rowToVerificationAttempt(row: VerificationAttemptRow): Verificat
     responseNotes: row.response_notes,
     emailOpenedAt: row.email_opened_at,
     linkClickedAt: row.link_clicked_at,
+    deliveryStatus: row.delivery_status ?? 'sent',
+    deliveredAt: row.delivered_at ?? null,
+    failedAt: row.failed_at ?? null,
+    failureCode: row.failure_code ?? null,
+    triggeredBy: row.triggered_by ?? 'driver',
     createdAt: row.created_at,
   }
 }

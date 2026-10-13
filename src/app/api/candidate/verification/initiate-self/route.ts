@@ -5,8 +5,9 @@ import {
   VerificationRequestRow,
   rowToVerificationRequest,
 } from '@/types/employment-verification'
-import { sendVerificationEmailAndTrack } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
+import { sendOutreachAttempt, type OutreachRequestRow } from '@/lib/evr-outreach'
+import { researchEmployerContact } from '@/lib/evr-contact-research'
 import {
   applicantTypeForSource,
   getMergedCandidateEmployments,
@@ -112,9 +113,9 @@ export async function POST(request: NextRequest) {
     const contactPhone = previousEmployerPhone ?? row.supervisorPhone ?? null
 
     // Drivers can submit a signed authorization without knowing the employer's
-    // contact info. The packet is created but nothing is emailed (see the
-    // !contactEmail branch below) — it sits at attempt_count 0 until the
-    // employer side researches the contact and completes auth Part 2.
+    // contact info. The packet is created, nothing is emailed, and contact
+    // research (FMCSA + web search) runs immediately so the driver can confirm
+    // a contact instead of the packet parking at attempt 0 forever.
     if (!contactEmail && !contactPhone && !needsContactResearch) {
       return NextResponse.json(
         {
@@ -183,7 +184,9 @@ export async function POST(request: NextRequest) {
       claimed_reason_for_leaving: row.reasonForLeaving ?? null,
       status: 'VERIFICATION_REQUESTED',
       attempt_count: 0,
-      next_attempt_at: new Date().toISOString(),
+      // No email yet → the cron must not pick it up; research gates the first send.
+      next_attempt_at: contactEmail ? new Date().toISOString() : null,
+      contact_research_status: contactEmail ? 'not_requested' : 'pending',
       ev_authorization_id: evAuth.id,
       ...(typeof correctionOf === 'string' && correctionOf ? { correction_of: correctionOf } : {}),
     }
@@ -222,53 +225,25 @@ export async function POST(request: NextRequest) {
       'Self-Initiated',
     )
 
-    const token = (newRequest as { verification_token?: string }).verification_token
-    if (!contactEmail) {
-      console.log('[CANDIDATE VERIFICATION] No contact email – skipping send')
-    } else if (!token) {
-      console.warn('[CANDIDATE VERIFICATION] No verification_token – skipping send')
-    } else {
-      const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
-      const emailResult = await sendVerificationEmailAndTrack(
-        supabase,
-        String((newRequest as { id: string }).id),
-        {
-          to: contactEmail,
-          verificationLink,
-          previousEmployerName: employerName,
-          claimedPosition: row.position ?? '',
-          claimedCompanyName: employerName,
-          claimedStartDate: claimedStartDate ?? undefined,
-          claimedEndDate: claimedEndDate ?? null,
-        },
-      )
-      if (!emailResult.ok) {
-        console.warn('[CANDIDATE VERIFICATION] Email send failed:', emailResult.error)
-      }
-      const now = new Date().toISOString()
-      await supabase.from('verification_attempts').insert({
-        verification_request_id: String((newRequest as { id: string }).id),
-        attempt_number: 1,
-        method: 'email',
-        contact_email: contactEmail,
-        contact_phone: contactPhone,
+    const requestId = String((newRequest as { id: string }).id)
+    if (contactEmail) {
+      await sendOutreachAttempt(supabase, newRequest as OutreachRequestRow, {
+        baseUrl: getAppBaseUrl(request),
+        triggeredBy: 'driver',
       })
-      await supabase
-        .from('employment_verification_requests')
-        .update({
-          attempt_count: 1,
-          last_attempt_at: now,
-          status: 'VERIFICATION_IN_PROGRESS',
-        })
-        .eq('id', (newRequest as { id: string }).id)
+    } else {
+      // Best-effort: a research failure must not fail the authorization save.
+      await researchEmployerContact(supabase, requestId).catch((err) =>
+        console.warn('[CANDIDATE VERIFICATION] Contact research failed:', err),
+      )
     }
 
     return NextResponse.json({
       success: true,
       verificationRequest,
       message: contactEmail
-        ? `Verification request created for ${employerName}. We'll email your contact to confirm dates if possible.`
-        : `Authorization saved for ${employerName}. Contact research is needed before the packet can be sent.`,
+        ? `Verification request sent for ${employerName}. We follow up automatically on day 3 and day 7 if they do not reply.`
+        : `Authorization saved for ${employerName}. We looked up the carrier's contact — confirm it to send.`,
     })
   } catch (error) {
     console.error('[CANDIDATE VERIFICATION] Error:', error)

@@ -229,14 +229,15 @@ export default function DriverAuthorizationForm({
             />
             <span>
               I don&apos;t have this employer&apos;s contact information. Submit my signed
-              authorization anyway — the employer side will research and complete this part before
-              the packet is sent.
+              authorization anyway — Provven will look the carrier up in the FMCSA registry and
+              propose a contact for you to confirm before anything is sent.
             </span>
           </label>
         )}
         {sent && !email.trim() && !phone.trim() && (
           <p className='mt-4 rounded-lg border border-dark-amber/30 bg-white px-3 py-2 text-xs text-[#173150]/75'>
-            Submitted without contact information — employer-side research will complete this part.
+            Submitted without contact information — confirm a contact in the outreach panel above
+            to send the packet.
           </p>
         )}
         <div className='mt-4 flex flex-wrap items-end gap-4'>

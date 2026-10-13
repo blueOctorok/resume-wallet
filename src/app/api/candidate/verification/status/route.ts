@@ -4,7 +4,10 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import {
   VerificationRequestRow,
   rowToVerificationRequest,
+  rowToVerificationAttempt,
   type DriverVerificationSummary,
+  type VerificationAttempt,
+  type VerificationAttemptRow,
 } from '@/types/employment-verification'
 import {
   getEvApplicantIdentity,
@@ -98,6 +101,19 @@ export async function GET(request: NextRequest) {
       return req
     })
 
+    // Attempt timeline per packet so the driver can see each send's delivery state.
+    const attemptsByRequest: Record<string, VerificationAttempt[]> = {}
+    if (requests.length > 0) {
+      const { data: attemptRows } = await supabase
+        .from('verification_attempts')
+        .select('*')
+        .in('verification_request_id', requests.map((r) => r.id))
+        .order('attempt_number', { ascending: true })
+      for (const row of (attemptRows ?? []) as VerificationAttemptRow[]) {
+        ;(attemptsByRequest[row.verification_request_id] ??= []).push(rowToVerificationAttempt(row))
+      }
+    }
+
     const applicantRequests = requests.filter((r) => r.initiatedBy === 'applicant')
 
     const statusCounts = {
@@ -155,6 +171,7 @@ export async function GET(request: NextRequest) {
       employments,
       summary,
       requests,
+      attemptsByRequest,
     })
   } catch (error) {
     console.error('[CANDIDATE VERIFICATION STATUS]', error)

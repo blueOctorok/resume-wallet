@@ -7,6 +7,7 @@ import DriverAuthorizationForm from './DriverAuthorizationForm'
 import SafetyPerformanceHistoryPaper from './SafetyPerformanceHistoryPaper'
 import EvDisclosureAuthorizationModal from './EvDisclosureAuthorizationModal'
 import EvShareRequestsPanel from './EvShareRequestsPanel'
+import EvOutreachStatus from './EvOutreachStatus'
 import {
   findApplicantVerificationsForRow,
   isDkimVerifiedRequest,
@@ -49,6 +50,7 @@ export default function CandidateEmploymentVerificationSection({
   const applicant = useEmploymentVerificationBlockStore((s) => s.applicant)
   const employments = useEmploymentVerificationBlockStore((s) => s.employments)
   const verificationRequests = useEmploymentVerificationBlockStore((s) => s.requests)
+  const attemptsByRequest = useEmploymentVerificationBlockStore((s) => s.attemptsByRequest)
   const loading = useEmploymentVerificationBlockStore((s) => s.isLoading)
   const error = useEmploymentVerificationBlockStore((s) => s.error)
   const fetchData = useEmploymentVerificationBlockStore((s) => s.fetch)
@@ -151,24 +153,6 @@ export default function CandidateEmploymentVerificationSection({
     }
   }
 
-  const resend = async (requestId: string) => {
-    setInitiatingKey(requestId)
-    try {
-      const res = await fetch('/api/candidate/verification/resend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId }),
-      })
-      const data = await res.json()
-      if (res.ok) void fetchData()
-      else alert(data.error ?? 'Failed to resend')
-    } catch {
-      alert('Failed to resend')
-    } finally {
-      setInitiatingKey(null)
-    }
-  }
-
   const saveReview = async (
     requestId: string,
     patch: { hidden?: boolean; reviewed?: boolean },
@@ -238,17 +222,6 @@ export default function CandidateEmploymentVerificationSection({
 
   const replied = hasEmployerReply(request)
   const sent = Boolean(request) && !isDriverSendDeclined(request)
-  const attempts = request?.attemptCount ?? 0
-  // A packet submitted with no employer contact is parked for employer-side
-  // research — nothing has actually gone out yet, so resend makes no sense.
-  const awaitingContactResearch =
-    sent && !request?.previousEmployerEmail && !request?.previousEmployerPhone
-  const canResend =
-    sent &&
-    !replied &&
-    !awaitingContactResearch &&
-    attempts < 3 &&
-    request?.status !== 'ATTEMPTS_EXHAUSTED'
 
   return (
     <div className={embedded ? '' : 'rounded-xl border border-ironside/30 bg-[#fbf8f1] p-4 sm:p-6'}>
@@ -282,11 +255,15 @@ export default function CandidateEmploymentVerificationSection({
                       ? 'Returned — review'
                       : isDriverSendDeclined(latest)
                         ? 'Declined'
-                        : latest && !latest.previousEmployerEmail && !latest.previousEmployerPhone
-                          ? 'Researching contact'
-                          : latest
-                            ? `Sent ${latest.attemptCount || 1}/3`
-                            : 'Needs send'}
+                        : latest?.status === 'ATTEMPTS_EXHAUSTED'
+                          ? 'No reply'
+                          : latest && !latest.previousEmployerEmail
+                            ? latest.contactResearchStatus === 'found'
+                              ? 'Confirm contact'
+                              : 'Researching contact'
+                            : latest
+                              ? `Sent ${latest.attemptCount || 1}/3`
+                              : 'Needs send'}
                 </span>
               </button>
             )
@@ -386,27 +363,8 @@ export default function CandidateEmploymentVerificationSection({
         </div>
       )}
 
-      {selected && sent && !replied && (
-        <div className='mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#173150]/70'>
-          <span>
-            {awaitingContactResearch
-              ? 'Submitted — the employer side is researching contact info for this employer. The packet goes out once Part 2 of the authorization is completed.'
-              : `Sent ${attempts}/3${
-                  request?.previousEmployerEmail ? ` to ${request.previousEmployerEmail}` : ''
-                }. We send this packet at least three times if they do not reply.`}
-          </span>
-          {canResend && request && (
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              disabled={initiatingKey !== null}
-              onClick={() => resend(request.id)}
-            >
-              Send again ({3 - attempts} left)
-            </Button>
-          )}
-        </div>
+      {selected && sent && !replied && request && (
+        <EvOutreachStatus request={request} attempts={attemptsByRequest[request.id] ?? []} />
       )}
 
       {selected && (

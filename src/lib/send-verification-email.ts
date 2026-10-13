@@ -14,6 +14,12 @@ export interface SendVerificationEmailParams {
   claimedEndDate?: string | null
   /** Per-packet Provven inbound address — responses sent here auto-file to the request. */
   deliveryAddress?: string
+  /**
+   * 1-based attempt number. Follow-ups get a different subject and opener so
+   * they are not collapsed into the first thread or filtered as duplicates.
+   */
+  attemptNumber?: number
+  maxAttempts?: number
 }
 
 /**
@@ -36,6 +42,8 @@ export async function sendVerificationEmail(
     claimedStartDate,
     claimedEndDate,
     deliveryAddress,
+    attemptNumber = 1,
+    maxAttempts,
   } = params
 
   const dateRange =
@@ -43,13 +51,23 @@ export async function sendVerificationEmail(
       ? [claimedStartDate, claimedEndDate].filter(Boolean).join(' – ')
       : null
 
-  const bodyHtml = `
-    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+  const isFollowUp = attemptNumber > 1
+  const attemptTag = maxAttempts ? ` (${attemptNumber} of ${maxAttempts})` : ''
+  const opener = isFollowUp
+    ? `<p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      <strong>Following up</strong> on an employment verification request we sent earlier for
+      <strong>${claimedCompanyName}</strong>. Our first message may have been filtered, so we are
+      sending it again. A one-word reply of <strong>YES</strong> is enough if the dates below are correct.
+    </p>`
+    : `<p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
       A former employee asked Provven to send you their signed authorization and a
       Safety Performance History Records Request for <strong>${claimedCompanyName}</strong>.
       Please confirm or correct their employment dates if you choose to.
       This is a voluntary, driver-initiated request — not a motor-carrier DOT investigation.
-    </p>
+    </p>`
+
+  const bodyHtml = `
+    ${opener}
     ${detailsBox(`
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Employment Details Provided</p>
       ${detailRow('Position', claimedPosition)}
@@ -79,7 +97,7 @@ export async function sendVerificationEmail(
   const html = buildEmail({
     preheader: `Employment verification request for ${claimedPosition} at ${claimedCompanyName}`,
     headerEyebrow: 'Employment Verification',
-    headerTitle: `Verification Request: ${claimedCompanyName}`,
+    headerTitle: `${isFollowUp ? 'Follow-up: ' : ''}Verification Request: ${claimedCompanyName}`,
     greeting: `Hello${previousEmployerName ? ` at ${previousEmployerName}` : ''},`,
     bodyHtml,
     ctaLabel: 'Verify Employment',
@@ -91,7 +109,7 @@ export async function sendVerificationEmail(
   const result = await sendEmail({
     type: 'employment_verification_email',
     to,
-    subject: `Employment verification request – ${claimedCompanyName}`,
+    subject: `${isFollowUp ? 'Follow-up: ' : ''}Employment verification request – ${claimedCompanyName}${attemptTag}`,
     html,
   })
 

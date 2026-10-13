@@ -10,6 +10,10 @@
     {
       "path": "/api/cron/reconcile-screenings",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/evr-outreach",
+      "schedule": "0 * * * *"
     }
   ]
 }

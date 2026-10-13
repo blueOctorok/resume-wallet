@@ -4,6 +4,37 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **EV outreach Phase 1: automated cadence, delivery tracking, contact research, attempt record** (2026-10-13)
+
+Driver-initiated employment verification was a single email with a manual "Send again" button and no idea whether anything arrived. Research (Superunit 2026: trucking EV completes 49% with phone + email; our email-only estimate was 10–15%) showed the leak is operational, not legal. Phase 1 keeps Provven as the **driver's agent only** (no CRA posture — employer-paid EV stays with Accio, DEC-2026-05-011) and automates the parts that cost nothing: a day 0 / 3 / 7 cadence through Pingram, Pingram delivery webhooks, FMCSA carrier lookup when the driver has no contact, and a hashed good-faith attempt record when nobody answers. Voice follow-up is Phase 2 (not started; TCPA / state AI-disclosure notes in the research canvas).
+
+**Apply `supabase/migrations/119_evr_outreach_phase1.sql`.** New env: `FMCSA_WEBKEY` (QCMobile developer key), `PINGRAM_WEBHOOK_SECRET` (falls back to `INTERNAL_API_SECRET`). Register `https://<host>/api/webhooks/pingram/events` in Pingram for `EMAIL_DELIVERED / EMAIL_OPEN / EMAIL_CLICK / EMAIL_FAILED`. Hourly cron `/api/cron/evr-outreach` added to `vercel.json` (uses `CRON_SECRET`).
+
+Behavior:
+- One sender (`sendOutreachAttempt`) for first send, cron follow-ups, manual "Send now", and confirmed contacts. Attempt rows record `provider_tracking_id`, `delivery_status`, `triggered_by`.
+- Follow-ups go out Mon–Fri 13:00–20:59 UTC. Exhaustion is **time-based**: 7 days after the 3rd send (the old resend route flipped to `ATTEMPTS_EXHAUSTED` the moment the 3rd email left, so it never had a chance).
+- A bounce pauses the cadence (`contact_research_status = 'pending'`, `next_attempt_at = null`) and notifies the driver instead of burning attempts into a dead mailbox.
+- No contact at submit → FMCSA name lookup (phone, address, USDOT) + Claude web-search for a company-domain email. **Nothing is sent to a researched address until the driver confirms it** — a guessed address would leak the employment claim.
+- `ATTEMPTS_EXHAUSTED` → driver downloads a Storm-branded attempt record (canonical JSON → SHA-256 printed on the PDF; `?format=json` reproduces it). Explicitly not a consumer report.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/119_evr_outreach_phase1.sql` | `verification_attempts`: `provider_tracking_id`, `delivery_status`, `delivered_at`, `failed_at`, `failure_code`, `triggered_by`. `employment_verification_requests`: `contact_research_status`, `contact_research`, `outreach_exhausted_at`. Indexes for tracking-id lookup and due-attempt scan. |
+| `src/lib/evr-outreach.ts` | New. `sendOutreachAttempt`, `runOutreachCadence`, `processEvrDeliveryEvent`, send-window + schedule helpers. |
+| `src/lib/evr-contact-research.ts` | New. FMCSA QCMobile lookup (token-overlap name match, same-state first) + Claude Haiku web-search email finder; persists `contact_research`. |
+| `src/lib/evr-attempt-record.ts`, `src/lib/pdf/EvrAttemptRecordPdf.tsx` | New. Canonical-JSON record + SHA-256; PDF on `StormPdfChrome` with a non-CRA footer. |
+| `src/lib/send-verification-email.ts` | Subject / opener are attempt-aware ("Follow-up: … (2 of 3)"). |
+| `src/app/api/webhooks/pingram/events/route.ts` | New. Verifies `pingram/webhooks` signature when present, else URL/Bearer secret. |
+| `src/app/api/cron/evr-outreach/route.ts`, `vercel.json` | New hourly cron. |
+| `src/app/api/candidate/verification/[id]/research-contact`, `…/set-contact`, `…/attempt-record` | New routes. `set-contact` sends immediately when an email is confirmed. |
+| `src/app/api/candidate/verification/initiate-self/route.ts`, `…/resend/route.ts` | Both call `sendOutreachAttempt`. `initiate-self` runs research when submitted without contact and leaves `next_attempt_at` null so the cron skips it. |
+| `src/app/api/candidate/verification/status/route.ts` | Returns `attemptsByRequest`. |
+| `src/types/employment-verification.ts` | `VerificationRequest` += `outreachExhaustedAt`, `contactResearchStatus`, `contactResearch`; `VerificationAttempt` += delivery fields + `triggeredBy`. |
+| `src/stores/employment-verification-block-store.ts` | `attemptsByRequest`, `actingOnRequestId`, `resend` / `researchContact` / `setContact` actions (one `postAndRefresh` helper). |
+| `src/components/verification/EvOutreachStatus.tsx` | New. Attempt timeline with delivery pills, next scheduled follow-up, bounce / research panel with "Use & send", exhausted → PDF download. |
+| `src/components/verification/CandidateEmploymentVerificationSection.tsx` | Renders `EvOutreachStatus`; inline resend + "Sent x/3" removed. Tile sub-label shows "Confirm contact" / "No reply". |
+| `src/components/verification/DriverAuthorizationForm.tsx` | Research copy says Provven looks up the carrier (not "the employer side"). |
+
 ## **Admin company cards: member labels and invite field** (2026-10-13)
 
 Company cards on the central admin Companies tab were printing the stored role. `company_members.role` still says `recruiter` for a team member (legacy value; `getDisplayRole` maps it, plus `hr_manager` / `hiring_manager` / `interviewer`, to "Team member"). The badge now uses that label, same as the employer team page. Invite still only renders after the member list is opened. The email field was sharing a row with the role menu and Invite button inside a grid card, so it collapsed to a few characters; it now takes the full card width, with role and Invite on the row below.
