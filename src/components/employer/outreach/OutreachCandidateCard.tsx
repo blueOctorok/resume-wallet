@@ -232,8 +232,6 @@ export default function OutreachCandidateCard({
   const anyProcessing = files.some((f) => hubDocStatusFromScreeningOrder(f.status) === 'processing')
   const fileCount = files.length + (consentBundle ? 1 : 0) + (awaitingOrders ? 1 : 0)
 
-  const sectionTitle = 'text-[10px] font-semibold uppercase tracking-wide text-ironside'
-
   return (
     <div className="flex flex-col">
       {/* ── Header — matches ModalHeader variant="block" tokens ─────────────── */}
@@ -284,9 +282,11 @@ export default function OutreachCandidateCard({
         </button>
       </header>
 
-      <div className="space-y-5 px-5 py-5">
+      <div className="space-y-3 px-5 py-5">
         {/* ── Progress ──────────────────────────────────────────────────────── */}
-        <OutreachProgress invite={invite} files={files} consentBundle={consentBundle} />
+        <CardSection title="Progress">
+          <OutreachProgress invite={invite} files={files} consentBundle={consentBundle} />
+        </CardSection>
 
         {/* ── Stormi attention — only when something needs eyes ─────────────── */}
         {attention && (
@@ -320,8 +320,7 @@ export default function OutreachCandidateCard({
         )}
 
         {/* ── Contact — quiet inputs, blur to save ───────────────────────────── */}
-        <section>
-          <p className={cn(sectionTitle, 'mb-1.5')}>Contact</p>
+        <CardSection title="Contact">
           <ContactFields
             name={invite.candidateName}
             email={invite.candidateEmail}
@@ -329,7 +328,7 @@ export default function OutreachCandidateCard({
             disabled={isTerminal}
             onSave={(patch) => onSaveContact(invite.id, patch)}
           />
-        </section>
+        </CardSection>
 
         {/* ── Send — the one primary action ──────────────────────────────────── */}
         {!isTerminal && (
@@ -346,10 +345,10 @@ export default function OutreachCandidateCard({
         )}
 
         {/* ── Files ──────────────────────────────────────────────────────────── */}
-        <section>
-          <div className="mb-1.5 flex items-center justify-between">
-            <p className={sectionTitle}>Files {fileCount > 0 && `(${fileCount})`}</p>
-            {onRefreshScreenings && anyProcessing && (
+        <CardSection
+          title={fileCount > 0 ? `Files (${fileCount})` : 'Files'}
+          action={
+            onRefreshScreenings && anyProcessing ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -360,10 +359,11 @@ export default function OutreachCandidateCard({
                 <RefreshCw className="h-3 w-3" />
                 Refresh
               </Button>
-            )}
-          </div>
+            ) : undefined
+          }
+        >
           {fileCount === 0 ? (
-            <p className="rounded-lg border border-dashed border-stone-200 px-3 py-2.5 text-xs text-ironside">
+            <p className="text-xs leading-snug text-ironside">
               Nothing on file yet. The signed consent package and MVR / PSP reports land here automatically.
             </p>
           ) : (
@@ -386,12 +386,12 @@ export default function OutreachCandidateCard({
               ))}
             </ul>
           )}
-        </section>
+        </CardSection>
 
-        {/* ── Notes + Stormi ─────────────────────────────────────────────────── */}
-        <section className="space-y-2">
-          {onRecruiterNotesSave && (
-            <div className="rounded-lg border border-stone-200">
+        {/* ── Notes ──────────────────────────────────────────────────────────── */}
+        {onRecruiterNotesSave && (
+          <CardSection title="Notes">
+            <div className="rounded-lg border border-stone-200 bg-white">
               <button
                 type="button"
                 onClick={() => {
@@ -433,33 +433,33 @@ export default function OutreachCandidateCard({
                 </div>
               )}
             </div>
-          )}
+          </CardSection>
+        )}
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {/* Once the invite is claimed there is a person behind it — the driver file is the full picture. */}
-            {invite.usedByUserId && (
-              <button
-                type="button"
-                onClick={() => openDriver(invite.usedByUserId as string)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#173150]/20 bg-white px-3 py-2 text-xs font-semibold text-[#173150] transition-colors hover:border-[#173150]/40 hover:bg-stone-50"
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-                Open driver file
-              </button>
-            )}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {/* Once the invite is claimed there is a person behind it — the driver file is the full picture. */}
+          {invite.usedByUserId && (
             <button
               type="button"
-              onClick={() => onAskStormi(invite)}
-              className={cn(
-                'flex w-full items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:border-violet-300 hover:bg-violet-100',
-                !invite.usedByUserId && 'sm:col-span-2',
-              )}
+              onClick={() => openDriver(invite.usedByUserId as string)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#173150]/20 bg-white px-3 py-2 text-xs font-semibold text-[#173150] transition-colors hover:border-[#173150]/40 hover:bg-stone-50"
             >
-              <Bot className="h-3.5 w-3.5" />
-              Ask AI about {firstName ?? 'this candidate'}
+              <FolderOpen className="h-3.5 w-3.5" />
+              Open driver file
             </button>
-          </div>
-        </section>
+          )}
+          <button
+            type="button"
+            onClick={() => onAskStormi(invite)}
+            className={cn(
+              'flex w-full items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:border-violet-300 hover:bg-violet-100',
+              !invite.usedByUserId && 'sm:col-span-2',
+            )}
+          >
+            <Bot className="h-3.5 w-3.5" />
+            Ask AI about {firstName ?? 'this candidate'}
+          </button>
+        </div>
       </div>
 
       {/* ── Footer toolbar — link tools left, admin right ─────────────────────── */}
@@ -551,6 +551,28 @@ export default function OutreachCandidateCard({
         </div>
       </footer>
     </div>
+  )
+}
+
+// ── Section shell ────────────────────────────────────────────────────────────
+
+function CardSection({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-xl border border-stone-200 bg-stone-50/80 px-3.5 py-3">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wide text-ironside">{title}</h4>
+        {action}
+      </div>
+      {children}
+    </section>
   )
 }
 

@@ -32,8 +32,11 @@ export default function StepStrip({
       {steps.map((step, i) => {
         const state = step.done ? 'done' : i === currentIdx && !muted ? 'current' : 'upcoming'
         const last = i === steps.length - 1
+        // Every step is the same width. The connector is one column wide,
+        // starting at this node's center, so it lands on the next node's
+        // center. A narrower last step lets that line run past the dot.
         return (
-          <li key={step.key} className={cn('relative flex min-w-0 flex-col items-center', last ? 'flex-none' : 'flex-1')}>
+          <li key={step.key} className="relative flex min-w-0 flex-1 flex-col items-center">
             {!last && (
               <span
                 aria-hidden

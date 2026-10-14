@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach modal: sections, and the progress line stops at Reports** (2026-10-14)
+
+The candidate modal read as one continuous column, and the progress line ran past the Reports dot out of the modal. The connector is drawn one full column wide from the center of a step. The last step was only as wide as its label, so that line kept going. Every step is now the same width, so the line ends on the last dot. Progress, contact, files, and notes each sit in their own bordered section. The "waiting on them" box was already a section and stays as it was.
+
+| File | Change |
+|---|---|
+| `src/components/employer/StepStrip.tsx` | Equal-width steps so the connector meets the next dot |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | `CardSection` around progress, contact, files, and notes |
+
+---
+
 ## **Screening status is lifecycle truth; 30-day validity lives in expires_at** (2026-10-14)
 
 Aaron Vukovic's driver file said MVR and PSP failed even though both reports came back from Accio. The same thing was true for most of Pace's roster: of 1,318 drivers with a completed consent, 995 showed MVR failed and 835 showed PSP failed when the report was actually on file. Aaron's DOT application was a separate, smaller lie — the preview always said "Submitted" next to an "In progress" pill.
@@ -18,7 +29,7 @@ The nightly jobs `expire-mvr-orders` and `expire-psp-orders` (migrations 032 and
 - The board says "Completed … · refresh due" once `expires_at` has passed, and the report stays openable. An `expired` row that still has `completed_at` reads as complete too, so a row this migration has not been applied to yet cannot show as failed.
 - The DOT preview says "Started" until `is_complete`, and "Submitted" only after that.
 
-Migration `122_screening_status_is_lifecycle_truth.sql` was not applied from this session — the database tool is read-only.
+Migration `122_screening_status_is_lifecycle_truth.sql` was applied 2026-10-14. Recount after apply: expired-with-results is 0 (2 MVRs remain `expired` with no result). Of 1,319 consented Pace drivers, 0 show a finished MVR or PSP as expired; 1,307 newest MVRs and 1,148 newest PSPs are `completed` or `needs_review`. Aaron Vukovic's MVR is `completed` / `clear` and his PSP is `needs_review` / `unknown`, both past `expires_at` so the board should say refresh due.
 
 | File | Change |
 |---|---|
