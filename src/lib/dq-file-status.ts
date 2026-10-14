@@ -797,6 +797,15 @@ export function resolveDriverDqFile(input: ResolveDriverDqInput): DqFileSnapshot
   return { items, ...rollup(items) }
 }
 
+/**
+ * An employer can open the artifact once the driver has started it or finished
+ * it. Missing, requested, and still-processing orders are not documents yet.
+ * The driver hub uses the same rule so both sides open the same blocks.
+ */
+export function dqItemHasWorkToShow(status: DqItemStatus): boolean {
+  return status === 'complete' || status === 'in_progress'
+}
+
 export function dqOverallLabel(overall: DqOverallStatus): string {
   switch (overall) {
     case 'not_started':

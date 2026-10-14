@@ -1,10 +1,10 @@
 'use client'
 
-import { ChevronDown, ExternalLink, Loader2, Mail, MessageSquare } from 'lucide-react'
+import { ExternalLink, Loader2, Mail, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
-import type { DqItemStatusResult } from '@/lib/dq-file-status'
 import type { DriverFileDetail } from '@/lib/dq-file-load'
+import { dqItemHasWorkToShow, type DqItemStatusResult } from '@/lib/dq-file-status'
 import { outcomeLabel } from '@/lib/accio-result-status'
 import { DQ_ITEM_ICONS, DqStatusBadge } from './DriverBlockBadges'
 
@@ -15,20 +15,12 @@ export function fmtDate(iso: string | null | undefined): string | null {
   return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const EV_STATUS_LABEL: Record<string, string> = {
-  VERIFICATION_REQUESTED: 'Requested',
-  VERIFICATION_IN_PROGRESS: 'In progress',
-  SELF_REPORTED: 'Self-reported',
-  VERIFIED: 'Verified',
-  PARTIALLY_VERIFIED: 'Partially verified',
-  VERIFICATION_DENIED: 'Denied',
-  ATTEMPTS_EXHAUSTED: 'No response',
-  VERIFICATION_DECLINED: 'Declined',
-}
-
 export interface ItemActions {
   onViewReport: (kind: 'mvr' | 'psp', orderId: string) => void
   onViewConsent: (bundleId: string) => void
+  onViewDot: (applicationId: string) => void
+  onViewLicense: () => void
+  onViewEmployment: () => void
   onResendConsent: (channel: 'email' | 'sms') => Promise<void>
   resending: 'email' | 'sms' | null
   hasEmail: boolean
@@ -88,6 +80,7 @@ function describe(
       const read = l.barcodeStatus === 'read' ? [l.licenseClass && `Class ${l.licenseClass}`, l.state, l.expiration && `exp ${l.expiration}`].filter(Boolean).join(' · ') : null
       return {
         line: [sides, read, l.confirmedAt ? `confirmed ${fmtDate(l.confirmedAt)}` : 'not confirmed yet', 'On file — not a verified record'].filter(Boolean).join(' · '),
+        action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View license" onClick={a.onViewLicense} /> : undefined,
       }
     }
 
@@ -98,6 +91,7 @@ function describe(
         line: app.isComplete
           ? `Submitted · updated ${fmtDate(app.updatedAt) ?? '—'}`
           : `Form ${app.currentStep} of 3 · last worked ${fmtDate(app.updatedAt) ?? '—'}`,
+        action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View application" onClick={() => a.onViewDot(app.id)} /> : undefined,
       }
     }
 
@@ -107,14 +101,15 @@ function describe(
         const parts = [c.parts.fcra && 'FCRA', c.parts.psp && 'PSP', c.parts.cdlis && 'CDLIS'].filter(Boolean).join(' · ')
         return {
           line: `Signed ${fmtDate(c.completedAt) ?? '—'} · ${parts}`,
-          action: (
-            <Button type="button" variant="secondary" size="sm" onClick={() => a.onViewConsent(c.id)}>
-              View package
-            </Button>
-          ),
+          action: <ViewBtn label="View package" onClick={() => a.onViewConsent(c.id)} />,
         }
       }
-      if (c) return { line: `Started ${fmtDate(c.createdAt)} · not finished` }
+      if (c) {
+        return {
+          line: `Started ${fmtDate(c.createdAt)} · not finished`,
+          action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View package" onClick={() => a.onViewConsent(c.id)} /> : undefined,
+        }
+      }
       if (item.status === 'requested') {
         return {
           line: `Sent ${fmtDate(item.updatedAt)} · unsigned`,
@@ -150,10 +145,7 @@ function describe(
       // Report access follows payment (CRA rule): a pull paid by another employer is a fact on the board, not a document you can open.
       const action =
         item.status === 'complete' && newest.orderedByYou ? (
-          <Button type="button" variant="secondary" size="sm" onClick={() => a.onViewReport(kind, newest.id)}>
-            <ExternalLink className="h-3.5 w-3.5" />
-            View report
-          </Button>
+          <ViewBtn label="View report" onClick={() => a.onViewReport(kind, newest.id)} />
         ) : undefined
       return { line, action }
     }
@@ -162,37 +154,29 @@ function describe(
       const evs = d.employmentVerifications
       if (evs.length === 0) return { line: item.emptyHint }
       const verified = evs.filter((e) => e.status === 'VERIFIED' || e.status === 'PARTIALLY_VERIFIED').length
+      const clock = item.hireClock
+        ? item.hireClock.overdue
+          ? ' · 30-day clock overdue'
+          : ` · due in ${item.hireClock.daysRemaining}d`
+        : ''
       return {
-        line: (
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
-              {evs.length} employer{evs.length === 1 ? '' : 's'} · {verified} verified
-              {item.hireClock && (
-                <span className={cn('ml-1 rounded px-1 py-px text-[10px]', item.hireClock.overdue ? 'bg-red-100 text-red-800' : 'bg-dark-amber/10 text-dark-amber')}>
-                  {item.hireClock.overdue ? '30-day clock overdue' : `due in ${item.hireClock.daysRemaining}d`}
-                </span>
-              )}
-              <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-            </summary>
-            <ul className="mt-1.5 space-y-1">
-              {evs.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-2 rounded-md bg-stone-50 px-2 py-1">
-                  <span className="truncate text-[#173150]">{e.employerName}</span>
-                  <span className="shrink-0 text-[11px]">
-                    {EV_STATUS_LABEL[e.status] ?? e.status}
-                    {e.attemptCount > 0 && ` · ${e.attemptCount} attempt${e.attemptCount === 1 ? '' : 's'}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        ),
+        line: `${evs.length} employer${evs.length === 1 ? '' : 's'} · ${verified} verified${clock}`,
+        action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View" onClick={a.onViewEmployment} /> : undefined,
       }
     }
 
     default:
       return { line: item.emptyHint }
   }
+}
+
+function ViewBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button type="button" variant="secondary" size="sm" onClick={onClick}>
+      <ExternalLink className="h-3.5 w-3.5" />
+      {label}
+    </Button>
+  )
 }
 
 function ResendBtn({

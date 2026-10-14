@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Status board: open a block once the driver has started it** (2026-10-14)
+
+Pace could open a finished MVR, PSP, or signed consent from the driver file, and nothing else. A DOT application on form 2 of 3, a license with one side uploaded, or a consent package the driver had started were visible as status and not openable.
+
+View now follows one rule, `dqItemHasWorkToShow`: status is **complete** or **in progress**. That opens the DOT application (the same redacted preview the career card uses), the license photos and barcode read (same scan the driver confirms, roster-gated), the consent package, and the employment-verification list. A finished report still opens only when this company paid for it. A processing order is not a document yet, so it stays a status.
+
+The driver's DQ packet uses the same status badges and the same rule: **View** once there's something to open, **Start** when it's still theirs to do.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-file-status.ts` | `dqItemHasWorkToShow` |
+| `src/components/employer/drivers/DriverFileItems.tsx` | View actions on license, DOT, in-progress consent, employment |
+| `src/components/employer/drivers/DriverFileModal.tsx` | Wires DOT preview, license, and employment modals |
+| `src/components/employer/drivers/DriverArtifactModals.tsx` | Read-only license (mirrors the driver block) and employment list |
+| `src/app/api/employer/dq-monitor/[userId]/license/route.ts` | Roster-gated license scan for the viewer |
+| `src/components/hub/BuildBoard.tsx` | Same badges; View / Start matches the employer rule |
+
+---
+
 ## **Outreach: one open invite per email and block** (2026-10-13)
 
 Julia Hejduk showed up five times on the outreach board because each "create invite" inserted a new row and nothing checked whether that email already had an open one. Four of those were screening-consent links created within twenty minutes, three of them never delivered. The board is one card per invite, so five rows rendered as five cards.

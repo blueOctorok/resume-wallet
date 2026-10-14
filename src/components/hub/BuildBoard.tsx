@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { ArrowRight, FolderCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useJourneyProgress } from '@/stores/journey-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
@@ -11,7 +10,8 @@ import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import DqCoachPanel from '@/components/hub/DqCoachPanel'
 import { DQ_ITEM_DEFINITIONS } from '@/lib/dq-file-registry'
-import type { DqItemStatus } from '@/lib/dq-file-status'
+import { dqItemHasWorkToShow, type DqItemStatus } from '@/lib/dq-file-status'
+import { DqStatusBadge } from '@/components/employer/drivers/DriverBlockBadges'
 
 /**
  * File board — AI-ordered next steps, then the full DQ packet
@@ -26,26 +26,6 @@ const PACKET_PAGE: Partial<Record<string, PageType | 'profile'>> = {
   cdlis_consent: 'screening-consent',
   employment_verification: 'employment-verification',
   dl_images: 'license',
-}
-
-function packetChip(status: DqItemStatus | 'todo', live: boolean): { label: string; className: string } {
-  if (status === 'complete') {
-    return { label: 'On file', className: 'bg-retro-teal/10 text-retro-teal ring-1 ring-retro-teal/25' }
-  }
-  if (status === 'processing' || status === 'in_progress') {
-    return { label: status === 'processing' ? 'Processing' : 'In progress', className: 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/25' }
-  }
-  if (status === 'requested' || status === 'failed') {
-    return { label: status === 'failed' ? 'Retry' : 'Requested', className: 'bg-dark-amber/10 text-dark-amber ring-1 ring-dark-amber/20' }
-  }
-  if (status === 'needs_employer') {
-    // Live item the driver cannot start themselves (PSP) — not a "to do" for them.
-    return { label: 'Employer orders', className: 'bg-stone-100 text-ironside ring-1 ring-ironside/15' }
-  }
-  if (!live) {
-    return { label: 'Not built yet', className: 'bg-stone-100 text-ironside ring-1 ring-ironside/15' }
-  }
-  return { label: 'To do', className: 'bg-stone-100 text-stone-700' }
 }
 
 export default function BuildBoard() {
@@ -120,10 +100,12 @@ export default function BuildBoard() {
           </p>
           <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-8'>
             {packet.map((row) => {
-              const chip = packetChip(row.status, row.shipped)
               const page = PACKET_PAGE[row.id]
-              const actionLabel =
-                row.id === 'dot_application' && row.status === 'complete' ? 'Edit' : 'Open'
+              const badgeStatus: DqItemStatus = row.status === 'todo' ? 'missing' : row.status
+              // Same gate as the employer file: View once there's something to
+              // open. Start is only for work the driver still has to do.
+              const canView = row.status !== 'todo' && (dqItemHasWorkToShow(row.status) || row.status === 'processing')
+              const canStart = row.status === 'todo' || row.status === 'missing' || row.status === 'failed' || row.status === 'requested'
               const open = () => {
                 if (!page) return
                 if (page === 'profile') {
@@ -144,21 +126,14 @@ export default function BuildBoard() {
                     ) : null}
                   </span>
                   <span className='flex shrink-0 items-center gap-2'>
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                        chip.className,
-                      )}
-                    >
-                      {chip.label}
-                    </span>
-                    {page && row.shipped ? (
+                    <DqStatusBadge status={badgeStatus} />
+                    {page && row.shipped && (canView || canStart) ? (
                       <button
                         type='button'
                         onClick={open}
                         className='inline-flex items-center gap-0.5 text-xs font-semibold text-[#173150] hover:text-[#f15a2b]'
                       >
-                        {actionLabel}
+                        {canView ? 'View' : 'Start'}
                         <ArrowRight className='h-3.5 w-3.5' aria-hidden />
                       </button>
                     ) : null}

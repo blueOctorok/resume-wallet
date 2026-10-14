@@ -11,6 +11,8 @@ import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
 import EmployerConsentPackageModal from '@/components/employer/EmployerConsentPackageModal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
+import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
+import { DriverEmploymentViewModal, DriverLicenseViewModal } from '@/components/employer/drivers/DriverArtifactModals'
 import { cn } from '@/lib/utils'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { getSendableOutreachBlocks } from '@/lib/outreach-sendable-blocks'
@@ -22,7 +24,13 @@ import { useUIStore } from '@/stores/ui-store'
 import { BallPill, DQ_ITEM_SHORT, DqStatusBadge, ballTone } from './DriverBlockBadges'
 import DriverFileItemRow, { fmtDate } from './DriverFileItems'
 
-type Viewer = { kind: 'mvr' | 'psp'; id: string } | { kind: 'consent'; id: string } | { kind: 'card' }
+type Viewer =
+  | { kind: 'mvr' | 'psp'; id: string }
+  | { kind: 'consent'; id: string }
+  | { kind: 'dot'; id: string }
+  | { kind: 'license' }
+  | { kind: 'ev' }
+  | { kind: 'card' }
 
 const LIVE_INVITE = new Set(['pending', 'viewed', 'in_progress'])
 
@@ -213,6 +221,9 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
                       actions={{
                         onViewReport: (kind, id) => setViewer({ kind, id }),
                         onViewConsent: (id) => setViewer({ kind: 'consent', id }),
+                        onViewDot: (id) => setViewer({ kind: 'dot', id }),
+                        onViewLicense: () => setViewer({ kind: 'license' }),
+                        onViewEmployment: () => setViewer({ kind: 'ev' }),
                         onResendConsent: handleResendConsent,
                         resending,
                         hasEmail: Boolean(file.candidate.email),
@@ -288,6 +299,20 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
       )}
       {viewer?.kind === 'consent' && file && (
         <EmployerConsentPackageModal bundleId={viewer.id} candidateName={file.candidate.name} onClose={() => setViewer(null)} />
+      )}
+      {viewer?.kind === 'dot' && (
+        <DotAppPreviewModal
+          isOpen
+          onClose={() => setViewer(null)}
+          userId={userId}
+          sessionUserId={sessionUserId}
+          isDark={false}
+          applicationId={viewer.id}
+        />
+      )}
+      {viewer?.kind === 'license' && <DriverLicenseViewModal userId={userId} onClose={() => setViewer(null)} />}
+      {viewer?.kind === 'ev' && file && (
+        <DriverEmploymentViewModal rows={file.detail.employmentVerifications} onClose={() => setViewer(null)} />
       )}
       {viewer?.kind === 'card' && (
         <CareerCardModal candidateUserId={userId} sessionUserId={sessionUserId} onClose={() => setViewer(null)} />
