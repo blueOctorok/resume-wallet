@@ -3,15 +3,34 @@ import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
 import { toMvrDataFromOrderRow, toPspDataFromOrderRow } from '@/lib/projected-career-card'
 import type { MvrData, PspData } from '@/types/career-card'
 
-/** Terminal states — a driver can re-order after these. Keep in sync with
- * REORDERABLE_STATUSES in screening-validation.ts and the partial unique
- * indexes from migration 102. */
+/**
+ * Statuses that never block a new pull, whatever `expires_at` says.
+ * Keep in sync with REORDERABLE_STATUSES in screening-validation.ts.
+ * The partial unique index (migration 122) only covers in-flight rows
+ * (`pending` / `processing`); it is not this list.
+ */
 const INACTIVE_STATUSES = new Set(['failed', 'cancelled', 'expired', 'superseded'])
 
-/** Active = pending through completed — blocks duplicate employer pre-screen pulls. */
-export function isActiveScreeningOrderStatus(status: string | null | undefined): boolean {
-  const s = String(status ?? '').toLowerCase()
-  return s.length > 0 && !INACTIVE_STATUSES.has(s)
+/**
+ * Still blocking a fresh pull: a non-terminal status whose report has not
+ * passed `expires_at`. Omit `expiresAt` when the caller has no date — a
+ * finished report with no expiry still counts as on file.
+ *
+ * A past `expires_at` releases the block even while status stays
+ * `completed`. Status is the lifecycle; the date is the 30-day window
+ * (DEC-2026-10-002). Do not pass `expiresAt` from a payment-credit check:
+ * a finished report consumed that credit whether or not it has since aged out.
+ */
+export function isActiveScreeningOrder(order: {
+  status: string | null | undefined
+  expiresAt?: string | null
+}): boolean {
+  const s = String(order.status ?? '').toLowerCase()
+  if (s.length === 0 || INACTIVE_STATUSES.has(s)) return false
+  if (!order.expiresAt) return true
+  const expires = Date.parse(order.expiresAt)
+  if (Number.isNaN(expires)) return true
+  return expires >= Date.now()
 }
 
 export interface DriverOwnedScreeningFlags {
@@ -33,7 +52,7 @@ export async function getDriverOwnedScreeningFlags(
   const [mvrRes, pspRes] = await Promise.all([
     supabase
       .from('mvr_orders')
-      .select('id, status')
+      .select('id, status, expires_at')
       .eq('driver_user_id', driverUserId)
       .is('ordered_by_company_id', null)
       .order('created_at', { ascending: false })
@@ -41,7 +60,7 @@ export async function getDriverOwnedScreeningFlags(
       .maybeSingle(),
     supabase
       .from('psp_orders')
-      .select('id, status')
+      .select('id, status, expires_at')
       .eq('driver_user_id', driverUserId)
       .is('ordered_by_company_id', null)
       .order('created_at', { ascending: false })
@@ -53,8 +72,14 @@ export async function getDriverOwnedScreeningFlags(
   const pspStatus = (pspRes.data?.status as string | undefined) ?? null
 
   return {
-    hasActiveDriverOwnedMvr: isActiveScreeningOrderStatus(mvrStatus),
-    hasActiveDriverOwnedPsp: isActiveScreeningOrderStatus(pspStatus),
+    hasActiveDriverOwnedMvr: isActiveScreeningOrder({
+      status: mvrStatus,
+      expiresAt: (mvrRes.data?.expires_at as string | null | undefined) ?? null,
+    }),
+    hasActiveDriverOwnedPsp: isActiveScreeningOrder({
+      status: pspStatus,
+      expiresAt: (pspRes.data?.expires_at as string | null | undefined) ?? null,
+    }),
     driverOwnedMvrStatus: mvrStatus,
     driverOwnedPspStatus: pspStatus,
   }
@@ -70,7 +95,8 @@ export interface ScreeningKindLock {
 /**
  * The re-order lock per kind, matching the duplicate guard in
  * screening-validation.ts: ANY active order — driver-owned or
- * employer-owned — whose report hasn't expired locks that kind.
+ * employer-owned — whose report hasn't passed expires_at locks that kind.
+ * Status stays `completed` after the window; the date is what releases it.
  * (getDriverOwnedScreeningFlags above is ownership-scoped; this is not.)
  */
 export async function getScreeningOrderLocks(
@@ -92,7 +118,8 @@ export async function getScreeningOrderLocks(
   const [mvrRes, pspRes] = await Promise.all([latestActive('mvr_orders'), latestActive('psp_orders')])
 
   const toLock = (row: { status: string; ordered_at: string; expires_at: string | null } | null): ScreeningKindLock => {
-    // Past-expiry orders don't lock even if the nightly cron hasn't flipped them yet.
+    // Past expires_at does not lock. The cron no longer rewrites a finished
+    // report's status, so this date check is the release, not a race with it.
     const expired = row?.expires_at ? new Date(row.expires_at).getTime() < Date.now() : false
     if (!row || expired) return { locked: false, status: null, orderedAt: null, expiresAt: null }
     return { locked: true, status: row.status, orderedAt: row.ordered_at, expiresAt: row.expires_at }

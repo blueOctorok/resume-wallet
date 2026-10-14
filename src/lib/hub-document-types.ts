@@ -49,10 +49,9 @@ export function employerOutreachFileStatusLabel(
   if (s === 'needs_review') return 'Needs review'
   if (s === 'completed') return 'Complete'
   if (s === 'failed') return 'Failed'
-  // `expired`/`cancelled` are administrative terminal states (lapsed TTL / pulled
-  // order) — surface them literally so a recruiter doesn't read them as a failed
-  // screening result.
-  if (s === 'expired') return 'Expired'
+  // `expired` is an order the vendor never returned (DEC-2026-10-002). A
+  // finished report keeps status `completed` and ages out via expires_at.
+  if (s === 'expired') return 'No result'
   if (s === 'cancelled') return 'Cancelled'
   if (s === 'superseded') return 'Superseded'
   if (s === 'processing') return 'Processing'

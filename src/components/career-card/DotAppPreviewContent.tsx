@@ -228,7 +228,9 @@ export default function DotAppPreviewContent({
             )}
             <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-[#5c6166]'>
               <StatusPill isComplete={data.isComplete} />
-              <span>Submitted {fmt(data.createdAt)}</span>
+              <span>
+                {data.isComplete ? 'Submitted' : 'Started'} {fmt(data.createdAt)}
+              </span>
             </div>
           </div>
           {data.addressedToCompany && <PreparedForStamp company={data.addressedToCompany} />}

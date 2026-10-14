@@ -48,6 +48,11 @@ export interface DqItemStatusResult {
   artifactRef: { kind: string; id: string } | null
   emptyHint: string
   sourceChip: string | null
+  /**
+   * Finished MVR/PSP whose `expires_at` has passed. The report is still on
+   * file and still openable; a fresh pull is allowed. Not a failure.
+   */
+  refreshDue: boolean
   /** Hire-clock helper for employment verification (company lens). */
   hireClock?: {
     hireDate: string
@@ -74,6 +79,8 @@ export interface DqScreeningOrderInput {
   processedAt?: string | null
   orderedAt?: string | null
   createdAt?: string | null
+  /** Report validity. Past this, the report is still complete but a fresh pull is allowed. */
+  expiresAt?: string | null
 }
 
 export interface DqConsentBundleInput {
@@ -178,20 +185,38 @@ function orderTimestamp(o: DqScreeningOrderInput): string | null {
   return o.completedAt || o.processedAt || o.orderedAt || o.createdAt || null
 }
 
+/**
+ * A finished report is stale once expires_at has passed. Status stays
+ * complete either way — staleness is the date, not a failed order.
+ * An `expired` row that still has completedAt is the pre-repair shape
+ * (the cron used to overwrite `completed`); treat that as stale too, so a
+ * row the migration has not touched yet cannot read as Failed.
+ */
+function reportRefreshDue(order: DqScreeningOrderInput): boolean {
+  if (order.expiresAt) {
+    const t = Date.parse(order.expiresAt)
+    return !Number.isNaN(t) && t < Date.now()
+  }
+  return (order.status || '').toLowerCase() === 'expired' && Boolean(order.completedAt)
+}
+
 function mapOrderStatus(order: DqScreeningOrderInput | null): {
   status: DqItemStatus
   updatedAt: string | null
   artifactRef: DqItemStatusResult['artifactRef']
+  refreshDue: boolean
 } {
   if (!order) {
-    return { status: 'missing', updatedAt: null, artifactRef: null }
+    return { status: 'missing', updatedAt: null, artifactRef: null, refreshDue: false }
   }
   const s = (order.status || '').toLowerCase()
-  if (TERMINAL_COMPLETE_ORDER.has(s)) {
+  const resultCameBack = s === 'expired' && Boolean(order.completedAt)
+  if (TERMINAL_COMPLETE_ORDER.has(s) || resultCameBack) {
     return {
       status: 'complete',
       updatedAt: orderTimestamp(order),
       artifactRef: { kind: 'order', id: order.id },
+      refreshDue: reportRefreshDue(order),
     }
   }
   if (PROCESSING_ORDER.has(s)) {
@@ -199,6 +224,7 @@ function mapOrderStatus(order: DqScreeningOrderInput | null): {
       status: 'processing',
       updatedAt: orderTimestamp(order),
       artifactRef: { kind: 'order', id: order.id },
+      refreshDue: false,
     }
   }
   if (FAILED_ORDER.has(s)) {
@@ -206,12 +232,14 @@ function mapOrderStatus(order: DqScreeningOrderInput | null): {
       status: 'failed',
       updatedAt: orderTimestamp(order),
       artifactRef: { kind: 'order', id: order.id },
+      refreshDue: false,
     }
   }
   return {
     status: 'in_progress',
     updatedAt: orderTimestamp(order),
     artifactRef: { kind: 'order', id: order.id },
+    refreshDue: false,
   }
 }
 
@@ -384,7 +412,7 @@ function baseItem(
   partial: Pick<
     DqItemStatusResult,
     'status' | 'updatedAt' | 'artifactRef' | 'hireClock' | 'emptyHint'
-  > & { sourceChip?: string | null },
+  > & { sourceChip?: string | null; refreshDue?: boolean },
 ): DqItemStatusResult {
   return {
     id: def.id,
@@ -398,6 +426,7 @@ function baseItem(
     artifactRef: partial.artifactRef,
     emptyHint: partial.emptyHint,
     sourceChip: partial.sourceChip ?? null,
+    refreshDue: partial.refreshDue ?? false,
     hireClock: partial.hireClock ?? null,
   }
 }

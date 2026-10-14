@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import { getStripe } from './stripe'
-import { isActiveScreeningOrderStatus } from './driver-owned-screening'
+import { isActiveScreeningOrder } from './driver-owned-screening'
 
 /**
  * Stripe Checkout for driver-initiated MVR orders (DEC-2026-10-001).
@@ -167,7 +167,9 @@ async function consumedPaymentIds(
     .in('payment_id', paymentIds)
   const consumed = new Set<string>()
   for (const row of data ?? []) {
-    if (row.payment_id && isActiveScreeningOrderStatus(row.status)) consumed.add(row.payment_id)
+    // No expiresAt: a finished report spent this credit even after the 30-day
+    // window. Expiry allows a new pull, not a second use of the same payment.
+    if (row.payment_id && isActiveScreeningOrder({ status: row.status })) consumed.add(row.payment_id)
   }
   return consumed
 }

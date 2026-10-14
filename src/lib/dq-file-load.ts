@@ -45,6 +45,7 @@ interface OrderRowRich {
   processed_at: string | null
   ordered_at: string | null
   created_at: string | null
+  expires_at: string | null
   ordered_by_company_id: string | null
   result_outcome: string | null
 }
@@ -100,7 +101,7 @@ interface CompanyDqRows {
 }
 
 const ORDER_COLS_RICH =
-  'id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id, result_outcome'
+  'id, status, completed_at, processed_at, ordered_at, created_at, expires_at, ordered_by_company_id, result_outcome'
 
 /**
  * Product rule (multi-employer DQ file):
@@ -207,6 +208,7 @@ function toOrderInput(o: OrderRowRich) {
     processedAt: o.processed_at,
     orderedAt: o.ordered_at,
     createdAt: o.created_at,
+    expiresAt: o.expires_at,
   }
 }
 
@@ -628,6 +630,7 @@ export async function loadDqMonitorList(
     processed_at?: string | null
     ordered_at?: string | null
     created_at?: string | null
+    expires_at?: string | null
   }
   type ConsentRow = {
     id: string
@@ -675,14 +678,14 @@ export async function loadDqMonitorList(
       fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
         supabase
           .from('mvr_orders')
-          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at')
           .in('driver_user_id', chunk)
           .limit(1000),
       ),
       fetchAllInChunks<OrderRow>(candidateIds, 'psp_orders', (chunk) =>
         supabase
           .from('psp_orders')
-          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at')
           .in('driver_user_id', chunk)
           .limit(1000),
       ),
@@ -789,6 +792,7 @@ export async function loadDqMonitorList(
         processedAt: o.processed_at,
         orderedAt: o.ordered_at,
         createdAt: o.created_at,
+        expiresAt: o.expires_at,
       })),
       pspOrders: psp.map((o) => ({
         id: o.id,
@@ -797,6 +801,7 @@ export async function loadDqMonitorList(
         processedAt: o.processed_at,
         orderedAt: o.ordered_at,
         createdAt: o.created_at,
+        expiresAt: o.expires_at,
       })),
       consentBundles: consents.map((b) => ({
         id: b.id,
@@ -873,13 +878,13 @@ export async function loadDriverDqSnapshot(
     // All Accio pulls for this driver — payment column ignored (portable DQ).
     supabase
       .from('mvr_orders')
-      .select('id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id')
+      .select('id, status, completed_at, processed_at, ordered_at, created_at, expires_at, ordered_by_company_id')
       .eq('driver_user_id', driverUserId)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('psp_orders')
-      .select('id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id')
+      .select('id, status, completed_at, processed_at, ordered_at, created_at, expires_at, ordered_by_company_id')
       .eq('driver_user_id', driverUserId)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -917,6 +922,7 @@ export async function loadDriverDqSnapshot(
       processedAt: o.processed_at,
       orderedAt: o.ordered_at,
       createdAt: o.created_at,
+      expiresAt: o.expires_at,
     })),
     pspOrders: (pspOrders ?? []).map((o) => ({
       id: o.id,
@@ -925,6 +931,7 @@ export async function loadDriverDqSnapshot(
       processedAt: o.processed_at,
       orderedAt: o.ordered_at,
       createdAt: o.created_at,
+      expiresAt: o.expires_at,
     })),
     consentBundles: (consentBundles ?? []).map((b) => ({
       id: b.id,

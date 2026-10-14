@@ -134,8 +134,9 @@ function describe(
       const outcome = newest.outcome ? outcomeLabel(newest.outcome) : null
       const extra = orders.length > 1 ? `${orders.length} pulls` : null
       const provenance = newest.orderedByYou ? null : 'On file via another employer'
+      const done = item.refreshDue ? `Completed ${when} · refresh due` : `Completed ${when}`
       const line = [
-        item.status === 'complete' ? `Completed ${when}` : item.status === 'processing' ? `Ordered ${when} · processing` : `Order ${newest.status}`,
+        item.status === 'complete' ? done : item.status === 'processing' ? `Ordered ${when} · processing` : `Order ${newest.status}`,
         outcome,
         extra,
         provenance,

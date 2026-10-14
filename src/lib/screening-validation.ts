@@ -252,11 +252,12 @@ export function validateScreeningOrderInput(input: ScreeningOrderInput): Validat
 }
 
 /**
- * Statuses after which a re-order is legitimate. Everything else (pending,
- * processing, completed, needs_review) means a report is in flight or on
- * file, so a new order is a duplicate spend. Keep in sync with
- * INACTIVE_STATUSES in driver-owned-screening.ts and the partial unique
- * indexes from migration 102.
+ * Statuses after which a re-order is legitimate no matter what expires_at
+ * says. A completed or needs_review report still blocks until expires_at
+ * passes (checked below) — status is not flipped to release it.
+ * Keep in sync with INACTIVE_STATUSES in driver-owned-screening.ts.
+ * The partial unique index (migration 122) only covers in-flight rows;
+ * this function is what enforces the 30-day "already on file" rule.
  */
 const REORDERABLE_STATUSES = ['failed', 'cancelled', 'expired', 'superseded']
 
@@ -304,8 +305,8 @@ export async function checkRecentDuplicateOrder(
   }
   if (!data) return null
 
-  // The nightly cron flips past-expiry orders to 'expired', but don't depend
-  // on its timing — an order past expires_at no longer blocks a fresh pull.
+  // expires_at is the validity window. A finished report past it no longer
+  // blocks a fresh pull, and its status stays completed (DEC-2026-10-002).
   if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
     return null
   }

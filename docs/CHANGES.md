@@ -4,6 +4,37 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Screening status is lifecycle truth; 30-day validity lives in expires_at** (2026-10-14)
+
+Aaron Vukovic's driver file said MVR and PSP failed even though both reports came back from Accio. The same thing was true for most of Pace's roster: of 1,318 drivers with a completed consent, 995 showed MVR failed and 835 showed PSP failed when the report was actually on file. Aaron's DOT application was a separate, smaller lie — the preview always said "Submitted" next to an "In progress" pill.
+
+The nightly jobs `expire-mvr-orders` and `expire-psp-orders` (migrations 032 and 102) set `status = 'expired'` on every row past `expires_at`, including finished reports. `expires_at` is order date plus 30 days, so on day 31 a `completed` report became `expired`. The status board treats `expired` as failed. Every other reader that checks `status === 'completed'` (driver hub, career card, outreach pills) went blind the same day. Measured before the repair: 1,072 MVR rows and 875 PSP rows were `expired` with both `completed_at` and `result_xml` set. Two expired MVRs had no result and stay expired.
+
+`status` was doing two jobs. It was the lifecycle (`pending` to `completed`) and it was membership in the reorder lock, because the partial unique index from migration 102 included `completed` and `needs_review`. The cron overwrote status to release that lock. The fix splits them (DEC-2026-10-002):
+
+- `status` is only what happened to the order. The cron now expires `pending` and `processing` rows only — an order the vendor never returned.
+- `expires_at` is the 30-day window. `checkRecentDuplicateOrder` already released the lock from that date. The unique index now covers in-flight rows only, so a finished report can be re-pulled after the window without a status rewrite.
+- The repair sets `expired` rows that have a result back to `completed`, or to `needs_review` when `result_outcome` is `unknown`. That matches `deriveScreeningStatus`: needs-review is the held or unrecognized case, and both are stored as outcome `unknown`.
+- The board says "Completed … · refresh due" once `expires_at` has passed, and the report stays openable. An `expired` row that still has `completed_at` reads as complete too, so a row this migration has not been applied to yet cannot show as failed.
+- The DOT preview says "Started" until `is_complete`, and "Submitted" only after that.
+
+Migration `122_screening_status_is_lifecycle_truth.sql` was not applied from this session — the database tool is read-only.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/122_screening_status_is_lifecycle_truth.sql` | Narrow the unique indexes, reschedule both expiry jobs, restore finished reports |
+| `src/lib/driver-owned-screening.ts` | `isActiveScreeningOrder` reads `expires_at`; flags select it |
+| `src/lib/screening-validation.ts` | Comment: the date releases the lock, not a status flip |
+| `src/lib/screening-order-reservation.ts` | Index covers in-flight rows only |
+| `src/lib/dq-file-status.ts` | `refreshDue`; `expired` + `completedAt` stays complete |
+| `src/lib/dq-file-load.ts` | Selects and maps `expires_at` |
+| `src/components/employer/drivers/DriverFileItems.tsx` | "refresh due" on a stale report; View stays |
+| `src/components/hub/BuildBoard.tsx` | Same hint on the driver's packet |
+| `src/lib/hub-document-types.ts` | Outreach label for `expired` is "No result" |
+| `src/components/career-card/DotAppPreviewContent.tsx` | "Started" vs "Submitted" |
+
+---
+
 ## **Status board: open a block once the driver has started it** (2026-10-14)
 
 Pace could open a finished MVR, PSP, or signed consent from the driver file, and nothing else. A DOT application on form 2 of 3, a license with one side uploaded, or a consent package the driver had started were visible as status and not openable.

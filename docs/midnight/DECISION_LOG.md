@@ -6,6 +6,39 @@ Decisions are listed newest first.
 
 ---
 
+## DEC-2026-10-002 — Screening `status` is lifecycle truth; the 30-day window is `expires_at`
+
+**Date:** 2026-10-14
+**Status:** Accepted
+**Decided by:** Owner (via the screening-status fix)
+
+### Context
+
+MVR and PSP orders carry `expires_at` = ordered_at + 30 days, the window during which a second pull of the same kind is a duplicate vendor charge. Migrations 032 and 102 enforced that window by a nightly cron that set `status = 'expired'` on every past-due row, including reports Accio had already returned as `completed`. The partial unique index from migration 102 also keyed on `status IN ('pending','processing','completed','needs_review')`, so rewriting status was how a finished report left the lock.
+
+Readers ask `status` one question: did this order finish? After day 31 the answer was wiped. About 1,950 finished reports rendered as failed on the driver file, the hub, and the career card.
+
+### Decision
+
+1. **`status` is what happened to the order.** Only an Accio outcome, or an order the vendor never returned, changes it. A finished report stays `completed` or `needs_review`.
+2. **`expires_at` is the 30-day window.** Anything that asks "can we pull again?" or "is this report stale?" reads the date. Nothing writes `status` to express staleness.
+3. **The unique index covers in-flight rows only** (`pending`, `processing`). It is the atomic reservation against concurrent placements. "A report is already on file" is `checkRecentDuplicateOrder`, which already consults `expires_at`.
+4. **The expiry cron only touches `pending` and `processing`.** `expired` means the vendor never came back. It does not mean the report aged out.
+5. **Stale is a label, not a failure.** A report past `expires_at` stays openable and is marked refresh-due.
+
+### Consequences
+
+- Do not put `completed` or `needs_review` back into `uniq_active_driver_owned_mvr` / `uniq_active_driver_owned_psp`. That recreates the reason the cron had to lie.
+- Do not schedule a job that sets `status = 'expired'` on a row with a result.
+- A payment credit stays consumed after the window. Expiry allows a new pull, not a second use of the payment that bought the last report.
+
+### Related
+
+- DEC-2026-07-002 (driver-owned screening; the index this decision narrows)
+- DEC-2026-10-001 (who pays for a pull; unchanged)
+
+---
+
 ## DEC-2026-10-001 — Driver-initiated MVR / PSP orders are paid through Stripe; company-sponsored orders stay uncharged
 
 **Date:** 2026-10-08

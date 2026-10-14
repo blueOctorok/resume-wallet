@@ -8,9 +8,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * produced N real Accio charges, and (b) an insert failure left us charged
  * with no record. Migration 102 added partial unique indexes
  * (`uniq_active_driver_owned_mvr` / `uniq_active_driver_owned_psp`) — at most
- * one active driver-owned order per driver per kind. Inserting the `pending`
- * row BEFORE calling Accio makes that index an atomic reservation: the race
- * has exactly one winner, and losers get a friendly 409 without costing money.
+ * one in-flight (`pending` / `processing`) driver-owned order per driver per
+ * kind (migration 122 narrowed it; finished reports are not in the index).
+ * Inserting the `pending` row BEFORE calling Accio makes that index an atomic
+ * reservation: the race has exactly one winner, and losers get a friendly 409
+ * without costing money. The 30-day "already on file" rule is
+ * checkRecentDuplicateOrder reading expires_at, not this index.
  *
  * Employer-owned orders (ordered_by_company_id set) are outside the index on
  * purpose — companies pay for their own pulls and have separate guards.

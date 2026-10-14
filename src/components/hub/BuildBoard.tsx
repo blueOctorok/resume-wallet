@@ -64,7 +64,9 @@ export default function BuildBoard() {
           return {
             id: def.id,
             label: def.label,
-            hint: def.cfrNote ?? null,
+            // Same words as the employer file: a finished report past its
+            // window is still complete, and the hint says a fresh pull is due.
+            hint: resolved?.refreshDue ? 'refresh due' : (def.cfrNote ?? null),
             live: def.blocksOverallCompletion,
             shipped: def.blocksOverallCompletion || def.id === 'dl_images',
             status: (resolved?.status ?? (def.blocksOverallCompletion ? 'missing' : 'coming_soon')) as DqItemStatus,
