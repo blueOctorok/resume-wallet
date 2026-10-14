@@ -8,10 +8,14 @@ import {
   resolveCompanyDqFile,
   resolveDriverDqFile,
   type DqFileSnapshot,
+  type DqItemStatus,
   type ResolveCompanyDqInput,
   type ResolveDriverDqInput,
 } from '@/lib/dq-file-status'
-import { getLicenseScan } from '@/lib/block-data'
+import type { DqItemId } from '@/lib/dq-file-registry'
+import type { ScreeningOutcome } from '@/lib/accio-result-status'
+import { isLicenseScanFields } from '@/lib/aamva-license'
+import { getCdlData, getLicenseScan, type LicenseScanRow } from '@/lib/block-data'
 import { toCompanyAccountTier } from '@/lib/company-account-tier'
 import { toDqLicenseScan } from '@/lib/license-scan-view'
 import { fetchAllInChunks } from '@/lib/supabase-in-chunks'
@@ -25,66 +29,97 @@ function displayName(
   return name || fallback
 }
 
-const ORDER_COLS = 'id, status, completed_at, processed_at, ordered_at, created_at'
+// ── Company lens: one query set, three consumers ───────────────────────────
+//
+// The talent route, the driver-file detail, and the board all need the same
+// rows. Fetch them once with every column the detail view wants, then map
+// down to the minimal resolver input. Fetching rich + mapping down is cheaper
+// to maintain than three near-identical query sets drifting apart.
 
-function mapOrderRows(
-  rows: Array<{
-    id: string
-    status: string
-    completed_at?: string | null
-    processed_at?: string | null
-    ordered_at?: string | null
-    created_at?: string | null
-  }> | null | undefined,
-) {
-  return (rows ?? []).map((o) => ({
-    id: o.id,
-    status: o.status,
-    completedAt: o.completed_at,
-    processedAt: o.processed_at,
-    orderedAt: o.ordered_at,
-    createdAt: o.created_at,
-  }))
+const LIVE_INVITE_STATUSES = ['pending', 'viewed', 'in_progress'] as const
+
+interface OrderRowRich {
+  id: string
+  status: string
+  completed_at: string | null
+  processed_at: string | null
+  ordered_at: string | null
+  created_at: string | null
+  ordered_by_company_id: string | null
+  result_outcome: string | null
 }
 
+interface ConsentRowRich {
+  id: string
+  status: string
+  cdlis_signed_at: string | null
+  completed_at: string | null
+  created_at: string
+  bgcheck_consent_id: string | null
+  psp_consent_id: string | null
+}
+
+interface DotRowRich {
+  id: string
+  is_complete: boolean | null
+  current_step: number | null
+  updated_at: string | null
+  created_at: string | null
+}
+
+interface EvRowRich {
+  id: string
+  status: string
+  finalized_at: string | null
+  updated_at: string | null
+  created_at: string | null
+  previous_employer_name: string
+  attempt_count: number | null
+  last_attempt_at: string | null
+}
+
+interface InviteRowRich {
+  id: string
+  target_block_type: string | null
+  status: string
+  created_at: string
+  email_sent_at: string | null
+  sms_sent_at: string | null
+  view_count: number | null
+}
+
+interface CompanyDqRows {
+  mvrOrders: OrderRowRich[]
+  pspOrders: OrderRowRich[]
+  consentBundles: ConsentRowRich[]
+  dotApplications: DotRowRich[]
+  employmentVerifications: EvRowRich[]
+  /** Every invite this company sent this person, newest first. */
+  invites: InviteRowRich[]
+  licenseScan: LicenseScanRow | null
+}
+
+const ORDER_COLS_RICH =
+  'id, status, completed_at, processed_at, ordered_at, created_at, ordered_by_company_id, result_outcome'
+
 /**
- * Load DQ inputs for one candidate as seen by an employer monitor.
- *
  * Product rule (multi-employer DQ file):
- * - MVR / PSP are **driver-owned artifacts** — ignore `ordered_by_company_id`.
- *   Who paid / who clicked does not matter; any Accio pull for this driver
- *   counts for every employer's DQ monitor.
- * - Consent package + employment verifications stay company-scoped (that
- *   employer's paperwork). DOT app is driver-global.
+ * - MVR / PSP are **driver-owned artifacts** — any pull for this driver counts
+ *   on every employer's board, regardless of who paid.
+ * - Consent, employment verifications, and invites stay company-scoped.
+ *   DOT app and license photos are driver-global.
  */
-export async function loadCompanyDqInput(
+async function loadCompanyDqRows(
   supabase: SupabaseClient,
   companyId: string,
   candidateUserId: string,
-  hireDate?: string | null,
-): Promise<ResolveCompanyDqInput> {
-  const [
-    { data: mvrOrders },
-    { data: pspOrders },
-    { data: consentBundles },
-    { data: dotApps },
-    { data: evRows },
-  ] = await Promise.all([
-    supabase
-      .from('mvr_orders')
-      .select(ORDER_COLS)
-      .eq('driver_user_id', candidateUserId)
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('psp_orders')
-      .select(ORDER_COLS)
-      .eq('driver_user_id', candidateUserId)
-      .order('created_at', { ascending: false })
-      .limit(20),
+): Promise<CompanyDqRows> {
+  const [mvr, psp, consents, dots, evs, invites, licenseScan] = await Promise.all([
+    supabase.from('mvr_orders').select(ORDER_COLS_RICH).eq('driver_user_id', candidateUserId).order('created_at', { ascending: false }).limit(20),
+    supabase.from('psp_orders').select(ORDER_COLS_RICH).eq('driver_user_id', candidateUserId).order('created_at', { ascending: false }).limit(20),
     supabase
       .from('screening_consent_bundles')
-      .select('id, status, cdlis_signed_at, completed_at, created_at')
+      .select('id, status, cdlis_signed_at, completed_at, created_at, bgcheck_consent_id, psp_consent_id')
       .eq('company_id', companyId)
       .eq('driver_user_id', candidateUserId)
       .order('created_at', { ascending: false })
@@ -97,31 +132,61 @@ export async function loadCompanyDqInput(
       .limit(10),
     supabase
       .from('employment_verification_requests')
-      .select('id, status, finalized_at, updated_at, created_at')
+      .select('id, status, finalized_at, updated_at, created_at, previous_employer_name, attempt_count, last_attempt_at')
       .eq('requesting_company_id', companyId)
       .eq('driver_id', candidateUserId)
       .order('created_at', { ascending: false })
       .limit(50),
+    supabase
+      .from('application_invites')
+      .select('id, target_block_type, status, created_at, email_sent_at, sms_sent_at, view_count')
+      .eq('company_id', companyId)
+      .or(`used_by_user_id.eq.${candidateUserId},candidate_user_id.eq.${candidateUserId}`)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    getLicenseScan(supabase, candidateUserId),
   ])
 
   return {
-    mvrOrders: mapOrderRows(mvrOrders),
-    pspOrders: mapOrderRows(pspOrders),
-    consentBundles: (consentBundles ?? []).map((b) => ({
+    mvrOrders: (mvr.data ?? []) as OrderRowRich[],
+    pspOrders: (psp.data ?? []) as OrderRowRich[],
+    consentBundles: (consents.data ?? []) as ConsentRowRich[],
+    dotApplications: (dots.data ?? []) as DotRowRich[],
+    employmentVerifications: (evs.data ?? []) as EvRowRich[],
+    invites: (invites.data ?? []) as InviteRowRich[],
+    licenseScan,
+  }
+}
+
+function newestLiveConsentInviteAt(invites: InviteRowRich[]): string | null {
+  return (
+    invites.find(
+      (i) =>
+        i.target_block_type === 'driver-screening-consent' &&
+        (LIVE_INVITE_STATUSES as readonly string[]).includes(i.status),
+    )?.created_at ?? null
+  )
+}
+
+function toCompanyDqInput(rows: CompanyDqRows, hireDate?: string | null): ResolveCompanyDqInput {
+  return {
+    mvrOrders: rows.mvrOrders.map(toOrderInput),
+    pspOrders: rows.pspOrders.map(toOrderInput),
+    consentBundles: rows.consentBundles.map((b) => ({
       id: b.id,
       status: b.status,
       cdlisSignedAt: b.cdlis_signed_at,
       completedAt: b.completed_at,
       createdAt: b.created_at,
     })),
-    dotApplications: (dotApps ?? []).map((a) => ({
+    dotApplications: rows.dotApplications.map((a) => ({
       id: a.id,
       isComplete: Boolean(a.is_complete),
       currentStep: a.current_step,
       updatedAt: a.updated_at,
       createdAt: a.created_at,
     })),
-    employmentVerifications: (evRows ?? []).map((r) => ({
+    employmentVerifications: rows.employmentVerifications.map((r) => ({
       id: r.id,
       status: r.status,
       finalizedAt: r.finalized_at,
@@ -129,7 +194,19 @@ export async function loadCompanyDqInput(
       createdAt: r.created_at,
     })),
     hireDate: hireDate ?? null,
-    licenseScan: toDqLicenseScan(await getLicenseScan(supabase, candidateUserId)),
+    licenseScan: toDqLicenseScan(rows.licenseScan),
+    pendingConsentInviteAt: newestLiveConsentInviteAt(rows.invites),
+  }
+}
+
+function toOrderInput(o: OrderRowRich) {
+  return {
+    id: o.id,
+    status: o.status,
+    completedAt: o.completed_at,
+    processedAt: o.processed_at,
+    orderedAt: o.ordered_at,
+    createdAt: o.created_at,
   }
 }
 
@@ -139,9 +216,161 @@ export async function resolveCompanyDqForCandidate(
   candidateUserId: string,
   hireDate?: string | null,
 ): Promise<DqFileSnapshot> {
-  const input = await loadCompanyDqInput(supabase, companyId, candidateUserId, hireDate)
-  return resolveCompanyDqFile(input)
+  const rows = await loadCompanyDqRows(supabase, companyId, candidateUserId)
+  return resolveCompanyDqFile(toCompanyDqInput(rows, hireDate))
 }
+
+// ── Driver file detail (board click-through) ───────────────────────────────
+
+export interface DriverFileDetail {
+  /** Self-reported CDL from the hub. Number is deliberately not included. */
+  cdl: {
+    cdlClass: string | null
+    state: string | null
+    expiration: string | null
+    endorsements: string[]
+    restrictions: string[]
+  } | null
+  /** License photos + what the barcode read. Class / state / expiry only — no number, DOB, or address. */
+  license: {
+    hasFront: boolean
+    hasBack: boolean
+    barcodeStatus: LicenseScanRow['barcode_status']
+    confirmedAt: string | null
+    licenseClass: string | null
+    state: string | null
+    expiration: string | null
+  } | null
+  dotApplication: { id: string; currentStep: number; isComplete: boolean; updatedAt: string | null } | null
+  consent: {
+    id: string
+    status: string
+    createdAt: string
+    completedAt: string | null
+    parts: { fcra: boolean; psp: boolean; cdlis: boolean }
+  } | null
+  screenings: Array<{
+    id: string
+    kind: 'mvr' | 'psp'
+    status: string
+    outcome: ScreeningOutcome | null
+    orderedAt: string | null
+    completedAt: string | null
+    /** Report access follows payment (CRA rule) — only your own orders open. */
+    orderedByYou: boolean
+  }>
+  employmentVerifications: Array<{
+    id: string
+    employerName: string
+    status: string
+    attemptCount: number
+    lastAttemptAt: string | null
+    updatedAt: string | null
+  }>
+  invites: Array<{
+    id: string
+    blockType: string | null
+    status: string
+    createdAt: string
+    emailSentAt: string | null
+    smsSentAt: string | null
+    viewCount: number
+  }>
+}
+
+export async function loadDriverFileDetail(
+  supabase: SupabaseClient,
+  companyId: string,
+  candidateUserId: string,
+  hireDate?: string | null,
+): Promise<{ dqFile: DqFileSnapshot; detail: DriverFileDetail }> {
+  const [rows, cdl] = await Promise.all([
+    loadCompanyDqRows(supabase, companyId, candidateUserId),
+    getCdlData(supabase, candidateUserId),
+  ])
+  const dqFile = resolveCompanyDqFile(toCompanyDqInput(rows, hireDate))
+
+  const scan = rows.licenseScan
+  const fields = isLicenseScanFields(scan?.parsed_fields) ? scan.parsed_fields : null
+  const newestDot = rows.dotApplications[0]
+  const newestConsent = rows.consentBundles[0]
+
+  const toScreening = (kind: 'mvr' | 'psp') => (o: OrderRowRich) => ({
+    id: o.id,
+    kind,
+    status: o.status,
+    outcome: (o.result_outcome as ScreeningOutcome | null) ?? null,
+    orderedAt: o.ordered_at ?? o.created_at,
+    completedAt: o.completed_at,
+    orderedByYou: o.ordered_by_company_id === companyId,
+  })
+
+  return {
+    dqFile,
+    detail: {
+      cdl: cdl
+        ? {
+            cdlClass: cdl.cdl_class,
+            state: cdl.cdl_state,
+            expiration: cdl.cdl_expiration,
+            endorsements: cdl.endorsements ?? [],
+            restrictions: cdl.restrictions ?? [],
+          }
+        : null,
+      license: scan
+        ? {
+            hasFront: Boolean(scan.front_storage_path),
+            hasBack: Boolean(scan.back_storage_path),
+            barcodeStatus: scan.barcode_status,
+            confirmedAt: scan.confirmed_at,
+            licenseClass: fields?.licenseClass || null,
+            state: fields?.state || null,
+            expiration: fields?.expirationDate || null,
+          }
+        : null,
+      dotApplication: newestDot
+        ? {
+            id: newestDot.id,
+            currentStep: newestDot.current_step ?? 1,
+            isComplete: Boolean(newestDot.is_complete),
+            updatedAt: newestDot.updated_at,
+          }
+        : null,
+      consent: newestConsent
+        ? {
+            id: newestConsent.id,
+            status: newestConsent.status,
+            createdAt: newestConsent.created_at,
+            completedAt: newestConsent.completed_at,
+            parts: {
+              fcra: Boolean(newestConsent.bgcheck_consent_id),
+              psp: Boolean(newestConsent.psp_consent_id),
+              cdlis: Boolean(newestConsent.cdlis_signed_at),
+            },
+          }
+        : null,
+      screenings: [...rows.mvrOrders.map(toScreening('mvr')), ...rows.pspOrders.map(toScreening('psp'))],
+      employmentVerifications: rows.employmentVerifications.map((r) => ({
+        id: r.id,
+        employerName: r.previous_employer_name,
+        status: r.status,
+        attemptCount: r.attempt_count ?? 0,
+        lastAttemptAt: r.last_attempt_at,
+        updatedAt: r.updated_at ?? r.created_at,
+      })),
+      invites: rows.invites.map((i) => ({
+        id: i.id,
+        blockType: i.target_block_type,
+        status: i.status,
+        createdAt: i.created_at,
+        emailSentAt: i.email_sent_at,
+        smsSentAt: i.sms_sent_at,
+        viewCount: i.view_count ?? 0,
+      })),
+    },
+  }
+}
+
 
 /**
  * Agency roster rule. A driver who signed up on their own belongs on the
@@ -356,10 +585,15 @@ export interface DqMonitorCandidateRow {
   userId: string
   name: string
   avatarUrl: string | null
+  headline: string | null
+  /** "Class A · OH" for the row subtitle. Null when the driver hasn't entered a CDL. */
+  cdl: { cdlClass: string | null; state: string | null } | null
   overallStatus: DqFileSnapshot['overall']
   completedCount: number
   totalLiveCount: number
   lastActivityAt: string | null
+  /** Live DQ items only — enough for badges and journey derivation without the full snapshot. */
+  items: Array<{ id: DqItemId; status: DqItemStatus }>
 }
 
 /**
@@ -378,6 +612,13 @@ export async function loadDqMonitorList(
     first_name: string | null
     last_name: string | null
     avatar_url: string | null
+    headline: string | null
+  }
+  type CdlSummaryRow = { user_id: string; cdl_class: string | null; cdl_state: string | null }
+  type LiveConsentInviteRow = {
+    used_by_user_id: string | null
+    candidate_user_id: string | null
+    created_at: string
   }
   type OrderRow = {
     id: string
@@ -423,12 +664,12 @@ export async function loadDqMonitorList(
     updated_at: string | null
   }
 
-  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows, licenseRows] =
+  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows, licenseRows, cdlRows, liveConsentInvites] =
     await Promise.all([
       fetchAllInChunks<ProfileRow>(candidateIds, 'profiles', (chunk) =>
         supabase
           .from('user_profiles')
-          .select('user_id, first_name, last_name, avatar_url')
+          .select('user_id, first_name, last_name, avatar_url, headline')
           .in('user_id', chunk),
       ),
       fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
@@ -475,6 +716,21 @@ export async function loadDqMonitorList(
           .in('user_id', chunk)
           .limit(1000),
       ),
+      fetchAllInChunks<CdlSummaryRow>(candidateIds, 'cdl', (chunk) =>
+        supabase.from('block_driver_cdl').select('user_id, cdl_class, cdl_state').in('user_id', chunk),
+      ),
+      // Consent invites still in flight — so "sent, unsigned" doesn't read as "missing".
+      // Not chunked by candidate: an unclaimed invite only has candidate_user_id, and
+      // the company-scoped set is small enough to fetch once.
+      supabase
+        .from('application_invites')
+        .select('used_by_user_id, candidate_user_id, created_at')
+        .eq('company_id', companyId)
+        .eq('target_block_type', 'driver-screening-consent')
+        .in('status', [...LIVE_INVITE_STATUSES])
+        .order('created_at', { ascending: false })
+        .limit(1000)
+        .then(({ data }) => (data ?? []) as LiveConsentInviteRow[]),
     ])
 
   const profileById = new Map(
@@ -483,9 +739,18 @@ export async function loadDqMonitorList(
       {
         name: displayName(p.first_name, p.last_name),
         avatarUrl: p.avatar_url ?? null,
+        headline: p.headline ?? null,
       },
     ]),
   )
+  const cdlByUser = new Map(cdlRows.map((c) => [c.user_id, { cdlClass: c.cdl_class, state: c.cdl_state }]))
+  // Newest first from the query, so the first write per user wins.
+  const consentInviteAtByUser = new Map<string, string>()
+  for (const inv of liveConsentInvites) {
+    for (const id of [inv.used_by_user_id, inv.candidate_user_id]) {
+      if (id && !consentInviteAtByUser.has(id)) consentInviteAtByUser.set(id, inv.created_at)
+    }
+  }
 
   const groupBy = <T>(rows: T[], key: keyof T): Map<string, T[]> => {
     const map = new Map<string, T[]>()
@@ -563,6 +828,7 @@ export async function loadDqMonitorList(
             updatedAt: license.updated_at,
           }
         : null,
+      pendingConsentInviteAt: consentInviteAtByUser.get(userId) ?? null,
     })
 
     const profile = profileById.get(userId)
@@ -570,10 +836,13 @@ export async function loadDqMonitorList(
       userId,
       name: profile?.name ?? 'Unknown driver',
       avatarUrl: profile?.avatarUrl ?? null,
+      headline: profile?.headline ?? null,
+      cdl: cdlByUser.get(userId) ?? null,
       overallStatus: snapshot.overall,
       completedCount: snapshot.completedCount,
       totalLiveCount: snapshot.totalLiveCount,
       lastActivityAt: snapshot.lastActivityAt,
+      items: snapshot.items.filter((i) => i.blocksOverallCompletion).map(({ id, status }) => ({ id, status })),
     })
   }
 

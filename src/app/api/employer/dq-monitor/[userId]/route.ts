@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
-import { resolveCompanyDqForCandidate, loadDqMonitorCandidateIds } from '@/lib/dq-file-load'
+import { loadDriverFileDetail, loadDqMonitorCandidateIds } from '@/lib/dq-file-load'
 
 /**
  * GET /api/employer/dq-monitor/[userId]
  *
- * Person detail DQ snapshot (company lens) + basic identity for the modal header.
+ * Driver file for the status board: identity header + DQ snapshot + the
+ * per-item detail (CDL, license read, DOT step, consent parts, screenings,
+ * employment verifications, this company's invites). Company lens.
  */
 export async function GET(
   request: NextRequest,
@@ -57,12 +59,7 @@ export async function GET(
     }
 
     const hireDate = request.nextUrl.searchParams.get('hireDate')
-    const dqFile = await resolveCompanyDqForCandidate(
-      supabase,
-      ctx.companyId,
-      candidateUserId,
-      hireDate,
-    )
+    const { dqFile, detail } = await loadDriverFileDetail(supabase, ctx.companyId, candidateUserId, hireDate)
 
     const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || 'Unknown driver'
 
@@ -78,6 +75,7 @@ export async function GET(
         headline: profile?.headline ?? null,
       },
       dqFile,
+      detail,
     })
   } catch (error) {
     console.error('[DQ MONITOR] Detail error:', error)

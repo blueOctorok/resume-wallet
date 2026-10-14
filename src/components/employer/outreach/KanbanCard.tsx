@@ -23,7 +23,6 @@ interface KanbanCardProps {
   files: ScreeningRow[]
   /** Latest company-scoped screening consent bundle for this candidate, if any */
   consentBundle?: ConsentBundleSummary | null
-  theme: string
   onClick: (invite: Invite) => void
 }
 

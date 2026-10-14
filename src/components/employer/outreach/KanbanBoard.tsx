@@ -2,17 +2,20 @@
 
 import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import Modal, { ModalHeader } from '@/components/ui/Modal'
+import Modal from '@/components/ui/Modal'
 import {
   OUTREACH_KANBAN_COLUMNS,
   OUTREACH_KANBAN_LABEL,
   type OutreachKanbanColumn,
 } from '@/lib/outreach-invite-buckets'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
+import type { BlockDefinition } from '@/lib/block-registry'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from './types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import KanbanCard from './KanbanCard'
 import OutreachCandidateCard from './OutreachCandidateCard'
+import type { SendSelection } from './SendBlocksPanel'
+import type { ContactPatch } from './ContactFields'
 
 const COLUMN_DOTS: Record<OutreachKanbanColumn, string> = {
   pending: 'bg-amber-400',
@@ -26,7 +29,17 @@ export interface KanbanBoardProps {
   screeningsByUserId?: ScreeningsByUserId
   /** Latest screening consent bundle per candidate — file badges on cards + modal */
   consentBundleByUserId?: Map<string, ConsentBundleSummary>
-  theme: string
+
+  // ── Detail modal: send + edit ──────────────────────────────────────────
+  sendableBlocks: BlockDefinition[]
+  /** Block type → createdAt of a live invite already out for this candidate. */
+  alreadySentFor: (invite: Invite) => ReadonlyMap<string, string>
+  /** Invite id whose detail modal currently has a send in flight. */
+  sendingId: string | null
+  onSendBlocks: (invite: Invite, selection: SendSelection) => Promise<void>
+  onSaveContact: (inviteId: string, patch: ContactPatch) => Promise<void>
+
+  // ── Detail modal: existing-link tools ──────────────────────────────────
   copiedId: string | null
   sendingEmailId: string | null
   emailSentId: string | null
@@ -36,27 +49,18 @@ export interface KanbanBoardProps {
   savingNotesId: string | null
   onCopy: (url: string, id: string) => void
   onShowQr: (invite: Invite) => void
-  onSendEmail: (invite: Invite, emailOverride?: string) => void
-  onSendSms: (invite: Invite, phoneOverride?: string) => void
+  onSendEmail: (invite: Invite) => void
+  onSendSms: (invite: Invite) => void
   onCancel: (id: string) => void
   onRemove: (id: string) => void
   onViewFile: (file: ScreeningRow) => void
   onViewConsent?: (bundle: ConsentBundleSummary) => void
-  onEdit: (invite: Invite) => void
   onAskStormi: (invite: Invite) => void
   onRecruiterNotesSave: (inviteId: string, notes: string) => void | Promise<void>
-  /**
-   * Fired when the employer hits "Resend consent" inside the detail modal.
-   * Parent owns the resend flow (creates a new invite + email) — we just
-   * forward the trigger. Receives the invite that needs rescue.
-   */
   onResendConsent?: (invite: Invite) => void | Promise<void>
-  /** Invite id currently mid-resend so the button can disable itself. */
   resendingId?: string | null
-  /** Kanban detail modal: employer may PATCH `invite.status` with override flag. */
   onPipelineStatusOverride?: (inviteId: string, status: InviteStatus) => Promise<void>
   statusOverrideSavingId?: string | null
-  /** Refresh screenings data — forwarded to OutreachCandidateCard refresh button */
   onRefreshScreenings?: () => void
 }
 
@@ -69,7 +73,11 @@ export default function KanbanBoard({
   invites,
   screeningsByUserId,
   consentBundleByUserId,
-  theme,
+  sendableBlocks,
+  alreadySentFor,
+  sendingId,
+  onSendBlocks,
+  onSaveContact,
   copiedId,
   sendingEmailId,
   emailSentId,
@@ -85,7 +93,6 @@ export default function KanbanBoard({
   onRemove,
   onViewFile,
   onViewConsent,
-  onEdit,
   onAskStormi,
   onRecruiterNotesSave,
   onResendConsent,
@@ -100,6 +107,9 @@ export default function KanbanBoard({
     () => invites.find((inv) => inv.id === activeInviteId) ?? null,
     [invites, activeInviteId],
   )
+
+  const filesFor = (inv: Invite) => (inv.usedByUserId ? screeningsByUserId?.get(inv.usedByUserId) ?? [] : [])
+  const bundleFor = (inv: Invite) => (inv.usedByUserId ? consentBundleByUserId?.get(inv.usedByUserId) : undefined)
 
   const byColumn = useMemo(() => {
     const m = new Map<OutreachKanbanColumn, Invite[]>()
@@ -166,17 +176,8 @@ export default function KanbanBoard({
                   <KanbanCard
                     key={invite.id}
                     invite={invite}
-                    files={
-                      invite.usedByUserId
-                        ? screeningsByUserId?.get(invite.usedByUserId) ?? []
-                        : []
-                    }
-                    consentBundle={
-                      invite.usedByUserId
-                        ? consentBundleByUserId?.get(invite.usedByUserId)
-                        : undefined
-                    }
-                    theme={theme}
+                    files={filesFor(invite)}
+                    consentBundle={bundleFor(invite)}
                     onClick={(inv) => setActiveInviteId(inv.id)}
                   />
                 ))}
@@ -186,59 +187,52 @@ export default function KanbanBoard({
         })}
       </div>
 
+      {/* Detail modal — same block shell as "New outreach" so the two feel like one tool.
+          The card renders its own header (avatar + name + status + close). */}
       {activeInvite && (
-        <Modal onClose={() => setActiveInviteId(null)} maxWidth="max-w-2xl" zIndex={1100}>
-          <ModalHeader
-            title={activeInvite.candidateName || activeInvite.candidateEmail || 'Candidate'}
-            subtitle="Candidate detail"
+        <Modal
+          onClose={() => setActiveInviteId(null)}
+          maxWidth="max-w-2xl"
+          zIndex={1100}
+          panelShape="block"
+          panelClassName="!border-stone-200 !bg-white !ring-[#173150]/10"
+        >
+          <OutreachCandidateCard
+            invite={activeInvite}
+            files={filesFor(activeInvite)}
+            consentBundle={bundleFor(activeInvite)}
             onClose={() => setActiveInviteId(null)}
+            sendableBlocks={sendableBlocks}
+            alreadySent={alreadySentFor(activeInvite)}
+            sending={sendingId === activeInvite.id}
+            onSendBlocks={onSendBlocks}
+            onSaveContact={onSaveContact}
+            copiedId={copiedId}
+            sendingEmailId={sendingEmailId}
+            emailSentId={emailSentId}
+            sendingSmsId={sendingSmsId}
+            smsSentId={smsSentId}
+            removingId={removingId}
+            notesSaving={savingNotesId === activeInvite.id}
+            onCopy={onCopy}
+            onShowQr={onShowQr}
+            onSendEmail={onSendEmail}
+            onSendSms={onSendSms}
+            onCancel={onCancel}
+            onRemove={(id) => {
+              onRemove(id)
+              setActiveInviteId(null)
+            }}
+            onViewFile={onViewFile}
+            onViewConsent={onViewConsent}
+            onAskStormi={onAskStormi}
+            onRecruiterNotesSave={onRecruiterNotesSave}
+            onResendConsent={onResendConsent}
+            resending={resendingId === activeInvite.id}
+            onRefreshScreenings={onRefreshScreenings}
+            onPipelineStatusOverride={onPipelineStatusOverride}
+            statusOverrideSaving={statusOverrideSavingId === activeInvite.id}
           />
-          <div className="p-4">
-            <OutreachCandidateCard
-              invite={activeInvite}
-              files={
-                activeInvite.usedByUserId
-                  ? screeningsByUserId?.get(activeInvite.usedByUserId) ?? []
-                  : []
-              }
-              consentBundle={
-                activeInvite.usedByUserId
-                  ? consentBundleByUserId?.get(activeInvite.usedByUserId)
-                  : undefined
-              }
-              theme={theme}
-              copiedId={copiedId}
-              sendingEmailId={sendingEmailId}
-              emailSentId={emailSentId}
-              sendingSmsId={sendingSmsId}
-              smsSentId={smsSentId}
-              removingId={removingId}
-              notesSaving={savingNotesId === activeInvite.id}
-              onCopy={onCopy}
-              onShowQr={onShowQr}
-              onSendEmail={onSendEmail}
-              onSendSms={onSendSms}
-              onCancel={onCancel}
-              onRemove={(id) => {
-                onRemove(id)
-                setActiveInviteId(null)
-              }}
-              onViewFile={onViewFile}
-              onViewConsent={onViewConsent}
-              onEdit={(inv) => {
-                setActiveInviteId(null)
-                onEdit(inv)
-              }}
-              onAskStormi={onAskStormi}
-              onRecruiterNotesSave={onRecruiterNotesSave}
-              onResendConsent={onResendConsent}
-              resending={resendingId === activeInvite.id}
-              onRefreshScreenings={onRefreshScreenings}
-              showPipelineStatusOverride
-              onPipelineStatusOverride={onPipelineStatusOverride}
-              statusOverrideSaving={statusOverrideSavingId === activeInvite.id}
-            />
-          </div>
         </Modal>
       )}
     </>

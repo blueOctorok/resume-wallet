@@ -7,7 +7,9 @@ import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import { cn } from '@/lib/utils'
-import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition, employerCanRequest } from '@/lib/block-registry'
+import { getBlockDefinition } from '@/lib/block-registry'
+import { getSendableOutreachBlocks } from '@/lib/outreach-sendable-blocks'
+import { createInvite, sendInviteEmail, sendInviteSms, type InviteTarget } from '@/lib/outreach-send-client'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import { sendToStormi, OutOfCreditsError, type StormiConversationTurn } from '@/lib/ava-chat'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
@@ -18,6 +20,8 @@ import KanbanBoard from '@/components/employer/outreach/KanbanBoard'
 import OutreachKanbanInfoModal from '@/components/employer/outreach/OutreachKanbanInfoModal'
 import OutreachFilterBar, { type FilterChipDef, type SortKey } from '@/components/employer/outreach/OutreachFilterBar'
 import FilesVault from '@/components/employer/outreach/FilesVault'
+import SendBlocksPanel, { type SendSelection } from '@/components/employer/outreach/SendBlocksPanel'
+import type { ContactPatch } from '@/components/employer/outreach/ContactFields'
 import StormiChatMarkdown from '@/components/employer/outreach/StormiChatMarkdown'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
@@ -39,7 +43,6 @@ import {
   X,
   Search,
   UserCheck,
-  Package,
   ShieldCheck,
   FileCheck,
   Inbox,
@@ -48,7 +51,6 @@ import {
   Download,
   Share2,
   Bot,
-  Pencil,
   Info,
 } from 'lucide-react'
 
@@ -88,14 +90,7 @@ interface CandidateOutreachProps {
   onRefreshScreenings?: () => void
   /** Employer hub context — passed through so the mini Stormi modal can call the AI API */
   employerContext?: EmployerHubContext | null
-  /** Company ID and wallet address — used for direct MVR/PSP ordering from the edit modal */
-  companyId?: string | null
-  companyWalletAddress?: string | null
 }
-
-// MVR/PSP are never email invites — they're paid orders placed from the edit
-// modal once the candidate's consent bundle is complete.
-const DIRECT_ORDER_ONLY_BLOCKS = new Set(['driver-psp', 'driver-mvr'])
 
 // Status visuals reused for the chip filter row. Keeping these here (not in the
 // card component) lets both Active and Archive tabs share one definition.
@@ -259,8 +254,6 @@ export default function CandidateOutreach({
   consentBundleByUserId,
   onRefreshScreenings,
   employerContext = null,
-  companyId = null,
-  companyWalletAddress = null,
 }: CandidateOutreachProps) {
   const { theme } = useTheme()
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
@@ -270,6 +263,8 @@ export default function CandidateOutreach({
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [creating, setCreating] = useState(false)
+  /** Invite id whose detail modal has a send in flight (create + deliver). */
+  const [sendingForInviteId, setSendingForInviteId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -342,9 +337,6 @@ export default function CandidateOutreach({
     }
   }, [search, selectedStatuses, selectedBlocks, sort])
 
-  // ── Edit invite modal state ────────────────────────────────────────────────
-  const [editingInvite, setEditingInvite] = useState<Invite | null>(null)
-
   // ── File view modal state (opens MvrViewModal/PspViewModal from a card) ──
   const [mvrViewOrderId, setMvrViewOrderId] = useState<string | null>(null)
   const [pspViewOrderId, setPspViewOrderId] = useState<string | null>(null)
@@ -375,36 +367,14 @@ export default function CandidateOutreach({
     [employerInstalledBlocks],
   )
 
-  // Screening consent is the only email-invite outreach. The DOT application is
-  // a core block auto-installed on every driver hub (their built-in first
-  // to-do), and MVR/PSP are direct orders placed from the edit modal after
-  // consent is signed. Derived from the registry rather than hard-coded so the
-  // invite stays honest about what it asks for.
-  const outreachBlock = useMemo(
-    () =>
-      BLOCK_DEFINITIONS.find(
-        (b) =>
-          b.employerRequestable &&
-          !DIRECT_ORDER_ONLY_BLOCKS.has(b.id) &&
-          employerCanRequest(b, installedEmployerBlockTypes),
-      ) ?? null,
+  // What a recruiter can send as an invite — today just Screening consent.
+  // The DOT application is a core block (already on every driver's hub) and
+  // MVR / PSP are orders triggered by the signed consent, so neither is an
+  // invite. See `getSendableOutreachBlocks` for the registry signals.
+  const sendableBlocks = useMemo(
+    () => getSendableOutreachBlocks(installedEmployerBlockTypes),
     [installedEmployerBlockTypes],
   )
-
-  // Edit modal needs the full list including screening blocks (for direct-order UI)
-  const allBlocksByCategory = useMemo(() => {
-    const map = new Map<string, typeof BLOCK_DEFINITIONS>()
-    for (const block of BLOCK_DEFINITIONS) {
-      if (!block.employerRequestable) continue
-      if (!employerCanRequest(block, installedEmployerBlockTypes)) continue
-      const existing = map.get(block.categoryId) ?? []
-      existing.push(block)
-      map.set(block.categoryId, existing)
-    }
-    return BLOCK_CATEGORIES
-      .filter(cat => map.has(cat.id))
-      .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
-  }, [installedEmployerBlockTypes])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -537,50 +507,6 @@ export default function CandidateOutreach({
     setProfileResults([])
   }
 
-  const handleCreate = async () => {
-    if (!outreachBlock) return
-    setCreating(true)
-    setError(null)
-    try {
-      const targetBlockType = outreachBlock.id
-
-      const res = await fetch('/api/employer/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          targetBlockType,
-          candidateEmail: form.candidateEmail || undefined,
-          candidatePhone: form.candidatePhone || undefined,
-          candidateName: form.candidateName || undefined,
-          candidateUserId: form.candidateUserId || undefined,
-          jobPostingId: form.jobPostingId || undefined,
-          welcomeMessage: form.welcomeMessage || undefined,
-        }),
-      })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error || 'Failed to create outreach')
-      }
-      const { invite } = await res.json()
-      setInvites((prev) => [
-        {
-          ...invite,
-          emailSentAt: invite.emailSentAt ?? null,
-          smsSentAt: invite.smsSentAt ?? null,
-          candidatePhone: invite.candidatePhone ?? null,
-        },
-        ...prev,
-      ])
-      setShowForm(false)
-      resetForm()
-      copyToClipboard(invite.url, invite.id)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setCreating(false)
-    }
-  }
-
   const handleCancel = async (id: string) => {
     try {
       const res = await fetch('/api/employer/invites', {
@@ -629,13 +555,7 @@ export default function CandidateOutreach({
     setError(null)
 
     try {
-      const res = await fetch('/api/employer/invites/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({ inviteId: invite.id, email }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send email')
+      await sendInviteEmail(invite.id, email)
 
       setInvites(prev => prev.map(inv =>
         inv.id === invite.id
@@ -659,16 +579,7 @@ export default function CandidateOutreach({
     setError(null)
 
     try {
-      const res = await fetch('/api/employer/invites/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteId: invite.id, phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send text')
-
-      const sentTo =
-        typeof data.sentTo === 'string' && data.sentTo ? data.sentTo : phone
+      const sentTo = await sendInviteSms(invite.id, phone)
       setInvites((prev) =>
         prev.map((inv) =>
           inv.id === invite.id
@@ -691,49 +602,124 @@ export default function CandidateOutreach({
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
-  /** Edit an invite's mutable fields (name, email, phone, job, welcome message). */
-  const handleEditInvite = async (
-    inviteId: string,
-    patch: {
-      candidateName?: string
-      candidateEmail?: string
-      candidatePhone?: string
-      jobPostingId?: string
-      welcomeMessage?: string
+  /**
+   * Create one invite per selected block and deliver it in the same action.
+   * This is the fix for "a link got minted but nobody received anything":
+   * creating and sending used to be two separate clicks, and the second one
+   * was easy to skip. When no channel is on, we fall back to copying the link.
+   */
+  const sendBlocks = async (target: InviteTarget, selection: SendSelection) => {
+    setError(null)
+    const created: Invite[] = []
+    for (const targetBlockType of selection.blockTypes) {
+      const { invite, supersededIds } = await createInvite(target, targetBlockType, selection.note)
+      created.push(invite)
+      // Reusing an open invite must not prepend a second copy of the same card.
+      // Ids in supersededIds are the extras that were just cancelled.
+      setInvites((prev) => {
+        const cancelled = new Set(supersededIds)
+        const next = prev.map((inv) => (cancelled.has(inv.id) ? { ...inv, status: 'cancelled' as const } : inv))
+        if (next.some((inv) => inv.id === invite.id)) {
+          return next.map((inv) => (inv.id === invite.id ? { ...inv, ...invite } : inv))
+        }
+        return [invite, ...next]
+      })
+    }
+
+    for (const invite of created) {
+      if (selection.viaEmail && invite.candidateEmail) await handleSendEmail(invite)
+      if (selection.viaSms && invite.candidatePhone) await handleSendSms(invite)
+    }
+    if (!selection.viaEmail && !selection.viaSms && created[0]) {
+      copyToClipboard(created[0].url, created[0].id)
+    }
+  }
+
+  /** New outreach form → sendBlocks, then close. */
+  const handleCreate = async (selection: SendSelection) => {
+    setCreating(true)
+    try {
+      await sendBlocks(form, selection)
+      setShowForm(false)
+      resetForm()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  /** Detail modal → sendBlocks for an existing candidate. */
+  const handleSendBlocksForInvite = async (invite: Invite, selection: SendSelection) => {
+    setSendingForInviteId(invite.id)
+    try {
+      await sendBlocks(
+        {
+          candidateName: invite.candidateName,
+          candidateEmail: invite.candidateEmail,
+          candidatePhone: invite.candidatePhone,
+          candidateUserId: invite.usedByUserId,
+          jobPostingId: invite.jobPostingId,
+        },
+        selection,
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Send failed')
+    } finally {
+      setSendingForInviteId(null)
+    }
+  }
+
+  /**
+   * Block types with a live invite already out for this candidate, keyed to the
+   * invite's createdAt. "Live" = still waiting on them (pending / viewed /
+   * in_progress). Completed is deliberately excluded so a recruiter can re-send
+   * consent for an annual re-pull. Matched by email or claimed user id.
+   */
+  const alreadySentFor = useCallback(
+    (invite: Invite): ReadonlyMap<string, string> => {
+      const email = (invite.candidateEmail ?? '').trim().toLowerCase()
+      const uid = invite.usedByUserId
+      const out = new Map<string, string>()
+      for (const inv of invites) {
+        if (!inv.targetBlockType) continue
+        if (!['pending', 'viewed', 'in_progress'].includes(inv.status)) continue
+        const sameEmail = email && (inv.candidateEmail ?? '').trim().toLowerCase() === email
+        const sameUser = uid && inv.usedByUserId === uid
+        if (sameEmail || sameUser) out.set(inv.targetBlockType, inv.createdAt)
+      }
+      return out
     },
-  ) => {
+    [invites],
+  )
+
+  /** Inline contact edit (name / email / phone) from the detail modal. */
+  const handleSaveContact = async (inviteId: string, patch: ContactPatch) => {
     const res = await fetch('/api/employer/invites', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({ id: inviteId, ...patch }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: inviteId, ...patch }),
     })
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      throw new Error((d as { error?: string }).error ?? 'Failed to update invite')
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string
+      invite?: { candidateName?: string | null; candidateEmail?: string | null; candidatePhone?: string | null }
     }
-    const data = await res.json().catch(() => ({})) as {
-      invite?: { candidatePhone?: string | null }
-    }
-    // Optimistic local update — the API returns the new field values
+    if (!res.ok) throw new Error(data.error ?? 'Failed to update invite')
+    // Trust the API echo — it normalizes phone to E.164 and turns '' into null,
+    // so `!== undefined` (not `??`) is what lets a cleared field actually clear.
+    const echo = data.invite ?? {}
     setInvites((prev) =>
       prev.map((inv) =>
         inv.id === inviteId
           ? {
               ...inv,
-              candidateName: patch.candidateName ?? inv.candidateName,
-              candidateEmail: patch.candidateEmail ?? inv.candidateEmail,
-              candidatePhone:
-                data.invite?.candidatePhone !== undefined
-                  ? data.invite.candidatePhone
-                  : patch.candidatePhone !== undefined
-                    ? patch.candidatePhone || null
-                    : inv.candidatePhone,
-              jobTitle: patch.jobPostingId ? (jobs.find((j) => j.id === patch.jobPostingId)?.title ?? inv.jobTitle) : inv.jobTitle,
+              candidateName: echo.candidateName !== undefined ? echo.candidateName : inv.candidateName,
+              candidateEmail: echo.candidateEmail !== undefined ? echo.candidateEmail : inv.candidateEmail,
+              candidatePhone: echo.candidatePhone !== undefined ? echo.candidatePhone : inv.candidatePhone,
             }
           : inv,
       ),
     )
-    setEditingInvite(null)
   }
 
   const handleRecruiterNotesSave = useCallback(
@@ -806,6 +792,7 @@ export default function CandidateOutreach({
             jobPostingId: invite.jobPostingId ?? undefined,
             welcomeMessage:
               "We hit a snag with your last screening — likely a typo in the driver's license field. Please re-sign so we can re-pull the report. Thanks!",
+            supersedeLive: true,
           }),
         })
         const data = await res.json()
@@ -816,7 +803,13 @@ export default function CandidateOutreach({
           smsSentAt: data.invite.smsSentAt ?? null,
           candidatePhone: data.invite.candidatePhone ?? null,
         }
-        setInvites((prev) => [newInvite, ...prev])
+        const superseded = new Set(
+          Array.isArray(data.supersededIds) ? data.supersededIds.filter((id: unknown) => typeof id === 'string') : [],
+        )
+        setInvites((prev) => {
+          const next = prev.map((inv) => (superseded.has(inv.id) ? { ...inv, status: 'cancelled' as const } : inv))
+          return [newInvite, ...next.filter((inv) => inv.id !== newInvite.id)]
+        })
 
         // Auto-email when on file; SMS stays manual (same as create — avoid surprise texts).
         if (newInvite.candidateEmail) {
@@ -1061,8 +1054,6 @@ export default function CandidateOutreach({
     })
   }, [])
 
-  const canSubmit = outreachBlock !== null
-
   const openCreateForm = () => {
     setShowForm(true)
     setError(null)
@@ -1192,7 +1183,11 @@ export default function CandidateOutreach({
                         invites={filteredActive}
                         screeningsByUserId={screeningsByUserId}
                         consentBundleByUserId={consentBundleMap}
-                        theme={theme}
+                        sendableBlocks={sendableBlocks}
+                        alreadySentFor={alreadySentFor}
+                        sendingId={sendingForInviteId}
+                        onSendBlocks={handleSendBlocksForInvite}
+                        onSaveContact={handleSaveContact}
                         copiedId={copiedId}
                         sendingEmailId={sendingEmailId}
                         emailSentId={emailSentId}
@@ -1208,7 +1203,6 @@ export default function CandidateOutreach({
                         onRemove={handleRemove}
                         onViewFile={handleViewFile}
                         onViewConsent={openConsent}
-                        onEdit={setEditingInvite}
                         onAskStormi={handleAskStormi}
                         onRecruiterNotesSave={handleRecruiterNotesSave}
                         onResendConsent={handleResendConsent}
@@ -1317,17 +1311,12 @@ export default function CandidateOutreach({
         >
           <ModalHeader
             title="New outreach"
-            subtitle="Invite a candidate to sign screening consent."
+            subtitle="Find or enter a candidate, then choose what to send."
             onClose={closeCreateForm}
             variant="block"
             paper
           />
           <div className="space-y-5 p-4 sm:p-5">
-            <p className="text-xs leading-relaxed text-ironside">
-              They sign FCRA + PSP + CDLIS consent so you can order MVR and PSP. The DOT
-              application is already a to-do on their career card.
-            </p>
-
             <div ref={profileSearchRef}>
               <label className={label}>Find someone already on Provven</label>
               {selectedProfile ? (
@@ -1468,17 +1457,15 @@ export default function CandidateOutreach({
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              className="w-full"
-              onClick={handleCreate}
-              disabled={creating || !canSubmit}
-            >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-              {creating ? 'Creating…' : 'Create & copy link'}
-            </Button>
+            {/* Same send panel as the candidate detail modal — one way to send, everywhere. */}
+            <SendBlocksPanel
+              blocks={sendableBlocks}
+              email={form.candidateEmail.trim() || null}
+              phone={form.candidatePhone.trim() || null}
+              sending={creating}
+              recipientFirstName={form.candidateName.trim().split(/\s+/)[0] || null}
+              onSend={handleCreate}
+            />
           </div>
         </Modal>
       )}
@@ -1493,31 +1480,6 @@ export default function CandidateOutreach({
       )}
 
       <OutreachKanbanInfoModal open={showKanbanHelp} onClose={() => setShowKanbanHelp(false)} />
-
-      {/* Edit invite modal */}
-      {editingInvite && (
-        <EditInviteModal
-          invite={editingInvite}
-          jobs={jobs}
-          blocksByCategory={allBlocksByCategory}
-          sessionUserId={sessionUserId}
-          companyId={companyId}
-          companyWalletAddress={companyWalletAddress}
-          consentBundle={editingInvite.usedByUserId ? (consentBundleByUserId?.get(editingInvite.usedByUserId) ?? null) : null}
-          theme={theme}
-          onSave={handleEditInvite}
-          onAddBlock={(newInvite) => {
-            setInvites((prev) => [newInvite, ...prev])
-            setEditingInvite(null)
-            copyToClipboard(newInvite.url, newInvite.id)
-          }}
-          onOrderPlaced={() => {
-            setEditingInvite(null)
-            void handleRefreshScreeningsAndInvites()
-          }}
-          onClose={() => setEditingInvite(null)}
-        />
-      )}
 
       {/* Stormi mini-chat modal — per-candidate AI coaching */}
       {stormiTarget && employerContext && (
@@ -1832,540 +1794,6 @@ function ArchiveTabContent({
         </div>
       )}
     </>
-  )
-}
-
-// ─── Edit invite modal ────────────────────────────────────────────────────────
-
-const SCREENING_BLOCK_IDS = new Set(['driver-mvr', 'driver-psp'])
-
-/**
- * Two-section modal:
- *   Top    — edit mutable fields on the existing invite (name, email, job, message)
- *   Bottom — send another block OR place a direct MVR/PSP order when consent is complete
- */
-function EditInviteModal({
-  invite,
-  jobs,
-  blocksByCategory,
-  sessionUserId,
-  companyId,
-  companyWalletAddress,
-  consentBundle,
-  theme,
-  onSave,
-  onAddBlock,
-  onOrderPlaced,
-  onClose,
-}: {
-  invite: Invite
-  jobs: Job[]
-  blocksByCategory: { category: { id: string; label: string }; blocks: typeof BLOCK_DEFINITIONS }[]
-  sessionUserId: string
-  companyId?: string | null
-  companyWalletAddress?: string | null
-  consentBundle?: ConsentBundleSummary | null
-  theme: string
-  onSave: (
-    id: string,
-    patch: {
-      candidateName?: string
-      candidateEmail?: string
-      candidatePhone?: string
-      jobPostingId?: string
-      welcomeMessage?: string
-    },
-  ) => Promise<void>
-  onAddBlock: (newInvite: Invite) => void
-  onOrderPlaced?: () => void
-  onClose: () => void
-}) {
-  const isDark = false
-
-  const inputCls = cn(
-    'w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors focus:ring-2 focus:ring-teal-500/40',
-    isDark
-      ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400'
-      : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400',
-  )
-
-  const [name, setName] = useState(invite.candidateName ?? '')
-  const [email, setEmail] = useState(invite.candidateEmail ?? '')
-  const [phone, setPhone] = useState(invite.candidatePhone ?? '')
-  const [jobId, setJobId] = useState('')
-  const [message, setMessage] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-
-  // Multi-select: Set of block IDs the employer has checked
-  const [selectedBlockTypes, setSelectedBlockTypes] = useState<Set<string>>(new Set())
-  const [addingBlock, setAddingBlock] = useState(false)
-  const [addBlockError, setAddBlockError] = useState<string | null>(null)
-
-  // Direct order state (for consent-backed MVR/PSP)
-  const [orderingType, setOrderingType] = useState<'mvr' | 'psp' | null>(null)
-  const [orderLoading, setOrderLoading] = useState(false)
-  const [orderError, setOrderError] = useState<string | null>(null)
-  const [ordersPlaced, setOrdersPlaced] = useState<Set<'mvr' | 'psp'>>(new Set())
-
-  const alreadyHasBlockType = invite.targetBlockType
-  const consentComplete = consentBundle?.status === 'complete'
-  const candidateUserId = invite.usedByUserId
-
-  // Split selected blocks into: screening (direct order when consent complete) vs invite
-  const selectedScreening = [...selectedBlockTypes].filter((b) => SCREENING_BLOCK_IDS.has(b))
-  const selectedInvite = [...selectedBlockTypes].filter((b) => !SCREENING_BLOCK_IDS.has(b))
-
-  // Can we run direct orders? Need: consent complete + candidate has a userId + company block + not already placed
-  const canDirectOrder = consentComplete && Boolean(candidateUserId) && Boolean(companyId)
-
-  const toggleBlock = (blockId: string) => {
-    setSelectedBlockTypes((prev) => {
-      const next = new Set(prev)
-      if (next.has(blockId)) next.delete(blockId)
-      else next.add(blockId)
-      return next
-    })
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    setSaveError(null)
-    try {
-      const patch: Parameters<typeof onSave>[1] = {}
-      if (name !== (invite.candidateName ?? '')) patch.candidateName = name
-      if (email !== (invite.candidateEmail ?? '')) patch.candidateEmail = email
-      if (phone !== (invite.candidatePhone ?? '')) patch.candidatePhone = phone
-      if (jobId) patch.jobPostingId = jobId
-      if (message) patch.welcomeMessage = message
-      // Nothing changed — skip the network round-trip
-      if (Object.keys(patch).length === 0) { setSaving(false); return }
-      await onSave(invite.id, patch)
-    } catch (e: unknown) {
-      setSaveError(e instanceof Error ? e.message : 'Failed to save')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Create invite links for non-screening blocks (unchanged behavior)
-  const handleAddInviteBlocks = async () => {
-    if (selectedInvite.length === 0) return
-    setAddingBlock(true)
-    setAddBlockError(null)
-    try {
-      for (const blockType of selectedInvite) {
-        const res = await fetch('/api/employer/invites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            targetBlockType: blockType,
-            candidateName: invite.candidateName || undefined,
-            candidateEmail: invite.candidateEmail || undefined,
-            candidatePhone: invite.candidatePhone || undefined,
-            candidateUserId: invite.usedByUserId || undefined,
-          }),
-        })
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}))
-          throw new Error((d as { error?: string }).error ?? 'Failed to create invite')
-        }
-        const { invite: created } = await res.json()
-        onAddBlock({
-          ...created,
-          emailSentAt: created.emailSentAt ?? null,
-          smsSentAt: created.smsSentAt ?? null,
-          candidatePhone: created.candidatePhone ?? null,
-        })
-      }
-    } catch (e: unknown) {
-      setAddBlockError(e instanceof Error ? e.message : 'Failed to create invite')
-    } finally {
-      setAddingBlock(false)
-    }
-  }
-
-  // Direct order — no Alchemy SDK involved; the API creates a waived payment
-  // record internally when paymentTxHash is omitted. When USDC billing is ready,
-  // swap this for the full payment button flow.
-  const handlePlaceOrder = async (type: 'mvr' | 'psp') => {
-    if (!candidateUserId || !consentBundle || !companyId) return
-    setOrderingType(type)
-    setOrderLoading(true)
-    setOrderError(null)
-    try {
-      const res = await fetch('/api/employer/screenings/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          candidateUserId,
-          type,
-          consentBundleId: consentBundle.id,
-          force: true,
-          // Hub ownership follows invite email, not candidate_name / stale used_by.
-          orderEmail: invite.candidateEmail || undefined,
-        }),
-      })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error((d as { error?: string }).error ?? `Failed to place ${type.toUpperCase()} order`)
-      }
-      setOrdersPlaced((prev) => new Set([...prev, type]))
-      setSelectedBlockTypes((prev) => {
-        const next = new Set(prev)
-        next.delete(type === 'mvr' ? 'driver-mvr' : 'driver-psp')
-        return next
-      })
-    } catch (e: unknown) {
-      setOrderError(e instanceof Error ? e.message : `Failed to place ${type.toUpperCase()} order`)
-    } finally {
-      setOrderLoading(false)
-      setOrderingType(null)
-    }
-  }
-
-  // If any orders were placed, call onOrderPlaced on modal close so parent refreshes
-  const handleClose = () => {
-    if (ordersPlaced.size > 0) onOrderPlaced?.()
-    onClose()
-  }
-
-  const sectionHead = cn(
-    'mb-3 text-[10px] font-semibold uppercase tracking-wide',
-    isDark ? 'text-gray-500' : 'text-gray-500',
-  )
-
-  return (
-    <Modal onClose={handleClose} maxWidth="max-w-lg" zIndex={1200}>
-      <ModalHeader
-        title={`Edit: ${invite.candidateName || invite.candidateEmail || 'Anonymous invite'}`}
-        subtitle="Update invite details or run screenings for this candidate"
-        onClose={handleClose}
-      />
-      <div className="p-5 space-y-6">
-        {/* ── Section 1: edit mutable fields ─────────────────────────────────── */}
-        <div>
-          <p className={sectionHead}>Invite details</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Candidate name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={inputCls}
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Candidate email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputCls}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Candidate phone
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={inputCls}
-                placeholder="Optional — for Text invites"
-              />
-            </div>
-          </div>
-
-          {jobs.length > 0 && (
-            <div className="mt-3">
-              <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Link to job posting (optional)
-              </label>
-              <select value={jobId} onChange={(e) => setJobId(e.target.value)} className={inputCls}>
-                <option value="">No specific job</option>
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="mt-3">
-            <label className={cn('mb-1 block text-xs font-medium', isDark ? 'text-gray-400' : 'text-gray-500')}>
-              Custom welcome message (optional)
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={2}
-              className={cn(inputCls, 'resize-none')}
-              placeholder="Add a personal note…"
-            />
-          </div>
-
-          {saveError && <p className="mt-2 text-xs text-red-400">{saveError}</p>}
-
-          <div className="mt-4 flex gap-2">
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pencil className="h-3.5 w-3.5" />}
-              Save changes
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={handleClose}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Section 2: block picker (multi-select) ───────────────────────── */}
-        {blocksByCategory.length > 0 && (
-          <div
-            className={cn(
-              'rounded-xl border p-4',
-              isDark ? 'border-teal-700/40 bg-teal-900/15' : 'border-teal-200 bg-teal-50',
-            )}
-          >
-            <p className={cn(sectionHead, isDark ? 'text-teal-600' : 'text-teal-600')}>
-              Add blocks for this candidate
-            </p>
-            <p className={cn('mb-3 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>
-              {consentComplete
-                ? 'Consent is on file — MVR and PSP can be ordered directly (no invite needed). Select one or more blocks.'
-                : 'Select one or more blocks to send as invite links.'}
-            </p>
-
-            {/* Consent badge */}
-            {consentBundle && (
-              <div
-                className={cn(
-                  'mb-3 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs',
-                  consentComplete
-                    ? isDark ? 'border-emerald-600/30 bg-emerald-900/20 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : isDark ? 'border-amber-600/30 bg-amber-900/20 text-amber-300' : 'border-amber-200 bg-amber-50 text-amber-800',
-                )}
-              >
-                <FileCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                <span className="font-medium">
-                  Consent package: {consentComplete ? 'Complete — ready to order' : 'Pending candidate signature'}
-                </span>
-              </div>
-            )}
-
-            <div
-              className={cn(
-                'rounded-lg border overflow-hidden',
-                isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white',
-              )}
-            >
-              {blocksByCategory.map(({ category, blocks }) => (
-                <div key={category.id}>
-                  <div
-                    className={cn(
-                      'px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b',
-                      isDark
-                        ? 'bg-gray-800 text-gray-500 border-gray-700'
-                        : 'bg-gray-50 text-gray-400 border-gray-200',
-                    )}
-                  >
-                    {category.label}
-                  </div>
-                  {blocks.map((block) => {
-                    const isCurrentBlock = block.id === alreadyHasBlockType
-                    const isAlreadyOrdered = (block.id === 'driver-mvr' && ordersPlaced.has('mvr')) ||
-                      (block.id === 'driver-psp' && ordersPlaced.has('psp'))
-                    const isScreening = SCREENING_BLOCK_IDS.has(block.id)
-                    const isSelected = selectedBlockTypes.has(block.id)
-                    const isDisabled = isCurrentBlock || isAlreadyOrdered
-
-                    return (
-                      <button
-                        key={block.id}
-                        type="button"
-                        disabled={isDisabled}
-                        onClick={() => !isDisabled && toggleBlock(block.id)}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-b last:border-b-0',
-                          isDisabled
-                            ? 'opacity-40 cursor-not-allowed'
-                            : isSelected
-                              ? isDark
-                                ? 'bg-teal-900/40'
-                                : 'bg-teal-50'
-                              : isDark
-                                ? 'hover:bg-gray-700/50 border-gray-700/50'
-                                : 'hover:bg-gray-50 border-gray-100',
-                        )}
-                      >
-                        {/* Checkbox indicator */}
-                        <div
-                          className={cn(
-                            'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
-                            isSelected && !isDisabled
-                              ? 'border-teal-500 bg-teal-500'
-                              : isDark ? 'border-gray-500 bg-transparent' : 'border-gray-300 bg-white',
-                          )}
-                        >
-                          {isSelected && !isDisabled && (
-                            <Check className="h-2.5 w-2.5 text-white" />
-                          )}
-                        </div>
-                        <div
-                          className={cn(
-                            'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
-                            isSelected && !isDisabled
-                              ? isDark ? 'bg-teal-800/60' : 'bg-teal-100'
-                              : isDark ? 'bg-gray-700' : 'bg-gray-100',
-                          )}
-                        >
-                          <Package className={cn('w-3.5 h-3.5', isSelected ? 'text-teal-500' : isDark ? 'text-gray-400' : 'text-gray-500')} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
-                              {block.label}
-                            </p>
-                            {isAlreadyOrdered && (
-                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
-                                ordered ✓
-                              </span>
-                            )}
-                            {isCurrentBlock && !isAlreadyOrdered && (
-                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500')}>
-                                already invited
-                              </span>
-                            )}
-                            {isScreening && consentComplete && !isDisabled && (
-                              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-100 text-emerald-700')}>
-                                direct order
-                              </span>
-                            )}
-                          </div>
-                          <p className={cn('text-xs truncate', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                            {block.description}
-                          </p>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-
-            {addBlockError && <p className="mt-2 text-xs text-red-400">{addBlockError}</p>}
-            {orderError && <p className="mt-2 text-xs text-red-400">{orderError}</p>}
-
-            {selectedBlockTypes.size > 0 && (
-              <div className="mt-4 space-y-3">
-                {/* Direct-order section: screening blocks with consent complete */}
-                {canDirectOrder && selectedScreening.length > 0 && (
-                  <div
-                    className={cn(
-                      'rounded-lg border p-3',
-                      isDark ? 'border-emerald-600/30 bg-emerald-950/20' : 'border-emerald-200 bg-emerald-50',
-                    )}
-                  >
-                    <p className={cn('mb-2 text-[11px] font-semibold uppercase tracking-wide', isDark ? 'text-emerald-300' : 'text-emerald-700')}>
-                      Place orders directly (consent on file)
-                    </p>
-                    <p className={cn('mb-3 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                      Consent is signed and on file. Click to run each screening — results appear in the Files section when ready.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedScreening.includes('driver-mvr') && (
-                        ordersPlaced.has('mvr') ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            <Check className="h-3.5 w-3.5" /> MVR ordered
-                          </span>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="primary"
-                            size="sm"
-                            disabled={orderLoading}
-                            isLoading={orderLoading && orderingType === 'mvr'}
-                            onClick={() => handlePlaceOrder('mvr')}
-                          >
-                            Run MVR
-                          </Button>
-                        )
-                      )}
-                      {selectedScreening.includes('driver-psp') && (
-                        ordersPlaced.has('psp') ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            <Check className="h-3.5 w-3.5" /> PSP ordered
-                          </span>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="primary"
-                            size="sm"
-                            disabled={orderLoading}
-                            isLoading={orderLoading && orderingType === 'psp'}
-                            onClick={() => handlePlaceOrder('psp')}
-                          >
-                            Run PSP
-                          </Button>
-                        )
-                      )}
-                    </div>
-                    {orderLoading && (
-                      <p className={cn('mt-2 flex items-center gap-1.5 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Placing {orderingType?.toUpperCase()} order…
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* No consent warning for screening blocks */}
-                {!canDirectOrder && selectedScreening.length > 0 && (
-                  <div className={cn('rounded-lg border p-3 text-xs', isDark ? 'border-amber-600/30 bg-amber-950/20 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800')}>
-                    <span className="font-semibold">Consent required to order MVR/PSP directly.</span>{' '}
-                    {!consentBundle
-                      ? 'Send a Screening consent invite first so the candidate can sign.'
-                      : 'Waiting for the candidate to complete the consent package.'}
-                  </div>
-                )}
-
-                {/* Invite-link section: non-screening blocks */}
-                {selectedInvite.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleAddInviteBlocks}
-                    disabled={addingBlock}
-                  >
-                    {addingBlock ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                    {addingBlock
-                      ? 'Creating…'
-                      : selectedInvite.length === 1
-                        ? 'Create & copy link'
-                        : `Create ${selectedInvite.length} invite links`}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </Modal>
   )
 }
 

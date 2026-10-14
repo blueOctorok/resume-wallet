@@ -127,6 +127,12 @@ export interface ResolveCompanyDqInput {
   /** ISO date when the company hired this driver — enables 30-day EV clock. */
   hireDate?: string | null
   licenseScan?: DqLicenseScanInput | null
+  /**
+   * Newest live (pending / viewed / in_progress) consent invite this company
+   * sent the driver. Without it, consent reads "missing" the moment after you
+   * sent it — which is how the board ends up telling you to do what you did.
+   */
+  pendingConsentInviteAt?: string | null
 }
 
 export interface ResolveDriverDqInput {
@@ -519,6 +525,16 @@ export function resolveCompanyDqFile(input: ResolveCompanyDqInput): DqFileSnapsh
               updatedAt: b.createdAt || null,
               artifactRef: { kind: 'consent_bundle', id: b.id },
               emptyHint,
+            }),
+          )
+        } else if (input.pendingConsentInviteAt) {
+          items.push(
+            baseItem(def, {
+              status: 'requested',
+              updatedAt: input.pendingConsentInviteAt,
+              artifactRef: null,
+              emptyHint,
+              sourceChip: 'Sent, awaiting signature',
             }),
           )
         } else {

@@ -4,6 +4,87 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach: one open invite per email and block** (2026-10-13)
+
+Julia Hejduk showed up five times on the outreach board because each "create invite" inserted a new row and nothing checked whether that email already had an open one. Four of those were screening-consent links created within twenty minutes, three of them never delivered. The board is one card per invite, so five rows rendered as five cards.
+
+Dedup key is **company + block + normalized email**, not email alone. A DOT invite and a consent invite for the same person are two different asks; collapsing on email would hide one of them. Phone is the key only when there is no email. No email and no phone (a blank link) is not deduped. Only **open** invites count (`pending`, `viewed`, `in_progress`). A completed invite stays on the board and does not block a fresh send, so a recruiter can re-consent after a finished screening.
+
+Sending again returns the open invite and delivers that link, instead of inserting a second card. If several open ones already exist, the one someone engaged with is kept (in progress, then viewed, then a delivered link, then the newest) and the rest are cancelled into Archive. The stuck-screening "resend consent" button passes `supersedeLive`, which cancels the open one and mints a fresh token — that flow still needs a new link. A unique index makes the rule true even when two sends race past the lookup.
+
+Migration `121_one_live_outreach_invite.sql` also archives the duplicates already in the database (Julia's three extra consent cards, and one extra pending consent for another candidate). It was not applied from this session — the database tool is read-only.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-invite-dedup.ts` | New. Lookup, winner pick, cancel extras. |
+| `src/lib/outreach-invite-dedup.test.ts` | Winner ranking and email normalization. |
+| `src/app/api/employer/invites/route.ts` | POST reuses an open invite; `supersedeLive` for the rescue resend; unique-violation falls back to the row that won. |
+| `src/lib/outreach-send-client.ts` | `createInvite` returns `alreadyOnFile` and `supersededIds`. |
+| `src/components/employer/CandidateOutreach.tsx` | Upsert by id so a reuse doesn't prepend a second card; rescue resend supersedes. |
+| `supabase/migrations/121_one_live_outreach_invite.sql` | Cancel existing open duplicates; partial unique indexes for email and phone-only. |
+
+---
+
+## **Driver status board replaces the DQ monitor** (2026-10-13)
+
+The "Drivers — DQ monitor" was named for a checklist but used as a status tracker, and it failed at that: the row showed a name, an `x of 6` and an overall pill; clicking a row opened the **career card** (no DQ information at all); the person-detail API and `DqFileSection` were orphaned; and after you sent a consent invite the Consent item still read "Missing" because the resolver only looked at signed bundles. Rebuilt as a **status board** + **driver file**.
+
+**Should outreach and the board merge?** No — they answer different questions and are keyed differently. Outreach is per *invite* ("did my link land?") and includes people who have never logged in. The board is per *person* and must include agency self-serve drivers who were never invited. Merging would force one of those populations into the wrong shape. What they now **share**: one person detail (the driver file), opened from either place — the outreach card gets an **Open driver file** button once the invite is claimed — and one client send path (`outreach-send-client.ts`), so sending consent from the file behaves exactly like sending it from the kanban.
+
+- **Board row** = avatar · name + CDL class/state · one chip per live DQ item (License, MVR, PSP, DOT, Consent, EV) coloured by status · next-step sentence · **ball-in-court pill** (Needs attention / Needs you / In process / Waiting on driver / DQ complete) · last activity. Count chips at the top double as filters; rows sort most-actionable first.
+- **Ball in court** is *derived*, never stored (`driver-journey.ts`). Consent gates the whole journey: until it's signed, the pill is decided by consent alone (unsent → Needs you, sent → Waiting on driver). After that: failed > something you can do > processing > waiting on driver > done. The "next step" text is picked from the same owner, so the pill and the sentence can never disagree.
+- **Consent `requested` state.** `resolveCompanyDqFile` now takes `pendingConsentInviteAt`; a live, unsigned consent invite renders Consent as **Sent, unsigned** instead of Missing. Both the list loader and the detail loader supply it.
+- **Driver file modal**: header (name, pill, `x of y`, CDL line, mailto/tel) → journey strip (Consent → Reports → License & DOT → Employment → DQ complete) → **Next step** callout, which embeds the `SendBlocksPanel` inline when consent hasn't been sent → per-item rows with real details and actions (license sides / barcode read / confirmed, DOT "Form n of 3", signed consent parts + View package, MVR/PSP date · outcome · View report, EV per-employer list) → outreach history from your company ("Link created, not delivered" in ember) → collapsed "Coming online" placeholders → footer (career card, refresh). Nested MVR / PSP / consent-package / career-card viewers.
+- **Report access follows payment** (CRA rule): `screenings[].orderedByYou` gates "View report"; a pull paid by another employer shows as a fact ("On file via another employer") with no report link. License detail exposes class / state / expiration only.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-journey.ts` | New. `deriveDriverJourney` (ball + next step), `deriveDriverJourneySteps` (strip), `DRIVER_JOURNEY_ORDER`, `BALL_LABEL`. Pure. |
+| `src/lib/dq-file-status.ts` | `ResolveCompanyDqInput.pendingConsentInviteAt`; company consent → `requested` / "Sent, awaiting signature". |
+| `src/lib/dq-file-load.ts` | Split into `loadCompanyDqRows` + `toCompanyDqInput`; new `DriverFileDetail` + `loadDriverFileDetail`; list rows gain `headline`, `cdl`, per-item `items`; pending consent invites loaded in one company-scoped query. |
+| `src/app/api/employer/dq-monitor/[userId]/route.ts` | Rewritten on `loadDriverFileDetail`; returns `{ candidate, dqFile, detail }`. |
+| `src/stores/driver-board-store.ts` | New. Roster, filter, search, selected driver, per-driver file cache, refresh. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | New. Replaces `dq/DqMonitorSection`. |
+| `src/components/employer/drivers/DriverFileModal.tsx`, `DriverFileItems.tsx`, `DriverBlockBadges.tsx` | New. File modal, per-item rows + actions, chip strip / status badge / ball pill. |
+| `src/components/employer/StepStrip.tsx` | New. Node/line strip extracted from `OutreachProgress`; shared by both surfaces. |
+| `src/lib/outreach-send-client.ts` | New. `createInvite` / `sendInviteEmail` / `sendInviteSms` / `createAndDeliverInvites` — one client send path for kanban and driver file. |
+| `src/components/employer/CandidateOutreach.tsx` | Uses the shared send client (behaviour unchanged). |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | **Open driver file** button when the invite is claimed; footer wraps as two groups. |
+| `src/components/employer/outreach/SendBlocksPanel.tsx` | Collapsed "Waiting on {name}" state when everything sendable is already out. |
+| `src/components/EmployerHub.tsx` | Mounts `DriverStatusBoard`. |
+| `src/components/employer/dq/` | **Deleted** (`DqMonitorSection`, dead `DqFileSection`, `DqStatusBadge`). |
+
+Not changed: DQ registry, resolver vocabulary, roster membership rules, every API route except the detail route's response shape.
+
+---
+
+## **Employer outreach: one send panel, no Edit modal** (2026-10-13)
+
+Trigger: someone at Pace pointed a Grok bot at the employer hub. It produced `https://provven.com/apply/_Ekb0lQL1TTFI7ad8gBVSA` and nobody got a consent form. Investigation: that token was **never issued** — the LLM fabricated a correctly-shaped URL (22-char base64url). The real pipeline is healthy (j.hejduk's 31 invites all emailed + texted), the `metro@pacedrivers.com` account only browsed (5 career-card views, zero writes), and nothing in the DB is corrupted. The actual wart the bot tripped over was **ours**: creating an invite and sending it were two separate steps, so a link could be minted and never delivered — and the detail modal buried the only thing that matters (send consent) behind a 3×3 action grid and an Edit modal with a four-block picker.
+
+Redesign of the kanban detail modal and the New outreach form:
+
+- **Edit modal is gone.** Name / email / phone are quiet inline fields on the card — click, type, blur (or Enter) saves; Esc reverts. Fixing a typo'd email no longer means leaving the candidate.
+- **One send panel.** A checkbox list of sendable blocks (nothing pre-checked, by design — the list grows), Email / Text delivery pills that show exactly where it goes, one primary button. Create + deliver happen in the **same click**; with no channel on file it falls back to "Create link & copy". If everything sendable is already out, the panel collapses to "Waiting on {name}" and points at the footer resend tools.
+- **Registry-driven sendable list** (`getSendableOutreachBlocks`): `employerRequestable` minus `coreBlock` (DOT application — drivers do it themselves) minus `employerOrderEvidenceTable` (MVR / PSP — consent auto-orders both), gated by `employerCanRequest`. Today that resolves to Screening consent only; adding a future block needs no UI change.
+- **Progress strip** derived from the invite + files: Sent → Opened → Consent signed → Reports. "Sent" shows *Email · Text* or, in ember, **Link created, not delivered** — the exact failure mode the bot exposed, now visible at a glance.
+- Footer toolbar: Copy link, QR, Email link / Resend, Text link / Resend (disabled with a hint when no contact), and on the right the "Move on board" override popover, Cancel invite, Remove.
+
+Not changed: invite / send-email / send-sms API routes, auto-install on claim, `/onboard` deep-link flow.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-sendable-blocks.ts` | New. `getSendableOutreachBlocks(installedEmployerBlocks)` — replaces the hardcoded `DIRECT_ORDER_ONLY_BLOCKS` set. |
+| `src/components/employer/outreach/SendBlocksPanel.tsx` | New. Checkbox list + delivery pills + one Send button; `SendSelection` type; all-sent collapsed state. |
+| `src/components/employer/outreach/ContactFields.tsx` | New. Blur-to-save `QuietField` inputs; `ContactPatch` type. |
+| `src/components/employer/outreach/OutreachProgress.tsx` | New. `deriveOutreachSteps` + strip. |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Rewritten as the full modal body (own sticky header). Dropped `theme`, `onEdit`, `showPipelineStatusOverride`, inline email/phone override inputs, `ActionBtn` grid. |
+| `src/components/employer/outreach/KanbanBoard.tsx`, `KanbanCard.tsx` | Block-shell paper modal, new send/contact props, `theme` / `onEdit` removed. |
+| `src/components/employer/CandidateOutreach.tsx` | `EditInviteModal` deleted (~530 lines). Added `sendBlocks` (create → email → sms in one action), `alreadySentFor`, `handleSaveContact`. New outreach form ends in `SendBlocksPanel`. Dropped `companyId` / `companyWalletAddress` props. |
+| `src/components/EmployerHub.tsx` | Call site updated for the dropped props. |
+
+Suggested, not done: `GET /api/invite/[token]` returns 500 (not 404) for an unknown token because of `.single()` — swap to `maybeSingle()` so fabricated links fail loudly and correctly.
+
 ## **EV outreach follow-ups and a dark Pingram call/text touch** (2026-10-13)
 
 Phase 1 follow-ups, plus one scripted call or text between email 2 and email 3. The call is one-way text-to-speech through Pingram, not a conversation. It ships **off** (`EVR_VOICE_SMS_ENABLED` unset) until counsel signs off. A personal admin bot is not code: central admin already opens for an `ADMIN_EMAILS` session, and the Verifications tab is the queue that bot works. There is no EV service token.

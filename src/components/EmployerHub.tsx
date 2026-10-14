@@ -42,7 +42,7 @@ import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
-import DqMonitorSection from '@/components/employer/dq/DqMonitorSection'
+import DriverStatusBoard from '@/components/employer/drivers/DriverStatusBoard'
 import PendingCompanyView from '@/components/employer/PendingCompanyView'
 
 /** Flip to true to show Activity snapshot, Job postings, and Hiring pipeline again. */
@@ -557,13 +557,11 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
           consentBundleByUserId={screenings.consentBundleByUserId}
           onRefreshScreenings={() => void screenings.refresh(true)}
           employerContext={employerStormiContext}
-          companyId={data.company.id}
-          companyWalletAddress={data.company.companyWalletAddress ?? null}
         />
       </div>
 
-      {/* DQ monitor — roster by name; click opens person detail + DQ checklist */}
-      <DqMonitorSection sessionUserId={sessionUserId} />
+      {/* Driver status board — every driver, whose move it is; click opens the driver file */}
+      <DriverStatusBoard sessionUserId={sessionUserId} />
 
       {SHOW_HUB_OPS_SECTIONS && (
       <>

@@ -11,6 +11,7 @@ import {
 } from '@/lib/complete-dot-outreach-invites'
 import { resolveStormUserIdByEmail } from '@/lib/resolve-candidate-by-email'
 import { normalizeToE164 } from '@/lib/phone-e164'
+import { normalizeOutreachEmail, resolveLiveOutreachInvite } from '@/lib/outreach-invite-dedup'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
@@ -222,9 +223,13 @@ export async function POST(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
     const ctx = await getEmployerContext(supabase, userId)
 
-    if (ctx.error) {
-      return NextResponse.json({ error: ctx.error }, { status: ctx.status })
+    if (ctx.error || !ctx.companyId) {
+      return NextResponse.json(
+        { error: ctx.error ?? 'No company found. Set up your company first.' },
+        { status: ctx.status ?? 403 },
+      )
     }
+    const companyId = ctx.companyId
 
     const body = await request.json()
     const {
@@ -236,6 +241,7 @@ export async function POST(request: NextRequest) {
       jobPostingId,
       welcomeMessage,
       expiresInDays = 30,
+      supersedeLive = false,
     } = body
 
     // If a target block is specified, validate it exists in the registry
@@ -287,11 +293,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique token
-    const token = generateToken()
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + expiresInDays)
-
     let phoneToStore: string | null = null
     if (candidatePhone) {
       const normalized = normalizeToE164(String(candidatePhone))
@@ -304,27 +305,93 @@ export async function POST(request: NextRequest) {
       phoneToStore = normalized
     }
 
-    const { data: created, error } = await supabase
-      .from('application_invites')
-      .insert({
-        company_id: ctx.companyId,
-        created_by_user_id: ctx.userId,
-        token,
-        type,
-        target_block_type: targetBlockType || null,
-        candidate_email: candidateEmail || null,
-        candidate_phone: phoneToStore,
-        candidate_name: candidateName || null,
-        candidate_user_id: candidateUserId || null,
-        job_posting_id: jobPostingId || null,
-        welcome_message: welcomeMessage || null,
-        expires_at: expiresAt.toISOString(),
-      })
-      .select(INVITE_SELECT)
-      .single()
+    const emailToStore = typeof candidateEmail === 'string' ? candidateEmail.trim() : ''
+    const emailKey = normalizeOutreachEmail(emailToStore)
 
-    if (error) {
-      console.error('[EMPLOYER INVITES] Create error:', error)
+    // Same company + block + email already has an open invite: reuse it instead
+    // of inserting another card. `supersedeLive` is the stuck-screening rescue,
+    // which needs a fresh token — it cancels the open one first.
+    const resolved = await resolveLiveOutreachInvite<InviteDbRow>({
+      supabase,
+      companyId,
+      targetBlockType: targetBlockType || null,
+      email: emailKey,
+      phone: emailKey ? null : phoneToStore,
+      select: INVITE_SELECT,
+      supersede: supersedeLive === true,
+    })
+
+    let created = resolved.invite
+    let alreadyOnFile = Boolean(created)
+    let supersededIds = resolved.supersededIds
+
+    if (created && alreadyOnFile) {
+      const patch: { candidate_phone?: string; candidate_name?: string } = {}
+      if (!created.candidate_phone && phoneToStore) patch.candidate_phone = phoneToStore
+      if (!created.candidate_name && candidateName) patch.candidate_name = String(candidateName).trim()
+      if (Object.keys(patch).length > 0) {
+        const { error: patchError } = await supabase
+          .from('application_invites')
+          .update(patch)
+          .eq('id', created.id)
+          .eq('company_id', ctx.companyId)
+        if (patchError) {
+          console.error('[EMPLOYER INVITES] Reuse patch error:', patchError)
+        } else {
+          created = { ...created, ...patch }
+        }
+      }
+    }
+
+    if (!created) {
+      const token = generateToken()
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays)
+
+      const { data: inserted, error } = await supabase
+        .from('application_invites')
+        .insert({
+          company_id: ctx.companyId,
+          created_by_user_id: ctx.userId,
+          token,
+          type,
+          target_block_type: targetBlockType || null,
+          candidate_email: emailToStore || null,
+          candidate_phone: phoneToStore,
+          candidate_name: candidateName || null,
+          candidate_user_id: candidateUserId || null,
+          job_posting_id: jobPostingId || null,
+          welcome_message: welcomeMessage || null,
+          expires_at: expiresAt.toISOString(),
+        })
+        .select(INVITE_SELECT)
+        .single()
+
+      // Two sends at the same moment both miss the lookup. The unique index
+      // rejects the second insert; hand back the row that won.
+      if (error?.code === '23505') {
+        const again = await resolveLiveOutreachInvite<InviteDbRow>({
+          supabase,
+          companyId,
+          targetBlockType: targetBlockType || null,
+          email: emailKey,
+          phone: emailKey ? null : phoneToStore,
+          select: INVITE_SELECT,
+          supersede: false,
+        })
+        created = again.invite
+        alreadyOnFile = Boolean(created)
+        supersededIds = [...supersededIds, ...again.supersededIds]
+      } else if (error || !inserted) {
+        console.error('[EMPLOYER INVITES] Create error:', error)
+        return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
+      } else {
+        created = inserted as unknown as InviteDbRow
+      }
+    }
+
+    if (!created) {
+      console.error('[EMPLOYER INVITES] Create lost the race and found no row')
       return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
     }
 
@@ -344,7 +411,7 @@ export async function POST(request: NextRequest) {
             .select(INVITE_SELECT)
             .eq('id', created.id)
             .single()
-          if (refreshed) invite = refreshed
+          if (refreshed) invite = refreshed as unknown as InviteDbRow
         }
       }
     }
@@ -353,6 +420,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      alreadyOnFile,
+      supersededIds,
       invite: mapInviteToClient(invite as unknown as InviteDbRow, baseUrl),
       companyName: ctx.companyName,
     })
