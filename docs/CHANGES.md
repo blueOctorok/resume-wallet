@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach shows the phone on the driver's profile** (2026-10-15)
+
+Barry Burton saved `(216) 314-6034` on his profile. The outreach card still said "Add phone" because it reads `application_invites.candidate_phone`, the number copied when the invite was created, which was empty. A claimed invite now shows the phone on `user_profiles` when the driver has one. The board re-reads every few seconds while the tab is open, and again when the tab is focused, so a recruiter watching the card sees the new number without reloading. That poll skips the company-wide status sync so it stays a read.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-live-contact.ts` | Profile phone wins over the invite copy |
+| `src/app/api/employer/invites/route.ts` | List applies it; `?live=1` skips the status sync |
+| `src/components/employer/CandidateOutreach.tsx` | Refreshes while the board is visible |
+
+---
+
 ## **Outreach: MVR release text and email** (2026-10-15)
 
 The screening-consent invite is the only thing outreach sends, and it was still the generic "complete your Screening consent on Provven" note. The text and the email are now the release letter: sign the MVR release, then the Career Hub is where the DOT application lives.

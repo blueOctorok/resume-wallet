@@ -378,9 +378,10 @@ export default function CandidateOutreach({
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
-  const fetchInvites = useCallback(async () => {
+  const fetchInvites = useCallback(async (opts?: { live?: boolean }) => {
     try {
-      const res = await fetch('/api/employer/invites')
+      const qs = opts?.live ? '?live=1' : ''
+      const res = await fetch(`/api/employer/invites${qs}`)
       if (res.ok) {
         const data = await res.json()
         setInvites(data.invites || [])
@@ -411,6 +412,23 @@ export default function CandidateOutreach({
       fetchJobs()
     }
   }, [sessionUserId, hubRefreshNonce, fetchInvites, fetchJobs])
+
+  // A driver can add a phone while this board is open. Re-read on a short
+  // timer, and the moment the tab is focused, so the contact line is the
+  // profile they just saved rather than the phone copied onto the invite.
+  useEffect(() => {
+    if (!sessionUserId) return
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      void fetchInvites({ live: true })
+    }
+    const timer = window.setInterval(refresh, 5000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [sessionUserId, fetchInvites])
 
   // ── Profile search autocomplete ────────────────────────────────────────────
 

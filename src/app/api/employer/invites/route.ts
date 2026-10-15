@@ -14,6 +14,7 @@ import { normalizeToE164 } from '@/lib/phone-e164'
 import { normalizeOutreachEmail, resolveLiveOutreachInvite } from '@/lib/outreach-invite-dedup'
 import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { getAppBaseUrl } from '@/lib/app-url'
+import { applyLiveDriverPhones } from '@/lib/outreach-live-contact'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
 import crypto from 'crypto'
 
@@ -145,6 +146,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'all'
+    // The board polls this while it is open. That poll must not rerun the
+    // company-wide status sync, which writes invite rows. `live=1` is a read.
+    const liveOnly = searchParams.get('live') === '1'
     // Optional explicit cap — only applied when caller asks for one.
     // The default kanban request does NOT pass `limit`, so the result is
     // bounded by the data lifecycle (30-day pending expiry, 14-day archive
@@ -175,9 +179,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Backfill kanban columns: screening reports may have landed while invite.status
-    // was still `in_progress` (webhook/reconcile did not run invite sync yet).
-    await syncOutreachInvitesForCompany(supabase, ctx.companyId!)
+    if (!liveOnly) {
+      // Backfill kanban columns: screening reports may have landed while invite.status
+      // was still `in_progress` (webhook/reconcile did not run invite sync yet).
+      await syncOutreachInvitesForCompany(supabase, ctx.companyId!)
+    }
 
     const { data: invites, error } = await query
 
@@ -188,11 +194,10 @@ export async function GET(request: NextRequest) {
 
     // Transform to cleaner response
     const baseUrl = getAppBaseUrl(request)
-    
+    const withLivePhones = await applyLiveDriverPhones(supabase, (invites || []) as unknown as InviteDbRow[])
+
     return NextResponse.json({
-      invites: (invites || []).map((invite) =>
-        mapInviteToClient(invite as unknown as InviteDbRow, baseUrl),
-      ),
+      invites: withLivePhones.map((invite) => mapInviteToClient(invite, baseUrl)),
       companyName: ctx.companyName,
     })
 
