@@ -3,6 +3,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendSms } from '@/lib/messaging'
 import { buildCandidateInviteSmsBody } from '@/lib/invite-sms-body'
+import { loadOutreachSender } from '@/lib/outreach-release-copy'
 import { normalizeToE164 } from '@/lib/phone-e164'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { createNotification } from '@/lib/create-notification'
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = getAppBaseUrl(request)
     const inviteLink = `${baseUrl}/apply/${invite.token}`
     const targetBlockType = (invite as { target_block_type?: string | null }).target_block_type || null
+    const sender = await loadOutreachSender(supabase, userId)
 
     const message = buildCandidateInviteSmsBody({
       companyName: company?.company_name || 'Employer',
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
       targetBlockType,
       candidateName: invite.candidate_name,
       jobTitle: job?.title || null,
+      recruiterName: sender.name,
     })
 
     const result = await sendSms({

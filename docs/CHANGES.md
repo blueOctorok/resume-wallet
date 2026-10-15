@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach: MVR release text and email** (2026-10-15)
+
+The screening-consent invite is the only thing outreach sends, and it was still the generic "complete your Screening consent on Provven" note. The text and the email are now the release letter: sign the MVR release, then the Career Hub is where the DOT application lives.
+
+The company name comes from the account, so a Pace send reads "Pace Drivers" and another company reads as itself. The recruiter's name and phone come from their profile. A missing job title or phone drops that clause instead of leaving a blank. Reply STOP stays on the text.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-release-copy.ts` | Letter copy, plus the sender lookup |
+| `src/lib/invite-sms-body.ts` | Consent invites use the text |
+| `src/lib/send-invite-email.ts` | Consent invites use the email |
+| `src/app/api/employer/invites/send-sms/route.ts` | Passes the recruiter's name |
+| `src/app/api/employer/invites/send-email/route.ts` | Passes the recruiter's name and phone |
+
+---
+
 ## **Outreach modal: sections, and the progress line stops at Reports** (2026-10-14)
 
 The candidate modal read as one continuous column, and the progress line ran past the Reports dot out of the modal. The connector is drawn one full column wide from the center of a step. The last step was only as wide as its label, so that line kept going. Every step is now the same width, so the line ends on the last dot. Progress, contact, files, and notes each sit in their own bordered section. The "waiting on them" box was already a section and stays as it was.

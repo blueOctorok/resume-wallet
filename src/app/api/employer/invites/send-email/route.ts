@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendInviteEmail } from '@/lib/send-invite-email'
+import { loadOutreachSender } from '@/lib/outreach-release-copy'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { createNotification } from '@/lib/create-notification'
 import { getAppBaseUrl } from '@/lib/app-url'
@@ -86,19 +87,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const company = invite.companies as any
-    const job = invite.job_postings as any
+    const company = invite.companies as { company_name?: string } | null
+    const job = invite.job_postings as { title?: string } | null
     const baseUrl = getAppBaseUrl(request)
+    const sender = await loadOutreachSender(supabase, userId)
 
     // Send the email
     const result = await sendInviteEmail({
       to: recipientEmail,
-      targetBlockType: (invite as any).target_block_type || null,
+      targetBlockType: (invite as { target_block_type?: string | null }).target_block_type || null,
       candidateName: invite.candidate_name || undefined,
       companyName: company?.company_name || 'Employer',
       jobTitle: job?.title || undefined,
       inviteLink: `${baseUrl}/apply/${invite.token}`,
       welcomeMessage: invite.welcome_message || undefined,
+      recruiterName: sender.name,
+      recruiterPhone: sender.phone,
     })
 
     if (!result.ok) {
@@ -120,7 +124,7 @@ export async function POST(request: NextRequest) {
     // an in-app notification so they see it in the notification bell immediately.
     const candidateUserId = (invite as { candidate_user_id?: string | null }).candidate_user_id
     if (candidateUserId) {
-      const targetBlock = (invite as any).target_block_type as string | null
+      const targetBlock = (invite as { target_block_type?: string | null }).target_block_type ?? null
       const blockDef = targetBlock ? getBlockDefinition(targetBlock) : null
       const inviteLabel = blockDef ? `${blockDef.label} Invite` : 'Provven Invite'
       const companyDisplayName = company?.company_name || 'An employer'

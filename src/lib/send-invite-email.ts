@@ -1,6 +1,7 @@
 import { buildEmail, infoBox, fallbackLink } from './email-template'
 import { getBlockDefinition } from './block-registry'
 import { isMessagingConfigured, sendEmail } from './messaging'
+import { buildMvrReleaseEmail, SCREENING_CONSENT_INVITE } from './outreach-release-copy'
 
 export interface SendInviteEmailParams {
   to: string
@@ -10,6 +11,8 @@ export interface SendInviteEmailParams {
   jobTitle?: string
   inviteLink: string
   welcomeMessage?: string
+  recruiterName?: string | null
+  recruiterPhone?: string | null
 }
 
 interface EmailContent {
@@ -85,6 +88,40 @@ export async function sendInviteEmail(
   }
 
   const { candidateName, companyName, inviteLink, welcomeMessage, targetBlockType } = params
+
+  if (targetBlockType === SCREENING_CONSENT_INVITE) {
+    const letter = buildMvrReleaseEmail({
+      candidateName,
+      recruiterName: params.recruiterName,
+      recruiterPhone: params.recruiterPhone,
+      companyName,
+      jobTitle: params.jobTitle,
+      releaseLink: inviteLink,
+      welcomeMessage,
+    })
+    const html = buildEmail({
+      preheader: letter.subject,
+      headerEyebrow: companyName,
+      headerTitle: 'Sign your MVR release',
+      greeting: letter.greeting,
+      bodyHtml: `${letter.bodyHtml}${fallbackLink(inviteLink)}`,
+      footerNote: `This invitation was sent by <strong>${companyName}</strong> through Provven. If you weren't expecting this, you can safely ignore it.`,
+    })
+    console.log('[INVITE EMAIL] Sending MVR release to=%s via Pingram', params.to)
+    const result = await sendEmail({
+      type: 'invite_email',
+      to: params.to,
+      subject: letter.subject,
+      html,
+    })
+    if (!result.ok) {
+      console.error('[INVITE EMAIL] Send failed:', result.error)
+      return { ok: false, error: result.error }
+    }
+    console.log('[INVITE EMAIL] Sent successfully. Pingram id:', result.id)
+    return { ok: true }
+  }
+
   const content = getEmailContent(targetBlockType, companyName, params.jobTitle)
   const greeting = candidateName ? `Hi ${candidateName.split(' ')[0]},` : 'Hello,'
 

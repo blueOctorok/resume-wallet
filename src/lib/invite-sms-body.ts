@@ -1,4 +1,5 @@
 import { getBlockDefinition } from '@/lib/block-registry'
+import { buildMvrReleaseSms, SCREENING_CONSENT_INVITE } from '@/lib/outreach-release-copy'
 
 /** Plain-text invite blurb for Pingram SMS (and copy-paste fallback). */
 export type InviteSmsContext = {
@@ -7,13 +8,24 @@ export type InviteSmsContext = {
   targetBlockType: string | null
   candidateName?: string | null
   jobTitle?: string | null
+  recruiterName?: string | null
 }
 
 /**
- * Short SMS copy for outreach — mirrors email intent (registry block label) without HTML.
+ * Short SMS copy for outreach. The screening-consent invite is the MVR
+ * release letter. Anything else stays a one-line block invite.
  * Includes STOP language for A2P 10DLC sample / carrier compliance.
  */
 export function buildCandidateInviteSmsBody(ctx: InviteSmsContext): string {
+  if (ctx.targetBlockType === SCREENING_CONSENT_INVITE) {
+    return buildMvrReleaseSms({
+      candidateName: ctx.candidateName,
+      recruiterName: ctx.recruiterName,
+      companyName: ctx.companyName,
+      releaseLink: ctx.inviteUrl,
+    })
+  }
+
   const block = ctx.targetBlockType ? getBlockDefinition(ctx.targetBlockType) : null
   const label = block?.label ?? 'your invite'
   const first = ctx.candidateName?.trim().split(/\s+/)[0]
