@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume button uses Retro Teal and a soft glow** (2026-10-16)
+
+The corner button was Hot Embers, the same as every other primary action, so it did not read as the thing to click. It now uses Retro Teal (`#3F8A8C`), the secondary cool color, with a slow glow that breathes out and fades. People who prefer reduced motion get a steady glow and no pulse. Driver and employer cards share the button, so both pick up the change.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/ViewResumeCornerButton.tsx` | Retro Teal fill |
+| `src/app/globals.css` | `resume-corner-glow` |
+
+---
+
 ## **Resume opener sits on the career card** (2026-10-16)
 
 The "Your resume is ready" pill lived in the toolbar between Refresh and Share, and drivers were missing it. It is now a button in the top-right corner of the career card: **Click here to view resume**. Refresh and Share stay in the toolbar. The same corner on the employer career card, opened from the driver status board, loads that same live resume. A company can read it when the driver is already on their board (a relationship, a screening they touched, or an agency self-serve signup). A stranger found only in talent search does not get the resume.

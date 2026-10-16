@@ -16,11 +16,11 @@ export default function ViewResumeCornerButton({
   return (
     <Button
       type='button'
-      variant='primary'
+      variant='secondary'
       size='sm'
       isLoading={isLoading}
       onClick={onClick}
-      className='whitespace-nowrap !px-3 !py-1.5 !text-xs'
+      className='animate-resume-corner-glow whitespace-nowrap !border-retro-teal !bg-retro-teal !px-3 !py-1.5 !text-xs !text-white hover:!bg-retro-teal hover:brightness-110 dark:!border-retro-teal dark:!bg-retro-teal dark:!text-white'
     >
       Click here to view resume
     </Button>

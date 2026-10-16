@@ -635,6 +635,31 @@ button:disabled,
   animation: ghost-pulse 2.4s ease-in-out infinite;
 }
 
+/* Resume corner button — Retro Teal breathe. A ring that opens and fades so the
+   button stays the click target. Reduced motion keeps a steady glow. */
+@keyframes resume-corner-glow {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px -2px rgb(63 138 140 / 0.55);
+  }
+  50% {
+    box-shadow:
+      0 6px 22px 0 rgb(63 138 140 / 0.7),
+      0 0 0 4px rgb(63 138 140 / 0.22);
+  }
+}
+
+.animate-resume-corner-glow {
+  animation: resume-corner-glow 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-resume-corner-glow {
+    animation: none;
+    box-shadow: 0 0 14px 2px rgb(63 138 140 / 0.45);
+  }
+}
+
 /* Career card entrance — employer/public views only. One quiet settle on
    load; no loops. The card is a credential, not a landing page. */
 @keyframes card-entrance {
