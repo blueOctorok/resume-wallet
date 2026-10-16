@@ -1,11 +1,12 @@
 /**
  * One open outreach invite per company + block + email.
  *
- * The board is one card per invite, so a second "send consent" used to insert
- * a second card for the same person. Email is the identity we actually have at
- * send time (most invites are created before anyone has an account). The block
- * is part of the key because a DOT invite and a consent invite are two
- * different asks — collapsing on email alone would hide one of them.
+ * The board shows one card per person (`outreach-person.ts`), so a second open
+ * consent link would still be a second row the recruiter can resend by mistake.
+ * Email is the identity we actually have at send time (most invites are created
+ * before anyone has an account). The block is part of the key because a DOT
+ * invite and a consent invite are two different asks — they share a card, but
+ * sending consent must not overwrite the DOT link.
  *
  * Only open invites count (pending / viewed / in_progress). A completed invite
  * stays on the board and does not block a fresh one, so a recruiter can

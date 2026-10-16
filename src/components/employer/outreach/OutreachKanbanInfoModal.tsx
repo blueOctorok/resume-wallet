@@ -29,7 +29,7 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
       <ModalHeader
         variant="block"
         title="How this board works"
-        subtitle="Columns follow each invite’s status — not a separate manual pipeline."
+        subtitle="One card per person. The column follows the ask that is still open."
         onClose={onClose}
       />
       <div
@@ -43,8 +43,9 @@ export default function OutreachKanbanInfoModal({ open, onClose }: OutreachKanba
             Columns
           </h4>
           <p className="mb-2">
-            Each column matches the invite&apos;s <strong className={isDark ? 'text-gray-100' : 'text-gray-900'}>candidate status</strong>
-            — when a candidate opens the link, starts, or finishes, their card moves here automatically.
+            Each person is one card. The column matches the ask that is still open
+            — when they open the link, sign consent, or a report comes back, the card moves.
+            A finished DOT application and an open consent link stay on that same card. Open it to see both.
           </p>
           <ul className="list-inside list-disc space-y-1 text-xs sm:text-sm">
             {OUTREACH_KANBAN_COLUMNS.map((id) => (

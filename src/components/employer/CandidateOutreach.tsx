@@ -33,6 +33,7 @@ import {
   isInviteInArchiveTab,
   isInviteOnActiveKanban,
 } from '@/lib/outreach-invite-buckets'
+import { groupInvitesByPerson, type OutreachPerson } from '@/lib/outreach-person'
 import {
   Link2,
   Plus,
@@ -925,14 +926,20 @@ export default function CandidateOutreach({
       return true
     })
   }, [invites])
+  // One card per person. A finished DOT invite and an open consent invite share
+  // a card; the column follows the open ask.
+  const people = useMemo(() => groupInvitesByPerson(boardInvites), [boardInvites])
   const archivedTabInvites = useMemo(() => invites.filter(isInviteInArchiveTab), [invites])
 
   const readyToViewCount = useMemo(() => {
     if (!screeningsByUserId) return 0
     let n = 0
-    for (const inv of boardInvites) {
-      if (!inv.usedByUserId) continue
-      const files = screeningsByUserId.get(inv.usedByUserId)
+    const seen = new Set<string>()
+    for (const person of people) {
+      const uid = person.primary.usedByUserId
+      if (!uid || seen.has(uid)) continue
+      seen.add(uid)
+      const files = screeningsByUserId.get(uid)
       if (!files) continue
       for (const f of files) {
         const s = String(f.status ?? '').toLowerCase()
@@ -940,7 +947,7 @@ export default function CandidateOutreach({
       }
     }
     return n
-  }, [boardInvites, screeningsByUserId])
+  }, [people, screeningsByUserId])
 
   /** Refresh screenings then re-fetch invites so kanban columns catch up after reconcile. */
   const handleRefreshScreeningsAndInvites = useCallback(async () => {
@@ -950,20 +957,23 @@ export default function CandidateOutreach({
 
   const statusChips = useMemo<FilterChipDef[]>(() => {
     const counts: Partial<Record<InviteStatus, number>> = {}
-    for (const inv of boardInvites) counts[inv.status] = (counts[inv.status] ?? 0) + 1
+    for (const person of people) {
+      const status = person.primary.status
+      counts[status] = (counts[status] ?? 0) + 1
+    }
     return OUTREACH_KANBAN_COLUMNS.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
       id: s,
       label: STATUS_CHIP_LABEL[s],
       count: counts[s] ?? 0,
       dotClass: STATUS_CHIP_DOTS[s],
     }))
-  }, [boardInvites])
+  }, [people])
 
   const blockChips = useMemo<FilterChipDef[]>(() => {
     const counts = new Map<string, number>()
-    for (const inv of boardInvites) {
-      const k = inv.targetBlockType ?? '__general__'
-      counts.set(k, (counts.get(k) ?? 0) + 1)
+    for (const person of people) {
+      const blocks = new Set(person.invites.map((inv) => inv.targetBlockType ?? '__general__'))
+      for (const k of blocks) counts.set(k, (counts.get(k) ?? 0) + 1)
     }
     // With consent-only outreach most boards have one block type — a single
     // chip can't filter anything, so hide the row entirely.
@@ -973,7 +983,7 @@ export default function CandidateOutreach({
       label: id === '__general__' ? 'General' : getBlockDefinition(id)?.label ?? id,
       count,
     }))
-  }, [boardInvites])
+  }, [people])
 
   // Filter + sort applied to whichever tab is active. Search matches name,
   // email, or job title.
@@ -1005,10 +1015,33 @@ export default function CandidateOutreach({
     [search, selectedStatuses, selectedBlocks, sort],
   )
 
-  const filteredActive = useMemo(
-    () => applyFilters(boardInvites, { useStatusFilter: true }),
-    [applyFilters, boardInvites],
-  )
+  const filteredPeople = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const out = people.filter((person) => {
+      if (q) {
+        const blob = person.invites
+          .flatMap((inv) => [inv.candidateName, inv.candidateEmail, inv.candidatePhone, inv.jobTitle])
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!blob.includes(q)) return false
+      }
+      if (selectedStatuses.size > 0 && !selectedStatuses.has(person.primary.status)) return false
+      if (selectedBlocks.size > 0) {
+        const blocks = person.invites.map((inv) => inv.targetBlockType ?? '__general__')
+        if (!blocks.some((block) => selectedBlocks.has(block))) return false
+      }
+      return true
+    })
+    const newestAt = (person: OutreachPerson) =>
+      Math.max(...person.invites.map((inv) => +new Date(inv.createdAt)))
+    const oldestAt = (person: OutreachPerson) =>
+      Math.min(...person.invites.map((inv) => +new Date(inv.createdAt)))
+    if (sort === 'newest') out.sort((a, b) => newestAt(b) - newestAt(a))
+    else if (sort === 'oldest') out.sort((a, b) => oldestAt(a) - oldestAt(b))
+    else out.sort((a, b) => (a.primary.candidateName ?? '').localeCompare(b.primary.candidateName ?? ''))
+    return out
+  }, [people, search, selectedStatuses, selectedBlocks, sort])
   const filteredArchive = useMemo(
     () => applyFilters(archivedTabInvites, { useStatusFilter: false }),
     [applyFilters, archivedTabInvites],
@@ -1102,7 +1135,7 @@ export default function CandidateOutreach({
             <div className="flex min-w-0 flex-1 gap-1 border-b border-stone-200" role="tablist">
               <TabButton
                 label="Active"
-                count={boardInvites.length}
+                count={people.length}
                 badgeCount={readyToViewCount}
                 badgeTitle={`${readyToViewCount} report${readyToViewCount === 1 ? '' : 's'} ready to view`}
                 active={activeTab === 'active'}
@@ -1146,7 +1179,7 @@ export default function CandidateOutreach({
                   </div>
                 ) : invites.length === 0 ? (
                   <EmptyOutreach onNewOutreach={openCreateForm} />
-                ) : boardInvites.length === 0 ? (
+                ) : people.length === 0 ? (
                   <div className="py-10 text-center">
                     <Inbox
                       className={cn('mx-auto mb-3 h-10 w-10', false ? 'text-gray-600' : 'text-gray-300')}
@@ -1174,7 +1207,7 @@ export default function CandidateOutreach({
                   <>
                     {/* Search/filters only earn their space once the board is busy —
                         a handful of cards doesn't need a filter bar. */}
-                    {(boardInvites.length > 5 || hasActiveFilters) && (
+                    {(people.length > 5 || hasActiveFilters) && (
                       <OutreachFilterBar
                         theme={theme}
                         search={search}
@@ -1187,18 +1220,18 @@ export default function CandidateOutreach({
                         onToggleBlock={toggleBlock}
                         sort={sort}
                         onSortChange={setSort}
-                        showingCount={filteredActive.length}
-                        totalCount={boardInvites.length}
+                        showingCount={filteredPeople.length}
+                        totalCount={people.length}
                         onClearAll={clearAllFilters}
                         hasActiveFilters={hasActiveFilters}
                       />
                     )}
 
-                    {filteredActive.length === 0 ? (
+                    {filteredPeople.length === 0 ? (
                       <NoMatches theme={theme} onClear={clearAllFilters} />
                     ) : (
                       <KanbanBoard
-                        invites={filteredActive}
+                        people={filteredPeople}
                         screeningsByUserId={screeningsByUserId}
                         consentBundleByUserId={consentBundleMap}
                         sendableBlocks={sendableBlocks}
@@ -1305,8 +1338,8 @@ export default function CandidateOutreach({
           icon={Link2}
           title="Candidate outreach"
           description={
-            boardInvites.length > 0
-              ? `${boardInvites.length} active — invite candidates and track their screenings.`
+            people.length > 0
+              ? `${people.length} active — invite candidates and track their screenings.`
               : 'Invite candidates and track their screenings.'
           }
           headerActions={

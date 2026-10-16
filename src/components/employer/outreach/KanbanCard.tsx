@@ -23,6 +23,8 @@ interface KanbanCardProps {
   files: ScreeningRow[]
   /** Latest company-scoped screening consent bundle for this candidate, if any */
   consentBundle?: ConsentBundleSummary | null
+  /** Other asks for this person live in the modal. Shown so the tile is not a mystery. */
+  askCount?: number
   onClick: (invite: Invite) => void
 }
 
@@ -30,7 +32,7 @@ interface KanbanCardProps {
  * Compact tile for status-based kanban. Column = `invite.status` (set by the
  * candidate flow), so the card has no column picker — open the modal for actions.
  */
-export default function KanbanCard({ invite, files, consentBundle, onClick }: KanbanCardProps) {
+export default function KanbanCard({ invite, files, consentBundle, askCount = 1, onClick }: KanbanCardProps) {
   const reportReadyFiles = files.filter((f) => employerScreeningReportReady(f.status))
   const needsReviewFiles = files.filter(
     (f) => String(f.status ?? '').toLowerCase() === 'needs_review',
@@ -92,6 +94,11 @@ export default function KanbanCard({ invite, files, consentBundle, onClick }: Ka
 
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 px-2.5 pb-2 pt-1 text-[10px] text-ironside">
         <span className="shrink-0">{timeAgo(invite.createdAt)}</span>
+        {askCount > 1 && (
+          <span className="shrink-0" title="Open the card to see every ask">
+            {askCount} asks
+          </span>
+        )}
 
         {needsReviewFiles.length > 0 && (
           <span

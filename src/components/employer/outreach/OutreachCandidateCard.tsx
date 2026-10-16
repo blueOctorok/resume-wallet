@@ -110,6 +110,8 @@ function expiryHint(expiresAt: string | null, status: InviteStatus): string | nu
 
 interface OutreachCandidateCardProps {
   invite: Invite
+  /** Other asks for this same person. The column follows `invite`; these stay in the modal. */
+  otherInvites?: Invite[]
   /** Files (MVR/PSP) the company has paid for, scoped to this candidate. May be empty. */
   files: ScreeningRow[]
   /** Signed FCRA + FMCSA + CDLIS package — same source as the Files vault */
@@ -160,6 +162,7 @@ interface OutreachCandidateCardProps {
  */
 export default function OutreachCandidateCard({
   invite,
+  otherInvites = [],
   files,
   consentBundle,
   onClose,
@@ -284,9 +287,38 @@ export default function OutreachCandidateCard({
 
       <div className="space-y-3 px-5 py-5">
         {/* ── Progress ──────────────────────────────────────────────────────── */}
-        <CardSection title="Progress">
+        <CardSection title={otherInvites.length > 0 ? blockLabel : 'Progress'}>
           <OutreachProgress invite={invite} files={files} consentBundle={consentBundle} />
         </CardSection>
+
+        {otherInvites.length > 0 && (
+          <CardSection title="Also asked">
+            <ul className="space-y-1.5">
+              {otherInvites.map((other) => {
+                const otherBlock = other.targetBlockType ? getBlockDefinition(other.targetBlockType) : null
+                const otherLabel = otherBlock?.label ?? other.targetBlockType ?? 'General invite'
+                const otherStatus = STATUS_CONFIG[other.status] ?? STATUS_CONFIG.pending
+                return (
+                  <li
+                    key={other.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5"
+                  >
+                    <span className="min-w-0 truncate text-xs font-medium text-[#173150]">{otherLabel}</span>
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                        otherStatus.classes,
+                      )}
+                    >
+                      {otherStatus.icon}
+                      {otherStatus.label}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </CardSection>
+        )}
 
         {/* ── Stormi attention — only when something needs eyes ─────────────── */}
         {attention && (

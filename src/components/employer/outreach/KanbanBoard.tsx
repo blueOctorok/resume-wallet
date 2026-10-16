@@ -10,6 +10,7 @@ import {
 } from '@/lib/outreach-invite-buckets'
 import { detectOutreachAttention } from '@/lib/outreach-attention'
 import type { BlockDefinition } from '@/lib/block-registry'
+import { personColumn, type OutreachPerson } from '@/lib/outreach-person'
 import type { Invite, InviteStatus, ScreeningRow, ScreeningsByUserId } from './types'
 import type { ConsentBundleSummary } from '@/hooks/useEmployerScreenings'
 import KanbanCard from './KanbanCard'
@@ -25,7 +26,8 @@ const COLUMN_DOTS: Record<OutreachKanbanColumn, string> = {
 }
 
 export interface KanbanBoardProps {
-  invites: Invite[]
+  /** One entry per person. The column is `primary.status`. */
+  people: OutreachPerson[]
   screeningsByUserId?: ScreeningsByUserId
   /** Latest screening consent bundle per candidate — file badges on cards + modal */
   consentBundleByUserId?: Map<string, ConsentBundleSummary>
@@ -65,12 +67,11 @@ export interface KanbanBoardProps {
 }
 
 /**
- * Kanban columns mirror `Invite.status` (candidate lifecycle). Placement is
- * automatic — employers do not drag between arbitrary pipeline buckets.
- * Stale completed invites are excluded here (they live under the Archive tab).
+ * One card per person. The column follows the ask that is still open
+ * (`person.primary`). Other asks for that person open inside the same modal.
  */
 export default function KanbanBoard({
-  invites,
+  people,
   screeningsByUserId,
   consentBundleByUserId,
   sendableBlocks,
@@ -101,42 +102,40 @@ export default function KanbanBoard({
   statusOverrideSavingId,
   onRefreshScreenings,
 }: KanbanBoardProps) {
-  const [activeInviteId, setActiveInviteId] = useState<string | null>(null)
+  const [activePersonKey, setActivePersonKey] = useState<string | null>(null)
 
-  const activeInvite = useMemo(
-    () => invites.find((inv) => inv.id === activeInviteId) ?? null,
-    [invites, activeInviteId],
+  const activePerson = useMemo(
+    () => people.find((person) => person.key === activePersonKey) ?? null,
+    [people, activePersonKey],
   )
+  const activeInvite = activePerson?.primary ?? null
 
   const filesFor = (inv: Invite) => (inv.usedByUserId ? screeningsByUserId?.get(inv.usedByUserId) ?? [] : [])
   const bundleFor = (inv: Invite) => (inv.usedByUserId ? consentBundleByUserId?.get(inv.usedByUserId) : undefined)
 
   const byColumn = useMemo(() => {
-    const m = new Map<OutreachKanbanColumn, Invite[]>()
+    const m = new Map<OutreachKanbanColumn, OutreachPerson[]>()
     for (const col of OUTREACH_KANBAN_COLUMNS) m.set(col, [])
-    for (const inv of invites) {
-      const col = inv.status
-      if (m.has(col as OutreachKanbanColumn)) {
-        m.get(col as OutreachKanbanColumn)!.push(inv)
-      }
+    for (const person of people) {
+      const col = personColumn(person)
+      if (col) m.get(col)!.push(person)
     }
     // Within each column, float "needs attention" cards to the top so the
     // recruiter sees stalled / failed screenings first — same idea as a stable
     // sort by attention then preserving incoming order for ties.
     for (const [col, list] of m) {
-      const flagged: Invite[] = []
-      const rest: Invite[] = []
-      for (const inv of list) {
-        const files = inv.usedByUserId
-          ? screeningsByUserId?.get(inv.usedByUserId) ?? []
-          : []
-        if (detectOutreachAttention(inv, files)) flagged.push(inv)
-        else rest.push(inv)
+      const flagged: OutreachPerson[] = []
+      const rest: OutreachPerson[] = []
+      for (const person of list) {
+        const invite = person.primary
+        const files = invite.usedByUserId ? screeningsByUserId?.get(invite.usedByUserId) ?? [] : []
+        if (detectOutreachAttention(invite, files)) flagged.push(person)
+        else rest.push(person)
       }
       m.set(col, [...flagged, ...rest])
     }
     return m
-  }, [invites, screeningsByUserId])
+  }, [people, screeningsByUserId])
 
   // Empty columns (usually In progress) give their width to columns that
   // actually have people. The grid is always 100% of the panel — never a
@@ -172,13 +171,14 @@ export default function KanbanBoard({
               </div>
 
               <div className="scrollbar-none flex max-h-[min(55vh,28rem)] flex-col gap-1.5 overflow-y-auto overflow-x-hidden pt-2">
-                {columnInvites.map((invite) => (
+                {columnInvites.map((person) => (
                   <KanbanCard
-                    key={invite.id}
-                    invite={invite}
-                    files={filesFor(invite)}
-                    consentBundle={bundleFor(invite)}
-                    onClick={(inv) => setActiveInviteId(inv.id)}
+                    key={person.key}
+                    invite={person.primary}
+                    files={filesFor(person.primary)}
+                    consentBundle={bundleFor(person.primary)}
+                    askCount={person.invites.length}
+                    onClick={() => setActivePersonKey(person.key)}
                   />
                 ))}
               </div>
@@ -189,9 +189,9 @@ export default function KanbanBoard({
 
       {/* Detail modal — same block shell as "New outreach" so the two feel like one tool.
           The card renders its own header (avatar + name + status + close). */}
-      {activeInvite && (
+      {activeInvite && activePerson && (
         <Modal
-          onClose={() => setActiveInviteId(null)}
+          onClose={() => setActivePersonKey(null)}
           maxWidth="max-w-2xl"
           zIndex={1100}
           panelShape="block"
@@ -199,9 +199,10 @@ export default function KanbanBoard({
         >
           <OutreachCandidateCard
             invite={activeInvite}
+            otherInvites={activePerson.invites.filter((invite) => invite.id !== activeInvite.id)}
             files={filesFor(activeInvite)}
             consentBundle={bundleFor(activeInvite)}
-            onClose={() => setActiveInviteId(null)}
+            onClose={() => setActivePersonKey(null)}
             sendableBlocks={sendableBlocks}
             alreadySent={alreadySentFor(activeInvite)}
             sending={sendingId === activeInvite.id}
@@ -221,7 +222,7 @@ export default function KanbanBoard({
             onCancel={onCancel}
             onRemove={(id) => {
               onRemove(id)
-              setActiveInviteId(null)
+              setActivePersonKey(null)
             }}
             onViewFile={onViewFile}
             onViewConsent={onViewConsent}

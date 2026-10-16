@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach board: one card per person** (2026-10-16)
+
+Barry Burton sat in both Viewed and Completed. Those were two invites — a DOT application that closed the moment it was created, because he had already submitted it, and a screening-consent link he had opened but not signed. The board drew one card per invite row. It now draws one card per person. The column follows the ask that is still open (his card is Viewed). The finished DOT ask, the consent steps, and the reports are inside that card. He does not leave this board to appear on the driver board; claiming an invite puts him on both.
+
+| File | Change |
+|---|---|
+| `src/lib/outreach-person.ts` | Groups invites by claimed user, else email. Open ask wins the column. |
+| `src/components/employer/outreach/KanbanBoard.tsx` | Renders people, not invite rows |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | Lists the other asks under the open one |
+| `src/components/employer/CandidateOutreach.tsx` | Counts, filters, and search are per person |
+
+---
+
 ## **Outreach shows the phone on the driver's profile** (2026-10-15)
 
 Barry Burton saved `(216) 314-6034` on his profile. The outreach card still said "Add phone" because it reads `application_invites.candidate_phone`, the number copied when the invite was created, which was empty. A claimed invite now shows the phone on `user_profiles` when the driver has one. The board re-reads every few seconds while the tab is open, and again when the tab is focused, so a recruiter watching the card sees the new number without reloading. That poll skips the company-wide status sync so it stays a read.
