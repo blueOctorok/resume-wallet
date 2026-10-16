@@ -133,6 +133,8 @@ interface ProjectedCareerCardProps {
   onUndoLensSwitch?: () => void
   /** Self mode: pinned top-right inside the vault header (e.g. Resume chip). */
   selfHeaderActions?: ReactNode
+  /** Top-right of the card face, owner and employer. The resume opener lives here. */
+  cornerAction?: ReactNode
   /**
    * Self mode: extra header content placed BELOW `selfHeaderActions` in the
    * top-right column (e.g. Construct “Use this card to apply” CTA).
@@ -191,6 +193,7 @@ export default function ProjectedCareerCard({
   onUndoLensSwitch,
   selfHeaderActions,
   selfHeaderActionsBelow,
+  cornerAction,
   onAvatarUploadSuccess,
   onEditProfile,
   selfSectionNav = 'all',
@@ -217,7 +220,7 @@ export default function ProjectedCareerCard({
       className={cn(!isCareerCardOwnerMode(mode) && 'animate-card-entrance')}
     >
       {/* ── Profile header (no hero gradient — stays on vault face so block sections read as one surface) ── */}
-      <div className='px-6 sm:px-8 pt-6 sm:pt-7 pb-5 relative z-[1]'>
+      <div className={cn('relative z-[1] px-6 pb-5 sm:px-8', cornerAction ? 'pt-14' : 'pt-6 sm:pt-7')}>
           {/*
             Lens chip — deliberately subtle. Muted text, only "switch" is a
             link. Not bold, no chevron, no accent — sits in peripheral vision
@@ -227,7 +230,8 @@ export default function ProjectedCareerCard({
             typography, just "Switched to X · undo" for ~5s, then back to the
             regular chip.
           */}
-          {(isCareerCardOwnerMode(mode) && (selfHeaderActions || selfHeaderActionsBelow)) ||
+          {cornerAction ||
+          (isCareerCardOwnerMode(mode) && (selfHeaderActions || selfHeaderActionsBelow)) ||
           (mode === 'self' && showLensChip && (activeLensName || lensSwitchNote)) ? (
             <div
               className={cn(
@@ -235,6 +239,7 @@ export default function ProjectedCareerCard({
                 'transition-opacity duration-300',
               )}
             >
+              {cornerAction ? <div className='flex shrink-0 items-center'>{cornerAction}</div> : null}
               {isCareerCardOwnerMode(mode) && selfHeaderActions ? (
                 <div className='flex shrink-0 items-center gap-0.5'>{selfHeaderActions}</div>
               ) : null}

@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume opener sits on the career card** (2026-10-16)
+
+The "Your resume is ready" pill lived in the toolbar between Refresh and Share, and drivers were missing it. It is now a button in the top-right corner of the career card: **Click here to view resume**. Refresh and Share stay in the toolbar. The same corner on the employer career card, opened from the driver status board, loads that same live resume. A company can read it when the driver is already on their board (a relationship, a screening they touched, or an agency self-serve signup). A stranger found only in talent search does not get the resume.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/ViewResumeCornerButton.tsx` | Shared corner button |
+| `src/components/career-card/ProjectedCareerCard.tsx` | `cornerAction` slot, owner and employer |
+| `src/components/app/CareerCardView.tsx` | Button moved off the toolbar onto the card |
+| `src/app/api/employer/talent/[userId]/resume/route.ts` | Employer read of the live resume |
+| `src/components/employer/CareerCardModal.tsx` | Same corner when the company may see the resume |
+| `src/lib/employer-company-access.ts` | `companyCanReadDriverResume` |
+
+---
+
 ## **Outreach board: one card per person** (2026-10-16)
 
 Barry Burton sat in both Viewed and Completed. Those were two invites — a DOT application that closed the moment it was created, because he had already submitted it, and a screening-consent link he had opened but not signed. The board drew one card per invite row. It now draws one card per person. The column follows the ask that is still open (his card is Viewed). The finished DOT ask, the consent steps, and the reports are inside that card. He does not leave this board to appear on the driver board; claiming an invite puts him on both.

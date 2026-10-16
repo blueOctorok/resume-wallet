@@ -21,12 +21,12 @@ import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-reques
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import EmployerAskBanner from '@/components/career-card/EmployerAskBanner'
 import Button from '@/components/ui/Button'
-import ProvvenMark from '@/components/ui/ProvvenMark'
+import ViewResumeCornerButton from '@/components/career-card/ViewResumeCornerButton'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 import DisclosurePreferencesModal from '@/components/hub/DisclosurePreferencesModal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import { downloadDriverResumePacketPdf } from '@/lib/driver-resume-packet-download'
-import type { ResumeProjection, ResumeProjectionStatus } from '@/lib/resume-projection'
+import type { ResumeProjection } from '@/lib/resume-projection'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 import type { PageType } from '@/stores/types'
 
@@ -37,7 +37,8 @@ interface CareerCardViewProps {
 
 /**
  * Driver home — the Career Card showroom.
- * Build lives in the nav toggle + Up next. Toolbar is Refresh / Resume / Share.
+ * Build lives in the nav toggle + Up next. Toolbar is Refresh / Share.
+ * The resume opener sits in the top-right of the card.
  */
 export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps) {
   const { theme } = useTheme()
@@ -76,7 +77,6 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
   const [shareOpen, setShareOpen] = useState(false)
   const [disclosureOpen, setDisclosureOpen] = useState(false)
   const [resumeProjection, setResumeProjection] = useState<ResumeProjection | null>(null)
-  const [resumeStatus, setResumeStatus] = useState<ResumeProjectionStatus | null>(null)
   const [resumeLoading, setResumeLoading] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null)
   const [resumeDownloading, setResumeDownloading] = useState(false)
@@ -87,17 +87,10 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
     else setLoading(true)
     setError(null)
     try {
-      const [cardRes, projRes] = await Promise.all([
-        fetch('/api/career-card'),
-        fetch('/api/driver/resume-projection'),
-      ])
+      const cardRes = await fetch('/api/career-card')
       if (!cardRes.ok) throw new Error('Failed to load career card')
       const json = await cardRes.json()
       setData(json.card)
-      if (projRes.ok) {
-        const pj = (await projRes.json()) as { projection?: ResumeProjection }
-        if (pj.projection?.status) setResumeStatus(pj.projection.status)
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -151,7 +144,6 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
       }
       const json = (await res.json()) as { projection: ResumeProjection }
       setResumeProjection(json.projection)
-      setResumeStatus(json.projection.status)
     } catch (err) {
       console.error('[CareerCardView] resume projection:', err)
       setResumeError(err instanceof Error ? err.message : 'Failed to load resume')
@@ -206,59 +198,22 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
 
   return (
     <div className='max-w-2xl mx-auto'>
-      <div className='mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2'>
-        <div className='justify-self-start'>
-          <Button
-            type='button'
-            variant='secondary'
-            size='sm'
-            onClick={() => void fetchCard(true)}
-            disabled={isRefreshing}
-            title='Refresh career card and resume status'
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
-            {isRefreshing ? 'Updating…' : 'Refresh'}
-          </Button>
-        </div>
-
-        <div className='justify-self-center'>
-          <Button
-            type='button'
-            variant='primary'
-            size='md'
-            isLoading={resumeLoading}
-            onClick={() => void openResumePreview()}
-            title={
-              resumeStatus === 'ready'
-                ? 'Your resume packet is ready — tap to open'
-                : resumeStatus === 'building'
-                  ? 'Your resume is filling in — tap to see it'
-                  : 'Open your live resume packet'
-            }
-            className={cn(
-              '!rounded-xl !px-4 !py-2 !text-sm',
-              resumeStatus === 'ready'
-                ? '!bg-retro-teal !text-white hover:!brightness-110'
-                : '!border !border-[#173150]/20 !bg-[#fbf8f1] !text-[#173150] hover:!bg-white',
-            )}
-          >
-            <ProvvenMark className='text-lg' />
-            {resumeStatus === 'ready'
-              ? 'Your resume is ready'
-              : resumeStatus === 'building'
-                ? isRefreshing
-                  ? 'Resume updating…'
-                  : 'Your resume is filling in'
-                : 'Open your resume'}
-          </Button>
-        </div>
-
-        <div className='justify-self-end'>
-          <Button type='button' variant='secondary' size='sm' onClick={() => setShareOpen(true)}>
-            <Share2 className='h-3.5 w-3.5' />
-            Share
-          </Button>
-        </div>
+      <div className='mb-4 flex items-center justify-between gap-2'>
+        <Button
+          type='button'
+          variant='secondary'
+          size='sm'
+          onClick={() => void fetchCard(true)}
+          disabled={isRefreshing}
+          title='Refresh career card and resume status'
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
+          {isRefreshing ? 'Updating…' : 'Refresh'}
+        </Button>
+        <Button type='button' variant='secondary' size='sm' onClick={() => setShareOpen(true)}>
+          <Share2 className='h-3.5 w-3.5' />
+          Share
+        </Button>
       </div>
 
       {/* Primary next step — one button, biggest click target */}
@@ -328,6 +283,12 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
         data={data}
         mode='self'
         sessionUserId={sessionUserId ?? undefined}
+        cornerAction={
+          <ViewResumeCornerButton
+            isLoading={resumeLoading}
+            onClick={() => void openResumePreview()}
+          />
+        }
         onNavigateToBlock={goToBlock}
         onAvatarUploadSuccess={(url) => {
           updateAvatarUrl(url)

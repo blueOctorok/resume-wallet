@@ -315,7 +315,12 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
         <DriverEmploymentViewModal rows={file.detail.employmentVerifications} onClose={() => setViewer(null)} />
       )}
       {viewer?.kind === 'card' && (
-        <CareerCardModal candidateUserId={userId} sessionUserId={sessionUserId} onClose={() => setViewer(null)} />
+        <CareerCardModal
+          candidateUserId={userId}
+          sessionUserId={sessionUserId}
+          fromDriverBoard
+          onClose={() => setViewer(null)}
+        />
       )}
     </>
   )

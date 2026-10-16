@@ -217,3 +217,79 @@ export async function hasEmployerCandidateRelationship(
     .maybeSingle()
   return Boolean(application)
 }
+
+/**
+ * Who may open the driver's live resume. Same people as the status board:
+ * a real relationship, a screening this company already touched, or (for an
+ * agency) a driver who signed up on their own. A talent-search stranger is not
+ * on that list — their career card stays the public projection.
+ */
+export async function companyCanReadDriverResume(
+  supabase: SupabaseClient,
+  access: EmployerCompanyAccess,
+  candidateUserId: string,
+): Promise<boolean> {
+  const companyId = access.companyId
+  if (await hasEmployerCandidateRelationship(supabase, companyId, candidateUserId)) return true
+
+  const [consent, mvr, psp, request] = await Promise.all([
+    supabase
+      .from('screening_consent_bundles')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('driver_user_id', candidateUserId)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('mvr_orders')
+      .select('id')
+      .eq('ordered_by_company_id', companyId)
+      .eq('driver_user_id', candidateUserId)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('psp_orders')
+      .select('id')
+      .eq('ordered_by_company_id', companyId)
+      .eq('driver_user_id', candidateUserId)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('candidate_requests')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('candidate_user_id', candidateUserId)
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (consent.data || mvr.data || psp.data || request.data) return true
+
+  if (access.accountTier !== 'agency') return false
+
+  const [{ data: user }, { data: staff }, { data: otherInvite }] = await Promise.all([
+    supabase.from('users').select('role').eq('id', candidateUserId).maybeSingle(),
+    supabase
+      .from('company_members')
+      .select('id')
+      .eq('user_id', candidateUserId)
+      .eq('is_active', true)
+      .not('accepted_at', 'is', null)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('application_invites')
+      .select('id')
+      .neq('company_id', companyId)
+      .eq('used_by_user_id', candidateUserId)
+      .in('status', ['pending', 'viewed', 'in_progress', 'completed'])
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (!user) return false
+  // Same rule as belongsOnSelfServeDqRoster, checked for this one driver
+  // instead of scanning the whole roster.
+  const role = user.role as string | null
+  if (role === 'employer' || role === 'admin') return false
+  if (staff || otherInvite) return false
+  return true
+}

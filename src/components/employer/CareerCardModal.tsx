@@ -17,6 +17,10 @@ import {
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import ViewResumeCornerButton from '@/components/career-card/ViewResumeCornerButton'
+import ResumePreviewModal from '@/components/ResumePreviewModal'
+import { downloadDriverResumePacketPdf } from '@/lib/driver-resume-packet-download'
+import type { ResumeProjection } from '@/lib/resume-projection'
 import CredentialFactsPanel from '@/components/employer/CredentialFactsPanel'
 import MvrViewModal from '@/components/MvrViewModal'
 import PspViewModal from '@/components/PspViewModal'
@@ -83,6 +87,8 @@ interface CareerCardModalProps {
   candidateUserId: string
   sessionUserId: string
   onClose: () => void
+  /** Status board already has this driver. Their resume sits on the card. */
+  fromDriverBoard?: boolean
 }
 
 interface JobPosting {
@@ -95,6 +101,7 @@ export default function CareerCardModal({
   candidateUserId,
   sessionUserId,
   onClose,
+  fromDriverBoard = false,
 }: CareerCardModalProps) {
   const { theme } = useTheme()
   const [loading, setLoading] = useState(true)
@@ -102,6 +109,10 @@ export default function CareerCardModal({
   const [card, setCard] = useState<ProjectedCardData | null>(null)
   const [employerExtras, setEmployerExtras] = useState<EmployerTalentExtras | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [resumeProjection, setResumeProjection] = useState<ResumeProjection | null>(null)
+  const [resumeLoading, setResumeLoading] = useState(false)
+  const [resumeError, setResumeError] = useState<string | null>(null)
+  const [resumeDownloading, setResumeDownloading] = useState(false)
 
   const [requestLoading, setRequestLoading] = useState<string | null>(null)
   const [resendLoading, setResendLoading] = useState<string | null>(null)
@@ -763,11 +774,42 @@ export default function CareerCardModal({
                 </div>
               </div>
             )}
+            {resumeError && !resumeProjection && (
+              <p className="mb-3 flex items-center gap-1.5 text-xs text-red-700" role="alert">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {resumeError}
+              </p>
+            )}
             <ProjectedCareerCard
               data={card}
               mode="employer"
               sessionUserId={sessionUserId}
               employerCanViewDotApp={employerExtras?.canViewDotApplication === true}
+              cornerAction={
+                fromDriverBoard || employerExtras?.hasRelationship ? (
+                  <ViewResumeCornerButton
+                    isLoading={resumeLoading}
+                    onClick={() => {
+                      void (async () => {
+                        setResumeLoading(true)
+                        setResumeError(null)
+                        try {
+                          const res = await fetch(`/api/employer/talent/${candidateUserId}/resume`)
+                          const body = (await res.json()) as { error?: string; projection?: ResumeProjection }
+                          if (!res.ok || !body.projection) {
+                            throw new Error(body.error || 'Failed to load resume')
+                          }
+                          setResumeProjection(body.projection)
+                        } catch (e) {
+                          setResumeError(e instanceof Error ? e.message : 'Failed to load resume')
+                        } finally {
+                          setResumeLoading(false)
+                        }
+                      })()
+                    }}
+                  />
+                ) : undefined
+              }
               employerHeaderAction={requestAllButton}
               employerSectionActions={employerSectionActions}
               footerSlot={footerActions}
@@ -929,6 +971,31 @@ export default function CareerCardModal({
           sessionUserId={sessionUserId}
           orderId={employerPspViewOrderId}
           employerCandidateUserId={candidateUserId}
+        />
+      )}
+      {resumeProjection && (
+        <ResumePreviewModal
+          title={resumeProjection.title}
+          structuredData={resumeProjection.structuredData}
+          packet={resumeProjection.packet}
+          mvrSummary={resumeProjection.mvrSummary}
+          zIndex={10050}
+          theme={theme}
+          subtitle="The resume on this driver's career card."
+          onClose={() => {
+            setResumeProjection(null)
+            setResumeError(null)
+          }}
+          isDownloading={resumeDownloading}
+          onDownload={() => {
+            if (!resumeProjection.packet) return
+            setResumeDownloading(true)
+            void downloadDriverResumePacketPdf(resumeProjection.packet, resumeProjection.title)
+              .catch((err) => {
+                console.error('[EMPLOYER RESUME] PDF:', err)
+              })
+              .finally(() => setResumeDownloading(false))
+          }}
         />
       )}
     </>
