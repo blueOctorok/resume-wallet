@@ -10,6 +10,7 @@ export type NotificationType =
   | 'new_application'
   | 'consent_signed'
   | 'job_match'
+  | 'resume_upkeep'
   | 'system'
 
 export interface CreateNotificationParams {

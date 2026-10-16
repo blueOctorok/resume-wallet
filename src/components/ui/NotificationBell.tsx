@@ -32,6 +32,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
   consent_signed:         <ClipboardCheck className='w-4 h-4' />,
   new_message:            <MessageSquare className='w-4 h-4' />,
   job_match:              <Sparkles className='w-4 h-4' />,
+  resume_upkeep:          <FileText className='w-4 h-4' />,
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -45,6 +46,7 @@ const TYPE_COLOR: Record<string, string> = {
   consent_signed:          'bg-teal-500/20 text-teal-400',
   new_message:             'bg-blue-500/20 text-blue-400',
   job_match:               'bg-sky-500/20 text-sky-400',
+  resume_upkeep:           'bg-retro-teal/20 text-retro-teal',
 }
 
 function typeChipClass(type: string) {

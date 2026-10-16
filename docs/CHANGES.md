@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume shows an expired CDL, and we tell the driver** (2026-10-16)
+
+Barry Burton’s file has a Class A CDL with hazmat (H) and tanker (N) that expired January 15, 2026. The resume was still printing it as a current credential (`CDL Class CDL-A`, hazmat and tanker chips, a month-only “exp 2026-01”). The packet now says Class A, names the full date, marks it expired, and drops hazmat and tanker from the “current” chip row until the date is updated. The credential line still lists them, because they live on that license. A self-reported class is no longer labeled Provven-verified.
+
+A daily job (`/api/cron/resume-upkeep`, 15:00 UTC) emails and texts the driver, and leaves a bell notification. Two notices, each sent once: the resume is on the career card, and a CDL date on file has passed. The same expiration date is not sent again. Updating to a new date that later expires can send again. Needs migration `123_driver_keep_current_notices.sql` before the job can record what it sent.
+
+| File | Change |
+|---|---|
+| `src/lib/cdl-freshness.ts` | One reading of class, endorsements, and whether the date has passed |
+| `src/lib/driver-resume-packet.ts` | Expired credential line, banner, chips |
+| `src/components/resume/DriverResumeDocument.tsx` | Banner on the resume |
+| `src/lib/driver-resume-packet-pdf.ts` | Same note on the PDF |
+| `src/lib/driver-keep-current.ts` | Email, text, and bell copy; daily send |
+| `src/app/api/cron/resume-upkeep/route.ts` | Cron entry |
+| `supabase/migrations/123_driver_keep_current_notices.sql` | Dedup table |
+| `vercel.json` | Daily schedule |
+
+---
+
 ## **Resume button uses Retro Teal and a soft glow** (2026-10-16)
 
 The corner button was Hot Embers, the same as every other primary action, so it did not read as the thing to click. It now uses Retro Teal (`#3F8A8C`), the secondary cool color, with a slow glow that breathes out and fades. People who prefer reduced motion get a steady glow and no pulse. Driver and employer cards share the button, so both pick up the change.

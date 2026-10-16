@@ -157,6 +157,12 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
         <QrBlock dataUrl={qrDataUrl} label={packet.qrLabelTop} />
       </header>
 
+      {packet.freshnessNote ? (
+        <p className='mt-4 rounded-md border border-[#F28A0F]/50 bg-[#F28A0F]/10 px-3 py-2 text-[12.5px] leading-snug text-[#173150]'>
+          {packet.freshnessNote}
+        </p>
+      ) : null}
+
       {packet.proofChips.length > 0 ? (
         <div className='mt-5 flex flex-wrap gap-1.5'>
           {packet.proofChips.map((chip) => (
@@ -167,7 +173,11 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
               <span
                 className={cn(
                   'h-1 w-1 shrink-0 rounded-full',
-                  chip.attested ? 'bg-teal-600' : 'bg-stone-400',
+                  chip.id === 'cdl-expired'
+                    ? 'bg-[#F28A0F]'
+                    : chip.attested
+                      ? 'bg-retro-teal'
+                      : 'bg-stone-400',
                 )}
                 aria-hidden
               />

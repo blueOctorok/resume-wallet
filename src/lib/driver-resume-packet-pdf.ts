@@ -107,6 +107,16 @@ export async function generateDriverResumePacketPDF(
   // Clear past QR block
   y = Math.max(y, MARGIN + QR_TOP + 10)
 
+  if (packet.freshnessNote) {
+    checkPage(16)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(9)
+    pdf.setTextColor(23, 49, 80)
+    const lines = pdf.splitTextToSize(packet.freshnessNote, pageWidth - MARGIN * 2) as string[]
+    pdf.text(lines, MARGIN, y)
+    y += lines.length * 4.2 + 3
+  }
+
   // === PROOF CHIPS ===
   if (packet.proofChips.length > 0) {
     checkPage(12)

@@ -8,6 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
 import { getAppBaseUrl } from '@/lib/app-url'
+import { cdlStaleSentence, readCdlFreshness } from '@/lib/cdl-freshness'
 import type { ResumeBuilderData } from '@/lib/profile-mapper'
 
 /** Minimal MVR rollup — avoids circular import with resume-projection */
@@ -52,6 +53,8 @@ export interface DriverResumePacket {
   footerBody: string
   /** Shown when packet is nearly empty */
   thinStateHint: string | null
+  /** Self-reported CDL date is in the past. Not an issuer finding. */
+  freshnessNote: string | null
   hasVerifiedClaims: boolean
 }
 
@@ -196,10 +199,15 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   const fullName =
     [pi.firstName, pi.lastName].filter(Boolean).join(' ').trim() || 'Your name'
 
-  const cdlClass = cdl.cdlClass?.trim()
+  const freshness = readCdlFreshness({
+    cdlClass: cdl.cdlClass,
+    expiration: cdl.expirationDate,
+    endorsements: cdl.endorsements,
+  })
+  const cdlClass = freshness.classLetter
   const location = [pi.city, pi.state].filter(Boolean).join(', ')
   const taglineParts: string[] = []
-  if (cdlClass) taglineParts.push(`CDL Class ${cdlClass}`)
+  if (freshness.classLabel) taglineParts.push(`CDL ${freshness.classLabel}`)
   if (location) taglineParts.push(location)
   const tagline = taglineParts.join(' • ')
 
@@ -211,14 +219,19 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   const attestedIds = new Set((input.attestedChips ?? []).map((c) => c.id))
   const proofChips: DriverResumeProofChip[] = [...(input.attestedChips ?? [])]
   const hasAttestedClass = attestedIds.has('cdl_class') || attestedIds.has('cdl_class_a')
-  if (
+  // An expired date is not a current proof. Hazmat and tanker ride on the CDL,
+  // so they come off the chip row until the date is updated. The credential
+  // line below still names them.
+  if (freshness.expired) {
+    proofChips.push({ id: 'cdl-expired', label: 'CDL expired' })
+  } else if (
     cdlClass &&
     !hasAttestedClass &&
     !proofChips.some((c) => c.id === 'cdl-class' || c.id.startsWith('cdl_class'))
   ) {
     proofChips.push({ id: 'cdl-class', label: `CDL Class ${cdlClass}` })
   }
-  if (!attestedIds.has('cdl_endorsements')) {
+  if (!freshness.expired && !attestedIds.has('cdl_endorsements')) {
     if (hasHazmat && hasTanker) {
       proofChips.push({ id: 'endorsements-ht', label: 'Hazmat + Tanker' })
     } else if (hasHazmat) {
@@ -263,27 +276,21 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   }
 
   const credentials: string[] = []
-  if (cdlClass) {
+  if (freshness.classLabel) {
     const endBits: string[] = []
     if (hasTanker) endBits.push('tanker')
     if (hasHazmat) endBits.push('hazmat')
     for (const o of otherEndorsements.slice(0, 3)) endBits.push(o)
-    const endPhrase = endBits.length ? ` — ${endBits.join(' & ')} endorsements` : ''
+    const endPhrase = endBits.length ? ` — ${endBits.join(' & ')}` : ''
     const state = cdl.cdlState?.trim()
-    const exp = cdl.expirationDate?.trim()
-    let expBit = ''
-    if (exp) {
-      try {
-        const d = new Date(exp)
-        expBit = Number.isNaN(d.getTime())
-          ? `, exp ${exp}`
-          : `, exp ${d.toISOString().slice(0, 7)}`
-      } catch {
-        expBit = `, exp ${exp}`
-      }
-    }
+    const when = freshness.expirationLabel
+    const expBit = !when
+      ? ''
+      : freshness.expired
+        ? ` — expired ${when}`
+        : `, expires ${when}`
     credentials.push(
-      `CDL Class ${cdlClass}${endPhrase}${state ? ` (${state}${expBit})` : expBit ? ` (${expBit.replace(/^, /, '')})` : ''}`,
+      `CDL ${freshness.classLabel}${endPhrase}${state ? ` (${state})` : ''}${expBit}`,
     )
   }
   if (medOk) {
@@ -329,7 +336,10 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     thinStateHint: thin
       ? 'Start your DOT application to fill this packet — credentials and experience appear as you go.'
       : null,
-    hasVerifiedClaims: proofChips.length > 0,
+    freshnessNote: cdlStaleSentence(freshness),
+    hasVerifiedClaims: proofChips.some(
+      (chip) => chip.attested || chip.id === 'med-card' || chip.id === 'psp-no-dq' || chip.id === 'license-valid',
+    ),
   }
 }
 
