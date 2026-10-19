@@ -598,9 +598,7 @@ export default function ProjectedCareerCard({
                   <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
                     {demoteEmployerScreeningDetails
                       ? 'MVR report (document fallback)'
-                      : data.employerCompanyMvr.employerPaidScreening === false
-                        ? 'MVR — candidate-owned (shared via consent)'
-                        : 'MVR — private to your company'}
+                      : 'MVR'}
                   </h3>
                   {demoteEmployerScreeningDetails && (
                     <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>
@@ -678,9 +676,7 @@ export default function ProjectedCareerCard({
                   <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
                     {demoteEmployerScreeningDetails
                       ? 'PSP report (document fallback)'
-                      : data.employerCompanyPsp.employerPaidScreening === false
-                        ? 'PSP — candidate-owned (shared via consent)'
-                        : 'PSP — private to your company'}
+                      : 'PSP'}
                   </h3>
                   {demoteEmployerScreeningDetails && (
                     <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-gray-600')}>

@@ -143,7 +143,8 @@ function describe(
       ]
         .filter(Boolean)
         .join(' · ')
-      // Report access follows payment (CRA rule): a pull paid by another employer is a fact on the board, not a document you can open.
+      // A pull paid by a different company stays a fact on the board. This
+      // company's own order, including one placed from its consent, opens.
       const action =
         item.status === 'complete' && newest.orderedByYou ? (
           <ViewBtn label="View report" onClick={() => a.onViewReport(kind, newest.id)} />

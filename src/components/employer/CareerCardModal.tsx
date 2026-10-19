@@ -450,7 +450,7 @@ export default function CareerCardModal({
       const waitTitle = screeningBundleFlow
         ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
         : 'Waiting for candidate to sign disclosure'
-      const driverOwnedTitle = 'Candidate ordered their own portable MVR — results appear when processing completes'
+      const driverOwnedTitle = 'MVR is already in progress — results appear when processing completes'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
@@ -461,7 +461,7 @@ export default function CareerCardModal({
                 isDarkTheme(theme) ? 'bg-teal-500/10 text-teal-300' : 'bg-stone-100 text-[#173150]'
               }`}
             >
-              <CheckCircle className="w-3 h-3" /> Driver-ordered MVR
+              <CheckCircle className="w-3 h-3" /> MVR in progress
             </span>
           ) : (
           <Button
@@ -493,7 +493,7 @@ export default function CareerCardModal({
       const waitTitle = screeningBundleFlow
         ? 'Waiting for candidate to complete the screening consent package (FCRA + FMCSA + CDLIS)'
         : 'Waiting for candidate to sign FMCSA PSP disclosure'
-      const driverOwnedTitle = 'Candidate ordered their own portable PSP — results appear when processing completes'
+      const driverOwnedTitle = 'PSP is already in progress — results appear when processing completes'
       return (
         <div className="flex items-center gap-2">
           {actionButton}
@@ -504,7 +504,7 @@ export default function CareerCardModal({
                 isDarkTheme(theme) ? 'bg-amber-500/10 text-amber-300' : 'bg-amber-50 text-amber-900'
               }`}
             >
-              <CheckCircle className="w-3 h-3" /> Driver-ordered PSP
+              <CheckCircle className="w-3 h-3" /> PSP in progress
             </span>
           ) : (
           <Button

@@ -717,7 +717,6 @@ function FilePill({ file, onView }: { file: ScreeningRow; onView: () => void }) 
       <Icon className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
       <span className="shrink-0 font-semibold text-[#173150]">
         {file.kind === 'mvr' ? 'MVR' : 'PSP'}
-        {file.driverOwned ? ' · candidate-owned' : ''}
       </span>
       {file.dlState && <span className="text-[10px] text-ironside">{file.dlState}</span>}
       <span

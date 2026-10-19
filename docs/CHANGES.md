@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer hub stops calling consent MVRs and PSPs candidate-owned** (2026-10-19)
+
+A consent-form pull is stored with no company on the order so the report can travel with the driver. The employer hub was reading that empty company as “someone else”: the career card and outreach files said “candidate-owned,” and the driver status file said “On file via another employer” even when this company collected the consent. The ownership of the row is unchanged. The labels no longer say who owns it, and a completed consent from this company counts as this company’s order for the status line and the View report button. A pull whose company id is a different company still says it is on file via another employer, and that report stays closed.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-file-load.ts` | Consent on file counts as this company’s order |
+| `src/components/employer/drivers/DriverFileItems.tsx` | Status line follows that flag |
+| `src/components/career-card/ProjectedCareerCard.tsx` | MVR and PSP headings are just MVR and PSP |
+| `src/components/employer/outreach/OutreachCandidateCard.tsx` | File pill drops the ownership suffix |
+| `src/components/employer/CareerCardModal.tsx` | In-progress pill no longer says the candidate ordered it |
+
+---
+
 ## **Resume shows an expired CDL, and we tell the driver** (2026-10-16)
 
 Barry Burton’s file has a Class A CDL with hazmat (H) and tanker (N) that expired January 15, 2026. The resume was still printing it as a current credential (`CDL Class CDL-A`, hazmat and tanker chips, a month-only “exp 2026-01”). The packet now says Class A, names the full date, marks it expired, and drops hazmat and tanker from the “current” chip row until the date is updated. The credential line still lists them, because they live on that license. A self-reported class is no longer labeled Provven-verified.

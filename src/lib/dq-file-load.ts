@@ -297,6 +297,10 @@ export async function loadDriverFileDetail(
   const newestDot = rows.dotApplications[0]
   const newestConsent = rows.consentBundles[0]
 
+  // Consent-bundle pulls are stored with no company id (the report stays portable).
+  // This company still initiated them when the driver signed its consent, so
+  // they are this company's to open — not "another employer".
+  const consentOnFile = rows.consentBundles.some((bundle) => bundle.status === 'complete')
   const toScreening = (kind: 'mvr' | 'psp') => (o: OrderRowRich) => ({
     id: o.id,
     kind,
@@ -304,7 +308,9 @@ export async function loadDriverFileDetail(
     outcome: (o.result_outcome as ScreeningOutcome | null) ?? null,
     orderedAt: o.ordered_at ?? o.created_at,
     completedAt: o.completed_at,
-    orderedByYou: o.ordered_by_company_id === companyId,
+    orderedByYou:
+      o.ordered_by_company_id === companyId ||
+      (o.ordered_by_company_id == null && consentOnFile),
   })
 
   return {
