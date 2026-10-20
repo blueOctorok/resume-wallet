@@ -6,7 +6,7 @@ import BackToHubButton from '@/components/ui/BackToHubButton'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
-import LicenseBarcodeScanner from '@/components/blocks/LicenseBarcodeScanner'
+import LicenseBarcodeScanner, { LicenseScanHelp } from '@/components/blocks/LicenseBarcodeScanner'
 import { useTheme } from '@/contexts/ThemeContext'
 import { emptyLicenseFields, type LicenseScanFields } from '@/lib/aamva-license'
 import { getBlockDefinition } from '@/lib/block-registry'
@@ -81,8 +81,11 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
           status={status}
         >
           <p className='text-sm text-gray-600 dark:text-gray-400'>
-            Hold the back of your license up to the camera. We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on the DOT application. An MVR replaces this read, even when the values match.
+            We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on the DOT application. An MVR replaces this read, even when the values match.
           </p>
+          <div className='mt-4'>
+            <LicenseScanHelp />
+          </div>
 
           <div className='mt-4'>
             <Button onClick={() => setScanning(true)} disabled={isSaving}>

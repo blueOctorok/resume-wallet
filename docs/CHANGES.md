@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **License scan tells drivers to use a phone** (2026-10-20)
+
+A phone read works. A built-in computer camera usually does not. The license page and the scan window now say to open this on a phone, to use the rectangle of tiny bars, and to move the phone slowly up and down in bright light until it locks on. On a computer the phone line is the first sentence.
+
+| File | Change |
+|---|---|
+| `src/components/blocks/LicenseBarcodeScanner.tsx` | Scan help, including the computer-camera warning |
+| `src/components/blocks/DriverLicenseBlock.tsx` | Same help before the driver opens the camera |
+
+---
+
 ## **License barcode scan reads the slot, not the whole frame** (2026-10-20)
 
 The camera opened and then sat on "Looking for the barcode" on a laptop and an iPhone. The reader was scanning the entire camera frame and running zxing's downscale pass, which shrinks a PDF417 until the bars are gone. It also asked for the human-readable text instead of the raw license string, so a successful decode could be thrown away. The scanner now reads only the slot on screen, at full size, with downscale off and plain text. The hint names the block of tiny bars, not the solid black stripe.

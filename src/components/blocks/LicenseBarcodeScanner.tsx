@@ -143,7 +143,7 @@ export default function LicenseBarcodeScanner({
       <ModalHeader
         variant='block'
         title='Scan the barcode'
-        subtitle='Line up the block of tiny bars on the back. Not the solid black stripe. The picture stays on this device.'
+        subtitle='The picture stays on this device. A phone camera works best.'
         onClose={onClose}
       />
       <div className='space-y-3 p-4'>
@@ -158,11 +158,42 @@ export default function LicenseBarcodeScanner({
         ) : (
           <p className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
             {ready ? <Loader2 className='h-4 w-4 animate-spin' /> : null}
-            {ready ? 'Hold the barcode steady in the slot…' : 'Opening the camera…'}
+            {ready ? 'Slowly move the phone up and down until it locks on.' : 'Opening the camera…'}
           </p>
         )}
+        <LicenseScanHelp />
       </div>
     </Modal>
+  )
+}
+
+/**
+ * A coarse pointer is a finger, which is how we tell a phone from a laptop webcam.
+ * The laptop camera is the one that usually cannot read this barcode.
+ */
+function useIsComputer() {
+  const [isComputer, setIsComputer] = useState(false)
+  useEffect(() => {
+    setIsComputer(!window.matchMedia('(pointer: coarse)').matches)
+  }, [])
+  return isComputer
+}
+
+export function LicenseScanHelp() {
+  const isComputer = useIsComputer()
+  return (
+    <div className='rounded-xl border border-[#F28A0F]/40 bg-[#F28A0F]/10 p-3 text-sm text-gray-700 dark:text-gray-200'>
+      <p className='font-medium text-gray-900 dark:text-gray-100'>
+        {isComputer
+          ? 'A computer camera usually cannot read this. Open this page on your phone.'
+          : 'Hold the phone a few inches from the card.'}
+      </p>
+      <ul className='mt-2 list-disc space-y-1 pl-4'>
+        <li>On the back, find the rectangle of tiny bars. Skip the solid black stripe.</li>
+        <li>Use bright light. Tilt the card so there is no shine on the bars.</li>
+        <li>Slowly move the phone up and down. It locks on by itself when the bars are sharp.</li>
+      </ul>
+    </div>
   )
 }
 
