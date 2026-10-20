@@ -216,8 +216,9 @@ export interface DotApp {
   current_step: number
   verification_status: string
   created_at: string
-  sessionUserId: string
   applicantName: string
+  /** From the list API. Wallet addresses are gone; this is the line under the name. */
+  email?: string | null
 }
 
 export interface MvrRow {

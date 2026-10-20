@@ -69,9 +69,9 @@ export default function DotAppsTab({
               <td className={tableCellClass}>
                 <div>
                   <div>{app.applicantName}</div>
-                  <code className='text-xs opacity-75'>
-                    {app.sessionUserId.slice(0, 8)}...
-                  </code>
+                  {app.email && (
+                    <div className='text-xs opacity-75'>{app.email}</div>
+                  )}
                 </div>
               </td>
               <td className={tableCellClass}>

@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin DOT apps tab no longer crashes on open** (2026-10-20)
+
+Clicking DOT apps in central admin threw `Cannot read properties of undefined (reading 'slice')`. The list API returns `email` and `legacyWalletAddress`. The table still rendered `app.sessionUserId.slice(0, 8)`, a wallet field the response never includes, so the first row crashed the tab. The line under the applicant name is now their email.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/DotAppsTab.tsx` | Applicant cell shows `email` instead of slicing `sessionUserId`. |
+| `src/components/admin/admin-types.ts` | `DotApp.sessionUserId` replaced with optional `email`. |
+
+---
+
 ## **License scan is a live barcode read, with no photo stored** (2026-10-20)
 
 The driver license block asked for a front photo and a back photo, then stored both. The barcode was the only useful part, and keeping the pictures was a trust problem. The block is now a live camera scan of the barcode on the back. The picture is decoded in the browser and never uploaded. The driver reviews the fields and confirms them. Those fields still fill empty profile spots and replace typed DOT license fields. An MVR still outranks the barcode. The label is "read from the license barcode." It is not a state record and not a Midnight proof.
