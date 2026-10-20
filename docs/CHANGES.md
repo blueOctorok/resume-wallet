@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **License barcode scan reads the slot, not the whole frame** (2026-10-20)
+
+The camera opened and then sat on "Looking for the barcode" on a laptop and an iPhone. The reader was scanning the entire camera frame and running zxing's downscale pass, which shrinks a PDF417 until the bars are gone. It also asked for the human-readable text instead of the raw license string, so a successful decode could be thrown away. The scanner now reads only the slot on screen, at full size, with downscale off and plain text. The hint names the block of tiny bars, not the solid black stripe.
+
+| File | Change |
+|---|---|
+| `src/components/blocks/LicenseBarcodeScanner.tsx` | Crop to the slot, keep full resolution, plain text |
+
+---
+
 ## **Admin DOT apps tab no longer crashes on open** (2026-10-20)
 
 Clicking DOT apps in central admin threw `Cannot read properties of undefined (reading 'slice')`. The list API returns `email` and `legacyWalletAddress`. The table still rendered `app.sessionUserId.slice(0, 8)`, a wallet field the response never includes, so the first row crashed the tab. The line under the applicant name is now their email.
