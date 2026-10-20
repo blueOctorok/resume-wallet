@@ -117,7 +117,7 @@ function AdminDashboardContent() {
 
   // Shared delete for every admin tab. The modal's checkbox is the confirm.
   const handleDelete = async () => {
-    if (!deleteTarget || !sessionUserId) return
+    if (!deleteTarget) return
 
     setDeleting(true)
     setDeleteError(null)
@@ -140,7 +140,8 @@ function AdminDashboardContent() {
       const endpoint = endpointMap[deleteTarget.type]
       if (!endpoint) return
 
-      const headers: Record<string, string> = { 'x-wallet-address': sessionUserId }
+      const headers: Record<string, string> = {}
+      if (sessionUserId) headers['x-wallet-address'] = sessionUserId
 
       const response = await fetch(endpoint, { method: 'DELETE', headers })
 

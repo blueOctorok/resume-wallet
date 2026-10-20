@@ -160,7 +160,7 @@ export async function DELETE(
     } else {
       // Full delete — remove block table rows by user_id
       const blockTables = [
-        'block_driver_cdl', 'block_driver_employment', 'block_driver_mvr',
+        'block_driver_cdl', 'block_driver_license', 'block_driver_employment', 'block_driver_mvr',
         'block_driver_emergency', 'block_driver_experience',
         'block_education', 'block_skills', 'block_references',
       ] as const

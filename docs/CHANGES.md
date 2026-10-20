@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin license delete removes the copied fields too** (2026-10-20)
+
+The Licenses tab could show a barcode read, and confirming a delete never reached the database. Delete now asks once, with the button enabled, and calls the delete route directly. That removes the barcode read and the license number, class, state, and expiration it copied onto the CDL record and the DOT application. A field an MVR already locked is left as the motor vehicle record wrote it. Deleting a driver profile also removes the barcode read.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/LicensesTab.tsx` | Confirm dialog calls the delete route. |
+| `src/lib/admin-license.ts` | Delete clears copied CDL and DOT license fields. |
+| `src/app/api/admin/profiles/[id]/route.ts` | Profile delete includes the license scan. |
+
+---
+
+## **DOT card section no longer offers a second resume upload** (2026-10-20)
+
+The career card already has a resume upload at the top. The DOT section also had "Upload resume" and "Upload resume to prefill", and both opened the same prefill. Those buttons are off the DOT section. Start, Continue, and View stay.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/sections/DotAppSection.tsx` | Removed the resume upload buttons. |
+
+---
+
 ## **File drops unbuilt checks; barcode name replaces a typed one** (2026-10-20)
 
 Manage files listed four items we are not building: criminal background check, DOT drug screen, CDLIS inquiry report, and FMCSA Clearinghouse. They are gone from the driver file and the employer DQ monitor. CDLIS written consent stays — that is the consent package, not the inquiry report. The medical card placeholder stays.

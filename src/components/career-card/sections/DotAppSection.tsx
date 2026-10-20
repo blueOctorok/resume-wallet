@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { ClipboardList, Clock, Upload } from 'lucide-react'
+import { ClipboardList, Clock } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
@@ -10,7 +10,6 @@ import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import type { DotAppData, CareerCardMode } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
 import type { DotVerifiedCoverage } from '@/lib/dot-verified-coverage'
-import { useDotApplicationStore } from '@/stores'
 
 interface DotAppSectionProps {
   data: DotAppData
@@ -39,7 +38,6 @@ export default function DotAppSection({
   employerCanViewFull,
   employerAction,
 }: DotAppSectionProps) {
-  const setShowPrefillUpload = useDotApplicationStore((s) => s.setShowPrefillUpload)
   const isEmpty = !data.id || data.status === 'empty'
   const isComplete = data.isComplete
   const [showPreview, setShowPreview] = useState(false)
@@ -50,11 +48,6 @@ export default function DotAppSection({
   const canPreview = Boolean(isComplete && userId && sessionUserId)
   const openPreview = () => setShowPreview(true)
   const handleAction = canPreview ? openPreview : onAction
-
-  const openPrefillUpload = () => {
-    setShowPrefillUpload(true)
-    onAction?.()
-  }
 
   // A carrier sees the summary. The full file stays closed until they are allowed in.
   const employerLocked = mode === 'employer' && employerCanViewFull !== true
@@ -96,19 +89,11 @@ export default function DotAppSection({
           Your federal driver qualification file — the home base for MVR, PSP, and employer
           screening.
         </p>
-        <div className='mt-4 flex flex-wrap items-center justify-center gap-2'>
-          {onAction ? (
-            <Button type='button' variant='primary' size='sm' onClick={onAction}>
-              Start application
-            </Button>
-          ) : null}
-          {onAction ? (
-            <Button type='button' variant='secondary' size='sm' onClick={openPrefillUpload}>
-              <Upload className='mr-1.5 h-3.5 w-3.5' aria-hidden />
-              Upload resume to prefill
-            </Button>
-          ) : null}
-        </div>
+        {onAction ? (
+          <Button type='button' variant='primary' size='sm' className='mt-4' onClick={onAction}>
+            Start application
+          </Button>
+        ) : null}
       </div>
     )
   }
@@ -139,22 +124,14 @@ export default function DotAppSection({
                 <div className='flex shrink-0 flex-wrap items-center justify-end gap-1.5'>
                   {employerAction}
                   {showAction ? (
-                    <>
-                      {!isComplete && isCareerCardOwnerMode(mode) && onAction ? (
-                        <Button type='button' variant='secondary' size='sm' onClick={openPrefillUpload}>
-                          <Upload className='h-3.5 w-3.5' aria-hidden />
-                          Upload resume
-                        </Button>
-                      ) : null}
-                      <Button
-                        type='button'
-                        variant={isComplete ? 'secondary' : 'primary'}
-                        size='sm'
-                        onClick={handleAction}
-                      >
-                        {isComplete ? 'View' : 'Continue'}
-                      </Button>
-                    </>
+                    <Button
+                      type='button'
+                      variant={isComplete ? 'secondary' : 'primary'}
+                      size='sm'
+                      onClick={handleAction}
+                    >
+                      {isComplete ? 'View' : 'Continue'}
+                    </Button>
                   ) : null}
                 </div>
               )}

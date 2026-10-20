@@ -21,11 +21,12 @@ export default function LicensesTab({
   currentPage,
   pageSize,
   setTotalCount,
-  onDelete,
 }: AdminTabProps) {
   const [licenses, setLicenses] = useState<AdminLicenseRecord[]>([])
   const [open, setOpen] = useState<AdminLicenseRecord | null>(null)
   const [openingId, setOpeningId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AdminLicenseRecord | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -59,14 +60,32 @@ export default function LicensesTab({
   }, [fetchData])
 
   const askDelete = (license: AdminLicenseRecord) => {
-    // The record modal sits above the shared confirm dialog. Close it first
-    // so the confirm is the dialog on screen.
+    setError(null)
     setOpen(null)
-    onDelete({
-      type: 'license',
-      id: license.userId,
-      name: `${license.name || license.email || 'this driver'}'s license`,
-    })
+    setPendingDelete(license)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/admin/licenses/${pendingDelete.userId}`, {
+        method: 'DELETE',
+      })
+      const data = (await response.json().catch(() => ({}))) as { error?: string }
+      if (!response.ok) {
+        setError(data.error || 'Could not delete license')
+        return
+      }
+      setPendingDelete(null)
+      await fetchData()
+    } catch (err) {
+      console.error('[ADMIN LICENSE DELETE]', err)
+      setError('Could not delete license')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const openLicense = async (userId: string) => {
@@ -139,6 +158,25 @@ export default function LicensesTab({
             </tbody>
           </table>
         </div>
+      )}
+
+      {pendingDelete && (
+        <Modal onClose={() => { if (!deleting) setPendingDelete(null) }} maxWidth='max-w-md' zIndex={1200}>
+          <div className='space-y-4 p-5'>
+            <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>Delete this license?</h3>
+            <p className={`text-sm ${muted}`}>
+              This removes {pendingDelete.name || pendingDelete.email || 'this driver'}&apos;s barcode read, and the license number, class, and expiration it copied onto the CDL and DOT application. A field locked by an MVR stays.
+            </p>
+            <div className='flex justify-end gap-2'>
+              <Button variant='secondary' size='sm' onClick={() => setPendingDelete(null)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button variant='danger' size='sm' onClick={() => void confirmDelete()} isLoading={deleting}>
+                Delete license
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {open && (
