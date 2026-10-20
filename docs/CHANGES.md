@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Licenses table keeps Delete on screen** (2026-10-20)
+
+The Licenses table was wider than the admin panel, so View and Delete sat in a horizontal scroll. The table now uses the panel width. Long names, emails, and license numbers truncate, and the actions stay in the last column.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/LicensesTab.tsx` | Fixed column widths. Removed the sideways scroll. |
+
+---
+
 ## **Admin license delete removes the copied fields too** (2026-10-20)
 
 The Licenses tab could show a barcode read, and confirming a delete never reached the database. Delete now asks once, with the button enabled, and calls the delete route directly. That removes the barcode read and the license number, class, state, and expiration it copied onto the CDL record and the DOT application. A field an MVR already locked is left as the motor vehicle record wrote it. Deleting a driver profile also removes the barcode read.

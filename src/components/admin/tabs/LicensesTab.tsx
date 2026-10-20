@@ -117,47 +117,47 @@ export default function LicensesTab({
       {licenses.length === 0 && !error ? (
         <p className={`py-8 text-center text-sm ${muted}`}>No licenses on file.</p>
       ) : (
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}>
-              <tr>
-                <th className={`${header} px-4 py-3 text-left`}>Driver</th>
-                <th className={`${header} px-4 py-3 text-left`}>License</th>
-                <th className={`${header} px-4 py-3 text-left`}>Class</th>
-                <th className={`${header} px-4 py-3 text-left`}>Expires</th>
-                <th className={`${header} px-4 py-3 text-left`}>Status</th>
-                <th className={`${header} px-4 py-3`} />
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
-              {licenses.map((license) => (
-                <tr key={license.userId}>
-                  <td className={cell}>
-                    <div>{license.name || '—'}</div>
-                    <div className={`text-xs ${muted}`}>{license.email || '—'}</div>
-                  </td>
-                  <td className={cell}>
+        <table className='w-full table-fixed'>
+          <thead className={isDarkTheme(theme) ? 'bg-gray-800' : 'bg-gray-50'}>
+            <tr>
+              <th className={`${header} w-[24%] px-4 py-3 text-left`}>Driver</th>
+              <th className={`${header} w-[20%] px-4 py-3 text-left`}>License</th>
+              <th className={`${header} w-[8%] px-4 py-3 text-left`}>Class</th>
+              <th className={`${header} w-[14%] px-4 py-3 text-left`}>Expires</th>
+              <th className={`${header} px-4 py-3 text-left`}>Status</th>
+              <th className={`${header} w-44 px-4 py-3 text-right`}>Actions</th>
+            </tr>
+          </thead>
+          <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
+            {licenses.map((license) => (
+              <tr key={license.userId}>
+                <td className={`${cell} max-w-0`}>
+                  <div className='truncate' title={license.name || undefined}>{license.name || '—'}</div>
+                  <div className={`truncate text-xs ${muted}`} title={license.email || undefined}>{license.email || '—'}</div>
+                </td>
+                <td className={`${cell} max-w-0`}>
+                  <span className='block truncate' title={license.licenseNumber || undefined}>
                     {license.licenseNumber || '—'}
                     {license.state ? <span className={`ml-1 text-xs ${muted}`}>({license.state})</span> : null}
-                  </td>
-                  <td className={cell}>{license.licenseClass || '—'}</td>
-                  <td className={cell}>{license.expirationDate || '—'}</td>
-                  <td className={cell}>{statusLabel(license)}</td>
-                  <td className={cell}>
-                    <div className='flex justify-end gap-2'>
-                      <Button variant='ghost' size='sm' onClick={() => void openLicense(license.userId)} isLoading={openingId === license.userId}>
-                        View
-                      </Button>
-                      <Button variant='danger' size='sm' onClick={() => askDelete(license)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                </td>
+                <td className={cell}>{license.licenseClass || '—'}</td>
+                <td className={`${cell} whitespace-nowrap`}>{license.expirationDate || '—'}</td>
+                <td className={cell}>{statusLabel(license)}</td>
+                <td className={`${cell} whitespace-nowrap text-right`}>
+                  <div className='inline-flex justify-end gap-2'>
+                    <Button variant='ghost' size='sm' onClick={() => void openLicense(license.userId)} isLoading={openingId === license.userId}>
+                      View
+                    </Button>
+                    <Button variant='danger' size='sm' onClick={() => askDelete(license)}>
+                      Delete
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {pendingDelete && (
