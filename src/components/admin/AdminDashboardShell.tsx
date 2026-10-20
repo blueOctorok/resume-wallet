@@ -442,6 +442,8 @@ function AdminDashboardContent() {
         onConfirm={handleDelete}
         deleting={deleting}
         error={deleteError}
+        // License (and other) record modals use 1100. The confirm has to sit above them.
+        zIndex={1200}
       />
 
       <CreateCompanyModal

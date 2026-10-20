@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin can remove a license from the open record** (2026-10-20)
+
+The Licenses tab listed every barcode read, and Delete lived only on the table row. Opening a record covered that row, and the confirm dialog rendered underneath the record (z-index 1000 vs 1100), so confirming a delete from the thing you were looking at did nothing visible. Delete is now on the open record. The shared confirm dialog sits above record modals. The delete itself reports when the row was not actually removed, and the list refetch skips the browser cache so a removed scan does not stay on screen.
+
+Deleting the scan does not clear CDL fields the driver already confirmed onto their profile.
+
+| File | Change |
+|---|---|
+| `src/components/admin/tabs/LicensesTab.tsx` | Delete on the open record. List fetch is `no-store`. |
+| `src/components/admin/modals/DeleteConfirmModal.tsx` | Optional `zIndex`. |
+| `src/components/admin/AdminDashboardShell.tsx` | Confirm dialog at 1200. |
+| `src/lib/admin-license.ts` | Delete checks that a row was removed. Photo cleanup cannot block it. |
+
+---
+
 ## **License scan tells drivers to use a phone** (2026-10-20)
 
 A phone read works. A built-in computer camera usually does not. The license page and the scan window now say to open this on a phone, to use the rectangle of tiny bars, and to move the phone slowly up and down in bright light until it locks on. On a computer the phone line is the first sentence.

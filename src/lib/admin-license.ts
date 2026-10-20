@@ -132,9 +132,15 @@ export async function getAdminLicense(
 
 /** Remove the on-file scan. Does not touch CDL credentials the driver confirmed separately. */
 export async function deleteAdminLicense(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  const row = await getLicenseScan(supabase, userId)
+  const { data: row, error: readError } = await supabase
+    .from('block_driver_license')
+    .select('front_storage_path, back_storage_path')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
   if (!row) return false
 
+  // Photo files are optional leftovers. A storage failure must not keep the scan.
   for (const path of [row.front_storage_path, row.back_storage_path]) {
     if (!path) continue
     try {
@@ -144,7 +150,11 @@ export async function deleteAdminLicense(supabase: SupabaseClient, userId: strin
     }
   }
 
-  const { error } = await supabase.from('block_driver_license').delete().eq('user_id', userId)
+  const { data: removed, error } = await supabase
+    .from('block_driver_license')
+    .delete()
+    .eq('user_id', userId)
+    .select('user_id')
   if (error) throw new Error(error.message)
-  return true
+  return (removed?.length ?? 0) > 0
 }

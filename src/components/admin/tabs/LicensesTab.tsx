@@ -33,6 +33,7 @@ export default function LicensesTab({
       const offset = (currentPage - 1) * pageSize
       const response = await fetch(
         `/api/admin/licenses?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
+        { cache: 'no-store' },
       )
       const data = (await response.json()) as {
         success?: boolean
@@ -56,6 +57,17 @@ export default function LicensesTab({
   useEffect(() => {
     void fetchData()
   }, [fetchData])
+
+  const askDelete = (license: AdminLicenseRecord) => {
+    // The record modal sits above the shared confirm dialog. Close it first
+    // so the confirm is the dialog on screen.
+    setOpen(null)
+    onDelete({
+      type: 'license',
+      id: license.userId,
+      name: `${license.name || license.email || 'this driver'}'s license`,
+    })
+  }
 
   const openLicense = async (userId: string) => {
     setOpeningId(userId)
@@ -117,17 +129,7 @@ export default function LicensesTab({
                       <Button variant='ghost' size='sm' onClick={() => void openLicense(license.userId)} isLoading={openingId === license.userId}>
                         View
                       </Button>
-                      <Button
-                        variant='danger'
-                        size='sm'
-                        onClick={() =>
-                          onDelete({
-                            type: 'license',
-                            id: license.userId,
-                            name: `${license.name || license.email || 'this driver'}'s license`,
-                          })
-                        }
-                      >
+                      <Button variant='danger' size='sm' onClick={() => askDelete(license)}>
                         Delete
                       </Button>
                     </div>
@@ -163,6 +165,11 @@ export default function LicensesTab({
                 <Fact label='Address' value={open.address} />
               </div>
             </dl>
+            <div className='flex justify-end border-t border-gray-200 pt-4 dark:border-gray-700'>
+              <Button variant='danger' size='sm' onClick={() => askDelete(open)}>
+                Delete license
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

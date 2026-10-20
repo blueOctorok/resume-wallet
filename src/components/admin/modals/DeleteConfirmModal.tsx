@@ -14,6 +14,7 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void
   deleting: boolean
   error?: string | null
+  zIndex?: number
 }
 
 export default function DeleteConfirmModal({
@@ -23,6 +24,7 @@ export default function DeleteConfirmModal({
   onConfirm,
   deleting,
   error,
+  zIndex = 1000,
 }: DeleteConfirmModalProps) {
   const [confirmed, setConfirmed] = useState(false)
 
@@ -40,7 +42,7 @@ export default function DeleteConfirmModal({
   }
 
   return (
-    <Modal onClose={handleClose} maxWidth="max-w-md">
+    <Modal onClose={handleClose} maxWidth="max-w-md" zIndex={zIndex}>
       <div className='p-6'>
         <div className='flex items-center gap-3 mb-4'>
           <div className='p-2 rounded-full bg-red-100 dark:bg-red-900/30'>
