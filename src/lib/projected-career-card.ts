@@ -27,6 +27,7 @@ import type {
   GitHubData,
   ProjectsData,
   ScreeningConsentData,
+  LicenseScanCardData,
   OnChainCredential,
 } from '@/types/career-card'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
@@ -133,6 +134,29 @@ export interface BuildProjectedCareerCardInput {
    * subset.
    */
   lensId?: string | null
+}
+
+const DRIVER_CARD_LEAD = [
+  'storm-resume',
+  'driver-resume',
+  'developer-resume',
+  'general-resume',
+  'driver-license',
+  'driver-dot-application',
+] as const
+
+/** Keep resume and the license scan ahead of everything else on the driver's card. */
+function pinDriverLeadSections(
+  visible: CareerCardSection[],
+  source: CareerCardSection[],
+): CareerCardSection[] {
+  const lead: CareerCardSection[] = []
+  for (const id of DRIVER_CARD_LEAD) {
+    const section = source.find((s) => s.blockType === id)
+    if (section) lead.push(section)
+  }
+  const leadIds = new Set(lead.map((s) => s.blockType))
+  return [...lead, ...visible.filter((s) => !leadIds.has(s.blockType))]
 }
 
 /**
@@ -274,16 +298,23 @@ export async function buildProjectedCareerCard(
 
   const sections: CareerCardSection[] = []
 
-  // DOT-first: resume lives on the Resume chip / live packet — never as a
-  // second section under DOT (legacy auto-create left storm-resume installed).
+  // Employer and public cards still lead with DOT. The driver's own card
+  // leads with resume + license, because those two fill the DOT application.
+  // MVR and PSP stay off that card — they live in the File.
   const hasDotApp = installedTypes.includes('driver-dot-application')
+  const isDriverSelf = meta.contactMode === 'self' && installedTypes.some((t) => t.startsWith('driver-'))
 
   for (const row of hubRows) {
     const blockType = row.block_type
     if (hasStormResume && legacyResumeBlockTypes.has(blockType)) continue
-    if (hasDotApp && resumeBlockTypes.has(blockType)) continue
+    if (!isDriverSelf && hasDotApp && resumeBlockTypes.has(blockType)) continue
+    if (isDriverSelf && (blockType === 'driver-mvr' || blockType === 'driver-psp')) continue
     const def = getBlockDefinition(blockType)
-    if (!def || !def.appearsOnCareerCard) continue
+    if (!def) continue
+    // storm-resume is hidden on employer cards. The driver's card still shows it,
+    // because the upload is what fills the DOT application.
+    const forceResumeOnDriverCard = isDriverSelf && resumeBlockTypes.has(blockType)
+    if (!def.appearsOnCareerCard && !forceResumeOnDriverCard) continue
 
     const fetched = await fetchSectionData(
       supabase,
@@ -297,12 +328,18 @@ export async function buildProjectedCareerCard(
     if (fetched) {
       sectionData = fetched
     } else {
-      // Resume: only show when a real artifact exists (no empty hero).
-      if (resumeBlockTypes.has(blockType)) continue
-      const fallback = EMPTY_SECTION_DATA[blockType]
-      if (!fallback) continue
-      sectionData = fallback as CareerCardSection['data']
-      needsSetup = true
+      // The driver's card always offers an upload, even before a file exists.
+      // Employer and public cards still hide an empty resume.
+      if (resumeBlockTypes.has(blockType)) {
+        if (!isDriverSelf) continue
+        sectionData = EMPTY_STORM_RESUME_CARD
+        needsSetup = true
+      } else {
+        const fallback = EMPTY_SECTION_DATA[blockType]
+        if (!fallback) continue
+        sectionData = fallback as CareerCardSection['data']
+        needsSetup = true
+      }
     }
 
     let cardPage = readCardPage(row.config ?? undefined)
@@ -343,10 +380,50 @@ export async function buildProjectedCareerCard(
     }
   }
 
-  const dotIdx = sections.findIndex((s) => s.blockType === 'driver-dot-application')
-  if (dotIdx > 0) {
-    const [dot] = sections.splice(dotIdx, 1)
-    sections.unshift(dot)
+  if (isDriverSelf) {
+    if (!sections.some((s) => resumeBlockTypes.has(s.blockType))) {
+      const resumeRow = hubRows.find((r) => r.block_type === 'storm-resume')
+      sections.push({
+        blockType: 'storm-resume',
+        label: 'Provven Resume',
+        icon: 'FileText',
+        data: EMPTY_STORM_RESUME_CARD,
+        hubBlockId: resumeRow?.id,
+        cardPage: 1,
+        needsSetup: true,
+      })
+    }
+    if (!sections.some((s) => s.blockType === 'driver-license')) {
+      const scan = await getLicenseScan(supabase, userId)
+      const licenseRow = hubRows.find((r) => r.block_type === 'driver-license')
+      const confirmed = Boolean(scan?.confirmed_at)
+      sections.push({
+        blockType: 'driver-license',
+        label: 'Driver license',
+        icon: 'IdCard',
+        data: {
+          confirmed,
+          barcodeRead: scan?.barcode_status === 'read',
+        } satisfies LicenseScanCardData,
+        hubBlockId: licenseRow?.id,
+        cardPage: 1,
+        needsSetup: !confirmed,
+      })
+    }
+
+    // Resume and the license scan fill the DOT app, so they sit above it.
+    const lead: CareerCardSection[] = []
+    for (const id of DRIVER_CARD_LEAD) {
+      const idx = sections.findIndex((s) => s.blockType === id)
+      if (idx >= 0) lead.push(sections.splice(idx, 1)[0])
+    }
+    sections.unshift(...lead)
+  } else {
+    const dotIdx = sections.findIndex((s) => s.blockType === 'driver-dot-application')
+    if (dotIdx > 0) {
+      const [dot] = sections.splice(dotIdx, 1)
+      sections.unshift(dot)
+    }
   }
 
   // Apply the lens ordering + filter before computing signals so score reflects
@@ -355,6 +432,12 @@ export async function buildProjectedCareerCard(
   const projectedSections = lensRow
     ? applyLensOrderAndFilterPerPage(sections, lensRow)
     : sections
+
+  // A lens can hide or reorder blocks. On the driver's card, resume and the
+  // license scan stay first anyway — they are how the DOT application gets filled.
+  const visibleSections = isDriverSelf
+    ? pinDriverLeadSections(projectedSections, sections)
+    : projectedSections
 
   if (pickedPendingScreening && meta.contactMode === 'self') {
     for (const s of projectedSections) {
@@ -370,7 +453,7 @@ export async function buildProjectedCareerCard(
     }
   }
 
-  const signals = computeCareerCardSignals(projectedSections, employerConfirmed)
+  const signals = computeCareerCardSignals(visibleSections, employerConfirmed)
 
   return {
     userId,
@@ -381,7 +464,7 @@ export async function buildProjectedCareerCard(
     location,
     memberSince: meta.memberSince,
     shareToken: meta.shareToken,
-    sections: projectedSections,
+    sections: visibleSections,
     settings: meta.shareSettings,
     contact,
     viewCount: meta.contactMode === 'public' ? meta.viewCount : undefined,

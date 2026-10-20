@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Driver card leads with resume and license** (2026-10-20)
+
+The driver's career card was opening on the DOT application and still offering MVR and PSP as things to do on the card. Resume upload and a license barcode scan are the useful first steps, because both fill empty DOT fields. MVR and PSP stay in the File. An MVR costs money, so the card no longer asks a driver to order one.
+
+Manage files sits at the bottom of the card and opens the same File view as the File control in the nav.
+
+Employer and public cards are unchanged. A carrier can still see an MVR or PSP when one is on file.
+
+| File | Change |
+|---|---|
+| `src/lib/projected-career-card.ts` | Self card hides MVR and PSP, and pins resume then license above DOT. |
+| `src/components/career-card/sections/LicenseScanSection.tsx` | License step on the driver's card. |
+| `src/lib/driver-next-action.ts` | Up next is resume, then license, then DOT. |
+| `src/components/app/CareerCardView.tsx` | Manage files opens the File. |
+
+---
+
 ## **Admin can remove a license from the open record** (2026-10-20)
 
 The Licenses tab listed every barcode read, and Delete lived only on the table row. Opening a record covered that row, and the confirm dialog rendered underneath the record (z-index 1000 vs 1100), so confirming a delete from the thing you were looking at did nothing visible. Delete is now on the open record. The shared confirm dialog sits above record modals. The delete itself reports when the row was not actually removed, and the list refetch skips the browser cache so a removed scan does not stay on screen.

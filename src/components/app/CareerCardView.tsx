@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Share2,
   ArrowRight,
+  FolderCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -37,10 +38,11 @@ interface CareerCardViewProps {
 
 /**
  * Driver home — the Career Card showroom.
- * Build lives in the nav toggle + Up next. Toolbar is Refresh / Share.
+ * Resume and the license scan come first. MVR and PSP live in the File.
+ * Manage files at the bottom opens the same File view as the nav.
  * The resume opener sits in the top-right of the card.
  */
-export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps) {
+export default function CareerCardView({ onBack }: CareerCardViewProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
@@ -296,6 +298,17 @@ export default function CareerCardView({ onBack: _onBack }: CareerCardViewProps)
         }}
         onEditProfile={() => setShowProfileSetup(true)}
       />
+
+      <Button
+        type='button'
+        variant='primary'
+        size='lg'
+        onClick={onBack}
+        className='mt-4 w-full'
+      >
+        <FolderCheck className='h-5 w-5' aria-hidden />
+        Manage files
+      </Button>
 
       {sessionUserId && (
         <>

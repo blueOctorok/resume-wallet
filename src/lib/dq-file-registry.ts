@@ -65,7 +65,7 @@ export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
     cfrNote: '§391.23',
     blocksOverallCompletion: true,
     employerEmptyHint: 'No MVR on this driver’s file yet.',
-    driverEmptyHint: 'Complete screening consent to order your MVR (agency-sponsored).',
+    driverEmptyHint: 'Optional, and it costs money. Most drivers leave this until an employer asks. You can order one from here later.',
   },
   {
     id: 'psp',

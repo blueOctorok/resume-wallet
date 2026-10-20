@@ -1,8 +1,8 @@
 /**
  * Single primary action for the driver Career Card home.
  *
- * Priority matches the DQ spine: profile → DOT → screening consent →
- * MVR/PSP → anything else actionable from the journey. Never wallet.
+ * Resume upload and the license scan come first — both fill the DOT
+ * application. MVR and PSP stay in the File; they are not a card action.
  */
 
 import type { JourneyProgress, JourneyStep } from '@/lib/journey-progress'
@@ -18,21 +18,21 @@ export interface DriverNextAction {
 }
 
 const DRIVER_STEP_PRIORITY = [
-  'profile',
-  'driver-dot-application',
-  'driver-screening-consent',
-  'driver-mvr',
   'storm-resume',
   'driver-resume',
+  'driver-license',
+  'driver-dot-application',
+  'profile',
+  'driver-screening-consent',
 ] as const
 
 const LABELS: Record<string, string> = {
   profile: 'Finish your profile',
   'driver-dot-application': 'Start your DOT application',
   'driver-screening-consent': 'Sign screening consent',
-  'driver-mvr': 'Order your MVR',
-  'storm-resume': 'Build your resume',
-  'driver-resume': 'Build your resume',
+  'storm-resume': 'Upload your resume',
+  'driver-resume': 'Upload your resume',
+  'driver-license': 'Scan your license',
 }
 
 const CONTINUE_LABELS: Record<string, string> = {
@@ -51,12 +51,6 @@ export function getDriverNextAction(journey: JourneyProgress): DriverNextAction 
   for (const id of DRIVER_STEP_PRIORITY) {
     const step = byId.get(id)
     if (!step || !isActionable(step)) continue
-
-    // MVR "in progress" is waiting on the CRA — not something to click.
-    // PSP is employer-ordered and never a driver action (DEC-2026-10-001).
-    if (id === 'driver-mvr' && step.status === 'in_progress') {
-      continue
-    }
 
     const page: PageType = id === 'profile' ? null : (step.action?.target ?? null)
     const label =

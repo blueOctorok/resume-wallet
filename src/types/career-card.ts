@@ -152,6 +152,12 @@ export interface WorkHistoryData {
   verifiedCount: number
 }
 
+/** Barcode scan on the driver's own card. Photos are not stored. */
+export interface LicenseScanCardData {
+  confirmed: boolean
+  barcodeRead: boolean
+}
+
 /** Per-employer screening consent bundle (FCRA + FMCSA + CDLIS) — self card only */
 export interface ScreeningConsentData {
   bundles: Array<{
@@ -174,6 +180,7 @@ export type SectionDataMap = {
   'driver-mvr': MvrData
   'driver-psp': PspData
   'driver-cdl-credentials': CdlData
+  'driver-license': LicenseScanCardData
   'developer-portfolio': PortfolioData
   'developer-github': GitHubData
   'developer-projects': ProjectsData

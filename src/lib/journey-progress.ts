@@ -144,13 +144,16 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'storm-resume',
       label: 'Provven Resume',
-      description: 'Generated from your DOT application (or upload) — optional career card artifact',
+      description: 'Upload a resume first. It fills empty fields on your DOT application.',
       status: d.hasResume ? 'complete' : 'pending',
-      isOptional: true,
-      action: !d.hasResume ? { label: 'Open DOT to prefill', target: 'dotapp' } : undefined,
+      action: !d.hasResume ? { label: 'Upload resume', target: 'storm-resume' } : undefined,
     }],
-    // DOT is the spine — don't nudge resume as the primary next action
-    nextAction: () => null,
+    nextAction: (d) => !d.hasResume ? {
+      label: 'Upload your resume',
+      description: 'A resume upload fills empty fields on your DOT application.',
+      target: 'storm-resume',
+      priority: 'high',
+    } : null,
   },
 
   'driver-resume': {
@@ -284,22 +287,15 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'driver-mvr',
       label: 'Motor Vehicle Record',
-      description: 'Order your MVR for employer verification',
+      description: 'Lives in your file. An MVR costs money, so most drivers wait until an employer asks.',
       status: d.mvrComplete ? 'complete' : d.hasMvrOrder ? 'in_progress' : 'pending',
-      action: !d.mvrComplete
-        ? { label: d.hasMvrOrder ? 'View MVR status' : 'Order MVR', target: 'mvr' }
+      action: d.hasMvrOrder && !d.mvrComplete
+        ? { label: 'View MVR status', target: 'mvr' }
         : undefined,
       isOptional: true,
     }],
-    nextAction: (d) => {
-      if (d.mvrComplete || d.hasMvrOrder) return null
-      return {
-        label: 'Order MVR',
-        description: 'Add your driving record to boost your profile',
-        target: 'mvr',
-        priority: 'medium',
-      }
-    },
+    // Drivers are not nudged to buy an MVR from the card. The file still has it.
+    nextAction: () => null,
   },
 
   // PSP is employer-ordered only (DEC-2026-10-001) — no "order" nudge for drivers.
