@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isLicenseScanFields, type LicenseScanFields } from '@/lib/aamva-license'
 import { getLicenseScan, type LicenseScanRow } from '@/lib/block-data'
 import { deleteDocument } from '@/lib/document-storage'
-import { licenseScanStatus, presentLicenseScan } from '@/lib/license-scan-view'
+import { licenseScanStatus } from '@/lib/license-scan-view'
 import { paginateInMemory, textMatchesSearch } from '@/lib/admin-search'
 
 export interface AdminLicenseRecord {
@@ -21,10 +21,6 @@ export interface AdminLicenseRecord {
   address: string | null
   confirmedAt: string | null
   updatedAt: string
-  hasFront: boolean
-  hasBack: boolean
-  frontUrl: string | null
-  backUrl: string | null
 }
 
 function fieldsOf(row: LicenseScanRow): LicenseScanFields | null {
@@ -41,7 +37,6 @@ function toRecord(
   row: LicenseScanRow,
   name: string | null,
   email: string | null,
-  photos: { frontUrl: string | null; backUrl: string | null } = { frontUrl: null, backUrl: null },
 ): AdminLicenseRecord {
   const fields = fieldsOf(row)
   return {
@@ -60,10 +55,6 @@ function toRecord(
     address: addressOf(fields),
     confirmedAt: row.confirmed_at,
     updatedAt: row.updated_at,
-    hasFront: Boolean(row.front_storage_path),
-    hasBack: Boolean(row.back_storage_path),
-    frontUrl: photos.frontUrl,
-    backUrl: photos.backUrl,
   }
 }
 
@@ -92,7 +83,7 @@ function identity(
   return { name, email }
 }
 
-/** Every license on file. Photos are omitted here; open one record to sign them. */
+/** Every barcode read. Photos are not stored. */
 export async function listAdminLicenses(
   supabase: SupabaseClient,
   search: string,
@@ -127,19 +118,16 @@ export async function listAdminLicenses(
   return { licenses: paginateInMemory(licenses, offset, limit), total: licenses.length }
 }
 
-/** One license, with short-lived photo URLs. */
+/** One barcode read, without a photo. */
 export async function getAdminLicense(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<AdminLicenseRecord | null> {
   const row = await getLicenseScan(supabase, userId)
   if (!row) return null
-  const [{ profileById, emailById }, view] = await Promise.all([
-    namesFor(supabase, [userId]),
-    presentLicenseScan(supabase, userId),
-  ])
+  const { profileById, emailById } = await namesFor(supabase, [userId])
   const who = identity(userId, profileById, emailById)
-  return toRecord(row, who.name, who.email, { frontUrl: view.frontUrl, backUrl: view.backUrl })
+  return toRecord(row, who.name, who.email)
 }
 
 /** Remove the on-file scan. Does not touch CDL credentials the driver confirmed separately. */

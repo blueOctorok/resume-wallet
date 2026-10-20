@@ -8,9 +8,9 @@ import { presentLicenseScan } from '@/lib/license-scan-view'
 /**
  * GET /api/employer/dq-monitor/[userId]/license
  *
- * The same license scan the driver confirms on their license block: both
- * photos and the barcode read. Only for a driver already on this company's
- * status board. On file — not a verified record.
+ * The same barcode read the driver confirms on their license block.
+ * Only for a driver already on this company's status board.
+ * A read of the card — not a state record.
  */
 export async function GET(
   request: NextRequest,

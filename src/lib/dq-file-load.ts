@@ -108,7 +108,7 @@ const ORDER_COLS_RICH =
  * - MVR / PSP are **driver-owned artifacts** — any pull for this driver counts
  *   on every employer's board, regardless of who paid.
  * - Consent, employment verifications, and invites stay company-scoped.
- *   DOT app and license photos are driver-global.
+ *   DOT app and the license barcode read are driver-global.
  */
 async function loadCompanyDqRows(
   supabase: SupabaseClient,
@@ -233,10 +233,8 @@ export interface DriverFileDetail {
     endorsements: string[]
     restrictions: string[]
   } | null
-  /** License photos + what the barcode read. Class / state / expiry only — no number, DOB, or address. */
+  /** What the barcode read. Class / state / expiry only — no number, DOB, or address. */
   license: {
-    hasFront: boolean
-    hasBack: boolean
     barcodeStatus: LicenseScanRow['barcode_status']
     confirmedAt: string | null
     licenseClass: string | null
@@ -327,8 +325,6 @@ export async function loadDriverFileDetail(
         : null,
       license: scan
         ? {
-            hasFront: Boolean(scan.front_storage_path),
-            hasBack: Boolean(scan.back_storage_path),
             barcodeStatus: scan.barcode_status,
             confirmedAt: scan.confirmed_at,
             licenseClass: fields?.licenseClass || null,
@@ -667,8 +663,7 @@ export async function loadDqMonitorList(
   type LicenseRow = {
     id: string
     user_id: string
-    front_storage_path: string | null
-    back_storage_path: string | null
+    barcode_status: 'unread' | 'read' | 'failed'
     confirmed_at: string | null
     updated_at: string | null
   }
@@ -721,7 +716,7 @@ export async function loadDqMonitorList(
       fetchAllInChunks<LicenseRow>(candidateIds, 'license_scans', (chunk) =>
         supabase
           .from('block_driver_license')
-          .select('id, user_id, front_storage_path, back_storage_path, confirmed_at, updated_at')
+          .select('id, user_id, barcode_status, confirmed_at, updated_at')
           .in('user_id', chunk)
           .limit(1000),
       ),
@@ -833,8 +828,7 @@ export async function loadDqMonitorList(
       licenseScan: license
         ? {
             id: license.id,
-            hasFront: Boolean(license.front_storage_path),
-            hasBack: Boolean(license.back_storage_path),
+            started: license.barcode_status === 'read' || Boolean(license.confirmed_at),
             confirmedAt: license.confirmed_at,
             updatedAt: license.updated_at,
           }

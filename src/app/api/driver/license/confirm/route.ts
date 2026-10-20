@@ -8,8 +8,8 @@ import { checkDlNumberIsNotName } from '@/lib/screening-validation'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
- * The driver accepts the fields read from the card (or typed after a missed barcode).
- * This writes empty CDL, profile, and DOT fields. It does not create a proof.
+ * The driver accepts the fields read from the barcode.
+ * This writes CDL, profile, and DOT fields. It does not create a Midnight proof.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
     const existing = await getLicenseScan(supabase, userId)
-    if (!existing?.front_storage_path || !existing.back_storage_path) {
-      return NextResponse.json({ error: 'Photograph the front and the back before confirming' }, { status: 400 })
+    if (existing?.barcode_status !== 'read') {
+      return NextResponse.json({ error: 'Scan the barcode on the back of the license first' }, { status: 400 })
     }
 
     await saveLicenseScan(supabase, userId, {

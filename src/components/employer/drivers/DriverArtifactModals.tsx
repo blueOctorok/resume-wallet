@@ -62,7 +62,7 @@ export function DriverLicenseViewModal({ userId, onClose }: { userId: string; on
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-2xl" zIndex={10100} panelShape="block" panelClassName="!border-stone-200 !bg-white !ring-[#173150]/10">
-      <ModalHeader variant="block" title="Driver license" subtitle="On file from the card they photographed. Not a verified record." onClose={onClose} />
+      <ModalHeader variant="block" title="Driver license" subtitle="Read from the license barcode. Not a state record." onClose={onClose} />
       <div className="space-y-4 p-4">
         {!scan && !error && (
           <p className="flex items-center gap-2 text-sm text-ironside">
@@ -72,12 +72,8 @@ export function DriverLicenseViewModal({ userId, onClose }: { userId: string; on
         {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
         {scan && (
           <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <LicenseSide label="Front" url={scan.frontUrl} />
-              <LicenseSide label="Back" url={scan.backUrl} />
-            </div>
             {scan.barcodeStatus === 'failed' && (
-              <p className="text-sm text-dark-amber">The barcode did not read. The driver can type the fields from the card.</p>
+              <p className="text-sm text-dark-amber">These fields were entered by the driver. The barcode was not read.</p>
             )}
             {rows.length > 0 && (
               <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -94,21 +90,6 @@ export function DriverLicenseViewModal({ userId, onClose }: { userId: string; on
         )}
       </div>
     </Modal>
-  )
-}
-
-function LicenseSide({ label, url }: { label: string; url: string | null }) {
-  return (
-    <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
-      <p className="mb-2 text-sm font-semibold text-[#173150]">{label}</p>
-      {url ? (
-        // Signed storage URL, one-off preview. Next image optimization isn't useful here.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={`${label} of the license`} className="h-36 w-full rounded-lg object-contain" />
-      ) : (
-        <p className="flex h-36 items-center justify-center text-xs text-ironside">No photo yet</p>
-      )}
-    </div>
   )
 }
 

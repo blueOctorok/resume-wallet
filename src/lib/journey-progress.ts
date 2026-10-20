@@ -122,7 +122,7 @@ export interface BlockProgressData {
   employmentVerificationPending?: boolean
   /** Candidate has at least one Verified by Storm attestation issued */
   hasVerifiedAttestation?: boolean
-  /** Both license photos saved and the driver confirmed the barcode read. */
+  /** The driver confirmed a barcode read from the back of the license. */
   licenseOnFile?: boolean
 }
 
@@ -324,13 +324,13 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'driver-license',
       label: 'License on file',
-      description: 'Photograph your license so empty DOT fields can be filled from the card',
+      description: 'Scan the barcode on the back of your license',
       status: d.licenseOnFile ? 'complete' : 'pending',
       action: !d.licenseOnFile ? { label: 'Add your license', target: 'license' } : undefined,
     }],
     nextAction: (d) => !d.licenseOnFile ? {
       label: 'Add your license',
-      description: 'A photo of the card fills empty license fields. It stays on file until a record pull verifies it.',
+      description: 'A barcode read fills empty license fields. It is a read of the card until a record pull verifies it.',
       target: 'license',
       priority: 'high',
     } : null,

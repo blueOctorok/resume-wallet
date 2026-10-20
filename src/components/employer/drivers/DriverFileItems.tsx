@@ -75,11 +75,11 @@ function describe(
   switch (item.id) {
     case 'dl_images': {
       const l = d.license
-      if (!l || (!l.hasFront && !l.hasBack)) return { line: item.emptyHint }
-      const sides = l.hasFront && l.hasBack ? 'Front & back on file' : l.hasFront ? 'Front only' : 'Back only'
-      const read = l.barcodeStatus === 'read' ? [l.licenseClass && `Class ${l.licenseClass}`, l.state, l.expiration && `exp ${l.expiration}`].filter(Boolean).join(' · ') : null
+      if (!l || (l.barcodeStatus !== 'read' && !l.confirmedAt)) return { line: item.emptyHint }
+      const read = [l.licenseClass && `Class ${l.licenseClass}`, l.state, l.expiration && `exp ${l.expiration}`].filter(Boolean).join(' · ')
+      const source = l.barcodeStatus === 'read' ? 'Read from the license barcode' : 'Entered by the driver'
       return {
-        line: [sides, read, l.confirmedAt ? `confirmed ${fmtDate(l.confirmedAt)}` : 'not confirmed yet', 'On file — not a verified record'].filter(Boolean).join(' · '),
+        line: [read, l.confirmedAt ? `confirmed ${fmtDate(l.confirmedAt)}` : 'not confirmed yet', source].filter(Boolean).join(' · '),
         action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View license" onClick={a.onViewLicense} /> : undefined,
       }
     }

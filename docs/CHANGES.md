@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **License scan is a live barcode read, with no photo stored** (2026-10-20)
+
+The driver license block asked for a front photo and a back photo, then stored both. The barcode was the only useful part, and keeping the pictures was a trust problem. The block is now a live camera scan of the barcode on the back. The picture is decoded in the browser and never uploaded. The driver reviews the fields and confirms them. Those fields still fill empty profile spots and replace typed DOT license fields. An MVR still outranks the barcode. The label is "read from the license barcode." It is not a state record and not a Midnight proof.
+
+Older rows that were typed after a failed photo decode stay on the file as "entered by the driver." A new scan replaces them. Migration `124_drop_license_photos.sql` clears the photo paths. Supabase blocks a SQL delete of storage rows, so the picture files are removed with the Storage API.
+
+| File | Change |
+|---|---|
+| `src/components/blocks/LicenseBarcodeScanner.tsx` | Live camera PDF417 read |
+| `src/components/blocks/DriverLicenseBlock.tsx` | Scan, review, confirm. No upload |
+| `src/app/api/driver/license/scan/route.ts` | Saves parsed fields and drops any stored photo |
+| `src/lib/dq-file-status.ts` | Complete when the read is confirmed |
+| `supabase/migrations/124_drop_license_photos.sql` | Clears photo paths. Files go through the Storage API |
+| `public/zxing/zxing_reader.wasm` | Barcode reader used by the camera page |
+
+---
+
 ## **Employer hub stops calling consent MVRs and PSPs candidate-owned** (2026-10-19)
 
 A consent-form pull is stored with no company on the order so the report can travel with the driver. The employer hub was reading that empty company as “someone else”: the career card and outreach files said “candidate-owned,” and the driver status file said “On file via another employer” even when this company collected the consent. The ownership of the row is unchanged. The labels no longer say who owns it, and a completed consent from this company counts as this company’s order for the status line and the View report button. A pull whose company id is a different company still says it is on file via another employer, and that report stays closed.

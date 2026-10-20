@@ -33,7 +33,7 @@ export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionP
         </h3>
         {data.licenseOnFile ? (
           <span className={cn('ml-auto text-[10px] font-semibold uppercase tracking-wide', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            License on file
+            Barcode read
           </span>
         ) : null}
       </div>

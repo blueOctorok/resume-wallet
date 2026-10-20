@@ -41,7 +41,7 @@ export const MVR_FORM1_LOCK_PATHS: readonly DotFieldPath[] = [
 
 /**
  * Who last wrote a Form 1 lock path.
- * User-typed values have no entry. A license photo outranks those.
+ * User-typed values have no entry. A barcode read outranks those.
  * An MVR outranks the license, even when the string is identical —
  * the source change is the point.
  */

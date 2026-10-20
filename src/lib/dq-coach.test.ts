@@ -216,7 +216,7 @@ describe('heuristicDqReview discrepancies', () => {
     expect(flags.some((f) => f.title === 'MVR accidents missing on DOT')).toBe(true)
   })
 
-  it('puts the license photo next once the profile is filled and neither source is on file', () => {
+  it('puts the license barcode next once the profile is filled and neither source is on file', () => {
     const review = heuristicDqReview(
       snapshot({
         profile: {
@@ -236,13 +236,13 @@ describe('heuristicDqReview discrepancies', () => {
       }),
     )
     expect(review.next?.target).toBe('license')
-    expect(review.next?.title).toMatch(/photograph your license/i)
+    expect(review.next?.title).toMatch(/scan your license barcode/i)
     const steps = buildDqActionSteps(review)
     expect(steps[0]?.target).toBe('license')
     expect(steps.some((step) => step.target === 'mvr')).toBe(true)
   })
 
-  it('finishes the profile before the license photo, and still lists the photo', () => {
+  it('finishes the profile before the license barcode, and still lists the scan', () => {
     const review = heuristicDqReview(
       snapshot({
         profile: {
@@ -264,7 +264,7 @@ describe('heuristicDqReview discrepancies', () => {
     expect(buildDqActionSteps(review).some((step) => step.target === 'license')).toBe(true)
   })
 
-  it('keeps the license photo as Next when the model suggests something else', () => {
+  it('keeps the license barcode as Next when the model suggests something else', () => {
     const base = heuristicDqReview(
       snapshot({
         profile: {

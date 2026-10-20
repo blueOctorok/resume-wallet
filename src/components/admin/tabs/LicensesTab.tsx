@@ -12,7 +12,7 @@ function statusLabel(license: AdminLicenseRecord): string {
   if (license.status === 'complete') return 'Confirmed'
   if (license.barcodeStatus === 'failed') return 'Barcode failed'
   if (license.barcodeStatus === 'read') return 'Read, not confirmed'
-  return 'Photos only'
+  return 'Not scanned'
 }
 
 export default function LicensesTab({
@@ -148,7 +148,7 @@ export default function LicensesTab({
           />
           <div className='space-y-4 p-4 sm:p-5'>
             <p className={`text-xs ${muted}`}>
-              Read from the card the driver uploaded. This is on file, not a state record.
+              Read from the license barcode. Not a state record.
             </p>
             <dl className='grid grid-cols-2 gap-3 text-sm'>
               <Fact label='Number' value={open.licenseNumber} />
@@ -163,10 +163,6 @@ export default function LicensesTab({
                 <Fact label='Address' value={open.address} />
               </div>
             </dl>
-            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-              <Photo label='Front' url={open.frontUrl} missing={!open.hasFront} />
-              <Photo label='Back' url={open.backUrl} missing={!open.hasBack} />
-            </div>
           </div>
         </Modal>
       )}
@@ -179,22 +175,6 @@ function Fact({ label, value }: { label: string; value: string | null }) {
     <div>
       <dt className='text-xs font-medium text-gray-500 dark:text-gray-400'>{label}</dt>
       <dd className='mt-0.5 text-gray-900 dark:text-gray-100'>{value || '—'}</dd>
-    </div>
-  )
-}
-
-function Photo({ label, url, missing }: { label: string; url: string | null; missing: boolean }) {
-  return (
-    <div>
-      <p className='mb-1 text-xs font-medium text-gray-500 dark:text-gray-400'>{label}</p>
-      {url ? (
-        <a href={url} target='_blank' rel='noreferrer'>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={`${label} of license`} className='h-40 w-full rounded-lg object-contain bg-gray-100 dark:bg-gray-800' />
-        </a>
-      ) : (
-        <p className='text-sm text-gray-500 dark:text-gray-400'>{missing ? 'No photo' : 'Photo unavailable'}</p>
-      )}
     </div>
   )
 }

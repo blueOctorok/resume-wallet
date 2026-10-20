@@ -88,7 +88,7 @@ export function nextStepText(id: DqItemId, status: DqItemStatus): string {
     case 'psp':
       return `Consent signed but no ${label} order — re-order`
     case 'dl_images':
-      return status === 'missing' ? 'Driver needs to photograph their license' : 'License photos partly uploaded'
+      return status === 'missing' ? 'Driver needs to scan their license barcode' : 'Barcode read, not confirmed'
     case 'dot_application':
       return status === 'missing' ? 'Driver hasn’t started the DOT application' : 'DOT application in progress'
     case 'employment_verification':

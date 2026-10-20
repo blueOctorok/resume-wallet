@@ -395,18 +395,18 @@ function licenseScanFlag(status: DqItemStatus): DqCoachFlag {
   const finishing = status === 'in_progress'
   return {
     severity: 'warn',
-    title: finishing ? 'Finish your license photos' : 'Photograph your license',
+    title: finishing ? 'Confirm your barcode read' : 'Scan your license barcode',
     detail: finishing
-      ? 'Both sides need to be saved and confirmed. A confirmed license replaces what you typed on the DOT application.'
-      : 'A confirmed license replaces what you typed on the DOT application. An MVR replaces the license, even when the values match, and that record is the verified one.',
+      ? 'Confirm the fields from the barcode. A confirmed read replaces what you typed on the DOT application.'
+      : 'A confirmed barcode read replaces what you typed on the DOT application. An MVR replaces that read, even when the values match, and that record is the verified one.',
     target: 'license',
   }
 }
 
 /**
  * After the profile, the driver needs one source that can fill the DOT license
- * fields. The photo is the one they can do themselves. An MVR an employer
- * already asked for comes first, and the photo stays the next step in the list.
+ * fields. The barcode scan is the one they can do themselves. An MVR an employer
+ * already asked for comes first, and the scan stays the next step in the list.
  */
 function licenseOrMvrNext(snapshot: DqCoachSnapshot): DqCoachReview['next'] {
   const license = snapshot.dqItems.find((item) => item.id === 'dl_images')
@@ -424,7 +424,7 @@ function licenseOrMvrNext(snapshot: DqCoachSnapshot): DqCoachReview['next'] {
             ? 'An employer asked for your MVR'
             : 'Finish your MVR',
       detail:
-        'The MVR is the verified record and it fills the DOT application. Photographing the license fills the same empty fields and stays on the file.',
+        'The MVR is the verified record and it fills the DOT application. Scanning the license barcode fills the same empty fields.',
       target: 'mvr',
     }
   }
@@ -472,7 +472,7 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
   }
 
   // One card per live DQ hole. Placeholders stay in the packet list, not Next.
-  // The license photo is live: it is the step a driver can do before anyone orders an MVR.
+  // The license barcode is live: it is the step a driver can do before anyone orders an MVR.
   for (const item of snapshot.dqItems) {
     if (!getDqItemDefinition(item.id).blocksOverallCompletion) continue
     if (item.id === 'dl_images' && (item.status === 'missing' || item.status === 'in_progress')) {
@@ -595,7 +595,7 @@ export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoa
     flags.push(flag)
   }
   // Discrepancies are the floor — the model must not bury them under "add PSP".
-  // Profile, then a license photo, stay pinned the same way. The model was
+  // Profile, then a license barcode, stay pinned the same way. The model was
   // skipping the scan because it used to be a placeholder.
   const floorNext = nextFromDiscrepancies(flags)
   const pinned =
@@ -679,8 +679,8 @@ mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity 
 Write like a safety clerk talking to a driver. Never say filledCode, Accio, CRA, XML, Form 1, Form 2, Form 3, or vendor field names. Point the driver to Section 1, 2, or 3 if they need to open a part of the application.
 
 Rules:
-- Order for next, after any identity mismatch: (1) profile if name, phone, or email is missing, (2) photograph the license (target license) when dl_images is not complete and the MVR is not complete. An MVR that is already complete satisfies that step. Trust on the DOT application is typed values, then the license photo, then the MVR. The photo replaces what the driver typed and stays on file. The MVR replaces the photo, even when the values match, and that record is the verified one. Never call the photo verified, proven, or a Midnight proof.
-- Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven". A photographed license is on file.
+- Order for next, after any identity mismatch: (1) profile if name, phone, or email is missing, (2) scan the license barcode (target license) when dl_images is not complete and the MVR is not complete. An MVR that is already complete satisfies that step. Trust on the DOT application is typed values, then the barcode read, then the MVR. The barcode read replaces what the driver typed. The MVR replaces the barcode read, even when the values match, and that record is the verified one. Never call the barcode read verified, proven, or a Midnight proof.
+- Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven". A barcode read is a read of the card.
 - Do not invent violations, crashes, employers, or dates.
 - Be specific (names, state codes, dates from the snapshot).
 - List each missing DQ item as its own flag. Do not collapse them into watching.

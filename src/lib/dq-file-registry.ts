@@ -50,12 +50,12 @@ export interface DqItemDefinition {
 export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
   {
     id: 'dl_images',
-    label: 'Driver license (front & back)',
-    description: 'Photos of both sides of the license. Reading the card fills empty DOT license fields. On file — not a verified record.',
+    label: 'Driver license',
+    description: 'Barcode read from the back of the license. Fills DOT license fields. A read of the card — not a state record.',
     source: 'driver_upload',
     blocksOverallCompletion: true,
-    employerEmptyHint: 'Driver has not put a license on file yet.',
-    driverEmptyHint: 'Photograph the front and back. That fills empty license fields on your DOT application.',
+    employerEmptyHint: 'Driver has not scanned a license barcode yet.',
+    driverEmptyHint: 'Scan the barcode on the back of your license. That fills empty license fields on your DOT application.',
   },
   {
     id: 'mvr',

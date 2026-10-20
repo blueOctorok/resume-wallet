@@ -393,7 +393,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   {
     id: 'driver-license',
     label: 'Driver license',
-    description: 'Front and back of your license, read from the card and kept on file',
+    description: 'Scan the barcode on the back of your license. The picture is not saved.',
     icon: 'IdCard',
     categoryId: 'drivers',
     suggestedFor: ['driver', 'cdl', 'license', 'id', 'identification'],

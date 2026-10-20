@@ -349,7 +349,7 @@ export interface VerificationOutreachSummary {
   replyRateByAttempt: { attemptNumber: number; sent: number; replied: number; rate: number }[]
 }
 
-/** A driver license kept on file (photos + barcode read). Not a DMV record. */
+/** A driver license barcode read. Not a DMV record. */
 export interface AdminLicense {
   userId: string
   name: string | null
@@ -366,10 +366,6 @@ export interface AdminLicense {
   address: string | null
   confirmedAt: string | null
   updatedAt: string
-  hasFront: boolean
-  hasBack: boolean
-  frontUrl?: string | null
-  backUrl?: string | null
 }
 
 export interface Profile {

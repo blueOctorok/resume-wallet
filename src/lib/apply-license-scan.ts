@@ -2,10 +2,10 @@
  * Write a confirmed license scan onto the DOT application.
  *
  * Trust order on Form 1 identity and license fields:
- *   what the driver typed  <  the license photo  <  the MVR
+ *   what the driver typed  <  the barcode read  <  the MVR
  *
- * The photo replaces typed values and locks them. An MVR replaces the photo
- * later, even when the string is the same. An MVR lock is never overwritten.
+ * The barcode read replaces typed values and locks them. An MVR replaces that
+ * read later, even when the string is the same. An MVR lock is never overwritten.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'

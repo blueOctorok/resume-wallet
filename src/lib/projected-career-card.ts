@@ -697,7 +697,7 @@ async function fetchCdlData(
     cdlExpiration: row.cdl_expiration,
     endorsements: row.endorsements ?? [],
     restrictions: row.restrictions ?? [],
-    licenseOnFile: Boolean(license?.confirmed_at),
+    licenseOnFile: license?.barcode_status === 'read' && Boolean(license.confirmed_at),
   }
 }
 

@@ -193,7 +193,7 @@ export default function UserDetailModal({
                       <div><span className='opacity-60'>Expires:</span> {user.license.expirationDate || '-'}</div>
                     </div>
                     <p className={`mt-2 text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Photos and the full barcode read are on the Licenses tab.
+                      The barcode read is on the Licenses tab.
                     </p>
                   </div>
                 </div>

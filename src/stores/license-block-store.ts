@@ -12,7 +12,7 @@ interface LicenseBlockState {
   /** Labels of fields the last confirm wrote into empty spots. */
   filled: string[]
   load: () => Promise<void>
-  uploadSide: (side: 'front' | 'back', file: File) => Promise<void>
+  submitBarcode: (raw: string) => Promise<void>
   confirm: (fields: LicenseScanFields) => Promise<boolean>
   clearError: () => void
 }
@@ -32,30 +32,31 @@ export const useLicenseBlockStore = create<LicenseBlockState>((set) => ({
       const res = await fetch('/api/driver/license')
       const body = await res.json()
       if (!res.ok) {
-        set({ error: body.error ?? 'Could not load the license on file', isLoading: false })
+        set({ error: body.error ?? 'Could not load the license', isLoading: false })
         return
       }
       set({ scan: body.scan ?? null, isLoading: false })
     } catch {
-      set({ error: 'Could not load the license on file', isLoading: false })
+      set({ error: 'Could not load the license', isLoading: false })
     }
   },
 
-  uploadSide: async (side, file) => {
+  submitBarcode: async (raw) => {
     set({ isSaving: true, error: null, filled: [] })
     try {
-      const form = new FormData()
-      form.set('side', side)
-      form.set('file', file)
-      const res = await fetch('/api/driver/license', { method: 'POST', body: form })
+      const res = await fetch('/api/driver/license/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw }),
+      })
       const body = await res.json()
       if (!res.ok) {
-        set({ error: body.error ?? 'Could not save that photo', isSaving: false })
+        set({ error: body.error ?? 'Could not save that barcode read', isSaving: false })
         return
       }
       set({ scan: body.scan ?? null, isSaving: false })
     } catch {
-      set({ error: 'Could not save that photo', isSaving: false })
+      set({ error: 'Could not save that barcode read', isSaving: false })
     }
   },
 

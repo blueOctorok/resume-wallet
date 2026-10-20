@@ -116,11 +116,10 @@ export interface DqPendingRequestInput {
   createdAt?: string | null
 }
 
-/** Front/back license photos. Absent until migration 116 is applied. */
+/** A barcode read the driver confirmed. Absent until a scan is saved. */
 export interface DqLicenseScanInput {
   id: string
-  hasFront: boolean
-  hasBack: boolean
+  started: boolean
   confirmedAt?: string | null
   updatedAt?: string | null
 }
@@ -246,10 +245,10 @@ function mapOrderStatus(order: DqScreeningOrderInput | null): {
 function resolveDlImages(
   scan: DqLicenseScanInput | null | undefined,
 ): Pick<DqItemStatusResult, 'status' | 'updatedAt' | 'artifactRef'> {
-  if (!scan || (!scan.hasFront && !scan.hasBack)) {
+  if (!scan || (!scan.started && !scan.confirmedAt)) {
     return { status: 'missing', updatedAt: null, artifactRef: null }
   }
-  if (scan.hasFront && scan.hasBack && scan.confirmedAt) {
+  if (scan.confirmedAt) {
     return {
       status: 'complete',
       updatedAt: scan.confirmedAt,
