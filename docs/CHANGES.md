@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **File drops unbuilt checks; barcode name replaces a typed one** (2026-10-20)
+
+Manage files listed four items we are not building: criminal background check, DOT drug screen, CDLIS inquiry report, and FMCSA Clearinghouse. They are gone from the driver file and the employer DQ monitor. CDLIS written consent stays — that is the consent package, not the inquiry report. The medical card placeholder stays.
+
+A confirmed barcode read already replaced a typed name on the DOT application, and left the profile alone when a name was already there. That is why the file review could say "Barry Burton" does not match the DOT application. The barcode now replaces a typed name, date of birth, and address on the profile too. An MVR lock still wins over the barcode. Opening the file applies a confirmed read again, so a name that was typed before this change gets corrected without another scan.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-file-registry.ts` | Removed the four unbuilt file items. |
+| `src/lib/apply-license-scan.ts` | Barcode replaces typed profile identity, unless an MVR locked the field. |
+| `src/lib/dq-coach.ts` | File review applies a confirmed barcode read before it compares names. |
+
+---
+
 ## **Driver card leads with resume and license** (2026-10-20)
 
 The driver's career card was opening on the DOT application and still offering MVR and PSP as things to do on the card. Resume upload and a license barcode scan are the useful first steps, because both fill empty DOT fields. MVR and PSP stay in the File. An MVR costs money, so the card no longer asks a driver to order one.

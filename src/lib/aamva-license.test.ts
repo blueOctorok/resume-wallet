@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { aamvaDate, parseAamvaLicense } from '@/lib/aamva-license'
-import { softFillForm1FromLicense } from '@/lib/apply-license-scan'
+import { profilePatchFromLicense, softFillForm1FromLicense } from '@/lib/apply-license-scan'
 import type { DotForm1FieldProvenance } from '@/lib/dot-field-provenance'
 
 const SAMPLE = [
@@ -97,5 +97,54 @@ describe('softFillForm1FromLicense', () => {
     expect(license.licenseNumber).toBe('D1234567')
     expect(license.state).toBe('OH')
     expect(form1._fieldProvenance?.fields?.['currentLicenses.0.licenseNumber']?.source).toBe('license')
+  })
+})
+
+describe('profilePatchFromLicense', () => {
+  const fields = parseAamvaLicense(SAMPLE)!
+
+  it('replaces a typed profile name with the barcode name', () => {
+    const patch = profilePatchFromLicense(
+      { first_name: 'Barry', last_name: 'Burton', display_name: 'Barry Burton' },
+      fields,
+      null,
+    )
+    expect(patch.first_name).toBe('John')
+    expect(patch.last_name).toBe('Doe')
+    expect(patch.display_name).toBe('John Quincy Doe')
+  })
+
+  it('keeps an MVR-locked name instead of the barcode', () => {
+    const provenance: DotForm1FieldProvenance = {
+      version: 1,
+      fields: {
+        firstName: {
+          path: 'firstName',
+          source: 'mvr',
+          mvrResultId: 'mvr-1',
+          orderId: null,
+          accioOrderNumber: 'ACC-1',
+          asOf: '2026-01-01',
+          value: 'Jane',
+        },
+        lastName: {
+          path: 'lastName',
+          source: 'mvr',
+          mvrResultId: 'mvr-1',
+          orderId: null,
+          accioOrderNumber: 'ACC-1',
+          asOf: '2026-01-01',
+          value: 'Doe',
+        },
+      },
+    }
+    const patch = profilePatchFromLicense(
+      { first_name: 'Barry', last_name: 'Burton', display_name: 'Barry Burton' },
+      fields,
+      { firstName: 'Jane', lastName: 'Doe', _fieldProvenance: provenance },
+    )
+    expect(patch.first_name).toBe('Jane')
+    expect(patch.last_name).toBe('Doe')
+    expect(patch.display_name).toBe('Jane Quincy Doe')
   })
 })

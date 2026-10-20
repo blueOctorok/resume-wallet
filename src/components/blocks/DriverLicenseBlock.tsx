@@ -81,7 +81,7 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
           status={status}
         >
           <p className='text-sm text-gray-600 dark:text-gray-400'>
-            We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on the DOT application. An MVR replaces this read, even when the values match.
+            We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on your profile and the DOT application. An MVR replaces this read, even when the values match.
           </p>
           <div className='mt-4'>
             <LicenseScanHelp />

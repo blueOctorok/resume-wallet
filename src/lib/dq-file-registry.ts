@@ -16,10 +16,6 @@ export type DqItemId =
   | 'employment_verification'
   | 'dl_images'
   | 'med_card'
-  | 'criminal_bg'
-  | 'drug_screen'
-  | 'clearinghouse'
-  | 'cdlis_report'
 
 /** Who supplies the artifact in the real ops workflow. */
 export type DqItemSource =
@@ -115,42 +111,6 @@ export const DQ_ITEM_DEFINITIONS: DqItemDefinition[] = [
     blocksOverallCompletion: false,
     employerEmptyHint: 'Needs driver upload (coming soon).',
     driverEmptyHint: 'Upload coming soon — keep your med card ready.',
-  },
-  {
-    id: 'criminal_bg',
-    label: 'Criminal background check',
-    description: 'Criminal background report ordered through Key.',
-    source: 'key',
-    blocksOverallCompletion: false,
-    employerEmptyHint: 'Needs Key order (coming soon).',
-    driverEmptyHint: 'Ordered by your employer through Key when needed.',
-  },
-  {
-    id: 'drug_screen',
-    label: 'DOT drug screen',
-    description: 'Completed DOT drug screen results via Key.',
-    source: 'key',
-    blocksOverallCompletion: false,
-    employerEmptyHint: 'Needs Key order (coming soon).',
-    driverEmptyHint: 'Ordered by your employer through Key when needed.',
-  },
-  {
-    id: 'clearinghouse',
-    label: 'FMCSA Clearinghouse',
-    description: 'FMCSA Drug & Alcohol Clearinghouse query results.',
-    source: 'gov',
-    blocksOverallCompletion: false,
-    employerEmptyHint: 'Needs government / employer Clearinghouse query (coming soon).',
-    driverEmptyHint: 'Queried by your employer via FMCSA Clearinghouse.',
-  },
-  {
-    id: 'cdlis_report',
-    label: 'CDLIS inquiry report',
-    description: 'Full CDLIS report from Key. Distinct from written consent on file.',
-    source: 'key',
-    blocksOverallCompletion: false,
-    employerEmptyHint: 'Needs Key CDLIS inquiry (coming soon). Consent may already be on file.',
-    driverEmptyHint: 'Report ordered by your employer through Key when needed.',
   },
 ]
 

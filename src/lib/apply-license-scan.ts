@@ -4,8 +4,9 @@
  * Trust order on Form 1 identity and license fields:
  *   what the driver typed  <  the barcode read  <  the MVR
  *
- * The barcode read replaces typed values and locks them. An MVR replaces that
- * read later, even when the string is the same. An MVR lock is never overwritten.
+ * The barcode read replaces typed values on the DOT application and on the
+ * profile, and locks them. An MVR replaces that read later, even when the
+ * string is the same. An MVR lock is never overwritten.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -140,11 +141,12 @@ export async function applyConfirmedLicenseScan(
     await ensureHubBlockInstalled(supabase, userId, 'driver-cdl-credentials')
   }
 
-  const profileFilled = await fillEmptyProfile(supabase, userId, fields)
-  filled.push(...profileFilled)
-
   const { filled: dotFilled, form1 } = await fillDotApplication(supabase, userId, fields)
   filled.push(...dotFilled)
+
+  // Profile is second so an MVR-locked DOT name wins over the barcode.
+  const profileFilled = await fillProfileFromLicense(supabase, userId, fields, form1)
+  filled.push(...profileFilled)
 
   const cdlFilled = await fillCdlFromLicense(supabase, userId, fields, form1)
   filled.push(...cdlFilled)
@@ -213,32 +215,90 @@ async function fillCdlFromLicense(
   return filled
 }
 
-async function fillEmptyProfile(
-  supabase: SupabaseClient,
-  userId: string,
-  fields: LicenseScanFields,
-): Promise<string[]> {
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('first_name, last_name, date_of_birth, city, state, zip_code')
-    .eq('user_id', userId)
-    .maybeSingle()
+export interface ProfileIdentityRow {
+  first_name?: string | null
+  last_name?: string | null
+  display_name?: string | null
+  date_of_birth?: string | null
+  city?: string | null
+  state?: string | null
+  zip_code?: string | null
+}
 
+function sameIdentity(current: string | null | undefined, next: string): boolean {
+  const left = (current ?? '').trim().toLowerCase()
+  const right = next.trim().toLowerCase()
+  if (!right) return true
+  if (left === right) return true
+  // Dates come back from Postgres as YYYY-MM-DD or with a time suffix.
+  return left.slice(0, 10) === right.slice(0, 10) && /^\d{4}-\d{2}-\d{2}/.test(right)
+}
+
+/** Barcode value, unless an MVR already locked that DOT field. */
+function valueOverTyped(
+  barcode: string,
+  form1: Form1WithProvenance | null,
+  path: DotFieldPath,
+): string {
+  const locked = form1?._fieldProvenance?.fields?.[path]
+  if (locked?.source === 'mvr' && locked.value.trim()) return locked.value.trim()
+  return barcode.trim()
+}
+
+function mailingOverTyped(
+  barcode: string,
+  form1: Form1WithProvenance | null,
+  key: 'city' | 'state' | 'zipCode',
+): string {
+  const mailing = form1?.currentMailing as Record<string, unknown> | undefined
+  if (mailing?._source === 'mvr') return String(mailing[key] ?? '').trim()
+  return barcode.trim()
+}
+
+/**
+ * Fields to write onto the profile. A typed name, date of birth, or address
+ * is replaced. An empty barcode field is left alone. An MVR lock on the DOT
+ * application wins over the barcode, so the profile stays in agreement with it.
+ */
+export function profilePatchFromLicense(
+  profile: ProfileIdentityRow | null,
+  fields: LicenseScanFields,
+  form1: Form1WithProvenance | null,
+): Record<string, string> {
+  const first = valueOverTyped(fields.firstName, form1, 'firstName')
+  const middle = valueOverTyped(fields.middleName, form1, 'middleName')
+  const last = valueOverTyped(fields.lastName, form1, 'lastName')
   const patch: Record<string, string> = {}
-  const take = (column: string, value: string) => {
-    if (!value) return
-    const current = profile?.[column as keyof NonNullable<typeof profile>]
-    if (typeof current === 'string' && current.trim()) return
+  const take = (column: keyof ProfileIdentityRow, value: string) => {
+    if (!value || sameIdentity(profile?.[column], value)) return
     patch[column] = value
   }
 
-  take('first_name', fields.firstName)
-  take('last_name', fields.lastName)
-  take('date_of_birth', fields.dateOfBirth)
-  take('city', fields.city)
-  take('state', fields.state)
-  take('zip_code', fields.postalCode)
+  take('first_name', first)
+  take('last_name', last)
+  take('date_of_birth', valueOverTyped(fields.dateOfBirth, form1, 'dateOfBirth'))
+  take('city', mailingOverTyped(fields.city, form1, 'city'))
+  take('state', mailingOverTyped(fields.state, form1, 'state'))
+  take('zip_code', mailingOverTyped(fields.postalCode, form1, 'zipCode'))
 
+  const display = [first, middle, last].filter(Boolean).join(' ')
+  take('display_name', display)
+  return patch
+}
+
+async function fillProfileFromLicense(
+  supabase: SupabaseClient,
+  userId: string,
+  fields: LicenseScanFields,
+  form1: Form1WithProvenance | null,
+): Promise<string[]> {
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('first_name, last_name, display_name, date_of_birth, city, state, zip_code')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const patch = profilePatchFromLicense(profile, fields, form1)
   if (Object.keys(patch).length === 0) return []
 
   const { error } = await supabase

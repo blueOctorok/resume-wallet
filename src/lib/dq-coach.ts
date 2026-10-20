@@ -5,7 +5,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getCdlData, getDriverEmployment, getMvrData, getPspData } from '@/lib/block-data'
+import { getCdlData, getDriverEmployment, getLicenseScan, getMvrData, getPspData } from '@/lib/block-data'
+import { isLicenseScanFields } from '@/lib/aamva-license'
+import { applyConfirmedLicenseScan } from '@/lib/apply-license-scan'
 import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { getDqItemDefinition, type DqItemId } from '@/lib/dq-file-registry'
@@ -193,6 +195,10 @@ export async function buildDqCoachSnapshot(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<DqCoachSnapshot> {
+  // A confirmed barcode read outranks a name the driver typed. Do this before
+  // the snapshot is read, so the review compares the corrected profile and DOT app.
+  await alignTypedIdentityWithLicense(supabase, userId)
+
   const [
     { data: profile },
     { data: hubBlocks },
@@ -348,6 +354,20 @@ export async function buildDqCoachSnapshot(
   }
 }
 
+async function alignTypedIdentityWithLicense(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  const scan = await getLicenseScan(supabase, userId)
+  if (!scan?.confirmed_at || scan.barcode_status !== 'read') return
+  if (!isLicenseScanFields(scan.parsed_fields)) return
+  try {
+    await applyConfirmedLicenseScan(supabase, userId, scan.parsed_fields)
+  } catch (error) {
+    console.warn('[DQ COACH] license identity sync failed:', error)
+  }
+}
+
 function parseDay(raw: string | null | undefined): Date | null {
   if (!raw) return null
   // Date-only strings are UTC midnight — compare calendar days, not local clock.
@@ -397,8 +417,8 @@ function licenseScanFlag(status: DqItemStatus): DqCoachFlag {
     severity: 'warn',
     title: finishing ? 'Confirm your barcode read' : 'Scan your license barcode',
     detail: finishing
-      ? 'Confirm the fields from the barcode. A confirmed read replaces what you typed on the DOT application.'
-      : 'A confirmed barcode read replaces what you typed on the DOT application. An MVR replaces that read, even when the values match, and that record is the verified one.',
+      ? 'Confirm the fields from the barcode. A confirmed read replaces what you typed on your profile and the DOT application.'
+      : 'A confirmed barcode read replaces what you typed on your profile and the DOT application. An MVR replaces that read, even when the values match, and that record is the verified one.',
     target: 'license',
   }
 }
@@ -679,7 +699,7 @@ mvr.hasDiscrepancyAlert means the report itself flagged a violation or identity 
 Write like a safety clerk talking to a driver. Never say filledCode, Accio, CRA, XML, Form 1, Form 2, Form 3, or vendor field names. Point the driver to Section 1, 2, or 3 if they need to open a part of the application.
 
 Rules:
-- Order for next, after any identity mismatch: (1) profile if name, phone, or email is missing, (2) scan the license barcode (target license) when dl_images is not complete and the MVR is not complete. An MVR that is already complete satisfies that step. Trust on the DOT application is typed values, then the barcode read, then the MVR. The barcode read replaces what the driver typed. The MVR replaces the barcode read, even when the values match, and that record is the verified one. Never call the barcode read verified, proven, or a Midnight proof.
+- Order for next, after any identity mismatch: (1) profile if name, phone, or email is missing, (2) scan the license barcode (target license) when dl_images is not complete and the MVR is not complete. An MVR that is already complete satisfies that step. Trust is typed values, then the barcode read, then the MVR. A confirmed barcode read already replaced a typed name on the profile and the DOT application before this review. Do not flag a name the barcode has already corrected. The MVR replaces the barcode read, even when the values match, and that record is the verified one. Never call the barcode read verified, proven, or a Midnight proof.
 - Only MVR, PSP, and employer confirmations are "verified". Self-reported DOT/resume is never "proven". A barcode read is a read of the card.
 - Do not invent violations, crashes, employers, or dates.
 - Be specific (names, state codes, dates from the snapshot).

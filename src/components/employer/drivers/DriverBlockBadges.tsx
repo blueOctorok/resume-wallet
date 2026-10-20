@@ -5,11 +5,7 @@ import {
   Car,
   ClipboardList,
   FileSearch,
-  FileText,
-  FlaskConical,
   IdCard,
-  Landmark,
-  Shield,
   ShieldCheck,
   Stethoscope,
   type LucideIcon,
@@ -29,10 +25,6 @@ export const DQ_ITEM_ICONS: Record<DqItemId, LucideIcon> = {
   psp: FileSearch,
   employment_verification: Building2,
   med_card: Stethoscope,
-  criminal_bg: Shield,
-  drug_screen: FlaskConical,
-  clearinghouse: Landmark,
-  cdlis_report: FileText,
 }
 
 /** Short names that fit in a chip. Full labels come from the registry. */
@@ -44,10 +36,6 @@ export const DQ_ITEM_SHORT: Record<DqItemId, string> = {
   psp: 'PSP',
   employment_verification: 'EV',
   med_card: 'Med',
-  criminal_bg: 'BG',
-  drug_screen: 'Drug',
-  clearinghouse: 'CH',
-  cdlis_report: 'CDLIS',
 }
 
 export const DQ_STATUS_LABEL: Record<DqItemStatus, string> = {
