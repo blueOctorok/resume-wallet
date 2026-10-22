@@ -1,5 +1,5 @@
 /**
- * Client-side invite calls shared by the outreach board and the driver file.
+ * Client-side invite calls shared by New outreach and the driver file.
  * Pure fetch wrappers — callers own their own optimistic state.
  */
 

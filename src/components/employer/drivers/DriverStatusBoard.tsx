@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Loader2, RefreshCw, Search, Users } from 'lucide-react'
+import { ChevronRight, Loader2, Plus, RefreshCw, Search, Users } from 'lucide-react'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
@@ -11,6 +11,7 @@ import { BALL_LABEL, deriveDriverJourney, type BallInCourt } from '@/lib/driver-
 import { useDriverBoardStore, type DriverBoardFilter, type DriverRosterRow } from '@/stores/driver-board-store'
 import DriverBlockBadges, { BallPill } from './DriverBlockBadges'
 import DriverFileModal from './DriverFileModal'
+import NewOutreachModal from '@/components/employer/outreach/NewOutreachModal'
 
 const PAGE_SIZE = 15
 
@@ -52,8 +53,9 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
     setSearch,
     openDriver,
   } = useDriverBoardStore()
-  // Pagination is purely local list UX — nobody else needs it.
+  // Pagination and the invite modal are local list UX — nobody else needs them.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [showNewOutreach, setShowNewOutreach] = useState(false)
 
   useEffect(() => {
     void fetchRoster()
@@ -109,16 +111,22 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
               : 'Every driver you’re working, and whose move it is. Click a row for the full file.'
           }
           headerActions={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void fetchRoster(true)}
-              disabled={isRefreshing || isLoading}
-              aria-label="Refresh driver board"
-            >
-              <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="primary" size="sm" onClick={() => setShowNewOutreach(true)}>
+                <Plus className="h-4 w-4" />
+                New outreach
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void fetchRoster(true)}
+                disabled={isRefreshing || isLoading}
+                aria-label="Refresh driver board"
+              >
+                <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+              </Button>
+            </div>
           }
         >
           {isLoading && (
@@ -252,6 +260,12 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
       </HubSectionPanel>
 
       {selectedUserId && <DriverFileModal userId={selectedUserId} sessionUserId={sessionUserId} />}
+      {showNewOutreach && (
+        <NewOutreachModal
+          onClose={() => setShowNewOutreach(false)}
+          onSent={() => void fetchRoster(true)}
+        />
+      )}
     </>
   )
 }

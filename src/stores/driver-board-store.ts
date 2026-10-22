@@ -28,7 +28,7 @@ interface DriverBoardState {
   error: string | null
   filter: DriverBoardFilter
   search: string
-  /** Whoever's file is open — set from the board or from an outreach card. */
+  /** Whoever's file is open — set from a row on the status board. */
   selectedUserId: string | null
   fileByUserId: Record<string, DriverFile>
   fileLoading: boolean

@@ -1,16 +1,14 @@
 /**
  * One open outreach invite per company + block + email.
  *
- * The board shows one card per person (`outreach-person.ts`), so a second open
- * consent link would still be a second row the recruiter can resend by mistake.
- * Email is the identity we actually have at send time (most invites are created
- * before anyone has an account). The block is part of the key because a DOT
- * invite and a consent invite are two different asks — they share a card, but
- * sending consent must not overwrite the DOT link.
+ * Email is the identity we have at send time (most invites are created before
+ * anyone has an account). The block is part of the key because a DOT invite
+ * and a consent invite are two different asks — sending consent must not
+ * overwrite the DOT link.
  *
  * Only open invites count (pending / viewed / in_progress). A completed invite
- * stays on the board and does not block a fresh one, so a recruiter can
- * re-consent after a finished screening.
+ * does not block a fresh one, so a recruiter can re-consent after a finished
+ * screening.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'

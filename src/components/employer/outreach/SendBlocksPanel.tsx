@@ -110,7 +110,7 @@ export default function SendBlocksPanel({
   }
 
   // Everything sendable is already out — show the list as a status, not a form.
-  // Nudging happens via the Email/Text link tools in the card footer.
+  // A live invite is resent from the driver file.
   const allSent = blocks.every((b) => alreadySent?.has(b.id))
 
   return (

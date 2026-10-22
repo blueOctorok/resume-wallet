@@ -12,7 +12,7 @@ export interface StripStep {
 
 /**
  * Horizontal node/line progress strip. Purely presentational — callers derive
- * `steps` from their own data (see `deriveOutreachSteps`, `deriveDriverJourneySteps`).
+ * `steps` from their own data (see `deriveDriverJourneySteps`).
  * The first step that isn't done renders as "current" with the ember pulse.
  */
 export default function StepStrip({

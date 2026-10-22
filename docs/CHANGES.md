@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Outreach is an invite button on the status board** (2026-10-22)
+
+The employer hub had two pipelines for the same drivers. The status board already walks consent, reports, license, and DOT, including View report on MVR and PSP. The outreach kanban repeated that, so it is off the hub. **New outreach** on the status board opens the invite form (search or type a person, then send consent). Someone who has not created an account yet does not appear on the board until they do. The invite is still created.
+
+| File | Change |
+|---|---|
+| `src/components/EmployerHub.tsx` | Removed the outreach section and the hub-wide screenings fetch. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | New outreach button opens the invite modal and refreshes the roster after a send. |
+| `src/components/employer/outreach/NewOutreachModal.tsx` | The old create form, using `createAndDeliverInvites`. A link-only send stays open with the copied URL. |
+| Kanban UI | Deleted the board, cards, files vault, archive, and the helpers only they used (`outreach-person`, `outreach-attention`, `outreach-invite-buckets`, `useEmployerScreenings`). Invite APIs and the driver file stay. |
+
+---
+
 ## **Licenses table keeps Delete on screen** (2026-10-20)
 
 The Licenses table was wider than the admin panel, so View and Delete sat in a horizontal scroll. The table now uses the panel width. Long names, emails, and license numbers truncate, and the actions stay in the last column.

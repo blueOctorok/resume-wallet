@@ -1,12 +1,8 @@
 /**
- * Shared types for the redesigned employer outreach surface.
+ * Wire shapes for employer invites and paid screenings.
  *
- * These mirror the wire shapes returned by:
  *   - GET /api/employer/invites    → Invite
  *   - GET /api/employer/screenings → ScreeningRow
- *
- * Keeping them in one place lets the Active tab, Files vault, and Archive tab
- * all consume the same maps without each component re-declaring its own types.
  */
 
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
@@ -48,9 +44,9 @@ export interface Invite {
   candidatePhone: string | null
   candidateName: string | null
   status: InviteStatus
-  /** Row update time from DB — used to age completed invites off the Active board. */
+  /** Row update time from the database. */
   updatedAt: string
-  /** Legacy DB field; not used for board columns (see `outreach-invite-buckets`). */
+  /** Legacy DB field kept for API compatibility. */
   recruiterStatus: RecruiterStatus
   /** Employer notes on this outreach; null when empty. */
   recruiterNotes: string | null

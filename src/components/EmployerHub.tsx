@@ -5,7 +5,6 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
-import CandidateOutreach from './employer/CandidateOutreach'
 import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
@@ -37,11 +36,9 @@ import {
   CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { EmployerHubContext } from '@/lib/ava-context'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
-import { useEmployerScreenings } from '@/hooks/useEmployerScreenings'
 import DriverStatusBoard from '@/components/employer/drivers/DriverStatusBoard'
 import PendingCompanyView from '@/components/employer/PendingCompanyView'
 
@@ -181,14 +178,8 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
 
   // Employer blocks are preinstalled — the fetch auto-provisions server-side.
-  // CandidateOutreach reads the resulting installed list from this store itself.
+  // The status board and the New outreach modal read the installed list themselves.
   const fetchEmployerBlocks = useEmployerBlocksStore((s) => s.fetchEmployerBlocks)
-
-  // One screenings fetch shared across the Active outreach (per-card files) and
-  // the Files vault tab. Anchored to `driver_user_id` at the DB level so files
-  // outlive any invite state — even after an invite is cancelled/removed.
-  const screenings = useEmployerScreenings(sessionUserId)
-  const refreshScreenings = screenings.refresh
 
   // Company + role live in global nav — keep store in sync whenever hub payload changes.
   useEffect(() => {
@@ -234,21 +225,6 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       return next
     })
   }
-
-  /** Snapshot for Stormi system prompt (employer hiring context — not candidate blocks) */
-  const employerStormiContext = useMemo((): EmployerHubContext | null => {
-    if (!data) return null
-    return {
-      needsCompanySetup: Boolean(data.needsCompanySetup),
-      hasCompany: Boolean(data.company),
-      companyName: data.company?.name ?? null,
-      activeJobs: data.stats.activeJobs,
-      totalJobs: data.stats.totalJobs,
-      totalApplicants: data.stats.totalApplicants,
-      pipeline: { ...data.pipeline },
-      userRole: data.userRole ?? null,
-    }
-  }, [data])
 
   /** Employer hiring snapshot for `useEmployerHiringPathStore` / journey helpers (hub no longer shows job-path rail). */
   const hiringPayload = useMemo(() => {
@@ -363,17 +339,12 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
     void fetchEmployerBlocks(sessionUserId)
   }, [sessionUserId, data?.company?.id, fetchEmployerBlocks])
 
-  // Full hub refresh: main hub API + employer blocks store + screenings + invites (nonce).
+  // Full hub refresh: main hub API + employer blocks. The status board refreshes its own roster.
   const pullLatestEmployerHub = useCallback(async () => {
     if (!sessionUserId) return
     await fetchHubData(true)
-    if (sessionUserId) {
-      await Promise.all([
-        fetchEmployerBlocks(sessionUserId),
-        refreshScreenings(true),
-      ])
-    }
-  }, [sessionUserId, fetchHubData, fetchEmployerBlocks, refreshScreenings])
+    await fetchEmployerBlocks(sessionUserId)
+  }, [sessionUserId, fetchHubData, fetchEmployerBlocks])
 
   // Auto-refresh when tab becomes visible (solves stale data after changes in
   // other tabs). Always silent — we don't want a focus event to wipe the hub
@@ -541,26 +512,8 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
   return (
     <div className="w-full max-w-full overflow-x-hidden">
       <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-8 pb-28 max-xl:pb-32 xl:pb-0">
-      {/* ── Candidate outreach ───────────────────────────────────────────
-           All employer capabilities (consent, MVR, PSP, DOT) are preinstalled
-           server-side, so outreach is the first thing on the hub — no block
-           management UI in between.
-      ──────────────────────────────────────────────────────────────── */}
-      <div id="candidate-outreach" className="mb-8">
-        <CandidateOutreach
-          sessionUserId={sessionUserId}
-          screeningsRows={screenings.rows}
-          screeningsByUserId={screenings.byUserId}
-          screeningsLoading={screenings.loading}
-          screeningsError={screenings.error}
-          consentBundles={screenings.consentBundles}
-          consentBundleByUserId={screenings.consentBundleByUserId}
-          onRefreshScreenings={() => void screenings.refresh(true)}
-          employerContext={employerStormiContext}
-        />
-      </div>
-
-      {/* Driver status board — every driver, whose move it is; click opens the driver file */}
+      {/* Driver status board — every driver, whose move it is; click opens the driver file.
+          New outreach is a button on that board. */}
       <DriverStatusBoard sessionUserId={sessionUserId} />
 
       {SHOW_HUB_OPS_SECTIONS && (
@@ -571,7 +524,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
           paper
           icon={Users}
           title="Activity snapshot"
-          description="Pipeline, jobs, and applicants after outreach and screenings."
+          description="Pipeline, jobs, and applicants."
         >
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <StatCard
@@ -611,8 +564,8 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       </HubSectionPanel>
 
       {/* Quick actions removed — these page-level destinations now live in the Employer Hub
-          dropdown in the global nav (Find Talent, Post Job, Applicants, Company, Team). The
-          "New outreach" CTA lives in the Candidate outreach section header above. */}
+          dropdown in the global nav (Find Talent, Post Job, Applicants, Company, Team).
+          New outreach is a button on the driver status board. */}
 
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
@@ -672,7 +625,7 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
                 <EmptyState
                   icon={<Users className="w-12 h-12" />}
                   title="No applicants yet"
-                  description="Use New Outreach to invite candidates, or Find Talent to pull them in directly"
+                  description="Invite a driver from the status board, or Find Talent to pull them in directly"
                   actionLabel="Find Talent"
                   onAction={() => onNavigate('talent-search')}
                   theme={theme}
@@ -711,8 +664,6 @@ export default function EmployerHub({ sessionUserId, onNavigate }: EmployerHubPr
       </HubSectionPanel>
       </>
       )}
-
-      {/* CandidateOutreach is now embedded inside the "Blocks & outreach" section above */}
 
       {/* Candidate card modal — z-index 1000 */}
       {selectedApplicant && (
