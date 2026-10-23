@@ -171,7 +171,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     id: 'storm-resume',
     label: 'Provven Resume',
     description:
-      'Upload your own file or build a Provven-style resume — Professional, Driver, or Developer paths in one place.',
+      'Upload a PDF. The Provven resume itself is generated from the license, MVR, and DOT application.',
     icon: 'Sparkles',
     categoryId: 'general',
     suggestedFor: [

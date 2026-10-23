@@ -263,7 +263,7 @@ export default function ResumeSection({
         </p>
         {isCareerCardOwnerMode(mode) && onAction ? (
           <Button type='button' variant='primary' size='sm' className='mt-4' onClick={onAction}>
-            Upload or build
+            Upload
           </Button>
         ) : null}
       </div>

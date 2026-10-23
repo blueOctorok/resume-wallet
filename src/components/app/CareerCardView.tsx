@@ -48,6 +48,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
   const setShowPrefillUpload = useDotApplicationStore((s) => s.setShowPrefillUpload)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const journey = useJourneyProgress()
@@ -113,10 +114,17 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
 
   const goToBlock = useCallback(
     (blockType: string) => {
+      // A resume on the driver card is an upload. The builder is a leftover —
+      // the live resume is generated from the license, MVR, and DOT application.
+      if (blockType === 'storm-resume' || blockType === 'driver-resume') {
+        setStormResumeInitialPanel('upload')
+        setCurrentPage('storm-resume')
+        return
+      }
       const route = getBlockDefinition(blockType)?.pageRoute
       if (route) setCurrentPage(route as PageType)
     },
-    [setCurrentPage],
+    [setCurrentPage, setStormResumeInitialPanel],
   )
 
   const runNextAction = useCallback(() => {

@@ -938,17 +938,6 @@ export default function DriverHub({
                 <Upload className='w-4 h-4' />
                 Upload Resume
               </button>
-              <button
-                onClick={() => onNavigate('resume')}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  isDarkTheme(theme)
-                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
-                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
-                }`}
-              >
-                <Plus className='w-4 h-4' />
-                {data.resumes.length > 0 ? 'New Resume' : 'Add Resume'}
-              </button>
             </div>
           </div>
 
@@ -956,9 +945,9 @@ export default function DriverHub({
             <EmptyState
               icon={<FileText className='w-8 h-8' />}
               title='No resumes yet'
-              description='Upload or build your professional resume to get started'
-              actionLabel='Add Resume'
-              onAction={() => onNavigate('resume')}
+              description='Upload a PDF. Your Provven resume is generated from your license, MVR, and DOT application.'
+              actionLabel='Upload resume'
+              onAction={() => setShowUploadResumeModal(true)}
               theme={theme}
             />
           ) : (

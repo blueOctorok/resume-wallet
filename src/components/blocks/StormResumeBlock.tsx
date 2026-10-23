@@ -2,16 +2,15 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 /**
- * STORM Resume — one shell for upload + career-path guided builders.
- * Add new career tabs by extending `CAREER_TABS` and the panel switch below.
+ * Resume page. Upload is the driver entry. Builder panels stay only when an
+ * existing resume's Edit action asks for one.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Upload, Briefcase, Truck, Code2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import BlockCard, { type BlockStatus } from '@/components/ui/BlockCard'
-import Button from '@/components/ui/Button'
 import LoadingScreen from '@/components/LoadingScreen'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import ResumeUploadWithVerification from '@/components/ResumeUploadWithVerification'
@@ -34,17 +33,10 @@ const DeveloperResumeBuilder = dynamic(() => import('@/components/DeveloperResum
   loading: () => <LoadingScreen message='Loading developer resume…' fullScreen={false} />,
 })
 
-const CAREER_TABS: { id: Exclude<StormResumePanel, 'upload'>; label: string; Icon: typeof Briefcase }[] = [
-  /** "General" = universal / non-CDL / non-dev resume — not a tier above Driver or Developer */
-  { id: 'general', label: 'General', Icon: Briefcase },
-  { id: 'driver', label: 'Driver', Icon: Truck },
-  { id: 'developer', label: 'Developer', Icon: Code2 },
-]
-
 function readInitialPanelFromStore(): StormResumePanel {
   const p = useUIStore.getState().stormResumeInitialPanel
   if (p === 'upload' || p === 'general' || p === 'driver' || p === 'developer') return p
-  return 'general'
+  return 'upload'
 }
 
 interface StormResumeBlockProps {
@@ -59,10 +51,9 @@ export default function StormResumeBlock({ onBack }: StormResumeBlockProps) {
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const userAddress = (sessionUserId ?? sessionUserId ?? '').trim() || undefined
   const editingResumeId = useUIStore((s) => s.editingResumeId)
-  const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
 
-  const [panel, setPanel] = useState<StormResumePanel>(() => readInitialPanelFromStore())
+  const [panel] = useState<StormResumePanel>(() => readInitialPanelFromStore())
   const didMountClearInitial = useRef(false)
 
   useEffect(() => {
@@ -76,14 +67,6 @@ export default function StormResumeBlock({ onBack }: StormResumeBlockProps) {
     if (wa) await syncDriverHubFromApi(wa)
   }, [])
 
-  const selectPanel = useCallback(
-    (next: StormResumePanel) => {
-      if (next !== panel) setEditingResumeId(undefined)
-      setPanel(next)
-    },
-    [panel, setEditingResumeId],
-  )
-
   return (
     <div className='max-w-4xl mx-auto space-y-6 px-2 sm:px-0'>
       <BackToHubButton onClick={onBack} />
@@ -92,36 +75,10 @@ export default function StormResumeBlock({ onBack }: StormResumeBlockProps) {
         <BlockCard
           variant='embed'
           icon={Sparkles}
-          title='STORM Resume'
-          description='Upload a file or build for General, Driver, or Developer roles'
+          title='Resume'
+          description='Upload a PDF. Your Provven resume is generated from your license, MVR, and DOT application.'
           status={blockStatus}
         >
-        <div className='flex flex-wrap gap-1.5 p-1 rounded-xl border border-slate-300/90 dark:border-gray-700/50 bg-slate-50/90 dark:bg-gray-900/40 -mt-1 mb-4 sm:mb-5'>
-          <Button
-            type='button'
-            variant={panel === 'upload' ? 'primary' : 'ghost'}
-            size='sm'
-            className='flex-1 min-w-[5.5rem] sm:flex-none'
-            onClick={() => selectPanel('upload')}
-          >
-            <Upload className='w-4 h-4 shrink-0 sm:mr-1.5' />
-            <span className='hidden sm:inline'>Upload</span>
-          </Button>
-          {CAREER_TABS.map(({ id, label, Icon }) => (
-            <Button
-              key={id}
-              type='button'
-              variant={panel === id ? 'primary' : 'ghost'}
-              size='sm'
-              className='flex-1 min-w-[5.5rem] sm:flex-none'
-              onClick={() => selectPanel(id)}
-            >
-              <Icon className='w-4 h-4 shrink-0 sm:mr-1.5' />
-              <span className='hidden sm:inline'>{label}</span>
-            </Button>
-          ))}
-        </div>
-
         {panel === 'upload' && (
           <ResumeUploadWithVerification
             embedInParent

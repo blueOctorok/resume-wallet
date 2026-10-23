@@ -148,6 +148,7 @@ export default function SimpleCardPanel() {
   // use auth:<uuid> placeholder in sessionUserId).
   const isGuest = !user || !sessionUserId
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
   const installedBlocks = useInstalledBlocks()
@@ -202,6 +203,11 @@ export default function SimpleCardPanel() {
   const handleNavigateToBlock = useCallback(
     (blockType?: string) => {
       const bt = blockType ?? 'driver-dot-application'
+      if (bt === 'storm-resume' || bt === 'driver-resume') {
+        setStormResumeInitialPanel('upload')
+        setCurrentPage('storm-resume')
+        return
+      }
       if (RESUME_BLOCK_TYPES.has(bt) || bt === 'driver-dot-application') {
         const route = getBlockDefinition(bt)?.pageRoute
         if (route) setCurrentPage(route as PageType)
@@ -212,7 +218,7 @@ export default function SimpleCardPanel() {
       const route = getBlockDefinition(bt)?.pageRoute
       if (route) queueMicrotask(() => setCurrentPage(route as PageType))
     },
-    [setReturnToApply, setUiMode, setCurrentPage],
+    [setReturnToApply, setUiMode, setCurrentPage, setStormResumeInitialPanel],
   )
 
   const handleApply = useCallback(() => {

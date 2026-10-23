@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Add resume on the driver hub is an upload** (2026-10-23)
+
+The empty resume on a driver's card said "Upload or build" and opened the resume builder. That builder is leftover. The resume drivers show employers is generated from the license scan, MVR, and DOT application. The button now says Upload and opens the file upload. The General / Driver / Developer build tabs are gone from that page. Editing an existing built resume can still open its builder.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/sections/ResumeSection.tsx` | Button label is Upload. |
+| `src/components/app/CareerCardView.tsx` | Resume blocks open the upload page. |
+| `src/components/simple/SimpleCardPanel.tsx` | Same from the guided driver card. |
+| `src/components/blocks/StormResumeBlock.tsx` | Upload is the page. Build tabs removed. |
+| `src/components/DriverHub.tsx` | Empty state uploads a file. The extra Add Resume button is gone. |
+| `src/lib/journey-progress.ts` | Driver resume step points at the upload page. |
+| `src/lib/block-registry.ts` | Resume block description matches the upload. |
+
+---
+
 ## **Consent forms refuse a signature with blank order fields** (2026-10-23)
 
 Signing the background-check disclosure or the PSP authorization only checked the name, license number, and date of birth. License state, street, city, state, and ZIP could be left empty, and those blanks are what make an MVR or PSP come back unfilled. Both forms now use one check, the same fields the order sends, and they name every blank in the error. A short license number or a ZIP that is not 5 digits is rejected too.
