@@ -1,23 +1,20 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getBlockDefinition, type BlockDefinition } from '@/lib/block-registry'
 import LoadingScreen from '@/components/LoadingScreen'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
+import Button from '@/components/ui/Button'
 import {
   CheckCircle,
   AlertCircle,
   Clock,
   XCircle,
   ArrowRight,
-  Shield,
   Briefcase,
   MapPin,
-  Users,
-  Package,
 } from 'lucide-react'
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface InviteData {
   valid: boolean
@@ -36,17 +33,7 @@ interface InviteData {
   invalidReason: 'expired' | 'completed' | 'cancelled' | null
 }
 
-// ─── Dynamic landing content builder ─────────────────────────────────────────
-//
-// Instead of a 3-way TYPE_CONFIG switch, we generate everything from the block
-// registry. When someone adds a new block type in the future, the landing page
-// works automatically — no code changes needed here.
-
 interface LandingContent {
-  accent: string
-  accentLight: string
-  accentText: string
-  icon: React.ReactNode
   label: string
   headline: (company: string) => string
   description: (company: string) => string
@@ -58,55 +45,47 @@ interface LandingContent {
 
 function buildLandingContent(block: BlockDefinition | null): LandingContent {
   if (!block) {
-    // General invite — no specific block
     return {
-      accent: 'from-slate-700 to-slate-800',
-      accentLight: 'bg-slate-500/10 border-slate-500/30',
-      accentText: 'text-slate-300',
-      icon: <Users className="w-8 h-8 text-white" />,
-      label: 'Join Provven',
-      headline: (company) => `${company} invited you to Provven`,
+      label: 'Invitation',
+      headline: (company) => `${company} invited you`,
       description: (company) =>
-        `Provven is a blockchain-verified credential platform for professionals. ${company} is using it to find and verify top talent. Joining only takes a few minutes.`,
-      checklistTitle: "What you'll do:",
+        `${company} invited you to Provven. Create an account and add what they asked for. Only companies you authorize can see it.`,
+      checklistTitle: "What you'll do",
       checklist: [
-        'Create your free Provven account',
-        'Set up your professional profile',
-        'Add relevant credentials and documents',
+        'Create your Provven account',
+        'Set up your profile',
+        'Add the documents they asked for',
       ],
       timeEstimate: '5–10 minutes',
-      ctaLabel: 'Join Provven',
+      ctaLabel: 'Get started',
     }
   }
 
-  // Block-targeted invite — everything comes from the registry
   return {
-    accent: 'from-teal-600 to-teal-700',
-    accentLight: 'bg-teal-500/10 border-teal-500/30',
-    accentText: 'text-teal-400',
-    icon: <Package className="w-8 h-8 text-white" />,
     label: block.label,
     headline: (company) => `${company} wants you on their team`,
     description: (company) =>
-      `${company} has invited you to complete a ${block.label} through Provven — a secure, blockchain-verified platform. ${block.description}. Your data is stored safely and only shared with companies you authorize.`,
-    checklistTitle: "What you'll do:",
+      `${company} invited you to complete ${block.label} on Provven. ${block.description} Only companies you authorize can see what you submit.`,
+    checklistTitle: "What you'll do",
     checklist: [
-      'Create your free Provven account',
+      'Create your Provven account',
       `Complete your ${block.label}`,
       'Review and submit your information',
     ],
     timeEstimate: block.complexity === 'complex' ? '15–25 minutes' : block.complexity === 'moderate' ? '10–15 minutes' : '5–10 minutes',
-    ctaLabel: `Start My ${block.label}`,
+    ctaLabel: 'Get started',
   }
 }
 
-// ─── Error / state screens ────────────────────────────────────────────────────
-
-function StandaloneCard({ children }: { children: React.ReactNode }) {
+function StandaloneCard({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-8 text-center">
-        {children}
+    <div className="flex min-h-screen items-center justify-center bg-[#f3f4f5] p-4 text-[#173150]">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-sm">
+        <div className="flex justify-center bg-[#f3f4f5] px-6 py-4">
+          <ProvvenWordmark className="text-[15px]" tone="auto" />
+        </div>
+        <div className="h-[3px] bg-[#f15a2b]" aria-hidden />
+        <div className="px-8 py-8 text-center">{children}</div>
       </div>
     </div>
   )
@@ -122,29 +101,24 @@ function InvalidScreen({
   onGoHome: () => void
 }) {
   const config = {
-    expired: { icon: <Clock className="w-14 h-14 text-amber-400 mx-auto mb-4" />, title: 'Invite Expired', msg: 'This invite has expired. Contact the company for a new link.' },
-    completed: { icon: <CheckCircle className="w-14 h-14 text-green-400 mx-auto mb-4" />, title: 'Already Completed', msg: 'You have already completed this invitation. Thank you!' },
-    cancelled: { icon: <XCircle className="w-14 h-14 text-red-400 mx-auto mb-4" />, title: 'Invite Cancelled', msg: 'This invite has been cancelled by the company.' },
-    notfound: { icon: <AlertCircle className="w-14 h-14 text-red-400 mx-auto mb-4" />, title: 'Invite Not Found', msg: 'This link is not valid or has been removed.' },
+    expired: { icon: <Clock className="mx-auto mb-4 h-12 w-12 text-[#F28A0F]" />, title: 'Invite expired', msg: 'This invite has expired. Ask the company for a new link.' },
+    completed: { icon: <CheckCircle className="mx-auto mb-4 h-12 w-12 text-[#3F8A8C]" />, title: 'Already completed', msg: 'You already finished this invitation.' },
+    cancelled: { icon: <XCircle className="mx-auto mb-4 h-12 w-12 text-[#9b2c2c]" />, title: 'Invite cancelled', msg: 'The company cancelled this invite.' },
+    notfound: { icon: <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[#9b2c2c]" />, title: 'Invite not found', msg: 'This link is not valid.' },
   }[reason]
 
   return (
     <StandaloneCard>
       {config.icon}
-      <h1 className="text-2xl font-bold text-white mb-2">{config.title}</h1>
-      <p className="text-gray-400 mb-1">{config.msg}</p>
-      {companyName && <p className="text-gray-500 text-sm mt-2">Company: {companyName}</p>}
-      <button
-        onClick={onGoHome}
-        className="mt-6 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors"
-      >
+      <h1 className="mb-2 text-2xl font-bold text-[#173150]">{config.title}</h1>
+      <p className="text-[#173150]/80">{config.msg}</p>
+      {companyName && <p className="mt-2 text-sm text-[#939598]">{companyName}</p>}
+      <Button type="button" variant="primary" className="mt-6" onClick={onGoHome}>
         Go to Provven
-      </button>
+      </Button>
     </StandaloneCard>
   )
 }
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ApplyPage() {
   const params = useParams()
@@ -196,7 +170,6 @@ export default function ApplyPage() {
     )
   }
 
-  // Resolve block from registry (null for general invites)
   const blockDef = inviteData.invite.targetBlockType
     ? getBlockDefinition(inviteData.invite.targetBlockType) ?? null
     : null
@@ -205,121 +178,94 @@ export default function ApplyPage() {
   const company = inviteData.company
   const job = inviteData.job
   const invite = inviteData.invite
+  const companyName = company?.name || 'This company'
 
-  // For general invites, inject company name into checklist
-  const checklist = blockDef
-    ? [...cfg.checklist, `Connect directly with ${company?.name || 'top companies'}`]
-    : [...cfg.checklist.slice(0, 3), `Connect directly with ${company?.name || 'top companies'}`]
+  const checklist = [
+    ...cfg.checklist,
+    `Connect directly with ${company?.name || 'the company'}`,
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Minimal top bar */}
-      <div className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-teal-400" />
-            <span className="font-bold text-white tracking-tight">Provven</span>
-          </div>
-          <span className="text-xs text-gray-500">Blockchain-Verified Credentials</span>
-        </div>
+    <div className="min-h-screen bg-[#f3f4f5] text-[#173150]">
+      <div className="mx-auto flex max-w-xl justify-center px-4 py-5">
+        <ProvvenWordmark className="text-[15px]" tone="auto" />
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 py-10">
-        {/* Main card */}
-        <div className="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl">
-
-          {/* Hero gradient header */}
-          <div className={`bg-gradient-to-br ${cfg.accent} px-8 py-10`}>
-            <p className="text-white/60 text-sm font-semibold tracking-widest uppercase mb-2">
-              {company?.name || 'Company'}
+      <main className="mx-auto max-w-xl px-4 pb-12">
+        <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+          <div className="bg-[#173150] px-8 pb-6 pt-7 text-[#f4f1ea]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4f1ea]/70">
+              {companyName}
             </p>
-
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
-                {cfg.icon}
-              </div>
-              <span className="text-white/80 text-sm font-medium">{cfg.label}</span>
-            </div>
-
-            <h1 className="text-3xl font-bold text-white leading-tight">
-              {cfg.headline(company?.name || 'A Company')}
+            <p className="mt-3 text-sm text-[#f4f1ea]/80">{cfg.label}</p>
+            <h1 className="mt-1 text-3xl font-bold leading-tight">
+              {cfg.headline(companyName)}
             </h1>
-
             {job && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2">
-                <Briefcase className="w-4 h-4 text-white/70" />
-                <span className="text-white font-medium text-sm">{job.title}</span>
+              <div className="mt-4 inline-flex flex-wrap items-center gap-2 text-sm text-[#f4f1ea]/85">
+                <Briefcase className="h-4 w-4" aria-hidden />
+                <span className="font-medium">{job.title}</span>
                 {job.location && (
                   <>
-                    <span className="text-white/40">·</span>
-                    <MapPin className="w-3.5 h-3.5 text-white/60" />
-                    <span className="text-white/70 text-sm">{job.location}</span>
+                    <span aria-hidden>·</span>
+                    <MapPin className="h-3.5 w-3.5" aria-hidden />
+                    <span>{job.location}</span>
                   </>
                 )}
               </div>
             )}
           </div>
+          <div className="h-[3px] bg-[#f15a2b]" aria-hidden />
 
-          {/* Body */}
-          <div className="bg-gray-900 px-8 py-8">
+          <div className="px-8 py-8">
             {invite.welcomeMessage && (
-              <div className={`border rounded-xl p-4 mb-6 ${cfg.accentLight}`}>
-                <p className="text-gray-300 text-sm italic">&quot;{invite.welcomeMessage}&quot;</p>
-                <p className={`text-xs mt-2 ${cfg.accentText}`}>— {company?.name}</p>
-              </div>
+              <blockquote className="mb-6 border-l-[3px] border-[#f15a2b] pl-4">
+                <p className="text-sm text-[#173150]">&quot;{invite.welcomeMessage}&quot;</p>
+                <p className="mt-2 text-xs text-[#939598]">— {companyName}</p>
+              </blockquote>
             )}
 
-            <p className="text-gray-300 text-base leading-relaxed mb-6">
-              {cfg.description(company?.name || 'This company')}
+            <p className="mb-6 text-base leading-relaxed text-[#173150]/90">
+              {cfg.description(companyName)}
             </p>
 
-            <div className="bg-gray-800/60 rounded-xl p-5 mb-6 border border-gray-700/50">
-              <p className="text-white font-semibold text-sm mb-3">{cfg.checklistTitle}</p>
+            <div className="mb-6 rounded-xl bg-[#f3f4f5] p-5">
+              <p className="mb-3 text-sm font-semibold text-[#173150]">{cfg.checklistTitle}</p>
               <ul className="space-y-2.5">
-                {checklist.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
-                    <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+                {checklist.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#173150]">
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#f15a2b]" aria-hidden />
                     {item}
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-700/50">
-                <Clock className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-xs text-gray-500">Estimated time: {cfg.timeEstimate}</span>
+              <div className="mt-4 flex items-center gap-2 border-t border-[#173150]/10 pt-4">
+                <Clock className="h-3.5 w-3.5 text-[#939598]" aria-hidden />
+                <span className="text-xs text-[#939598]">Estimated time: {cfg.timeEstimate}</span>
               </div>
             </div>
 
-            <button
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className="w-full"
               onClick={handleStart}
               disabled={starting}
-              className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-bold text-lg text-white transition-all ${
-                starting
-                  ? 'bg-gray-700 cursor-wait'
-                  : 'bg-teal-600 hover:bg-teal-500 shadow-lg shadow-teal-900/30 active:scale-[0.99]'
-              }`}
+              isLoading={starting}
             >
-              {starting ? (
-                <>
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                <>
-                  {cfg.ctaLabel}
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+              {cfg.ctaLabel}
+              {!starting && <ArrowRight className="h-5 w-5" aria-hidden />}
+            </Button>
 
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
-              <Shield className="w-3.5 h-3.5 text-teal-500" />
-              <span>Blockchain-verified · Only {company?.name || 'this company'} sees your data</span>
-            </div>
+            <p className="mt-5 text-center text-xs text-[#939598]">
+              Only companies you authorize can see what you submit.
+            </p>
           </div>
         </div>
 
         {invite.expiresAt && (
-          <p className="text-center text-xs text-gray-600 mt-4">
+          <p className="mt-4 text-center text-xs text-[#939598]">
             This invite expires on {new Date(invite.expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         )}

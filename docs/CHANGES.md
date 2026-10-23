@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Screening invite page uses the paper header** (2026-10-23)
+
+`/apply/{token}` was still the old dark card: an ember-to-navy gradient, and a line calling the consent invite blockchain-verified. Signing a disclosure is not a verified record. The page now uses brand paper, the shield lockup, a solid Midnight header, and a 3px Hot Embers rule — the same frame as the consent forms and the emails.
+
+| File | Change |
+|---|---|
+| `src/app/apply/[token]/page.tsx` | Invite landing and the expired/invalid states. |
+
+---
+
 ## **License name replaces the typed name on the career card** (2026-10-23)
 
 The empty resume row was a dashed box. It now matches the other rows: title, one line, and the button on the right.
