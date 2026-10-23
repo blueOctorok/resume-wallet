@@ -739,30 +739,33 @@ export default function DotApplicationFlow({
   const renderFormStepTabs = () => {
     if (dotApp.isApplicationCompleted || showEmploymentVerification) return null
     const steps = [
-      { id: 1, label: 'Section 1', sublabel: 'Personal Info' },
-      { id: 2, label: 'Section 2', sublabel: 'Driving & Records' },
-      { id: 3, label: 'Section 3', sublabel: 'Employment & Signature' },
+      { id: 1, label: 'Section 1', short: 'Personal', sublabel: 'Personal Info' },
+      { id: 2, label: 'Section 2', short: 'Driving', sublabel: 'Driving & Records' },
+      { id: 3, label: 'Section 3', short: 'Employment', sublabel: 'Employment & Signature' },
     ]
     return (
-      <div className='flex justify-center mb-8 px-4'>
-        <div className='flex space-x-4'>
-          {steps.map((step) => (
-            <button
-              key={step.id}
-              onClick={() => handleFormNavigation(step.id)}
-              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-                dotApp.currentForm === step.id
-                  ? 'bg-[#173150] text-white shadow-lg'
-                  : 'border-2 border-ironside/30 bg-white text-[#173150] hover:bg-stone-50'
-              }`}
-            >
-              <div className='text-center'>
-                <div className='font-bold text-base'>{step.label}</div>
-                <div className='text-sm opacity-90'>{step.sublabel}</div>
-              </div>
-            </button>
-          ))}
-        </div>
+      <div className='mb-6 grid grid-cols-3 gap-1.5'>
+        {steps.map((step) => (
+          <button
+            key={step.id}
+            type='button'
+            onClick={() => handleFormNavigation(step.id)}
+            className={`min-w-0 rounded-lg px-1.5 py-2 text-center transition-colors sm:px-4 sm:py-3 ${
+              dotApp.currentForm === step.id
+                ? 'bg-[#173150] text-white shadow-sm'
+                : 'border-2 border-ironside/30 bg-white text-[#173150] hover:bg-stone-50'
+            }`}
+          >
+            <div className='text-xs font-bold leading-tight sm:text-base'>
+              <span className='sm:hidden'>{step.id}</span>
+              <span className='hidden sm:inline'>{step.label}</span>
+            </div>
+            <div className='mt-0.5 text-[10px] font-medium leading-tight sm:text-sm'>
+              <span className='sm:hidden'>{step.short}</span>
+              <span className='hidden sm:inline'>{step.sublabel}</span>
+            </div>
+          </button>
+        ))}
       </div>
     )
   }

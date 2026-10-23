@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT form controls fit a phone** (2026-10-23)
+
+On a phone the three section tabs broke their labels ("Section" on one line, "2" on the next), and Previous, Save, and Next wrapped so Next sat alone on the left. The tabs are now three equal columns with a short label. The step buttons stack full width, and sit in one row again from the small breakpoint up.
+
+| File | Change |
+|---|---|
+| `src/components/app/DotApplicationFlow.tsx` | Section tabs. |
+| `src/components/driver-application/DotFormStepNav.tsx` | Previous, Save, Next. |
+| `src/components/driver-application/SaveProgressButton.tsx` | Save matches the full-width stack. |
+
+---
+
 ## **Screening invite page uses the paper header** (2026-10-23)
 
 `/apply/{token}` was still the old dark card: an ember-to-navy gradient, and a line calling the consent invite blockchain-verified. Signing a disclosure is not a verified record. The page now uses brand paper, the shield lockup, a solid Midnight header, and a 3px Hot Embers rule — the same frame as the consent forms and the emails.

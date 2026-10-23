@@ -156,12 +156,12 @@ export default function SaveProgressButton({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex w-full items-center justify-center gap-3 sm:w-auto">
       <button
         type="button"
         onClick={handleSave}
         disabled={saveState === 'saving' || !sessionUserId || !onSaveProgress}
-        className={getButtonStyles()}
+        className={`${getButtonStyles()} w-full justify-center sm:w-auto`}
         title={!sessionUserId ? 'Sign in to save' : !onSaveProgress ? 'Save not available' : 'Save all forms to your profile'}
       >
         {renderIcon()}

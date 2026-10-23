@@ -32,20 +32,21 @@ export default function DotFormStepNav({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 px-6 py-6 border-t-2 ${
+      className={`flex flex-col gap-2 border-t-2 px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:py-6 ${
         isDarkTheme(theme) ? 'border-gray-700' : 'border-gray-200'
       }`}
     >
       <Button
         type='button'
         variant='secondary'
+        className='w-full sm:w-auto'
         onClick={onPrevious}
         disabled={currentStep === 1}
       >
         Previous
       </Button>
 
-      <div className='flex flex-wrap items-center justify-center gap-2'>
+      <div className='flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto'>
         <SaveProgressButton
           onSaveProgress={onSaveProgress}
           sessionUserId={sessionUserId}
@@ -54,7 +55,7 @@ export default function DotFormStepNav({
           <button
             type='button'
             onClick={onFillTestData}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium shadow ${
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium shadow ${
               isDarkTheme(theme)
                 ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
                 : 'bg-yellow-500 text-white hover:bg-yellow-400'
@@ -67,7 +68,7 @@ export default function DotFormStepNav({
         )}
       </div>
 
-      <Button type='button' variant='primary' onClick={onNext}>
+      <Button type='button' variant='primary' className='w-full sm:w-auto' onClick={onNext}>
         {nextLabel}
       </Button>
     </div>
