@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   consentBoardLine,
+  isRecentConsentSent,
   rosterWhereLine,
   screeningBoardLine,
+  signedUpWithoutConsentInvite,
 } from '@/lib/dq-board-lines'
 
 describe('consentBoardLine', () => {
@@ -34,6 +36,57 @@ describe('consentBoardLine', () => {
 
   it('says not sent when nothing has gone out', () => {
     expect(consentBoardLine({ status: 'missing' })).toBe('Not sent')
+  })
+})
+
+describe('isRecentConsentSent', () => {
+  const now = Date.parse('2026-10-23T16:00:00Z')
+
+  it('includes a consent sent within the last 7 days', () => {
+    expect(isRecentConsentSent('2026-10-17T16:00:00Z', now)).toBe(true)
+  })
+
+  it('drops a consent sent more than 7 days ago', () => {
+    expect(isRecentConsentSent('2026-10-16T15:59:00Z', now)).toBe(false)
+  })
+
+  it('drops a missing send time', () => {
+    expect(isRecentConsentSent(null, now)).toBe(false)
+  })
+})
+
+describe('signedUpWithoutConsentInvite', () => {
+  const invitedUserIds = new Set(['invited-user'])
+  const invitedEmails = new Set(['sent@example.com'])
+
+  it('keeps someone this company never sent a consent invite', () => {
+    expect(
+      signedUpWithoutConsentInvite({
+        userId: 'new-user',
+        email: 'new@example.com',
+        invitedUserIds,
+        invitedEmails,
+      }),
+    ).toBe(true)
+  })
+
+  it('drops someone the invite was claimed by, or whose email was already sent a consent', () => {
+    expect(
+      signedUpWithoutConsentInvite({
+        userId: 'invited-user',
+        email: 'other@example.com',
+        invitedUserIds,
+        invitedEmails,
+      }),
+    ).toBe(false)
+    expect(
+      signedUpWithoutConsentInvite({
+        userId: 'new-user',
+        email: 'Sent@example.com',
+        invitedUserIds,
+        invitedEmails,
+      }),
+    ).toBe(false)
   })
 })
 

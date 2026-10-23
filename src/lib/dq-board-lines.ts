@@ -44,6 +44,32 @@ function clip(text: string): string {
   return `${clean.slice(0, 157)}…`
 }
 
+/** How far back Recent looks. A week is the batch HR is still chasing. */
+export const RECENT_CONSENT_DAYS = 7
+
+export function isRecentConsentSent(sentAt: string | null | undefined, now = Date.now()): boolean {
+  if (!sentAt) return false
+  const t = Date.parse(sentAt)
+  if (Number.isNaN(t)) return false
+  return now - t <= RECENT_CONSENT_DAYS * 86400000 && t <= now
+}
+
+/**
+ * They created an account without this company sending a screening-consent invite.
+ * Matched on the user id the invite was claimed under, or on the email it was sent to.
+ */
+export function signedUpWithoutConsentInvite(input: {
+  userId: string
+  email: string | null
+  invitedUserIds: ReadonlySet<string>
+  invitedEmails: ReadonlySet<string>
+}): boolean {
+  if (input.invitedUserIds.has(input.userId)) return false
+  const email = input.email?.trim().toLowerCase()
+  if (email && input.invitedEmails.has(email)) return false
+  return true
+}
+
 export interface ConsentInviteSnap {
   status: string
   viewCount: number

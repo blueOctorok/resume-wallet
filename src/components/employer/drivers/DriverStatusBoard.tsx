@@ -7,8 +7,8 @@ import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
-import { BALL_LABEL, deriveDriverJourney, type BallInCourt } from '@/lib/driver-journey'
-import { rosterWhereLine } from '@/lib/dq-board-lines'
+import { BALL_LABEL, DRIVER_JOURNEY_ORDER, deriveDriverJourney, type BallInCourt } from '@/lib/driver-journey'
+import { isRecentConsentSent, rosterWhereLine } from '@/lib/dq-board-lines'
 import type { DqItemId } from '@/lib/dq-file-registry'
 import { useDriverBoardStore, type DriverBoardFilter, type DriverRosterRow } from '@/stores/driver-board-store'
 import DriverBlockBadges, { BallPill, DQ_ITEM_SHORT, DqStatusBadge } from './DriverBlockBadges'
@@ -18,11 +18,30 @@ import NewOutreachModal from '@/components/employer/outreach/NewOutreachModal'
 
 const PAGE_SIZE = 15
 
-/** Chip order. The list itself is newest activity first — see the sort below. */
-const BALL_ORDER: BallInCourt[] = ['attention', 'you', 'processing', 'driver', 'done']
+/**
+ * Left-to-right is the life of a file after a consent goes out: the driver acts,
+ * a check runs, something fails, or the file is done. Recent and Signed up sit
+ * beside All. The list stays newest-activity first, except those two pills.
+ */
+const BALL_ORDER: BallInCourt[] = ['driver', 'processing', 'attention', 'done']
 
-/** Document pills sit to the right of the journey pills. Order is the one HR scans. */
-const DOC_PILLS: DqItemId[] = ['cdlis_consent', 'mvr', 'dl_images', 'psp', 'dot_application', 'employment_verification']
+const BALL_HINT: Record<BallInCourt, string> = {
+  you: 'You still need to send consent, order a report, or start employment verification',
+  driver: 'The driver has the link or the forms and has not finished',
+  processing: 'A report or employment check is already running',
+  attention: 'An MVR, PSP, or employment check failed',
+  done: 'Every live item on the file is complete',
+}
+
+const RECENT_HINT = 'Consents sent in the last 7 days, newest first'
+const SIGNED_UP_HINT = 'Created an account on their own. You have not sent them a consent invite.'
+
+function chipTitle(id: DriverBoardFilter): string {
+  if (id === 'all') return 'Every driver on the board'
+  if (id === 'recent') return RECENT_HINT
+  if (id === 'signed-up') return SIGNED_UP_HINT
+  return BALL_HINT[id]
+}
 
 const RECRUITER_EMAIL_KEY = 'provven-hr-recruiter-email'
 
@@ -97,26 +116,48 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
     [roster],
   )
 
-  const counts = useMemo(() => {
-    const c: Record<BallInCourt, number> = { attention: 0, you: 0, processing: 0, driver: 0, done: 0 }
-    for (const r of rows) c[r.journey.ball] += 1
-    return c
-  }, [rows])
+  const rosterRows = rows.filter((r) => !r.row.recentConsentOnly)
+  const counts: Record<BallInCourt, number> = { attention: 0, you: 0, processing: 0, driver: 0, done: 0 }
+  for (const r of rosterRows) counts[r.journey.ball] += 1
+  const recentCount = rows.filter((r) => isRecentConsentSent(r.row.consentSentAt)).length
+  const signedUpCount = rosterRows.filter((r) => r.row.signedUpOnOwn).length
 
   const q = search.trim().toLowerCase()
-  const filtered = rows.filter(
-    ({ row, journey }) => (filter === 'all' || journey.ball === filter) && (!q || row.name.toLowerCase().includes(q)),
-  )
+  const filtered = rows.filter(({ row, journey }) => {
+    const matches =
+      !q || row.name.toLowerCase().includes(q) || (row.recentConsentOnly && (row.headline ?? '').toLowerCase().includes(q))
+    if (!matches) return false
+    if (filter === 'recent') return isRecentConsentSent(row.consentSentAt)
+    if (row.recentConsentOnly) return false
+    if (filter === 'signed-up') return row.signedUpOnOwn
+    return filter === 'all' || journey.ball === filter
+  })
+  if (filter === 'recent') {
+    filtered.sort(
+      (a, b) =>
+        (Date.parse(b.row.consentSentAt ?? '') || 0) - (Date.parse(a.row.consentSentAt ?? '') || 0) ||
+        a.row.name.localeCompare(b.row.name),
+    )
+  }
+  if (filter === 'signed-up') {
+    filtered.sort(
+      (a, b) =>
+        (Date.parse(b.row.accountCreatedAt ?? '') || 0) - (Date.parse(a.row.accountCreatedAt ?? '') || 0) ||
+        a.row.name.localeCompare(b.row.name),
+    )
+  }
   const visible = filtered.slice(0, visibleCount)
   const remaining = filtered.length - visible.length
 
   const chips: Array<{ id: DriverBoardFilter; label: string; count: number }> = [
-    { id: 'all', label: 'All', count: rows.length },
+    { id: 'all', label: 'All', count: rosterRows.length },
+    { id: 'recent', label: 'Recent', count: recentCount },
+    { id: 'signed-up', label: 'Signed up', count: signedUpCount },
     ...BALL_ORDER.map((b) => ({ id: b, label: BALL_LABEL[b], count: counts[b] })),
   ]
 
   const docCounts = Object.fromEntries(
-    DOC_PILLS.map((id) => [id, filtered.filter(({ row }) => row.items.find((item) => item.id === id)?.status === 'complete').length]),
+    DRIVER_JOURNEY_ORDER.map((id) => [id, filtered.filter(({ row }) => row.items.find((item) => item.id === id)?.status === 'complete').length]),
   ) as Record<DqItemId, number>
 
   const emailDrivers = filtered.map(({ row, journey }) => ({
@@ -201,6 +242,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                     <button
                       key={chip.id}
                       type="button"
+                      title={chipTitle(chip.id)}
                       onClick={() => setFilter(chip.id)}
                       className={cn(
                         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
@@ -215,7 +257,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                       <span
                         className={cn(
                           'rounded-full px-1.5 text-[10px] tabular-nums',
-                          active ? 'bg-white/20' : chip.id === 'you' && chip.count > 0 ? 'bg-[#f15a2b] text-white' : 'bg-stone-100',
+                          active ? 'bg-white/20' : chip.id === 'recent' && chip.count > 0 ? 'bg-[#f15a2b] text-white' : 'bg-stone-100',
                         )}
                       >
                         {chip.count}
@@ -224,7 +266,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                   )
                 })}
                 <span className="mx-1 hidden h-4 w-px bg-stone-200 sm:block" aria-hidden />
-                {DOC_PILLS.map((id) => {
+                {DRIVER_JOURNEY_ORDER.map((id) => {
                   const active = focus === id
                   const count = docCounts[id]
                   return (
@@ -264,7 +306,13 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
 
               {filtered.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-stone-200 px-4 py-8 text-center">
-                  <p className="text-sm text-ironside">No drivers match.</p>
+                  <p className="text-sm text-ironside">
+                    {filter === 'recent'
+                      ? 'No consents sent in the last 7 days.'
+                      : filter === 'signed-up'
+                        ? 'No one has signed up on their own.'
+                        : 'No drivers match.'}
+                  </p>
                   <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={() => { setSearch(''); setFilter('all'); setFocus(null) }}>
                     Clear filters
                   </Button>
@@ -276,7 +324,10 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                       <li key={row.userId}>
                         <button
                           type="button"
-                          onClick={() => openDriver(row.userId)}
+                          onClick={() => {
+                            if (!row.recentConsentOnly) openDriver(row.userId)
+                          }}
+                          title={row.recentConsentOnly ? 'No account yet — nothing to open' : undefined}
                           className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-3 py-3 text-left transition-colors hover:bg-stone-50 md:grid-cols-[auto_minmax(0,13rem)_1fr_auto_auto]"
                         >
                           <Avatar name={row.name} avatarUrl={row.avatarUrl} size="md" color="amber" round />
@@ -287,10 +338,16 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                           </div>
 
                           {/* Mobile: pill sits top-right; desktop: it moves into its own column. */}
-                          <BallPill ball={journey.ball} className="md:hidden" />
+                          {row.recentConsentOnly ? (
+                            <span className="text-[10px] text-ironside md:hidden">No account yet</span>
+                          ) : (
+                            <BallPill ball={journey.ball} className="md:hidden" />
+                          )}
 
                           <div className="col-span-3 min-w-0 md:col-span-1">
-                            {focus ? (
+                            {row.recentConsentOnly ? (
+                              <FocusedItem item={row.items.find((entry) => entry.id === 'cdlis_consent')} />
+                            ) : focus ? (
                               <FocusedItem item={row.items.find((entry) => entry.id === focus)} />
                             ) : (
                               <>
@@ -303,11 +360,19 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                           </div>
 
                           <div className="hidden flex-col items-end gap-1 md:flex">
-                            <BallPill ball={journey.ball} />
-                            <span className="text-[10px] text-ironside">{activityLabel(row.lastActivityAt)}</span>
+                            {row.recentConsentOnly ? (
+                              <span className="text-[10px] text-ironside">No account yet</span>
+                            ) : (
+                              <BallPill ball={journey.ball} />
+                            )}
+                            <span className="text-[10px] text-ironside">
+                              {activityLabel(
+                                filter === 'recent' ? row.consentSentAt : filter === 'signed-up' ? row.accountCreatedAt : row.lastActivityAt,
+                              )}
+                            </span>
                           </div>
 
-                          <ChevronRight className="hidden h-4 w-4 text-ironside md:block" />
+                          <ChevronRight className={cn('hidden h-4 w-4 text-ironside md:block', row.recentConsentOnly && 'invisible')} />
                         </button>
                       </li>
                     ))}

@@ -16,11 +16,14 @@ import type { DqItemId } from '@/lib/dq-file-registry'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
 import {
   asScreeningOutcome,
+  boardDate,
   consentBoardLine,
   dotBoardLine,
   evBoardLine,
   licenseBoardLine,
+  RECENT_CONSENT_DAYS,
   screeningBoardLine,
+  signedUpWithoutConsentInvite,
   type ConsentInviteSnap,
 } from '@/lib/dq-board-lines'
 import { isLicenseScanFields } from '@/lib/aamva-license'
@@ -611,11 +614,151 @@ export interface DqMonitorCandidateRow {
   completedCount: number
   totalLiveCount: number
   lastActivityAt: string | null
+  /** Newest screening-consent invite in the Recent window. Null when nothing went out that recently. */
+  consentSentAt: string | null
+  /**
+   * True when this row is only here because a consent went out and they have
+   * not created an account. Hidden from every pill except Recent.
+   */
+  recentConsentOnly: boolean
+  /** Created an account without this company sending a screening-consent invite. */
+  signedUpOnOwn: boolean
+  /** When their profile was created. Used to put the newest signups first. */
+  accountCreatedAt: string | null
   /**
    * Live DQ items only. `line` is the sentence the board, the file, and the
    * recruiter email share for this item.
    */
   items: Array<{ id: DqItemId; status: DqItemStatus; line: string }>
+}
+
+interface RecentConsentInvite {
+  id: string
+  used_by_user_id: string | null
+  candidate_user_id: string | null
+  candidate_name: string | null
+  candidate_email: string | null
+  candidate_phone: string | null
+  created_at: string
+  used_at: string | null
+  status: string
+  view_count: number | null
+}
+
+/** Newest screening-consent invite per user, from a newest-first list. */
+function newestSentAtByUser(invites: RecentConsentInvite[]): Map<string, string> {
+  const sentAt = new Map<string, string>()
+  for (const inv of invites) {
+    for (const id of [inv.used_by_user_id, inv.candidate_user_id]) {
+      if (id && !sentAt.has(id)) sentAt.set(id, inv.created_at)
+    }
+  }
+  return sentAt
+}
+
+function consentItemForInvite(inv: RecentConsentInvite): { status: DqItemStatus; line: string } {
+  if (inv.status === 'completed') {
+    return {
+      status: 'complete',
+      line: consentBoardLine({ status: 'complete', signedAt: inv.used_at || inv.created_at }),
+    }
+  }
+  if (inv.status === 'expired') {
+    const d = boardDate(inv.created_at)
+    return { status: 'failed', line: d ? `Sent ${d}, expired` : 'Sent, expired' }
+  }
+  const invite: ConsentInviteSnap = {
+    status: inv.status,
+    viewCount: inv.view_count ?? 0,
+    createdAt: inv.created_at,
+  }
+  if (inv.status === 'in_progress') {
+    return { status: 'in_progress', line: consentBoardLine({ status: 'in_progress', startedAt: inv.created_at, invite }) }
+  }
+  return { status: 'requested', line: consentBoardLine({ status: 'requested', invite }) }
+}
+
+/**
+ * People a consent was sent to who are not already on the roster.
+ * One row per address, newest invite wins.
+ */
+function recentInviteOnlyRows(invites: RecentConsentInvite[], knownUserIds: Set<string>): DqMonitorCandidateRow[] {
+  const seen = new Set<string>()
+  const rows: DqMonitorCandidateRow[] = []
+  for (const inv of invites) {
+    const userIds = [inv.used_by_user_id, inv.candidate_user_id].filter((id): id is string => Boolean(id))
+    if (userIds.some((id) => knownUserIds.has(id))) continue
+    const key = (inv.candidate_email || inv.candidate_phone || inv.id).trim().toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    const email = inv.candidate_email?.trim() || null
+    const phone = inv.candidate_phone?.trim() || null
+    const named = inv.candidate_name?.trim() || null
+    const item = consentItemForInvite(inv)
+    rows.push({
+      userId: `invite:${inv.id}`,
+      name: named || email || phone || 'Invited driver',
+      avatarUrl: null,
+      headline: named ? email || phone || 'No account yet' : 'No account yet',
+      cdl: null,
+      overallStatus: 'started',
+      completedCount: item.status === 'complete' ? 1 : 0,
+      totalLiveCount: 1,
+      lastActivityAt: inv.created_at,
+      consentSentAt: inv.created_at,
+      recentConsentOnly: true,
+      signedUpOnOwn: false,
+      accountCreatedAt: null,
+      items: [{ id: 'cdlis_consent', status: item.status, line: item.line }],
+    })
+  }
+  return rows
+}
+
+/** Every screening-consent invite this company has sent, so Signed up can exclude them. */
+async function loadConsentInviteTouches(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<{ userIds: Set<string>; emails: Set<string> }> {
+  const invites = await eachPage<{
+    used_by_user_id: string | null
+    candidate_user_id: string | null
+    candidate_email: string | null
+  }>('consent invite touches', (from, to) =>
+    supabase
+      .from('application_invites')
+      .select('used_by_user_id, candidate_user_id, candidate_email')
+      .eq('company_id', companyId)
+      .eq('target_block_type', 'driver-screening-consent')
+      .order('id', { ascending: true })
+      .range(from, to),
+  )
+  const userIds = new Set<string>()
+  const emails = new Set<string>()
+  for (const invite of invites) {
+    if (invite.used_by_user_id) userIds.add(invite.used_by_user_id)
+    if (invite.candidate_user_id) userIds.add(invite.candidate_user_id)
+    const email = invite.candidate_email?.trim().toLowerCase()
+    if (email) emails.add(email)
+  }
+  return { userIds, emails }
+}
+
+async function loadRecentConsentInvites(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<RecentConsentInvite[]> {
+  const cutoff = new Date(Date.now() - RECENT_CONSENT_DAYS * 86400000).toISOString()
+  const { data } = await supabase
+    .from('application_invites')
+    .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count')
+    .eq('company_id', companyId)
+    .eq('target_block_type', 'driver-screening-consent')
+    .gte('created_at', cutoff)
+    .neq('status', 'cancelled')
+    .order('created_at', { ascending: false })
+    .limit(500)
+  return (data ?? []) as RecentConsentInvite[]
 }
 
 /**
@@ -626,8 +769,18 @@ export async function loadDqMonitorList(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<{ rows: DqMonitorCandidateRow[]; includesSelfServe: boolean }> {
-  const { ids: candidateIds, includesSelfServe } = await loadDqMonitorCandidateIds(supabase, companyId)
-  if (candidateIds.length === 0) return { rows: [], includesSelfServe }
+  const [{ ids: engagedIds, includesSelfServe }, recentInvites, consentTouches] = await Promise.all([
+    loadDqMonitorCandidateIds(supabase, companyId),
+    loadRecentConsentInvites(supabase, companyId),
+    loadConsentInviteTouches(supabase, companyId),
+  ])
+  // The engaged-id query caps invites at 500 with no recency order, so a consent
+  // sent this week can miss the roster. Pull those user ids in explicitly.
+  const sentAtByUser = newestSentAtByUser(recentInvites)
+  const candidateIds = Array.from(new Set([...engagedIds, ...sentAtByUser.keys()]))
+  if (candidateIds.length === 0) {
+    return { rows: recentInviteOnlyRows(recentInvites, new Set()), includesSelfServe }
+  }
 
   type ProfileRow = {
     user_id: string
@@ -635,7 +788,10 @@ export async function loadDqMonitorList(
     last_name: string | null
     avatar_url: string | null
     headline: string | null
+    email: string | null
+    created_at: string | null
   }
+  type UserEmailRow = { id: string; email: string | null }
   type CdlSummaryRow = { user_id: string; cdl_class: string | null; cdl_state: string | null }
   type LiveConsentInviteRow = {
     used_by_user_id: string | null
@@ -691,13 +847,16 @@ export async function loadDqMonitorList(
     updated_at: string | null
   }
 
-  const [profiles, mvrOrders, pspOrders, consentBundles, dotApps, evRows, licenseRows, cdlRows, liveConsentInvites] =
+  const [profiles, userEmails, mvrOrders, pspOrders, consentBundles, dotApps, evRows, licenseRows, cdlRows, liveConsentInvites] =
     await Promise.all([
       fetchAllInChunks<ProfileRow>(candidateIds, 'profiles', (chunk) =>
         supabase
           .from('user_profiles')
-          .select('user_id, first_name, last_name, avatar_url, headline')
+          .select('user_id, first_name, last_name, avatar_url, headline, email, created_at')
           .in('user_id', chunk),
+      ),
+      fetchAllInChunks<UserEmailRow>(candidateIds, 'user emails', (chunk) =>
+        supabase.from('users').select('id, email').in('id', chunk),
       ),
       fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
         supabase
@@ -767,9 +926,12 @@ export async function loadDqMonitorList(
         name: displayName(p.first_name, p.last_name),
         avatarUrl: p.avatar_url ?? null,
         headline: p.headline ?? null,
+        email: p.email ?? null,
+        createdAt: p.created_at ?? null,
       },
     ]),
   )
+  const emailByUser = new Map(userEmails.map((user) => [user.id, user.email]))
   const cdlByUser = new Map(cdlRows.map((c) => [c.user_id, { cdlClass: c.cdl_class, state: c.cdl_state }]))
   // Newest first from the query, so the first write per user wins.
   const consentInviteByUser = new Map<string, ConsentInviteSnap>()
@@ -942,11 +1104,23 @@ export async function loadDqMonitorList(
       completedCount: snapshot.completedCount,
       totalLiveCount: snapshot.totalLiveCount,
       lastActivityAt: snapshot.lastActivityAt,
+      consentSentAt: sentAtByUser.get(userId) ?? null,
+      recentConsentOnly: false,
+      signedUpOnOwn: signedUpWithoutConsentInvite({
+        userId,
+        email: emailByUser.get(userId) || profile?.email || null,
+        invitedUserIds: consentTouches.userIds,
+        invitedEmails: consentTouches.emails,
+      }),
+      accountCreatedAt: profile?.createdAt ?? null,
       items: snapshot.items
         .filter((i) => i.blocksOverallCompletion)
         .map(({ id, status }) => ({ id, status, line: lineFor(id, status) })),
     })
   }
+
+  const known = new Set(rows.map((row) => row.userId))
+  rows.push(...recentInviteOnlyRows(recentInvites, known))
 
   // Most recently active first; then name.
   rows.sort((a, b) => {

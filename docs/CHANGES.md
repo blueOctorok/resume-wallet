@@ -4,6 +4,40 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Signed up pill** (2026-10-23)
+
+Drivers who created an account without this company sending a screening-consent invite get a **Signed up** pill, next to Recent. The match is the user the invite was claimed under, or the email it was sent to, so an unclaimed invite does not look like a walk-in. Newest accounts are first. Sending them a consent takes them off this pill.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-board-lines.ts` | `signedUpWithoutConsentInvite`. |
+| `src/lib/dq-file-load.ts` | Roster rows carry the flag and when the profile was created. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Signed up pill. |
+
+---
+
+## **Recent replaces Your move** (2026-10-23)
+
+Your move was almost the whole roster, because it meant “consent was never sent.” The pill next to All is now **Recent**: consents sent in the last 7 days, newest send first. Someone who was sent a consent and has not created an account shows up there, and only there, with the sent / opened / signed line. They have no file to open yet.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-board-lines.ts` | Seven-day window. |
+| `src/lib/dq-file-load.ts` | Roster rows carry `consentSentAt`. Invite-only rows for this week’s unclaimed sends. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Recent pill. Your move pill removed. |
+
+---
+
+## **Status pills follow the file, left to right** (2026-10-23)
+
+The whose-turn pills now read in the order a file actually moves: Your move, Waiting on driver, In process, Failed, DQ complete. The file pills follow the same walk as the driver file: Consent, MVR, PSP, License, DOT, EV. Hovering a whose-turn pill says what that count is.
+
+| File | Change |
+|---|---|
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Pill order and hover text. |
+
+---
+
 ## **HR sees driver status; recruiters get it by email** (2026-10-23)
 
 Recruiters do not log into Provven. The person in the hub is HR. The status board stays newest-activity first, and the old “Needs attention” / “Needs you” pills now say **Failed** and **Your move**. Consent, MVR, License, PSP, DOT, and EV pills sit to the right and change each row to that one item, so she can see which are done. Consent says sent-not-opened, opened-not-signed, started, or signed. An MVR or PSP line names the outcome (Clear, Hits found, Pending review) and any error text Accio stored. **Email update** sends the drivers currently on screen to an address she types. Nothing sends until she presses Send.
