@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Email a recruiter from the open driver file** (2026-10-23)
+
+The driver file has an **Email recruiter** button. It opens the same email window with that driver's name already filled in and the note already writing. She does not have to close the file and search for them again.
+
+| File | Change |
+|---|---|
+| `src/components/employer/drivers/DriverFileModal.tsx` | Email recruiter button. |
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Optional driver already chosen. |
+
+---
+
 ## **Email update shows when the note is being written** (2026-10-23)
 
 While the driver note is being written, the message box is replaced by a spinner and “Writing the update…”. Send stays off until the words are there.

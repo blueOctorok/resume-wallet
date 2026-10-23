@@ -9,6 +9,7 @@ import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
 import { BALL_LABEL, DRIVER_JOURNEY_ORDER, deriveDriverJourney, type BallInCourt } from '@/lib/driver-journey'
 import { isRecentConsentSent, rosterWhereLine } from '@/lib/dq-board-lines'
+import { RECRUITER_EMAIL_STORAGE_KEY } from '@/lib/recruiter-inboxes'
 import type { DqItemId } from '@/lib/dq-file-registry'
 import { useDriverBoardStore, type DriverBoardFilter, type DriverRosterRow } from '@/stores/driver-board-store'
 import DriverBlockBadges, { BallPill, DQ_ITEM_SHORT, DqStatusBadge } from './DriverBlockBadges'
@@ -43,7 +44,6 @@ function chipTitle(id: DriverBoardFilter): string {
   return BALL_HINT[id]
 }
 
-const RECRUITER_EMAIL_KEY = 'provven-hr-recruiter-email'
 
 function activityLabel(iso: string | null): string {
   if (!iso) return 'No activity yet'
@@ -393,7 +393,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
         />
       )}
       {showEmail && (
-        <EmailUpdateModal rows={roster} storageKey={RECRUITER_EMAIL_KEY} onClose={() => setShowEmail(false)} />
+        <EmailUpdateModal rows={roster} storageKey={RECRUITER_EMAIL_STORAGE_KEY} onClose={() => setShowEmail(false)} />
       )}
     </>
   )

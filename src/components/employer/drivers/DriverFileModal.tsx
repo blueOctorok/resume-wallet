@@ -17,7 +17,9 @@ import { cn } from '@/lib/utils'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { getSendableOutreachBlocks } from '@/lib/outreach-sendable-blocks'
 import { createAndDeliverInvites, sendInviteEmail, sendInviteSms } from '@/lib/outreach-send-client'
-import { DRIVER_JOURNEY_ORDER, deriveDriverJourney, deriveDriverJourneySteps } from '@/lib/driver-journey'
+import { DRIVER_JOURNEY_ORDER, deriveDriverJourney, deriveDriverJourneySteps, nextStepText } from '@/lib/driver-journey'
+import { RECRUITER_EMAIL_STORAGE_KEY } from '@/lib/recruiter-inboxes'
+import EmailUpdateModal from './EmailUpdateModal'
 import { useDriverBoardStore } from '@/stores/driver-board-store'
 import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -61,6 +63,8 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
   const [sending, setSending] = useState(false)
   const [resending, setResending] = useState<'email' | 'sms' | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [showEmail, setShowEmail] = useState(false)
+  const roster = useDriverBoardStore((s) => s.roster)
 
   const lite = useMemo(
     () => (file ? file.dqFile.items.filter((i) => i.blocksOverallCompletion).map(({ id, status }) => ({ id, status })) : []),
@@ -176,9 +180,15 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
                   )}
                 </p>
               </div>
-              <button type="button" onClick={closeDriver} aria-label="Close" className="rounded-lg p-1.5 text-ironside transition-colors hover:bg-stone-100 hover:text-[#173150]">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setShowEmail(true)}>
+                  <Mail className="h-4 w-4" />
+                  Email recruiter
+                </Button>
+                <button type="button" onClick={closeDriver} aria-label="Close" className="rounded-lg p-1.5 text-ironside transition-colors hover:bg-stone-100 hover:text-[#173150]">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </header>
 
             {/* ── Body ────────────────────────────────────────────────────── */}
@@ -308,6 +318,21 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
           sessionUserId={sessionUserId}
           isDark={false}
           applicationId={viewer.id}
+        />
+      )}
+      {showEmail && file && (
+        <EmailUpdateModal
+          rows={roster}
+          storageKey={RECRUITER_EMAIL_STORAGE_KEY}
+          initialDriver={{
+            userId,
+            name: file.candidate.name,
+            headline: file.candidate.headline,
+            items:
+              roster.find((row) => row.userId === userId)?.items ??
+              liveItems.map((item) => ({ id: item.id, status: item.status, line: nextStepText(item.id, item.status) })),
+          }}
+          onClose={() => setShowEmail(false)}
         />
       )}
       {viewer?.kind === 'license' && <DriverLicenseViewModal userId={userId} onClose={() => setViewer(null)} />}

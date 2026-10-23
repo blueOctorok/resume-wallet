@@ -25,18 +25,21 @@ interface EmailDriver {
 export default function EmailUpdateModal({
   rows,
   storageKey,
+  initialDriver = null,
   onClose,
 }: {
   rows: readonly EmailDriver[]
   storageKey: string
+  /** Set when she opened this from a driver's file, so the name is already chosen. */
+  initialDriver?: EmailDriver | null
   onClose: () => void
 }) {
   const [to, setTo] = useState<RecruiterInbox | 'other' | ''>('')
   const [otherAddress, setOtherAddress] = useState('')
   const [query, setQuery] = useState('')
-  const [driver, setDriver] = useState<EmailDriver | null>(null)
+  const [driver, setDriver] = useState<EmailDriver | null>(initialDriver)
   const [message, setMessage] = useState('')
-  const [writing, setWriting] = useState(false)
+  const [writing, setWriting] = useState(Boolean(initialDriver))
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -85,6 +88,13 @@ export default function EmailUpdateModal({
       setWriting(false)
     }
   }
+
+  useEffect(() => {
+    if (!initialDriver) return
+    void writeNote(initialDriver)
+    // Mounts once per open. A later run would replace a message she already edited.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const recipient = (to === 'other' ? otherAddress : to).trim().toLowerCase()
 

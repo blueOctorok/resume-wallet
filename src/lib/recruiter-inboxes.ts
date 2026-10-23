@@ -3,6 +3,9 @@
  * One list, shared by the picker and the send route, so they cannot drift.
  * Not keyed on a company name — when another company needs its own list, this is the spot.
  */
+/** Last recruiter address, shared by the board button and the driver file. */
+export const RECRUITER_EMAIL_STORAGE_KEY = 'provven-hr-recruiter-email'
+
 export const RECRUITER_INBOXES = [
   't.mangus@pacedrivers.com',
   'a.foersterconnolly@pacedrivers.com',
