@@ -25,3 +25,10 @@ export function recruiterInboxLabel(email: RecruiterInbox): string {
 export function isRecruiterInbox(email: string): email is RecruiterInbox {
   return (RECRUITER_INBOXES as readonly string[]).includes(email.trim().toLowerCase())
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Other in the dropdown: any normal address, not only the six inboxes. */
+export function isEmailAddress(email: string): boolean {
+  return EMAIL_RE.test(email.trim())
+}

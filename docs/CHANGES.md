@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Other address on the recruiter dropdown** (2026-10-23)
+
+The recruiter list still has the six inboxes. **Other** at the bottom opens a field for any email address. The last address, listed or typed, stays in this browser.
+
+| File | Change |
+|---|---|
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Other option and the address field. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Accepts a normal email, not only the six inboxes. |
+
+---
+
+## **Recruiter email is one driver, written from the file** (2026-10-23)
+
+Email update no longer sends a group based on a reason. She picks a recruiter, types a driver's name, and the message box fills with a short note: what that driver has finished and what they are stuck on. The note is written from the same status lines the board shows. She can edit it or ask for another draft before Send. If the model is unavailable, the same facts go out as a plain sentence.
+
+| File | Change |
+|---|---|
+| `src/lib/recruiter-status-note.ts` | Facts, fallback sentence, and the writing rules. |
+| `src/app/api/employer/dq-monitor/status-note/route.ts` | Writes the note. Falls back to the plain sentence. |
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Recruiter, driver search, editable message. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Sends that one message. |
+
+---
+
 ## **Email update asks what it is about** (2026-10-23)
 
 The email button no longer sends whoever is showing on the board. Inside the modal she picks a recruiter and one plain reason: consents sent this week, signed up on their own, still waiting on the driver, something failed, or the file is complete. That choice decides who is listed. The pills on the board are not involved. The name preview is gone. The email opens with the reason, then her optional note, then the drivers.

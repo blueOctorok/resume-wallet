@@ -1,38 +1,41 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { isRecruiterInbox, RECRUITER_INBOXES, recruiterInboxLabel, type RecruiterInbox } from '@/lib/recruiter-inboxes'
-import {
-  driversForStatusUpdate,
-  STATUS_UPDATE_REASONS,
-  statusUpdateReason,
-  type StatusUpdateReasonId,
-  type StatusUpdateRow,
-} from '@/lib/status-update-reasons'
-
-const SEND_CAP = 200
+import { isEmailAddress, isRecruiterInbox, RECRUITER_INBOXES, recruiterInboxLabel, type RecruiterInbox } from '@/lib/recruiter-inboxes'
+import type { DqItemId } from '@/lib/dq-file-registry'
+import type { DqItemStatus } from '@/lib/dq-file-status'
 
 const inputBase =
   'w-full px-3 py-2 rounded-lg text-sm border border-stone-200 bg-white text-[#173150] placeholder-ironside outline-none transition-colors focus:ring-2 focus:ring-teal-500/40'
 
+interface EmailDriver {
+  userId: string
+  name: string
+  headline: string | null
+  items: Array<{ id: DqItemId; status: DqItemStatus; line: string }>
+}
+
 /**
- * She picks a recruiter and what the email is about, here.
- * The pills on the board do not decide who gets included.
+ * She picks a recruiter and one driver. The message is written from that
+ * driver's file: what is done, and what they are stuck on. She can edit it.
  */
 export default function EmailUpdateModal({
   rows,
   storageKey,
   onClose,
 }: {
-  rows: readonly StatusUpdateRow[]
+  rows: readonly EmailDriver[]
   storageKey: string
   onClose: () => void
 }) {
-  const [to, setTo] = useState<RecruiterInbox | ''>('')
-  const [reasonId, setReasonId] = useState<StatusUpdateReasonId | ''>('')
-  const [note, setNote] = useState('')
+  const [to, setTo] = useState<RecruiterInbox | 'other' | ''>('')
+  const [otherAddress, setOtherAddress] = useState('')
+  const [query, setQuery] = useState('')
+  const [driver, setDriver] = useState<EmailDriver | null>(null)
+  const [message, setMessage] = useState('')
+  const [writing, setWriting] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -40,30 +43,64 @@ export default function EmailUpdateModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
-      if (saved && isRecruiterInbox(saved)) setTo(saved)
+      if (!saved) return
+      if (isRecruiterInbox(saved)) setTo(saved)
+      else if (isEmailAddress(saved)) {
+        setTo('other')
+        setOtherAddress(saved)
+      }
     } catch {
       /* This browser is blocking storage. She can still pick from the list. */
     }
   }, [storageKey])
 
-  const reason = reasonId ? statusUpdateReason(reasonId) : null
-  const matched = useMemo(() => (reason ? driversForStatusUpdate(rows, reason.id) : []), [reason, rows])
-  const drivers = matched.slice(0, SEND_CAP)
+  const q = query.trim().toLowerCase()
+  const matches =
+    driver || q.length < 2
+      ? []
+      : rows
+          .filter((row) => row.name.toLowerCase().includes(q) || (row.headline ?? '').toLowerCase().includes(q))
+          .slice(0, 6)
+
+  const writeNote = async (next: EmailDriver) => {
+    setWriting(true)
+    setError(null)
+    setMessage('')
+    try {
+      const res = await fetch('/api/employer/dq-monitor/status-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: next.name,
+          items: next.items.map((item) => ({ id: item.id, status: item.status, line: item.line })),
+        }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
+      if (!res.ok || !data.message) throw new Error(data.error || 'Could not write the update')
+      setMessage(data.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not write the update')
+    } finally {
+      setWriting(false)
+    }
+  }
+
+  const recipient = (to === 'other' ? otherAddress : to).trim().toLowerCase()
 
   const handleSend = async () => {
-    if (!reason) return
+    if (!driver || !isEmailAddress(recipient)) return
     setSending(true)
     setError(null)
     try {
       const res = await fetch('/api/employer/dq-monitor/email-update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: to.trim(), reasonId: reason.id, note: note.trim(), drivers }),
+        body: JSON.stringify({ to: recipient, driverName: driver.name, message: message.trim() }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) throw new Error(data.error || 'Could not send')
       try {
-        localStorage.setItem(storageKey, to.trim())
+        localStorage.setItem(storageKey, recipient)
       } catch {
         /* Remembering the address is a convenience. */
       }
@@ -75,13 +112,6 @@ export default function EmailUpdateModal({
     }
   }
 
-  const countLine =
-    matched.length === 0
-      ? 'Nobody fits this right now.'
-      : matched.length > SEND_CAP
-        ? `The first ${SEND_CAP} of ${matched.length} drivers will be included.`
-        : `${matched.length} driver${matched.length === 1 ? '' : 's'} will be included.`
-
   return (
     <Modal
       onClose={onClose}
@@ -90,11 +120,11 @@ export default function EmailUpdateModal({
       panelShape="block"
       panelClassName="!border-stone-200 !bg-white !ring-[#173150]/10"
     >
-      <ModalHeader title="Email update" subtitle="Pick a recruiter and what this is about." onClose={onClose} variant="block" paper />
+      <ModalHeader title="Email update" subtitle="Pick a recruiter and one driver." onClose={onClose} variant="block" paper />
       <div className="space-y-4 p-4 sm:p-5">
         {sent ? (
           <p className="text-sm text-[#173150]">
-            Sent to {to ? recruiterInboxLabel(to) : 'the recruiter'}. {drivers.length} driver{drivers.length === 1 ? '' : 's'}.
+            Sent to {to === 'other' ? otherAddress.trim() : to ? recruiterInboxLabel(to) : 'the recruiter'} about {driver?.name}.
           </p>
         ) : (
           <>
@@ -107,7 +137,8 @@ export default function EmailUpdateModal({
                 value={to}
                 onChange={(e) => {
                   const next = e.target.value
-                  setTo(isRecruiterInbox(next) ? next : '')
+                  if (next === 'other') setTo('other')
+                  else setTo(isRecruiterInbox(next) ? next : '')
                 }}
                 className={inputBase}
               >
@@ -117,48 +148,100 @@ export default function EmailUpdateModal({
                     {recruiterInboxLabel(email)}
                   </option>
                 ))}
+                <option value="other">Other</option>
               </select>
+              {to === 'other' && (
+                <input
+                  id="recruiter-other"
+                  type="email"
+                  value={otherAddress}
+                  onChange={(e) => setOtherAddress(e.target.value)}
+                  placeholder="name@company.com"
+                  aria-label="Email address"
+                  className={`${inputBase} mt-2`}
+                  autoComplete="email"
+                />
+              )}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ironside" htmlFor="update-reason">
-                What is this about?
+              <label className="mb-1 block text-xs font-medium text-ironside" htmlFor="driver-search">
+                Driver
               </label>
-              <select
-                id="update-reason"
-                value={reasonId}
-                onChange={(e) => {
-                  const next = statusUpdateReason(e.target.value)
-                  setReasonId(next ? next.id : '')
-                }}
-                className={inputBase}
-              >
-                <option value="">Select one…</option>
-                {STATUS_UPDATE_REASONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {driver ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                  <p className="truncate text-sm font-medium text-[#173150]">{driver.name}</p>
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs font-medium text-[#173150] underline"
+                    onClick={() => {
+                      setDriver(null)
+                      setMessage('')
+                      setQuery('')
+                      setError(null)
+                    }}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    id="driver-search"
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Type a name…"
+                    className={inputBase}
+                    autoComplete="off"
+                  />
+                  {matches.length > 0 && (
+                    <ul className="mt-1 overflow-hidden rounded-lg border border-stone-200">
+                      {matches.map((row) => (
+                        <li key={row.userId}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm text-[#173150] hover:bg-stone-50"
+                            onClick={() => {
+                              setDriver(row)
+                              setQuery('')
+                              void writeNote(row)
+                            }}
+                          >
+                            {row.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {q.length >= 2 && matches.length === 0 && <p className="mt-1 text-xs text-ironside">No driver with that name.</p>}
+                </>
+              )}
             </div>
-            {reason && (
-              <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
-                <p className="text-sm text-[#173150]">{reason.sentence}</p>
-                <p className="mt-1 text-xs text-ironside">{countLine}</p>
+            {driver && (
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-xs font-medium text-ironside" htmlFor="status-message">
+                    Message
+                  </label>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-[#173150] underline disabled:opacity-40"
+                    disabled={writing}
+                    onClick={() => void writeNote(driver)}
+                  >
+                    Write it again
+                  </button>
+                </div>
+                <textarea
+                  id="status-message"
+                  value={writing ? '' : message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={5}
+                  placeholder={writing ? 'Writing a short update…' : 'The update will appear here.'}
+                  className={`${inputBase} resize-none`}
+                />
               </div>
             )}
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ironside" htmlFor="recruiter-note">
-                Add a note (optional)
-              </label>
-              <textarea
-                id="recruiter-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-                placeholder="Anything else they should know…"
-                className={`${inputBase} resize-none`}
-              />
-            </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
           </>
         )}
@@ -172,7 +255,7 @@ export default function EmailUpdateModal({
               variant="primary"
               size="sm"
               onClick={() => void handleSend()}
-              disabled={sending || !to || !reason || drivers.length === 0}
+              disabled={sending || writing || !isEmailAddress(recipient) || !driver || !message.trim()}
               isLoading={sending}
             >
               Send
