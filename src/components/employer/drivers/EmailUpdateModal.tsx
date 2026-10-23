@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { isEmailAddress, isRecruiterInbox, RECRUITER_INBOXES, recruiterInboxLabel, type RecruiterInbox } from '@/lib/recruiter-inboxes'
@@ -232,14 +233,24 @@ export default function EmailUpdateModal({
                     Write it again
                   </button>
                 </div>
-                <textarea
-                  id="status-message"
-                  value={writing ? '' : message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={5}
-                  placeholder={writing ? 'Writing a short update…' : 'The update will appear here.'}
-                  className={`${inputBase} resize-none`}
-                />
+                {writing ? (
+                  <div
+                    className="flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-8 text-sm text-[#173150]"
+                    role="status"
+                  >
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#f15a2b]" />
+                    Writing the update…
+                  </div>
+                ) : (
+                  <textarea
+                    id="status-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={5}
+                    placeholder="The update will appear here."
+                    className={`${inputBase} resize-none`}
+                  />
+                )}
               </div>
             )}
             {error && <p className="text-sm text-red-600">{error}</p>}

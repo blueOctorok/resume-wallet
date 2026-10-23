@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Email update shows when the note is being written** (2026-10-23)
+
+While the driver note is being written, the message box is replaced by a spinner and “Writing the update…”. Send stays off until the words are there.
+
+| File | Change |
+|---|---|
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Visible writing state. |
+
+---
+
 ## **Other address on the recruiter dropdown** (2026-10-23)
 
 The recruiter list still has the six inboxes. **Other** at the bottom opens a field for any email address. The last address, listed or typed, stays in this browser.
