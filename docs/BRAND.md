@@ -37,6 +37,7 @@ Shield crown + check + bottom V. The check **joins** the top-right of the crown
 | React — mark | [`src/components/ui/ProvvenMark.tsx`](../src/components/ui/ProvvenMark.tsx) — embers on ink/dark, Midnight Blue on paper |
 | React — lockup | [`src/components/ui/ProvvenWordmark.tsx`](../src/components/ui/ProvvenWordmark.tsx) — mark + `PROVVEN` (Montserrat bold) |
 | SVG — dark | `public/brand/provven-mark.svg` (Hot Embers, transparent) |
+| Email PNG | `public/brand/provven-mark.png` — same mark, rasterized. Inboxes drop SVG. |
 | SVG — light | `public/brand/provven-mark-light.svg` (Midnight Blue, transparent) |
 | Tile / favicon | `public/brand/provven-mark-tile.svg`, `public/favicon.svg`, `src/app/favicon.ico` |
 

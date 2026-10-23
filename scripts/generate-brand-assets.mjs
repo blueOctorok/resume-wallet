@@ -3,6 +3,7 @@
  *
  * Reads public/brand/provven-mark.svg (Hot Embers) and writes:
  *   - public/brand/provven-mark-tile.svg
+ *   - public/brand/provven-mark.png (email-safe raster of the same mark)
  *   - public/favicon.svg
  *   - src/app/favicon.ico (16/32/48 PNG-in-ICO)
  *
@@ -40,6 +41,12 @@ const tileSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fil
 
 writeFileSync('public/brand/provven-mark-tile.svg', tileSvg)
 writeFileSync('public/favicon.svg', tileSvg)
+
+// Inbox clients drop SVG. This is the same Hot Embers mark, tall enough for a 22px slot at 3x.
+await sharp('public/brand/provven-mark.svg', { density: 300 })
+  .resize({ height: 192 })
+  .png()
+  .toFile('public/brand/provven-mark.png')
 
 const sizes = [16, 32, 48]
 const pngs = await Promise.all(

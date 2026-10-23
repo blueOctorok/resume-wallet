@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Email chrome uses the Blue Star lockup** (2026-10-23)
+
+Every email goes through one template. The orange “Provven” pill and the navy-to-ember gradient are gone. The top is the shield mark plus PROVVEN, on brand paper. The card header is solid Midnight with cream type and a 3px Hot Embers rule. The ask page uses the same header and the same wordmark component as the rest of the app. Inboxes drop SVG, so the mark in email is a PNG of that same art.
+
+| File | Change |
+|---|---|
+| `src/lib/email-template.ts` | Shared chrome for every outbound email. |
+| `src/components/ask/RecruiterAsk.tsx` | Same lockup and header on the recruiter page. |
+| `public/brand/provven-mark.png` | Email-safe raster of the mark. |
+| `scripts/generate-brand-assets.mjs` | Writes that PNG with the other brand files. |
+
+---
+
+## **Recruiter email opens a page that emails the driver** (2026-10-23)
+
+The status email still carries the note. When the driver still owes a step that is theirs (sign consent, scan the license, finish the DOT application), the email also has one button. That opens a page with no login. The recruiter checks those steps, can add a short note, and Provven emails the driver the links. Their address is not on the page. One send per link, then it expires in 14 days. Reports and employment checks stay with HR, so those are not on the page. License and DOT links are `/?onboard=license` and `/?onboard=dotapp`. A magic-link sign-in that opens in a new tab can still drop that query; consent uses the existing `/apply/{token}` invite, which already survives that hop.
+
+Apply `supabase/migrations/125_recruiter_asks.sql` before the button can be created. Until that table exists, the status email still sends and simply has no button.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/125_recruiter_asks.sql` | One-purpose ticket. Service role only. |
+| `src/lib/recruiter-ask.ts` | Which steps are the driver's, and the email those steps become. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Puts the button on the recruiter email when a step is open. |
+| `src/app/ask/[token]/page.tsx` | The page the button opens. |
+| `src/components/ask/RecruiterAsk.tsx` | The note, the steps, the optional message. |
+| `src/app/api/ask/[token]/route.ts` | Loads the ticket and sends the driver email once. |
+
+---
+
 ## **Email a recruiter from the open driver file** (2026-10-23)
 
 The driver file has an **Email recruiter** button. It opens the same email window with that driver's name already filled in and the note already writing. She does not have to close the file and search for them again.

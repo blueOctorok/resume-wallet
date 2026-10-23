@@ -1,17 +1,20 @@
 import { HOT_EMBERS, MIDNIGHT } from '@/lib/brand-colors'
+import { getAppBaseUrl } from '@/lib/app-url'
 
 /**
- * Shared Provven email template builder.
+ * Shared Provven email template.
  *
- * Every outgoing email uses this function so they all have the same:
- *   - Logo badge (Provven, gold pill)
- *   - Gold gradient header band with title + subtitle
- *   - White card body with consistent typography
- *   - Gold CTA button
- *   - Consistent footer
+ * Every outgoing email uses this, so the chrome lives in one place:
+ *   - Blue Star lockup (ember shield + PROVVEN) on brand paper
+ *   - Solid Midnight header, cream type, a 3px Hot Embers rule
+ *   - White card, Hot Embers button
  *
- * Callers only supply the content — never the chrome.
+ * Callers only supply the content.
  */
+
+const PAPER = '#f3f4f5'
+const CREAM = '#f4f1ea'
+const TYPE = '#173150'
 
 export interface EmailTemplateOptions {
   /** Short preview text shown in inbox before opening */
@@ -35,8 +38,6 @@ export interface EmailTemplateOptions {
 }
 
 const TEAL = HOT_EMBERS
-const TEAL_DARK = MIDNIGHT
-const TEAL_LIGHT = HOT_EMBERS
 const TEAL_BG = '#fef4f0'
 const TEAL_BORDER = HOT_EMBERS
 
@@ -80,25 +81,32 @@ export function buildEmail(opts: EmailTemplateOptions): string {
          You're receiving this from Provven. If you weren't expecting this email, you can safely ignore it.
        </p>`
 
+  const markUrl = `${getAppBaseUrl()}/brand/provven-mark.png`
+  const sans = "Montserrat,Arial,Helvetica,sans-serif"
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1e293b;">
+<body style="margin:0;padding:0;background:${PAPER};font-family:${sans};color:${TYPE};">
   ${preheaderHtml}
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${PAPER};padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
-        <!-- Logo -->
+        <!-- Lockup: ember shield + PROVVEN. PNG because inboxes drop SVG. -->
         <tr>
-          <td style="padding-bottom:20px;text-align:center;">
-            <table cellpadding="0" cellspacing="0" style="display:inline-table;">
+          <td style="padding-bottom:20px;" align="center">
+            <table cellpadding="0" cellspacing="0" role="presentation" style="display:inline-table;">
               <tr>
-                <td style="background:${TEAL};border-radius:10px;padding:8px 18px;">
-                  <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">Provven</span>
+                <td style="padding-right:8px;vertical-align:middle;">
+                  <img src="${markUrl}" width="22" height="23" alt="" style="display:block;border:0;height:22px;width:auto;">
+                </td>
+                <td style="vertical-align:middle;font-family:${sans};font-size:15px;font-weight:700;letter-spacing:0.12em;color:${MIDNIGHT};">
+                  PROVVEN
                 </td>
               </tr>
             </table>
@@ -107,15 +115,17 @@ export function buildEmail(opts: EmailTemplateOptions): string {
 
         <!-- Card -->
         <tr>
-          <td style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
+          <td style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(23,49,80,0.08);">
 
-            <!-- Header band -->
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="background:linear-gradient(135deg,${TEAL_DARK} 0%,${TEAL} 60%,${TEAL_LIGHT} 100%);padding:32px 40px;">
-                  <p style="margin:0 0 4px;color:#e8d9b5;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;">${headerEyebrow}</p>
-                  <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;line-height:1.25;">${headerTitle}</h1>
+                <td style="background:${MIDNIGHT};padding:28px 40px 22px;">
+                  <p style="margin:0 0 6px;color:${CREAM};font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;font-family:${sans};">${headerEyebrow}</p>
+                  <h1 style="margin:0;color:${CREAM};font-size:24px;font-weight:700;line-height:1.25;font-family:${sans};">${headerTitle}</h1>
                 </td>
+              </tr>
+              <tr>
+                <td style="background:${HOT_EMBERS};height:3px;font-size:0;line-height:3px;">&nbsp;</td>
               </tr>
             </table>
 

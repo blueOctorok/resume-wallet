@@ -106,7 +106,12 @@ export default function EmailUpdateModal({
       const res = await fetch('/api/employer/dq-monitor/email-update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient, driverName: driver.name, message: message.trim() }),
+        body: JSON.stringify({
+          to: recipient,
+          driverName: driver.name,
+          driverUserId: driver.userId,
+          message: message.trim(),
+        }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) throw new Error(data.error || 'Could not send')
