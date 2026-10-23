@@ -5,6 +5,7 @@ import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { buildEmail } from '@/lib/email-template'
 import { sendEmail } from '@/lib/messaging'
 import { isRecruiterInbox } from '@/lib/recruiter-inboxes'
+import { statusUpdateReason } from '@/lib/status-update-reasons'
 
 const MAX_DRIVERS = 200
 const MAX_NOTE = 2000
@@ -20,8 +21,8 @@ function esc(value: string): string {
 /**
  * POST /api/employer/dq-monitor/email-update
  *
- * HR sends the drivers currently on her board to a recruiter who does not
- * log in. The lines are the same sentences the board is showing.
+ * HR picks a recruiter and a reason inside the modal. The reason chooses
+ * which drivers are listed. The pills on the board are not involved.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -34,11 +35,14 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json().catch(() => null)) as {
       to?: unknown
+      reasonId?: unknown
       note?: unknown
       drivers?: unknown
     } | null
     const to = typeof body?.to === 'string' ? body.to.trim().toLowerCase() : ''
     if (!isRecruiterInbox(to)) return NextResponse.json({ error: 'Pick a recruiter from the list' }, { status: 400 })
+    const reason = typeof body?.reasonId === 'string' ? statusUpdateReason(body.reasonId) : null
+    if (!reason) return NextResponse.json({ error: 'Pick what this is about' }, { status: 400 })
 
     const note = typeof body?.note === 'string' ? body.note.trim().slice(0, MAX_NOTE) : ''
     const raw = Array.isArray(body?.drivers) ? body.drivers : []
@@ -63,22 +67,23 @@ export async function POST(request: NextRequest) {
           `<p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:#173150;"><strong>${esc(driver.name)}</strong><br><span style="color:#64748b;">${esc(driver.line)}</span></p>`,
       )
       .join('')
+    const reasonHtml = `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#173150;">${esc(reason.sentence)}</p>`
     const noteHtml = note
       ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;">${esc(note).replace(/\n/g, '<br>')}</p>`
       : ''
 
     const html = buildEmail({
       headerEyebrow: companyName,
-      headerTitle: 'Driver status',
-      preheader: `${drivers.length} driver${drivers.length === 1 ? '' : 's'} from ${companyName}`,
-      bodyHtml: `${noteHtml}${list}`,
+      headerTitle: reason.label,
+      preheader: reason.sentence,
+      bodyHtml: `${reasonHtml}${noteHtml}${list}`,
       footerNote: `Sent from Provven by ${companyName}. This note is for your recruiting team.`,
     })
 
     const result = await sendEmail({
       type: 'driver_status_update',
       to,
-      subject: `${companyName}: driver status (${drivers.length})`,
+      subject: `${companyName}: ${reason.label} (${drivers.length})`,
       html,
     })
     if (!result.ok) return NextResponse.json({ error: result.error || 'Could not send' }, { status: 502 })

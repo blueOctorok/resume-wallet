@@ -160,13 +160,6 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
     DRIVER_JOURNEY_ORDER.map((id) => [id, filtered.filter(({ row }) => row.items.find((item) => item.id === id)?.status === 'complete').length]),
   ) as Record<DqItemId, number>
 
-  const emailDrivers = filtered.map(({ row, journey }) => ({
-    name: row.name,
-    line: focus
-      ? row.items.find((item) => item.id === focus)?.line || 'Not on file'
-      : rosterWhereLine(journey.next, row.items),
-  }))
-
   return (
     <>
       <HubSectionPanel isDark={false} accent="teal" className="mb-8">
@@ -400,12 +393,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
         />
       )}
       {showEmail && (
-        <EmailUpdateModal
-          drivers={emailDrivers}
-          focusLabel={focus ? DQ_ITEM_SHORT[focus] : null}
-          storageKey={RECRUITER_EMAIL_KEY}
-          onClose={() => setShowEmail(false)}
-        />
+        <EmailUpdateModal rows={roster} storageKey={RECRUITER_EMAIL_KEY} onClose={() => setShowEmail(false)} />
       )}
     </>
   )

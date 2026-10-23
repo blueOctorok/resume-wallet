@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Email update asks what it is about** (2026-10-23)
+
+The email button no longer sends whoever is showing on the board. Inside the modal she picks a recruiter and one plain reason: consents sent this week, signed up on their own, still waiting on the driver, something failed, or the file is complete. That choice decides who is listed. The pills on the board are not involved. The name preview is gone. The email opens with the reason, then her optional note, then the drivers.
+
+| File | Change |
+|---|---|
+| `src/lib/status-update-reasons.ts` | The five reasons and who each one includes. |
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Recruiter and reason, both chosen here. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Requires a reason id and leads the email with its sentence. |
+
+---
+
 ## **Email update picks a recruiter** (2026-10-23)
 
 The status-board email button no longer asks HR to type an address. She picks one inbox from a fixed list, and the send route refuses anything else. The last pick stays in this browser.
