@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **HR sees driver status; recruiters get it by email** (2026-10-23)
+
+Recruiters do not log into Provven. The person in the hub is HR. The status board stays newest-activity first, and the old “Needs attention” / “Needs you” pills now say **Failed** and **Your move**. Consent, MVR, License, PSP, DOT, and EV pills sit to the right and change each row to that one item, so she can see which are done. Consent says sent-not-opened, opened-not-signed, started, or signed. An MVR or PSP line names the outcome (Clear, Hits found, Pending review) and any error text Accio stored. **Email update** sends the drivers currently on screen to an address she types. Nothing sends until she presses Send.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-board-lines.ts` | Shared sentences for the board, the driver file, and the email. |
+| `src/lib/dq-file-load.ts` | Roster rows carry those lines. Invites include viewed-or-not. Orders include outcome and error text. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Document pills, newest-first sort, Email update. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Authenticated send through the existing mailer. |
+| `src/components/employer/drivers/DriverFileItems.tsx` | The open file uses the same sentences. |
+
+---
+
 ## **Outreach is an invite button on the status board** (2026-10-22)
 
 The employer hub had two pipelines for the same drivers. The status board already walks consent, reports, license, and DOT, including View report on MVR and PSP. The outreach kanban repeated that, so it is off the hub. **New outreach** on the status board opens the invite form (search or type a person, then send consent). Someone who has not created an account yet does not appear on the board until they do. The invite is still created.

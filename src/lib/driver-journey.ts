@@ -20,8 +20,8 @@ export type BallInCourt = 'attention' | 'you' | 'processing' | 'driver' | 'done'
 type Owner = Exclude<BallInCourt, 'done'>
 
 export const BALL_LABEL: Record<BallInCourt, string> = {
-  attention: 'Needs attention',
-  you: 'Needs you',
+  attention: 'Failed',
+  you: 'Your move',
   processing: 'In process',
   driver: 'Waiting on driver',
   done: 'DQ complete',

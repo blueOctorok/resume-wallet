@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import type { DriverFileDetail } from '@/lib/dq-file-load'
 import { dqItemHasWorkToShow, type DqItemStatusResult } from '@/lib/dq-file-status'
-import { outcomeLabel } from '@/lib/accio-result-status'
+import { consentBoardLine, dotBoardLine, evBoardLine, licenseBoardLine, screeningBoardLine } from '@/lib/dq-board-lines'
 import { DQ_ITEM_ICONS, DqStatusBadge } from './DriverBlockBadges'
 
 export function fmtDate(iso: string | null | undefined): string | null {
@@ -75,44 +75,59 @@ function describe(
   switch (item.id) {
     case 'dl_images': {
       const l = d.license
-      if (!l || (l.barcodeStatus !== 'read' && !l.confirmedAt)) return { line: item.emptyHint }
+      const base = licenseBoardLine({
+        confirmed: Boolean(l?.confirmedAt),
+        barcodeRead: l?.barcodeStatus === 'read',
+      })
+      if (!l || (l.barcodeStatus !== 'read' && !l.confirmedAt)) return { line: base }
       const read = [l.licenseClass && `Class ${l.licenseClass}`, l.state, l.expiration && `exp ${l.expiration}`].filter(Boolean).join(' · ')
       const source = l.barcodeStatus === 'read' ? 'Read from the license barcode' : 'Entered by the driver'
       return {
-        line: [read, l.confirmedAt ? `confirmed ${fmtDate(l.confirmedAt)}` : 'not confirmed yet', source].filter(Boolean).join(' · '),
+        line: [base, read, source].filter(Boolean).join(' · '),
         action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View license" onClick={a.onViewLicense} /> : undefined,
       }
     }
 
     case 'dot_application': {
       const app = d.dotApplication
-      if (!app) return { line: item.emptyHint }
+      const base = dotBoardLine({ status: item.status, currentStep: app?.currentStep })
+      if (!app) return { line: base }
+      const when = fmtDate(app.updatedAt)
       return {
-        line: app.isComplete
-          ? `Submitted · updated ${fmtDate(app.updatedAt) ?? '—'}`
-          : `Form ${app.currentStep} of 3 · last worked ${fmtDate(app.updatedAt) ?? '—'}`,
+        line: when ? `${base} · ${when}` : base,
         action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View application" onClick={() => a.onViewDot(app.id)} /> : undefined,
       }
     }
 
     case 'cdlis_consent': {
       const c = d.consent
+      const invite = d.invites.find(
+        (row) => row.blockType === 'driver-screening-consent' && ['pending', 'viewed', 'in_progress'].includes(row.status),
+      )
+      const line = consentBoardLine({
+        status: item.status,
+        signedAt: c?.completedAt,
+        startedAt: c?.createdAt,
+        invite: invite ? { status: invite.status, viewCount: invite.viewCount, createdAt: invite.createdAt } : null,
+      })
+      const parts = c?.status === 'complete'
+        ? [c.parts.fcra && 'FCRA', c.parts.psp && 'PSP', c.parts.cdlis && 'CDLIS'].filter(Boolean).join(' · ')
+        : ''
       if (c?.status === 'complete') {
-        const parts = [c.parts.fcra && 'FCRA', c.parts.psp && 'PSP', c.parts.cdlis && 'CDLIS'].filter(Boolean).join(' · ')
         return {
-          line: `Signed ${fmtDate(c.completedAt) ?? '—'} · ${parts}`,
+          line: parts ? `${line} · ${parts}` : line,
           action: <ViewBtn label="View package" onClick={() => a.onViewConsent(c.id)} />,
         }
       }
       if (c) {
         return {
-          line: `Started ${fmtDate(c.createdAt)} · not finished`,
+          line,
           action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View package" onClick={() => a.onViewConsent(c.id)} /> : undefined,
         }
       }
       if (item.status === 'requested') {
         return {
-          line: `Sent ${fmtDate(item.updatedAt)} · unsigned`,
+          line,
           action: (
             <div className="flex items-center gap-1">
               <ResendBtn channel="email" icon={Mail} enabled={a.hasEmail} busy={a.resending} onClick={a.onResendConsent} />
@@ -121,7 +136,7 @@ function describe(
           ),
         }
       }
-      return { line: item.emptyHint }
+      return { line }
     }
 
     case 'mvr':
@@ -130,19 +145,17 @@ function describe(
       const orders = d.screenings.filter((s) => s.kind === kind)
       const newest = orders[0]
       if (!newest) return { line: item.emptyHint }
-      const when = fmtDate(newest.completedAt ?? newest.orderedAt)
-      const outcome = newest.outcome ? outcomeLabel(newest.outcome) : null
+      const base = screeningBoardLine({
+        itemStatus: item.status,
+        orderStatus: newest.status,
+        outcome: newest.outcome,
+        errorMessage: newest.errorMessage,
+        errorCode: newest.errorCode,
+      })
       const extra = orders.length > 1 ? `${orders.length} pulls` : null
       const provenance = newest.orderedByYou ? null : 'On file via another employer'
-      const done = item.refreshDue ? `Completed ${when} · refresh due` : `Completed ${when}`
-      const line = [
-        item.status === 'complete' ? done : item.status === 'processing' ? `Ordered ${when} · processing` : `Order ${newest.status}`,
-        outcome,
-        extra,
-        provenance,
-      ]
-        .filter(Boolean)
-        .join(' · ')
+      const refresh = item.refreshDue ? 'refresh due' : null
+      const line = [base, refresh, extra, provenance].filter(Boolean).join(' · ')
       // A pull paid by a different company stays a fact on the board. This
       // company's own order, including one placed from its consent, opens.
       const action =
@@ -153,16 +166,18 @@ function describe(
     }
 
     case 'employment_verification': {
+      const base = evBoardLine(item.status)
       const evs = d.employmentVerifications
-      if (evs.length === 0) return { line: item.emptyHint }
+      if (evs.length === 0) return { line: base }
       const verified = evs.filter((e) => e.status === 'VERIFIED' || e.status === 'PARTIALLY_VERIFIED').length
       const clock = item.hireClock
         ? item.hireClock.overdue
-          ? ' · 30-day clock overdue'
-          : ` · due in ${item.hireClock.daysRemaining}d`
-        : ''
+          ? '30-day clock overdue'
+          : `due in ${item.hireClock.daysRemaining}d`
+        : null
+      const detail = `${evs.length} employer${evs.length === 1 ? '' : 's'} · ${verified} verified`
       return {
-        line: `${evs.length} employer${evs.length === 1 ? '' : 's'} · ${verified} verified${clock}`,
+        line: [base, detail, clock].filter(Boolean).join(' · '),
         action: dqItemHasWorkToShow(item.status) ? <ViewBtn label="View" onClick={a.onViewEmployment} /> : undefined,
       }
     }

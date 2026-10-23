@@ -1,22 +1,30 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, Loader2, Plus, RefreshCw, Search, Users } from 'lucide-react'
+import { ChevronRight, Loader2, Mail, Plus, RefreshCw, Search, Users } from 'lucide-react'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
 import { BALL_LABEL, deriveDriverJourney, type BallInCourt } from '@/lib/driver-journey'
+import { rosterWhereLine } from '@/lib/dq-board-lines'
+import type { DqItemId } from '@/lib/dq-file-registry'
 import { useDriverBoardStore, type DriverBoardFilter, type DriverRosterRow } from '@/stores/driver-board-store'
-import DriverBlockBadges, { BallPill } from './DriverBlockBadges'
+import DriverBlockBadges, { BallPill, DQ_ITEM_SHORT, DqStatusBadge } from './DriverBlockBadges'
+import EmailUpdateModal from './EmailUpdateModal'
 import DriverFileModal from './DriverFileModal'
 import NewOutreachModal from '@/components/employer/outreach/NewOutreachModal'
 
 const PAGE_SIZE = 15
 
-/** Chip order = sort order. The board reads top-down as "what do I do next". */
+/** Chip order. The list itself is newest activity first — see the sort below. */
 const BALL_ORDER: BallInCourt[] = ['attention', 'you', 'processing', 'driver', 'done']
+
+/** Document pills sit to the right of the journey pills. Order is the one HR scans. */
+const DOC_PILLS: DqItemId[] = ['cdlis_consent', 'mvr', 'dl_images', 'psp', 'dot_application', 'employment_verification']
+
+const RECRUITER_EMAIL_KEY = 'provven-hr-recruiter-email'
 
 function activityLabel(iso: string | null): string {
   if (!iso) return 'No activity yet'
@@ -26,6 +34,16 @@ function activityLabel(iso: string | null): string {
   if (days === 1) return 'Yesterday'
   if (days < 30) return `${days}d ago`
   return new Date(iso).toLocaleDateString()
+}
+
+function FocusedItem({ item }: { item: DriverRosterRow['items'][number] | undefined }) {
+  if (!item) return <p className="text-xs text-ironside">Not on file</p>
+  return (
+    <div className="min-w-0">
+      <DqStatusBadge status={item.status} />
+      <p className="mt-1 truncate text-xs text-ironside">{item.line}</p>
+    </div>
+  )
 }
 
 function cdlLabel(row: DriverRosterRow): string | null {
@@ -56,6 +74,8 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
   // Pagination and the invite modal are local list UX — nobody else needs them.
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [showNewOutreach, setShowNewOutreach] = useState(false)
+  const [focus, setFocus] = useState<DqItemId | null>(null)
+  const [showEmail, setShowEmail] = useState(false)
 
   useEffect(() => {
     void fetchRoster()
@@ -63,15 +83,13 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [filter, search])
+  }, [filter, search, focus])
 
   const rows = useMemo(
     () =>
       roster
         .map((r) => ({ row: r, journey: deriveDriverJourney(r.items) }))
         .sort((a, b) => {
-          const d = BALL_ORDER.indexOf(a.journey.ball) - BALL_ORDER.indexOf(b.journey.ball)
-          if (d !== 0) return d
           const at = a.row.lastActivityAt ? Date.parse(a.row.lastActivityAt) : 0
           const bt = b.row.lastActivityAt ? Date.parse(b.row.lastActivityAt) : 0
           return bt - at || a.row.name.localeCompare(b.row.name)
@@ -97,6 +115,17 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
     ...BALL_ORDER.map((b) => ({ id: b, label: BALL_LABEL[b], count: counts[b] })),
   ]
 
+  const docCounts = Object.fromEntries(
+    DOC_PILLS.map((id) => [id, filtered.filter(({ row }) => row.items.find((item) => item.id === id)?.status === 'complete').length]),
+  ) as Record<DqItemId, number>
+
+  const emailDrivers = filtered.map(({ row, journey }) => ({
+    name: row.name,
+    line: focus
+      ? row.items.find((item) => item.id === focus)?.line || 'Not on file'
+      : rosterWhereLine(journey.next, row.items),
+  }))
+
   return (
     <>
       <HubSectionPanel isDark={false} accent="teal" className="mb-8">
@@ -112,6 +141,16 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
           }
           headerActions={
             <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowEmail(true)}
+                disabled={roster.length === 0}
+              >
+                <Mail className="h-4 w-4" />
+                Email update
+              </Button>
               <Button type="button" variant="primary" size="sm" onClick={() => setShowNewOutreach(true)}>
                 <Plus className="h-4 w-4" />
                 New outreach
@@ -184,6 +223,31 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                     </button>
                   )
                 })}
+                <span className="mx-1 hidden h-4 w-px bg-stone-200 sm:block" aria-hidden />
+                {DOC_PILLS.map((id) => {
+                  const active = focus === id
+                  const count = docCounts[id]
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setFocus((current) => (current === id ? null : id))}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                        active
+                          ? 'border-[#173150] bg-[#173150] text-white'
+                          : count === 0
+                            ? 'border-stone-200 bg-white text-ironside/60'
+                            : 'border-stone-200 bg-white text-[#173150] hover:border-ironside',
+                      )}
+                    >
+                      {DQ_ITEM_SHORT[id]}
+                      <span className={cn('rounded-full px-1.5 text-[10px] tabular-nums', active ? 'bg-white/20' : 'bg-stone-100')}>
+                        {count}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
               <div className="relative">
@@ -201,7 +265,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
               {filtered.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-stone-200 px-4 py-8 text-center">
                   <p className="text-sm text-ironside">No drivers match.</p>
-                  <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={() => { setSearch(''); setFilter('all') }}>
+                  <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={() => { setSearch(''); setFilter('all'); setFocus(null) }}>
                     Clear filters
                   </Button>
                 </div>
@@ -226,11 +290,15 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                           <BallPill ball={journey.ball} className="md:hidden" />
 
                           <div className="col-span-3 min-w-0 md:col-span-1">
-                            <DriverBlockBadges items={row.items} />
-                            {journey.next && (
-                              <p className={cn('mt-1 truncate text-xs', journey.ball === 'you' || journey.ball === 'attention' ? 'font-medium text-[#173150]' : 'text-ironside')}>
-                                {journey.next.text}
-                              </p>
+                            {focus ? (
+                              <FocusedItem item={row.items.find((entry) => entry.id === focus)} />
+                            ) : (
+                              <>
+                                <DriverBlockBadges items={row.items} />
+                                <p className={cn('mt-1 truncate text-xs', journey.ball === 'you' || journey.ball === 'attention' ? 'font-medium text-[#173150]' : 'text-ironside')}>
+                                  {rosterWhereLine(journey.next, row.items)}
+                                </p>
+                              </>
                             )}
                           </div>
 
@@ -264,6 +332,14 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
         <NewOutreachModal
           onClose={() => setShowNewOutreach(false)}
           onSent={() => void fetchRoster(true)}
+        />
+      )}
+      {showEmail && (
+        <EmailUpdateModal
+          drivers={emailDrivers}
+          focusLabel={focus ? DQ_ITEM_SHORT[focus] : null}
+          storageKey={RECRUITER_EMAIL_KEY}
+          onClose={() => setShowEmail(false)}
         />
       )}
     </>

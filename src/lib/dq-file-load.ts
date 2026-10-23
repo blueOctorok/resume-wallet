@@ -14,6 +14,15 @@ import {
 } from '@/lib/dq-file-status'
 import type { DqItemId } from '@/lib/dq-file-registry'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
+import {
+  asScreeningOutcome,
+  consentBoardLine,
+  dotBoardLine,
+  evBoardLine,
+  licenseBoardLine,
+  screeningBoardLine,
+  type ConsentInviteSnap,
+} from '@/lib/dq-board-lines'
 import { isLicenseScanFields } from '@/lib/aamva-license'
 import { getCdlData, getLicenseScan, type LicenseScanRow } from '@/lib/block-data'
 import { toCompanyAccountTier } from '@/lib/company-account-tier'
@@ -48,6 +57,8 @@ interface OrderRowRich {
   expires_at: string | null
   ordered_by_company_id: string | null
   result_outcome: string | null
+  error_message: string | null
+  error_code: string | null
 }
 
 interface ConsentRowRich {
@@ -101,7 +112,7 @@ interface CompanyDqRows {
 }
 
 const ORDER_COLS_RICH =
-  'id, status, completed_at, processed_at, ordered_at, created_at, expires_at, ordered_by_company_id, result_outcome'
+  'id, status, completed_at, processed_at, ordered_at, created_at, expires_at, ordered_by_company_id, result_outcome, error_message, error_code'
 
 /**
  * Product rule (multi-employer DQ file):
@@ -256,6 +267,8 @@ export interface DriverFileDetail {
     outcome: ScreeningOutcome | null
     orderedAt: string | null
     completedAt: string | null
+    errorMessage: string | null
+    errorCode: string | null
     /** Report access follows payment (CRA rule) — only your own orders open. */
     orderedByYou: boolean
   }>
@@ -306,6 +319,8 @@ export async function loadDriverFileDetail(
     outcome: (o.result_outcome as ScreeningOutcome | null) ?? null,
     orderedAt: o.ordered_at ?? o.created_at,
     completedAt: o.completed_at,
+    errorMessage: o.error_message,
+    errorCode: o.error_code,
     orderedByYou:
       o.ordered_by_company_id === companyId ||
       (o.ordered_by_company_id == null && consentOnFile),
@@ -596,8 +611,11 @@ export interface DqMonitorCandidateRow {
   completedCount: number
   totalLiveCount: number
   lastActivityAt: string | null
-  /** Live DQ items only — enough for badges and journey derivation without the full snapshot. */
-  items: Array<{ id: DqItemId; status: DqItemStatus }>
+  /**
+   * Live DQ items only. `line` is the sentence the board, the file, and the
+   * recruiter email share for this item.
+   */
+  items: Array<{ id: DqItemId; status: DqItemStatus; line: string }>
 }
 
 /**
@@ -623,6 +641,8 @@ export async function loadDqMonitorList(
     used_by_user_id: string | null
     candidate_user_id: string | null
     created_at: string
+    status: string
+    view_count: number | null
   }
   type OrderRow = {
     id: string
@@ -633,6 +653,9 @@ export async function loadDqMonitorList(
     ordered_at?: string | null
     created_at?: string | null
     expires_at?: string | null
+    result_outcome?: string | null
+    error_message?: string | null
+    error_code?: string | null
   }
   type ConsentRow = {
     id: string
@@ -679,14 +702,14 @@ export async function loadDqMonitorList(
       fetchAllInChunks<OrderRow>(candidateIds, 'mvr_orders', (chunk) =>
         supabase
           .from('mvr_orders')
-          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at, result_outcome, error_message, error_code')
           .in('driver_user_id', chunk)
           .limit(1000),
       ),
       fetchAllInChunks<OrderRow>(candidateIds, 'psp_orders', (chunk) =>
         supabase
           .from('psp_orders')
-          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at')
+          .select('id, driver_user_id, status, completed_at, processed_at, ordered_at, created_at, expires_at, result_outcome, error_message, error_code')
           .in('driver_user_id', chunk)
           .limit(1000),
       ),
@@ -728,7 +751,7 @@ export async function loadDqMonitorList(
       // the company-scoped set is small enough to fetch once.
       supabase
         .from('application_invites')
-        .select('used_by_user_id, candidate_user_id, created_at')
+        .select('used_by_user_id, candidate_user_id, created_at, status, view_count')
         .eq('company_id', companyId)
         .eq('target_block_type', 'driver-screening-consent')
         .in('status', [...LIVE_INVITE_STATUSES])
@@ -749,10 +772,15 @@ export async function loadDqMonitorList(
   )
   const cdlByUser = new Map(cdlRows.map((c) => [c.user_id, { cdlClass: c.cdl_class, state: c.cdl_state }]))
   // Newest first from the query, so the first write per user wins.
-  const consentInviteAtByUser = new Map<string, string>()
+  const consentInviteByUser = new Map<string, ConsentInviteSnap>()
   for (const inv of liveConsentInvites) {
+    const snap: ConsentInviteSnap = {
+      status: inv.status,
+      viewCount: inv.view_count ?? 0,
+      createdAt: inv.created_at,
+    }
     for (const id of [inv.used_by_user_id, inv.candidate_user_id]) {
-      if (id && !consentInviteAtByUser.has(id)) consentInviteAtByUser.set(id, inv.created_at)
+      if (id && !consentInviteByUser.has(id)) consentInviteByUser.set(id, snap)
     }
   }
 
@@ -833,8 +861,75 @@ export async function loadDqMonitorList(
             updatedAt: license.updated_at,
           }
         : null,
-      pendingConsentInviteAt: consentInviteAtByUser.get(userId) ?? null,
+      pendingConsentInviteAt: consentInviteByUser.get(userId)?.createdAt ?? null,
     })
+
+    const invite = consentInviteByUser.get(userId) ?? null
+    const newest = (orders: OrderRow[]) => {
+      if (orders.length === 0) return null
+      return [...orders].sort((a, b) => {
+        const at = Date.parse(a.created_at || a.ordered_at || '') || 0
+        const bt = Date.parse(b.created_at || b.ordered_at || '') || 0
+        return bt - at
+      })[0]
+    }
+    const signedBundle = [...consents].sort((a, b) => {
+      const at = Date.parse(a.completed_at || a.created_at || '') || 0
+      const bt = Date.parse(b.completed_at || b.created_at || '') || 0
+      return bt - at
+    }).find((b) => b.status === 'complete' || Boolean(b.cdlis_signed_at))
+    const startedBundle = [...consents].sort((a, b) => {
+      const at = Date.parse(a.created_at || '') || 0
+      const bt = Date.parse(b.created_at || '') || 0
+      return bt - at
+    })[0]
+    const dotAppsSorted = [...dots].sort((a, b) => {
+      const at = Date.parse(a.updated_at || a.created_at || '') || 0
+      const bt = Date.parse(b.updated_at || b.created_at || '') || 0
+      return bt - at
+    })
+    const dotForLine = dotAppsSorted.find((a) => a.is_complete) ?? dotAppsSorted[0] ?? null
+    const mvrOrder = newest(mvr)
+    const pspOrder = newest(psp)
+
+    const lineFor = (id: DqItemId, status: DqItemStatus): string => {
+      switch (id) {
+        case 'cdlis_consent':
+          return consentBoardLine({
+            status,
+            signedAt: signedBundle?.cdlis_signed_at || signedBundle?.completed_at || signedBundle?.created_at || null,
+            startedAt: startedBundle?.created_at || null,
+            invite,
+          })
+        case 'mvr':
+          return screeningBoardLine({
+            itemStatus: status,
+            orderStatus: mvrOrder?.status,
+            outcome: asScreeningOutcome(mvrOrder?.result_outcome),
+            errorMessage: mvrOrder?.error_message,
+            errorCode: mvrOrder?.error_code,
+          })
+        case 'psp':
+          return screeningBoardLine({
+            itemStatus: status,
+            orderStatus: pspOrder?.status,
+            outcome: asScreeningOutcome(pspOrder?.result_outcome),
+            errorMessage: pspOrder?.error_message,
+            errorCode: pspOrder?.error_code,
+          })
+        case 'dl_images':
+          return licenseBoardLine({
+            confirmed: Boolean(license?.confirmed_at),
+            barcodeRead: license?.barcode_status === 'read',
+          })
+        case 'dot_application':
+          return dotBoardLine({ status, currentStep: dotForLine?.current_step })
+        case 'employment_verification':
+          return evBoardLine(status)
+        default:
+          return ''
+      }
+    }
 
     const profile = profileById.get(userId)
     rows.push({
@@ -847,7 +942,9 @@ export async function loadDqMonitorList(
       completedCount: snapshot.completedCount,
       totalLiveCount: snapshot.totalLiveCount,
       lastActivityAt: snapshot.lastActivityAt,
-      items: snapshot.items.filter((i) => i.blocksOverallCompletion).map(({ id, status }) => ({ id, status })),
+      items: snapshot.items
+        .filter((i) => i.blocksOverallCompletion)
+        .map(({ id, status }) => ({ id, status, line: lineFor(id, status) })),
     })
   }
 
