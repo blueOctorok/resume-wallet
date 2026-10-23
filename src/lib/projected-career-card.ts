@@ -31,6 +31,7 @@ import type {
   OnChainCredential,
 } from '@/types/career-card'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
+import { syncConfirmedLicenseName } from '@/lib/apply-license-scan'
 
 /** @deprecated Empty resume heroes are no longer shown — resume appears only with a real artifact. */
 export const EMPTY_STORM_RESUME_CARD: ResumeData = {
@@ -187,7 +188,11 @@ export async function buildProjectedCareerCard(
     [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() ||
     userProfile?.display_name?.trim() ||
     ''
-  const userName = upName || 'Candidate'
+  // A confirmed license read replaces a name the driver typed. The card
+  // shows that name, including the middle name, and the profile row is
+  // brought back in line if a later save put the typed name back.
+  const licenseName = await syncConfirmedLicenseName(supabase, userId)
+  const userName = licenseName || upName || 'Candidate'
   const avatarUrl = userProfile?.avatar_url ?? null
 
   const location =

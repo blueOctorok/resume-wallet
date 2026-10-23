@@ -11,10 +11,11 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  emptyLicenseFields,
   licenseClassForDot,
   type LicenseScanFields,
 } from '@/lib/aamva-license'
-import { ensureHubBlockInstalled, getCdlData, saveCdlData } from '@/lib/block-data'
+import { ensureHubBlockInstalled, getCdlData, getLicenseScan, saveCdlData } from '@/lib/block-data'
 import {
   getForm1ValueAtPath,
   isDotFieldPath,
@@ -266,7 +267,6 @@ export function profilePatchFromLicense(
   form1: Form1WithProvenance | null,
 ): Record<string, string> {
   const first = valueOverTyped(fields.firstName, form1, 'firstName')
-  const middle = valueOverTyped(fields.middleName, form1, 'middleName')
   const last = valueOverTyped(fields.lastName, form1, 'lastName')
   const patch: Record<string, string> = {}
   const take = (column: keyof ProfileIdentityRow, value: string) => {
@@ -281,9 +281,61 @@ export function profilePatchFromLicense(
   take('state', mailingOverTyped(fields.state, form1, 'state'))
   take('zip_code', mailingOverTyped(fields.postalCode, form1, 'zipCode'))
 
-  const display = [first, middle, last].filter(Boolean).join(' ')
+  const display = licenseIdentityName(fields, form1)
   take('display_name', display)
   return patch
+}
+
+/** Name the barcode (or an MVR lock) should show. Middle name is included. */
+export function licenseIdentityName(
+  fields: LicenseScanFields,
+  form1: Form1WithProvenance | null,
+): string {
+  const first = valueOverTyped(fields.firstName, form1, 'firstName')
+  const middle = valueOverTyped(fields.middleName, form1, 'middleName')
+  const last = valueOverTyped(fields.lastName, form1, 'lastName')
+  return [first, middle, last].filter(Boolean).join(' ')
+}
+
+function coerceLicenseFields(raw: unknown): LicenseScanFields | null {
+  if (!raw || typeof raw !== 'object') return null
+  const row = raw as Record<string, unknown>
+  const text = (key: string) => (typeof row[key] === 'string' ? row[key].trim() : '')
+  if (!text('firstName') && !text('lastName')) return null
+  return {
+    ...emptyLicenseFields(),
+    firstName: text('firstName'),
+    middleName: text('middleName'),
+    lastName: text('lastName'),
+  }
+}
+
+/**
+ * A confirmed barcode read is the profile name until an MVR locks it.
+ * A later profile save can put the typed name back into first and last
+ * while leaving the scan in place, so the card calls this on load.
+ * Returns the name to show, or null when there is no confirmed read.
+ */
+export async function syncConfirmedLicenseName(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  const scan = await getLicenseScan(supabase, userId)
+  if (!scan?.confirmed_at) return null
+  const fields = coerceLicenseFields(scan.parsed_fields)
+  if (!fields) return null
+
+  const { data: app } = await supabase
+    .from('driver_applications')
+    .select('application_data')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const form1 =
+    (app?.application_data as { form1?: Form1WithProvenance | null } | null)?.form1 ?? null
+
+  await fillProfileFromLicense(supabase, userId, fields, form1)
+  const name = licenseIdentityName(fields, form1)
+  return name || null
 }
 
 async function fillProfileFromLicense(

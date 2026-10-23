@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, Maximize2, Briefcase } from 'lucide-react'
+import { Maximize2, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -252,20 +252,25 @@ export default function ResumeSection({
     return (
       <div
         className={cn(
-          'rounded-xl border-2 border-dashed p-6 text-center',
-          isDark ? 'border-teal-400/25 bg-teal-500/[0.06]' : 'border-teal-300/60 bg-teal-50/50',
+          'rounded-xl border p-4',
+          isDark ? 'border-gray-600/55 bg-gray-800/45' : 'border-gray-200/90 bg-white/85',
         )}
       >
-        <FileText className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-teal-300' : 'text-teal-600')} />
-        <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Add your resume</p>
-        <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
-          Upload a PDF first. It fills empty fields on your DOT application.
-        </p>
-        {isCareerCardOwnerMode(mode) && onAction ? (
-          <Button type='button' variant='primary' size='sm' className='mt-4' onClick={onAction}>
-            Upload
-          </Button>
-        ) : null}
+        <div className='flex items-center justify-between gap-3'>
+          <div className='min-w-0'>
+            <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+              Add your resume
+            </p>
+            <p className={cn('mt-0.5 text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              Upload a PDF. It fills empty fields on your DOT application.
+            </p>
+          </div>
+          {isCareerCardOwnerMode(mode) && onAction ? (
+            <Button type='button' variant='primary' size='sm' className='shrink-0' onClick={onAction}>
+              Upload
+            </Button>
+          ) : null}
+        </div>
       </div>
     )
   }

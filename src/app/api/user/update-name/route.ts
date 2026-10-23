@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { syncConfirmedLicenseName } from '@/lib/apply-license-scan'
 
 /**
  * POST /api/user/update-name
@@ -56,7 +57,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ success: true })
+    const licenseName = await syncConfirmedLicenseName(supabase, user.id)
+
+    return NextResponse.json({ success: true, name: licenseName || trimmed })
   } catch (error) {
     console.error('[UPDATE NAME] Unexpected error:', error)
     return NextResponse.json(

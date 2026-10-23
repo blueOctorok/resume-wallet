@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { syncConfirmedLicenseName } from '@/lib/apply-license-scan'
 
 /**
  * POST /api/user/profile-setup
@@ -50,7 +51,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, name: fullName })
+    // A confirmed license read replaces a name typed into this form.
+    const licenseName = await syncConfirmedLicenseName(supabase, userId)
+
+    return NextResponse.json({ success: true, name: licenseName || fullName })
   } catch (err) {
     console.error('[PROFILE SETUP] Unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

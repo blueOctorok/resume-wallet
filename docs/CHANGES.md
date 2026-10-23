@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **License name replaces the typed name on the career card** (2026-10-23)
+
+The empty resume row was a dashed box. It now matches the other rows: title, one line, and the button on the right.
+
+A confirmed license read is supposed to replace the name the driver typed. The card was still building the name from first and last name, so a later profile save could put the typed name back while the license name sat only in the display name. Opening the card writes the barcode name onto the profile (first, last, and the full name with the middle name) and shows that name. An MVR lock still replaces the barcode. Saving the profile again does not put the typed name back while that read is confirmed.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/sections/ResumeSection.tsx` | Empty resume uses the same row as the other card sections. |
+| `src/lib/apply-license-scan.ts` | Syncs a confirmed barcode name onto the profile. |
+| `src/lib/projected-career-card.ts` | Card title uses that name. |
+| `src/app/api/user/profile-setup/route.ts` | A typed name does not stick over a confirmed read. |
+| `src/app/api/user/update-name/route.ts` | Same for the name update. |
+
+---
+
 ## **Resume upload is a PDF save, not a hash ceremony** (2026-10-23)
 
 The upload screen still ran the old hash-first flow: calculate a file hash, show pending steps, and print the user id like a wallet address. The panel was a dark slab. Uploading a resume now saves the PDF and offers to fill empty fields from it. There is no hash step and no chain payload. The form sits on brand paper with Midnight type and a Hot Embers button.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { aamvaDate, parseAamvaLicense } from '@/lib/aamva-license'
-import { profilePatchFromLicense, softFillForm1FromLicense } from '@/lib/apply-license-scan'
+import { licenseIdentityName, profilePatchFromLicense, softFillForm1FromLicense } from '@/lib/apply-license-scan'
 import type { DotForm1FieldProvenance } from '@/lib/dot-field-provenance'
 
 const SAMPLE = [
@@ -112,6 +112,7 @@ describe('profilePatchFromLicense', () => {
     expect(patch.first_name).toBe('John')
     expect(patch.last_name).toBe('Doe')
     expect(patch.display_name).toBe('John Quincy Doe')
+    expect(licenseIdentityName(fields, null)).toBe('John Quincy Doe')
   })
 
   it('keeps an MVR-locked name instead of the barcode', () => {
