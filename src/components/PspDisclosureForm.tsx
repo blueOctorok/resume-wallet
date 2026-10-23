@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useRef, useEffect } from 'react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -10,12 +9,11 @@ import {
   CheckCircle,
   PenLine,
   AlertTriangle,
-  FileWarning,
 } from 'lucide-react'
-import { useTheme } from '@/contexts/ThemeContext'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
-import { checkDlNumberIsNotName, validateDateOfBirth } from '@/lib/screening-validation'
+import { validateConsentProfile } from '@/lib/screening-validation'
 
 export type PspConsentSignedResult = {
   consentId: string
@@ -169,7 +167,6 @@ export default function PspDisclosureForm({
   deferSubmit = false,
   presetConsent,
 }: PspDisclosureFormProps) {
-  const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
   // Seed from initialProfile (e.g. BG disclosure step) so candidates don't
@@ -323,35 +320,13 @@ export default function PspDisclosureForm({
       setError('Please enter your name as it should appear printed on the form.')
       return
     }
-    if (!profile.firstName.trim() || !profile.lastName.trim()) {
-      setError('First name and last name are required.')
-      return
-    }
-    if (!profile.dlNumber.trim()) {
-      setError("Driver's license number is required.")
-      return
-    }
-    const dlNameError = checkDlNumberIsNotName({
-      dlNumber: profile.dlNumber,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-    })
-    if (dlNameError) {
-      setError(dlNameError)
+    const profileCheck = validateConsentProfile(profile)
+    if (!profileCheck.ok) {
+      setError(profileCheck.error)
       return
     }
     if ((fulfillOrder || deferSubmit) && !isValidSsn(ssn)) {
       setError('Your full 9-digit Social Security Number is required.')
-      return
-    }
-    if (profile.dateOfBirth.trim()) {
-      const dobCheck = validateDateOfBirth(profile.dateOfBirth)
-      if (!dobCheck.ok) {
-        setError(dobCheck.error)
-        return
-      }
-    } else {
-      setError('Date of birth is required.')
       return
     }
 
@@ -546,25 +521,11 @@ export default function PspDisclosureForm({
     }
   }
 
-  const isDark = isDarkTheme(theme)
-  const overlayBg = isDark ? 'bg-gray-950' : 'bg-gray-100'
-  const footerBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
-  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
-
   const content = (
-      <div className={`flex flex-col ${renderInline ? 'h-full' : 'max-h-[90vh]'} ${overlayBg}`}>
+      <div className={`flex flex-col bg-[#f3f4f5] text-[#173150] ${renderInline ? 'h-full' : 'max-h-[90vh]'}`}>
         {renderInline ? (
-          <div className={`flex items-center gap-3 px-6 py-4 border-b ${footerBg}`}>
-            <div className={`p-2.5 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
-              <FileWarning className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <h2 className={`font-semibold ${textPrimary}`}>
-                {fulfillOrder ? 'PSP + MVR Report — Disclosure & Order' : 'PSP Disclosure & Authorization (FMCSA)'}
-              </h2>
-              <p className={`text-sm ${textSecondary}`}>Prospective Employer: {employerDisplay}</p>
-            </div>
+          <div className="flex items-center px-6 py-4">
+            <ProvvenWordmark className="text-[15px]" tone="auto" />
           </div>
         ) : (
           <ModalHeader
@@ -580,15 +541,13 @@ export default function PspDisclosureForm({
             <div
               ref={printRef}
               data-psp-pdf-root
-              className="bg-white text-gray-900 rounded-xl border border-amber-200 shadow-sm overflow-x-hidden overflow-y-visible"
+              className="overflow-x-hidden overflow-y-visible rounded-2xl bg-white text-gray-900 shadow-[0_4px_24px_rgba(23,49,80,0.08)]"
             >
-              <div className="bg-gradient-to-r from-amber-600 to-amber-700 px-8 py-5 text-white">
-                <div className="flex items-center gap-3 mb-2">
-                  <FileWarning className="w-6 h-6" />
-                  <span className="text-xs font-medium uppercase tracking-wide opacity-95">Stand-alone FMCSA document</span>
-                </div>
-                <h1 className="text-lg font-bold leading-snug">{FMCSA_HEADER}</h1>
+              <div className="bg-[#173150] px-8 pb-5 pt-7 text-[#f4f1ea]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">{employerDisplay}</p>
+                <h1 className="mt-1.5 font-display text-lg font-bold leading-snug">{FMCSA_HEADER}</h1>
               </div>
+              <div className="h-[3px] bg-[#f15a2b]" aria-hidden />
 
               <div className="px-8 py-6 space-y-4 text-sm text-gray-800 leading-relaxed">
                 {FMCSA_DISCLOSURE_PARAS.map((para, i) => (
@@ -641,6 +600,7 @@ export default function PspDisclosureForm({
                       value={profile.dlState}
                       readOnly={viewMode}
                       onChange={v => setProfile(p => ({ ...p, dlState: v }))}
+                      required
                     />
                     <ReadOnlyOrInput
                       label="Date of Birth"
@@ -649,6 +609,7 @@ export default function PspDisclosureForm({
                       onChange={v => setProfile(p => ({ ...p, dateOfBirth: v }))}
                       type="date"
                       autoComplete="bday"
+                      required
                     />
                     <ReadOnlyOrInput
                       label="Current Address"
@@ -656,6 +617,7 @@ export default function PspDisclosureForm({
                       readOnly={viewMode}
                       onChange={v => setProfile(p => ({ ...p, address: v }))}
                       autoComplete="street-address"
+                      required
                     />
                     <ReadOnlyOrInput
                       label="City"
@@ -663,12 +625,14 @@ export default function PspDisclosureForm({
                       readOnly={viewMode}
                       onChange={v => setProfile(p => ({ ...p, city: v }))}
                       autoComplete="address-level2"
+                      required
                     />
                     <PspStateField
                       label="State"
                       value={profile.state}
                       readOnly={viewMode}
                       onChange={v => setProfile(p => ({ ...p, state: v }))}
+                      required
                     />
                     <ReadOnlyOrInput
                       label="ZIP Code"
@@ -680,6 +644,7 @@ export default function PspDisclosureForm({
                       maxLength={10}
                       autoComplete="postal-code"
                       placeholder="e.g. 44114"
+                      required
                     />
                     <ReadOnlyOrInput
                       label="Email Address"
@@ -747,11 +712,11 @@ export default function PspDisclosureForm({
           </div>
         </div>
 
-        <div className={`px-6 py-4 border-t ${footerBg}`}>
+        <div className="border-t border-[#e5e7eb] bg-[#f3f4f5] px-6 py-4">
           <div className="max-w-3xl mx-auto flex flex-wrap items-center gap-3">
             {signed ? (
               <>
-                <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                <div className="flex items-center gap-2 text-sm text-green-700">
                   <CheckCircle className="w-4 h-4" />
                   {orderPlaced
                     ? 'PSP order submitted — your report will be processed shortly'
@@ -886,17 +851,20 @@ function PspStateField({
   label,
   value,
   readOnly = false,
+  required = false,
   onChange,
 }: {
   label: string
   value: string
   readOnly?: boolean
+  required?: boolean
   onChange?: (value: string) => void
 }) {
+  const mark = required ? <span className="text-red-500 ml-0.5">*</span> : null
   if (readOnly) {
     return (
       <div>
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <p className="text-xs text-gray-400 mb-1">{label}{mark}</p>
         <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
           {value || <span className="text-gray-300 italic">—</span>}
         </div>
@@ -906,7 +874,7 @@ function PspStateField({
 
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}{mark}</label>
       <StateSelect
         value={value}
         onChange={v => onChange?.(v)}

@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Consent forms refuse a signature with blank order fields** (2026-10-23)
+
+Signing the background-check disclosure or the PSP authorization only checked the name, license number, and date of birth. License state, street, city, state, and ZIP could be left empty, and those blanks are what make an MVR or PSP come back unfilled. Both forms now use one check, the same fields the order sends, and they name every blank in the error. A short license number or a ZIP that is not 5 digits is rejected too.
+
+| File | Change |
+|---|---|
+| `src/lib/screening-validation.ts` | `validateConsentProfile` — the order's required identity fields. |
+| `src/components/BackgroundCheckDisclosure.tsx` | Blocks Sign until that check passes. |
+| `src/components/PspDisclosureForm.tsx` | Same check on the PSP form. |
+
+---
+
+## **Consent forms sit on paper, with the email header** (2026-10-23)
+
+The background-check disclosure and the PSP authorization were a white page inside a dark panel. That panel was the app's dark theme filling the padding around the document. Both forms now use brand paper, the shield lockup, and a solid Midnight header with a 3px Hot Embers rule — the same frame as outbound email. The header no longer says "Provven Verified Document." A disclosure the driver signs is not a verified record.
+
+| File | Change |
+|---|---|
+| `src/components/BackgroundCheckDisclosure.tsx` | Paper page, email header, no verified claim. |
+| `src/components/PspDisclosureForm.tsx` | Same frame on the next consent step. |
+
+---
+
 ## **Email chrome uses the Blue Star lockup** (2026-10-23)
 
 Every email goes through one template. The orange “Provven” pill and the navy-to-ember gradient are gone. The top is the shield mark plus PROVVEN, on brand paper. The card header is solid Midnight with cream type and a 3px Hot Embers rule. The ask page uses the same header and the same wordmark component as the rest of the app. Inboxes drop SVG, so the mark in email is a PNG of that same art.

@@ -1,5 +1,44 @@
 import { describe, expect, it, vi } from 'vitest'
-import { checkRecentDuplicateOrder } from '@/lib/screening-validation'
+import { checkRecentDuplicateOrder, validateConsentProfile } from '@/lib/screening-validation'
+
+const completeProfile = {
+  firstName: 'Jane',
+  lastName: 'Doe',
+  dateOfBirth: '1985-04-12',
+  dlNumber: 'OH123456',
+  dlState: 'OH',
+  address: '100 Main Street',
+  city: 'Cleveland',
+  state: 'OH',
+  zip: '44114',
+}
+
+describe('validateConsentProfile', () => {
+  it('accepts a complete profile', () => {
+    expect(validateConsentProfile(completeProfile)).toEqual({ ok: true })
+  })
+
+  it('names every blank the order needs, in one message', () => {
+    const result = validateConsentProfile({
+      ...completeProfile,
+      dlState: '',
+      address: '  ',
+      zip: '',
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toContain('license state')
+      expect(result.error).toContain('street address')
+      expect(result.error).toContain('ZIP code')
+    }
+  })
+
+  it('rejects a short license number and a short ZIP', () => {
+    expect(validateConsentProfile({ ...completeProfile, dlNumber: 'AB' }).ok).toBe(false)
+    expect(validateConsentProfile({ ...completeProfile, zip: '4411' }).ok).toBe(false)
+  })
+})
+
 
 /**
  * Fluent stub for the guard's query chain:

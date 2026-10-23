@@ -138,6 +138,88 @@ export function validateDateOfBirth(input: string): { ok: true } | { ok: false; 
   return { ok: true }
 }
 
+const ZIP_RE = /^\d{5}(-\d{4})?$/
+
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels[0] ?? ''
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`
+}
+
+/**
+ * Everything an MVR or PSP order sends to the vendor, except the SSN
+ * (that field lives on a later step). Signing with any of these blank is
+ * how orders get placed and then come back unfilled.
+ */
+export function validateConsentProfile(input: {
+  firstName: string
+  lastName: string
+  dateOfBirth: string
+  dlNumber: string
+  dlState: string
+  address: string
+  city: string
+  state: string
+  zip: string
+}): { ok: true } | { ok: false; error: string } {
+  const firstName = trimSafe(input.firstName)
+  const lastName = trimSafe(input.lastName)
+  const dateOfBirth = trimSafe(input.dateOfBirth)
+  const dlNumber = trimSafe(input.dlNumber)
+  const dlState = trimSafe(input.dlState).toUpperCase()
+  const address = trimSafe(input.address)
+  const city = trimSafe(input.city)
+  const state = trimSafe(input.state).toUpperCase()
+  const zip = trimSafe(input.zip)
+
+  const missing: string[] = []
+  if (!firstName) missing.push('first name')
+  if (!lastName) missing.push('last name')
+  if (!dlNumber) missing.push('driver license number')
+  if (!dlState) missing.push('license state')
+  if (!dateOfBirth) missing.push('date of birth')
+  if (!address) missing.push('street address')
+  if (!city) missing.push('city')
+  if (!state) missing.push('state')
+  if (!zip) missing.push('ZIP code')
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      error: `Fill in ${joinLabels(missing)} before you sign. A motor vehicle record or PSP report cannot be ordered without them.`,
+    }
+  }
+
+  const dob = validateDateOfBirth(dateOfBirth)
+  if (!dob.ok) return dob
+
+  if (!US_STATE_CODES.has(dlState)) {
+    return { ok: false, error: 'Choose the state that issued your driver license.' }
+  }
+  if (!DL_NUMBER_RE.test(dlNumber)) {
+    return {
+      ok: false,
+      error: 'Driver license number must be 5-17 letters, digits, or dashes. Check the number on the physical card.',
+    }
+  }
+  const nameError = checkDlNumberIsNotName({ dlNumber, firstName, lastName })
+  if (nameError) return { ok: false, error: nameError }
+
+  if (address.length < 5) {
+    return { ok: false, error: 'Enter the street address on your license, including the number.' }
+  }
+  if (city.length < 2) {
+    return { ok: false, error: 'Enter the city on your license.' }
+  }
+  if (!US_STATE_CODES.has(state)) {
+    return { ok: false, error: 'Choose the state for your current address.' }
+  }
+  if (!ZIP_RE.test(zip)) {
+    return { ok: false, error: 'ZIP code must be 5 digits, or 5 digits plus 4 (12345 or 12345-6789).' }
+  }
+
+  return { ok: true }
+}
+
 /** YYYY-MM-DD or YYYYMMDD → YYYYMMDD. Returns null if not parseable. */
 function normalizeDob(input: string): string | null {
   const stripped = input.replace(/[^\d]/g, '')

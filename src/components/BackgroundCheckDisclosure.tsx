@@ -1,11 +1,9 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 import { useState, useRef, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import {
   X,
-  Shield,
   Download,
   Loader2,
   CheckCircle,
@@ -15,10 +13,10 @@ import {
   PenLine,
   AlertTriangle,
 } from 'lucide-react'
-import { useTheme } from '@/contexts/ThemeContext'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { formatSsnDisplay, isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
-import { checkDlNumberIsNotName, validateDateOfBirth } from '@/lib/screening-validation'
+import { validateConsentProfile } from '@/lib/screening-validation'
 
 interface DriverProfileInfo {
   firstName: string
@@ -173,7 +171,6 @@ export default function BackgroundCheckDisclosure({
   initialFormData,
   presetConsent,
 }: BackgroundCheckDisclosureProps) {
-  const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
   const [profile, setProfile] = useState<DriverProfileInfo>(() => {
@@ -291,35 +288,13 @@ export default function BackgroundCheckDisclosure({
       setError('Please type your full name to sign.')
       return
     }
-    if (!profile.firstName.trim() || !profile.lastName.trim()) {
-      setError('First name and last name are required.')
-      return
-    }
-    if (!profile.dlNumber.trim()) {
-      setError("Driver's license number is required.")
-      return
-    }
-    const dlNameError = checkDlNumberIsNotName({
-      dlNumber: profile.dlNumber,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-    })
-    if (dlNameError) {
-      setError(dlNameError)
+    const profileCheck = validateConsentProfile(profile)
+    if (!profileCheck.ok) {
+      setError(profileCheck.error)
       return
     }
     if (fulfillOrder && !isValidSsn(ssn)) {
       setError('Your full 9-digit Social Security Number is required to submit the order.')
-      return
-    }
-    if (profile.dateOfBirth.trim()) {
-      const dobCheck = validateDateOfBirth(profile.dateOfBirth)
-      if (!dobCheck.ok) {
-        setError(dobCheck.error)
-        return
-      }
-    } else {
-      setError('Date of birth is required.')
       return
     }
 
@@ -552,59 +527,38 @@ export default function BackgroundCheckDisclosure({
     }
   }
 
-  const isDark = isDarkTheme(theme)
-  const overlayBg = isDark ? 'bg-gray-950' : 'bg-gray-100'
-  const headerBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-  const footerBg = isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
-  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
-
   const content = (
-    <div className={`flex flex-col ${renderInline ? 'h-full' : 'max-h-[90vh]'} ${overlayBg}`}>
-      {/* Header */}
-      <div className={`flex items-center justify-between px-6 py-4 border-b ${headerBg}`}>
-        <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl ${isDark ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
-            <Shield className="w-5 h-5 text-teal-500" />
-          </div>
-          <div>
-            <h2 className={`font-semibold ${textPrimary}`}>
-              {fulfillOrder ? 'MVR Background Check — Disclosure & Order' : 'Background Check Disclosure & Authorization'}
-            </h2>
-            <p className={`text-sm ${textSecondary}`}>Requested by {viewCompanyName}</p>
-          </div>
-        </div>
+    // Paper, not the app's dark shell. This is a document the driver signs.
+    // A dark frame around it was the app theme showing through the padding.
+    <div className={`flex flex-col bg-[#f3f4f5] text-[#173150] ${renderInline ? 'h-full' : 'max-h-[90vh]'}`}>
+      <div className="flex items-center justify-between px-6 py-4">
+        <ProvvenWordmark className="text-[15px]" tone="auto" />
         {!renderInline && (
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            className="rounded-lg p-2 text-[#939598] transition-colors hover:bg-white hover:text-[#173150]"
           >
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* The white document area — always light for print clarity */}
-        <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="mx-auto max-w-3xl px-4 pb-8">
           {/* overflow-y-visible so tall disclosure isn’t clipped before capture; PDF clone also forces visible */}
           <div
             ref={printRef}
             data-bgcheck-pdf-root
-            className="bg-white text-gray-900 rounded-2xl shadow-xl overflow-x-hidden overflow-y-visible"
+            className="overflow-x-hidden overflow-y-visible rounded-2xl bg-white text-gray-900 shadow-[0_4px_24px_rgba(23,49,80,0.08)]"
           >
-            {/* Document Header */}
-            <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-8 py-6 text-white">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-6 h-6" />
-                <span className="text-sm font-medium uppercase tracking-widest opacity-90">
-                  Provven Verified Document
-                </span>
-              </div>
-              <h1 className="text-2xl font-bold">Background Check Disclosure</h1>
-              <p className="mt-1 opacity-90">Pursuant to the Fair Credit Reporting Act (FCRA)</p>
+            <div className="bg-[#173150] px-8 pb-6 pt-7 text-[#f4f1ea]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">{viewCompanyName}</p>
+              <h1 className="mt-1.5 font-display text-2xl font-bold leading-tight">
+                {fulfillOrder ? 'MVR Background Check' : 'Background Check Disclosure'}
+              </h1>
+              <p className="mt-1 text-sm text-[#f4f1ea]/75">Pursuant to the Fair Credit Reporting Act (FCRA)</p>
             </div>
+            <div className="h-[3px] bg-[#f15a2b]" aria-hidden />
 
             <div className="px-8 py-6 space-y-6">
               {/* Disclosure Section */}
@@ -761,6 +715,7 @@ export default function BackgroundCheckDisclosure({
                         value={profile.dlState}
                         readOnly={viewMode}
                         onChange={v => setProfile(p => ({ ...p, dlState: v }))}
+                        required
                       />
                       <ReadOnlyOrInput
                         label="Date of Birth"
@@ -769,6 +724,7 @@ export default function BackgroundCheckDisclosure({
                         onChange={v => setProfile(p => ({ ...p, dateOfBirth: v }))}
                         type="date"
                         autoComplete="bday"
+                        required
                       />
                       <ReadOnlyOrInput
                         label="Current Address"
@@ -776,6 +732,7 @@ export default function BackgroundCheckDisclosure({
                         readOnly={viewMode}
                         onChange={v => setProfile(p => ({ ...p, address: v }))}
                         autoComplete="street-address"
+                        required
                       />
                       <ReadOnlyOrInput
                         label="City"
@@ -783,12 +740,14 @@ export default function BackgroundCheckDisclosure({
                         readOnly={viewMode}
                         onChange={v => setProfile(p => ({ ...p, city: v }))}
                         autoComplete="address-level2"
+                        required
                       />
                       <StateField
                         label="State"
                         value={profile.state}
                         readOnly={viewMode}
                         onChange={v => setProfile(p => ({ ...p, state: v }))}
+                        required
                       />
                       <ReadOnlyOrInput
                         label="ZIP Code"
@@ -800,6 +759,7 @@ export default function BackgroundCheckDisclosure({
                         maxLength={10}
                         autoComplete="postal-code"
                         placeholder="e.g. 44114"
+                        required
                       />
                       <ReadOnlyOrInput
                         label="Email Address"
@@ -901,9 +861,8 @@ export default function BackgroundCheckDisclosure({
               </section>
 
               {/* Document Footer */}
-              <div className="border-t border-gray-200 pt-4 flex items-center justify-between text-xs text-gray-400">
+              <div className="border-t border-gray-200 pt-4 text-xs text-gray-400">
                 <span>Key Background Screening, Inc. — 3711 Chester Ave., Cleveland OH 44114 — keybackground.com</span>
-                <span>Provven Verified</span>
               </div>
             </div>
           </div>
@@ -911,11 +870,11 @@ export default function BackgroundCheckDisclosure({
       </div>
 
       {/* Sticky Footer Actions */}
-      <div className={`px-6 py-4 border-t ${footerBg}`}>
+      <div className="border-t border-[#e5e7eb] bg-[#f3f4f5] px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           {signed ? (
             <>
-              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+              <div className="flex items-center gap-2 text-sm text-green-700">
                 <CheckCircle className="w-4 h-4" />
                 {orderPlaced
                   ? 'Order submitted — your MVR will be processed shortly'
@@ -931,11 +890,7 @@ export default function BackgroundCheckDisclosure({
                 onClick={handleDownloadPDF}
                 disabled={generatingPdf}
                 title="Printable PDF with all sections expanded. PDFs are static — no interactive controls."
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  isDark
-                    ? 'border-teal-500/50 text-teal-400 hover:bg-teal-500/10'
-                    : 'border-teal-500 text-teal-700 hover:bg-teal-50'
-                }`}
+                className="flex items-center gap-2 rounded-xl border border-[#f15a2b] px-4 py-2.5 text-sm font-medium text-[#f15a2b] transition-colors hover:bg-[#f15a2b]/10"
               >
                 {generatingPdf ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -955,11 +910,7 @@ export default function BackgroundCheckDisclosure({
             <>
               <button
                 onClick={onClose}
-                className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  isDark
-                    ? 'border-gray-700 text-gray-400 hover:bg-gray-800'
-                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
+                className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white"
               >
                 Decline
               </button>
@@ -969,11 +920,7 @@ export default function BackgroundCheckDisclosure({
                 onClick={handleDownloadPDF}
                 disabled={generatingPdf}
                 title="Printable PDF with all sections expanded. PDFs are static — no interactive controls."
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  isDark
-                    ? 'border-gray-700 text-gray-400 hover:bg-gray-800'
-                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
+                className="flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white"
               >
                 {generatingPdf ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -988,7 +935,7 @@ export default function BackgroundCheckDisclosure({
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   !signedName.trim()
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                    : 'bg-[#f15a2b] text-white hover:brightness-110'
                 }`}
               >
                 {submitting ? (
@@ -1074,17 +1021,20 @@ function StateField({
   label,
   value,
   readOnly = false,
+  required = false,
   onChange,
 }: {
   label: string
   value: string
   readOnly?: boolean
+  required?: boolean
   onChange?: (value: string) => void
 }) {
+  const mark = required ? <span className="text-red-500 ml-0.5">*</span> : null
   if (readOnly) {
     return (
       <div>
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <p className="text-xs text-gray-400 mb-1">{label}{mark}</p>
         <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-800 min-h-[36px] text-sm">
           {value || <span className="text-gray-300 italic">—</span>}
         </div>
@@ -1094,7 +1044,7 @@ function StateField({
 
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs text-gray-500 mb-1">{label}{mark}</label>
       <StateSelect
         value={value}
         onChange={v => onChange?.(v)}
