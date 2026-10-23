@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume upload is a PDF save, not a hash ceremony** (2026-10-23)
+
+The upload screen still ran the old hash-first flow: calculate a file hash, show pending steps, and print the user id like a wallet address. The panel was a dark slab. Uploading a resume now saves the PDF and offers to fill empty fields from it. There is no hash step and no chain payload. The form sits on brand paper with Midnight type and a Hot Embers button.
+
+| File | Change |
+|---|---|
+| `src/components/ResumeUploadWithVerification.tsx` | Plain PDF picker and upload. |
+| `src/app/api/resumes/upload/route.ts` | Stores the file. Does not require or save a file hash, and does not return a chain payload. |
+
+---
+
 ## **Add resume on the driver hub is an upload** (2026-10-23)
 
 The empty resume on a driver's card said "Upload or build" and opened the resume builder. That builder is leftover. The resume drivers show employers is generated from the license scan, MVR, and DOT application. The button now says Upload and opens the file upload. The General / Driver / Developer build tabs are gone from that page. Editing an existing built resume can still open its builder.

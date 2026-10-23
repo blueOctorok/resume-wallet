@@ -1,18 +1,16 @@
 // app/api/resumes/upload/route.ts
-// Hash-first resume upload with comprehensive validation (FREE operations first)
+// Save a resume PDF to storage. No chain write and no client-supplied file hash.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
 import { createClient } from '@/utils/supabase/server'
-import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadDocument, getSignedDocumentUrl } from '@/lib/document-storage'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('📝 Resume Upload API: Starting hash-first validation')
+    console.log('[RESUME UPLOAD] Starting')
 
-    const supabaseAdmin = await getAdminSupabaseClient()
     let user: { id: string }
     const sessionUserId = await getStormUserIdFromRequest(req)
     if (sessionUserId) {
@@ -48,25 +46,13 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Resume Upload API: Rate limit passed')
 
-    // 4. Parse form data (expecting file hash from client)
     const formData = await req.formData()
     const file = formData.get('file') as File
     const title = formData.get('title') as string
-    const fileHash = formData.get('fileHash') as string
 
-    if (!file || !fileHash) {
-      return NextResponse.json(
-        {
-          error: 'No file or file hash provided',
-        },
-        { status: 400 }
-      )
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
-
-    console.log(
-      '📄 Resume Upload API: File hash received:',
-      fileHash.substring(0, 16) + '...'
-    )
 
     // 6. Validate file (simple checks)
     if (file.size > 5 * 1024 * 1024) {
@@ -93,51 +79,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('✅ Resume Upload API: File validation passed')
+    console.log('[RESUME UPLOAD] File validation passed')
 
-    // 7. Check for duplicates using file hash BEFORE expensive operations (FREE operation)
-    // NOTE: Using admin client to bypass RLS and check across ALL users for duplicates
-    // This prevents IPFS upload costs for duplicate files
-    console.log('🔍 Resume Upload API: Checking for duplicate file hash (before IPFS)')
-
-    // Use admin client for duplicate check (bypasses RLS to check across all users)
-    const adminSupabase = await getAdminSupabaseClient()
-    const { data: existingResume } = await adminSupabase
-      .from('resumes')
-      .select('id, user_id')
-      .eq('file_hash', fileHash)
-      .maybeSingle()
-
-    if (existingResume) {
-      // Check if it's the same user (allowed to re-upload) or different user (block)
-      if (existingResume.user_id === user.id) {
-        console.log('⚠️ Resume Upload API: User re-uploading same file (rejected before IPFS)')
-        return NextResponse.json(
-          {
-            error: 'Duplicate file',
-            message:
-              'You have already uploaded this exact file. Please select a different file or update your existing resume.',
-          },
-          { status: 409 }
-        )
-      } else {
-        console.log(
-          '🚫 Resume Upload API: File already uploaded by different user (rejected before IPFS)'
-        )
-        return NextResponse.json(
-          {
-            error: 'Duplicate file',
-            message:
-              'This file has already been uploaded by another user. Please select a different file or rename your current file.',
-          },
-          { status: 409 }
-        )
-      }
-    }
-
-    console.log('✅ Resume Upload API: No duplicate file hash found - proceeding with storage upload')
-
-    // 8. Upload to Supabase Storage (only reached if not duplicate)
+    // 8. Upload to Supabase Storage
     console.log('[RESUME UPLOAD] Uploading to Supabase Storage')
     const { storagePath } = await uploadDocument(user.id, 'resumes', file, file.name, file.type)
     const documentUrl = await getSignedDocumentUrl('resumes', storagePath)
@@ -158,7 +102,7 @@ export async function POST(req: NextRequest) {
             .replace('.doc', '')
             .replace('.docx', ''),
         filename: file.name,
-        file_hash: fileHash,
+        file_hash: null,
         storage_path: storagePath,
         ipfs_hash: null,
         ipfs_url: null,
@@ -194,26 +138,9 @@ export async function POST(req: NextRequest) {
             .replace('.pdf', '')
             .replace('.doc', '')
             .replace('.docx', ''),
-        ipfsHash: storagePath,
-        ipfsUrl: documentUrl,
         storagePath,
         documentUrl,
         createdAt: resume.created_at,
-      },
-      // Data needed for blockchain verification step
-      blockchainData: {
-        storagePath,
-        title:
-          title ||
-          file.name
-            .replace('.pdf', '')
-            .replace('.doc', '')
-            .replace('.docx', ''),
-        filename: file.name,
-        // Legacy IPFS/blockchain field (removed in Phase 1). Read straight from
-        // the header for back-compat; null on the session-auth path.
-        userAddress: req.headers.get('x-wallet-address'),
-        isPublic: false,
       },
     })
   } catch (error) {
