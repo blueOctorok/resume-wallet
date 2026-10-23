@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import { isRecruiterInbox, RECRUITER_INBOXES, recruiterInboxLabel, type RecruiterInbox } from '@/lib/recruiter-inboxes'
 
 const inputBase =
   'w-full px-3 py-2 rounded-lg text-sm border border-stone-200 bg-white text-[#173150] placeholder-ironside outline-none transition-colors focus:ring-2 focus:ring-teal-500/40'
@@ -14,7 +15,7 @@ export interface StatusUpdateDriver {
 
 /**
  * HR sends the drivers currently on the board to a recruiter who does not log in.
- * The last address stays in this browser so she is not retyping the same inbox.
+ * She picks from the fixed inbox list. The last pick stays in this browser.
  */
 export default function EmailUpdateModal({
   drivers,
@@ -27,7 +28,7 @@ export default function EmailUpdateModal({
   storageKey: string
   onClose: () => void
 }) {
-  const [to, setTo] = useState('')
+  const [to, setTo] = useState<RecruiterInbox | ''>('')
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,9 +37,9 @@ export default function EmailUpdateModal({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
-      if (saved) setTo(saved)
+      if (saved && isRecruiterInbox(saved)) setTo(saved)
     } catch {
-      /* This browser is blocking storage. She can still type the address. */
+      /* This browser is blocking storage. She can still pick from the list. */
     }
   }, [storageKey])
 
@@ -90,22 +91,29 @@ export default function EmailUpdateModal({
       />
       <div className="space-y-4 p-4 sm:p-5">
         {sent ? (
-          <p className="text-sm text-[#173150]">Sent to {to.trim()}.</p>
+          <p className="text-sm text-[#173150]">Sent to {to ? recruiterInboxLabel(to) : 'the recruiter'}.</p>
         ) : (
           <>
             <div>
               <label className="mb-1 block text-xs font-medium text-ironside" htmlFor="recruiter-email">
-                Recruiter email
+                Recruiter
               </label>
-              <input
+              <select
                 id="recruiter-email"
-                type="email"
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="name@company.com"
+                onChange={(e) => {
+                  const next = e.target.value
+                  setTo(isRecruiterInbox(next) ? next : '')
+                }}
                 className={inputBase}
-                autoComplete="email"
-              />
+              >
+                <option value="">Select a recruiter…</option>
+                {RECRUITER_INBOXES.map((email) => (
+                  <option key={email} value={email}>
+                    {recruiterInboxLabel(email)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-ironside" htmlFor="recruiter-note">

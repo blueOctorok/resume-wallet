@@ -4,10 +4,10 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
 import { buildEmail } from '@/lib/email-template'
 import { sendEmail } from '@/lib/messaging'
+import { isRecruiterInbox } from '@/lib/recruiter-inboxes'
 
 const MAX_DRIVERS = 200
 const MAX_NOTE = 2000
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function esc(value: string): string {
   return value
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
       note?: unknown
       drivers?: unknown
     } | null
-    const to = typeof body?.to === 'string' ? body.to.trim() : ''
-    if (!EMAIL_RE.test(to)) return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
+    const to = typeof body?.to === 'string' ? body.to.trim().toLowerCase() : ''
+    if (!isRecruiterInbox(to)) return NextResponse.json({ error: 'Pick a recruiter from the list' }, { status: 400 })
 
     const note = typeof body?.note === 'string' ? body.note.trim().slice(0, MAX_NOTE) : ''
     const raw = Array.isArray(body?.drivers) ? body.drivers : []

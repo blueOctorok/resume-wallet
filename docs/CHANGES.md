@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Email update picks a recruiter** (2026-10-23)
+
+The status-board email button no longer asks HR to type an address. She picks one inbox from a fixed list, and the send route refuses anything else. The last pick stays in this browser.
+
+| File | Change |
+|---|---|
+| `src/lib/recruiter-inboxes.ts` | The six inboxes, shared by the picker and the route. |
+| `src/components/employer/drivers/EmailUpdateModal.tsx` | Recruiter dropdown. |
+| `src/app/api/employer/dq-monitor/email-update/route.ts` | Rejects an address that is not on the list. |
+
+---
+
 ## **Signed up pill** (2026-10-23)
 
 Drivers who created an account without this company sending a screening-consent invite get a **Signed up** pill, next to Recent. The match is the user the invite was claimed under, or the email it was sent to, so an unclaimed invite does not look like a walk-in. Newest accounts are first. Sending them a consent takes them off this pill.
