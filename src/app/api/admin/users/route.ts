@@ -116,14 +116,12 @@ export async function GET(request: NextRequest) {
       { data: devGithubRows },
       { data: resumes },
       { data: dotApps },
-      { data: devProjects },
       { data: hubBlocks },
     ] = await Promise.all([
       supabase.from('user_profiles').select('user_id, first_name, last_name, email').in('user_id', userIds),
       supabase.from('block_dev_github').select('user_id, username').in('user_id', userIds),
       supabase.from('resumes').select('user_id').in('user_id', userIds),
       supabase.from('driver_applications').select('user_id').in('user_id', userIds),
-      supabase.from('developer_projects').select('user_id').in('user_id', userIds),
       supabase.from('hub_blocks').select('user_id, block_type').in('user_id', userIds),
     ])
 
@@ -142,11 +140,6 @@ export async function GET(request: NextRequest) {
     const dotAppCountMap = new Map<string, number>()
     dotApps?.forEach((a) => {
       dotAppCountMap.set(a.user_id, (dotAppCountMap.get(a.user_id) || 0) + 1)
-    })
-
-    const devProjectCountMap = new Map<string, number>()
-    devProjects?.forEach((p) => {
-      devProjectCountMap.set(p.user_id, (devProjectCountMap.get(p.user_id) || 0) + 1)
     })
 
     const blocksMap = new Map<string, string[]>()
@@ -183,7 +176,6 @@ export async function GET(request: NextRequest) {
         hasDevProfile: hasDevBlocks,
         resumeCount: resumeCountMap.get(user.id) || 0,
         dotAppCount: dotAppCountMap.get(user.id) || 0,
-        devProjectCount: devProjectCountMap.get(user.id) || 0,
         isAdmin: isAdminEmail(displayEmail),
         installedBlocks,
         blockCategories,

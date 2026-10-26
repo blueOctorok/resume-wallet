@@ -46,30 +46,23 @@ export async function GET(request: NextRequest) {
 
     const userIds = [...new Set(profiles?.map((p) => p.user_id) || [])]
 
-    // Enrich with github, skills, user info, wallet, and project counts
+    // Enrich with github, skills, and user info
     const [
       { data: users },
       { data: userProfiles },
       { data: githubRows },
       { data: skillRows },
-      { data: projects },
     ] = await Promise.all([
       supabase.from('users').select('id, wallet_address').in('id', userIds),
       supabase.from('user_profiles').select('user_id, first_name, last_name, email').in('user_id', userIds),
       supabase.from('block_dev_github').select('user_id, username').in('user_id', userIds),
       supabase.from('block_skills').select('user_id, entries').in('user_id', userIds),
-      supabase.from('developer_projects').select('user_id').in('user_id', userIds),
     ])
 
     const userMap = new Map(users?.map(u => [u.id, u.wallet_address]) || [])
     const upMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
     const githubMap = new Map((githubRows || []).map(g => [g.user_id, g.username]))
     const skillsMap = new Map((skillRows || []).map(s => [s.user_id, s.entries]))
-
-    const projectCountMap = new Map<string, number>()
-    projects?.forEach(p => {
-      projectCountMap.set(p.user_id, (projectCountMap.get(p.user_id) || 0) + 1)
-    })
 
     const enrichedProfiles = profiles?.map((profile) => {
       const up = upMap.get(profile.user_id)
@@ -85,7 +78,6 @@ export async function GET(request: NextRequest) {
         email: up?.email ?? null,
         full_name: fullName || null,
         sessionUserId: userMap.get(profile.user_id) || 'Unknown',
-        projectCount: projectCountMap.get(profile.user_id) || 0,
         skillCount: Array.isArray(skills) ? skills.length : 0,
       }
     })

@@ -4,6 +4,39 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **New Jersey MVR summaries fill the same fields** (2026-10-26)
+
+A New Jersey MVR can come back as a labeled summary instead of license and violation tags. The order was marked filled, and class, violations, accidents, and the medical card stayed blank. The parser now reads that summary. Marcellus Barnes and George Postell were the two stored reports in that shape; a backfill writes their fields from the summary already on the order.
+
+| File | Change |
+|---|---|
+| `src/lib/accio-xml-parser.ts` | Reads the New Jersey summary into the same license, event, and medical fields. |
+| `src/lib/accio-xml-parser.test.ts` | Summary with events, and a clear summary that stays empty. |
+| `scripts/backfill-nj-mvr-summary.ts` | Rewrites the two stored New Jersey summaries. |
+
+---
+
+## **Central admin no longer has Projects** (2026-10-26)
+
+The Candidates sidebar item named Projects was the old developer-projects list. That tab, its API, the project section on a user, and the project counts on the user tables are gone. A driver's portfolio projects are unchanged.
+
+| File | Change |
+|---|---|
+| `src/components/admin/AdminDashboardShell.tsx` | Sidebar item and tab. |
+| `src/components/admin/tabs/DevProjectsTab.tsx` | Removed. |
+| `src/app/api/admin/dev-projects/` | Removed. |
+| `src/components/admin/admin-types.ts` | Project types. |
+| `src/components/admin/modals/UserDetailModal.tsx` | Project section. |
+| `src/app/api/admin/users/route.ts` | Project counts. |
+| `src/app/api/admin/users/[id]/route.ts` | Project list on a user. |
+| `src/components/admin/tabs/UsersTab.tsx` | Project badge. |
+| `src/components/admin/tabs/CandidatesTab.tsx` | Project badge. |
+| `src/components/admin/tabs/DevProfilesTab.tsx` | Project column. |
+| `src/app/api/admin/dev-profiles/route.ts` | Project counts. |
+| `src/app/api/admin/dev-profiles/[id]/route.ts` | Project list. |
+
+---
+
 ## **Unopened rows can resend the same link** (2026-10-26)
 
 The Unopened list showed who never opened the consent link, and the row could not be opened because they have no account. Resend on that row delivers the invite they already have. It repeats email, text, or both, matching whichever channel already carried the link. It does not create a second invite.

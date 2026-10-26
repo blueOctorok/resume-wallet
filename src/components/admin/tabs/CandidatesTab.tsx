@@ -98,13 +98,11 @@ export default function CandidatesTab({
               displayName: userFromList?.displayName,
               displayEmail: userFromList?.displayEmail,
               hasDevProfile: userFromList?.hasDevProfile || false,
-              devProjectCount: userFromList?.devProjectCount || 0,
               installedBlocks: userFromList?.installedBlocks || [],
               blockCategories: userFromList?.blockCategories || [],
             },
             profile: data.profile,
             devProfile: data.devProfile || null,
-            devProjects: data.devProjects || [],
             resumes: data.resumes || [],
             dotApps: data.dotApps || [],
             license: data.license ?? null,
@@ -213,11 +211,6 @@ export default function CandidatesTab({
                     {user.dotAppCount > 0 && (
                       <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                         {user.dotAppCount} DOT
-                      </span>
-                    )}
-                    {user.devProjectCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400">
-                        {user.devProjectCount} Project{user.devProjectCount > 1 ? 's' : ''}
                       </span>
                     )}
                   </div>

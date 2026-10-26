@@ -667,3 +667,135 @@ ________________________________________________________________________________
     expect(p.suspensions!.every((s) => s.avdCode === 'DH02')).toBe(true)
   })
 })
+
+/**
+ * New Jersey arrives as a labeled summary. No `<mvr_license>`, no
+ * `<mvr_violation>`, and no "LICENSE AND PERMIT INFORMATION" block.
+ * Names and numbers here are fake.
+ */
+describe('parseAccioMvrResult — New Jersey labeled summary', () => {
+  const NJ_XML = `<ScreeningResults>
+  <completeOrder number="100" remote_number="200">
+    <subOrder remote_number="300" type="MVR" filledStatus="filled" filledCode="hits">
+      <dlnum>X12345678901234</dlnum>
+      <dlstate>NJ</dlstate>
+      <text>NEW JERSEY MOTOR VEHICLE RECORD
+Record Type: Five-Year Driver History
+Driver Name: Jane Q Public
+License Number: X12345678901234
+License State: New Jersey
+License Status: VALID
+License Type: Commercial
+License Class: A
+Expiration Date: 11/08/2029
+Endorsements: Double/Triple Trailers
+License Restrictions: No Manual Transmission CMV
+Issue Date: Not provided.
+VIOLATIONS
+10/10/2023 – Obstruct Passage Vehicle
+Location: Example Township
+ACD: F34 | AVD: VE04 | State Code: C046
+ACCIDENTS
+04/27/2024 – Accident reported in New Jersey.
+AVD: AA01 | State Code: POLC
+Fault: Not specified. No determination of fault is made.
+SUSPENSIONS / REVOCATIONS
+No activity reported.
+CDL MEDICAL CERTIFICATION
+Self-Certification Type: Non-Excepted Interstate
+Status: Certified
+Issued: 04/06/2026
+Expiration: 04/06/2028
+Medical Restrictions: N/A
+Medical Examiner: Alex Examiner
+Examiner License: EX123 – NJ
+National Registry Number: 1112223334
+ADDITIONAL STATE INFORMATION
+Driving privileges in good standing.
+03/13/2022 – Annual Safe Driving Point Credit: -3.
+End of Motor Vehicle Report</text>
+    </subOrder>
+  </completeOrder>
+</ScreeningResults>`
+
+  const parsed = parseAccioMvrResult(NJ_XML)
+
+  it('fills the license, events, and medical card from the summary', () => {
+    expect(parsed.dmvRecordText).toContain('NEW JERSEY MOTOR VEHICLE RECORD')
+    expect(parsed.dmvRecordName).toBe('Jane Q Public')
+    expect(parsed.licenses).toEqual([
+      expect.objectContaining({
+        class: 'A',
+        type: 'COMMERCIAL',
+        status: 'VALID',
+        expirationDate: '20291108',
+        endorsements: 'Double/Triple Trailers',
+        restrictions: 'No Manual Transmission CMV',
+      }),
+    ])
+    expect(parsed.licenses![0].issueDate).toBeUndefined()
+    expect(parsed.licenseExpirationDate).toBe('20291108')
+    expect(parsed.violations).toEqual([
+      expect.objectContaining({
+        date: '20231010',
+        description: 'Obstruct Passage Vehicle',
+        state: 'NJ',
+        acdCode: 'F34',
+        stateCode: 'C046',
+      }),
+    ])
+    expect(parsed.violationCount).toBe(1)
+    expect(parsed.accidents).toEqual([
+      expect.objectContaining({
+        date: '20240427',
+        description: 'Accident reported in New Jersey',
+        fault: undefined,
+      }),
+    ])
+    expect(parsed.suspensions ?? []).toHaveLength(0)
+    expect(parsed.medicalCertStatus).toBe('Certified')
+    expect(parsed.medicalCertIssueDate).toBe('20260406')
+    expect(parsed.medicalCertExpiration).toBe('20280406')
+    expect(parsed.medicalCertSelfCertification).toBe('Non-Excepted Interstate')
+    expect(parsed.medicalExaminer).toEqual({
+      name: 'Alex Examiner',
+      licenseNumber: 'EX123',
+      licenseJurisdiction: 'NJ',
+      nationalRegistryNumber: '1112223334',
+    })
+    expect(parsed.additionalDriverInfo).toEqual([
+      expect.objectContaining({
+        date: '20220313',
+        description: 'Annual Safe Driving Point Credit: -3',
+      }),
+    ])
+  })
+
+  it('leaves a clear summary empty instead of inventing a violation', () => {
+    const clear = parseAccioMvrResult(`<ScreeningResults><completeOrder number="1">
+      <subOrder type="MVR" filledStatus="filled" filledCode="clear">
+        <dlstate>NJ</dlstate>
+        <text>NEW JERSEY MOTOR VEHICLE RECORD
+License Status: VALID
+License Type: Personal
+License Class: D
+Restrictions: Not provided in license section.
+VIOLATIONS / CONVICTIONS / FAILURES TO APPEAR
+None reported.
+ACCIDENTS
+None reported.
+SUSPENSIONS / REVOCATIONS
+No activity reported.
+</text>
+      </subOrder></completeOrder></ScreeningResults>`)
+    expect(clear.licenses?.[0]).toEqual(expect.objectContaining({
+      class: 'D',
+      type: 'PERSONAL',
+      status: 'VALID',
+    }))
+    expect(clear.licenses?.[0].restrictions).toBeUndefined()
+    expect(clear.violations ?? []).toHaveLength(0)
+    expect(clear.accidents ?? []).toHaveLength(0)
+    expect(clear.violationCount ?? 0).toBe(0)
+  })
+})

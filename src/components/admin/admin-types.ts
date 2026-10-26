@@ -13,7 +13,6 @@ export type TabId =
   | 'mvr'
   | 'psp'
   | 'bgcheckRequests'
-  | 'devProjects'
   | 'verifications'
   | 'surveys'
   | 'licenses'
@@ -64,7 +63,6 @@ export interface User {
   hasDevProfile: boolean
   resumeCount: number
   dotAppCount: number
-  devProjectCount: number
   isAdmin: boolean
   installedBlocks: string[]
   blockCategories: string[]
@@ -84,27 +82,7 @@ export interface DevProfile {
   created_at: string
   updated_at: string
   sessionUserId: string
-  projectCount: number
   skillCount: number
-}
-
-export interface DevProject {
-  id: string
-  user_id: string
-  developer_profile_id: string | null
-  title: string
-  description: string | null
-  tech_stack: string[] | null
-  live_url: string | null
-  repo_url: string | null
-  is_featured: boolean
-  is_public: boolean
-  role: string | null
-  created_at: string
-  updated_at: string
-  sessionUserId: string
-  ownerName: string
-  techCount: number
 }
 
 export interface AdminCompany {
@@ -203,7 +181,6 @@ export interface UserDetail {
   user: User
   profile: Profile | null
   devProfile: DevProfile | null
-  devProjects: DevProject[]
   resumes: Resume[]
   dotApps: DotApp[]
   license: AdminLicense | null

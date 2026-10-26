@@ -53,7 +53,6 @@ export default function DevProfilesTab({
             <th className={`${tableHeaderClass} px-4 py-3`}>Headline</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>GitHub</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>Skills</th>
-            <th className={`${tableHeaderClass} px-4 py-3`}>Projects</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>Available</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>Created</th>
             <th className={`${tableHeaderClass} px-4 py-3`}>Actions</th>
@@ -102,15 +101,6 @@ export default function DevProfilesTab({
                   <span className='px-1.5 py-0.5 rounded text-xs bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400'>
                     {profile.skillCount} skill
                     {profile.skillCount > 1 ? 's' : ''}
-                  </span>
-                ) : (
-                  <span className='text-xs opacity-50'>0</span>
-                )}
-              </td>
-              <td className={tableCellClass}>
-                {profile.projectCount > 0 ? (
-                  <span className='px-1.5 py-0.5 rounded text-xs bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'>
-                    {profile.projectCount}
                   </span>
                 ) : (
                   <span className='text-xs opacity-50'>0</span>

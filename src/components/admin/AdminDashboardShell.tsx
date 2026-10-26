@@ -16,7 +16,6 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  FolderGit2,
   Car,
   IdCard,
   ShieldCheck,
@@ -38,7 +37,6 @@ import ResumesTab from './tabs/ResumesTab'
 import MvrTab from './tabs/MvrTab'
 import PspTab from './tabs/PspTab'
 import VerificationsTab from './tabs/VerificationsTab'
-import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
 import SurveysTab from './tabs/SurveysTab'
 import LicensesTab from './tabs/LicensesTab'
@@ -128,7 +126,6 @@ function AdminDashboardContent() {
         profile: `/api/admin/profiles/${deleteTarget.id}`,
         resume: `/api/admin/resumes/${deleteTarget.id}`,
         devProfile: `/api/admin/dev-profiles/${deleteTarget.id}`,
-        devProject: `/api/admin/dev-projects/${deleteTarget.id}`,
         verification: `/api/admin/verifications/${deleteTarget.id}`,
         mvr: `/api/admin/mvr/${deleteTarget.id}`,
         psp: `/api/admin/psp/${deleteTarget.id}`,
@@ -190,7 +187,6 @@ function AdminDashboardContent() {
         { id: 'psp', label: 'PSP Orders', icon: <ShieldCheck className='w-4 h-4' /> },
         { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
         { id: 'surveys', label: 'Surveys', icon: <ClipboardList className='w-4 h-4' /> },
-        { id: 'devProjects', label: 'Projects', icon: <FolderGit2 className='w-4 h-4' /> },
       ],
     },
     {
@@ -284,8 +280,6 @@ function AdminDashboardContent() {
         return <VerificationsTab key={refreshKey} {...tabProps} />
       case 'surveys':
         return <SurveysTab key={refreshKey} {...tabProps} />
-      case 'devProjects':
-        return <DevProjectsTab key={refreshKey} {...tabProps} />
       case 'users':
         return <UsersTab key={refreshKey} {...tabProps} />
       default:

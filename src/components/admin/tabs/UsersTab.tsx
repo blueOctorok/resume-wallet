@@ -68,11 +68,9 @@ export default function UsersTab({
               displayName: userFromList?.displayName,
               displayEmail: userFromList?.displayEmail,
               hasDevProfile: userFromList?.hasDevProfile || false,
-              devProjectCount: userFromList?.devProjectCount || 0,
             },
             profile: data.profile,
             devProfile: data.devProfile || null,
-            devProjects: data.devProjects || [],
             resumes: data.resumes || [],
             dotApps: data.dotApps || [],
             license: data.license ?? null,
@@ -167,12 +165,6 @@ export default function UsersTab({
                     {user.dotAppCount > 0 && (
                       <span className='px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'>
                         {user.dotAppCount} DOT
-                      </span>
-                    )}
-                    {user.devProjectCount > 0 && (
-                      <span className='px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'>
-                        {user.devProjectCount} Project
-                        {user.devProjectCount > 1 ? 's' : ''}
                       </span>
                     )}
                   </div>

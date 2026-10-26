@@ -37,17 +37,12 @@ export async function GET(
 
     const userId = devRow.user_id
 
-    const [user, github, portfolio, skills, education, projects] = await Promise.all([
+    const [user, github, portfolio, skills, education] = await Promise.all([
       supabase.from('users').select('wallet_address, email').eq('id', userId).single().then(r => r.data),
       getDevGithub(supabase, userId),
       getDevPortfolio(supabase, userId),
       getSkills(supabase, userId),
       getEducation(supabase, userId),
-      supabase.from('developer_projects')
-        .select('id, title, description, tech_stack, is_featured, is_public, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .then(r => r.data),
     ])
 
     const profile = {
@@ -76,7 +71,6 @@ export async function GET(
     return NextResponse.json({
       success: true,
       profile,
-      projects: projects || [],
     })
   } catch (error) {
     console.error('[ADMIN DEV PROFILE DETAIL] Unexpected error:', error)
@@ -89,7 +83,7 @@ export async function GET(
 
 /**
  * DELETE /api/admin/dev-profiles/[id]
- * Delete a developer profile (cascades to projects)
+ * Delete a developer profile and its block rows.
  */
 export async function DELETE(
   request: NextRequest,

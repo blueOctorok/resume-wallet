@@ -40,7 +40,7 @@ export async function GET(
       userProfile,
       cdl, employment, mvr, skills, education,
       devGithub, devPortfolio, devProfileData,
-      devProjects, resumes, dotApps, mvrOrders, license,
+      resumes, dotApps, mvrOrders, license,
     ] = await Promise.all([
       supabase.from('user_profiles').select('*').eq('user_id', id).maybeSingle().then(r => r.data),
       getCdlData(supabase, id),
@@ -51,9 +51,6 @@ export async function GET(
       getDevGithub(supabase, id),
       getDevPortfolio(supabase, id),
       getDevProfile(supabase, id),
-      supabase.from('developer_projects')
-        .select('id, name, description, tech_stack, is_featured, is_public, role, created_at')
-        .eq('user_id', id).order('created_at', { ascending: false }).then(r => r.data),
       supabase.from('resumes')
         .select('id, title, filename, verification_status, created_at, resume_type')
         .eq('user_id', id).order('created_at', { ascending: false }).then(r => r.data),
@@ -106,7 +103,6 @@ export async function GET(
       userProfile,
       profile,
       devProfile,
-      devProjects: devProjects || [],
       resumes: resumes || [],
       dotApps: dotApps || [],
       mvrOrders: mvrOrders || [],

@@ -567,6 +567,10 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
           if (textEndorsements) result.licenses[0].endorsements = textEndorsements
         }
 
+        // NJ (and any fill that uses Accio's labeled summary instead of
+        // `<mvr_license>` / `<mvr_violation>`) still has the facts in `<text>`.
+        applyNarrativeMvrSummary(result, mvrTextBlock)
+
         // Medical examiner info lives only in the text block.
         const examiner = extractMedicalExaminerFromText(mvrTextBlock)
         if (examiner) result.medicalExaminer = examiner
@@ -1522,6 +1526,255 @@ function attachSuspensionActionsFromText(suspensions: Suspension[], text: string
  *   Status: LICENSED
  *   Class: A - ANY COMBINATION OF VEHICLES...
  */
+/**
+ * Accio's New Jersey fill is a labeled summary, not the underscore DMV printout
+ * and not `<mvr_license>` / `<mvr_violation>` tags. The header is the detector
+ * so a normal state record that happens to contain "License Class:" is left alone.
+ *
+ * Only fills fields the structured parse left empty. "Not provided" and
+ * "None reported" stay empty — they are not a class, a violation, or a date.
+ */
+function applyNarrativeMvrSummary(result: ParsedMvrResult, text: string): void {
+  if (!/^NEW JERSEY MOTOR VEHICLE RECORD\s*$/m.test(text)) return
+
+  const { header, sections } = splitNarrativeSections(text)
+  const stateCode = result.licenseState && /^[A-Za-z]{2}$/.test(result.licenseState)
+    ? result.licenseState.toUpperCase()
+    : narrativeStateCode(labeled(header, ['License State']))
+
+  if (!result.licenses || result.licenses.length === 0) {
+    const license = narrativeLicense(header)
+    if (license) {
+      result.licenses = [license]
+      if (!result.licenseExpirationDate && license.expirationDate) {
+        result.licenseExpirationDate = license.expirationDate
+      }
+    }
+  }
+
+  if (!result.dmvRecordName) {
+    const driverName = labeled(header, ['Driver Name'])
+    if (driverName) result.dmvRecordName = driverName
+  }
+
+  if (!result.violations || result.violations.length === 0) {
+    const violations = narrativeViolations(sections.get('VIOLATIONS') ?? '', stateCode)
+    if (violations.length > 0) {
+      result.violations = violations
+      result.violationCount = violations.length
+    }
+  }
+
+  if (!result.accidents || result.accidents.length === 0) {
+    const accidents = narrativeAccidents(sections.get('ACCIDENTS') ?? '')
+    if (accidents.length > 0) {
+      result.accidents = accidents
+      result.accidentCount = accidents.length
+    }
+  }
+
+  if (!result.suspensions || result.suspensions.length === 0) {
+    const suspensions = narrativeSuspensions(sections.get('SUSPENSIONS') ?? '', stateCode)
+    if (suspensions.length > 0) {
+      result.suspensions = suspensions
+      result.suspensionCount = suspensions.length
+    }
+  }
+
+  const medicalBody = sections.get('MEDICAL') ?? ''
+  if (medicalBody) {
+    if (!result.medicalCertStatus) result.medicalCertStatus = labeled(medicalBody, ['Status'])
+    if (!result.medicalCertIssueDate) {
+      result.medicalCertIssueDate = narrativeYmd(labeled(medicalBody, ['Issued']))
+    }
+    if (!result.medicalCertExpiration) {
+      result.medicalCertExpiration = narrativeYmd(labeled(medicalBody, ['Expiration']))
+    }
+    if (!result.medicalCertSelfCertification) {
+      result.medicalCertSelfCertification = labeled(medicalBody, ['Self-Certification Type'])
+    }
+    if (!result.medicalExaminer) {
+      const examiner = narrativeExaminer(medicalBody)
+      if (examiner) result.medicalExaminer = examiner
+    }
+  }
+
+  if (!result.additionalDriverInfo || result.additionalDriverInfo.length === 0) {
+    const notes = narrativeAdminNotes(sections.get('ADDITIONAL') ?? '')
+    if (notes.length > 0) result.additionalDriverInfo = notes
+  }
+}
+
+/** A summary value that means "the state did not send this." */
+function narrativeBlank(value: string | undefined): boolean {
+  if (!value) return true
+  const cleaned = value.trim().replace(/\.+$/, '').trim().toLowerCase()
+  return (
+    cleaned === '' ||
+    cleaned === 'n/a' ||
+    cleaned === 'na' ||
+    cleaned === 'none' ||
+    cleaned === 'none reported' ||
+    cleaned === 'no activity reported' ||
+    // "Not provided." and "Not provided in license section." are the same gap.
+    cleaned.startsWith('not provided')
+  )
+}
+
+function labeled(block: string, labels: string[]): string | undefined {
+  for (const label of labels) {
+    const match = block.match(new RegExp(`^${label}:\\s*(.+)$`, 'im'))
+    const value = match?.[1]?.trim()
+    if (value && !narrativeBlank(value)) return value
+  }
+  return undefined
+}
+
+function narrativeYmd(value: string | undefined): string | undefined {
+  if (!value || narrativeBlank(value)) return undefined
+  return slashDateToYmd(value)
+}
+
+function narrativeStateCode(value: string | undefined): string | undefined {
+  if (!value || narrativeBlank(value)) return undefined
+  const trimmed = value.trim()
+  if (/^[A-Za-z]{2}$/.test(trimmed)) return trimmed.toUpperCase()
+  return trimmed.toLowerCase() === 'new jersey' ? 'NJ' : undefined
+}
+
+function splitNarrativeSections(text: string): { header: string; sections: Map<string, string> } {
+  const sections = new Map<string, string[]>()
+  const header: string[] = []
+  let current: string | null = null
+  for (const line of text.split('\n')) {
+    const name = narrativeSectionName(line.trim())
+    if (name) {
+      current = name
+      sections.set(name, [])
+      continue
+    }
+    if (current) sections.get(current)!.push(line)
+    else header.push(line)
+  }
+  const joined = new Map<string, string>()
+  for (const [name, lines] of sections) joined.set(name, lines.join('\n'))
+  return { header: header.join('\n'), sections: joined }
+}
+
+function narrativeSectionName(line: string): string | null {
+  if (/^VIOLATIONS\b/i.test(line)) return 'VIOLATIONS'
+  if (/^ACCIDENTS\b/i.test(line)) return 'ACCIDENTS'
+  if (/^SUSPENSIONS\b/i.test(line)) return 'SUSPENSIONS'
+  if (/^CDL MEDICAL CERTIFICATION$/i.test(line)) return 'MEDICAL'
+  if (/^ADDITIONAL STATE INFORMATION$/i.test(line)) return 'ADDITIONAL'
+  return null
+}
+
+function narrativeLicense(header: string): MvrLicense | null {
+  const classRaw = labeled(header, ['License Class'])
+  const typeRaw = labeled(header, ['License Type'])
+  const status = labeled(header, ['License Status'])
+  const endorsements = labeled(header, ['Endorsements'])
+  const restrictions = labeled(header, ['License Restrictions', 'Restrictions'])
+  const classParts = (classRaw ?? '').split(' - ')
+  const classLetter = classParts[0]?.trim() || undefined
+  const classDescription = classParts.slice(1).join(' - ').trim() || undefined
+  const license: MvrLicense = {
+    class: classLetter,
+    classDescription,
+    type: typeRaw ? typeRaw.toUpperCase() : undefined,
+    status,
+    expirationDate: narrativeYmd(labeled(header, ['Expiration Date'])),
+    issueDate: narrativeYmd(labeled(header, ['Issue Date'])),
+    endorsements,
+    restrictions,
+  }
+  return license.class || license.status || license.type ? license : null
+}
+
+/** Events start with "10/10/2023 – description". Placeholder lines are not events. */
+function narrativeEvents(body: string): Array<{ date: string; description: string; rest: string }> {
+  const events: Array<{ date: string; description: string; rest: string }> = []
+  let current: { date: string; description: string; lines: string[] } | null = null
+  const flush = () => {
+    if (!current) return
+    events.push({ date: current.date, description: current.description, rest: current.lines.join('\n') })
+  }
+  for (const line of body.split('\n')) {
+    const head = line.trim().match(/^(\d{1,2}\/\d{1,2}\/\d{2,4})\s*[–—-]\s*(.+)$/)
+    if (head) {
+      flush()
+      current = { date: head[1], description: head[2].trim(), lines: [] }
+    } else if (current) {
+      current.lines.push(line)
+    }
+  }
+  flush()
+  return events
+}
+
+function narrativeCode(rest: string, label: string): string | undefined {
+  const match = rest.match(new RegExp(`${label}:\\s*([A-Za-z0-9]+)`, 'i'))
+  return match?.[1]
+}
+
+function narrativeViolations(body: string, stateCode: string | undefined): Violation[] {
+  if (narrativeBlank(body.trim())) return []
+  return narrativeEvents(body).map((event) => ({
+    date: narrativeYmd(event.date),
+    description: event.description,
+    state: stateCode,
+    acdCode: narrativeCode(event.rest, 'ACD'),
+    stateCode: narrativeCode(event.rest, 'State Code'),
+  }))
+}
+
+function narrativeAccidents(body: string): Accident[] {
+  if (narrativeBlank(body.trim())) return []
+  return narrativeEvents(body).map((event) => {
+    const faultLine = labeled(event.rest, ['Fault'])
+    // "Not specified" and "no determination of fault" are not a yes.
+    const fault = faultLine && !/not specified|no determination|unknown/i.test(faultLine) ? faultLine : undefined
+    return {
+      date: narrativeYmd(event.date),
+      description: event.description.replace(/\.$/, ''),
+      fault,
+    }
+  })
+}
+
+function narrativeSuspensions(body: string, stateCode: string | undefined): Suspension[] {
+  if (narrativeBlank(body.trim())) return []
+  return narrativeEvents(body).map((event) => ({
+    date: narrativeYmd(event.date),
+    reason: event.description,
+    state: stateCode,
+    acdCode: narrativeCode(event.rest, 'ACD'),
+  }))
+}
+
+function narrativeExaminer(body: string): ParsedMvrResult['medicalExaminer'] {
+  const name = labeled(body, ['Medical Examiner'])
+  const licenseLine = labeled(body, ['Examiner License'])
+  const registry = labeled(body, ['National Registry Number'])
+  if (!name && !licenseLine && !registry) return undefined
+  const licenseParts = licenseLine?.split(/\s*[–—-]\s*/) ?? []
+  const examiner: ParsedMvrResult['medicalExaminer'] = {}
+  if (name) examiner.name = name
+  if (licenseParts[0]) examiner.licenseNumber = licenseParts[0]
+  if (licenseParts[1]) examiner.licenseJurisdiction = narrativeStateCode(licenseParts[1]) ?? licenseParts[1]
+  if (registry) examiner.nationalRegistryNumber = registry
+  return examiner
+}
+
+function narrativeAdminNotes(body: string): AdditionalDriverInfo[] {
+  return narrativeEvents(body).map((event) => ({
+    date: narrativeYmd(event.date),
+    description: event.description.replace(/\.$/, ''),
+    type: 'DRIVER OTHER INFORMATION',
+  }))
+}
+
 function extractLicensesFromText(text: string): MvrLicense[] {
   // Scope to the LICENSE AND PERMIT INFORMATION block only.
   const blockMatch = text.match(

@@ -9,9 +9,6 @@ import {
   FileText,
   CheckCircle,
   Code,
-  FolderGit2,
-  Github,
-  ExternalLink,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import type {
@@ -423,103 +420,6 @@ export default function UserDetailModal({
                           </div>
                         </div>
                       )}
-                  </div>
-                </div>
-              )}
-
-              {/* Developer Projects */}
-              {user.devProjects && user.devProjects.length > 0 && (
-                <div className='mb-6'>
-                  <h4
-                    className={`font-semibold mb-3 flex items-center gap-2 ${
-                      isDarkTheme(theme) ? 'text-white' : 'text-gray-900'
-                    }`}
-                  >
-                    <FolderGit2 className='w-4 h-4 text-cyan-500' />
-                    Developer Projects ({user.devProjects.length})
-                  </h4>
-                  <div className='space-y-2'>
-                    {user.devProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          isDarkTheme(theme)
-                            ? 'bg-gray-700/50'
-                            : 'bg-gray-50'
-                        }`}
-                      >
-                        <div className='flex-1'>
-                          <div className='flex items-center gap-2'>
-                            <span className='text-sm font-medium'>
-                              {project.title}
-                            </span>
-                            {project.is_featured && (
-                              <span className='px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'>
-                                Featured
-                              </span>
-                            )}
-                            {project.is_public ? (
-                              <span className='px-1.5 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'>
-                                Public
-                              </span>
-                            ) : (
-                              <span className='px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'>
-                                Private
-                              </span>
-                            )}
-                          </div>
-                          {project.tech_stack &&
-                            project.tech_stack.length > 0 && (
-                              <div className='flex flex-wrap gap-1 mt-1'>
-                                {project.tech_stack
-                                  .slice(0, 5)
-                                  .map((tech, i) => (
-                                    <span
-                                      key={i}
-                                      className='px-1 py-0.5 rounded text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                                    >
-                                      {tech}
-                                    </span>
-                                  ))}
-                              </div>
-                            )}
-                        </div>
-                        <div className='flex items-center gap-2'>
-                          {project.live_url && (
-                            <a
-                              href={project.live_url}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-teal-600 dark:text-teal-400 hover:underline'
-                            >
-                              <ExternalLink className='w-4 h-4' />
-                            </a>
-                          )}
-                          {project.repo_url && (
-                            <a
-                              href={project.repo_url}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='opacity-60 hover:opacity-100'
-                            >
-                              <Github className='w-4 h-4' />
-                            </a>
-                          )}
-                          <button
-                            onClick={() =>
-                              handleDeleteAndClose({
-                                type: 'devProject',
-                                id: project.id,
-                                name: project.title,
-                              })
-                            }
-                            className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}
