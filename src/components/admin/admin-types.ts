@@ -16,6 +16,7 @@ export type TabId =
   | 'verifications'
   | 'surveys'
   | 'licenses'
+  | 'support'
 
 /** Who placed a screening order (MVR / PSP). Drives FCRA isolation in the UI. */
 export type ScreeningOrderedBy =

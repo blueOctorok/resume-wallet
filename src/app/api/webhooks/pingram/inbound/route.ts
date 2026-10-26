@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { processEvrInboundEmail, type PingramInboundEmail } from '@/lib/evr-inbound'
+import { isSupportRecipient, saveSupportInbound } from '@/lib/support-inbox'
 
 function inboundSecret(): string | null {
   return (
@@ -24,8 +25,8 @@ function authorize(request: NextRequest): boolean {
 /**
  * POST /api/webhooks/pingram/inbound
  *
- * Pingram EMAIL_INBOUND (and optional raw RFC822) for employment-verification replies.
- * DKIM is verified only when raw MIME is present.
+ * Pingram EMAIL_INBOUND. Employment-verification replies stay on that request.
+ * Mail to a support address is stored for central admin instead.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
     const result = await processEvrInboundEmail(supabase, payload)
+    if (!result.ok && isSupportRecipient(payload.to)) {
+      const saved = await saveSupportInbound(supabase, payload)
+      if (!saved.ok) {
+        return NextResponse.json({ error: saved.error }, { status: 422 })
+      }
+      return NextResponse.json({ success: true, supportMessageId: saved.id, duplicate: saved.duplicate })
+    }
     if (!result.ok) {
       console.warn('[EVR INBOUND]', result.error)
       return NextResponse.json({ error: result.error }, { status: 422 })

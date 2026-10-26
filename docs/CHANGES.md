@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Support mail shows in central admin** (2026-10-26)
+
+Central admin has a Support tab. Mail to `support@verify.provven.com` is stored when Pingram delivers it, and a reply can be sent from that tab. `support@provven.com` is still the public address. It shows up after that mailbox is forwarded to `support@verify.provven.com`. Leave the Pingram MX on `verify.provven.com` where it is. Apply `supabase/migrations/126_support_messages.sql` before the tab can load.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/126_support_messages.sql` | Inbox table, service role only. |
+| `src/lib/support-inbox.ts` | Decides which inbound mail is support and stores it. |
+| `src/app/api/webhooks/pingram/inbound/route.ts` | Files a support address instead of treating it as a failed employment reply. |
+| `src/app/api/admin/support/` | List, open, and reply. |
+| `src/components/admin/tabs/SupportTab.tsx` | The inbox. |
+| `src/components/admin/AdminDashboardShell.tsx` | Support in the System section, with an unread count. |
+
+---
+
 ## **Correct a mismatched MVR without re-entering the SSN** (2026-10-26)
 
 When the state says the name, date of birth, or license number on an MVR did not match, the driver opens the same screening page and corrects those fields. The Social Security number already on the consent is reused, and the forms are not signed again. That report is marked replaced and a new MVR is ordered. On the driver file, a discrepancy shows the name and license number that were ordered. The date of birth and SSN stay off that line.

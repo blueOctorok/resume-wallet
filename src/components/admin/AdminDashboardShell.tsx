@@ -22,6 +22,7 @@ import {
   Building2,
   Briefcase,
   Send,
+  LifeBuoy,
 } from 'lucide-react'
 import type { TabId, SidebarSection, DeleteTarget } from './admin-types'
 import { getCardClass } from './admin-styles'
@@ -39,6 +40,7 @@ import PspTab from './tabs/PspTab'
 import VerificationsTab from './tabs/VerificationsTab'
 import UsersTab from './tabs/UsersTab'
 import SurveysTab from './tabs/SurveysTab'
+import SupportTab from './tabs/SupportTab'
 import LicensesTab from './tabs/LicensesTab'
 import DeleteConfirmModal from './modals/DeleteConfirmModal'
 import CreateCompanyModal from './modals/CreateCompanyModal'
@@ -76,6 +78,7 @@ function AdminDashboardContent() {
 
   // Badge counts for sidebar
   const [companyPendingBadge, setCompanyPendingBadge] = useState(0)
+  const [supportUnread, setSupportUnread] = useState(0)
 
   // A key that increments to force tab re-fetch after delete or create
   const [refreshKey, setRefreshKey] = useState(0)
@@ -91,6 +94,9 @@ function AdminDashboardContent() {
       if (compData.success && compData.stats) {
         setCompanyPendingBadge(compData.stats.pending || 0)
       }
+      const supportRes = await fetch('/api/admin/support?limit=1')
+      const supportData = await supportRes.json()
+      if (supportData.success) setSupportUnread(supportData.unread || 0)
     } catch {
       // Badge counts are non-critical
     }
@@ -194,6 +200,11 @@ function AdminDashboardContent() {
       label: 'System',
       tabs: [
         { id: 'users', label: 'All Users', icon: <Users className='w-4 h-4' /> },
+        {
+          id: 'support',
+          label: `Support${supportUnread > 0 ? ` (${supportUnread})` : ''}`,
+          icon: <LifeBuoy className='w-4 h-4' />,
+        },
       ],
     },
   ]
@@ -282,6 +293,8 @@ function AdminDashboardContent() {
         return <SurveysTab key={refreshKey} {...tabProps} />
       case 'users':
         return <UsersTab key={refreshKey} {...tabProps} />
+      case 'support':
+        return <SupportTab key={refreshKey} {...tabProps} />
       default:
         return null
     }

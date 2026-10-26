@@ -28,6 +28,8 @@ export type SendEmailParams = {
   html: string
   fromName?: string
   fromAddress?: string
+  /** Where a human reply should land. Support uses the address Pingram already receives. */
+  replyToAddresses?: string[]
 }
 
 export type SendSmsParams = {
@@ -118,6 +120,7 @@ export async function sendEmail(params: SendEmailParams): Promise<MessagingResul
         html: params.html,
         fromName,
         fromAddress,
+        replyToAddresses: params.replyToAddresses,
       })
 
       if (res?.error?.message) {
