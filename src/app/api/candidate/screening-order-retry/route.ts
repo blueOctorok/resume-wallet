@@ -3,6 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { placeDriverOwnedOrdersFromConsentBundle } from '@/lib/place-driver-owned-orders-from-bundle'
 import { getScreeningOrderLocks } from '@/lib/driver-owned-screening'
+import { findMvrIdentityMismatch, storedIdentityFromForm } from '@/lib/mvr-identity-correction'
 
 /**
  * GET /api/candidate/screening-order-retry
@@ -32,10 +33,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ retryable: false })
     }
 
-    // Any active order (driver- OR employer-owned) locks its kind — offering a
-    // retry the duplicate guard would 409 just confuses the candidate.
+    // Any active order locks its kind. A DMV identity mismatch is the exception:
+    // the driver can correct the name, license number, or date of birth and
+    // we place a new MVR with the SSN already on the consent.
     const locks = await getScreeningOrderLocks(supabase, userId)
-    if (locks.mvr.locked && locks.psp.locked) {
+    const mismatch = locks.mvr.locked ? await findMvrIdentityMismatch(supabase, userId) : null
+    if (locks.mvr.locked && locks.psp.locked && !mismatch) {
       return NextResponse.json({ retryable: false })
     }
 
@@ -45,15 +48,20 @@ export async function GET(request: NextRequest) {
       .eq('id', bundle.company_id)
       .maybeSingle()
 
-    const formData = (bundle.form_data ?? {}) as Record<string, string>
-    const storedDob = String(formData.dob ?? formData.dateOfBirth ?? '').trim() || null
+    const stored = storedIdentityFromForm((bundle.form_data ?? {}) as Record<string, unknown>)
 
     return NextResponse.json({
       retryable: true,
       requestId: bundle.candidate_request_id as string,
       companyName: (company as { company_name?: string } | null)?.company_name ?? 'Your employer',
-      storedDob,
-      needsMvr: !locks.mvr.locked,
+      storedDob: stored.dob || null,
+      storedFirstName: stored.firstName,
+      storedLastName: stored.lastName,
+      storedDlNumber: stored.dlNumber,
+      storedDlState: stored.dlState,
+      correctIdentity: Boolean(mismatch),
+      mismatchFields: mismatch?.fields ?? [],
+      needsMvr: !locks.mvr.locked || Boolean(mismatch),
       needsPsp: !locks.psp.locked,
     })
   } catch (e) {
@@ -65,8 +73,10 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/candidate/screening-order-retry
  *
- * Retry driver-owned MVR + PSP when consent saved but orders failed (e.g. bad DOB).
- * Body: { requestId, formDataPatch?: { dob?, dlNumber?, ... } }
+ * Retry driver-owned MVR + PSP when consent saved but orders failed, or replace
+ * an MVR the state could not match. Body:
+ * { requestId, correctIdentity?: boolean, formDataPatch?: { firstName?, lastName?, dob?, dlNumber?, dlState? } }
+ * SSN is not accepted — the encrypted value on the consent is reused.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -77,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as {
       requestId?: string
+      correctIdentity?: boolean
       formDataPatch?: Record<string, string>
     }
 
@@ -101,7 +112,11 @@ export async function POST(request: NextRequest) {
       request,
       user.id,
       user.email ?? null,
-      { requestId: body.requestId, formDataPatch: body.formDataPatch },
+      {
+        requestId: body.requestId,
+        formDataPatch: body.formDataPatch,
+        correctIdentity: body.correctIdentity === true,
+      },
     )
 
     if (!result.ok) {

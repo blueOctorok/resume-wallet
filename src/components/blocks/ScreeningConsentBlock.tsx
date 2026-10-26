@@ -14,6 +14,7 @@ import BackToHubButton from '@/components/ui/BackToHubButton'
 import Button from '@/components/ui/Button'
 import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import { CDLIS_PAGE_BREADCRUMB } from '@/lib/employer-psp-mvr-page3-copy'
+import { dobForDateInput } from '@/lib/mvr-identity-correction'
 import { validateDateOfBirth } from '@/lib/screening-validation'
 import { clearInviteToken, peekInviteToken } from '@/lib/invite-resume'
 
@@ -25,7 +26,10 @@ interface ScreeningConsentBlockProps {
 interface OrderRetryState {
   requestId: string
   companyName: string
-  storedDob: string | null
+  correctIdentity: boolean
+  mismatchFields: string[]
+  needsMvr: boolean
+  needsPsp: boolean
 }
 
 /**
@@ -46,9 +50,14 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const [orderRetry, setOrderRetry] = useState<OrderRetryState | null>(null)
   const [retryLoading, setRetryLoading] = useState(true)
   const [retryDob, setRetryDob] = useState('')
+  const [retryFirstName, setRetryFirstName] = useState('')
+  const [retryLastName, setRetryLastName] = useState('')
+  const [retryDlNumber, setRetryDlNumber] = useState('')
+  const [retryDlState, setRetryDlState] = useState('')
   const [invalidStoredDob, setInvalidStoredDob] = useState<string | null>(null)
   const [retrySubmitting, setRetrySubmitting] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [correctedIdentity, setCorrectedIdentity] = useState(false)
   const [claimingInvite, setClaimingInvite] = useState(false)
   // Explicit decline (boss ask): consent forms must offer a recorded "no",
   // not just a silent Back to Hub that leaves the request pending forever.
@@ -99,11 +108,21 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
         setOrderRetry({
           requestId: data.requestId as string,
           companyName: data.companyName as string,
-          storedDob: (data.storedDob as string | null) ?? null,
+          correctIdentity: data.correctIdentity === true,
+          mismatchFields: Array.isArray(data.mismatchFields)
+            ? data.mismatchFields.filter((field: unknown): field is string => typeof field === 'string')
+            : [],
+          needsMvr: data.needsMvr !== false,
+          needsPsp: data.needsPsp === true,
         })
+        setRetryFirstName(typeof data.storedFirstName === 'string' ? data.storedFirstName : '')
+        setRetryLastName(typeof data.storedLastName === 'string' ? data.storedLastName : '')
+        setRetryDlNumber(typeof data.storedDlNumber === 'string' ? data.storedDlNumber : '')
+        setRetryDlState(typeof data.storedDlState === 'string' ? data.storedDlState : '')
         const stored = (data.storedDob as string | null) ?? ''
-        if (stored && validateDateOfBirth(stored).ok) {
-          setRetryDob(stored)
+        const dobInput = dobForDateInput(stored)
+        if (dobInput && validateDateOfBirth(dobInput).ok) {
+          setRetryDob(dobInput)
           setInvalidStoredDob(null)
         } else if (stored) {
           // Don't trap the user on a bad saved year (e.g. 1070 typo) — force a fresh pick.
@@ -158,6 +177,14 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
   const handleOrderRetry = async () => {
     if (!orderRetry) return
     setRetryError(null)
+    if (!retryFirstName.trim() || !retryLastName.trim()) {
+      setRetryError('Enter the legal first and last name printed on the license, not a nickname.')
+      return
+    }
+    if (!retryDlNumber.trim() || !retryDlState.trim()) {
+      setRetryError('Enter the license number and the state that issued it.')
+      return
+    }
     const dobCheck = validateDateOfBirth(retryDob)
     if (!dobCheck.ok) {
       setRetryError(dobCheck.error)
@@ -170,13 +197,22 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requestId: orderRetry.requestId,
-          formDataPatch: { dob: retryDob.trim(), dateOfBirth: retryDob.trim() },
+          correctIdentity: orderRetry.correctIdentity,
+          formDataPatch: {
+            firstName: retryFirstName.trim(),
+            lastName: retryLastName.trim(),
+            dlNumber: retryDlNumber.trim(),
+            dlState: retryDlState.trim(),
+            dob: retryDob.trim(),
+            dateOfBirth: retryDob.trim(),
+          },
         }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(typeof data.error === 'string' ? data.error : 'Failed to submit orders')
       }
+      setCorrectedIdentity(orderRetry.correctIdentity)
       setComplete(true)
       setOrderRetry(null)
       void refreshPendingRequest()
@@ -207,11 +243,12 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
             </div>
             <div className={`${cardClass} p-8`}>
               <h3 className={`text-lg font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
-                Finish your MVR & PSP orders
+                {orderRetry.correctIdentity ? 'Correct the name or license number' : 'Finish your MVR & PSP orders'}
               </h3>
               <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-600'}`}>
-                Your screening consent for {orderRetry.companyName} is saved, but the MVR and PSP orders did not
-                submit. Pick your correct date of birth below and try again — no need to re-sign the disclosure forms.
+                {orderRetry.correctIdentity
+                  ? `The state could not match ${orderRetry.mismatchFields.join(', ') || 'the name or license number'} on the MVR for ${orderRetry.companyName}. Use the legal name and the license number printed on the card. The Social Security number you already entered stays on file, and you do not sign the forms again.`
+                  : `Your screening consent for ${orderRetry.companyName} is saved, but the orders did not submit. Check the legal name, license number, and date of birth. The Social Security number you already entered stays on file.`}
               </p>
               {invalidStoredDob && (
                 <p className={`text-sm mb-4 rounded-lg px-3 py-2 ${isDarkTheme(theme) ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-900'}`}>
@@ -219,24 +256,89 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
                   — check the <strong>year</strong> (e.g. 1970, not 1070).
                 </p>
               )}
-              <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-                Date of birth
-              </label>
-              <input
-                type="date"
-                value={retryDob}
-                onChange={(e) => {
-                  setRetryDob(e.target.value)
-                  setRetryError(null)
-                }}
-                className={inputClass}
-              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className={`mb-2 block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Legal first name
+                  </span>
+                  <input
+                    value={retryFirstName}
+                    onChange={(e) => {
+                      setRetryFirstName(e.target.value)
+                      setRetryError(null)
+                    }}
+                    autoComplete="given-name"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block">
+                  <span className={`mb-2 block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Legal last name
+                  </span>
+                  <input
+                    value={retryLastName}
+                    onChange={(e) => {
+                      setRetryLastName(e.target.value)
+                      setRetryError(null)
+                    }}
+                    autoComplete="family-name"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block">
+                  <span className={`mb-2 block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Driver license number
+                  </span>
+                  <input
+                    value={retryDlNumber}
+                    onChange={(e) => {
+                      setRetryDlNumber(e.target.value)
+                      setRetryError(null)
+                    }}
+                    autoComplete="off"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block">
+                  <span className={`mb-2 block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    License state
+                  </span>
+                  <input
+                    value={retryDlState}
+                    maxLength={2}
+                    onChange={(e) => {
+                      setRetryDlState(e.target.value.toUpperCase())
+                      setRetryError(null)
+                    }}
+                    placeholder="OH"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className={`mb-2 block text-sm font-medium ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Date of birth
+                  </span>
+                  <input
+                    type="date"
+                    value={retryDob}
+                    onChange={(e) => {
+                      setRetryDob(e.target.value)
+                      setRetryError(null)
+                    }}
+                    className={inputClass}
+                  />
+                </label>
+              </div>
               {retryError && (
                 <p className="mt-3 text-sm text-red-600 dark:text-red-400">{retryError}</p>
               )}
               <div className="mt-6 flex gap-3">
                 <Button variant="primary" onClick={handleOrderRetry} isLoading={retrySubmitting}>
-                  Submit MVR & PSP orders
+                  {orderRetry.correctIdentity
+                    ? orderRetry.needsPsp
+                      ? 'Order a corrected MVR and PSP'
+                      : 'Order a corrected MVR'
+                    : 'Submit MVR & PSP orders'}
                 </Button>
                 <Button variant="secondary" onClick={onBack}>
                   Back to Hub
@@ -315,12 +417,12 @@ export default function ScreeningConsentBlock({ userAddress, onBack }: Screening
               <CheckCircle className={`w-8 h-8 ${isDarkTheme(theme) ? 'text-green-400' : 'text-green-500'}`} />
             </div>
             <h3 className={`text-xl font-semibold mb-2 ${isDarkTheme(theme) ? 'text-gray-100' : 'text-gray-900'}`}>
-              MVR & PSP orders submitted
+              {correctedIdentity ? 'Corrected MVR submitted' : 'MVR & PSP orders submitted'}
             </h3>
             <p className={`text-sm mb-6 ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
-              Your consent is on file and your MVR and PSP orders are processing. These reports belong to you —
-              track progress in My Files on your hub. Your employer can view results while evaluating your
-              application.
+              {correctedIdentity
+                ? 'A new driving record is processing with the name and license number you just entered. The Social Security number already on file was used again. Track it in My Files.'
+                : 'Your consent is on file and your MVR and PSP orders are processing. These reports belong to you — track progress in My Files on your hub. Your employer can view results while evaluating your application.'}
             </p>
             <Button variant="primary" onClick={onBack}>
               Back to Hub

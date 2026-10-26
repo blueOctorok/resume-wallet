@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Correct a mismatched MVR without re-entering the SSN** (2026-10-26)
+
+When the state says the name, date of birth, or license number on an MVR did not match, the driver opens the same screening page and corrects those fields. The Social Security number already on the consent is reused, and the forms are not signed again. That report is marked replaced and a new MVR is ordered. On the driver file, a discrepancy shows the name and license number that were ordered. The date of birth and SSN stay off that line.
+
+| File | Change |
+|---|---|
+| `src/lib/mvr-identity-correction.ts` | Mismatch fields, the file sentence, and the replace step. |
+| `src/app/api/candidate/screening-order-retry/route.ts` | Offers the correction when the latest MVR has a DMV identity alert. |
+| `src/lib/place-driver-owned-orders-from-bundle.ts` | Patches name and license, keeps the stored SSN, then places the new MVR. |
+| `src/components/blocks/ScreeningConsentBlock.tsx` | Name, license number, license state, and date of birth on the same page. |
+| `src/lib/dq-file-load.ts` | Loads the ordered name and license for this company's discrepant MVR. |
+| `src/components/employer/drivers/DriverFileItems.tsx` | Shows that sentence beside the MVR line. |
+
+---
+
 ## **New Jersey MVR summaries fill the same fields** (2026-10-26)
 
 A New Jersey MVR can come back as a labeled summary instead of license and violation tags. The order was marked filled, and class, violations, accidents, and the medical card stayed blank. The parser now reads that summary. Marcellus Barnes and George Postell were the two stored reports in that shape; a backfill writes their fields from the summary already on the order.

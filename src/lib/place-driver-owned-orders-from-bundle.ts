@@ -5,12 +5,18 @@ import { placeScreeningOrder } from '@/lib/place-screening-order'
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 import { notifyEmployerCandidateActionComplete } from '@/lib/notify-employer-candidate-action'
 import { getScreeningOrderLocks } from '@/lib/driver-owned-screening'
+import { releaseMismatchedMvr, whitelistIdentityPatch } from '@/lib/mvr-identity-correction'
 import { validateScreeningOrderInput } from '@/lib/screening-validation'
 
 export interface DriverOwnedOrderRetryInput {
   requestId: string
-  /** Optional field overrides (e.g. corrected DOB after a typo). */
+  /** Name, license, or date of birth. SSN is ignored — the stored value is reused. */
   formDataPatch?: Record<string, string>
+  /**
+   * The latest MVR came back with a DMV identity mismatch. Supersede that
+   * row (the report stays) so a corrected MVR can be placed inside 30 days.
+   */
+  correctIdentity?: boolean
 }
 
 function pickDob(formData: Record<string, unknown>): string {
@@ -51,7 +57,8 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
   driverEmail: string | null,
   input: DriverOwnedOrderRetryInput,
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const { requestId, formDataPatch } = input
+  const { requestId } = input
+  const formDataPatch = whitelistIdentityPatch(input.formDataPatch)
 
   const { data: candidateRequest } = await supabase
     .from('candidate_requests')
@@ -76,13 +83,6 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
 
   if (!bundle) {
     return { ok: false, status: 404, error: 'Screening consent not found — complete the consent forms first' }
-  }
-
-  // Any active order (driver- OR employer-owned) locks its kind — matches the
-  // duplicate guard in screening-validation.ts, so we skip legs that would 409.
-  const locks = await getScreeningOrderLocks(supabase, driverUserId)
-  if (locks.mvr.locked && locks.psp.locked) {
-    return { ok: false, status: 409, error: 'MVR and PSP orders are already on file' }
   }
 
   let ssn: string
@@ -111,17 +111,34 @@ export async function placeDriverOwnedOrdersFromConsentBundle(
   }
 
   if (formDataPatch && Object.keys(formDataPatch).length > 0) {
-    const { ssn: _strip, ...patchSansSsn } = formDataPatch
     const updatedForm = {
       ...(bundle.form_data as Record<string, unknown>),
-      ...patchSansSsn,
-      dob: orderFormData.dob,
-      dateOfBirth: orderFormData.dob,
+      ...formDataPatch,
+      firstName: validation.normalized.firstName,
+      lastName: validation.normalized.lastName,
+      dlNumber: validation.normalized.dlNumber,
+      dlState: validation.normalized.dlState,
+      dob: validation.normalized.dob,
+      dateOfBirth: validation.normalized.dob,
     }
     await supabase
       .from('screening_consent_bundles')
       .update({ form_data: updatedForm })
       .eq('id', bundle.id)
+  }
+
+  // Supersede only after the corrected fields validate. A typo in the form
+  // must not drop the report that is already on file.
+  if (input.correctIdentity) {
+    const released = await releaseMismatchedMvr(supabase, driverUserId)
+    if (!released.ok) return { ok: false, status: 409, error: released.error }
+  }
+
+  // Any active order (driver- OR employer-owned) locks its kind — matches the
+  // duplicate guard in screening-validation.ts, so we skip legs that would 409.
+  const locks = await getScreeningOrderLocks(supabase, driverUserId)
+  if (locks.mvr.locked && locks.psp.locked) {
+    return { ok: false, status: 409, error: 'MVR and PSP orders are already on file' }
   }
 
   const companyId = candidateRequest.company_id as string

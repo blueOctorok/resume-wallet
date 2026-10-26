@@ -14,6 +14,7 @@ import {
 } from '@/lib/dq-file-status'
 import type { DqItemId } from '@/lib/dq-file-registry'
 import type { ScreeningOutcome } from '@/lib/accio-result-status'
+import { orderedIdentityForMvr } from '@/lib/mvr-identity-correction'
 import {
   asScreeningOutcome,
   boardDate,
@@ -275,6 +276,12 @@ export interface DriverFileDetail {
     errorCode: string | null
     /** Report access follows payment (CRA rule) — only your own orders open. */
     orderedByYou: boolean
+    /**
+     * This company's own discrepant MVR: the name and license number that were
+     * ordered, plus which field the state could not match. Null otherwise.
+     * Date of birth and SSN are never included.
+     */
+    orderedAs: string | null
   }>
   employmentVerifications: Array<{
     id: string
@@ -316,6 +323,16 @@ export async function loadDriverFileDetail(
   // This company still initiated them when the driver signed its consent, so
   // they are this company's to open — not "another employer".
   const consentOnFile = rows.consentBundles.some((bundle) => bundle.status === 'complete')
+  const newestMvr = rows.mvrOrders[0]
+  const newestMvrYours = Boolean(
+    newestMvr &&
+      (newestMvr.ordered_by_company_id === companyId ||
+        (newestMvr.ordered_by_company_id == null && consentOnFile)),
+  )
+  const orderedAs =
+    newestMvr && newestMvrYours && newestMvr.result_outcome === 'discrepancy'
+      ? await orderedIdentityForMvr(supabase, newestMvr.id)
+      : null
   const toScreening = (kind: 'mvr' | 'psp') => (o: OrderRowRich) => ({
     id: o.id,
     kind,
@@ -328,6 +345,7 @@ export async function loadDriverFileDetail(
     orderedByYou:
       o.ordered_by_company_id === companyId ||
       (o.ordered_by_company_id == null && consentOnFile),
+    orderedAs: kind === 'mvr' && newestMvr && o.id === newestMvr.id ? orderedAs : null,
   })
 
   return {

@@ -155,7 +155,7 @@ function describe(
       const extra = orders.length > 1 ? `${orders.length} pulls` : null
       const provenance = newest.orderedByYou ? null : 'On file via another employer'
       const refresh = item.refreshDue ? 'refresh due' : null
-      const line = [base, refresh, extra, provenance].filter(Boolean).join(' · ')
+      const line = [base, kind === 'mvr' ? newest.orderedAs : null, refresh, extra, provenance].filter(Boolean).join(' · ')
       // A pull paid by a different company stays a fact on the board. This
       // company's own order, including one placed from its consent, opens.
       const action =
