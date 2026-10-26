@@ -18,7 +18,7 @@ export interface DriverFile {
   detail: DriverFileDetail
 }
 
-export type DriverBoardFilter = 'all' | 'recent' | 'signed-up' | BallInCourt
+export type DriverBoardFilter = 'all' | 'recent' | 'unopened' | 'signed-up' | BallInCourt
 
 interface DriverBoardState {
   roster: DriverRosterRow[]

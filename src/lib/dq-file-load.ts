@@ -21,6 +21,7 @@ import {
   dotBoardLine,
   evBoardLine,
   licenseBoardLine,
+  isUntouchedConsentInvite,
   RECENT_CONSENT_DAYS,
   screeningBoardLine,
   signedUpWithoutConsentInvite,
@@ -618,9 +619,12 @@ export interface DqMonitorCandidateRow {
   consentSentAt: string | null
   /**
    * True when this row is only here because a consent went out and they have
-   * not created an account. Hidden from every pill except Recent.
+   * not created an account. Hidden from the roster pills. Recent and Unopened
+   * (and a name search) are the places they show up.
    */
   recentConsentOnly: boolean
+  /** Consent link sent, still pending, never opened, no account. Any age, while the link is live. */
+  linkUntouched: boolean
   /** Created an account without this company sending a screening-consent invite. */
   signedUpOnOwn: boolean
   /** When their profile was created. Used to put the newest signups first. */
@@ -643,6 +647,7 @@ interface RecentConsentInvite {
   used_at: string | null
   status: string
   view_count: number | null
+  expires_at?: string | null
 }
 
 /** Newest screening-consent invite per user, from a newest-first list. */
@@ -707,6 +712,12 @@ function recentInviteOnlyRows(invites: RecentConsentInvite[], knownUserIds: Set<
       lastActivityAt: inv.created_at,
       consentSentAt: inv.created_at,
       recentConsentOnly: true,
+      linkUntouched: isUntouchedConsentInvite({
+        status: inv.status,
+        viewCount: inv.view_count,
+        usedByUserId: inv.used_by_user_id,
+        candidateUserId: inv.candidate_user_id,
+      }),
       signedUpOnOwn: false,
       accountCreatedAt: null,
       items: [{ id: 'cdlis_consent', status: item.status, line: item.line }],
@@ -744,6 +755,40 @@ async function loadConsentInviteTouches(
   return { userIds, emails }
 }
 
+/** Pending consent links nobody has opened, including ones older than the Recent window. */
+async function loadUntouchedConsentInvites(
+  supabase: SupabaseClient,
+  companyId: string,
+): Promise<RecentConsentInvite[]> {
+  const now = Date.now()
+  const invites = await eachPage<RecentConsentInvite>('untouched consents', (from, to) =>
+    supabase
+      .from('application_invites')
+      .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count, expires_at')
+      .eq('company_id', companyId)
+      .eq('target_block_type', 'driver-screening-consent')
+      .eq('status', 'pending')
+      .is('used_by_user_id', null)
+      .is('candidate_user_id', null)
+      .order('created_at', { ascending: false })
+      .range(from, to),
+  )
+  return invites.filter((inv) => {
+    if ((inv.view_count ?? 0) > 0) return false
+    if (!inv.expires_at) return true
+    const expires = Date.parse(inv.expires_at)
+    return Number.isNaN(expires) || expires > now
+  })
+}
+
+function mergeConsentInvites(recent: RecentConsentInvite[], untouched: RecentConsentInvite[]): RecentConsentInvite[] {
+  const byId = new Map<string, RecentConsentInvite>()
+  for (const inv of [...recent, ...untouched]) {
+    if (!byId.has(inv.id)) byId.set(inv.id, inv)
+  }
+  return [...byId.values()].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+}
+
 async function loadRecentConsentInvites(
   supabase: SupabaseClient,
   companyId: string,
@@ -769,17 +814,19 @@ export async function loadDqMonitorList(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<{ rows: DqMonitorCandidateRow[]; includesSelfServe: boolean }> {
-  const [{ ids: engagedIds, includesSelfServe }, recentInvites, consentTouches] = await Promise.all([
+  const [{ ids: engagedIds, includesSelfServe }, recentInvites, untouchedInvites, consentTouches] = await Promise.all([
     loadDqMonitorCandidateIds(supabase, companyId),
     loadRecentConsentInvites(supabase, companyId),
+    loadUntouchedConsentInvites(supabase, companyId),
     loadConsentInviteTouches(supabase, companyId),
   ])
+  const inviteOnlySource = mergeConsentInvites(recentInvites, untouchedInvites)
   // The engaged-id query caps invites at 500 with no recency order, so a consent
   // sent this week can miss the roster. Pull those user ids in explicitly.
   const sentAtByUser = newestSentAtByUser(recentInvites)
   const candidateIds = Array.from(new Set([...engagedIds, ...sentAtByUser.keys()]))
   if (candidateIds.length === 0) {
-    return { rows: recentInviteOnlyRows(recentInvites, new Set()), includesSelfServe }
+    return { rows: recentInviteOnlyRows(inviteOnlySource, new Set()), includesSelfServe }
   }
 
   type ProfileRow = {
@@ -1106,6 +1153,7 @@ export async function loadDqMonitorList(
       lastActivityAt: snapshot.lastActivityAt,
       consentSentAt: sentAtByUser.get(userId) ?? null,
       recentConsentOnly: false,
+      linkUntouched: false,
       signedUpOnOwn: signedUpWithoutConsentInvite({
         userId,
         email: emailByUser.get(userId) || profile?.email || null,
@@ -1120,7 +1168,7 @@ export async function loadDqMonitorList(
   }
 
   const known = new Set(rows.map((row) => row.userId))
-  rows.push(...recentInviteOnlyRows(recentInvites, known))
+  rows.push(...recentInviteOnlyRows(inviteOnlySource, known))
 
   // Most recently active first; then name.
   rows.sort((a, b) => {

@@ -55,6 +55,21 @@ export function isRecentConsentSent(sentAt: string | null | undefined, now = Dat
 }
 
 /**
+ * The link went out and nothing happened: still pending, never opened, and
+ * not tied to an account. Viewed or started invites are not in this set.
+ */
+export function isUntouchedConsentInvite(invite: {
+  status: string
+  viewCount: number | null
+  usedByUserId?: string | null
+  candidateUserId?: string | null
+}): boolean {
+  if (invite.usedByUserId || invite.candidateUserId) return false
+  if (invite.status !== 'pending') return false
+  return (invite.viewCount ?? 0) <= 0
+}
+
+/**
  * They created an account without this company sending a screening-consent invite.
  * Matched on the user id the invite was claimed under, or on the email it was sent to.
  */

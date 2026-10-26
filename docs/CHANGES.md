@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Unopened consent links have their own board filter** (2026-10-26)
+
+Someone sent a consent link who never opened it had no account, so they were left off All. Recent only kept the last 7 days, and a name search on All skipped them. Kevin Lovell and Nickolas Keys are in that set: pending invites, never opened. Unopened lists every live link like that, newest send first, with no 7-day cap. Typing the name finds them from the other pills too.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-board-lines.ts` | What counts as an unopened invite. |
+| `src/lib/dq-file-load.ts` | Loads those invites onto the roster. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Unopened pill and name search. |
+| `src/stores/driver-board-store.ts` | Filter id. |
+
+---
+
 ## **DOT form controls fit a phone** (2026-10-23)
 
 On a phone the three section tabs broke their labels ("Section" on one line, "2" on the next), and Previous, Save, and Next wrapped so Next sat alone on the left. The tabs are now three equal columns with a short label. The step buttons stack full width, and sit in one row again from the small breakpoint up.

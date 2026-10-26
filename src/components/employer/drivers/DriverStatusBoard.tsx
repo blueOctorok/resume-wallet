@@ -35,11 +35,13 @@ const BALL_HINT: Record<BallInCourt, string> = {
 }
 
 const RECENT_HINT = 'Consents sent in the last 7 days, newest first'
+const UNOPENED_HINT = 'Consent link sent. They have not opened it and have no account yet.'
 const SIGNED_UP_HINT = 'Created an account on their own. You have not sent them a consent invite.'
 
 function chipTitle(id: DriverBoardFilter): string {
   if (id === 'all') return 'Every driver on the board'
   if (id === 'recent') return RECENT_HINT
+  if (id === 'unopened') return UNOPENED_HINT
   if (id === 'signed-up') return SIGNED_UP_HINT
   return BALL_HINT[id]
 }
@@ -120,6 +122,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
   const counts: Record<BallInCourt, number> = { attention: 0, you: 0, processing: 0, driver: 0, done: 0 }
   for (const r of rosterRows) counts[r.journey.ball] += 1
   const recentCount = rows.filter((r) => isRecentConsentSent(r.row.consentSentAt)).length
+  const unopenedCount = rows.filter((r) => r.row.linkUntouched).length
   const signedUpCount = rosterRows.filter((r) => r.row.signedUpOnOwn).length
 
   const q = search.trim().toLowerCase()
@@ -128,11 +131,21 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
       !q || row.name.toLowerCase().includes(q) || (row.recentConsentOnly && (row.headline ?? '').toLowerCase().includes(q))
     if (!matches) return false
     if (filter === 'recent') return isRecentConsentSent(row.consentSentAt)
-    if (row.recentConsentOnly) return false
+    if (filter === 'unopened') return row.linkUntouched
+    // No account yet, so All and the journey pills skip them. A name search
+    // still finds an unopened invite, which is how HR looks up a specific person.
+    if (row.recentConsentOnly) return Boolean(q) && row.linkUntouched
     if (filter === 'signed-up') return row.signedUpOnOwn
     return filter === 'all' || journey.ball === filter
   })
   if (filter === 'recent') {
+    filtered.sort(
+      (a, b) =>
+        (Date.parse(b.row.consentSentAt ?? '') || 0) - (Date.parse(a.row.consentSentAt ?? '') || 0) ||
+        a.row.name.localeCompare(b.row.name),
+    )
+  }
+  if (filter === 'unopened') {
     filtered.sort(
       (a, b) =>
         (Date.parse(b.row.consentSentAt ?? '') || 0) - (Date.parse(a.row.consentSentAt ?? '') || 0) ||
@@ -152,6 +165,7 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
   const chips: Array<{ id: DriverBoardFilter; label: string; count: number }> = [
     { id: 'all', label: 'All', count: rosterRows.length },
     { id: 'recent', label: 'Recent', count: recentCount },
+    { id: 'unopened', label: 'Unopened', count: unopenedCount },
     { id: 'signed-up', label: 'Signed up', count: signedUpCount },
     ...BALL_ORDER.map((b) => ({ id: b, label: BALL_LABEL[b], count: counts[b] })),
   ]
@@ -250,7 +264,11 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                       <span
                         className={cn(
                           'rounded-full px-1.5 text-[10px] tabular-nums',
-                          active ? 'bg-white/20' : chip.id === 'recent' && chip.count > 0 ? 'bg-[#f15a2b] text-white' : 'bg-stone-100',
+                          active
+                            ? 'bg-white/20'
+                            : (chip.id === 'recent' || chip.id === 'unopened') && chip.count > 0
+                              ? 'bg-[#f15a2b] text-white'
+                              : 'bg-stone-100',
                         )}
                       >
                         {chip.count}
@@ -302,9 +320,11 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                   <p className="text-sm text-ironside">
                     {filter === 'recent'
                       ? 'No consents sent in the last 7 days.'
-                      : filter === 'signed-up'
-                        ? 'No one has signed up on their own.'
-                        : 'No drivers match.'}
+                      : filter === 'unopened'
+                        ? 'No unopened consent links.'
+                        : filter === 'signed-up'
+                          ? 'No one has signed up on their own.'
+                          : 'No drivers match.'}
                   </p>
                   <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={() => { setSearch(''); setFilter('all'); setFocus(null) }}>
                     Clear filters

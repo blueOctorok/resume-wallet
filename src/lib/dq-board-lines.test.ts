@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   consentBoardLine,
   isRecentConsentSent,
+  isUntouchedConsentInvite,
   rosterWhereLine,
   screeningBoardLine,
   signedUpWithoutConsentInvite,
@@ -52,6 +53,20 @@ describe('isRecentConsentSent', () => {
 
   it('drops a missing send time', () => {
     expect(isRecentConsentSent(null, now)).toBe(false)
+  })
+})
+
+describe('isUntouchedConsentInvite', () => {
+  it('keeps a pending invite that was never opened and has no account', () => {
+    expect(
+      isUntouchedConsentInvite({ status: 'pending', viewCount: 0, usedByUserId: null, candidateUserId: null }),
+    ).toBe(true)
+  })
+
+  it('drops an invite they opened, started, or already claimed', () => {
+    expect(isUntouchedConsentInvite({ status: 'viewed', viewCount: 1, usedByUserId: null, candidateUserId: null })).toBe(false)
+    expect(isUntouchedConsentInvite({ status: 'pending', viewCount: 0, usedByUserId: 'user-1', candidateUserId: null })).toBe(false)
+    expect(isUntouchedConsentInvite({ status: 'in_progress', viewCount: 0, usedByUserId: null, candidateUserId: null })).toBe(false)
   })
 })
 
