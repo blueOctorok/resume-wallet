@@ -70,6 +70,25 @@ export function isUntouchedConsentInvite(invite: {
 }
 
 /**
+ * Which channels to deliver again. A stamp means that channel already carried
+ * the link, so a text-only invite is not also emailed. When nothing was stamped,
+ * email wins if we have one — a surprise text is the worse miss.
+ */
+export function channelsForConsentResend(invite: {
+  email: string | null
+  phone: string | null
+  emailed: boolean
+  texted: boolean
+}): Array<'email' | 'sms'> {
+  const channels: Array<'email' | 'sms'> = []
+  if (invite.email && (invite.emailed || !invite.texted)) channels.push('email')
+  if (invite.phone && invite.texted) channels.push('sms')
+  if (channels.length > 0) return channels
+  if (invite.phone) return ['sms']
+  return []
+}
+
+/**
  * They created an account without this company sending a screening-consent invite.
  * Matched on the user id the invite was claimed under, or on the email it was sent to.
  */

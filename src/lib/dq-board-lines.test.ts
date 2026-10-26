@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   consentBoardLine,
+  channelsForConsentResend,
   isRecentConsentSent,
   isUntouchedConsentInvite,
   rosterWhereLine,
@@ -67,6 +68,19 @@ describe('isUntouchedConsentInvite', () => {
     expect(isUntouchedConsentInvite({ status: 'viewed', viewCount: 1, usedByUserId: null, candidateUserId: null })).toBe(false)
     expect(isUntouchedConsentInvite({ status: 'pending', viewCount: 0, usedByUserId: 'user-1', candidateUserId: null })).toBe(false)
     expect(isUntouchedConsentInvite({ status: 'in_progress', viewCount: 0, usedByUserId: null, candidateUserId: null })).toBe(false)
+  })
+})
+
+describe('channelsForConsentResend', () => {
+  it('repeats only the channel that already carried the link', () => {
+    expect(channelsForConsentResend({ email: 'a@b.com', phone: '+1555', emailed: true, texted: false })).toEqual(['email'])
+    expect(channelsForConsentResend({ email: 'a@b.com', phone: '+1555', emailed: false, texted: true })).toEqual(['sms'])
+    expect(channelsForConsentResend({ email: 'a@b.com', phone: '+1555', emailed: true, texted: true })).toEqual(['email', 'sms'])
+  })
+
+  it('emails when nothing was stamped and an address exists', () => {
+    expect(channelsForConsentResend({ email: 'a@b.com', phone: '+1555', emailed: false, texted: false })).toEqual(['email'])
+    expect(channelsForConsentResend({ email: null, phone: '+1555', emailed: false, texted: false })).toEqual(['sms'])
   })
 })
 

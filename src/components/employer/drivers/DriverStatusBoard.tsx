@@ -8,7 +8,8 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
 import { BALL_LABEL, DRIVER_JOURNEY_ORDER, deriveDriverJourney, type BallInCourt } from '@/lib/driver-journey'
-import { isRecentConsentSent, rosterWhereLine } from '@/lib/dq-board-lines'
+import { isRecentConsentSent, channelsForConsentResend, rosterWhereLine } from '@/lib/dq-board-lines'
+import { sendInviteEmail, sendInviteSms } from '@/lib/outreach-send-client'
 import { RECRUITER_EMAIL_STORAGE_KEY } from '@/lib/recruiter-inboxes'
 import type { DqItemId } from '@/lib/dq-file-registry'
 import { useDriverBoardStore, type DriverBoardFilter, type DriverRosterRow } from '@/stores/driver-board-store'
@@ -18,6 +19,16 @@ import DriverFileModal from './DriverFileModal'
 import NewOutreachModal from '@/components/employer/outreach/NewOutreachModal'
 
 const PAGE_SIZE = 15
+
+const ROW_CLASS =
+  'grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-3 py-3 text-left transition-colors hover:bg-stone-50 md:grid-cols-[auto_minmax(0,13rem)_1fr_auto_auto]'
+
+function resendLabel(done: string[]): string {
+  if (done.length === 2) return 'Emailed and texted'
+  if (done[0] === 'email') return 'Emailed again'
+  if (done[0] === 'text') return 'Texted again'
+  return 'Sent again'
+}
 
 /**
  * Left-to-right is the life of a file after a consent goes out: the driver acts,
@@ -72,6 +83,22 @@ function cdlLabel(row: DriverRosterRow): string | null {
   return parts.length > 0 ? parts.join(' · ') : row.headline
 }
 
+function ResendLinkButton({ busy, className, onClick }: { busy: boolean; className?: string; onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      className={className}
+      isLoading={busy}
+      title="Sends the same consent link again"
+      onClick={onClick}
+    >
+      Resend
+    </Button>
+  )
+}
+
 /**
  * Every driver this company is working, one row each, sorted by whose move it
  * is. The roster API already returns live DQ item statuses per driver, so the
@@ -97,6 +124,8 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
   const [showNewOutreach, setShowNewOutreach] = useState(false)
   const [focus, setFocus] = useState<DqItemId | null>(null)
   const [showEmail, setShowEmail] = useState(false)
+  const [resendBusy, setResendBusy] = useState<string | null>(null)
+  const [resendNote, setResendNote] = useState<{ id: string; text: string; ok: boolean } | null>(null)
 
   useEffect(() => {
     void fetchRoster()
@@ -105,6 +134,36 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
   }, [filter, search, focus])
+
+  const resendUnopened = async (invite: NonNullable<DriverRosterRow['unopenedInvite']>) => {
+    if (resendBusy) return
+    setResendBusy(invite.inviteId)
+    setResendNote(null)
+    const channels = channelsForConsentResend(invite)
+    const done: string[] = []
+    const failed: string[] = []
+    for (const channel of channels) {
+      try {
+        if (channel === 'email' && invite.email) {
+          await sendInviteEmail(invite.inviteId, invite.email)
+          done.push('email')
+        } else if (channel === 'sms' && invite.phone) {
+          await sendInviteSms(invite.inviteId, invite.phone)
+          done.push('text')
+        }
+      } catch (e) {
+        failed.push(e instanceof Error ? e.message : 'Resend failed')
+      }
+    }
+    if (channels.length === 0) failed.push('No email or phone on this invite')
+    const sent = resendLabel(done)
+    setResendNote({
+      id: invite.inviteId,
+      ok: failed.length === 0,
+      text: failed.length === 0 ? sent : sent && done.length > 0 ? `${sent}. ${failed[0]}` : failed[0],
+    })
+    setResendBusy(null)
+  }
 
   const rows = useMemo(
     () =>
@@ -333,25 +392,29 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
               ) : (
                 <>
                   <ul className="max-h-[36rem] divide-y divide-stone-200 overflow-y-auto rounded-xl border border-stone-200">
-                    {visible.map(({ row, journey }) => (
-                      <li key={row.userId}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!row.recentConsentOnly) openDriver(row.userId)
-                          }}
-                          title={row.recentConsentOnly ? 'No account yet — nothing to open' : undefined}
-                          className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-3 py-3 text-left transition-colors hover:bg-stone-50 md:grid-cols-[auto_minmax(0,13rem)_1fr_auto_auto]"
-                        >
+                    {visible.map(({ row, journey }) => {
+                      const invite = row.unopenedInvite
+                      const note = invite && resendNote?.id === invite.inviteId ? resendNote : null
+                      const body = (
+                        <>
                           <Avatar name={row.name} avatarUrl={row.avatarUrl} size="md" color="amber" round />
 
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-[#173150]">{row.name}</p>
                             <p className="truncate text-xs text-ironside">{cdlLabel(row) ?? `${row.completedCount} of ${row.totalLiveCount} on file`}</p>
+                            {note && (
+                              <p className={cn('truncate text-[10px]', note.ok ? 'text-[#173150]' : 'text-red-700')}>{note.text}</p>
+                            )}
                           </div>
 
                           {/* Mobile: pill sits top-right; desktop: it moves into its own column. */}
-                          {row.recentConsentOnly ? (
+                          {invite ? (
+                            <ResendLinkButton
+                              busy={resendBusy === invite.inviteId}
+                              className="md:hidden"
+                              onClick={() => void resendUnopened(invite)}
+                            />
+                          ) : row.recentConsentOnly ? (
                             <span className="text-[10px] text-ironside md:hidden">No account yet</span>
                           ) : (
                             <BallPill ball={journey.ball} className="md:hidden" />
@@ -380,15 +443,36 @@ export default function DriverStatusBoard({ sessionUserId }: { sessionUserId: st
                             )}
                             <span className="text-[10px] text-ironside">
                               {activityLabel(
-                                filter === 'recent' ? row.consentSentAt : filter === 'signed-up' ? row.accountCreatedAt : row.lastActivityAt,
+                                filter === 'recent' || filter === 'unopened' ? row.consentSentAt : filter === 'signed-up' ? row.accountCreatedAt : row.lastActivityAt,
                               )}
                             </span>
                           </div>
 
-                          <ChevronRight className={cn('hidden h-4 w-4 text-ironside md:block', row.recentConsentOnly && 'invisible')} />
-                        </button>
-                      </li>
-                    ))}
+                          {invite ? (
+                            <ResendLinkButton
+                              busy={resendBusy === invite.inviteId}
+                              className="hidden md:inline-flex"
+                              onClick={() => void resendUnopened(invite)}
+                            />
+                          ) : (
+                            <ChevronRight className={cn('hidden h-4 w-4 text-ironside md:block', row.recentConsentOnly && 'invisible')} />
+                          )}
+                        </>
+                      )
+                      return (
+                        <li key={row.userId}>
+                          {row.recentConsentOnly ? (
+                            <div className={ROW_CLASS} title="No account yet — nothing to open">
+                              {body}
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => openDriver(row.userId)} className={ROW_CLASS}>
+                              {body}
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
 
                   {remaining > 0 && (

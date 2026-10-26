@@ -625,6 +625,17 @@ export interface DqMonitorCandidateRow {
   recentConsentOnly: boolean
   /** Consent link sent, still pending, never opened, no account. Any age, while the link is live. */
   linkUntouched: boolean
+  /**
+   * The live invite behind an Unopened row. Resend delivers this same invite
+   * again. Null for anyone who already has an account.
+   */
+  unopenedInvite: {
+    inviteId: string
+    email: string | null
+    phone: string | null
+    emailed: boolean
+    texted: boolean
+  } | null
   /** Created an account without this company sending a screening-consent invite. */
   signedUpOnOwn: boolean
   /** When their profile was created. Used to put the newest signups first. */
@@ -648,6 +659,8 @@ interface RecentConsentInvite {
   status: string
   view_count: number | null
   expires_at?: string | null
+  email_sent_at?: string | null
+  sms_sent_at?: string | null
 }
 
 /** Newest screening-consent invite per user, from a newest-first list. */
@@ -700,6 +713,12 @@ function recentInviteOnlyRows(invites: RecentConsentInvite[], knownUserIds: Set<
     const phone = inv.candidate_phone?.trim() || null
     const named = inv.candidate_name?.trim() || null
     const item = consentItemForInvite(inv)
+    const untouched = isUntouchedConsentInvite({
+      status: inv.status,
+      viewCount: inv.view_count,
+      usedByUserId: inv.used_by_user_id,
+      candidateUserId: inv.candidate_user_id,
+    })
     rows.push({
       userId: `invite:${inv.id}`,
       name: named || email || phone || 'Invited driver',
@@ -712,12 +731,16 @@ function recentInviteOnlyRows(invites: RecentConsentInvite[], knownUserIds: Set<
       lastActivityAt: inv.created_at,
       consentSentAt: inv.created_at,
       recentConsentOnly: true,
-      linkUntouched: isUntouchedConsentInvite({
-        status: inv.status,
-        viewCount: inv.view_count,
-        usedByUserId: inv.used_by_user_id,
-        candidateUserId: inv.candidate_user_id,
-      }),
+      linkUntouched: untouched,
+      unopenedInvite: untouched
+        ? {
+            inviteId: inv.id,
+            email,
+            phone,
+            emailed: Boolean(inv.email_sent_at),
+            texted: Boolean(inv.sms_sent_at),
+          }
+        : null,
       signedUpOnOwn: false,
       accountCreatedAt: null,
       items: [{ id: 'cdlis_consent', status: item.status, line: item.line }],
@@ -764,7 +787,7 @@ async function loadUntouchedConsentInvites(
   const invites = await eachPage<RecentConsentInvite>('untouched consents', (from, to) =>
     supabase
       .from('application_invites')
-      .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count, expires_at')
+      .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count, expires_at, email_sent_at, sms_sent_at')
       .eq('company_id', companyId)
       .eq('target_block_type', 'driver-screening-consent')
       .eq('status', 'pending')
@@ -796,7 +819,7 @@ async function loadRecentConsentInvites(
   const cutoff = new Date(Date.now() - RECENT_CONSENT_DAYS * 86400000).toISOString()
   const { data } = await supabase
     .from('application_invites')
-    .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count')
+    .select('id, used_by_user_id, candidate_user_id, candidate_name, candidate_email, candidate_phone, created_at, used_at, status, view_count, email_sent_at, sms_sent_at')
     .eq('company_id', companyId)
     .eq('target_block_type', 'driver-screening-consent')
     .gte('created_at', cutoff)
@@ -1154,6 +1177,7 @@ export async function loadDqMonitorList(
       consentSentAt: sentAtByUser.get(userId) ?? null,
       recentConsentOnly: false,
       linkUntouched: false,
+      unopenedInvite: null,
       signedUpOnOwn: signedUpWithoutConsentInvite({
         userId,
         email: emailByUser.get(userId) || profile?.email || null,

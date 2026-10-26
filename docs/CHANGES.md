@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Unopened rows can resend the same link** (2026-10-26)
+
+The Unopened list showed who never opened the consent link, and the row could not be opened because they have no account. Resend on that row delivers the invite they already have. It repeats email, text, or both, matching whichever channel already carried the link. It does not create a second invite.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-board-lines.ts` | Which channel to send again. |
+| `src/lib/dq-file-load.ts` | The live invite id and how it was sent, on the Unopened row. |
+| `src/components/employer/drivers/DriverStatusBoard.tsx` | Resend button. |
+
+---
+
 ## **Unopened consent links have their own board filter** (2026-10-26)
 
 Someone sent a consent link who never opened it had no account, so they were left off All. Recent only kept the last 7 days, and a name search on All skipped them. Kevin Lovell and Nickolas Keys are in that set: pending invites, never opened. Unopened lists every live link like that, newest send first, with no 7-day cap. Typing the name finds them from the other pills too.
