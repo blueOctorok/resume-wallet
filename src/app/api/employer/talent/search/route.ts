@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getBlockDefinition } from '@/lib/block-registry'
+import { releasesDriverIdentifiers, toCompanyAccountTier } from '@/lib/company-account-tier'
 
 /**
  * GET /api/employer/talent/search
@@ -102,6 +103,13 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    const { data: companyTierRow } = await supabase
+      .from('companies')
+      .select('account_tier')
+      .eq('id', companyId)
+      .maybeSingle()
+    const releaseIdentifiers = releasesDriverIdentifiers(toCompanyAccountTier(companyTierRow?.account_tier))
 
     // Validate minExperience to avoid passing NaN
     const minExpNum = minExperience ? parseInt(minExperience, 10) : null
@@ -269,7 +277,7 @@ export async function GET(request: NextRequest) {
     const results = validCandidates.map((c: RawCandidate) => ({
       userId: c.user_id,
       name: c.full_name!,
-      email: c.email,
+      email: releaseIdentifiers ? c.email : null,
       location: c.city && c.state ? `${c.city}, ${c.state}` : c.state || c.city || null,
       state: c.state,
       yearsExperience: c.years_experience,

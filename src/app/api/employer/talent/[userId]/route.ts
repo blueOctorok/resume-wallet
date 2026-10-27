@@ -9,7 +9,8 @@ import {
 } from '@/lib/driver-owned-screening'
 import { listVerifiedCredentialFactsForEmployer } from '@/lib/employer-credential-facts'
 import { resolveCompanyDqForCandidate } from '@/lib/dq-file-load'
-import { stripTier3FromFormData } from '@/lib/employer-pii'
+import { releasesDriverIdentifiers, toCompanyAccountTier } from '@/lib/company-account-tier'
+import { consentFormDataForEmployer } from '@/lib/employer-pii'
 import { companyCanViewDotApplication, hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
 import type { MvrData, PspData } from '@/types/career-card'
 
@@ -86,15 +87,24 @@ export async function GET(
     const defaultShare = { showContact: false, allowConnect: true }
     const shareSettings = candidate.share_settings ?? defaultShare
 
+    const { data: companyTierRow } = await supabase
+      .from('companies')
+      .select('account_tier')
+      .eq('id', companyId)
+      .maybeSingle()
+    const releaseIdentifiers = releasesDriverIdentifiers(toCompanyAccountTier(companyTierRow?.account_tier))
+
     const card = await buildProjectedCareerCard(supabase, userId, {
       memberSince: candidate.created_at ?? new Date().toISOString(),
       shareToken: candidate.share_token ?? null,
       shareSettings,
       contactMode: 'employer',
+      releaseIdentifiers,
     })
 
-    // Contact leaves Provven only after the driver has a relationship with this company.
-    if (!related) {
+    // A search-only account sees email and phone only after this driver is already
+    // theirs. The agency hub sends consent invites, so those fields stay on the card.
+    if (!related && !releaseIdentifiers) {
       card.contact = undefined
     }
 
@@ -292,15 +302,17 @@ export async function GET(
       existingApplication,
       hasBgcheckConsent: !!bgcheckConsent,
       bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
-      // Prefills the legacy MVR/PSP order form. Stripped of Tier 3 so a signed
-      // consent can't be used as a lookup for the driver's DOB and home address.
-      bgcheckConsentFormData: stripTier3FromFormData(
-        bgcheckConsent?.form_data as Record<string, unknown> | null
+      // A carrier account does not receive DOB or street from the signed consent.
+      // An agency does. The encrypted SSN is not in this blob.
+      bgcheckConsentFormData: consentFormDataForEmployer(
+        bgcheckConsent?.form_data as Record<string, unknown> | null,
+        releaseIdentifiers,
       ),
       hasPspFmcsaConsent: !!pspFmcsaConsent,
       pspFmcsaConsentSignedAt: pspFmcsaConsent?.signed_at || null,
-      pspFmcsaConsentFormData: stripTier3FromFormData(
-        pspFmcsaConsent?.form_data as Record<string, unknown> | null
+      pspFmcsaConsentFormData: consentFormDataForEmployer(
+        pspFmcsaConsent?.form_data as Record<string, unknown> | null,
+        releaseIdentifiers,
       ),
       screeningConsentBundleId: latestScreeningBundle?.id ?? null,
       hasActiveDriverOwnedMvr: driverOwnedFlags.hasActiveDriverOwnedMvr,

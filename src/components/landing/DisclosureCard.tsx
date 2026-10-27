@@ -23,27 +23,27 @@ interface DisclosureCardProps {
 
 const VERIFIED_FACTS = [
   {
-    fact: 'Clean MVR — 36 months',
-    source: 'Derived from a licensed CRA report',
+    fact: 'Class D CDL · Ohio',
+    source: 'On the Career Card',
   },
   {
-    fact: 'CDL-A · Hazmat + Tanker',
-    source: 'Issuer-backed · TX DPS',
+    fact: 'Endorsements · Hazmat + Tanker',
+    source: 'H and N',
   },
   {
-    fact: 'Employment — 3 carriers confirmed',
-    source: 'Verified with prior carriers',
+    fact: 'Based in Raccoon City',
+    source: 'Profile',
   },
 ] as const
 
 const PRIVATE_ROWS = [
-  { label: 'Date of birth', value: 'March 14, 1987', bars: ['w-20'] },
-  { label: 'Home address', value: '4128 Elm Creek Dr, Dallas, TX', bars: ['w-28', 'w-12'] },
-  { label: 'Violation history', value: '2 minor, resolved · 2019', bars: ['w-16', 'w-24'] },
-  { label: 'Full MVR report', value: '14 pages · Feb 2026 pull', bars: ['w-24', 'w-14'] },
+  { label: 'Date of birth', value: 'On file', bars: ['w-20'] },
+  { label: 'Home address', value: 'Raccoon City', bars: ['w-28'] },
+  { label: 'License number', value: 'On file', bars: ['w-16', 'w-24'] },
+  { label: 'Full MVR report', value: 'On file', bars: ['w-24', 'w-14'] },
 ] as const
 
-const SHARE_TARGETS = ['Pace Drivers', 'Schneider', 'a Dallas carrier'] as const
+const SHARE_TARGETS = ['Pace Drivers', 'Schneider', 'a Raccoon City carrier'] as const
 
 function reducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -264,17 +264,17 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
 
       <div className='flex items-start gap-3 px-5 pt-5'>
         <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#173150] text-sm font-bold text-white ring-2 ring-[#f15a2b]/40'>
-          MR
+          BB
         </div>
         <div className='min-w-0 flex-1'>
           <div className='flex flex-wrap items-center gap-2'>
-            <h3 className='text-[15px] font-semibold text-[#173150]'>Marcus Reed</h3>
+            <h3 className='text-[15px] font-semibold text-[#173150]'>Barry Burton</h3>
             <span className='inline-flex items-center gap-1 rounded-full bg-[#f15a2b]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#f15a2b] ring-1 ring-[#f15a2b]/30'>
               <ProvvenMark tone='auto' className='h-3 w-auto' />
               Verified by Provven
             </span>
           </div>
-          <p className='mt-0.5 text-xs text-ironside'>CDL-A driver · 9 years · Dallas, TX</p>
+          <p className='mt-0.5 text-xs text-ironside'>Class D · Hazmat + Tanker · Raccoon City</p>
         </div>
       </div>
 
@@ -334,7 +334,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
               </div>
               {isStamped && (
                 <span className='lp-stamp shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#f15a2b]'>
-                  verified
+                  on file
                 </span>
               )}
             </li>
@@ -402,7 +402,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
 
       <p className='px-5 pb-5 pt-4 text-center text-[10px] leading-relaxed text-ironside'>
         {isShared
-          ? 'Only what Marcus chose to share leaves the vault. Nothing else.'
+          ? 'Only what Barry chose to share leaves the vault. Nothing else.'
           : 'Every share starts here — and every share is your call.'}
       </p>
     </div>

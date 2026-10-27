@@ -301,6 +301,9 @@ export function generateDotApplicationPDF(
       { label: 'Email', value: f1.email },
       { label: 'Date of birth', value: fmtDate(f1.dateOfBirth) },
     ])
+    if (f1.socialSecurity) {
+      fieldRow([{ label: 'Social Security number', value: f1.socialSecurity }])
+    }
     fieldRow([
       { label: 'Position applied for', value: f1.positionAppliedFor },
       { label: 'Date available', value: fmtDate(f1.dateAvailableForWork) },

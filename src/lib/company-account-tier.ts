@@ -20,3 +20,12 @@ export function isCompanyAccountTier(value: unknown): value is CompanyAccountTie
 export function toCompanyAccountTier(value: unknown): CompanyAccountTier {
   return isCompanyAccountTier(value) ? value : 'agency'
 }
+
+/**
+ * Email, phone, SSN, date of birth, street address, and the license number.
+ * The full hub (agency) sees them. A search-only carrier account does not.
+ * The switch is the tier, never the company name.
+ */
+export function releasesDriverIdentifiers(accountTier: CompanyAccountTier): boolean {
+  return accountTier === 'agency'
+}

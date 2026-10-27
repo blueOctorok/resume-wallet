@@ -10,7 +10,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { companyCanViewDotApplication, getEmployerCompanyAccess } from '@/lib/employer-company-access'
-import { redactDotAppForEmployer } from '@/lib/redact-dot-app'
+import { releasesDriverIdentifiers } from '@/lib/company-account-tier'
+import { projectDotAppForEmployer } from '@/lib/redact-dot-app'
 
 type Json = Record<string, unknown>
 
@@ -128,7 +129,10 @@ export async function loadDotAppForViewer(
     isSelf,
     app: {
       ...base,
-      ...redactDotAppForEmployer(appData),
+      ...projectDotAppForEmployer(
+        appData,
+        releasesDriverIdentifiers(companyAccess!.accountTier),
+      ),
       addressedToCompany: company?.company_name?.trim() || null,
     },
   }

@@ -3,6 +3,7 @@ import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { buildProjectedCareerCard } from '@/lib/projected-career-card'
 import { buildCareerCardPdfBuffer } from '@/lib/career-card-pdf'
+import { releasesDriverIdentifiers, toCompanyAccountTier } from '@/lib/company-account-tier'
 import { hasEmployerCandidateRelationship } from '@/lib/employer-company-access'
 
 /**
@@ -69,11 +70,18 @@ export async function GET(
       allowConnect: rawSettings?.allowConnect !== false,
     }
 
+    const { data: companyTierRow } = await supabase
+      .from('companies')
+      .select('account_tier')
+      .eq('id', companyId)
+      .maybeSingle()
+
     const card = await buildProjectedCareerCard(supabase, userId, {
       memberSince: candidate.created_at ?? new Date().toISOString(),
       shareToken: candidate.share_token,
       shareSettings,
       contactMode: 'employer',
+      releaseIdentifiers: releasesDriverIdentifiers(toCompanyAccountTier(companyTierRow?.account_tier)),
     })
 
     const base =

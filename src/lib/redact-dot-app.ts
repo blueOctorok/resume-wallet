@@ -63,7 +63,24 @@ function redactForm3(form3: unknown): Json | null {
 /**
  * Form 2 (accidents, convictions, license actions) carries no raw identifiers,
  * so it passes through unchanged.
+ *
+ * An agency sees the driver's SSN, date of birth, and street. A carrier account
+ * still gets this redacted copy. The signature IP stays off both.
  */
+export function projectDotAppForEmployer(
+  applicationData: unknown,
+  releaseIdentifiers: boolean,
+): RedactedDotApp {
+  if (!releaseIdentifiers) return redactDotAppForEmployer(applicationData)
+  const data = (applicationData ?? {}) as Json
+  return {
+    form1: (data.form1 as Json) ?? null,
+    form2: (data.form2 as Json) ?? null,
+    form3: redactForm3(data.form3),
+    redactedFields: [],
+  }
+}
+
 export function redactDotAppForEmployer(applicationData: unknown): RedactedDotApp {
   const data = (applicationData ?? {}) as Json
 

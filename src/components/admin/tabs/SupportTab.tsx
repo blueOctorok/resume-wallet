@@ -127,7 +127,7 @@ export default function SupportTab({
       {error && <p className='mb-3 text-sm text-red-600 dark:text-red-400'>{error}</p>}
       {messages.length === 0 && !error ? (
         <p className={`py-8 text-center text-sm ${muted}`}>
-          No support mail yet. Messages appear here after support@provven.com is forwarded to support@verify.provven.com.
+          No support mail yet. Messages appear here after support@provven.com and info@provven.com are forwarded to the same names at verify.provven.com.
         </p>
       ) : (
         <div className='overflow-x-auto'>

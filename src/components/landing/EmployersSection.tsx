@@ -55,12 +55,12 @@ function RequestMock({ isDark }: { isDark: boolean }) {
       )}
     >
       <p className='text-[10px] font-semibold uppercase tracking-[0.2em] text-ironside'>
-        Request from Marcus Reed
+        Request from Barry Burton
       </p>
       <div className='mt-3 flex flex-wrap gap-2'>
         {chip(<FileText className='h-3.5 w-3.5' />, 'Resume')}
-        {chip(<Gauge className='h-3.5 w-3.5' />, 'MVR', true)}
-        {chip(<IdCard className='h-3.5 w-3.5' />, 'CDL')}
+        {chip(<Gauge className='h-3.5 w-3.5' />, 'MVR')}
+        {chip(<IdCard className='h-3.5 w-3.5' />, 'CDL', true)}
       </div>
       <div
         className={cn(
@@ -71,10 +71,10 @@ function RequestMock({ isDark }: { isDark: boolean }) {
         <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />
         <div className='min-w-0'>
           <p className={cn('text-xs font-semibold', isDark ? 'text-[#f15a2b]' : 'text-[#173150]')}>
-            Clean MVR — 36 months · verified
+            Class D CDL · Hazmat + Tanker
           </p>
           <p className={cn('text-[10px]', isDark ? 'text-[#f15a2b]/70' : 'text-[#f15a2b]/85')}>
-            Fact shared by candidate · ready to review
+            On the Career Card · shared by the driver
           </p>
         </div>
       </div>

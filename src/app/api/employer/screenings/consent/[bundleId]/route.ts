@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
-import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { releasesDriverIdentifiers } from '@/lib/company-account-tier'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
-import { stripTier3FromFormData } from '@/lib/employer-pii'
+import { consentFormDataForEmployer } from '@/lib/employer-pii'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,10 +30,7 @@ export async function GET(
     }
 
     const supabase = await getAdminSupabaseClient()
-    // resolveEmployerCompanyForWallet resolves by session user id since the D3.4 auth
-    // cutover — NOT a wallet address. Passing wallet_address here matched no users.id
-    // (uuid) and silently 403'd the entire outreach screenings/consent surface.
-    const ctx = await resolveEmployerCompanyForWallet(supabase, userId)
+    const ctx = await getEmployerCompanyAccess(supabase, userId)
     if (!ctx) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
@@ -40,6 +38,8 @@ export async function GET(
     // A signed consent package is a Tier 2 artifact: it names the driver, the CRA,
     // and what they authorized. Company scoping alone let an interviewer or viewer
     // read it.
+    const releaseIdentifiers = releasesDriverIdentifiers(ctx.accountTier)
+
     if (!can(ctx.companyRole, 'viewScreeningResults')) {
       return NextResponse.json(
         { error: capabilityDeniedMessage('viewScreeningResults') },
@@ -92,7 +92,10 @@ export async function GET(
           signedName: (bg.signed_name as string) ?? '',
           signedAt: (bg.signed_at as string) ?? '',
           companyName: (bg.company_name as string) || 'Unknown Company',
-          formData: stripTier3FromFormData(bg.form_data as Record<string, unknown>),
+          formData: consentFormDataForEmployer(
+            bg.form_data as Record<string, unknown>,
+            releaseIdentifiers,
+          ),
         }
       }
     }
@@ -117,7 +120,10 @@ export async function GET(
           signedName: (pspRow.signed_name as string) ?? '',
           signedAt: (pspRow.signed_at as string) ?? '',
           companyName: (pspRow.company_name as string) || 'Unknown Company',
-          formData: stripTier3FromFormData(pspRow.form_data as Record<string, unknown>),
+          formData: consentFormDataForEmployer(
+            pspRow.form_data as Record<string, unknown>,
+            releaseIdentifiers,
+          ),
           formVersion: (pspRow.form_version as string | null) ?? null,
         }
       }
@@ -129,7 +135,7 @@ export async function GET(
         ? {
             signedName: (bundle.cdlis_signed_name as string | null) ?? null,
             signedAt: (bundle.cdlis_signed_at as string | null) ?? null,
-            formData: stripTier3FromFormData(cdlisFormRaw),
+            formData: consentFormDataForEmployer(cdlisFormRaw, releaseIdentifiers),
           }
         : null
 

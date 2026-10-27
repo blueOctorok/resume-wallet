@@ -10,9 +10,10 @@
  *   Tier 1 — the driver's projection. Not role-gated.
  *   Tier 2 — paid CRA artifacts (MVR/PSP results, signed consents, DL numbers).
  *            Role-gated here, and separately scoped to the company that paid.
- *   Tier 3 — raw identifiers (SSN, DOB, street address). Never returned to an
- *            employer at any role; they exist to be decrypted server-side for a
- *            consented screening order.
+ *   Tier 3 — raw identifiers (SSN, DOB, street address). An agency sees them on
+ *            the career card and DOT file. A carrier (search) account does not.
+ *            The stored SSN used to place an order is still decrypted only on
+ *            the server.
  */
 
 export type EmployerCapability =

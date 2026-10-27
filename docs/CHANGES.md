@@ -4,6 +4,97 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Agency hub keeps email and phone on the career card** (2026-10-27)
+
+The full hub sends consent invites, so email and phone stay on the career card even before that driver has an application or an accepted invite. A search-only account still sees them only after the driver is already connected, and a search result for that account does not include the email.
+
+| File | Change |
+|---|---|
+| `src/app/api/employer/talent/[userId]/route.ts` | Agency card keeps contact. |
+| `src/app/api/employer/talent/search/route.ts` | Carrier search results omit email. |
+
+---
+
+## **Agency hub sees driver identifiers** (2026-10-27)
+
+SSN, date of birth, and street address were withheld from every employer, including the full hub. A company on the agency tier now sees those fields on the DOT file, the license number on the career card, and date of birth plus street on a signed consent. A carrier account, the search-only shell, still does not. The tier on the company decides this. The company name is not checked. The signature IP and the encrypted order SSN stay off both copies.
+
+| File | Change |
+|---|---|
+| `src/lib/company-account-tier.ts` | `releasesDriverIdentifiers` is true only for `agency`. |
+| `src/lib/redact-dot-app.ts` | Agency copy keeps SSN, date of birth, and street. |
+| `src/lib/load-dot-app-for-viewer.ts` | DOT preview and PDF use that copy. |
+| `src/lib/projected-career-card.ts` | Agency career card includes the license number. |
+| `src/lib/employer-pii.ts` | Agency consent keeps date of birth and street. |
+| `src/app/api/employer/talent/[userId]/route.ts` | Talent card and consent prefill follow the tier. |
+| `src/app/api/employer/talent/[userId]/pdf/route.ts` | Career-card PDF follows the tier. |
+| `src/app/api/employer/screenings/consent/[bundleId]/route.ts` | Consent review follows the tier. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | Shows the Social Security number when the copy includes it. |
+| `src/lib/dot-application-pdf.ts` | Same on the PDF. |
+| `src/components/career-card/sections/CdlSection.tsx` | Shows the license number when the copy includes it. |
+
+---
+
+## **info@provven.com lands in the support inbox** (2026-10-27)
+
+Ngage’s marketing mail uses `info@provven.com`. The apex domain does not receive mail itself. Forward that address to `info@verify.provven.com`, the same way as support. Pingram already catches the verify subdomain. The support inbox now keeps those messages. Employment-verification replies stay out of it.
+
+| File | Change |
+|---|---|
+| `src/lib/support-inbox.ts` | Accepts `info@provven.com` and `info@verify.provven.com`. |
+| `src/components/admin/tabs/SupportTab.tsx` | Empty state names both forwards. |
+| `VERCEL_ENV_CHECKLIST.md` | Apex forward stays off the Pingram MX. |
+
+---
+
+## **Ngage campaign site stays off provven.com** (2026-10-27)
+
+Ngage is building their own homepage for marketing and Reddit, including a barcode-scanner demo. That page is not part of this site. provven.com remains the product. The license barcode inside the signed-in hub stays here.
+
+| File | Change |
+|---|---|
+| `docs/PROJECT_ROADMAP.md` | Records the split so a later session does not build their campaign page into the app. |
+
+---
+
+## **Homepage headline matches the review** (2026-10-27)
+
+The homepage H1 is now "Build Your Truck Driver Resume and Reuse It for Every Job." The earlier headline was a different option from the same review. The WebPage schema name uses the same sentence, so the first HTML response and the visible headline agree.
+
+| File | Change |
+|---|---|
+| `src/components/landing/HeroSection.tsx` | Visible H1. |
+| `src/lib/site-seo.ts` | WebPage schema name. |
+| `src/app/layout.tsx` | Social image alt text. |
+
+---
+
+## **Homepage example is Barry Burton** (2026-10-27)
+
+The Career Card on the public homepage used a fictional driver, Marcus Reed. It now uses Barry Burton, the test driver, with the Class D Ohio license and Hazmat + Tanker endorsements already on his Career Card. His city on the card is Raccoon City. Birth date, street address, and license number are not printed on the page. Those rows say "On file." The card does not call his license or a motor vehicle record verified.
+
+| File | Change |
+|---|---|
+| `src/components/landing/DisclosureCard.tsx` | Name, license line, city, and private rows. |
+| `src/components/landing/EmployersSection.tsx` | The request mock names Barry Burton. |
+| `src/components/landing/README.md` | Notes which details stay off the page. |
+
+---
+
+## **Homepage copy for truck-driver search** (2026-10-27)
+
+The public homepage now speaks to truck drivers: resume, DOT application, and a Career Card they reuse. The page title, description, headline, and footer summary use those phrases. Organization, WebSite, and WebPage schema are in the first HTML response. A resume or application the driver typed is not called verified. A verified MVR is named as something a licensed screener issued and the driver chooses to share. The agency review PDF was moved out of `public/` so a deploy does not publish it.
+
+| File | Change |
+|---|---|
+| `src/lib/site-seo.ts` | Shared title, description, intro, footer summary, and schema. |
+| `src/app/layout.tsx` | Title, description, social tags, and JSON-LD. |
+| `src/components/landing/HeroSection.tsx` | Headline and intro. |
+| `src/components/landing/LandingPage.tsx` | Footer summary. |
+| `docs/marketing/` | Agency review PDF, no longer under `public/brand/`. |
+
+---
+
 ## **Search Console tag for provven.com** (2026-10-27)
 
 The homepage verification meta now matches the new Search Console property for `https://provven.com/`. The previous token belonged to the old property. Google reads this tag from the first HTML response, so it verifies without running the Analytics script. Leave the tag in place after Verify succeeds.

@@ -16,6 +16,8 @@ The Foundation Reset's first arc is **complete**: Phase 1 (Web2 cleanup), Web3 d
 | **Phase 3 — Midnight ZK backbone** | Swap signed-JWT implementation for Midnight ZK proofs behind the *same* `attestationService` interface. Optionally reissue STORM as a Midnight-native shielded token if a token use case emerges. Users still never *interact with* Midnight. | 🎯 **Active — P3.9 Vercel Production on mainnet (2026-09-04). Local batch proving 677 READY facts.** |
 | **Payments (Stripe)** | Checkout (one-time) for **driver-initiated MVR** orders shipped 2026-10-08 (DEC-2026-10-001) — company-sponsored orders stay uncharged; PSP is employer-ordered only (no self-serve). Employer subscriptions and Pace billing remain deferred. | 🟡 **Partial — self-serve screening live; migration 117 + `STRIPE_*` env pending in prod** |
 
+**Ngage’s campaign homepage is a different site (2026-10-27).** Marketing and Reddit traffic, including a barcode-scanner demo, go to a page Ngage builds. That page is not `provven.com` and it does not get added to this repo. `provven.com` stays the product: the Career Card, the hub, and the homepage search copy already in this codebase. The in-app license barcode stays inside the signed-in product.
+
 ### Pre-flight decisions (resolved 2026-05-22)
 
 - **Auth provider:** ✅ **Supabase Auth** (DEC-2026-05-008) — already paid for on Supabase Pro; native `auth.uid()` for RLS; one vendor surface. Custom sign-in UI built with Storm's `@/components/ui` primitives. **Shipped.**

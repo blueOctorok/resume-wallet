@@ -45,7 +45,7 @@ Site-wide brand (Tailwind `teal-*` remaps to Hot Embers).
 
 ## Swapping the Career Card mock for a real screenshot
 
-`DisclosureCard` is a hand-built mock (fictional "Marcus Reed"). To replace it with a product screenshot later:
+`DisclosureCard` is a hand-built mock of the test driver Barry Burton. Birth date, street address, and license number stay off this page. To replace it with a product screenshot later:
 
 1. Drop the screenshot in `public/` and swap `<DisclosureCard view='shared' />` in `HeroSection.tsx` for an `<Image>`.
 2. Keep the pedestal glow div behind it — it does the "sitting on the plane" work.

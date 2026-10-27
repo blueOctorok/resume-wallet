@@ -5,6 +5,8 @@ describe('support inbox', () => {
   it('recognizes both support addresses and ignores an employment-verification alias', () => {
     expect(isSupportRecipient('Support <support@provven.com>')).toBe(true)
     expect(isSupportRecipient('support@verify.provven.com')).toBe(true)
+    expect(isSupportRecipient('Info <info@provven.com>')).toBe(true)
+    expect(isSupportRecipient('info@verify.provven.com')).toBe(true)
     expect(isSupportRecipient('evr-3e9344b2-3bd8-495b-bd4e-0ee7bd611bdb@verify.provven.com')).toBe(false)
   })
 

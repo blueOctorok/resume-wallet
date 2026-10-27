@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { SITE_LEGAL } from '@/lib/site-legal'
+import { SITE_SEO } from '@/lib/site-seo'
 import { LandingContainer, SealDivider, mutedText } from './landing-shared'
 import HeroSection from './HeroSection'
 import ProblemSection from './ProblemSection'
@@ -104,6 +105,9 @@ export default function LandingPage({
       <footer className='pb-10'>
         <LandingContainer>
           <SealDivider isDark={isDark} className='mb-6' />
+          <p className={`mx-auto mb-6 max-w-2xl text-sm leading-relaxed ${mutedText(isDark)}`}>
+            {SITE_SEO.footerSummary}
+          </p>
           <div className='flex flex-col items-center gap-2 text-center'>
             <p className='text-lg'>
               <ProvvenWordmark tone='auto' isDark={isDark} />

@@ -3,11 +3,16 @@ import type { PingramInboundEmail } from '@/lib/evr-inbound'
 
 /**
  * Pingram catches every message on verify.provven.com. The public address
- * support@provven.com is on the apex, so it has to be forwarded to
- * support@verify.provven.com before it shows up here. Employment-verification
- * replies (evr-<id>@verify.provven.com) are not support mail.
+ * support@provven.com and info@provven.com are on the apex, so each one has to be
+ * forwarded to the same name at verify.provven.com before it shows up here.
+ * Employment-verification replies (evr-<id>@verify.provven.com) are not support mail.
  */
-export const SUPPORT_ADDRESSES = ['support@provven.com', 'support@verify.provven.com'] as const
+export const SUPPORT_ADDRESSES = [
+  'support@provven.com',
+  'support@verify.provven.com',
+  'info@provven.com',
+  'info@verify.provven.com',
+] as const
 
 const BODY_LIMIT = 20000
 

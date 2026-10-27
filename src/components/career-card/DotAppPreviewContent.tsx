@@ -272,6 +272,7 @@ export default function DotAppPreviewContent({
               <DotField label='Middle name' value={f1.middleName} />
               <DotField label='Last name' value={f1.lastName} />
               <DotField label='Date of Birth' value={fmt(f1.dateOfBirth)} />
+              <DotField label='Social Security number' value={f1.socialSecurity} />
               <DotField label='Phone' value={f1.phone} />
               <DotField label='Email' value={f1.email} />
               <DotField label='Position Applied For' value={f1.positionAppliedFor} />

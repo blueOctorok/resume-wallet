@@ -55,6 +55,14 @@ export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionP
             </p>
           </div>
         )}
+        {data.cdlNumber && (
+          <div>
+            <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>Number</p>
+            <p className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+              {data.cdlNumber}
+            </p>
+          </div>
+        )}
         {data.cdlExpiration && (
           <div>
             <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>Expires</p>

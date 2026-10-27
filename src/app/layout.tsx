@@ -6,6 +6,7 @@ import MobileConsole from '@/components/MobileConsole'
 import ScrollToTop from '@/components/ScrollToTop'
 import SupabaseAuthSync from '@/components/SupabaseAuthSync'
 import SiteAnalytics from '@/components/SiteAnalytics'
+import { SITE_SEO, siteJsonLd } from '@/lib/site-seo'
 
 const montserrat = Montserrat({
   variable: '--font-montserrat',
@@ -24,23 +25,17 @@ const stormWordmark = Orbitron({
 export const metadata: Metadata = {
   metadataBase: new URL('https://provven.com'),
   title: {
-    default: 'Provven | Blockchain-Verified Career Platform',
+    default: SITE_SEO.title,
     template: '%s | Provven',
   },
-  description:
-    'Build your Career Card, apply to jobs instantly, and get verified on-chain. The blockchain-verified career platform for drivers and software engineers.',
+  description: SITE_SEO.description,
   keywords: [
     'Provven',
     'Career Card',
-    'blockchain verification',
-    'driver applications',
-    'DOT application',
-    'developer portfolio',
-    'resume verification',
-    'verified credentials',
-    'job applications',
-    'CDL driver jobs',
-    'software engineer portfolio',
+    'truck driver resume',
+    'truck driver employment application',
+    'DOT driver application',
+    'truck driver employment verification',
   ],
   authors: [{ name: 'Provven' }],
   creator: 'Provven',
@@ -54,23 +49,21 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://provven.com',
     siteName: 'Provven',
-    title: 'Provven | Blockchain-Verified Career Platform',
-    description:
-      'Build your Career Card, apply to jobs instantly, and get verified on-chain. For drivers and software engineers.',
+    title: SITE_SEO.title,
+    description: SITE_SEO.description,
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Provven - Your Career, One Verified Card',
+        alt: 'Provven - Build Your Truck Driver Resume and Reuse It for Every Job',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Provven | Blockchain-Verified Career Platform',
-    description:
-      'Build your Career Card, apply to jobs instantly, and get verified on-chain.',
+    title: SITE_SEO.title,
+    description: SITE_SEO.description,
     images: ['/og-image.png'],
   },
   robots: {
@@ -133,6 +126,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${montserrat.variable} ${stormWordmark.variable} antialiased`}>
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd()) }}
+        />
         <ThemeProvider>
           <SupabaseAuthSync />
           {children}

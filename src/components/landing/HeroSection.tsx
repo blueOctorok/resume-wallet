@@ -12,6 +12,7 @@ import { ArrowRight, Building2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
+import { SITE_SEO } from '@/lib/site-seo'
 import DisclosureCard from './DisclosureCard'
 import { GOLD_CTA, InkBand, LandingContainer } from './landing-shared'
 
@@ -54,20 +55,18 @@ export default function HeroSection({
             </div>
 
             <h1
-              className='lp-rise mt-10 text-[1.85rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-5xl xl:text-[3.4rem]'
+              className='lp-rise mt-10 text-[1.65rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-4xl xl:text-[2.75rem]'
               style={{ animationDelay: '120ms' }}
             >
-              Proof,{' '}
-              <em className='font-semibold not-italic text-[#f15a2b]'>not paperwork.</em>
+              Build Your Truck Driver Resume{' '}
+              <em className='font-semibold not-italic text-[#f15a2b]'>and Reuse It for Every Job</em>
             </h1>
 
             <p
               className='lp-rise mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-400 sm:text-lg xl:mx-0'
               style={{ animationDelay: '220ms' }}
             >
-              Build a Career Card once and own it for good. Facts verified by licensed
-              screeners, shared with employers on your terms &mdash; prove a clean MVR
-              without handing over the whole report.
+              {SITE_SEO.intro}
             </p>
 
             <div

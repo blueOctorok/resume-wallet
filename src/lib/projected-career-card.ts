@@ -135,6 +135,11 @@ export interface BuildProjectedCareerCardInput {
    * subset.
    */
   lensId?: string | null
+  /**
+   * Agency hub only. Puts the license number on the career card.
+   * Ignored for the driver's own card and for a public share link.
+   */
+  releaseIdentifiers?: boolean
 }
 
 const DRIVER_CARD_LEAD = [
@@ -327,6 +332,7 @@ export async function buildProjectedCareerCard(
       blockType as SectionBlockType,
       avatarUrl,
       meta.contactMode,
+      meta.contactMode === 'employer' && meta.releaseIdentifiers === true,
     )
     let sectionData: CareerCardSection['data']
     let needsSetup = false
@@ -491,6 +497,7 @@ async function fetchSectionData(
   blockType: SectionBlockType,
   userAvatarUrl: string | null,
   contactMode: ProjectedCareerCardContactMode,
+  releaseIdentifiers = false,
 ): Promise<
   | ResumeData
   | DotAppData
@@ -519,7 +526,7 @@ async function fetchSectionData(
     case 'driver-psp':
       return fetchPspData(supabase, userId, contactMode)
     case 'driver-cdl-credentials':
-      return fetchCdlData(supabase, userId, contactMode)
+      return fetchCdlData(supabase, userId, contactMode, releaseIdentifiers)
     case 'developer-portfolio':
       return fetchPortfolioData(supabase, userId)
     case 'developer-github':
@@ -770,18 +777,20 @@ async function fetchCdlData(
   supabase: SupabaseClient,
   userId: string,
   contactMode: ProjectedCareerCardContactMode,
+  releaseIdentifiers = false,
 ): Promise<CdlData | null> {
   const [row, license] = await Promise.all([
     getCdlData(supabase, userId),
     getLicenseScan(supabase, userId),
   ])
   if (!row) return null
-  // License number is PII. A share link and the employer talent card show class,
-  // state, and endorsements — the number stays on the candidate's own view.
+  // License number is PII. A public share link never includes it. A search-only
+  // carrier account does not either. The agency hub does.
+  const showLicenseNumber = contactMode === 'self' || (contactMode === 'employer' && releaseIdentifiers)
   return {
     cdlClass: row.cdl_class,
     cdlState: row.cdl_state,
-    cdlNumber: contactMode === 'self' ? row.cdl_number : null,
+    cdlNumber: showLicenseNumber ? row.cdl_number : null,
     cdlExpiration: row.cdl_expiration,
     endorsements: row.endorsements ?? [],
     restrictions: row.restrictions ?? [],

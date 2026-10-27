@@ -23,8 +23,26 @@ export const TIER3_CONSENT_FIELDS = ['ssn', 'dateOfBirth', 'dob', 'address'] as 
 export function stripTier3FromFormData(
   formData: Record<string, unknown> | null | undefined
 ): Record<string, string> {
+  return flattenConsentForm(formData, TIER3_CONSENT_FIELDS)
+}
+
+/**
+ * Agency reviewers see date of birth and street on the signed consent.
+ * A carrier account still gets those keys removed. `ssn` stays out either way:
+ * the order path decrypts it server-side and this blob is not that copy.
+ */
+export function consentFormDataForEmployer(
+  formData: Record<string, unknown> | null | undefined,
+  releaseIdentifiers: boolean,
+): Record<string, string> {
+  return flattenConsentForm(formData, releaseIdentifiers ? ['ssn'] : TIER3_CONSENT_FIELDS)
+}
+
+function flattenConsentForm(
+  formData: Record<string, unknown> | null | undefined,
+  blocked: readonly string[],
+): Record<string, string> {
   if (!formData || typeof formData !== 'object') return {}
-  const blocked = TIER3_CONSENT_FIELDS as readonly string[]
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(formData)) {
     if (value == null) continue
