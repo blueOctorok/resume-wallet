@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalShell title='Privacy Policy' updated='September 17, 2026'>
+    <LegalShell title='Privacy Policy' updated='October 27, 2026'>
       <section>
         <h2 className='mb-2 text-base font-semibold text-[#173150] dark:text-gray-100'>
           Who we are
@@ -88,7 +88,9 @@ export default function PrivacyPage() {
         <p>
           We use vendors to deliver email and SMS, host the product, and process
           authorized screening. Those vendors only receive what they need to perform
-          that work.
+          that work. Google Analytics records which pages are visited and a coarse
+          location. It does not receive your name, license number, or Social Security
+          number, and private codes in invite links are removed before anything is sent.
         </p>
       </section>
     </LegalShell>

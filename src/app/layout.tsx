@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import MobileConsole from '@/components/MobileConsole'
 import ScrollToTop from '@/components/ScrollToTop'
 import SupabaseAuthSync from '@/components/SupabaseAuthSync'
+import SiteAnalytics from '@/components/SiteAnalytics'
 
 const montserrat = Montserrat({
   variable: '--font-montserrat',
@@ -137,6 +138,7 @@ export default function RootLayout({
           {children}
           {process.env.NODE_ENV === 'development' && <MobileConsole />}
           <ScrollToTop />
+          <SiteAnalytics />
         </ThemeProvider>
       </body>
     </html>

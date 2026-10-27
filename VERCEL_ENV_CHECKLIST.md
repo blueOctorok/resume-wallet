@@ -8,6 +8,7 @@ Copy these from your `.env.local` file to Vercel.
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_APP_URL=               # Production: https://provven.com (no trailing slash)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=     # Optional. Production already uses G-3P343MXLST when this is empty.
 ```
 
 ## Private Variables (Backend only — DO NOT prefix with NEXT_PUBLIC)

@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Analytics is ready for a new Provven property** (2026-10-27)
+
+The site had no Analytics tag. Production sends page views to the Provven stream `G-3P343MXLST`, and only on provven.com. Invite and share codes are replaced with `[token]` before they leave the browser. The privacy policy says so. Search Console for provven.com is a new property in Google; the stormchain.ai HTML file does not verify this domain.
+
+| File | Change |
+|---|---|
+| `src/components/SiteAnalytics.tsx` | Loads GA4 and sends a scrubbed page view. |
+| `src/lib/analytics-path.ts` | Strips secret codes from the path. |
+| `src/app/layout.tsx` | Mounts the tag. |
+| `src/app/privacy/page.tsx` | Says Analytics is in use. |
+| `VERCEL_ENV_CHECKLIST.md` | Measurement id. |
+
+---
+
 ## **Support mail shows in central admin** (2026-10-26)
 
 Central admin has a Support tab. Mail to `support@verify.provven.com` is stored when Pingram delivers it, and a reply can be sent from that tab. `support@provven.com` is still the public address. It shows up after that mailbox is forwarded to `support@verify.provven.com`. Leave the Pingram MX on `verify.provven.com` where it is. Apply `supabase/migrations/126_support_messages.sql` before the tab can load.
