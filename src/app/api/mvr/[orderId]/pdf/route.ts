@@ -17,7 +17,8 @@ import { createClient as createServiceClient, type SupabaseClient } from '@supab
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 
-import { resolveEmployerCompanyForWallet } from '@/lib/employer-talent-auth'
+import { getEmployerCompanyAccess } from '@/lib/employer-company-access'
+import { releasesDriverIdentifiers } from '@/lib/company-account-tier'
 import { fetchEmployerAccessibleMvrOrder } from '@/lib/employer-screening-order-access'
 import { parseAccioMvrResult } from '@/lib/accio-xml-parser'
 import { MvrReportPdf } from '@/lib/pdf/MvrReportPdf'
@@ -130,12 +131,16 @@ export async function GET(
 
     let mvrOrder: MvrOrderRow | null = null
     let candidateName = 'Driver'
+    // The driver opening their own report sees their own date and number.
+    // An employer sees them only on the full hub. A search-only account stays masked.
+    let releaseIdentifiers = true
 
     if (employerCandidateUserId) {
-      const ctx = await resolveEmployerCompanyForWallet(supabase, sessionUserId)
+      const ctx = await getEmployerCompanyAccess(supabase, sessionUserId)
       if (!ctx) {
         return NextResponse.json({ error: 'No company access' }, { status: 403 })
       }
+      releaseIdentifiers = releasesDriverIdentifiers(ctx.accountTier)
 
       const { data, error } = await fetchEmployerAccessibleMvrOrder(supabase, MVR_ORDER_COLUMNS, {
         companyId: ctx.companyId,
@@ -212,6 +217,7 @@ export async function GET(
         profilePhone: profile?.phone ?? null,
         preparedFor,
         requestedBy,
+        releaseIdentifiers,
       },
     }) as unknown as React.ReactElement<DocumentProps>
     const buffer = await renderToBuffer(element)

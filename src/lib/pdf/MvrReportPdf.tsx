@@ -62,6 +62,12 @@ export interface MvrReportPdfMeta {
   preparedFor: MvrReportParty
   /** Who placed the order, when known. */
   requestedBy?: MvrReportParty | null
+  /**
+   * Full hub (and the driver opening their own report) prints the date of birth
+   * and Social Security number Accio returned. A search-only account keeps the
+   * year and all but the last four hidden. The XML is unchanged either way.
+   */
+  releaseIdentifiers?: boolean
 }
 
 // Accio dates arrive as YYYYMMDD; `<dlexpiration>` on some fills is ISO
@@ -75,15 +81,23 @@ function formatYmd(value?: string | null): string {
   return v
 }
 
-/** Key masks the year ("08/01/XXXX") — month/day is enough to confirm identity on paper. */
-function maskDob(value?: string | null): string {
+/**
+ * Search-only accounts get month and day ("08/01/XXXX"). The full hub gets the year.
+ * The year swap happens here, at draw time — the stored report still has the date.
+ */
+function displayDob(value: string | null | undefined, releaseIdentifiers: boolean): string {
   const formatted = formatYmd(value)
-  return formatted ? formatted.replace(/\d{4}$/, 'XXXX') : ''
+  if (!formatted) return ''
+  return releaseIdentifiers ? formatted : formatted.replace(/\d{4}$/, 'XXXX')
 }
 
-function maskSsn(value?: string | null): string {
+/** Search-only accounts see the last four. The full hub sees the nine digits Accio sent back. */
+function displaySsn(value: string | null | undefined, releaseIdentifiers: boolean): string {
   const digits = (value ?? '').replace(/\D/g, '')
-  return digits.length >= 4 ? `XXX-XX-${digits.slice(-4)}` : ''
+  if (digits.length < 4) return ''
+  if (!releaseIdentifiers) return `XXX-XX-${digits.slice(-4)}`
+  if (digits.length === 9) return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
+  return digits
 }
 
 function formatTimestamp(value?: string | null): string {
@@ -168,6 +182,7 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
   const licenses = parsed.licenses ?? []
   const mismatchAlerts = parsed.mismatchAlerts ?? []
 
+  const releaseIdentifiers = meta.releaseIdentifiers === true
   const displayPhone = resolveDisplayPhone(parsed.subject?.phone, meta.profilePhone)
   const displayGender = formatDisplayGender(parsed.subject?.gender)
   const pc = parsed.personalCharacteristics
@@ -212,8 +227,8 @@ export function MvrReportPdf({ parsed, meta }: MvrReportPdfProps) {
         <View style={stormPdfStyles.kvGrid}>
           <KeyValue label="License #" value={parsed.licenseNumber} />
           <KeyValue label="License State" value={parsed.licenseState} />
-          <KeyValue label="DOB" value={maskDob(parsed.subject?.dateOfBirth)} />
-          <OptionalKeyValue label="SSN" value={maskSsn(parsed.subject?.ssn)} />
+          <KeyValue label="DOB" value={displayDob(parsed.subject?.dateOfBirth, releaseIdentifiers)} />
+          <OptionalKeyValue label="SSN" value={displaySsn(parsed.subject?.ssn, releaseIdentifiers)} />
           <KeyValue label="License Expires" value={formatYmd(parsed.licenseExpirationDate)} />
           {/* DMV's own pull date — distinct from Storm/Accio timestamps. Many states omit it. */}
           <OptionalKeyValue label="DMV As Of" value={parsed.dmvAsOfDate} />

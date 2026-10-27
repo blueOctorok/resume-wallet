@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Agency MVR report shows the full date of birth and SSN** (2026-10-27)
+
+The DOT file was already releasing those fields for the full hub. The MVR PDF still swapped the birth year for `XXXX` and kept only the last four of the Social Security number, for every viewer. That swap happens when the PDF is drawn. The stored report was never stripped, so no backfill is involved. The full hub and the driver opening their own report now see the values Accio returned. A search-only account still sees the mask.
+
+| File | Change |
+|---|---|
+| `src/lib/pdf/MvrReportPdf.tsx` | `releaseIdentifiers` prints the full date and the dashed SSN. |
+| `src/app/api/mvr/[orderId]/pdf/route.ts` | Sets the flag from the company tier. The driver's own download stays open. |
+| `src/lib/pdf/MvrReportPdf.test.tsx` | Covers both the masked and the released copy. |
+
+---
+
 ## **DOT download line matches the open file** (2026-10-27)
 
 The employer download bar always said the file was redacted, including for the full hub after identifiers were released. It now says the fields stay off only when this copy actually withheld them.

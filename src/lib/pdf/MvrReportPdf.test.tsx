@@ -113,9 +113,19 @@ describe('MvrReportPdf', () => {
     expect(text).toContain('08/01/XXXX')
     expect(text).not.toContain('08/01/1966')
     expect(text).toContain('XXX-XX-0654')
-    expect(text).not.toContain('123450654')
+    expect(text).not.toContain('123-45-0654')
     expect(text).toContain('08/01/2029')
     expect(text).not.toContain('2029-08-01')
+  })
+
+  it('prints the full date of birth and Social Security number when identifiers are released', () => {
+    const released = collectText(
+      <MvrReportPdf parsed={parsed} meta={{ ...meta, releaseIdentifiers: true }} />,
+    ).join('\n')
+    expect(released).toContain('08/01/1966')
+    expect(released).not.toContain('08/01/XXXX')
+    expect(released).toContain('123-45-0654')
+    expect(released).not.toContain('XXX-XX-0654')
   })
 
   it('renders to a real PDF without throwing', async () => {
