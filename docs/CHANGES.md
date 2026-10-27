@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Search Console tag for provven.com** (2026-10-27)
+
+The homepage verification meta now matches the new Search Console property for `https://provven.com/`. The previous token belonged to the old property. Google reads this tag from the first HTML response, so it verifies without running the Analytics script. Leave the tag in place after Verify succeeds.
+
+| File | Change |
+|---|---|
+| `src/app/layout.tsx` | `metadata.verification.google` set to the provven.com token. |
+
+---
+
 ## **Analytics is ready for a new Provven property** (2026-10-27)
 
 The site had no Analytics tag. Production sends page views to the Provven stream `G-3P343MXLST`, and only on provven.com. Invite and share codes are replaced with `[token]` before they leave the browser. The privacy policy says so. Search Console for provven.com is a new property in Google; the stormchain.ai HTML file does not verify this domain.
