@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT download line matches the open file** (2026-10-27)
+
+The employer download bar always said the file was redacted, including for the full hub after identifiers were released. It now says the fields stay off only when this copy actually withheld them.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/DotAppPreviewModal.tsx` | Download note follows `redactedFields`. |
+
+---
+
 ## **Agency hub keeps email and phone on the career card** (2026-10-27)
 
 The full hub sends consent invites, so email and phone stay on the career card even before that driver has an application or an accepted invite. A search-only account still sees them only after the driver is already connected, and a search result for that account does not include the email.

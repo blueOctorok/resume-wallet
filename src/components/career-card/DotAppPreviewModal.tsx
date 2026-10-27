@@ -124,7 +124,9 @@ export default function DotAppPreviewModal({
           <p className='text-xs text-[#5c6166]'>
             {isSelf
               ? 'Export your own copy. Nothing is withheld.'
-              : 'Export this copy. It carries your company name and the same redactions as this view.'}
+              : previewData.redactedFields && previewData.redactedFields.length > 0
+                ? 'Export this copy. It carries your company name. Social Security number, date of birth, and street address stay off it.'
+                : 'Export this copy. It carries your company name and the same details as this view.'}
           </p>
           <Button
             type='button'
