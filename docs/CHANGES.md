@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT preview cast matches the build** (2026-10-28)
+
+The production typecheck rejected a direct cast from the stripped Form 2 object to the preview's form type. The preview now hops through `unknown`, the same way the other provenance reads in that file already do.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/DotAppPreviewContent.tsx` | Cast the stripped form through `unknown`. |
+
+---
+
 ## **MVR personal info only on the DOT application** (2026-10-28)
 
 Accidents, crashes, and convictions from an MVR or PSP are no longer copied onto the DOT application. Personal info from the MVR still fills Form 1. A saved application drops those report rows the next time it is opened or saved, and the driver lists accidents and convictions himself. Checking "none" is not treated as the driving record confirming a clean history.

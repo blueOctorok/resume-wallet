@@ -197,7 +197,7 @@ export default function DotAppPreviewContent({
   const isDark = false
   const f1 = data.form1
   const f2 = data.form2
-    ? (omitScreeningHistoryFromForm2(data.form2) as NonNullable<DotAppPreviewData['form2']>)
+    ? (omitScreeningHistoryFromForm2(data.form2) as unknown as NonNullable<DotAppPreviewData['form2']>)
     : data.form2
   const f3 = data.form3
   // Provenance types are a superset view of the same JSON; TS wants the hop via unknown.
