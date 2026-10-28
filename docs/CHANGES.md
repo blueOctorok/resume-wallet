@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Proofs carry their own dates** (2026-10-28)
+
+Each resume proof shows the expiration from its own source. The barcode proof uses the date read off the card. Accio class, endorsements, and restrictions use the license date on the driving record, and the med proof uses the med-card date. When Midnight replaces a fact, that proof keeps the same record date. A source with no date stays undated.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | Attach `expires` / `expired` to each proof chip. |
+| `src/lib/block-data.ts` | Read `license_expiration_date` with the driver-owned MVR. |
+| `src/components/resume/DriverResumeDocument.tsx` | Show the date beside the proof cite. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same on the download. |
+
+---
+
+## **Resume drops the Credentials section** (2026-10-28)
+
+The section under the proofs only repeated the med card and printed the license expiration date from the file. Proofs already carry the med card. An expired license still has its note at the top of the sheet.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | Stop building credential lines. |
+| `src/components/resume/DriverResumeDocument.tsx` | Remove the Credentials block. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same on the download. |
+
+---
+
 ## **Accio proof holds the fact until Midnight replaces it** (2026-10-28)
 
 A driver-owned Accio record now puts its class, endorsements, restrictions, and med card on the resume as soon as those fields are stored. Each of those is an Accio proof, cited as the driving record. When the Midnight circuit for that same fact finishes, the Midnight proof takes its place and the Accio copy of that fact comes off. The barcode license proof stays either way. A report with no class adds no Accio proof.

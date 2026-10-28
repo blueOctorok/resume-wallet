@@ -206,6 +206,7 @@ export async function generateDriverResumePacketPDF(
       const accio = chip.tier === 'accio'
       const kicker = midnight ? 'MIDNIGHT PROOF' : accio ? 'ACCIO PROOF' : 'LICENSE PROOF'
       const cite = midnight ? 'via Accio' : accio ? 'Driving record' : 'Barcode read'
+      const citeLine = chip.dateLabel ? `${cite} · ${chip.dateLabel}` : cite
       // Midnight navy, Accio dark amber, license denim.
       const factRgb: [number, number, number] = midnight
         ? [23, 49, 80]
@@ -218,7 +219,7 @@ export async function generateDriverResumePacketPDF(
       const factW = pdf.getTextWidth(chip.label)
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(6)
-      const metaW = pdf.getTextWidth(`${kicker}  ${cite}`)
+      const metaW = pdf.getTextWidth(`${kicker}  ${citeLine}`)
       const blockW = (provvenMark ? badgeW + 1.6 : 0) + Math.max(factW, metaW)
       if (x > MARGIN && x + blockW > pageWidth - MARGIN) {
         x = MARGIN
@@ -239,7 +240,7 @@ export async function generateDriverResumePacketPDF(
       const kickW = pdf.getTextWidth(`${kicker}  `)
       pdf.setFont('helvetica', 'normal')
       pdf.setTextColor(...textMuted)
-      pdf.text(cite, textX + kickW, rowTop + 4.8)
+      pdf.text(citeLine, textX + kickW, rowTop + 4.8)
       x += blockW + 5
     }
     y = rowTop + 8
@@ -253,20 +254,6 @@ export async function generateDriverResumePacketPDF(
     const hintLines = pdf.splitTextToSize(packet.thinStateHint, pageWidth - MARGIN * 2)
     pdf.text(hintLines, MARGIN, y)
     y += hintLines.length * 4 + 2
-  }
-
-  // CREDENTIALS
-  if (packet.credentials.length > 0) {
-    drawSectionHeader('Credentials')
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(10)
-    pdf.setTextColor(...textDark)
-    for (const line of packet.credentials) {
-      checkPage(6)
-      const lines = pdf.splitTextToSize(line, pageWidth - MARGIN * 2)
-      pdf.text(lines, MARGIN, y)
-      y += lines.length * 4.5 + 1
-    }
   }
 
   // EXPERIENCE

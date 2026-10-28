@@ -139,9 +139,11 @@ const PROOF_TONE = {
 function ProofMark({
   tone,
   facts,
+  dateLabel,
 }: {
   tone: keyof typeof PROOF_TONE
   facts: string
+  dateLabel?: string
 }) {
   const colors = PROOF_TONE[tone]
   return (
@@ -159,6 +161,7 @@ function ProofMark({
           {colors.label}
           <span className='ml-1.5 font-medium normal-case tracking-normal text-stone-500'>
             {colors.cite}
+            {dateLabel ? ` · ${dateLabel}` : ''}
           </span>
         </span>
       </span>
@@ -178,7 +181,12 @@ function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
   return (
     <div className='mt-4 flex flex-wrap items-center justify-start gap-x-5 gap-y-2'>
       {proofs.map((chip) => (
-        <ProofMark key={chip.id} tone={chip.tier ?? 'license'} facts={chip.label} />
+        <ProofMark
+          key={chip.id}
+          tone={chip.tier ?? 'license'}
+          facts={chip.label}
+          dateLabel={chip.dateLabel}
+        />
       ))}
     </div>
   )
@@ -251,17 +259,6 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
 
       {packet.thinStateHint ? (
         <p className='mt-6 text-sm italic text-stone-500'>{packet.thinStateHint}</p>
-      ) : null}
-
-      {packet.credentials.length > 0 ? (
-        <>
-          <SectionRule title='Credentials' />
-          <ul className='space-y-1.5 text-[13px] leading-snug text-stone-800'>
-            {packet.credentials.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </>
       ) : null}
 
       {packet.experience.length > 0 ? (

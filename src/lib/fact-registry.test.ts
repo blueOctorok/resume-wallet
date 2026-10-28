@@ -86,6 +86,7 @@ function completedMvrCtx(overrides?: Partial<MvrAttestationContext>): MvrAttesta
     restrictions: [],
     medicalCertStatus: null,
     medicalCertExpiration: null,
+    licenseExpiration: null,
     isDriverOwned: true,
     ...overrides,
   }

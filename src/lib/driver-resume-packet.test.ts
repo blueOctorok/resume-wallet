@@ -54,8 +54,9 @@ describe('resume proof badges', () => {
       licenseClass: 'A',
       endorsements: ['H'],
       restrictions: [],
-      medicalCertStatus: null,
-      medicalCertExpiration: null,
+      medicalCertStatus: 'Certified',
+      medicalCertExpiration: '2027-06-01',
+      licenseExpiration: '2034-01-17',
     }
     const waiting = buildDriverResumePacket({
       structuredData: data,
@@ -64,14 +65,24 @@ describe('resume proof badges', () => {
       asOfCandidates: [],
       hasDotApp: true,
       accioRecord,
-      licenseProof: { label: 'Class A · TX' },
+      licenseProof: { label: 'Class A · TX', expirationDate: '2034-01-17' },
     })
     expect(waiting.proofChips.map((chip) => `${chip.tier}:${chip.id}`)).toEqual([
       'accio:cdl_class',
       'accio:cdl_endorsements',
       'accio:cdl_restrictions',
+      'accio:med_cert_valid',
       'license:license-proof',
     ])
+    expect(waiting.proofChips.find((chip) => chip.id === 'cdl_class')?.dateLabel).toBe(
+      'expires January 17, 2034',
+    )
+    expect(waiting.proofChips.find((chip) => chip.id === 'med_cert_valid')?.dateLabel).toBe(
+      'expires June 1, 2027',
+    )
+    expect(waiting.proofChips.find((chip) => chip.id === 'license-proof')?.dateLabel).toBe(
+      'expires January 17, 2034',
+    )
 
     const proved = buildDriverResumePacket({
       structuredData: data,
@@ -80,15 +91,19 @@ describe('resume proof badges', () => {
       asOfCandidates: [],
       hasDotApp: true,
       accioRecord,
-      licenseProof: { label: 'Class A · TX' },
+      licenseProof: { label: 'Class A · TX', expirationDate: '2034-01-17' },
       attestedChips: [{ id: 'cdl_class', label: 'Class A', attested: true, tier: 'midnight' }],
     })
     expect(proved.proofChips.map((chip) => `${chip.tier}:${chip.id}`)).toEqual([
       'midnight:cdl_class',
       'accio:cdl_endorsements',
       'accio:cdl_restrictions',
+      'accio:med_cert_valid',
       'license:license-proof',
     ])
+    expect(proved.proofChips.find((chip) => chip.id === 'cdl_class')?.dateLabel).toBe(
+      'expires January 17, 2034',
+    )
   })
 
   it('does not invent an Accio proof from a record with no class', () => {
@@ -104,6 +119,7 @@ describe('resume proof badges', () => {
         restrictions: [],
         medicalCertStatus: null,
         medicalCertExpiration: null,
+        licenseExpiration: null,
       },
       attestedChips: [{ id: 'cdl_class', label: 'Class D', attested: true }],
     })
@@ -137,8 +153,7 @@ describe('resume proof badges', () => {
 
     expect(packet.tagline).toBe('Cypress, TX')
     expect(packet.proofChips.map((chip) => chip.id)).toEqual(['license-proof'])
-    expect(packet.credentials.some((line) => line.startsWith('CDL'))).toBe(false)
-    expect(packet.credentials).toEqual(['License expires January 17, 2034'])
+    expect(packet.freshnessNote).toBeNull()
   })
 
   it('does not print typed endorsements as a chip', () => {

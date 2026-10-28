@@ -265,6 +265,8 @@ export interface MvrAttestationContext {
   restrictions: string[]
   medicalCertStatus: string | null
   medicalCertExpiration: string | null
+  /** License expiration on the parsed driving record, when the report included one. */
+  licenseExpiration: string | null
   /** True when the source pull is driver-owned (ordered_by_company_id IS NULL). */
   isDriverOwned: true
 }
@@ -352,7 +354,7 @@ export async function getMvrAttestationContext(
   const { data: result } = await supabase
     .from('mvr_results')
     .select(
-      'id, license_class, violations, accidents, total_points, violation_count, license_status, cdl_endorsements, cdl_restrictions, medical_cert_status, medical_cert_expiration',
+      'id, license_class, violations, accidents, total_points, violation_count, license_status, cdl_endorsements, cdl_restrictions, medical_cert_status, medical_cert_expiration, license_expiration_date',
     )
     .eq('mvr_order_id', order.id)
     .maybeSingle()
@@ -383,6 +385,7 @@ export async function getMvrAttestationContext(
     restrictions,
     medicalCertStatus: (result?.medical_cert_status as string | null) ?? null,
     medicalCertExpiration: (result?.medical_cert_expiration as string | null) ?? null,
+    licenseExpiration: (result?.license_expiration_date as string | null) ?? null,
     isDriverOwned: true,
   }
 }
