@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer proof uses Retro Teal** (2026-10-28)
+
+The employer proof on the resume and the PDF uses Retro Teal `#3F8A8C`, the same teal as the DKIM proof that replaces it.
+
+| File | Change |
+|---|---|
+| `src/components/resume/DriverResumeDocument.tsx` | Employer proof tone is Retro Teal. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same teal on the download. |
+
+---
+
 ## **DKIM reply can go on the resume** (2026-10-28)
 
 A returned employment packet the driver puts on the resume shows an employer proof. When that same reply later has a DKIM signature, the DKIM proof replaces the employer proof. Midnight does not prove the mail signature.
