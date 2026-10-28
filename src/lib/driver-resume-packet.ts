@@ -1,16 +1,20 @@
 /**
  * Premium “DOT packet” resume model — layout matching docs/midnight/example_resume.png.
  *
- * Two proof badges sit above the quiet chips. A Midnight proof is an MVR fact
- * whose circuit actually ran. A license proof is the confirmed barcode read —
- * still a proof, and not a Midnight or DMV claim (DEC-2026-08-004).
+ * Class and license status show up only as proofs. An Accio proof is a fact
+ * on the driving record and stays until that same fact has a Midnight proof.
+ * A license proof is the confirmed barcode read. None of these is a DMV check
+ * by itself, and a barcode is never a Midnight claim (DEC-2026-08-004).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isLicenseScanFields } from '@/lib/aamva-license'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
-import { getLicenseScan } from '@/lib/block-data'
+import { getLicenseScan, getMvrAttestationContext } from '@/lib/block-data'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
+import { formatCardFactLabel } from '@/lib/card-fact-display'
+import { normalizeAccioCdlClass } from '@/lib/fact-registry'
+import { normalizeEndorsementLetter } from '@/lib/mvr-field-predicate'
 import { getAppBaseUrl } from '@/lib/app-url'
 import { writeResumeSummary } from '@/lib/resume-summary'
 import { cdlStaleSentence, readCdlFreshness } from '@/lib/cdl-freshness'
@@ -24,7 +28,14 @@ export interface PacketMvrSummary {
   violationCount: number
 }
 
-export type ResumeProofTier = 'midnight' | 'license'
+export type ResumeProofTier = 'midnight' | 'accio' | 'license'
+
+/** Midnight first, then the Accio record it has not replaced, then the barcode. */
+export function resumeProofRank(tier: ResumeProofTier | undefined): number {
+  if (tier === 'midnight') return 0
+  if (tier === 'accio') return 1
+  return 2
+}
 
 export interface DriverResumeProofChip {
   id: string
@@ -32,8 +43,9 @@ export interface DriverResumeProofChip {
   /** True when this chip came from an attestation row. */
   attested?: boolean
   /**
-   * midnight — MVR fact with a predicate proof. license — barcode read.
-   * Absent chips are stated facts, not proofs.
+   * midnight — the Accio fact after its circuit ran.
+   * accio — that fact on the driving record, until Midnight replaces it.
+   * license — confirmed barcode read.
    */
   tier?: ResumeProofTier
 }
@@ -46,7 +58,7 @@ export interface DriverResumeExperienceRow {
 
 export interface DriverResumePacket {
   fullName: string
-  /** e.g. "CDL Class A • Indianapolis, IN" */
+  /** City and state. Class lives on a proof, not in this line. */
   tagline: string
   /** e.g. "email · phone" */
   contactLine: string
@@ -134,41 +146,6 @@ function formatYearOnly(dateStr?: string): string {
   return String(d.getFullYear())
 }
 
-function normalizeEndorsements(raw: string[]): { labels: string[]; hasHazmat: boolean; hasTanker: boolean } {
-  const labels: string[] = []
-  let hasHazmat = false
-  let hasTanker = false
-  for (const e of raw) {
-    const t = e.trim()
-    if (!t) continue
-    const lower = t.toLowerCase()
-    const isHazmat =
-      lower === 'h' || lower.includes('hazmat') || lower.includes('hazardous')
-    const isTanker = lower === 'n' || lower.includes('tanker') || lower.includes('tank')
-    if (isHazmat) hasHazmat = true
-    if (isTanker) hasTanker = true
-    if (isHazmat || isTanker) continue
-    labels.push(t)
-  }
-  return { labels, hasHazmat, hasTanker }
-}
-
-function isLicenseValidStatus(status: string | null | undefined): boolean {
-  if (!status?.trim()) return false
-  const s = status.trim().toLowerCase()
-  if (s.includes('valid') || s.includes('eligible') || s === 'ok' || s === 'active') return true
-  if (s.includes('suspend') || s.includes('revok') || s.includes('disqual') || s.includes('cancel')) {
-    return false
-  }
-  return false
-}
-
-function isPspNoDq(outcome: string | null | undefined): boolean {
-  if (!outcome) return false
-  const o = outcome.toLowerCase()
-  return o === 'clear' || o === 'no_hits' || o === 'pass'
-}
-
 function buildExperience(data: ResumeBuilderData): DriverResumeExperienceRow[] {
   return data.employments
     .filter((e) => e.companyName?.trim() || e.position?.trim())
@@ -203,7 +180,73 @@ export interface BuildPacketInput {
   attestedChips?: DriverResumeProofChip[]
   /** Confirmed barcode read. Omitted when the card was never confirmed. */
   licenseProof?: { label: string } | null
+  /** Parsed driver-owned Accio record. Facts it does not contain are skipped. */
+  accioRecord?: {
+    licenseClass: string | null
+    endorsements: string[]
+    restrictions: string[]
+    medicalCertStatus: string | null
+    medicalCertExpiration: string | null
+  } | null
   hasDotApp: boolean
+}
+
+/** Facts the driving record actually contains. A shell with no class adds none. */
+function accioRecordChips(
+  record: NonNullable<BuildPacketInput['accioRecord']>,
+): DriverResumeProofChip[] {
+  const chips: DriverResumeProofChip[] = []
+  const letter = normalizeAccioCdlClass(record.licenseClass)
+  if (letter) {
+    chips.push({
+      id: 'cdl_class',
+      label: formatCardFactLabel('cdl_class', { class: letter }, `Class ${letter}`),
+      tier: 'accio',
+    })
+  }
+
+  const endorsementLetters = record.endorsements
+    .map((code) => normalizeEndorsementLetter(code))
+    .filter((code): code is string => Boolean(code))
+  if (endorsementLetters.length > 0) {
+    chips.push({
+      id: 'cdl_endorsements',
+      label: formatCardFactLabel(
+        'cdl_endorsements',
+        { endorsements: endorsementLetters.join(', ') },
+        'Endorsements',
+      ),
+      tier: 'accio',
+    })
+  }
+
+  // "None" is only honest after a real license block was parsed.
+  if (letter) {
+    const raw = record.restrictions.map((code) => code.trim()).filter(Boolean)
+    chips.push({
+      id: 'cdl_restrictions',
+      label: formatCardFactLabel(
+        'cdl_restrictions',
+        { restrictions: raw.length > 0 ? raw.join(', ') : 'none' },
+        'No restrictions',
+      ),
+      tier: 'accio',
+    })
+  }
+
+  if (hasValidMedicalCert(record.medicalCertStatus, record.medicalCertExpiration)) {
+    chips.push({
+      id: 'med_cert_valid',
+      label: formatCardFactLabel(
+        'med_cert_valid',
+        { expiration: record.medicalCertExpiration ?? '' },
+        'Med card current',
+      ),
+      tier: 'accio',
+    })
+  }
+
+  return chips
 }
 
 /**
@@ -220,21 +263,23 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     expiration: cdl.expirationDate,
     endorsements: cdl.endorsements,
   })
-  const cdlClass = freshness.classLetter
-  const location = [pi.city, pi.state].filter(Boolean).join(', ')
-  const taglineParts: string[] = []
-  if (freshness.classLabel) taglineParts.push(`CDL ${freshness.classLabel}`)
-  if (location) taglineParts.push(location)
-  const tagline = taglineParts.join(' • ')
+  // Class is a proof (barcode or Midnight), for every letter. The header is place.
+  const tagline = [pi.city, pi.state].filter(Boolean).join(', ')
 
   const contactLine = [pi.email, pi.phone].filter(Boolean).join(' · ')
 
-  const endorsements = Array.isArray(cdl.endorsements) ? cdl.endorsements : []
-  const { labels: otherEndorsements, hasHazmat, hasTanker } = normalizeEndorsements(endorsements)
-
-  const attestedIds = new Set((input.attestedChips ?? []).map((c) => c.id))
-  const proofChips: DriverResumeProofChip[] = [...(input.attestedChips ?? [])]
-  // Midnight proofs are the Accio record. The barcode proof stays beside them.
+  const proofChips: DriverResumeProofChip[] = (input.attestedChips ?? []).filter(
+    (chip) => chip.tier === 'midnight',
+  )
+  // A Midnight proof of a fact replaces that fact's Accio proof. The barcode stays.
+  const proved = new Set(proofChips.map((chip) => chip.id))
+  if (proved.has('cdl_class_a')) proved.add('cdl_class')
+  if (input.accioRecord) {
+    for (const chip of accioRecordChips(input.accioRecord)) {
+      if (proved.has(chip.id)) continue
+      proofChips.push(chip)
+    }
+  }
   if (input.licenseProof?.label) {
     proofChips.push({
       id: 'license-proof',
@@ -242,33 +287,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
       tier: 'license',
     })
   }
-  const hasAttestedClass = attestedIds.has('cdl_class') || attestedIds.has('cdl_class_a')
-  // An expired date is not a current proof. Hazmat and tanker ride on the CDL,
-  // so they come off the chip row until the date is updated. The credential
-  // line below still names them.
-  if (freshness.expired) {
-    proofChips.push({ id: 'cdl-expired', label: 'CDL expired' })
-  } else if (
-    cdlClass &&
-    !hasAttestedClass &&
-    !proofChips.some((c) => c.id === 'cdl-class' || c.id.startsWith('cdl_class'))
-  ) {
-    proofChips.push({ id: 'cdl-class', label: `CDL Class ${cdlClass}` })
-  }
   const medOk = hasValidMedicalCert(input.medicalCertStatus, input.medicalCertExpiration)
-  if (medOk && !attestedIds.has('med_cert_valid')) {
-    proofChips.push({ id: 'med-card', label: 'Med card current' })
-  }
-
-  if (isPspNoDq(input.pspResultOutcome)) {
-    proofChips.push({ id: 'psp-no-dq', label: 'PSP: no DQ' })
-  }
-
-  const licenseStatus =
-    input.mvrSummary?.licenseStatus || null
-  if (isLicenseValidStatus(licenseStatus)) {
-    proofChips.push({ id: 'license-valid', label: 'License valid' })
-  }
 
   const asOfDates = input.asOfCandidates
     .map((s) => (s ? new Date(s) : null))
@@ -290,21 +309,12 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   }
 
   const credentials: string[] = []
-  if (freshness.classLabel) {
-    const endBits: string[] = []
-    if (hasTanker) endBits.push('tanker')
-    if (hasHazmat) endBits.push('hazmat')
-    for (const o of otherEndorsements.slice(0, 3)) endBits.push(o)
-    const endPhrase = endBits.length ? ` — ${endBits.join(' & ')}` : ''
-    const state = cdl.cdlState?.trim()
-    const when = freshness.expirationLabel
-    const expBit = !when
-      ? ''
-      : freshness.expired
-        ? ` — expired ${when}`
-        : `, expires ${when}`
+  // Expiration is a date on file. It is not a class claim and not a proof.
+  if (freshness.expirationLabel) {
     credentials.push(
-      `CDL ${freshness.classLabel}${endPhrase}${state ? ` (${state})` : ''}${expBit}`,
+      freshness.expired
+        ? `License expired ${freshness.expirationLabel}`
+        : `License expires ${freshness.expirationLabel}`,
     )
   }
   if (medOk) {
@@ -352,15 +362,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
       ? 'Start your DOT application to fill this packet — credentials and experience appear as you go.'
       : null,
     freshnessNote: cdlStaleSentence(freshness),
-    hasVerifiedClaims: proofChips.some(
-      (chip) =>
-        chip.tier === 'midnight' ||
-        chip.tier === 'license' ||
-        chip.attested ||
-        chip.id === 'med-card' ||
-        chip.id === 'psp-no-dq' ||
-        chip.id === 'license-valid',
-    ),
+    hasVerifiedClaims: proofChips.some((chip) => chip.tier != null),
   }
 }
 
@@ -380,7 +382,8 @@ export async function assembleDriverResumePacket(
 ): Promise<DriverResumePacket> {
   const shareToken = await ensureShareToken(supabase, userId)
 
-  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof] = await Promise.all([
+  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof, accio] =
+    await Promise.all([
     supabase
       .from('mvr_results')
       .select(
@@ -401,6 +404,7 @@ export async function assembleDriverResumePacket(
       .maybeSingle(),
     loadCardAttestedFacts(supabase, userId),
     loadLicenseProof(supabase, userId),
+    getMvrAttestationContext(supabase, userId),
   ])
 
   const accidents = opts.applicationData?.form2?.accidents
@@ -427,6 +431,15 @@ export async function assembleDriverResumePacket(
       tier: f.provenOnMidnight ? ('midnight' as const) : undefined,
     })),
     licenseProof,
+    accioRecord: accio
+      ? {
+          licenseClass: accio.licenseClass,
+          endorsements: accio.endorsements,
+          restrictions: accio.restrictions,
+          medicalCertStatus: accio.medicalCertStatus,
+          medicalCertExpiration: accio.medicalCertExpiration,
+        }
+      : null,
   })
 
   const filled = opts.structuredData.employments.filter(

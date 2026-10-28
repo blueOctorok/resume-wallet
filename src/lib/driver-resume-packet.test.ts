@@ -49,17 +49,96 @@ describe('resume proof badges', () => {
     })
   })
 
-  it('leaves a fact that is only stated off the proof tiers', () => {
+  it('shows an Accio proof until Midnight replaces that fact, and keeps the barcode', () => {
+    const accioRecord = {
+      licenseClass: 'A',
+      endorsements: ['H'],
+      restrictions: [],
+      medicalCertStatus: null,
+      medicalCertExpiration: null,
+    }
+    const waiting = buildDriverResumePacket({
+      structuredData: data,
+      mvrSummary: null,
+      shareToken: 'abc',
+      asOfCandidates: [],
+      hasDotApp: true,
+      accioRecord,
+      licenseProof: { label: 'Class A · TX' },
+    })
+    expect(waiting.proofChips.map((chip) => `${chip.tier}:${chip.id}`)).toEqual([
+      'accio:cdl_class',
+      'accio:cdl_endorsements',
+      'accio:cdl_restrictions',
+      'license:license-proof',
+    ])
+
+    const proved = buildDriverResumePacket({
+      structuredData: data,
+      mvrSummary: null,
+      shareToken: 'abc',
+      asOfCandidates: [],
+      hasDotApp: true,
+      accioRecord,
+      licenseProof: { label: 'Class A · TX' },
+      attestedChips: [{ id: 'cdl_class', label: 'Class A', attested: true, tier: 'midnight' }],
+    })
+    expect(proved.proofChips.map((chip) => `${chip.tier}:${chip.id}`)).toEqual([
+      'midnight:cdl_class',
+      'accio:cdl_endorsements',
+      'accio:cdl_restrictions',
+      'license:license-proof',
+    ])
+  })
+
+  it('does not invent an Accio proof from a record with no class', () => {
     const packet = buildDriverResumePacket({
       structuredData: data,
       mvrSummary: null,
       shareToken: 'abc',
       asOfCandidates: [],
       hasDotApp: false,
+      accioRecord: {
+        licenseClass: null,
+        endorsements: [],
+        restrictions: [],
+        medicalCertStatus: null,
+        medicalCertExpiration: null,
+      },
       attestedChips: [{ id: 'cdl_class', label: 'Class D', attested: true }],
     })
-    expect(packet.proofChips.find((chip) => chip.id === 'cdl_class')?.tier).toBeUndefined()
-    expect(packet.proofChips.some((chip) => chip.tier === 'license')).toBe(false)
+    expect(packet.proofChips).toEqual([])
+  })
+
+  it('does not add a class pill for a CDL letter or for class D', () => {
+    const packet = buildDriverResumePacket({
+      structuredData: {
+        ...data,
+        personalInfo: { ...data.personalInfo, city: 'Cypress', state: 'TX' },
+        cdlInfo: {
+          ...data.cdlInfo,
+          cdlClass: 'C',
+          cdlState: 'TX',
+          endorsements: ['None'],
+          expirationDate: '2034-01-17',
+        },
+      },
+      mvrSummary: {
+        licenseState: 'TX',
+        licenseStatus: 'valid',
+        totalPoints: 0,
+        violationCount: 0,
+      },
+      shareToken: 'abc',
+      asOfCandidates: [],
+      hasDotApp: true,
+      licenseProof: { label: 'Class C · TX' },
+    })
+
+    expect(packet.tagline).toBe('Cypress, TX')
+    expect(packet.proofChips.map((chip) => chip.id)).toEqual(['license-proof'])
+    expect(packet.credentials.some((line) => line.startsWith('CDL'))).toBe(false)
+    expect(packet.credentials).toEqual(['License expires January 17, 2034'])
   })
 
   it('does not print typed endorsements as a chip', () => {

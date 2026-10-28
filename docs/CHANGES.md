@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Accio proof holds the fact until Midnight replaces it** (2026-10-28)
+
+A driver-owned Accio record now puts its class, endorsements, restrictions, and med card on the resume as soon as those fields are stored. Each of those is an Accio proof, cited as the driving record. When the Midnight circuit for that same fact finishes, the Midnight proof takes its place and the Accio copy of that fact comes off. The barcode license proof stays either way. A report with no class adds no Accio proof.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | Build Accio chips from the parsed record and drop one when its Midnight proof exists. |
+| `src/components/resume/DriverResumeDocument.tsx` | Accio proof sits between Midnight and the barcode. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same order on the download. |
+
+---
+
+## **Resume class row is proofs only** (2026-10-28)
+
+Stated pills are gone from the resume and the PDF. "CDL Class C", "License valid", "Med card current", and "PSP: no DQ" were profile or MVR text, and the class pill only appeared for A, B, and C, so a Class D resume never matched. Class now shows only as a Midnight proof or a barcode license proof, and the letter is whatever was read. The header is city and state. A license expiration date stays in Credentials without calling the license a CDL.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | Stop building stated class, license, med-card, and PSP chips. |
+| `src/components/resume/DriverResumeDocument.tsx` | Drop the pill row. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same on the download. |
+
+---
+
+## **Worker sync hits a retired Midnight indexer** (2026-10-28)
+
+`provven-midnight-worker` had been failing every sync with `Wallet.Sync` because `indexer.mainnet.midnight.network` was retired on 30 September 2026 and returns HTTP 410. Mainnet indexer and RPC are Blockfrost. A free Starter project, Provven Midnight, is on the account. `.env.local` and the Fly worker secrets now point `MIDNIGHT_NODE_RPC_URL`, `MIDNIGHT_INDEXER_URL`, and `MIDNIGHT_INDEXER_WS_URL` at Blockfrost with that project id. A check returned indexer block height and chain name Midnight Mainnet. The project id stays out of git.
+
+---
+
 ## **Midnight proofs run on a Fly worker** (2026-10-27)
 
 The Fly proof server only calculates a proof when it is asked. A separate always-on worker holds the wallet, watches completed driver-owned MVRs, and asks Fly to prove the class and the other fields on that record. The web app does not prove inside the request. A held pull that arrives without the driving record is still filled in by the backup job; the worker proves it once the class is stored.

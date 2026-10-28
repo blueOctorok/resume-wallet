@@ -12,10 +12,10 @@ Add these to `.env.local` (gitignored). Copy from `docs/midnight/env.local.midni
 | `MIDNIGHT_PROOF_SERVER_URL` | yes | `http://127.0.0.1:6300` or `https://….fly.dev` | Local Docker **or** hosted Fly origin (no userinfo — see auth rows) |
 | `MIDNIGHT_PROOF_SERVER_USER` | hosted | `prove` | Basic-auth user for Fly nginx |
 | `MIDNIGHT_PROOF_SERVER_PASSWORD` | hosted | (secret) | Basic-auth password — prefer this over `user:pass@` in the URL (undici rejects credentialed URLs) |
-| `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.preprod.midnight.network` | Public node RPC (sync + prove). Mainnet app/Vercel stay here. |
+| `MIDNIGHT_NODE_RPC_URL` | yes (P3.3+) | `https://rpc.midnight-mainnet.blockfrost.io?project_id=` | Public node RPC (sync + prove). Midnight-hosted `rpc.mainnet.midnight.network` was retired 2026-09-30. Append a Blockfrost Midnight Mainnet project id. |
 | `MIDNIGHT_DEPLOY_RPC_URL` | mainnet deploy only | `https://rpc.mainnet.midnight.foundation/v1/mk_…` | Foundation keyed node. **`contractDeploy` submit only.** Never set this as `MIDNIGHT_NODE_RPC_URL` (wallet relay) — the node reports tip 0 and merkle sync loops. Never Vercel. |
-| `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://indexer.preprod.midnight.network/api/v4/graphql` | GraphQL indexer v4 (Preprod matrix) |
-| `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | Real-time indexer events |
+| `MIDNIGHT_INDEXER_URL` | yes (P3.3+) | `https://midnight-mainnet.blockfrost.io/api/v0?project_id=` | GraphQL indexer. `indexer.mainnet.midnight.network` returns 410. Same Blockfrost project id as the RPC. |
+| `MIDNIGHT_INDEXER_WS_URL` | optional | `wss://midnight-mainnet.blockfrost.io/api/v0/ws?project_id=` | Wallet sync subscription. Same project id. |
 | `MIDNIGHT_PRIVATE_STATE_PASSWORD` | yes (P3.3+) | `"Str0ng!LocalOnly"` | Encrypts LevelDB contract private state on disk — server-side only |
 | `MIDNIGHT_CONTRACT_ADDRESS` | after deploy | `mn_shield-addr_…` | MVR (`mvr_clean_36_months`) — set after `npm run midnight:deploy` |
 | `MIDNIGHT_CONTRACT_ADDRESS_CDL_CLASS_A` | after deploy | `mn_shield-addr_…` | P3.5 `cdl_class_a` circuit |

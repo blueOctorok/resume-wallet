@@ -4,7 +4,7 @@
  */
 
 import { jsPDF } from 'jspdf'
-import type { DriverResumePacket } from '@/lib/driver-resume-packet'
+import { resumeProofRank, type DriverResumePacket } from '@/lib/driver-resume-packet'
 
 const MARGIN = 18
 const QR_TOP = 22
@@ -50,9 +50,6 @@ export async function generateDriverResumePacketPDF(
   const textMuted: [number, number, number] = [120, 113, 108]
   const linkAmber: [number, number, number] = [146, 64, 14]
   const greenDot: [number, number, number] = [74, 124, 98]
-  const goldDot: [number, number, number] = [184, 144, 77]
-  const stoneDot: [number, number, number] = [168, 162, 158]
-  const rule: [number, number, number] = [214, 211, 209]
 
   const [qrTop, provvenMark, paper] = await Promise.all([
     qrPngDataUrl(packet.verifyUrl, 128),
@@ -194,15 +191,10 @@ export async function generateDriverResumePacketPDF(
     y += summaryLines.length * 4.2 + 3
   }
 
-  // Midnight proofs first, then the license barcode proof, then stated chips.
-  const proofBadges = packet.proofChips
-    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
-    .sort((a, b) => (a.tier === 'midnight' ? 0 : 1) - (b.tier === 'midnight' ? 0 : 1))
-  const statedChips = packet.proofChips.filter(
-    (chip) => chip.tier !== 'midnight' && chip.tier !== 'license',
-  )
-
-  const proofs = proofBadges.filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
+  // Midnight, then Accio facts it has not replaced, then the barcode.
+  const proofs = packet.proofChips
+    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'accio' || chip.tier === 'license')
+    .sort((a, b) => resumeProofRank(a.tier) - resumeProofRank(b.tier))
   if (proofs.length > 0) {
     checkPage(12)
     const badgeW = 4.2
@@ -211,8 +203,16 @@ export async function generateDriverResumePacketPDF(
     let rowTop = y
     for (const chip of proofs) {
       const midnight = chip.tier === 'midnight'
-      const kicker = midnight ? 'MIDNIGHT PROOF' : 'LICENSE PROOF'
-      const cite = midnight ? 'via Accio' : 'Barcode read'
+      const accio = chip.tier === 'accio'
+      const kicker = midnight ? 'MIDNIGHT PROOF' : accio ? 'ACCIO PROOF' : 'LICENSE PROOF'
+      const cite = midnight ? 'via Accio' : accio ? 'Driving record' : 'Barcode read'
+      // Midnight navy, Accio dark amber, license denim.
+      const factRgb: [number, number, number] = midnight
+        ? [23, 49, 80]
+        : accio
+          ? [242, 138, 15]
+          : [0, 96, 139]
+      const kickerRgb: [number, number, number] = midnight ? [241, 90, 43] : factRgb
       pdf.setFont('times', 'bold')
       pdf.setFontSize(9)
       const factW = pdf.getTextWidth(chip.label)
@@ -230,11 +230,11 @@ export async function generateDriverResumePacketPDF(
       const textX = x + (provvenMark ? badgeW + 1.6 : 0)
       pdf.setFont('times', 'bold')
       pdf.setFontSize(9)
-      pdf.setTextColor(midnight ? 23 : 0, midnight ? 49 : 96, midnight ? 80 : 139)
+      pdf.setTextColor(...factRgb)
       pdf.text(chip.label, textX, rowTop + 2.2)
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(6)
-      pdf.setTextColor(midnight ? 241 : 0, midnight ? 90 : 96, midnight ? 43 : 139)
+      pdf.setTextColor(...kickerRgb)
       pdf.text(kicker, textX, rowTop + 4.8)
       const kickW = pdf.getTextWidth(`${kicker}  `)
       pdf.setFont('helvetica', 'normal')
@@ -243,30 +243,6 @@ export async function generateDriverResumePacketPDF(
       x += blockW + 5
     }
     y = rowTop + 8
-  }
-
-  if (statedChips.length > 0) {
-    checkPage(12)
-    let chipX = MARGIN
-    const chipH = 6.5
-    pdf.setFontSize(8)
-    for (const chip of statedChips) {
-      const labelW = pdf.getTextWidth(chip.label) + 8
-      if (chipX + labelW > pageWidth - MARGIN) {
-        chipX = MARGIN
-        y += chipH + 2
-      }
-      pdf.setDrawColor(...rule)
-      pdf.setFillColor(250, 250, 249)
-      pdf.roundedRect(chipX, y, labelW, chipH, 1.5, 1.5, 'FD')
-      pdf.setFillColor(...(chip.attested ? goldDot : stoneDot))
-      pdf.circle(chipX + 3, y + chipH / 2, 0.9, 'F')
-      pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...textDark)
-      pdf.text(chip.label, chipX + 5.5, y + chipH / 2 + 1.1)
-      chipX += labelW + 2.5
-    }
-    y += chipH + 4
   }
 
   if (packet.thinStateHint) {

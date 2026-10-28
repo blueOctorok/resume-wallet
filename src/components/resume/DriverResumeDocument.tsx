@@ -130,35 +130,36 @@ function CardLinkRow({
   )
 }
 
+const PROOF_TONE = {
+  midnight: { fact: '#173150', kicker: '#f15a2b', label: 'Midnight proof', cite: 'via Accio' },
+  accio: { fact: '#F28A0F', kicker: '#F28A0F', label: 'Accio proof', cite: 'Driving record' },
+  license: { fact: '#00608b', kicker: '#00608b', label: 'License proof', cite: 'Barcode read' },
+} as const
+
 function ProofMark({
   tone,
-  kicker,
-  cite,
   facts,
 }: {
-  tone: 'midnight' | 'license'
-  kicker: string
-  cite: string
+  tone: keyof typeof PROOF_TONE
   facts: string
 }) {
-  const midnight = tone === 'midnight'
+  const colors = PROOF_TONE[tone]
   return (
     <span className='inline-flex items-center gap-1.5'>
       {/* eslint-disable-next-line @next/next/no-img-element -- brand mark beside the proof */}
       <img src='/brand/provven-mark.svg' alt='' className='h-4 w-4 shrink-0' />
       <span className='leading-tight'>
-        <span
-          className='block text-[12px] font-semibold'
-          style={{ color: midnight ? '#173150' : '#00608b' }}
-        >
+        <span className='block text-[12px] font-semibold' style={{ color: colors.fact }}>
           {facts}
         </span>
         <span
           className='block text-[9px] font-bold uppercase tracking-[0.14em]'
-          style={{ color: midnight ? '#f15a2b' : '#00608b' }}
+          style={{ color: colors.kicker }}
         >
-          {kicker}
-          <span className='ml-1.5 font-medium normal-case tracking-normal text-stone-500'>{cite}</span>
+          {colors.label}
+          <span className='ml-1.5 font-medium normal-case tracking-normal text-stone-500'>
+            {colors.cite}
+          </span>
         </span>
       </span>
     </span>
@@ -166,45 +167,18 @@ function ProofMark({
 }
 
 function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
-  // Midnight first, then the barcode. Each one starts at the left of the next.
-  const proofs = [...chips]
-    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
-    .sort((a, b) => (a.tier === 'midnight' ? 0 : 1) - (b.tier === 'midnight' ? 0 : 1))
+  const proofs = chips
+    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'accio' || chip.tier === 'license')
+    .sort((a, b) => {
+      const rank = (tier: DriverResumeProofChip['tier']) =>
+        tier === 'midnight' ? 0 : tier === 'accio' ? 1 : 2
+      return rank(a.tier) - rank(b.tier)
+    })
   if (proofs.length === 0) return null
   return (
     <div className='mt-4 flex flex-wrap items-center justify-start gap-x-5 gap-y-2'>
       {proofs.map((chip) => (
-        <ProofMark
-          key={chip.id}
-          tone={chip.tier === 'midnight' ? 'midnight' : 'license'}
-          kicker={chip.tier === 'midnight' ? 'Midnight proof' : 'License proof'}
-          cite={chip.tier === 'midnight' ? 'via Accio' : 'Barcode read'}
-          facts={chip.label}
-        />
-      ))}
-    </div>
-  )
-}
-
-function StatedChips({ chips }: { chips: DriverResumeProofChip[] }) {
-  const stated = chips.filter((chip) => chip.tier !== 'midnight' && chip.tier !== 'license')
-  if (stated.length === 0) return null
-  return (
-    <div className='mt-3 flex flex-wrap gap-1.5'>
-      {stated.map((chip) => (
-        <span
-          key={chip.id}
-          className='inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-medium text-stone-700'
-        >
-          <span
-            className={cn(
-              'h-1 w-1 shrink-0 rounded-full',
-              chip.id === 'cdl-expired' ? 'bg-[#F28A0F]' : chip.attested ? 'bg-retro-teal' : 'bg-stone-400',
-            )}
-            aria-hidden
-          />
-          {chip.label}
-        </span>
+        <ProofMark key={chip.id} tone={chip.tier ?? 'license'} facts={chip.label} />
       ))}
     </div>
   )
@@ -274,7 +248,6 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
       ) : null}
 
       <ProofBadges chips={packet.proofChips} />
-      <StatedChips chips={packet.proofChips} />
 
       {packet.thinStateHint ? (
         <p className='mt-6 text-sm italic text-stone-500'>{packet.thinStateHint}</p>
