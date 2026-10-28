@@ -234,6 +234,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
 
   const attestedIds = new Set((input.attestedChips ?? []).map((c) => c.id))
   const proofChips: DriverResumeProofChip[] = [...(input.attestedChips ?? [])]
+  // Midnight proofs are the Accio record. The barcode proof stays beside them.
   if (input.licenseProof?.label) {
     proofChips.push({
       id: 'license-proof',

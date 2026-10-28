@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   accioXmlHasFilledFmcsa,
   accioXmlHasFilledMvr,
+  accioXmlHasMvrRecord,
   pullAccioOrderResults,
   summarizeAccioSuborders,
 } from '@/lib/accio-get-order-results'
@@ -282,4 +283,55 @@ export async function pullFilledScreeningRelease(
   } catch (err) {
     console.warn('[SCREENING PULL] non-fatal:', err)
   }
+}
+
+const PROOF_CATCHUP_DAYS = 14
+const PROOF_CATCHUP_LIMIT = 15
+
+/**
+ * A held Accio pull can mark the order complete before the driving record
+ * is in the XML. Keep asking until `<mvr_license>` or `<text>` shows up.
+ * The Fly proof worker proves the class once that record is stored.
+ */
+export async function catchUpDriverMvrProofs(
+  supabase: SupabaseClient,
+): Promise<{ checked: number; imported: number }> {
+  const since = new Date(Date.now() - PROOF_CATCHUP_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const { data: orders, error } = await supabase
+    .from('mvr_orders')
+    .select('id, driver_user_id, accio_order_number, accio_remote_order_number')
+    .eq('status', 'completed')
+    .is('ordered_by_company_id', null)
+    .gte('completed_at', since)
+    .order('completed_at', { ascending: false })
+    .limit(PROOF_CATCHUP_LIMIT)
+
+  if (error || !orders?.length) return { checked: 0, imported: 0 }
+
+  let imported = 0
+  for (const order of orders) {
+    if (!order.driver_user_id) continue
+    try {
+      const { data: result } = await supabase
+        .from('mvr_results')
+        .select('license_class')
+        .eq('mvr_order_id', order.id)
+        .maybeSingle()
+      const hasClass = Boolean(
+        result?.license_class && String(result.license_class).trim(),
+      )
+      if (hasClass) continue
+
+      const lookup = pickAccioLookupId(order)
+      if (!lookup) continue
+      const pull = await pullAccioOrderResults(lookup)
+      if (!pull.ok || !accioXmlHasMvrRecord(pull.xml)) continue
+      const outcome = await processMvrAccioWebhookCompletion(supabase, pull.xml)
+      if (outcome.status === 200) imported += 1
+    } catch (err) {
+      console.warn('[MVR PROOF] catch-up', order.id, err instanceof Error ? err.message : err)
+    }
+  }
+
+  return { checked: orders.length, imported }
 }

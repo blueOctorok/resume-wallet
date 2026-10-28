@@ -41,6 +41,7 @@ describe('resume proof badges', () => {
     })
 
     expect(packet.proofChips.find((chip) => chip.id === 'cdl_class')?.tier).toBe('midnight')
+    expect(packet.proofChips.filter((chip) => chip.tier === 'midnight')).toHaveLength(1)
     expect(packet.proofChips.find((chip) => chip.id === 'license-proof')).toEqual({
       id: 'license-proof',
       label: 'Class D · OH',

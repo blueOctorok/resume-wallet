@@ -33,7 +33,7 @@ export function toRelayUrl(nodeRpc: string): URL {
 }
 
 /** Incremental merkle restore dies if the cache is days behind the indexer. */
-const MAX_WALLET_CACHE_AGE_MS = 48 * 60 * 60 * 1000
+const MAX_WALLET_CACHE_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
 // @ts-expect-error SDK expects WebSocket on global in Node
 globalThis.WebSocket = WebSocket
@@ -46,11 +46,9 @@ const CONTRACT_NAME = 'mvr-clean-36'
 
 const walletDir = path.dirname(fileURLToPath(import.meta.url))
 
-// Persisted wallet sync state lives here (gitignored). Restoring it on the next
-// run makes the wallet resume from the saved block height instead of re-scanning
-// the whole chain — turning a multi-minute cold sync into a quick incremental one.
-// Keyed by network so preprod/testnet caches never collide. Contains wallet
-// financial state, so it must never be committed.
+// Persisted wallet sync state (gitignored). Restoring it skips a full chain scan.
+// A quiet week between MVRs must not throw the cache away. A bad restore still
+// falls back to a full sync. Keyed by network. Never commit this file.
 const WALLET_CACHE_DIR = path.join(walletDir, '..', '.wallet-cache')
 const WALLET_CACHE_PATH = path.join(
   WALLET_CACHE_DIR,

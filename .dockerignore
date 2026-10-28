@@ -1,0 +1,10 @@
+# Build context is the repo root. Keep compiled Midnight circuits (managed/).
+.git
+.next
+node_modules
+midnight/runtime/node_modules
+midnight/runtime/.wallet-cache
+**/.env
+**/.env.*
+coverage
+dist

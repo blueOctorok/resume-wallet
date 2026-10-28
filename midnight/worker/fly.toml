@@ -1,0 +1,26 @@
+# Provven Midnight proof worker — Fly.io
+#
+# One always-on machine. It holds the wallet and asks the proof server
+# (provven-midnight-proof) to prove each completed driver-owned MVR.
+#
+# Deploy from the repo root:
+#   npm run midnight:proof-worker:deploy
+
+app = "provven-midnight-worker"
+primary_region = "iad"
+
+kill_signal = "SIGTERM"
+kill_timeout = "300s"
+
+[build]
+  # Path is relative to this file. `fly deploy .` still sends the repo root
+  # as the build context, which is what the Dockerfile copies from.
+  dockerfile = "Dockerfile"
+
+[mounts]
+  source = "midnight_wallet"
+  destination = "/app/midnight/runtime/.wallet-cache"
+
+[[vm]]
+  size = "performance-2x"
+  memory = "16384"

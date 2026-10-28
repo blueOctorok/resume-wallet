@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Midnight proofs run on a Fly worker** (2026-10-27)
+
+The Fly proof server only calculates a proof when it is asked. A separate always-on worker holds the wallet, watches completed driver-owned MVRs, and asks Fly to prove the class and the other fields on that record. The web app does not prove inside the request. A held pull that arrives without the driving record is still filled in by the backup job; the worker proves it once the class is stored.
+
+| File | Change |
+|---|---|
+| `scripts/midnight-proof-worker.ts` | Process entry. Stops cleanly on SIGTERM. |
+| `src/lib/mvr-proof-worker.ts` | One driver per pass, newest parsed class first. |
+| `src/lib/mvr-proof-queue.ts` | Skip drivers who already have a Midnight class proof. |
+| `midnight/worker/` | Fly app, 16 GB, wallet cache on a volume. The Dockerfile path in `fly.toml` is next to that file; the build context is still the repo root. |
+| `scripts/midnight-proof-worker-deploy.sh` | Create the app, volume, and secrets, then deploy. |
+| `src/lib/process-mvr-accio-webhook.ts` | Completion stores the record. It does not prove. |
+| `midnight/runtime/src/wallet.ts` | A synced wallet stays usable for 14 days. |
+
+---
+
+## **MVR record adds a Midnight proof beside the license proof** (2026-10-27)
+
+The resume shows a Midnight proof for each Accio fact whose circuit ran, and keeps the barcode proof beside it. Facts the report does not contain are skipped. Proving itself runs on the Fly worker, not in the web request.
+
+| File | Change |
+|---|---|
+| `src/lib/prove-mvr-facts.ts` | Prove the four Accio card facts from a parsed license class. |
+| `src/lib/accio-get-order-results.ts` | Tell a status shell apart from an XML record. |
+| `src/lib/reconcile-pending-screenings.ts` | Keep asking Accio until the driving record is in the XML. |
+| `src/app/api/cron/reconcile-screenings/route.ts` | Run that record catch-up every pass. |
+| `src/lib/driver-resume-packet.ts` | A Midnight proof does not replace the barcode proof. |
+
+---
+
 ## **Filled MVRs are not held for Accio's postback** (2026-10-27)
 
 Accio filled Samuel Blaha's Ohio MVR in 4 seconds and set `held_for_review`, so the postback never arrived and the order stayed Processing. A filled report now keeps its real outcome (clear, hits, and the rest) instead of moving to needs review because of that flag. Right after an order is accepted, we ask Accio for the result twice. The backup job picks up anything still pending after 1 minute.

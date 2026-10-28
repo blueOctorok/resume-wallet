@@ -27,6 +27,8 @@
     "midnight:deploy": "NODE_OPTIONS='--max-old-space-size=16384' npm run deploy --prefix midnight/runtime --",
     "midnight:prove-fact": "npx tsx scripts/midnight-prove-fact.ts",
     "midnight:prove-batch": "npx tsx scripts/midnight-prove-batch.ts",
+    "midnight:proof-worker": "npx tsx scripts/midnight-proof-worker.ts",
+    "midnight:proof-worker:deploy": "bash scripts/midnight-proof-worker-deploy.sh",
     "midnight:cost-benchmark": "npx tsx scripts/midnight-cost-benchmark.ts"
   },
   "dependencies": {

@@ -8,6 +8,7 @@ import {
 } from '@/lib/accio-get-order-results'
 import { processMvrAccioWebhookCompletion } from '@/lib/process-mvr-accio-webhook'
 import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhook'
+import { catchUpDriverMvrProofs } from '@/lib/reconcile-pending-screenings'
 
 /**
  * GET /api/cron/reconcile-screenings
@@ -85,7 +86,14 @@ export async function GET(request: NextRequest) {
 
   console.log('[RECONCILE CRON]', JSON.stringify(summary))
 
-  return NextResponse.json({ success: true, ...summary })
+  let mvrRecords = { checked: 0, imported: 0 }
+  try {
+    mvrRecords = await catchUpDriverMvrProofs(supabase)
+  } catch (err) {
+    console.warn('[RECONCILE CRON] MVR record catch-up non-fatal:', err)
+  }
+
+  return NextResponse.json({ success: true, ...summary, mvrRecords })
 }
 
 function bumpSummary(

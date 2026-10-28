@@ -55,6 +55,14 @@ function isFilledStatus(status: string | null | undefined): boolean {
   return s === 'filled' || s === 'complete' || s === 'completed'
 }
 
+/**
+ * True when the XML includes the driving record, not only a filled status.
+ * A held order can be `filled` and still omit `<mvr_license>` and `<text>`.
+ */
+export function accioXmlHasMvrRecord(xml: string): boolean {
+  return /<mvr_license\b/i.test(xml) || /<text\b/i.test(xml)
+}
+
 /** True when Accio reports the MVR suborder as filled (ready to import). */
 export function accioXmlHasFilledMvr(xml: string): boolean {
   return summarizeAccioSuborders(xml).some(
