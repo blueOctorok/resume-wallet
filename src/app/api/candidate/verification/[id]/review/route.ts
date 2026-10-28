@@ -27,23 +27,56 @@ export async function PATCH(
     const body = (await request.json()) as {
       reviewed?: boolean
       hidden?: boolean
+      onResume?: boolean
     }
 
+    const supabase = await getAdminSupabaseClient()
     const patch: Record<string, unknown> = {}
     if (body.reviewed === true) patch.driver_reviewed_at = new Date().toISOString()
     if (typeof body.hidden === 'boolean') patch.driver_hidden = body.hidden
+
+    if (typeof body.onResume === 'boolean') {
+      if (!body.onResume) {
+        patch.resume_accepted_at = null
+      } else {
+        const { data: current, error: readError } = await supabase
+          .from('employment_verification_requests')
+          .select('dkim_valid, dkim_domain, status, driver_hidden')
+          .eq('id', id)
+          .eq('driver_id', userId)
+          .maybeSingle()
+        if (readError) {
+          console.error('[EVR REVIEW]', readError)
+          return NextResponse.json({ error: 'Failed to save review' }, { status: 500 })
+        }
+        if (!current) {
+          return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
+        }
+        const signed =
+          current.dkim_valid === true &&
+          Boolean(String(current.dkim_domain ?? '').trim()) &&
+          (current.status === 'VERIFIED' || current.status === 'PARTIALLY_VERIFIED') &&
+          current.driver_hidden !== true
+        if (!signed) {
+          return NextResponse.json(
+            { error: 'A resume proof needs a DKIM-signed reply from the employer domain' },
+            { status: 400 },
+          )
+        }
+        patch.resume_accepted_at = new Date().toISOString()
+      }
+    }
 
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
     }
 
-    const supabase = await getAdminSupabaseClient()
     const { data, error } = await supabase
       .from('employment_verification_requests')
       .update(patch)
       .eq('id', id)
       .eq('driver_id', userId)
-      .select('id, driver_reviewed_at, driver_hidden')
+      .select('id, driver_reviewed_at, driver_hidden, resume_accepted_at')
       .maybeSingle()
 
     if (error) {

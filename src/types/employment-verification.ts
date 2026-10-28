@@ -128,6 +128,8 @@ export interface VerificationRequest {
   driverReviewedAt?: string | null
   driverShareConsent?: 'share' | 'hold' | null
   driverHidden?: boolean
+  /** Set when the driver accepts a DKIM reply onto the resume. */
+  resumeAcceptedAt?: string | null
   correctionOf?: string | null
   
   // Token for previous employer (not exposed to frontend except in portal)
@@ -260,6 +262,7 @@ export interface VerificationRequestRow {
   driver_reviewed_at?: string | null
   driver_share_consent?: 'share' | 'hold' | null
   driver_hidden?: boolean
+  resume_accepted_at?: string | null
   correction_of?: string | null
   outreach_exhausted_at?: string | null
   contact_research_status?: ContactResearchStatus
@@ -327,6 +330,7 @@ export function rowToVerificationRequest(
     driverReviewedAt: row.driver_reviewed_at ?? null,
     driverShareConsent: row.driver_share_consent ?? null,
     driverHidden: Boolean(row.driver_hidden),
+    resumeAcceptedAt: row.resume_accepted_at ?? null,
     correctionOf: row.correction_of ?? null,
     outreachExhaustedAt: row.outreach_exhausted_at ?? null,
     contactResearchStatus: row.contact_research_status ?? 'not_requested',

@@ -193,7 +193,13 @@ export async function generateDriverResumePacketPDF(
 
   // Midnight, then Accio facts it has not replaced, then the barcode.
   const proofs = packet.proofChips
-    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'accio' || chip.tier === 'license')
+    .filter(
+      (chip) =>
+        chip.tier === 'midnight' ||
+        chip.tier === 'accio' ||
+        chip.tier === 'dkim' ||
+        chip.tier === 'license',
+    )
     .sort((a, b) => resumeProofRank(a.tier) - resumeProofRank(b.tier))
   if (proofs.length > 0) {
     checkPage(12)
@@ -202,24 +208,26 @@ export async function generateDriverResumePacketPDF(
     let x = MARGIN
     let rowTop = y
     for (const chip of proofs) {
-      const midnight = chip.tier === 'midnight'
-      const accio = chip.tier === 'accio'
-      const kicker = midnight ? 'MIDNIGHT PROOF' : accio ? 'ACCIO PROOF' : 'LICENSE PROOF'
-      const cite = midnight ? 'via Accio' : accio ? 'Driving record' : 'Barcode read'
-      const citeLine = chip.dateLabel ? `${cite} · ${chip.dateLabel}` : cite
-      // Midnight navy, Accio dark amber, license denim.
-      const factRgb: [number, number, number] = midnight
-        ? [23, 49, 80]
-        : accio
-          ? [242, 138, 15]
-          : [0, 96, 139]
-      const kickerRgb: [number, number, number] = midnight ? [241, 90, 43] : factRgb
+      const tone: {
+        kicker: string
+        cite: string
+        fact: [number, number, number]
+        kick: [number, number, number]
+      } =
+        chip.tier === 'midnight'
+          ? { kicker: 'MIDNIGHT PROOF', cite: 'via Accio', fact: [23, 49, 80], kick: [241, 90, 43] }
+          : chip.tier === 'accio'
+            ? { kicker: 'ACCIO PROOF', cite: 'Driving record', fact: [242, 138, 15], kick: [242, 138, 15] }
+            : chip.tier === 'dkim'
+              ? { kicker: 'DKIM PROOF', cite: chip.cite || 'Signed email', fact: [63, 138, 140], kick: [63, 138, 140] }
+              : { kicker: 'LICENSE PROOF', cite: 'Barcode read', fact: [0, 96, 139], kick: [0, 96, 139] }
+      const citeLine = chip.dateLabel ? `${tone.cite} · ${chip.dateLabel}` : tone.cite
       pdf.setFont('times', 'bold')
       pdf.setFontSize(9)
       const factW = pdf.getTextWidth(chip.label)
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(6)
-      const metaW = pdf.getTextWidth(`${kicker}  ${citeLine}`)
+      const metaW = pdf.getTextWidth(`${tone.kicker}  ${citeLine}`)
       const blockW = (provvenMark ? badgeW + 1.6 : 0) + Math.max(factW, metaW)
       if (x > MARGIN && x + blockW > pageWidth - MARGIN) {
         x = MARGIN
@@ -231,13 +239,13 @@ export async function generateDriverResumePacketPDF(
       const textX = x + (provvenMark ? badgeW + 1.6 : 0)
       pdf.setFont('times', 'bold')
       pdf.setFontSize(9)
-      pdf.setTextColor(...factRgb)
+      pdf.setTextColor(...tone.fact)
       pdf.text(chip.label, textX, rowTop + 2.2)
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(6)
-      pdf.setTextColor(...kickerRgb)
-      pdf.text(kicker, textX, rowTop + 4.8)
-      const kickW = pdf.getTextWidth(`${kicker}  `)
+      pdf.setTextColor(...tone.kick)
+      pdf.text(tone.kicker, textX, rowTop + 4.8)
+      const kickW = pdf.getTextWidth(`${tone.kicker}  `)
       pdf.setFont('helvetica', 'normal')
       pdf.setTextColor(...textMuted)
       pdf.text(citeLine, textX + kickW, rowTop + 4.8)

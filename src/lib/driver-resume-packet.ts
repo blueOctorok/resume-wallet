@@ -28,13 +28,14 @@ export interface PacketMvrSummary {
   violationCount: number
 }
 
-export type ResumeProofTier = 'midnight' | 'accio' | 'license'
+export type ResumeProofTier = 'midnight' | 'accio' | 'dkim' | 'license'
 
-/** Midnight first, then the Accio record it has not replaced, then the barcode. */
+/** Midnight, then Accio facts it has not replaced, then a DKIM employment reply, then the barcode. */
 export function resumeProofRank(tier: ResumeProofTier | undefined): number {
   if (tier === 'midnight') return 0
   if (tier === 'accio') return 1
-  return 2
+  if (tier === 'dkim') return 2
+  return 3
 }
 
 export interface DriverResumeProofChip {
@@ -45,11 +46,14 @@ export interface DriverResumeProofChip {
   /**
    * midnight — the Accio fact after its circuit ran.
    * accio — that fact on the driving record, until Midnight replaces it.
+   * dkim — a signed employer reply the driver accepted onto the resume.
    * license — confirmed barcode read.
    */
   tier?: ResumeProofTier
   /** "expires January 17, 2034" from this proof's own source. Omitted when that source has no date. */
   dateLabel?: string
+  /** Overrides the tier's default cite. DKIM uses the signing domain. */
+  cite?: string
 }
 
 export interface DriverResumeExperienceRow {
@@ -188,11 +192,19 @@ export interface BuildPacketInput {
     medicalCertExpiration: string | null
     licenseExpiration: string | null
   } | null
+  /** DKIM replies the driver accepted. A form reply never arrives here. */
+  dkimProofs?: Array<{
+    id: string
+    employerName: string
+    dkimDomain: string
+    startDate: string | null
+    endDate: string | null
+    verifiedAt: string | null
+  }>
   hasDotApp: boolean
 }
 
-/** "expires January 17, 2034" from a YYYY-MM-DD or YYYYMMDD source date. */
-export function proofDateLabel(raw: string | null | undefined, now: Date = new Date()): string | undefined {
+function proofDay(raw: string | null | undefined): { day: string; when: string } | undefined {
   if (!raw?.trim()) return undefined
   const compact = raw.trim().match(/^(\d{4})(\d{2})(\d{2})$/)
   const iso = raw.trim().match(/^(\d{4}-\d{2}-\d{2})/)
@@ -206,8 +218,34 @@ export function proofDateLabel(raw: string | null | undefined, now: Date = new D
     year: 'numeric',
     timeZone: 'UTC',
   })
+  return { day, when }
+}
+
+/** "expires January 17, 2034" from a YYYY-MM-DD or YYYYMMDD source date. */
+export function proofDateLabel(raw: string | null | undefined, now: Date = new Date()): string | undefined {
+  const parsed = proofDay(raw)
+  if (!parsed) return undefined
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now)
-  return day < today ? `expired ${when}` : `expires ${when}`
+  return parsed.day < today ? `expired ${parsed.when}` : `expires ${parsed.when}`
+}
+
+function dkimProofChips(rows: NonNullable<BuildPacketInput['dkimProofs']>): DriverResumeProofChip[] {
+  return rows.flatMap((row) => {
+    const employer = row.employerName.trim()
+    const domain = row.dkimDomain.trim()
+    if (!employer || !domain) return []
+    const start = row.startDate?.slice(0, 4) ?? ''
+    const end = row.endDate?.trim() ? row.endDate.slice(0, 4) : 'Present'
+    const range = start ? `${start}–${end}` : ''
+    const verified = proofDay(row.verifiedAt)
+    return [{
+      id: `dkim-${row.id}`,
+      label: [employer, range].filter(Boolean).join(' · '),
+      tier: 'dkim' as const,
+      cite: domain,
+      ...(verified ? { dateLabel: `verified ${verified.when}` } : {}),
+    }]
+  })
 }
 
 function withDate(chip: DriverResumeProofChip, raw: string | null | undefined): DriverResumeProofChip {
@@ -342,6 +380,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
       proofChips.push(chip)
     }
   }
+  proofChips.push(...dkimProofChips(input.dkimProofs ?? []))
   if (input.licenseProof?.label) {
     proofChips.push(
       withDate(
@@ -432,7 +471,7 @@ export async function assembleDriverResumePacket(
 ): Promise<DriverResumePacket> {
   const shareToken = await ensureShareToken(supabase, userId)
 
-  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof, accio] =
+  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof, accio, dkimRows] =
     await Promise.all([
     supabase
       .from('mvr_results')
@@ -453,6 +492,14 @@ export async function assembleDriverResumePacket(
     loadCardAttestedFacts(supabase, userId),
     loadLicenseProof(supabase, userId),
     getMvrAttestationContext(supabase, userId),
+    supabase
+      .from('employment_verification_requests')
+      .select('id, previous_employer_name, dkim_domain, claimed_start_date, claimed_end_date, verified_at')
+      .eq('driver_id', userId)
+      .eq('dkim_valid', true)
+      .eq('driver_hidden', false)
+      .not('resume_accepted_at', 'is', null)
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED']),
   ])
 
   const accidents = opts.applicationData?.form2?.accidents
@@ -487,6 +534,14 @@ export async function assembleDriverResumePacket(
           licenseExpiration: accio.licenseExpiration,
         }
       : null,
+    dkimProofs: (dkimRows.data ?? []).map((row) => ({
+      id: String(row.id),
+      employerName: String(row.previous_employer_name ?? ''),
+      dkimDomain: String(row.dkim_domain ?? ''),
+      startDate: (row.claimed_start_date as string | null) ?? null,
+      endDate: (row.claimed_end_date as string | null) ?? null,
+      verifiedAt: (row.verified_at as string | null) ?? null,
+    })),
   })
 
   const filled = opts.structuredData.employments.filter(

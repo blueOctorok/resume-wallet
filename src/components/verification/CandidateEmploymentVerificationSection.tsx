@@ -155,7 +155,7 @@ export default function CandidateEmploymentVerificationSection({
 
   const saveReview = async (
     requestId: string,
-    patch: { hidden?: boolean; reviewed?: boolean },
+    patch: { hidden?: boolean; reviewed?: boolean; onResume?: boolean },
   ) => {
     setSavingReview(true)
     try {
@@ -328,7 +328,30 @@ export default function CandidateEmploymentVerificationSection({
             Employers never see this packet automatically. When an employer requests it, you
             authorize or decline that named employer under Employer share requests below.
           </p>
+          {isDkimVerifiedRequest(request) ? (
+            <p className='text-xs text-[#173150]/75'>
+              This reply is DKIM-signed
+              {request.dkimDomain ? ` by ${request.dkimDomain}` : ''}. Putting it on your resume
+              shows that signature as a proof. Midnight does not prove the mail signature.
+            </p>
+          ) : (
+            <p className='text-xs text-[#173150]/75'>
+              This reply came back on the form. It stays on file. A resume proof needs a
+              DKIM-signed email from the employer domain.
+            </p>
+          )}
           <div className='flex flex-wrap gap-2'>
+            {isDkimVerifiedRequest(request) && (
+              <Button
+                type='button'
+                variant='primary'
+                size='sm'
+                disabled={savingReview}
+                onClick={() => saveReview(request.id, { onResume: !request.resumeAcceptedAt })}
+              >
+                {request.resumeAcceptedAt ? 'Remove from resume' : 'Put on resume'}
+              </Button>
+            )}
             <Button
               type='button'
               variant='ghost'

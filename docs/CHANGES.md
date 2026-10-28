@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DKIM reply can go on the resume** (2026-10-28)
+
+A returned employment packet now has Put on resume when the reply is DKIM-signed. That accept adds a DKIM proof: employer, years, signing domain, and the day the reply was verified. Midnight does not prove the mail signature. A form reply stays on file and cannot be accepted onto the resume.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/127_evr_resume_accept.sql` | `resume_accepted_at` on the verification request. |
+| `src/app/api/candidate/verification/[id]/review/route.ts` | Accept only when DKIM passed. |
+| `src/components/verification/CandidateEmploymentVerificationSection.tsx` | Accept button, and a note when the reply is only a form. |
+| `src/lib/driver-resume-packet.ts` | DKIM proof chip on the resume. |
+| `src/components/resume/DriverResumeDocument.tsx` | Render that proof. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same on the download. |
+
+---
+
 ## **Proofs carry their own dates** (2026-10-28)
 
 Each resume proof shows the expiration from its own source. The barcode proof uses the date read off the card. Accio class, endorsements, and restrictions use the license date on the driving record, and the med proof uses the med-card date. When Midnight replaces a fact, that proof keeps the same record date. A source with no date stays undated.

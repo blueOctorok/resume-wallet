@@ -133,6 +133,7 @@ function CardLinkRow({
 const PROOF_TONE = {
   midnight: { fact: '#173150', kicker: '#f15a2b', label: 'Midnight proof', cite: 'via Accio' },
   accio: { fact: '#F28A0F', kicker: '#F28A0F', label: 'Accio proof', cite: 'Driving record' },
+  dkim: { fact: '#3F8A8C', kicker: '#3F8A8C', label: 'DKIM proof', cite: 'Signed email' },
   license: { fact: '#00608b', kicker: '#00608b', label: 'License proof', cite: 'Barcode read' },
 } as const
 
@@ -140,10 +141,12 @@ function ProofMark({
   tone,
   facts,
   dateLabel,
+  cite,
 }: {
   tone: keyof typeof PROOF_TONE
   facts: string
   dateLabel?: string
+  cite?: string
 }) {
   const colors = PROOF_TONE[tone]
   return (
@@ -160,7 +163,7 @@ function ProofMark({
         >
           {colors.label}
           <span className='ml-1.5 font-medium normal-case tracking-normal text-stone-500'>
-            {colors.cite}
+            {cite ?? colors.cite}
             {dateLabel ? ` · ${dateLabel}` : ''}
           </span>
         </span>
@@ -171,10 +174,16 @@ function ProofMark({
 
 function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
   const proofs = chips
-    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'accio' || chip.tier === 'license')
+    .filter(
+      (chip) =>
+        chip.tier === 'midnight' ||
+        chip.tier === 'accio' ||
+        chip.tier === 'dkim' ||
+        chip.tier === 'license',
+    )
     .sort((a, b) => {
       const rank = (tier: DriverResumeProofChip['tier']) =>
-        tier === 'midnight' ? 0 : tier === 'accio' ? 1 : 2
+        tier === 'midnight' ? 0 : tier === 'accio' ? 1 : tier === 'dkim' ? 2 : 3
       return rank(a.tier) - rank(b.tier)
     })
   if (proofs.length === 0) return null
@@ -186,6 +195,7 @@ function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
           tone={chip.tier ?? 'license'}
           facts={chip.label}
           dateLabel={chip.dateLabel}
+          cite={chip.cite}
         />
       ))}
     </div>
