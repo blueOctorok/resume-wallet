@@ -10,7 +10,7 @@ Each resume proof shows the expiration from its own source. The barcode proof us
 
 | File | Change |
 |---|---|
-| `src/lib/driver-resume-packet.ts` | Attach `expires` / `expired` to each proof chip. |
+| `src/lib/driver-resume-packet.ts` | Attach `expires` / `expired` to each proof chip. The barcode loader's return type includes that expiration. |
 | `src/lib/block-data.ts` | Read `license_expiration_date` with the driver-owned MVR. |
 | `src/components/resume/DriverResumeDocument.tsx` | Show the date beside the proof cite. |
 | `src/lib/driver-resume-packet-pdf.ts` | Same on the download. |

@@ -515,7 +515,7 @@ export async function assembleDriverResumePacket(
 export async function loadLicenseProof(
   supabase: SupabaseClient,
   userId: string,
-): Promise<{ label: string } | null> {
+): Promise<{ label: string; expirationDate: string | null } | null> {
   const scan = await getLicenseScan(supabase, userId)
   if (!scan?.confirmed_at || !isLicenseScanFields(scan.parsed_fields)) return null
   const classRaw = scan.parsed_fields.licenseClass.trim()
