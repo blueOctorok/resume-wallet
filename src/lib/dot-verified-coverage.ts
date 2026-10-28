@@ -129,28 +129,9 @@ export function computeDotVerifiedCoverage(
     })
   })
 
-  // Clean-record flags — only when that issuer stamped a zero count
-  if (f2Prov?.mvrResultId && form2?.hasNoAccidents && f2Prov.mvrAccidentCount === 0) {
-    slots.push({
-      id: 'f2:no-accidents-mvr',
-      label: 'No accidents (MVR)',
-      verified: true,
-    })
-  }
-  if (f2Prov?.mvrResultId && form2?.hasNoConvictions && f2Prov.mvrConvictionCount === 0) {
-    slots.push({
-      id: 'f2:no-convictions',
-      label: 'No convictions (MVR)',
-      verified: true,
-    })
-  }
-  if (f2Prov?.pspResultId && (f2Prov.pspCrashCount ?? 0) === 0) {
-    slots.push({
-      id: 'f2:no-crashes-psp',
-      label: 'No FMCSA crashes (PSP)',
-      verified: true,
-    })
-  }
+  // Clean-record flags for inspections only. Accident and conviction lines on
+  // this application are the driver's disclosure, so an MVR count must not
+  // verify "no accidents" or "no convictions" here.
   if (f2Prov?.pspResultId && (f2Prov.pspInspectionCount ?? 0) === 0) {
     slots.push({
       id: 'f2:no-inspections-psp',

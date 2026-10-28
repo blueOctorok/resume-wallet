@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR personal info only on the DOT application** (2026-10-28)
+
+Accidents, crashes, and convictions from an MVR or PSP are no longer copied onto the DOT application. Personal info from the MVR still fills Form 1. A saved application drops those report rows the next time it is opened or saved, and the driver lists accidents and convictions himself. Checking "none" is not treated as the driving record confirming a clean history.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-field-provenance.ts` | Form 2 projection keeps the driver's rows and removes report rows. |
+| `src/lib/dot-form-mapper.ts` | Profile prefill no longer copies MVR accidents or convictions. |
+| `src/components/app/DotApplicationFlow.tsx` | Opening the application from the profile no longer copies them. |
+| `src/lib/dot-verified-coverage.ts` | The DOT meter no longer verifies "no accidents" or "no convictions" from the MVR. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | The preview shows the driver's accident and conviction lines. |
+| `src/lib/projected-career-card.ts` | Coverage ignores report rows still stored on an older application. |
+
+---
+
 ## **DOT driver answers stay open on a locked MVR row** (2026-10-28)
 
 An MVR accident or conviction locks the facts the record stated. Fatalities, injuries, chemical spills, at-fault, and a conviction state or penalty the violation block left out stay editable. Saving the application keeps those answers. A value the report itself stated stays locked.

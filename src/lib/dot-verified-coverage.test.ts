@@ -94,10 +94,9 @@ describe('computeDotVerifiedCoverage', () => {
       { mvrResultId: 'r1', asOf: '2026-07-01T00:00:00.000Z', accioOrderNumber: 'ACC-1' },
     )
     const c = computeDotVerifiedCoverage(null, merged)
-    // 2 MVR rows + 2 self rows = 4; verified = 2
-    expect(c.totalCount).toBe(4)
-    expect(c.verifiedCount).toBe(2)
-    expect(c.percent).toBe(50)
+    expect(c.totalCount).toBe(2)
+    expect(c.verifiedCount).toBe(0)
+    expect(c.percent).toBe(0)
     expect(c.majorityVerified).toBe(false)
   })
 })

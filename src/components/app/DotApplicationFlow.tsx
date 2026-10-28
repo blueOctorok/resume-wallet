@@ -425,23 +425,6 @@ export default function DotApplicationFlow({
           }))
         }
 
-        const drivingRecord = dotData.drivingRecord
-        if (drivingRecord && (drivingRecord.violations?.length || drivingRecord.accidents?.length)) {
-          dotApp.setForm2Data((prev: Record<string, unknown>) => ({
-            ...prev,
-            accidents: drivingRecord.accidents?.map((acc: Record<string, unknown>) => ({
-              date: acc.date || '', nature: acc.description || '',
-              fatalities: acc.fatalities || '', injuries: acc.injuries || '', atFault: '',
-            })) || [],
-            hasNoAccidents: !drivingRecord.accidents?.length,
-            convictions: drivingRecord.violations?.map((viol: Record<string, unknown>) => ({
-              dateConvicted: viol.date || '', violation: viol.violation || '',
-              stateOfViolation: viol.location || '', penalty: viol.fine || '',
-            })) || [],
-            hasNoConvictions: !drivingRecord.violations?.length,
-          }))
-        }
-
         dotApp.setProfileDataLoaded(true)
         dotApp.setProfileSource(profile.lastUpdatedFrom || 'profile')
         dotApp.setShowPrefillUpload(false)

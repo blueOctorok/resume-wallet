@@ -2,10 +2,11 @@
 
 import { CheckCircle, Clock, ShieldCheck, PenLine, EyeOff } from 'lucide-react'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
-import type {
-  DotFieldPath,
-  Form1WithProvenance,
-  Form2WithProvenance,
+import {
+  omitScreeningHistoryFromForm2,
+  type DotFieldPath,
+  type Form1WithProvenance,
+  type Form2WithProvenance,
 } from '@/lib/dot-field-provenance'
 import { computeDotVerifiedCoverage } from '@/lib/dot-verified-coverage'
 import { orderHistoryEntries } from '@/lib/history-entry-order'
@@ -196,6 +197,8 @@ export default function DotAppPreviewContent({
   const isDark = false
   const f1 = data.form1
   const f2 = data.form2
+    ? (omitScreeningHistoryFromForm2(data.form2) as NonNullable<DotAppPreviewData['form2']>)
+    : data.form2
   const f3 = data.form3
   // Provenance types are a superset view of the same JSON; TS wants the hop via unknown.
   const form1Prov = f1 as unknown as Form1WithProvenance | null
@@ -418,21 +421,8 @@ export default function DotAppPreviewContent({
 
           <DotSection title='Accident History (Past 5 Years)'>
             {f2.hasNoAccidents || !f2.accidents?.length ? (
-              <p
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-xl border px-4 py-3 text-sm',
-                  form2Prov?._rowProvenance && f2.hasNoAccidents
-                    ? 'border-emerald-200 bg-white text-emerald-900'
-                    : 'border-ironside/20 bg-white text-[#5c6166]',
-                )}
-              >
-                {form2Prov?._rowProvenance && f2.hasNoAccidents ? (
-                  <>
-                    <ShieldCheck className='h-3.5 w-3.5 shrink-0' /> No accidents (MVR)
-                  </>
-                ) : (
-                  'No accidents reported'
-                )}
+              <p className='rounded-xl border border-ironside/20 bg-white px-4 py-3 text-sm text-[#5c6166]'>
+                No accidents reported
               </p>
             ) : (
               <CardStack>
@@ -509,21 +499,8 @@ export default function DotAppPreviewContent({
 
           <DotSection title='Traffic Convictions (Past 3 Years)'>
             {f2.hasNoConvictions || !f2.convictions?.length ? (
-              <p
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-xl border px-4 py-3 text-sm',
-                  form2Prov?._rowProvenance?.mvrResultId && f2.hasNoConvictions
-                    ? 'border-emerald-200 bg-white text-emerald-900'
-                    : 'border-ironside/20 bg-white text-[#5c6166]',
-                )}
-              >
-                {form2Prov?._rowProvenance?.mvrResultId && f2.hasNoConvictions ? (
-                  <>
-                    <ShieldCheck className='h-3.5 w-3.5 shrink-0' /> No convictions (MVR)
-                  </>
-                ) : (
-                  'No convictions reported'
-                )}
+              <p className='rounded-xl border border-ironside/20 bg-white px-4 py-3 text-sm text-[#5c6166]'>
+                No convictions reported
               </p>
             ) : (
               <CardStack>

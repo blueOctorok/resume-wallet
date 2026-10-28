@@ -10,7 +10,6 @@
  */
 
 import {
-  mvrFlagToYesNo,
   type UnifiedDriverProfile,
   type UnifiedEmployment,
   type UnifiedEducation,
@@ -384,23 +383,6 @@ export function profileToForm2(profile: UnifiedDriverProfile): Partial<DotForm2D
       { equipmentType: 'Straight Truck', yearsOfExperience: profile.drivingExperience.equipmentTypes.straightTruck.years.toString() },
       { equipmentType: 'Tractor-Trailer', yearsOfExperience: profile.drivingExperience.equipmentTypes.tractorTrailer.years.toString() },
     ].filter(exp => parseFloat(exp.yearsOfExperience) > 0) : [],
-    // Pre-fill accidents from MVR if available
-    accidents: profile.mvrAccidents.map(acc => ({
-      date: acc.date,
-      nature: acc.description,
-      fatalities: mvrFlagToYesNo(acc.fatalities),
-      injuries: mvrFlagToYesNo(acc.injuries),
-      atFault: mvrFlagToYesNo(acc.atFault),
-    })),
-    hasNoAccidents: profile.mvrAccidents.length === 0,
-    // Pre-fill convictions from MVR if available
-    convictions: profile.mvrViolations.map(viol => ({
-      dateConvicted: viol.date,
-      violation: viol.violation,
-      stateOfViolation: viol.state,
-      penalty: viol.fine ? `$${viol.fine}` : '',
-    })),
-    hasNoConvictions: profile.mvrViolations.length === 0,
   }
 }
 

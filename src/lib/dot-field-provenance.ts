@@ -5,112 +5,20 @@
  * not merely copied into application_data and disabled in the UI.
  *
  * Form 1: hard-lock identity/license scalar paths.
- * Form 2: MVR accident/conviction rows lock against edit/delete; driver may append
- * self-certified rows (391.21 must not block additional disclosures).
- * At-fault, fatalities, injuries, and spills stay open when the record did not
- * state them. Conviction state and penalty stay open when that violation block
- * did not include them. A later re-projection keeps those driver answers.
+ * Form 2 accident and conviction rows are the driver's own disclosure.
+ * A driving record or PSP crash is not copied onto those rows. Personal info
+ * stays on Form 1. Re-projection removes report rows that were copied earlier
+ * and leaves the driver's own rows.
  *
  * Honesty: only issuer-backed paths get source:'mvr'. Self-reported fields stay open.
  */
 
 import type { Form2AccidentRow, Form2ConvictionRow } from '@/lib/mvr-to-form2-mapper'
 
-function isYesNo(value: string | undefined): value is 'yes' | 'no' {
-  return value === 'yes' || value === 'no'
-}
-
-/**
- * State MVRs omit fault, fatalities, injuries, and spills. PSP sometimes has
- * the counts and never has fault. A blank incoming field is the driver's
- * answer, and a later re-projection has to keep it. A value the report
- * itself stated replaces that answer and stays locked.
- */
-function carryBlankDriverAnswer(
-  incoming: string | undefined,
-  prior: string | undefined,
-  priorFromRecord: boolean | undefined,
-  accept: (value: string) => boolean,
-): { value: string; fromRecord: boolean } {
-  const next = (incoming ?? '').trim()
-  if (next && accept(next)) return { value: next, fromRecord: true }
-  const kept = (prior ?? '').trim()
-  if (kept && priorFromRecord !== true && accept(kept)) return { value: kept, fromRecord: false }
-  return { value: '', fromRecord: false }
-}
-
-function anyNonEmpty(value: string): boolean {
-  return value.trim().length > 0
-}
-
-function carryDriverAccidentAnswers(
-  previous: Form2AccidentRow[],
-  incoming: Form2AccidentRow[],
-): Form2AccidentRow[] {
-  return incoming.map((row) => {
-    const prior = previous.find((existing) => {
-      if (row._mvrKey && existing._mvrKey === row._mvrKey) return true
-      if (row._pspKey && existing._pspKey === row._pspKey) return true
-      return false
-    })
-    const atFault = carryBlankDriverAnswer(row.atFault, prior?.atFault, prior?._faultFromRecord, isYesNo)
-    const fatalities = carryBlankDriverAnswer(
-      row.fatalities,
-      prior?.fatalities,
-      prior?._fatalitiesFromRecord,
-      anyNonEmpty,
-    )
-    const injuries = carryBlankDriverAnswer(
-      row.injuries,
-      prior?.injuries,
-      prior?._injuriesFromRecord,
-      anyNonEmpty,
-    )
-    const spills = carryBlankDriverAnswer(
-      row.chemicalSpills,
-      prior?.chemicalSpills,
-      prior?._spillsFromRecord,
-      anyNonEmpty,
-    )
-    return {
-      ...row,
-      atFault: atFault.value,
-      _faultFromRecord: atFault.fromRecord,
-      fatalities: fatalities.value,
-      _fatalitiesFromRecord: fatalities.fromRecord,
-      injuries: injuries.value,
-      _injuriesFromRecord: injuries.fromRecord,
-      chemicalSpills: spills.value,
-      _spillsFromRecord: spills.fromRecord,
-    }
-  })
-}
-
-/** A state or penalty the violation itself omitted stays the driver's answer. */
-function carryDriverConvictionAnswers(
-  previous: Form2ConvictionRow[],
-  incoming: Form2ConvictionRow[],
-): Form2ConvictionRow[] {
-  return incoming.map((row) => {
-    const prior = previous.find((existing) => row._mvrKey && existing._mvrKey === row._mvrKey)
-    const stateFromRecord = row._stateFromRecord === true
-    const driverState =
-      !stateFromRecord && prior && prior._stateFromRecord !== true
-        ? (prior.stateOfViolation ?? '').trim()
-        : ''
-    const penaltyFromRecord = row._penaltyFromRecord === true
-    const driverPenalty =
-      !penaltyFromRecord && prior && prior._penaltyFromRecord !== true
-        ? (prior.penalty ?? '').trim()
-        : ''
-    return {
-      ...row,
-      stateOfViolation: stateFromRecord ? row.stateOfViolation : driverState || row.stateOfViolation,
-      _stateFromRecord: stateFromRecord,
-      penalty: penaltyFromRecord ? row.penalty : driverPenalty || row.penalty,
-      _penaltyFromRecord: penaltyFromRecord,
-    }
-  })
+/** Removing a report row must not check "none" for the driver. */
+function driverSaidNone(keptCount: number, removedReportRows: boolean, previous: unknown): boolean {
+  if (keptCount > 0 || removedReportRows) return false
+  return previous === true
 }
 
 export type DotFieldPath =
@@ -370,15 +278,14 @@ export function mergeMvrPrefillIntoForm1(
 }
 
 /**
- * Merge MVR accident/conviction rows into Form 2.
- * - Replaces all prior `_source:'mvr'` rows with the fresh MVR projection
- * - Keeps `_source:'psp'` and `_source:'self'` (or untagged legacy) rows
- * - Even identical values get re-stamped so badges appear (late-MVR path)
+ * Form 2 keeps the driver's accident and conviction rows.
+ * Accidents, crashes, and convictions from an MVR or PSP are not written here.
+ * Personal info from the MVR stays on Form 1. Report rows copied earlier are removed.
  */
 export function mergeMvrRowsIntoForm2(
   existing: Record<string, unknown> | null | undefined,
-  mvrAccidents: Form2AccidentRow[],
-  mvrConvictions: Form2ConvictionRow[],
+  _mvrAccidents: Form2AccidentRow[],
+  _mvrConvictions: Form2ConvictionRow[],
   meta: {
     mvrResultId: string
     orderId?: string | null
@@ -386,6 +293,8 @@ export function mergeMvrRowsIntoForm2(
     asOf: string
   },
 ): Form2WithProvenance {
+  void _mvrAccidents
+  void _mvrConvictions
   const base: Record<string, unknown> = existing ? { ...existing } : {}
   const prevProv = (base._rowProvenance as DotForm2RowProvenance | undefined) ?? null
 
@@ -396,32 +305,21 @@ export function mergeMvrRowsIntoForm2(
     ? (base.convictions as Form2ConvictionRow[])
     : []
 
-  // Keep PSP + self-certified rows (driver disclosures / FMCSA crashes)
-  const keepAccidents = existingAccidents
-    .filter((row) => {
-      if (row._source === 'mvr') return false
-      return Boolean(row.date?.trim() || row.nature?.trim())
-    })
-    .map((row) =>
-      row._source === 'psp' ? row : { ...row, _source: 'self' as const },
-    )
+  const removedReportAccidents = existingAccidents.some((row) => row._source === 'mvr' || row._source === 'psp')
+  const removedReportConvictions = existingConvictions.some((row) => row._source === 'mvr')
 
-  const keepConvictions = existingConvictions
-    .filter((row) => {
-      if (row._source === 'mvr') return false
-      return Boolean(row.dateConvicted?.trim() || row.violation?.trim())
-    })
-    .map((row) =>
-      row._source === 'psp' ? row : { ...row, _source: 'self' as const },
-    )
+  const accidents = existingAccidents
+    .filter((row) => row._source !== 'mvr' && row._source !== 'psp')
+    .filter((row) => Boolean(row.date?.trim() || row.nature?.trim()))
+    .map((row) => ({ ...row, _source: 'self' as const }))
 
-  const priorMvrAccidents = existingAccidents.filter((row) => row._source === 'mvr')
-  const accidents = [...carryDriverAccidentAnswers(priorMvrAccidents, mvrAccidents), ...keepAccidents]
-  const priorMvrConvictions = existingConvictions.filter((row) => row._source === 'mvr')
-  const convictions = [...carryDriverConvictionAnswers(priorMvrConvictions, mvrConvictions), ...keepConvictions]
+  const convictions = existingConvictions
+    .filter((row) => row._source !== 'mvr')
+    .filter((row) => Boolean(row.dateConvicted?.trim() || row.violation?.trim()))
+    .map((row) => ({ ...row, _source: 'self' as const }))
 
-  const hasNoAccidents = accidents.length === 0
-  const hasNoConvictions = convictions.length === 0
+  const hasNoAccidents = driverSaidNone(accidents.length, removedReportAccidents, base.hasNoAccidents)
+  const hasNoConvictions = driverSaidNone(convictions.length, removedReportConvictions, base.hasNoConvictions)
 
   const rowProvenance: DotForm2RowProvenance = {
     version: 1,
@@ -429,8 +327,8 @@ export function mergeMvrRowsIntoForm2(
     orderId: meta.orderId ?? null,
     accioOrderNumber: meta.accioOrderNumber ?? null,
     asOf: meta.asOf,
-    mvrAccidentCount: mvrAccidents.length,
-    mvrConvictionCount: mvrConvictions.length,
+    mvrAccidentCount: 0,
+    mvrConvictionCount: 0,
     // Preserve any prior PSP stamp
     pspResultId: prevProv?.pspResultId ?? null,
     pspOrderId: prevProv?.pspOrderId ?? null,
@@ -475,10 +373,8 @@ export function mergeMvrRowsIntoForm2(
 }
 
 /**
- * Merge PSP crash/inspection rows into Form 2.
- * - Crashes replace prior `_source:'psp'` accident rows; keep MVR + self
- * - Inspections array is fully replaced with PSP projection (self appends kept)
- * - Preserves MVR provenance fields on `_rowProvenance`
+ * PSP inspections can still land on Form 2. Crashes do not.
+ * Accident rows copied from a PSP or MVR report are removed. The driver lists those himself.
  */
 export function mergePspRowsIntoForm2(
   existing: Record<string, unknown> | null | undefined,
@@ -501,14 +397,15 @@ export function mergePspRowsIntoForm2(
     ? (base.inspections as import('@/lib/psp-to-form2-mapper').Form2InspectionRow[])
     : []
 
-  const keepAccidents = existingAccidents
-    .filter((row) => {
-      if (row._source === 'psp') return false
-      return Boolean(row.date?.trim() || row.nature?.trim())
-    })
-    .map((row) =>
-      row._source === 'mvr' ? row : { ...row, _source: 'self' as const },
-    )
+  void pspCrashesAsAccidents
+
+  const removedReportAccidents = existingAccidents.some(
+    (row) => row._source === 'mvr' || row._source === 'psp',
+  )
+  const accidents = existingAccidents
+    .filter((row) => row._source !== 'mvr' && row._source !== 'psp')
+    .filter((row) => Boolean(row.date?.trim() || row.nature?.trim()))
+    .map((row) => ({ ...row, _source: 'self' as const }))
 
   const keepInspections = existingInspections
     .filter((row) => {
@@ -517,18 +414,8 @@ export function mergePspRowsIntoForm2(
     })
     .map((row) => ({ ...row, _source: 'self' as const }))
 
-  // Order: MVR crashes, PSP crashes, self disclosures
-  const mvrAcc = keepAccidents.filter((r) => r._source === 'mvr')
-  const selfAcc = keepAccidents.filter((r) => r._source !== 'mvr')
-  const priorPspAccidents = existingAccidents.filter((row) => row._source === 'psp')
-  const orderedAccidents = [
-    ...mvrAcc,
-    ...carryDriverAccidentAnswers(priorPspAccidents, pspCrashesAsAccidents),
-    ...selfAcc,
-  ]
   const inspections = [...pspInspections, ...keepInspections]
-
-  const hasNoAccidents = orderedAccidents.length === 0
+  const hasNoAccidents = driverSaidNone(accidents.length, removedReportAccidents, base.hasNoAccidents)
   const hasNoInspections = inspections.length === 0
 
   const rowProvenance: DotForm2RowProvenance = {
@@ -537,21 +424,21 @@ export function mergePspRowsIntoForm2(
     orderId: prevProv?.orderId ?? null,
     accioOrderNumber: prevProv?.accioOrderNumber ?? null,
     asOf: prevProv?.asOf ?? null,
-    mvrAccidentCount: prevProv?.mvrAccidentCount ?? 0,
+    mvrAccidentCount: 0,
     mvrConvictionCount: prevProv?.mvrConvictionCount ?? 0,
     pspResultId: meta.pspResultId,
     pspOrderId: meta.orderId ?? null,
     pspAccioOrderNumber: meta.accioOrderNumber ?? null,
     pspAsOf: meta.asOf,
-    pspCrashCount: pspCrashesAsAccidents.length,
+    pspCrashCount: 0,
     pspInspectionCount: pspInspections.length,
   }
 
   return {
     ...base,
     accidents:
-      orderedAccidents.length > 0
-        ? orderedAccidents
+      accidents.length > 0
+        ? accidents
         : [
             {
               date: '',
@@ -568,6 +455,21 @@ export function mergePspRowsIntoForm2(
     hasNoInspections,
     _rowProvenance: rowProvenance,
   }
+}
+
+/** Saved applications may still contain report rows. Readers drop them. */
+export function omitScreeningHistoryFromForm2(
+  form2: object | null | undefined,
+): Form2WithProvenance | null {
+  if (!form2) return null
+  const record = form2 as Record<string, unknown>
+  const prev = record._rowProvenance as DotForm2RowProvenance | undefined
+  return mergeMvrRowsIntoForm2(record, [], [], {
+    mvrResultId: prev?.mvrResultId ?? '',
+    orderId: prev?.orderId,
+    accioOrderNumber: prev?.accioOrderNumber,
+    asOf: prev?.asOf ?? new Date(0).toISOString(),
+  })
 }
 
 export function getLockedPaths(

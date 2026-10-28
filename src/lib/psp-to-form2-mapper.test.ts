@@ -41,7 +41,7 @@ describe('PSP → Form 2', () => {
     expect(mapped.inspections[0].violationSummary).toContain('Inoperative lamp')
   })
 
-  it('preserves MVR rows when merging PSP (and vice versa)', () => {
+  it('does not copy MVR or PSP crashes onto the accident list', () => {
     const withMvr = mergeMvrRowsIntoForm2(
       null,
       [
@@ -86,15 +86,15 @@ describe('PSP → Form 2', () => {
       },
     )
 
-    const sources = (withBoth.accidents ?? []).map((a) => a._source)
-    expect(sources).toContain('mvr')
-    expect(sources).toContain('psp')
+    const filled = (withBoth.accidents ?? []).filter((row) => row.date || row.nature)
+    expect(filled).toEqual([])
+    expect(withBoth.hasNoAccidents).toBe(false)
     expect(withBoth._rowProvenance?.mvrResultId).toBe('mvr-1')
     expect(withBoth._rowProvenance?.pspResultId).toBe('psp-1')
-    expect(withBoth._rowProvenance?.pspCrashCount).toBe(1)
+    expect(withBoth._rowProvenance?.pspCrashCount).toBe(0)
   })
 
-  it('keeps a driver at-fault answer on a PSP crash the report did not judge', () => {
+  it('removes a PSP crash already saved on the application', () => {
     const withAnswer = mergePspRowsIntoForm2(
       {
         accidents: [
@@ -129,8 +129,8 @@ describe('PSP → Form 2', () => {
         accioOrderNumber: 'PSP-1',
       },
     )
-    expect(withAnswer.accidents?.[0]?.atFault).toBe('yes')
-    expect(withAnswer.accidents?.[0]?._faultFromRecord).toBe(false)
+    expect(withAnswer.accidents?.some((row) => row.nature === 'PSP crash')).toBe(false)
+    expect(withAnswer.hasNoAccidents).toBe(false)
   })
 
   it('stamps clean PSP provenance with zero crashes/inspections', () => {
@@ -139,7 +139,7 @@ describe('PSP → Form 2', () => {
       asOf: '2026-07-12T00:00:00.000Z',
       accioOrderNumber: 'PSP-C',
     })
-    expect(clean.hasNoAccidents).toBe(true)
+    expect(clean.hasNoAccidents).toBe(false)
     expect(clean.hasNoInspections).toBe(true)
     expect(clean._rowProvenance?.pspCrashCount).toBe(0)
     expect(clean._rowProvenance?.pspInspectionCount).toBe(0)

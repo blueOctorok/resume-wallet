@@ -14,6 +14,7 @@ import type {
   Form1WithProvenance,
   Form2WithProvenance,
 } from '@/lib/dot-field-provenance'
+import { omitScreeningHistoryFromForm2 } from '@/lib/dot-field-provenance'
 import type {
   ProjectedCareerCard,
   CareerCardSection,
@@ -652,8 +653,9 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
     form2?: Form2WithProvenance
     form3?: Record<string, unknown>
   }
+  const form2 = omitScreeningHistoryFromForm2(appData.form2)
   const coverage = summarizeDotVerifiedCoverage(
-    computeDotVerifiedCoverage(appData.form1, appData.form2, appData.form3),
+    computeDotVerifiedCoverage(appData.form1, form2, appData.form3),
   )
 
   return {

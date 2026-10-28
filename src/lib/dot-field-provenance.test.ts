@@ -130,232 +130,67 @@ describe('dot-field-provenance', () => {
     expect(merged.positionAppliedFor).toBe('OTR')
   })
 
-  it('Form 2 late-MVR overwrites MVR rows and keeps self disclosures', () => {
-    const existing = {
-      accidents: [
-        {
-          date: '2020-01-01',
-          nature: 'Driver typed this',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: 'no',
-          _source: 'self' as const,
-        },
-        {
-          date: '2019-01-01',
-          nature: 'Stale MVR row',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: '',
-          _source: 'mvr' as const,
-        },
-      ],
-      convictions: [],
-    }
-    const mvrAccidents = [
-      {
-        date: '2021-06-15',
-        nature: 'Rear-end',
-        fatalities: '',
-        injuries: '',
-        chemicalSpills: '',
-        atFault: 'yes',
-        _source: 'mvr' as const,
-        _mvrKey: 'a:1',
-      },
-    ]
-    const merged = mergeMvrRowsIntoForm2(existing, mvrAccidents, [], {
-      mvrResultId: 'res-1',
-      accioOrderNumber: 'ACC-1',
-      asOf: '2026-07-01T00:00:00.000Z',
-    })
-    expect(merged.accidents).toHaveLength(2)
-    expect(merged.accidents?.[0]?._source).toBe('mvr')
-    expect(merged.accidents?.[0]?.nature).toBe('Rear-end')
-    expect(merged.accidents?.[1]?._source).toBe('self')
-    expect(merged.accidents?.[1]?.nature).toBe('Driver typed this')
-    expect(merged._rowProvenance?.mvrAccidentCount).toBe(1)
-    expect(merged.hasNoAccidents).toBe(false)
-  })
-
-  it('keeps a driver at-fault answer when the MVR does not state fault', () => {
-    const existing = {
-      accidents: [
-        {
-          date: '2024-03-01',
-          nature: 'Property damage',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: 'no',
-          _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
-        },
-      ],
-      convictions: [],
-    }
+  it('drops driving-record accidents and convictions and keeps what the driver typed', () => {
     const merged = mergeMvrRowsIntoForm2(
-      existing,
+      {
+        accidents: [
+          {
+            date: '2020-01-01',
+            nature: 'Driver typed this',
+            fatalities: '',
+            injuries: '',
+            chemicalSpills: '',
+            atFault: 'no',
+            _source: 'self' as const,
+          },
+          {
+            date: '2019-01-01',
+            nature: 'Stale MVR row',
+            fatalities: '',
+            injuries: '',
+            chemicalSpills: '',
+            atFault: '',
+            _source: 'mvr' as const,
+          },
+        ],
+        convictions: [
+          {
+            dateConvicted: '03/2024',
+            violation: 'SPEED',
+            stateOfViolation: 'OH',
+            penalty: '2 pts',
+            _source: 'mvr' as const,
+          },
+        ],
+        hasNoAccidents: false,
+      },
       [
         {
-          date: '2024-03-01',
-          nature: 'Property damage',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: '',
-          _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
-        },
-      ],
-      [],
-      {
-        mvrResultId: 'res-1',
-        asOf: '2026-10-28T00:00:00.000Z',
-      },
-    )
-    expect(merged.accidents?.[0]?.atFault).toBe('no')
-    expect(merged.accidents?.[0]?._faultFromRecord).toBe(false)
-  })
-
-  it('keeps fault when the driving record itself states it', () => {
-    const existing = {
-      accidents: [
-        {
-          date: '2024-03-01',
-          nature: 'Property damage',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: 'no',
-          _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
-        },
-      ],
-      convictions: [],
-    }
-    const merged = mergeMvrRowsIntoForm2(
-      existing,
-      [
-        {
-          date: '2024-03-01',
-          nature: 'Property damage',
+          date: '2021-06-15',
+          nature: 'Rear-end',
           fatalities: '',
           injuries: '',
           chemicalSpills: '',
           atFault: 'yes',
           _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
+          _mvrKey: 'a:1',
         },
       ],
       [],
       {
         mvrResultId: 'res-1',
-        asOf: '2026-10-28T00:00:00.000Z',
+        accioOrderNumber: 'ACC-1',
+        asOf: '2026-07-01T00:00:00.000Z',
       },
     )
-    expect(merged.accidents?.[0]?.atFault).toBe('yes')
-    expect(merged.accidents?.[0]?._faultFromRecord).toBe(true)
-  })
-
-  it('keeps driver harm answers the driving record never stated', () => {
-    const existing = {
-      accidents: [
-        {
-          date: '2024-03-01',
-          nature: 'Property damage',
-          fatalities: '0',
-          injuries: '1',
-          chemicalSpills: 'no',
-          atFault: 'no',
-          _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
-        },
-      ],
-      convictions: [
-        {
-          dateConvicted: '03/2024',
-          violation: 'SPEED',
-          stateOfViolation: 'PA',
-          penalty: 'Fine $150',
-          _source: 'mvr' as const,
-          _mvrKey: 'v:20240301::SPEED:0',
-        },
-      ],
-    }
-    const merged = mergeMvrRowsIntoForm2(
-      existing,
-      [
-        {
-          date: '2024-03-01',
-          nature: 'Property damage',
-          fatalities: '',
-          injuries: '',
-          chemicalSpills: '',
-          atFault: '',
-          _source: 'mvr' as const,
-          _mvrKey: 'a:20240301:PROPERTY:0',
-        },
-      ],
-      [
-        {
-          dateConvicted: '03/2024',
-          violation: 'SPEED',
-          stateOfViolation: 'OH',
-          penalty: '',
-          _stateFromRecord: false,
-          _penaltyFromRecord: false,
-          _source: 'mvr' as const,
-          _mvrKey: 'v:20240301::SPEED:0',
-        },
-      ],
-      { mvrResultId: 'res-1', asOf: '2026-10-28T00:00:00.000Z' },
-    )
-    expect(merged.accidents?.[0]?.fatalities).toBe('0')
-    expect(merged.accidents?.[0]?.injuries).toBe('1')
-    expect(merged.accidents?.[0]?.chemicalSpills).toBe('no')
-    expect(merged.accidents?.[0]?._fatalitiesFromRecord).toBe(false)
-    expect(merged.convictions?.[0]?.stateOfViolation).toBe('PA')
-    expect(merged.convictions?.[0]?._stateFromRecord).toBe(false)
-    expect(merged.convictions?.[0]?.penalty).toBe('Fine $150')
-    expect(merged.convictions?.[0]?._penaltyFromRecord).toBe(false)
-  })
-
-  it('keeps a conviction state the violation itself named', () => {
-    const merged = mergeMvrRowsIntoForm2(
-      {
-        accidents: [],
-        convictions: [
-          {
-            dateConvicted: '03/2024',
-            violation: 'SPEED',
-            stateOfViolation: 'PA',
-            penalty: 'Fine $150',
-            _source: 'mvr' as const,
-            _mvrKey: 'v:1',
-          },
-        ],
-      },
-      [],
-      [
-        {
-          dateConvicted: '03/2024',
-          violation: 'SPEED',
-          stateOfViolation: 'OH',
-          penalty: '2 pts',
-          _stateFromRecord: true,
-          _penaltyFromRecord: true,
-          _source: 'mvr' as const,
-          _mvrKey: 'v:1',
-        },
-      ],
-      { mvrResultId: 'res-1', asOf: '2026-10-28T00:00:00.000Z' },
-    )
-    expect(merged.convictions?.[0]?.stateOfViolation).toBe('OH')
-    expect(merged.convictions?.[0]?._stateFromRecord).toBe(true)
-    expect(merged.convictions?.[0]?.penalty).toBe('2 pts')
-    expect(merged.convictions?.[0]?._penaltyFromRecord).toBe(true)
+    expect(merged.accidents).toEqual([
+      expect.objectContaining({ nature: 'Driver typed this', _source: 'self' }),
+    ])
+    expect(merged.convictions?.[0]?.violation).toBe('')
+    expect(merged.convictions?.[0]?._source).toBe('self')
+    expect(merged.hasNoAccidents).toBe(false)
+    expect(merged.hasNoConvictions).toBe(false)
+    expect(merged._rowProvenance?.mvrAccidentCount).toBe(0)
+    expect(merged._rowProvenance?.mvrConvictionCount).toBe(0)
   })
 })
