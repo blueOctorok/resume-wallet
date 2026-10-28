@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume sheet lifts off the preview** (2026-10-27)
+
+The on-screen resume has a deeper shadow so the page sits above the modal. Job dates are one step darker. The PDF has the darker dates and no shadow.
+
+| File | Change |
+|---|---|
+| `src/components/resume/DriverResumeDocument.tsx` | Shadow on the sheet. Dates use stone-600. |
+| `src/components/ResumePreviewModal.tsx` | Deeper mat and more padding so the shadow reads around the page. |
+| `src/lib/driver-resume-packet-pdf.ts` | Date ink matches the screen. |
+
+---
+
+## **Resume sheet is cotton paper** (2026-10-27)
+
+The resume page uses a light cotton-fiber ground, with a Midnight rule and the Provven wordmark at the top. The fiber is faint so the type stays first. The download tiles the same paper. The slow shading in the source photo is flattened so the repeat doesn't show as blocks.
+
+| File | Change |
+|---|---|
+| `public/brand/resume-paper.png` | Repeatable cotton tile. |
+| `src/components/resume/DriverResumeDocument.tsx` | Paper texture, letterhead rule, wordmark. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same tile, rule, and wordmark on every page. |
+
+---
+
 ## **Resume dividers use the brand diamond** (2026-10-27)
 
 The rules under Experience and after the jobs keep the diamond, in grey. Proofs no longer use that bar. Each proof starts at the left with the Provven mark beside it, and the next proof sits to its right. A Midnight proof is always the leftmost.

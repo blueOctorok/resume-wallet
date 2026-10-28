@@ -316,7 +316,7 @@ export default function ResumePreviewModal({
           className={`flex-1 overflow-y-auto ${
             packet
               ? // Always light “desk” under the paper page (Quiet Ink must not darken it)
-                'resume-packet-mat bg-stone-100 p-4 sm:p-6'
+                'resume-packet-mat bg-stone-200 p-5 sm:p-8'
               : 'p-6'
           }`}
         >

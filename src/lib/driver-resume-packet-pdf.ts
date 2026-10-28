@@ -10,9 +10,9 @@ const MARGIN = 18
 const QR_TOP = 22
 const QR_FOOTER = 18
 
-async function provvenMarkDataUrl(): Promise<string | null> {
+async function publicPngDataUrl(path: string): Promise<string | null> {
   try {
-    const response = await fetch('/brand/provven-mark.png')
+    const response = await fetch(path)
     if (!response.ok) return null
     const bytes = new Uint8Array(await response.arrayBuffer())
     let binary = ''
@@ -54,18 +54,38 @@ export async function generateDriverResumePacketPDF(
   const stoneDot: [number, number, number] = [168, 162, 158]
   const rule: [number, number, number] = [214, 211, 209]
 
-  const [qrTop, provvenMark] = await Promise.all([
+  const [qrTop, provvenMark, paper] = await Promise.all([
     qrPngDataUrl(packet.verifyUrl, 128),
-    provvenMarkDataUrl(),
+    publicPngDataUrl('/brand/provven-mark.png'),
+    publicPngDataUrl('/brand/resume-paper.png?v=2'),
   ])
   const qrFoot = qrTop // same URL
 
   const checkPage = (need: number) => {
     if (y + need > pageHeight - MARGIN - 8) {
       pdf.addPage()
+      paintPage()
       y = MARGIN
     }
   }
+
+  const paintPage = () => {
+    pdf.setFillColor(246, 246, 246)
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+    if (paper) {
+      // Same cotton tile as the screen. Alias keeps one copy of the image in the file.
+      const tileW = 110
+      const tileH = tileW * (493 / 740)
+      for (let yy = 0; yy < pageHeight; yy += tileH) {
+        for (let xx = 0; xx < pageWidth; xx += tileW) {
+          pdf.addImage(paper, 'PNG', xx, yy, tileW + 0.4, tileH + 0.4, 'resume-paper', 'FAST')
+        }
+      }
+    }
+    pdf.setFillColor(23, 49, 80)
+    pdf.rect(0, 0, pageWidth, 2.2, 'F')
+  }
+  paintPage()
 
   const drawDiamondRule = (yLine: number, ink: [number, number, number]) => {
     const midX = pageWidth / 2
@@ -102,6 +122,15 @@ export async function generateDriverResumePacketPDF(
     drawDiamondRule(y, [168, 162, 158])
     y += 5
   }
+
+  // Letterhead: mark + word, then the driver's name.
+  const letterY = 11
+  if (provvenMark) pdf.addImage(provvenMark, 'PNG', MARGIN, letterY, 4, 4.3)
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(8)
+  pdf.setTextColor(23, 49, 80)
+  pdf.text('PROVVEN', MARGIN + (provvenMark ? 5.4 : 0), letterY + 3.1)
+  y = letterY + 9
 
   // === HEADER ===
   pdf.setFont('times', 'bold')
@@ -278,7 +307,7 @@ export async function generateDriverResumePacketPDF(
       if (row.dateRange) {
         pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(9)
-        pdf.setTextColor(...textMuted)
+        pdf.setTextColor(...textMid)
         pdf.text(row.dateRange, pageWidth - MARGIN, y, { align: 'right' })
       }
       y += titleLines.length * 4.5 + 1

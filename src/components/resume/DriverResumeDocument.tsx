@@ -13,6 +13,10 @@ import { Check, Copy, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DriverResumePacket, DriverResumeProofChip } from '@/lib/driver-resume-packet'
 import { PROVVEN_QR_OPTS } from '@/lib/provven-qr'
+import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
+
+/** Fallback under the cotton tile. Matches the texture's average so a slow load doesn't flash ivory. */
+const RESUME_PAPER = '#f6f6f6'
 
 function DiamondRule({ ink = '#a8a29e', className }: { ink?: string; className?: string }) {
   return (
@@ -53,7 +57,8 @@ function QrBlock({
   return (
     <div className='flex flex-col items-center gap-1'>
       <div
-        className={`relative ${sizeClass} flex items-center justify-center border border-stone-900 bg-white p-0.5`}
+        className={`relative ${sizeClass} flex items-center justify-center border border-stone-900 p-0.5`}
+        style={{ backgroundColor: '#ffffff' }}
       >
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- data URL from qrcode
@@ -63,7 +68,7 @@ function QrBlock({
         )}
         {dataUrl ? (
           <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
-            <div className='flex h-[32%] w-[32%] items-center justify-center rounded-sm bg-white'>
+            <div className='flex h-[32%] w-[32%] items-center justify-center rounded-sm' style={{ backgroundColor: '#ffffff' }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- brand mark over QR */}
               <img src='/brand/provven-mark.svg' alt='' className='h-[78%] w-[78%]' />
             </div>
@@ -226,14 +231,19 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
 
   return (
     <article
-      className='resume-packet-paper mx-auto max-w-[640px] bg-white px-8 py-9 text-stone-900 shadow-sm ring-1 ring-stone-200 sm:px-10'
+      className='resume-packet-paper relative mx-auto max-w-[640px] overflow-hidden text-stone-900 shadow-[0_4px_16px_rgba(23,49,80,0.16),0_14px_36px_-6px_rgba(23,49,80,0.32)] ring-1 ring-stone-300'
       style={{
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-        // Inline lock: Quiet Ink remaps Tailwind `.bg-white` → zinc via globals.css
-        backgroundColor: '#ffffff',
+        backgroundColor: RESUME_PAPER,
+        backgroundImage: 'url(/brand/resume-paper.png?v=2)',
+        backgroundRepeat: 'repeat',
+        backgroundSize: '740px 493px',
         color: '#1c1917',
       }}
     >
+      <div className='h-1 bg-[#173150]' aria-hidden />
+      <div className='px-8 py-7 sm:px-10'>
+      <ProvvenWordmark tone='auto' className='mb-5 text-[11px]' />
       {/* Header: name + contact | QR (print/phone secondary) */}
       <header className='flex items-start justify-between gap-6'>
         <div className='min-w-0 flex-1'>
@@ -290,7 +300,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
                 <div className='flex items-baseline justify-between gap-4'>
                   <p className='text-[13px] font-semibold text-stone-900'>{row.titleLine}</p>
                   {row.dateRange ? (
-                    <p className='shrink-0 text-[12px] text-stone-500'>{row.dateRange}</p>
+                    <p className='shrink-0 text-[12px] text-stone-600'>{row.dateRange}</p>
                   ) : null}
                 </div>
                 {row.bullets.length > 0 ? (
@@ -335,6 +345,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
         </div>
         </div>
       </footer>
+      </div>
     </article>
   )
 }
