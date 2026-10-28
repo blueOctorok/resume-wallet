@@ -94,6 +94,45 @@ describe('PSP → Form 2', () => {
     expect(withBoth._rowProvenance?.pspCrashCount).toBe(1)
   })
 
+  it('keeps a driver at-fault answer on a PSP crash the report did not judge', () => {
+    const withAnswer = mergePspRowsIntoForm2(
+      {
+        accidents: [
+          {
+            date: '2021-06-15',
+            nature: 'PSP crash',
+            fatalities: '0',
+            injuries: '0',
+            chemicalSpills: '',
+            atFault: 'yes',
+            _source: 'psp',
+            _pspKey: 'c1',
+          },
+        ],
+      },
+      [
+        {
+          date: '2021-06-15',
+          nature: 'PSP crash',
+          fatalities: '0',
+          injuries: '0',
+          chemicalSpills: '',
+          atFault: '',
+          _source: 'psp',
+          _pspKey: 'c1',
+        },
+      ],
+      [],
+      {
+        pspResultId: 'psp-1',
+        asOf: '2026-10-28T00:00:00.000Z',
+        accioOrderNumber: 'PSP-1',
+      },
+    )
+    expect(withAnswer.accidents?.[0]?.atFault).toBe('yes')
+    expect(withAnswer.accidents?.[0]?._faultFromRecord).toBe(false)
+  })
+
   it('stamps clean PSP provenance with zero crashes/inspections', () => {
     const clean = mergePspRowsIntoForm2(null, [], [], {
       pspResultId: 'psp-clean',

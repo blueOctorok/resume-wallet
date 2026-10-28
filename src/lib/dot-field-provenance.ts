@@ -7,11 +7,111 @@
  * Form 1: hard-lock identity/license scalar paths.
  * Form 2: MVR accident/conviction rows lock against edit/delete; driver may append
  * self-certified rows (391.21 must not block additional disclosures).
+ * At-fault, fatalities, injuries, and spills stay open when the record did not
+ * state them. Conviction state and penalty stay open when that violation block
+ * did not include them. A later re-projection keeps those driver answers.
  *
  * Honesty: only issuer-backed paths get source:'mvr'. Self-reported fields stay open.
  */
 
 import type { Form2AccidentRow, Form2ConvictionRow } from '@/lib/mvr-to-form2-mapper'
+
+function isYesNo(value: string | undefined): value is 'yes' | 'no' {
+  return value === 'yes' || value === 'no'
+}
+
+/**
+ * State MVRs omit fault, fatalities, injuries, and spills. PSP sometimes has
+ * the counts and never has fault. A blank incoming field is the driver's
+ * answer, and a later re-projection has to keep it. A value the report
+ * itself stated replaces that answer and stays locked.
+ */
+function carryBlankDriverAnswer(
+  incoming: string | undefined,
+  prior: string | undefined,
+  priorFromRecord: boolean | undefined,
+  accept: (value: string) => boolean,
+): { value: string; fromRecord: boolean } {
+  const next = (incoming ?? '').trim()
+  if (next && accept(next)) return { value: next, fromRecord: true }
+  const kept = (prior ?? '').trim()
+  if (kept && priorFromRecord !== true && accept(kept)) return { value: kept, fromRecord: false }
+  return { value: '', fromRecord: false }
+}
+
+function anyNonEmpty(value: string): boolean {
+  return value.trim().length > 0
+}
+
+function carryDriverAccidentAnswers(
+  previous: Form2AccidentRow[],
+  incoming: Form2AccidentRow[],
+): Form2AccidentRow[] {
+  return incoming.map((row) => {
+    const prior = previous.find((existing) => {
+      if (row._mvrKey && existing._mvrKey === row._mvrKey) return true
+      if (row._pspKey && existing._pspKey === row._pspKey) return true
+      return false
+    })
+    const atFault = carryBlankDriverAnswer(row.atFault, prior?.atFault, prior?._faultFromRecord, isYesNo)
+    const fatalities = carryBlankDriverAnswer(
+      row.fatalities,
+      prior?.fatalities,
+      prior?._fatalitiesFromRecord,
+      anyNonEmpty,
+    )
+    const injuries = carryBlankDriverAnswer(
+      row.injuries,
+      prior?.injuries,
+      prior?._injuriesFromRecord,
+      anyNonEmpty,
+    )
+    const spills = carryBlankDriverAnswer(
+      row.chemicalSpills,
+      prior?.chemicalSpills,
+      prior?._spillsFromRecord,
+      anyNonEmpty,
+    )
+    return {
+      ...row,
+      atFault: atFault.value,
+      _faultFromRecord: atFault.fromRecord,
+      fatalities: fatalities.value,
+      _fatalitiesFromRecord: fatalities.fromRecord,
+      injuries: injuries.value,
+      _injuriesFromRecord: injuries.fromRecord,
+      chemicalSpills: spills.value,
+      _spillsFromRecord: spills.fromRecord,
+    }
+  })
+}
+
+/** A state or penalty the violation itself omitted stays the driver's answer. */
+function carryDriverConvictionAnswers(
+  previous: Form2ConvictionRow[],
+  incoming: Form2ConvictionRow[],
+): Form2ConvictionRow[] {
+  return incoming.map((row) => {
+    const prior = previous.find((existing) => row._mvrKey && existing._mvrKey === row._mvrKey)
+    const stateFromRecord = row._stateFromRecord === true
+    const driverState =
+      !stateFromRecord && prior && prior._stateFromRecord !== true
+        ? (prior.stateOfViolation ?? '').trim()
+        : ''
+    const penaltyFromRecord = row._penaltyFromRecord === true
+    const driverPenalty =
+      !penaltyFromRecord && prior && prior._penaltyFromRecord !== true
+        ? (prior.penalty ?? '').trim()
+        : ''
+    return {
+      ...row,
+      stateOfViolation: stateFromRecord ? row.stateOfViolation : driverState || row.stateOfViolation,
+      _stateFromRecord: stateFromRecord,
+      penalty: penaltyFromRecord ? row.penalty : driverPenalty || row.penalty,
+      _penaltyFromRecord: penaltyFromRecord,
+    }
+  })
+}
 
 export type DotFieldPath =
   | 'firstName'
@@ -315,8 +415,10 @@ export function mergeMvrRowsIntoForm2(
       row._source === 'psp' ? row : { ...row, _source: 'self' as const },
     )
 
-  const accidents = [...mvrAccidents, ...keepAccidents]
-  const convictions = [...mvrConvictions, ...keepConvictions]
+  const priorMvrAccidents = existingAccidents.filter((row) => row._source === 'mvr')
+  const accidents = [...carryDriverAccidentAnswers(priorMvrAccidents, mvrAccidents), ...keepAccidents]
+  const priorMvrConvictions = existingConvictions.filter((row) => row._source === 'mvr')
+  const convictions = [...carryDriverConvictionAnswers(priorMvrConvictions, mvrConvictions), ...keepConvictions]
 
   const hasNoAccidents = accidents.length === 0
   const hasNoConvictions = convictions.length === 0
@@ -418,7 +520,12 @@ export function mergePspRowsIntoForm2(
   // Order: MVR crashes, PSP crashes, self disclosures
   const mvrAcc = keepAccidents.filter((r) => r._source === 'mvr')
   const selfAcc = keepAccidents.filter((r) => r._source !== 'mvr')
-  const orderedAccidents = [...mvrAcc, ...pspCrashesAsAccidents, ...selfAcc]
+  const priorPspAccidents = existingAccidents.filter((row) => row._source === 'psp')
+  const orderedAccidents = [
+    ...mvrAcc,
+    ...carryDriverAccidentAnswers(priorPspAccidents, pspCrashesAsAccidents),
+    ...selfAcc,
+  ]
   const inspections = [...pspInspections, ...keepInspections]
 
   const hasNoAccidents = orderedAccidents.length === 0

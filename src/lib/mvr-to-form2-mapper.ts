@@ -13,6 +13,15 @@ export interface Form2AccidentRow {
   injuries: string
   chemicalSpills: string
   atFault: string
+  /**
+   * True only when the driving record itself stated fault.
+   * A blank record leaves this false so the driver can answer and still move on.
+   */
+  _faultFromRecord?: boolean
+  /** True when the report itself gave this count. A blank stays the driver's answer. */
+  _fatalitiesFromRecord?: boolean
+  _injuriesFromRecord?: boolean
+  _spillsFromRecord?: boolean
   _source?: 'mvr' | 'psp' | 'self'
   _mvrKey?: string
   _pspKey?: string
@@ -23,6 +32,10 @@ export interface Form2ConvictionRow {
   violation: string
   stateOfViolation: string
   penalty: string
+  /** True only when this violation block named a state. A license-state guess stays editable. */
+  _stateFromRecord?: boolean
+  /** True when the record included a penalty, such as points. */
+  _penaltyFromRecord?: boolean
   _source?: 'mvr' | 'psp' | 'self'
   _mvrKey?: string
 }
@@ -59,16 +72,24 @@ function faultToYesNo(fault: string | undefined): string {
   return ''
 }
 
+function violationStateCode(state: string | undefined): string {
+  const raw = (state || '').trim().toUpperCase()
+  return /^[A-Z]{2}$/.test(raw) ? raw : ''
+}
+
 /**
  * Accio often omits `<state>` on individual `<mvr_violation>` blocks.
  * Fall back to MVR DL state (`dlstate`), then subject address state.
  * Use `||` (not `??`) so empty strings from parsed JSON don't block fallbacks.
+ * That guess is not `_stateFromRecord` — the driver can still change the state.
  */
 function convictionState(v: Violation, mvr: ParsedMvrResult): string {
-  const candidates = [v.state, mvr.licenseState, mvr.subject?.state]
+  const fromViolation = violationStateCode(v.state)
+  if (fromViolation) return fromViolation
+  const candidates = [mvr.licenseState, mvr.subject?.state]
   for (const candidate of candidates) {
-    const raw = (candidate || '').trim().toUpperCase()
-    if (/^[A-Z]{2}$/.test(raw)) return raw
+    const code = violationStateCode(candidate)
+    if (code) return code
   }
   return ''
 }
@@ -105,6 +126,8 @@ export function mapMvrToForm2Rows(mvr: ParsedMvrResult): {
     violation: v.description || v.type || '',
     stateOfViolation: convictionState(v, mvr),
     penalty: v.points != null && v.points > 0 ? `${v.points} pts` : '',
+    _stateFromRecord: Boolean(violationStateCode(v.state)),
+    _penaltyFromRecord: v.points != null && v.points > 0,
     _source: 'mvr' as const,
     _mvrKey: violationKey(v, i),
   }))

@@ -4,6 +4,30 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT driver answers stay open on a locked MVR row** (2026-10-28)
+
+An MVR accident or conviction locks the facts the record stated. Fatalities, injuries, chemical spills, at-fault, and a conviction state or penalty the violation block left out stay editable. Saving the application keeps those answers. A value the report itself stated stays locked.
+
+| File | Change |
+|---|---|
+| `src/components/driver-application/PersonalInfoForm2.tsx` | Those answers stay enabled on an issuer row. |
+| `src/lib/dot-field-provenance.ts` | Re-projection keeps the driver's answers and lets a stated record value win. |
+| `src/lib/mvr-to-form2-mapper.ts` | Marks whether the violation itself named the state and the penalty. |
+
+---
+
+## **DOT at-fault stays open on an MVR accident** (2026-10-28)
+
+An accident copied from the driving record locked the whole row, including at-fault. State records usually do not say who was at fault, so the driver could not answer and could not leave the step. At-fault stays selectable unless the record itself stated it. Saving the application keeps that answer instead of blanking it on the next projection.
+
+| File | Change |
+|---|---|
+| `src/components/driver-application/PersonalInfoForm2.tsx` | At-fault radios stay enabled on a locked accident when the record did not state fault. |
+| `src/lib/dot-field-provenance.ts` | Re-projection keeps the driver's yes/no on that same accident. |
+| `src/lib/mvr-to-form2-mapper.ts` | `_faultFromRecord` marks a fault the record itself stated. |
+
+---
+
 ## **Employer proof uses Retro Teal** (2026-10-28)
 
 The employer proof on the resume and the PDF uses Retro Teal `#3F8A8C`, the same teal as the DKIM proof that replaces it.

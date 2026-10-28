@@ -51,6 +51,32 @@ const CFR391_OFFENSES = [
   { key: 'felony',            label: 'Any other felony involving the use of a commercial motor vehicle' },
 ]
 
+const OPEN_ANSWER_FLAG = {
+  atFault: '_faultFromRecord',
+  fatalities: '_fatalitiesFromRecord',
+  injuries: '_injuriesFromRecord',
+  chemicalSpills: '_spillsFromRecord',
+  stateOfViolation: '_stateFromRecord',
+  penalty: '_penaltyFromRecord',
+} as const
+
+/** One driver answer on a locked row, and only when the report did not state it. */
+function isOpenDriverAnswer(
+  field: string,
+  value: unknown,
+  row: object | undefined,
+): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const keys = Object.keys(value)
+  if (keys.length !== 1) return false
+  const key = keys[0]
+  const onAccident = field === 'accidents' && (key === 'atFault' || key === 'fatalities' || key === 'injuries' || key === 'chemicalSpills')
+  const onConviction = field === 'convictions' && (key === 'stateOfViolation' || key === 'penalty')
+  if (!onAccident && !onConviction) return false
+  const flag = OPEN_ANSWER_FLAG[key as keyof typeof OPEN_ANSWER_FLAG]
+  return (row as Record<string, unknown> | undefined)?.[flag] !== true
+}
+
 const STEPS = [
   {
     id: 1,
@@ -155,9 +181,13 @@ export default function PersonalInfoForm2({
         date: '',
         nature: '',
         fatalities: '',
+        _fatalitiesFromRecord: false,
         injuries: '',
+        _injuriesFromRecord: false,
         chemicalSpills: '',
+        _spillsFromRecord: false,
         atFault: '',
+        _faultFromRecord: false,
         _source: 'self' as 'mvr' | 'psp' | 'self',
         _mvrKey: undefined as string | undefined,
         _pspKey: undefined as string | undefined,
@@ -171,7 +201,9 @@ export default function PersonalInfoForm2({
         dateConvicted: '',
         violation: '',
         stateOfViolation: '',
+        _stateFromRecord: false,
         penalty: '',
+        _penaltyFromRecord: false,
         _source: 'self' as 'mvr' | 'psp' | 'self',
         _mvrKey: undefined as string | undefined,
       },
@@ -205,22 +237,15 @@ export default function PersonalInfoForm2({
 
   const handleInputChange = (field: string, value: any, index?: number) => {
     // P3.7 — block edits to issuer-sourced accident/conviction/inspection rows.
-    // Exception: Accio often omits violation state — allow filling empty stateOfViolation
-    // on an otherwise locked MVR conviction so the driver isn't stuck on Next.
+    // The record locks the facts it actually stated. Answers it left blank
+    // (fault, harm, spills, a missing conviction state or penalty) stay editable
+    // so the driver can fill them and still leave the step.
     if (
       index !== undefined &&
       (field === 'accidents' || field === 'convictions' || field === 'inspections') &&
       isIssuerRow(formData[field][index])
     ) {
-      const fillingEmptyConvictionState =
-        field === 'convictions' &&
-        typeof value === 'object' &&
-        value !== null &&
-        'stateOfViolation' in value &&
-        !String(
-          (formData.convictions ?? [])[index]?.stateOfViolation ?? '',
-        ).trim()
-      if (!fillingEmptyConvictionState) return
+      if (!isOpenDriverAnswer(field, value, formData[field][index])) return
     }
     if (field === 'hasNoAccidents' || field === 'hasNoConvictions' || field === 'hasNoInspections') {
       // Don't let "none" wipe issuer rows — server will re-project on save anyway
@@ -309,9 +334,9 @@ export default function PersonalInfoForm2({
       hasHydratedRef.current = false
       setFormData({
         drivingExperience: [{ equipmentType: '', yearsOfExperience: '' }],
-        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '', _source: 'self' as const, _mvrKey: undefined as string | undefined, _pspKey: undefined as string | undefined }],
+        accidents: [{ date: '', nature: '', fatalities: '', _fatalitiesFromRecord: false, injuries: '', _injuriesFromRecord: false, chemicalSpills: '', _spillsFromRecord: false, atFault: '', _faultFromRecord: false, _source: 'self' as const, _mvrKey: undefined as string | undefined, _pspKey: undefined as string | undefined }],
         hasNoAccidents: false,
-        convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', penalty: '', _source: 'self' as const, _mvrKey: undefined as string | undefined }],
+        convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', _stateFromRecord: false, penalty: '', _penaltyFromRecord: false, _source: 'self' as const, _mvrKey: undefined as string | undefined }],
         hasNoConvictions: false,
         inspections: [],
         hasNoInspections: false,
@@ -515,9 +540,13 @@ export default function PersonalInfoForm2({
           date: '',
           nature: '',
           fatalities: '',
+          _fatalitiesFromRecord: false,
           injuries: '',
+          _injuriesFromRecord: false,
           chemicalSpills: '',
+          _spillsFromRecord: false,
           atFault: '',
+          _faultFromRecord: false,
           _source: 'self' as const,
           _mvrKey: undefined as string | undefined,
           _pspKey: undefined as string | undefined,
@@ -544,7 +573,9 @@ export default function PersonalInfoForm2({
           dateConvicted: '',
           violation: '',
           stateOfViolation: '',
+          _stateFromRecord: false,
           penalty: '',
+          _penaltyFromRecord: false,
           _source: 'self' as const,
           _mvrKey: undefined as string | undefined,
         },
@@ -587,9 +618,13 @@ export default function PersonalInfoForm2({
               date: '2022-06-15',
               nature: 'Rear-end collision',
               fatalities: '0',
+              _fatalitiesFromRecord: false,
               injuries: '1',
+              _injuriesFromRecord: false,
               chemicalSpills: 'N',
+              _spillsFromRecord: false,
               atFault: 'no',
+              _faultFromRecord: false,
               _source: 'self' as const,
               _mvrKey: undefined as string | undefined,
               _pspKey: undefined as string | undefined,
@@ -605,7 +640,9 @@ export default function PersonalInfoForm2({
               dateConvicted: '03/2023',
               violation: 'Speeding - 15 mph over limit',
               stateOfViolation: 'OH',
+              _stateFromRecord: false,
               penalty: 'Fine $150, 2 points',
+              _penaltyFromRecord: false,
               _source: 'self' as const,
               _mvrKey: undefined as string | undefined,
             },
@@ -786,6 +823,11 @@ export default function PersonalInfoForm2({
         <div className='space-y-6'>
           {(formData.accidents ?? []).map((accident, index) => {
             const locked = isIssuerRow(accident)
+            // The record locks the crash itself. Counts and fault stay open unless that record stated them.
+            const atFaultLocked = Boolean(accident._faultFromRecord)
+            const fatalitiesLocked = Boolean(accident._fatalitiesFromRecord)
+            const injuriesLocked = Boolean(accident._injuriesFromRecord)
+            const spillsLocked = Boolean(accident._spillsFromRecord)
             const badgeText =
               accident._source === 'psp' || accident._source === 'mvr'
                 ? rowBadgeText(accident._source)
@@ -894,8 +936,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.fatalities}
-                    disabled={locked}
-                    readOnly={locked}
+                    disabled={fatalitiesLocked}
+                    readOnly={fatalitiesLocked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -907,7 +949,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${fatalitiesLocked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -919,8 +961,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.injuries}
-                    disabled={locked}
-                    readOnly={locked}
+                    disabled={injuriesLocked}
+                    readOnly={injuriesLocked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -932,7 +974,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${injuriesLocked ? lockedInputClass : ''}`}
                   />
                 </div>
                 <div className='flex flex-col'>
@@ -944,8 +986,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={accident.chemicalSpills}
-                    disabled={locked}
-                    readOnly={locked}
+                    disabled={spillsLocked}
+                    readOnly={spillsLocked}
                     onChange={(e) =>
                       handleInputChange(
                         'accidents',
@@ -957,7 +999,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${spillsLocked ? lockedInputClass : ''}`}
                   />
                 </div>
               </div>
@@ -976,7 +1018,7 @@ export default function PersonalInfoForm2({
                       name={`atFault-${index}`}
                       value='yes'
                       checked={accident.atFault === 'yes'}
-                      disabled={locked}
+                      disabled={atFaultLocked}
                       onChange={(e) =>
                         handleInputChange(
                           'accidents',
@@ -998,7 +1040,7 @@ export default function PersonalInfoForm2({
                       name={`atFault-${index}`}
                       value='no'
                       checked={accident.atFault === 'no'}
-                      disabled={locked}
+                      disabled={atFaultLocked}
                       onChange={(e) =>
                         handleInputChange(
                           'accidents',
@@ -1312,9 +1354,9 @@ export default function PersonalInfoForm2({
         <div className='space-y-6'>
           {(formData.convictions ?? []).map((conviction, index) => {
             const locked = isIssuerRow(conviction)
-            // Soft-unlock state when Accio/projection left it empty — other fields stay locked
-            const stateLocked =
-              locked && Boolean(String(conviction.stateOfViolation ?? '').trim())
+            // Lock state and penalty only when that violation block stated them.
+            const stateLocked = Boolean(conviction._stateFromRecord)
+            const penaltyLocked = Boolean(conviction._penaltyFromRecord)
             const badge = locked && conviction._source === 'mvr'
               ? rowBadgeEntry(`convictions.${index}`)
               : null
@@ -1438,8 +1480,8 @@ export default function PersonalInfoForm2({
                   <input
                     type='text'
                     value={conviction.penalty}
-                    disabled={locked}
-                    readOnly={locked}
+                    disabled={penaltyLocked}
+                    readOnly={penaltyLocked}
                     onChange={(e) =>
                       handleInputChange(
                         'convictions',
@@ -1452,7 +1494,7 @@ export default function PersonalInfoForm2({
                       isDarkTheme(theme)
                         ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
-                    } ${locked ? lockedInputClass : ''}`}
+                    } ${penaltyLocked ? lockedInputClass : ''}`}
                   />
                 </div>
               </div>
