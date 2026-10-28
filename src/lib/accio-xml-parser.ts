@@ -347,8 +347,8 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       filledCode = mvrSubOrder?.filledCode
     }
 
-    // Build result object — propagate held_for_* flags from the matched
-    // subOrder so deriveScreeningStatus can route held reports to needs_review.
+    // Build result object. held_for_review is recorded, but a filled code is
+    // still the outcome — Accio's hold only delays their postback.
     const result: ParsedMvrResult = {
       orderNumber,
       subOrderNumber,

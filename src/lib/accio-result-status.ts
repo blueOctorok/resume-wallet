@@ -103,11 +103,9 @@ export function deriveScreeningStatus(
     return { status: 'failed', outcome: 'unknown' }
   }
 
-  // Vendor flagged for human review — keep the order in needs_review even on
-  // a "clear" code so admin can adjudicate before it shows green to employers.
-  if (input.heldForReview) {
-    return { status: 'needs_review', outcome: outcomeFromCode(code) }
-  }
+  // Accio's held_for_review flag only means they have not posted the result yet.
+  // The report is already filled. A known code is the outcome for every driver.
+  // Unknown codes still fall through to needs_review below.
 
   if (FAILED_CODES.has(code)) {
     return { status: 'failed', outcome: null }

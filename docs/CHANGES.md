@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Filled MVRs are not held for Accio's postback** (2026-10-27)
+
+Accio filled Samuel Blaha's Ohio MVR in 4 seconds and set `held_for_review`, so the postback never arrived and the order stayed Processing. A filled report now keeps its real outcome (clear, hits, and the rest) instead of moving to needs review because of that flag. Right after an order is accepted, we ask Accio for the result twice. The backup job picks up anything still pending after 1 minute.
+
+| File | Change |
+|---|---|
+| `src/lib/accio-result-status.ts` | A held postback no longer overrides a filled outcome. |
+| `src/lib/reconcile-pending-screenings.ts` | Pull the filled result 4 seconds after place, then again. Backup wait is 1 minute. |
+| `src/lib/place-screening-order.ts` | Consent-bundle MVR and PSP orders use that pull. |
+| `src/app/api/mvr/order/route.ts` | Driver orders use that pull. |
+| `src/app/api/employer/mvr/order/route.ts` | Employer orders use that pull. |
+| `src/app/api/cron/reconcile-screenings/route.ts` | Backup wait is 1 minute. |
+
+---
+
 ## **Resume sheet lifts off the preview** (2026-10-27)
 
 The on-screen resume has a deeper shadow so the page sits above the modal. Job dates are one step darker. The PDF has the darker dates and no shadow.

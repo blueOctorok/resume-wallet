@@ -8,7 +8,7 @@ import {
 import { processMvrAccioWebhookCompletion } from '@/lib/process-mvr-accio-webhook'
 import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhook'
 
-const DEFAULT_STALE_MINUTES = 10
+const DEFAULT_STALE_MINUTES = 1
 
 /**
  * Accio's `getOrderResults` expects THEIR orderID (the short numeric one they
@@ -44,13 +44,14 @@ export interface ReconcileOptions {
   orderId?: string
   /** Filter by kind */
   kind?: 'mvr' | 'psp'
-  /** Only reconcile orders ordered_at < now() - staleMinutes. Default 10. */
+  /** Only reconcile orders ordered_at < now() - staleMinutes. Default 1. */
   staleMinutes?: number
 }
 
 /**
  * Ask Accio for current results and replay through the same processors as webhooks.
- * Fixes orders stuck at `pending` when Key has the report but postback never landed.
+ * Fixes orders stuck at `pending` when the report is filled but the postback
+ * is still held. Default wait is 1 minute so a slow state still lands quickly.
  */
 export async function reconcilePendingScreeningsForCompany(
   supabase: SupabaseClient,
@@ -249,5 +250,36 @@ async function reconcileOne(
       action: 'process_error',
       detail: msg,
     }
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Accio often fills an MVR in a few seconds, then holds the postback.
+ * Ask for the result directly so the order does not sit on Processing.
+ * Two tries, four seconds apart. A miss stays pending for the cron.
+ */
+export async function pullFilledScreeningRelease(
+  supabase: SupabaseClient,
+  kind: 'mvr' | 'psp',
+  row: {
+    id: string
+    accio_order_number: string | null
+    accio_remote_order_number: string | null
+  },
+): Promise<void> {
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await sleep(4000)
+      const result = await reconcileOne(supabase, kind, { ...row, status: 'pending' })
+      if (result.action === 'reconciled' || result.action === 'voided_by_vendor') return
+      if (result.action !== 'still_pending') {
+        console.warn('[SCREENING PULL]', kind, row.id, result.action, result.detail)
+        return
+      }
+    }
+  } catch (err) {
+    console.warn('[SCREENING PULL] non-fatal:', err)
   }
 }

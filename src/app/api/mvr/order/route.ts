@@ -11,6 +11,7 @@ import {
   releaseScreeningOrderReservation,
   reserveScreeningOrder,
 } from '@/lib/screening-order-reservation'
+import { pullFilledScreeningRelease } from '@/lib/reconcile-pending-screenings'
 
 /**
  * API Route: Order MVR from Accio
@@ -390,6 +391,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[MVR ORDER] Order created successfully:', mvrOrder.id)
+
+    await pullFilledScreeningRelease(supabaseService, 'mvr', {
+      id: mvrOrder.id,
+      accio_order_number: mvrOrder.accio_order_number,
+      accio_remote_order_number: accioOrderId || null,
+    })
 
     return NextResponse.json({
       success: true,

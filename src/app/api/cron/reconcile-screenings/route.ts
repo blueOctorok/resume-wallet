@@ -13,8 +13,10 @@ import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhoo
  * GET /api/cron/reconcile-screenings
  *
  * Vercel cron — runs every 5 minutes. Pulls Accio `getOrderResults` for any
- * pending MVR or PSP order older than 10 minutes and imports completed
- * results through the same processors webhooks use.
+ * pending MVR or PSP order older than 1 minute and imports filled results
+ * through the same processors webhooks use. Accio often fills in seconds and
+ * then holds the postback (`held_for_review`). The pull does not wait for
+ * that release.
  *
  * Why this exists:
  *   Accio webhooks are best-effort. We saw 22+ stuck MVR orders over 7 days
@@ -26,7 +28,7 @@ import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhoo
  * but we accept either to make manual testing easier).
  */
 
-const STALE_MINUTES = 10
+const STALE_MINUTES = 1
 const MAX_PER_RUN = 100 // cap Accio calls per cron tick
 
 export async function GET(request: NextRequest) {

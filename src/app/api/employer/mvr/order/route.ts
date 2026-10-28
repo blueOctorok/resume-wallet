@@ -14,6 +14,7 @@ import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/sc
 import { resolveScreeningPayment } from '@/lib/resolve-waived-screening-payment'
 import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
 import { resolveEmployerOrderDriverUserId } from '@/lib/resolve-candidate-by-email'
+import { pullFilledScreeningRelease } from '@/lib/reconcile-pending-screenings'
 
 /**
  * POST /api/employer/mvr/order
@@ -314,6 +315,12 @@ export async function POST(request: NextRequest) {
 
     // Status-only tile on the email owner's hub (full report stays company-private).
     await ensureHubBlockInstalled(supabase, hubUserId, 'driver-mvr')
+
+    await pullFilledScreeningRelease(supabase, 'mvr', {
+      id: mvrOrder.id,
+      accio_order_number: mvrOrder.accio_order_number,
+      accio_remote_order_number: accioOrderId,
+    })
 
     return NextResponse.json({
       success: true,

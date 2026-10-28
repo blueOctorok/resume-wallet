@@ -14,6 +14,15 @@ describe('deriveScreeningStatus — Accio filledCode mapping', () => {
     ).toEqual({ status: 'completed', outcome: 'hits' })
   })
 
+  it('does not park a filled report when Accio is still holding the postback', () => {
+    expect(
+      deriveScreeningStatus({ filledStatus: 'filled', filledCode: 'hits', heldForReview: true }),
+    ).toEqual({ status: 'completed', outcome: 'hits' })
+    expect(
+      deriveScreeningStatus({ filledStatus: 'filled', filledCode: 'clear', heldForReview: true }),
+    ).toEqual({ status: 'completed', outcome: 'clear' })
+  })
+
   it('maps filled + discrepancy to completed/discrepancy (Key MVR wording)', () => {
     expect(
       deriveScreeningStatus({ filledStatus: 'filled', filledCode: 'discrepancy' }),

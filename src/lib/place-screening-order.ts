@@ -20,6 +20,7 @@ import {
   resolveScreeningOrderOwnershipFields,
   type ScreeningOrderOwnership,
 } from '@/lib/screening-order-ownership'
+import { pullFilledScreeningRelease } from '@/lib/reconcile-pending-screenings'
 
 export type PlaceScreeningOrderSuccess =
   | { type: 'mvr'; orderId: string; orderNumber: string }
@@ -334,6 +335,11 @@ export async function placeScreeningOrder(
       accio_remote_suborder_number: ids.fmcsaSuborderId,
     })
     await ensureHubBlockInstalled(supabase, driverUserId, 'driver-psp')
+    await pullFilledScreeningRelease(supabase, 'psp', {
+      id: reservedOrderId,
+      accio_order_number: orderNumber,
+      accio_remote_order_number: ids.accioOrderId,
+    })
     if (input.candidateRequestIdToComplete) {
       await supabase
         .from('candidate_requests')
@@ -366,6 +372,11 @@ export async function placeScreeningOrder(
   })
 
   await ensureHubBlockInstalled(supabase, driverUserId, 'driver-mvr')
+  await pullFilledScreeningRelease(supabase, 'mvr', {
+    id: reservedOrderId,
+    accio_order_number: orderNumber,
+    accio_remote_order_number: accioOrderId,
+  })
 
   if (input.candidateRequestIdToComplete) {
     await supabase
