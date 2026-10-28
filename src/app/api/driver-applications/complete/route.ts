@@ -5,6 +5,8 @@ import { reprojectScreeningOntoApp } from '@/lib/reproject-screening-onto-app'
 import { completeDriverApplication } from '@/lib/driver-application-db'
 import { completeDotOutreachInvites } from '@/lib/complete-dot-outreach-invites'
 import { hashJson } from '@/lib/hash-utils'
+import { loadSignatureNameAnchor } from '@/lib/load-signature-name-anchor'
+import { signatureFieldError } from '@/lib/signature-name-check'
 
 /**
  * POST — final DOT application submit. Replaces the old `'use server'` submit
@@ -28,6 +30,17 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await getAdminSupabaseClient()
+    const anchor = await loadSignatureNameAnchor(supabase, userId)
+    const form3 = form3Data as { applicantSignature?: unknown; applicantNamePrinted?: unknown }
+    const signedName = typeof form3.applicantSignature === 'string' ? form3.applicantSignature : ''
+    const printedName = typeof form3.applicantNamePrinted === 'string' ? form3.applicantNamePrinted : ''
+    const nameError =
+      signatureFieldError(signedName, anchor, 'signature') ||
+      signatureFieldError(printedName, anchor, 'printed')
+    if (nameError) {
+      return NextResponse.json({ error: nameError }, { status: 400 })
+    }
+
     const applicationData = await reprojectScreeningOntoApp(supabase, userId, {
       form1: form1Data,
       form2: form2Data,

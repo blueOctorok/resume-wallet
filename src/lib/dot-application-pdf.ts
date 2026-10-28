@@ -474,7 +474,7 @@ export function generateDotApplicationPDF(
               { label: 'Safety-sensitive function', value: yesNo(emp.safetySensitiveFunction) },
               { label: 'Salary', value: emp.salary },
             ])
-            if (emp.duties) fieldRow([{ label: 'Duties', value: emp.duties }], 1)
+            if (emp.duties) fieldRow([{ label: 'Work description', value: emp.duties }], 1)
           } else {
             fieldRow([
               { label: 'Course of study', value: emp.courseOfStudy },

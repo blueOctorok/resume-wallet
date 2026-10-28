@@ -9,8 +9,13 @@
  * Form 3: Employment History (incl. CDL / school), Signature
  */
 
-import type { UnifiedDriverProfile, UnifiedEmployment, UnifiedEducation } from '@/types/driver-profile'
-import { mvrFlagToYesNo } from '@/types/driver-profile'
+import {
+  mvrFlagToYesNo,
+  type UnifiedDriverProfile,
+  type UnifiedEmployment,
+  type UnifiedEducation,
+} from '@/types/driver-profile'
+import { workDescriptionToBullets } from '@/lib/work-description'
 import { parseCertifications } from '@/lib/cdl-certifications'
 import { orderHistoryEntries } from '@/lib/history-entry-order'
 
@@ -425,7 +430,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       startDate: form3DateToProfileDate(emp.fromDate),
       endDate: form3DateToProfileDate(emp.toDate),
       isCurrent: emp.toDate?.toLowerCase() === 'present' || !emp.toDate,
-      responsibilities: [],
+      responsibilities: workDescriptionToBullets(emp.duties),
       equipment: [],
       reasonForLeaving: emp.reasonForLeaving,
       subjectToFMCSR: emp.subjectToFMCSR === 'yes',
@@ -484,6 +489,7 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
     phone: '',
     address: emp.location,
     positionHeld: emp.position,
+    duties: (emp.responsibilities ?? []).map((line) => line.trim()).filter(Boolean).join('\n'),
     fromDate: profileDateToForm3Date(emp.startDate, false),
     toDate: profileDateToForm3Date(emp.endDate, emp.isCurrent),
     reasonForLeaving: emp.reasonForLeaving || '',

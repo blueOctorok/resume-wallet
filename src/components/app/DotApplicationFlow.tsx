@@ -412,6 +412,7 @@ export default function DotApplicationFlow({
               email: emp.supervisorEmail || '',
               address: (emp.location as string) || '',
               positionHeld: emp.position || '',
+              duties: emp.duties || '',
               fromDate: emp.startDate || '',
               toDate: emp.endDate || 'Present',
               reasonForLeaving: emp.reasonForLeaving || '',

@@ -50,15 +50,17 @@ function fmt(d?: string): string | undefined {
 function DotField({
   label,
   value,
+  preserveBreaks = false,
 }: {
   label: string
   value?: string | null
+  preserveBreaks?: boolean
 }) {
   if (!value) return null
   return (
     <div className='min-w-0'>
       <p className='text-[11px] font-medium uppercase tracking-wide text-[#5c6166]'>{label}</p>
-      <p className='mt-0.5 break-words text-sm leading-snug text-[#173150]'>{value}</p>
+      <p className={`mt-0.5 break-words text-sm leading-snug text-[#173150] ${preserveBreaks ? 'whitespace-pre-wrap' : ''}`}>{value}</p>
     </div>
   )
 }
@@ -633,6 +635,11 @@ export default function DotAppPreviewContent({
                           value={emp.safetySensitiveFunction}
                         />
                       </FieldGrid>
+                      {emp.duties ? (
+                        <div className='mt-4'>
+                          <DotField label='Work description' value={emp.duties} preserveBreaks />
+                        </div>
+                      ) : null}
                     </div>
                     )
                   })}

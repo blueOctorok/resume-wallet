@@ -17,6 +17,7 @@ import type {
   UnifiedSkill,
 } from '@/types/driver-profile'
 import { mvrFlagToYesNo } from '@/types/driver-profile'
+import { workDescriptionToBullets } from '@/lib/work-description'
 
 import type { DriverApplicationData } from '@/components/driver-application/types/driver-application.types'
 
@@ -359,7 +360,7 @@ export function dotApplicationToProfile(data: DriverApplicationData): Partial<Un
       startDate: emp.startDate,
       endDate: emp.endDate,
       isCurrent: !emp.endDate,
-      responsibilities: emp.duties ? emp.duties.split(';').map((d) => d.trim()) : [],
+      responsibilities: workDescriptionToBullets(emp.duties),
       equipment: [],
       reasonForLeaving: emp.reasonForLeaving,
       supervisorName: emp.supervisorName,

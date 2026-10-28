@@ -23,6 +23,10 @@ import {
   dotErrorInputClass,
   scrollToDotValidationErrors,
 } from './dot-form-validation'
+import {
+  signatureFieldError,
+  type SignatureNameAnchor,
+} from '@/lib/signature-name-check'
 
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
@@ -177,6 +181,8 @@ export default function PersonalInfoForm3({
   const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Loaded for this step only. A completed MVR wins; otherwise the confirmed barcode read.
+  const [signatureAnchor, setSignatureAnchor] = useState<SignatureNameAnchor | null>(null)
   // Per-entry collapse state, keyed by entryCardKey (local UI toggle only)
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({})
   
@@ -450,6 +456,26 @@ export default function PersonalInfoForm3({
     })
   }, [formData.employers])
 
+  useEffect(() => {
+    if (!sessionUserId) return
+    let cancelled = false
+    fetch('/api/driver/signature-name-anchor')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { anchor?: SignatureNameAnchor | null } | null) => {
+        if (cancelled) return
+        const anchor = body?.anchor
+        if (anchor?.name && (anchor.source === 'mvr' || anchor.source === 'license')) {
+          setSignatureAnchor(anchor)
+        }
+      })
+      .catch(() => {
+        // The submit route repeats this check, so a missed load still cannot sign as someone else.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sessionUserId])
+
   // Capture IP address on mount — stored in form data so it's saved with the signature
   useEffect(() => {
     if (formData.ipAddress) return // already captured (e.g. loaded from saved data)
@@ -636,8 +662,22 @@ export default function PersonalInfoForm3({
       }
     } else if (step === 2) {
       // Signature validation
-      if (!formData.applicantSignature?.trim())
+      if (!formData.applicantSignature?.trim()) {
         newErrors.applicantSignature = 'Signature is required'
+      } else {
+        const signatureError = signatureFieldError(
+          formData.applicantSignature,
+          signatureAnchor,
+          'signature',
+        )
+        if (signatureError) newErrors.applicantSignature = signatureError
+      }
+      const printedError = signatureFieldError(
+        formData.applicantNamePrinted,
+        signatureAnchor,
+        'printed',
+      )
+      if (printedError) newErrors.applicantNamePrinted = printedError
       if (!formData.signatureDate)
         newErrors.signatureDate = 'Signature date is required'
       if (!formData.safetyPerformanceHistoryAcknowledgement) {
@@ -828,7 +868,7 @@ export default function PersonalInfoForm3({
             email: 'hr@abctrucking.com',
             address: '123 Highway Road, Columbus, OH 43215',
             positionHeld: 'Commercial Driver',
-            duties: 'OTR freight hauling, pre-trip inspections, load securing, DOT compliance',
+            duties: 'OTR freight hauling, pre-trip inspections, load securing, and DOT compliance',
             fromDate: `01/${cy - 3}`,
             toDate: 'Present',
             reasonForLeaving: '',
@@ -850,7 +890,7 @@ export default function PersonalInfoForm3({
             email: 'verification@xyzlogistics.com',
             address: '456 Freight Lane, Cleveland, OH 44101',
             positionHeld: 'Delivery Driver',
-            duties: 'Local delivery routes, customer service, inventory management',
+            duties: 'Ran local delivery routes for grocery accounts. Helped customers at the dock and kept the trailer inventory straight.',
             fromDate: `01/${cy - 6}`,
             toDate: `12/${cy - 4}`,
             reasonForLeaving: 'Better opportunity',
@@ -894,7 +934,7 @@ export default function PersonalInfoForm3({
             email: 'employment@midwesttransport.com',
             address: '789 Industrial Blvd, Indianapolis, IN 46225',
             positionHeld: 'Regional Driver',
-            duties: 'Regional freight routes, equipment maintenance, HazMat transport',
+            duties: '- Regional freight routes\n- Equipment maintenance\n- HazMat transport',
             fromDate: `01/${cy - 9}`,
             toDate: `06/${cy - 7}`,
             reasonForLeaving: 'Relocated for better pay',
@@ -954,10 +994,10 @@ export default function PersonalInfoForm3({
           },
         ],
       
-      // Signature - use AI-extracted name if available, otherwise test data
-      applicantSignature: prev.applicantSignature || 'John Michael Doe',
+      // Sign with the MVR or license name when one is on file, so the button can complete.
+      applicantSignature: signatureAnchor?.name || prev.applicantSignature || 'John Michael Doe',
       signatureDate: prev.signatureDate || new Date().toISOString().slice(0, 10),
-      applicantNamePrinted: prev.applicantNamePrinted || 'John Michael Doe',
+      applicantNamePrinted: signatureAnchor?.name || prev.applicantNamePrinted || 'John Michael Doe',
       safetyPerformanceHistoryAcknowledgement:
         prev.safetyPerformanceHistoryAcknowledgement ?? true,
       safetyPerformanceInquiryConsent:
@@ -1606,7 +1646,27 @@ export default function PersonalInfoForm3({
                         : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
                     } ${dotErrorInputClass(!!errors[`employer${index}Address`])}`}
                   />
-                  <DotFieldError message={errors[`employer${index}Address`]} />
+                    <DotFieldError message={errors[`employer${index}Address`]} />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
+                    WORK DESCRIPTION
+                  </label>
+                  <textarea
+                    value={employer.duties}
+                    onChange={(e) => handleInputChange('employers', { duties: e.target.value }, index)}
+                    rows={4}
+                    placeholder="What you did in this job. A sentence, a list, or a few lines all work."
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      isDarkTheme(theme)
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-[#173150]/25 rounded-lg'
+                    }`}
+                  />
+                  <p className={`mt-1.5 text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Write it however you like. Your resume turns this into bullets.
+                  </p>
                 </div>
 
                 {/* Reason for Leaving */}
@@ -2634,6 +2694,13 @@ export default function PersonalInfoForm3({
             <label className={`block text-sm font-medium mb-2 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
               Signature (type your full name)
             </label>
+            {signatureAnchor && (
+              <p className={`mb-2 text-xs ${isDarkTheme(theme) ? 'text-gray-400' : 'text-gray-500'}`}>
+                {signatureAnchor.source === 'mvr'
+                  ? 'This has to match the name on your motor vehicle report.'
+                  : 'This has to match the name read from your license barcode.'}
+              </p>
+            )}
             <input
               type='text'
               value={formData.applicantSignature}
@@ -2674,6 +2741,9 @@ export default function PersonalInfoForm3({
               isDarkTheme(theme) ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
             }`}
           />
+          {errors.applicantNamePrinted && (
+            <p className='mt-1 text-sm text-red-600'>{errors.applicantNamePrinted}</p>
+          )}
         </div>
 
         {/* Read-only metadata — populated automatically */}

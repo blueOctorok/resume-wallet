@@ -11,8 +11,24 @@
 import { useEffect, useState } from 'react'
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { DriverResumePacket } from '@/lib/driver-resume-packet'
+import type { DriverResumePacket, DriverResumeProofChip } from '@/lib/driver-resume-packet'
 import { PROVVEN_QR_OPTS } from '@/lib/provven-qr'
+
+function DiamondRule({ ink = '#a8a29e', className }: { ink?: string; className?: string }) {
+  return (
+    <div className={cn('flex items-center', className)} aria-hidden>
+      <span
+        className='h-px flex-1'
+        style={{ backgroundImage: `linear-gradient(to right, transparent, ${ink})` }}
+      />
+      <span className='mx-3 h-1.5 w-1.5 shrink-0 rotate-45' style={{ backgroundColor: ink }} />
+      <span
+        className='h-px flex-1'
+        style={{ backgroundImage: `linear-gradient(to left, transparent, ${ink})` }}
+      />
+    </div>
+  )
+}
 
 function SectionRule({ title }: { title: string }) {
   return (
@@ -20,7 +36,7 @@ function SectionRule({ title }: { title: string }) {
       <h3 className='text-[11px] font-bold uppercase tracking-[0.14em] text-stone-500'>
         {title}
       </h3>
-      <div className='mt-1.5 h-px w-full bg-stone-300' />
+      <DiamondRule className='mt-1.5' />
     </div>
   )
 }
@@ -109,6 +125,86 @@ function CardLinkRow({
   )
 }
 
+function ProofMark({
+  tone,
+  kicker,
+  cite,
+  facts,
+}: {
+  tone: 'midnight' | 'license'
+  kicker: string
+  cite: string
+  facts: string
+}) {
+  const midnight = tone === 'midnight'
+  return (
+    <span className='inline-flex items-center gap-1.5'>
+      {/* eslint-disable-next-line @next/next/no-img-element -- brand mark beside the proof */}
+      <img src='/brand/provven-mark.svg' alt='' className='h-4 w-4 shrink-0' />
+      <span className='leading-tight'>
+        <span
+          className='block text-[12px] font-semibold'
+          style={{ color: midnight ? '#173150' : '#00608b' }}
+        >
+          {facts}
+        </span>
+        <span
+          className='block text-[9px] font-bold uppercase tracking-[0.14em]'
+          style={{ color: midnight ? '#f15a2b' : '#00608b' }}
+        >
+          {kicker}
+          <span className='ml-1.5 font-medium normal-case tracking-normal text-stone-500'>{cite}</span>
+        </span>
+      </span>
+    </span>
+  )
+}
+
+function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
+  // Midnight first, then the barcode. Each one starts at the left of the next.
+  const proofs = [...chips]
+    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
+    .sort((a, b) => (a.tier === 'midnight' ? 0 : 1) - (b.tier === 'midnight' ? 0 : 1))
+  if (proofs.length === 0) return null
+  return (
+    <div className='mt-4 flex flex-wrap items-center justify-start gap-x-5 gap-y-2'>
+      {proofs.map((chip) => (
+        <ProofMark
+          key={chip.id}
+          tone={chip.tier === 'midnight' ? 'midnight' : 'license'}
+          kicker={chip.tier === 'midnight' ? 'Midnight proof' : 'License proof'}
+          cite={chip.tier === 'midnight' ? 'via Accio' : 'Barcode read'}
+          facts={chip.label}
+        />
+      ))}
+    </div>
+  )
+}
+
+function StatedChips({ chips }: { chips: DriverResumeProofChip[] }) {
+  const stated = chips.filter((chip) => chip.tier !== 'midnight' && chip.tier !== 'license')
+  if (stated.length === 0) return null
+  return (
+    <div className='mt-3 flex flex-wrap gap-1.5'>
+      {stated.map((chip) => (
+        <span
+          key={chip.id}
+          className='inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-medium text-stone-700'
+        >
+          <span
+            className={cn(
+              'h-1 w-1 shrink-0 rounded-full',
+              chip.id === 'cdl-expired' ? 'bg-[#F28A0F]' : chip.attested ? 'bg-retro-teal' : 'bg-stone-400',
+            )}
+            aria-hidden
+          />
+          {chip.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function DriverResumeDocument({ packet }: { packet: DriverResumePacket }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
@@ -163,41 +259,12 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
         </p>
       ) : null}
 
-      {packet.proofChips.length > 0 ? (
-        <div className='mt-5 flex flex-wrap gap-1.5'>
-          {packet.proofChips.map((chip) => (
-            <span
-              key={chip.id}
-              className='inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] font-medium text-stone-700'
-            >
-              <span
-                className={cn(
-                  'h-1 w-1 shrink-0 rounded-full',
-                  chip.id === 'cdl-expired'
-                    ? 'bg-[#F28A0F]'
-                    : chip.attested
-                      ? 'bg-retro-teal'
-                      : 'bg-stone-400',
-                )}
-                aria-hidden
-              />
-              {chip.label}
-            </span>
-          ))}
-        </div>
+      {packet.summary ? (
+        <p className='mt-4 text-[13px] leading-relaxed text-stone-700'>{packet.summary}</p>
       ) : null}
 
-      {/* Verification metadata + primary link */}
-      <div className='mt-3 border-t border-stone-200 pt-2'>
-        <p className='text-[11px] leading-relaxed text-stone-500'>
-          {packet.hasVerifiedClaims
-            ? `Provven-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel}`
-            : 'Candidate packet'}
-        </p>
-        <div className='mt-1.5'>
-          <CardLinkRow href={packet.verifyUrl} displayPath={packet.verifyDisplayPath} compact />
-        </div>
-      </div>
+      <ProofBadges chips={packet.proofChips} />
+      <StatedChips chips={packet.proofChips} />
 
       {packet.thinStateHint ? (
         <p className='mt-6 text-sm italic text-stone-500'>{packet.thinStateHint}</p>
@@ -252,7 +319,9 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
       ) : null}
 
       {/* Footer: link primary, QR secondary (print / phone) */}
-      <footer className='mt-10 flex items-start gap-4 border-t border-stone-200 pt-6'>
+      <footer className='mt-10'>
+        <DiamondRule className='mb-6' />
+        <div className='flex items-start gap-4'>
         <QrBlock dataUrl={qrDataUrl} sizeClass='h-[64px] w-[64px]' label='Scan with phone' />
         <div className='min-w-0 flex-1 pt-0.5'>
           <p className='text-[13px] font-semibold text-stone-900'>{packet.footerTitle}</p>
@@ -263,6 +332,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
           {packet.hasVerifiedClaims ? (
             <p className='mt-2 text-[11px] text-stone-500'>Proofs expire {packet.expiresLabel}</p>
           ) : null}
+        </div>
         </div>
       </footer>
     </article>

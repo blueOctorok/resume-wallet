@@ -4,6 +4,71 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume dividers use the brand diamond** (2026-10-27)
+
+The rules under Experience and after the jobs keep the diamond, in grey. Proofs no longer use that bar. Each proof starts at the left with the Provven mark beside it, and the next proof sits to its right. A Midnight proof is always the leftmost.
+
+| File | Change |
+|---|---|
+| `src/components/resume/DriverResumeDocument.tsx` | Grey section and footer rules. Proof row with the mark. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same grey rules and left-hand proof row on the download. |
+
+---
+
+## **Resume summary, stated endorsement chip removed** (2026-10-27)
+
+The gray Hazmat + Tanker chip is gone. It was the letters H and N saved from fill-test data, and it sat next to the license proof. The resume now opens with a two-sentence description in resume voice: no "I", and no "this driver". Sonnet writes it from the years on the jobs, the barcode class, endorsements saved on the application, recorded miles, and a motor vehicle report when one is on file. It does not invent miles, on-time rates, or a clean MVR. The city stays in the header and is not repeated in the summary. Endorsements are not sent to the model. Haiku still handles the short notes. If the model is unavailable, the summary is left off.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | Drops the endorsement chips. Asks for the summary when the packet is assembled. |
+| `src/lib/resume-summary.ts` | Sonnet prompt and a short cache so reopening the same resume does not call again. |
+| `src/components/resume/DriverResumeDocument.tsx` | Summary paragraph under the contact line. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same paragraph on the download. |
+
+---
+
+## **Resume proof badges** (2026-10-27)
+
+The resume listed every fact as the same small chip. A motor vehicle report fact whose Midnight circuit actually ran is now a Midnight proof, drawn as the site footer’s hairline and diamond in ember, and it cites Accio. A confirmed license barcode uses the same ornament in denim and says it was read from the barcode. Stated facts stay the small chips. The “Provven-verified” line and card link that sat under the name were removed, because the footer already carries the link. The PDF matches.
+
+| File | Change |
+|---|---|
+| `src/lib/driver-resume-packet.ts` | `midnight` and `license` tiers. Loads the confirmed barcode. |
+| `src/components/resume/DriverResumeDocument.tsx` | Proof badges above the quiet chips. |
+| `src/lib/driver-resume-packet-pdf.ts` | Same badges on the download. |
+
+---
+
+## **DOT signature has to match the MVR or license name** (2026-10-27)
+
+Typing any name was enough to sign the application. The signature and the printed name now have to match a completed motor vehicle report when one is on file. Until then they have to match the confirmed license barcode read. A missing middle name still matches. With neither record on file, the signature is not compared. Submit checks the same rule again.
+
+| File | Change |
+|---|---|
+| `src/lib/signature-name-check.ts` | Match rule. The report wins over the barcode. |
+| `src/lib/load-signature-name-anchor.ts` | Loads the latest completed report and the confirmed barcode name. |
+| `src/app/api/driver/signature-name-anchor/route.ts` | Returns that name to the signature step. |
+| `src/app/api/driver-applications/complete/route.ts` | Rejects a signature that does not match. |
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Shows the error, and fill test data signs with the name on file. |
+
+---
+
+## **DOT employment work description feeds resume bullets** (2026-10-27)
+
+Each job on the DOT employment section now has a work description. The application keeps the driver's words. The resume splits that text into bullets whether they wrote a sentence, a comma list, or a dashed list. Fill test data writes the field in those three styles.
+
+| File | Change |
+|---|---|
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Work description on each job, including fill test data. |
+| `src/lib/work-description.ts` | Splits free text into resume bullets without rewriting it. |
+| `src/lib/dot-form-mapper.ts` | Form 3 duties become employment responsibilities. |
+| `src/lib/profile-mapper.ts` | The older DOT employment path uses the same split. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | Preview shows the description. |
+| `src/lib/dot-application-pdf.ts` | PDF labels it Work description. |
+
+---
+
 ## **Agency MVR report shows the full date of birth and SSN** (2026-10-27)
 
 The DOT file was already releasing those fields for the full hub. The MVR PDF still swapped the birth year for `XXXX` and kept only the last four of the Social Security number, for every viewer. That swap happens when the PDF is drawn. The stored report was never stripped, so no backfill is involved. The full hub and the driver opening their own report now see the values Accio returned. A search-only account still sees the mask.

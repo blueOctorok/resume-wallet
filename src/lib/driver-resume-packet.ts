@@ -1,13 +1,18 @@
 /**
  * Premium “DOT packet” resume model — layout matching docs/midnight/example_resume.png.
  *
- * Resume chips stay quiet. Midnight wording lives on the career card (DEC-2026-08-004).
+ * Two proof badges sit above the quiet chips. A Midnight proof is an MVR fact
+ * whose circuit actually ran. A license proof is the confirmed barcode read —
+ * still a proof, and not a Midnight or DMV claim (DEC-2026-08-004).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isLicenseScanFields } from '@/lib/aamva-license'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
+import { getLicenseScan } from '@/lib/block-data'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
 import { getAppBaseUrl } from '@/lib/app-url'
+import { writeResumeSummary } from '@/lib/resume-summary'
 import { cdlStaleSentence, readCdlFreshness } from '@/lib/cdl-freshness'
 import type { ResumeBuilderData } from '@/lib/profile-mapper'
 
@@ -19,11 +24,18 @@ export interface PacketMvrSummary {
   violationCount: number
 }
 
+export type ResumeProofTier = 'midnight' | 'license'
+
 export interface DriverResumeProofChip {
   id: string
   label: string
-  /** True when this chip came from an attestation row — still no Midnight copy here. */
+  /** True when this chip came from an attestation row. */
   attested?: boolean
+  /**
+   * midnight — MVR fact with a predicate proof. license — barcode read.
+   * Absent chips are stated facts, not proofs.
+   */
+  tier?: ResumeProofTier
 }
 
 export interface DriverResumeExperienceRow {
@@ -38,6 +50,8 @@ export interface DriverResumePacket {
   tagline: string
   /** e.g. "email · phone" */
   contactLine: string
+  /** Two sentences on the work. Null when there is nothing to describe. */
+  summary: string | null
   proofChips: DriverResumeProofChip[]
   asOfLabel: string
   expiresLabel: string
@@ -187,6 +201,8 @@ export interface BuildPacketInput {
   /** DOT Form 2 accidents array length when known */
   dotAccidentCount?: number | null
   attestedChips?: DriverResumeProofChip[]
+  /** Confirmed barcode read. Omitted when the card was never confirmed. */
+  licenseProof?: { label: string } | null
   hasDotApp: boolean
 }
 
@@ -218,6 +234,13 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
 
   const attestedIds = new Set((input.attestedChips ?? []).map((c) => c.id))
   const proofChips: DriverResumeProofChip[] = [...(input.attestedChips ?? [])]
+  if (input.licenseProof?.label) {
+    proofChips.push({
+      id: 'license-proof',
+      label: input.licenseProof.label,
+      tier: 'license',
+    })
+  }
   const hasAttestedClass = attestedIds.has('cdl_class') || attestedIds.has('cdl_class_a')
   // An expired date is not a current proof. Hazmat and tanker ride on the CDL,
   // so they come off the chip row until the date is updated. The credential
@@ -231,16 +254,6 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
   ) {
     proofChips.push({ id: 'cdl-class', label: `CDL Class ${cdlClass}` })
   }
-  if (!freshness.expired && !attestedIds.has('cdl_endorsements')) {
-    if (hasHazmat && hasTanker) {
-      proofChips.push({ id: 'endorsements-ht', label: 'Hazmat + Tanker' })
-    } else if (hasHazmat) {
-      proofChips.push({ id: 'endorsements-h', label: 'Hazmat' })
-    } else if (hasTanker) {
-      proofChips.push({ id: 'endorsements-n', label: 'Tanker' })
-    }
-  }
-
   const medOk = hasValidMedicalCert(input.medicalCertStatus, input.medicalCertExpiration)
   if (medOk && !attestedIds.has('med_cert_valid')) {
     proofChips.push({ id: 'med-card', label: 'Med card current' })
@@ -319,6 +332,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     fullName,
     tagline,
     contactLine,
+    summary: null,
     proofChips,
     asOfLabel: formatShortDate(asOf),
     expiresLabel: formatShortDate(expires),
@@ -338,7 +352,13 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
       : null,
     freshnessNote: cdlStaleSentence(freshness),
     hasVerifiedClaims: proofChips.some(
-      (chip) => chip.attested || chip.id === 'med-card' || chip.id === 'psp-no-dq' || chip.id === 'license-valid',
+      (chip) =>
+        chip.tier === 'midnight' ||
+        chip.tier === 'license' ||
+        chip.attested ||
+        chip.id === 'med-card' ||
+        chip.id === 'psp-no-dq' ||
+        chip.id === 'license-valid',
     ),
   }
 }
@@ -359,7 +379,7 @@ export async function assembleDriverResumePacket(
 ): Promise<DriverResumePacket> {
   const shareToken = await ensureShareToken(supabase, userId)
 
-  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts] = await Promise.all([
+  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof] = await Promise.all([
     supabase
       .from('mvr_results')
       .select(
@@ -379,12 +399,13 @@ export async function assembleDriverResumePacket(
       .limit(1)
       .maybeSingle(),
     loadCardAttestedFacts(supabase, userId),
+    loadLicenseProof(supabase, userId),
   ])
 
   const accidents = opts.applicationData?.form2?.accidents
   const dotAccidentCount = Array.isArray(accidents) ? accidents.length : null
 
-  return buildDriverResumePacket({
+  const packet = buildDriverResumePacket({
     structuredData: opts.structuredData,
     mvrSummary: opts.mvrSummary,
     shareToken,
@@ -402,6 +423,45 @@ export async function assembleDriverResumePacket(
       id: f.factType,
       label: f.label,
       attested: true,
+      tier: f.provenOnMidnight ? ('midnight' as const) : undefined,
+    })),
+    licenseProof,
+  })
+
+  const filled = opts.structuredData.employments.filter(
+    (job) => job.companyName?.trim() || job.position?.trim(),
+  )
+  const summary = await writeResumeSummary({
+    licenseLabel: licenseProof?.label ?? null,
+    endorsements: opts.structuredData.cdlInfo.endorsements,
+    mvr: opts.mvrSummary
+      ? {
+          violationCount: opts.mvrSummary.violationCount,
+          licenseStatus: opts.mvrSummary.licenseStatus,
+        }
+      : null,
+    jobs: packet.experience.map((row, index) => ({
+      titleLine: row.titleLine,
+      dateRange: row.dateRange,
+      bullets: row.bullets,
+      miles: filled[index]?.milesDriven?.trim() || null,
     })),
   })
+  return { ...packet, summary }
+}
+
+/** Class and state from a confirmed barcode. Not a state record. */
+export async function loadLicenseProof(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ label: string } | null> {
+  const scan = await getLicenseScan(supabase, userId)
+  if (!scan?.confirmed_at || !isLicenseScanFields(scan.parsed_fields)) return null
+  const classRaw = scan.parsed_fields.licenseClass.trim()
+  const state = scan.parsed_fields.state.trim()
+  const classLabel = classRaw
+    ? `Class ${classRaw.replace(/^class\s+/i, '')}`
+    : ''
+  const label = [classLabel, state].filter(Boolean).join(' · ')
+  return { label: label || 'Barcode read' }
 }

@@ -10,6 +10,19 @@ const MARGIN = 18
 const QR_TOP = 22
 const QR_FOOTER = 18
 
+async function provvenMarkDataUrl(): Promise<string | null> {
+  try {
+    const response = await fetch('/brand/provven-mark.png')
+    if (!response.ok) return null
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    let binary = ''
+    for (const byte of bytes) binary += String.fromCharCode(byte)
+    return `data:image/png;base64,${btoa(binary)}`
+  } catch {
+    return null
+  }
+}
+
 async function qrPngDataUrl(verifyUrl: string, size: number): Promise<string | null> {
   try {
     const { qrDataUrlWithProvvenMark } = await import('@/lib/provven-qr')
@@ -41,7 +54,10 @@ export async function generateDriverResumePacketPDF(
   const stoneDot: [number, number, number] = [168, 162, 158]
   const rule: [number, number, number] = [214, 211, 209]
 
-  const qrTop = await qrPngDataUrl(packet.verifyUrl, 128)
+  const [qrTop, provvenMark] = await Promise.all([
+    qrPngDataUrl(packet.verifyUrl, 128),
+    provvenMarkDataUrl(),
+  ])
   const qrFoot = qrTop // same URL
 
   const checkPage = (need: number) => {
@@ -51,6 +67,30 @@ export async function generateDriverResumePacketPDF(
     }
   }
 
+  const drawDiamondRule = (yLine: number, ink: [number, number, number]) => {
+    const midX = pageWidth / 2
+    pdf.setDrawColor(...ink)
+    pdf.setLineWidth(0.2)
+    pdf.line(MARGIN, yLine, midX - 3.2, yLine)
+    pdf.line(midX + 3.2, yLine, pageWidth - MARGIN, yLine)
+    pdf.setFillColor(...ink)
+    const s = 0.85
+    // Diamond, same mark as the site footer. Vectors walk left → top → right → bottom.
+    pdf.lines(
+      [
+        [s, -s],
+        [s, s],
+        [-s, s],
+        [-s, -s],
+      ],
+      midX - s,
+      yLine,
+      [1, 1],
+      'F',
+      true,
+    )
+  }
+
   const drawSectionHeader = (title: string) => {
     checkPage(14)
     y += 4
@@ -58,10 +98,8 @@ export async function generateDriverResumePacketPDF(
     pdf.setFontSize(9)
     pdf.setTextColor(...textMuted)
     pdf.text(title.toUpperCase(), MARGIN, y)
-    y += 2
-    pdf.setDrawColor(...rule)
-    pdf.setLineWidth(0.3)
-    pdf.line(MARGIN, y, pageWidth - MARGIN, y)
+    y += 2.5
+    drawDiamondRule(y, [168, 162, 158])
     y += 5
   }
 
@@ -117,24 +155,81 @@ export async function generateDriverResumePacketPDF(
     y += lines.length * 4.2 + 3
   }
 
-  // === PROOF CHIPS ===
-  if (packet.proofChips.length > 0) {
+  if (packet.summary) {
+    checkPage(16)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(10)
+    pdf.setTextColor(...textMid)
+    const summaryLines = pdf.splitTextToSize(packet.summary, pageWidth - MARGIN * 2) as string[]
+    pdf.text(summaryLines, MARGIN, y)
+    y += summaryLines.length * 4.2 + 3
+  }
+
+  // Midnight proofs first, then the license barcode proof, then stated chips.
+  const proofBadges = packet.proofChips
+    .filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
+    .sort((a, b) => (a.tier === 'midnight' ? 0 : 1) - (b.tier === 'midnight' ? 0 : 1))
+  const statedChips = packet.proofChips.filter(
+    (chip) => chip.tier !== 'midnight' && chip.tier !== 'license',
+  )
+
+  const proofs = proofBadges.filter((chip) => chip.tier === 'midnight' || chip.tier === 'license')
+  if (proofs.length > 0) {
+    checkPage(12)
+    const badgeW = 4.2
+    const badgeH = 4.5
+    let x = MARGIN
+    let rowTop = y
+    for (const chip of proofs) {
+      const midnight = chip.tier === 'midnight'
+      const kicker = midnight ? 'MIDNIGHT PROOF' : 'LICENSE PROOF'
+      const cite = midnight ? 'via Accio' : 'Barcode read'
+      pdf.setFont('times', 'bold')
+      pdf.setFontSize(9)
+      const factW = pdf.getTextWidth(chip.label)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(6)
+      const metaW = pdf.getTextWidth(`${kicker}  ${cite}`)
+      const blockW = (provvenMark ? badgeW + 1.6 : 0) + Math.max(factW, metaW)
+      if (x > MARGIN && x + blockW > pageWidth - MARGIN) {
+        x = MARGIN
+        rowTop += 8
+      }
+      if (provvenMark) {
+        pdf.addImage(provvenMark, 'PNG', x, rowTop, badgeW, badgeH)
+      }
+      const textX = x + (provvenMark ? badgeW + 1.6 : 0)
+      pdf.setFont('times', 'bold')
+      pdf.setFontSize(9)
+      pdf.setTextColor(midnight ? 23 : 0, midnight ? 49 : 96, midnight ? 80 : 139)
+      pdf.text(chip.label, textX, rowTop + 2.2)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(6)
+      pdf.setTextColor(midnight ? 241 : 0, midnight ? 90 : 96, midnight ? 43 : 139)
+      pdf.text(kicker, textX, rowTop + 4.8)
+      const kickW = pdf.getTextWidth(`${kicker}  `)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(...textMuted)
+      pdf.text(cite, textX + kickW, rowTop + 4.8)
+      x += blockW + 5
+    }
+    y = rowTop + 8
+  }
+
+  if (statedChips.length > 0) {
     checkPage(12)
     let chipX = MARGIN
-    const chipY = y
     const chipH = 6.5
     pdf.setFontSize(8)
-    for (const chip of packet.proofChips) {
+    for (const chip of statedChips) {
       const labelW = pdf.getTextWidth(chip.label) + 8
       if (chipX + labelW > pageWidth - MARGIN) {
         chipX = MARGIN
         y += chipH + 2
       }
-      // pill outline
       pdf.setDrawColor(...rule)
       pdf.setFillColor(250, 250, 249)
       pdf.roundedRect(chipX, y, labelW, chipH, 1.5, 1.5, 'FD')
-      // green dot
       pdf.setFillColor(...(chip.attested ? goldDot : stoneDot))
       pdf.circle(chipX + 3, y + chipH / 2, 0.9, 'F')
       pdf.setFont('helvetica', 'normal')
@@ -142,30 +237,8 @@ export async function generateDriverResumePacketPDF(
       pdf.text(chip.label, chipX + 5.5, y + chipH / 2 + 1.1)
       chipX += labelW + 2.5
     }
-    y = Math.max(y, chipY) + chipH + 4
+    y += chipH + 4
   }
-
-  // Metadata line
-  pdf.setDrawColor(...rule)
-  pdf.setLineWidth(0.25)
-  pdf.line(MARGIN, y, pageWidth - MARGIN, y)
-  y += 4.5
-  pdf.setFont('helvetica', 'normal')
-  pdf.setFontSize(8)
-  pdf.setTextColor(...textMuted)
-  if (packet.hasVerifiedClaims) {
-    const metaLeft = `Provven-verified • as of ${packet.asOfLabel} • expires ${packet.expiresLabel} • `
-    pdf.text(metaLeft, MARGIN, y)
-    const leftW = pdf.getTextWidth(metaLeft)
-    pdf.setTextColor(...linkAmber)
-    pdf.text(packet.verifyDisplayPath, MARGIN + leftW, y)
-  } else {
-    pdf.text('Candidate packet • ', MARGIN, y)
-    const leftW = pdf.getTextWidth('Candidate packet • ')
-    pdf.setTextColor(...linkAmber)
-    pdf.text(packet.verifyDisplayPath, MARGIN + leftW, y)
-  }
-  y += 6
 
   if (packet.thinStateHint) {
     checkPage(12)
@@ -242,9 +315,7 @@ export async function generateDriverResumePacketPDF(
     y = Math.max(y + 6, pageHeight - MARGIN - footerBlockH - 4)
   }
 
-  pdf.setDrawColor(...rule)
-  pdf.setLineWidth(0.3)
-  pdf.line(MARGIN, y, pageWidth - MARGIN, y)
+  drawDiamondRule(y, [168, 162, 158])
   y += 5
 
   const footQrX = MARGIN
