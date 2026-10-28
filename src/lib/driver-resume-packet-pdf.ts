@@ -197,6 +197,7 @@ export async function generateDriverResumePacketPDF(
       (chip) =>
         chip.tier === 'midnight' ||
         chip.tier === 'accio' ||
+        chip.tier === 'employer' ||
         chip.tier === 'dkim' ||
         chip.tier === 'license',
     )
@@ -218,6 +219,8 @@ export async function generateDriverResumePacketPDF(
           ? { kicker: 'MIDNIGHT PROOF', cite: 'via Accio', fact: [23, 49, 80], kick: [241, 90, 43] }
           : chip.tier === 'accio'
             ? { kicker: 'ACCIO PROOF', cite: 'Driving record', fact: [242, 138, 15], kick: [242, 138, 15] }
+          : chip.tier === 'employer'
+            ? { kicker: 'EMPLOYER PROOF', cite: chip.cite || 'Employer reply', fact: [147, 149, 152], kick: [147, 149, 152] }
             : chip.tier === 'dkim'
               ? { kicker: 'DKIM PROOF', cite: chip.cite || 'Signed email', fact: [63, 138, 140], kick: [63, 138, 140] }
               : { kicker: 'LICENSE PROOF', cite: 'Barcode read', fact: [0, 96, 139], kick: [0, 96, 139] }

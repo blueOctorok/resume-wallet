@@ -28,14 +28,15 @@ export interface PacketMvrSummary {
   violationCount: number
 }
 
-export type ResumeProofTier = 'midnight' | 'accio' | 'dkim' | 'license'
+export type ResumeProofTier = 'midnight' | 'accio' | 'employer' | 'dkim' | 'license'
 
-/** Midnight, then Accio facts it has not replaced, then a DKIM employment reply, then the barcode. */
+/** Midnight, then Accio, then an employer reply, then DKIM once it replaces that reply, then the barcode. */
 export function resumeProofRank(tier: ResumeProofTier | undefined): number {
   if (tier === 'midnight') return 0
   if (tier === 'accio') return 1
-  if (tier === 'dkim') return 2
-  return 3
+  if (tier === 'employer') return 2
+  if (tier === 'dkim') return 3
+  return 4
 }
 
 export interface DriverResumeProofChip {
@@ -46,7 +47,8 @@ export interface DriverResumeProofChip {
   /**
    * midnight — the Accio fact after its circuit ran.
    * accio — that fact on the driving record, until Midnight replaces it.
-   * dkim — a signed employer reply the driver accepted onto the resume.
+   * employer — the employer reply, until a DKIM signature replaces it.
+   * dkim — the signed email for that same reply.
    * license — confirmed barcode read.
    */
   tier?: ResumeProofTier
@@ -192,11 +194,12 @@ export interface BuildPacketInput {
     medicalCertExpiration: string | null
     licenseExpiration: string | null
   } | null
-  /** DKIM replies the driver accepted. A form reply never arrives here. */
-  dkimProofs?: Array<{
+  /** One row per accepted reply. DKIM replaces the employer proof for that same row. */
+  employmentProofs?: Array<{
     id: string
     employerName: string
-    dkimDomain: string
+    dkimValid: boolean
+    dkimDomain: string | null
     startDate: string | null
     endDate: string | null
     verifiedAt: string | null
@@ -229,20 +232,23 @@ export function proofDateLabel(raw: string | null | undefined, now: Date = new D
   return parsed.day < today ? `expired ${parsed.when}` : `expires ${parsed.when}`
 }
 
-function dkimProofChips(rows: NonNullable<BuildPacketInput['dkimProofs']>): DriverResumeProofChip[] {
+function employmentProofChips(
+  rows: NonNullable<BuildPacketInput['employmentProofs']>,
+): DriverResumeProofChip[] {
   return rows.flatMap((row) => {
     const employer = row.employerName.trim()
-    const domain = row.dkimDomain.trim()
-    if (!employer || !domain) return []
+    if (!employer) return []
     const start = row.startDate?.slice(0, 4) ?? ''
     const end = row.endDate?.trim() ? row.endDate.slice(0, 4) : 'Present'
     const range = start ? `${start}–${end}` : ''
     const verified = proofDay(row.verifiedAt)
+    const domain = row.dkimDomain?.trim() ?? ''
+    const dkim = row.dkimValid && domain.length > 0
     return [{
-      id: `dkim-${row.id}`,
+      id: `employment-${row.id}`,
       label: [employer, range].filter(Boolean).join(' · '),
-      tier: 'dkim' as const,
-      cite: domain,
+      tier: dkim ? ('dkim' as const) : ('employer' as const),
+      cite: dkim ? domain : 'Employer reply',
       ...(verified ? { dateLabel: `verified ${verified.when}` } : {}),
     }]
   })
@@ -380,7 +386,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
       proofChips.push(chip)
     }
   }
-  proofChips.push(...dkimProofChips(input.dkimProofs ?? []))
+  proofChips.push(...employmentProofChips(input.employmentProofs ?? []))
   if (input.licenseProof?.label) {
     proofChips.push(
       withDate(
@@ -494,9 +500,8 @@ export async function assembleDriverResumePacket(
     getMvrAttestationContext(supabase, userId),
     supabase
       .from('employment_verification_requests')
-      .select('id, previous_employer_name, dkim_domain, claimed_start_date, claimed_end_date, verified_at')
+      .select('id, previous_employer_name, dkim_valid, dkim_domain, claimed_start_date, claimed_end_date, verified_at')
       .eq('driver_id', userId)
-      .eq('dkim_valid', true)
       .eq('driver_hidden', false)
       .not('resume_accepted_at', 'is', null)
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED']),
@@ -534,10 +539,11 @@ export async function assembleDriverResumePacket(
           licenseExpiration: accio.licenseExpiration,
         }
       : null,
-    dkimProofs: (dkimRows.data ?? []).map((row) => ({
+    employmentProofs: (dkimRows.data ?? []).map((row) => ({
       id: String(row.id),
       employerName: String(row.previous_employer_name ?? ''),
-      dkimDomain: String(row.dkim_domain ?? ''),
+      dkimValid: row.dkim_valid === true,
+      dkimDomain: (row.dkim_domain as string | null) ?? null,
       startDate: (row.claimed_start_date as string | null) ?? null,
       endDate: (row.claimed_end_date as string | null) ?? null,
       verifiedAt: (row.verified_at as string | null) ?? null,

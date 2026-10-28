@@ -156,30 +156,49 @@ describe('resume proof badges', () => {
     expect(packet.freshnessNote).toBeNull()
   })
 
-  it('shows an accepted DKIM reply as its own proof', () => {
-    const packet = buildDriverResumePacket({
+  it('shows an employer proof until DKIM replaces that same reply', () => {
+    const base = {
       structuredData: data,
       mvrSummary: null,
       shareToken: 'abc',
       asOfCandidates: [],
       hasDotApp: true,
-      dkimProofs: [{
+    }
+    const waiting = buildDriverResumePacket({
+      ...base,
+      employmentProofs: [{
         id: 'evr-1',
         employerName: 'XYZ Logistics',
+        dkimValid: false,
+        dkimDomain: null,
+        startDate: '2020-01-01',
+        endDate: '2022-12-01',
+        verifiedAt: '2026-10-28',
+      }],
+    })
+    expect(waiting.proofChips.map((chip) => `${chip.tier}:${chip.id}`)).toEqual([
+      'employer:employment-evr-1',
+    ])
+
+    const signed = buildDriverResumePacket({
+      ...base,
+      employmentProofs: [{
+        id: 'evr-1',
+        employerName: 'XYZ Logistics',
+        dkimValid: true,
         dkimDomain: 'xyzlogistics.com',
         startDate: '2020-01-01',
         endDate: '2022-12-01',
         verifiedAt: '2026-10-28',
       }],
     })
-
-    expect(packet.proofChips.find((chip) => chip.tier === 'dkim')).toEqual({
-      id: 'dkim-evr-1',
+    expect(signed.proofChips).toEqual([{
+      id: 'employment-evr-1',
       label: 'XYZ Logistics · 2020–2022',
       tier: 'dkim',
       cite: 'xyzlogistics.com',
       dateLabel: 'verified October 28, 2026',
-    })
+    }])
   })
 
   it('does not print typed endorsements as a chip', () => {

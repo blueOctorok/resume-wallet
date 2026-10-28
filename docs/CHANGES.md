@@ -6,7 +6,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **DKIM reply can go on the resume** (2026-10-28)
 
-A returned employment packet now has Put on resume when the reply is DKIM-signed. That accept adds a DKIM proof: employer, years, signing domain, and the day the reply was verified. Midnight does not prove the mail signature. A form reply stays on file and cannot be accepted onto the resume.
+A returned employment packet the driver puts on the resume shows an employer proof. When that same reply later has a DKIM signature, the DKIM proof replaces the employer proof. Midnight does not prove the mail signature.
 
 | File | Change |
 |---|---|

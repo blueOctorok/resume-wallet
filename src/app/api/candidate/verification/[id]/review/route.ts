@@ -41,7 +41,7 @@ export async function PATCH(
       } else {
         const { data: current, error: readError } = await supabase
           .from('employment_verification_requests')
-          .select('dkim_valid, dkim_domain, status, driver_hidden')
+          .select('status, driver_hidden')
           .eq('id', id)
           .eq('driver_id', userId)
           .maybeSingle()
@@ -53,13 +53,11 @@ export async function PATCH(
           return NextResponse.json({ error: 'Verification request not found' }, { status: 404 })
         }
         const signed =
-          current.dkim_valid === true &&
-          Boolean(String(current.dkim_domain ?? '').trim()) &&
           (current.status === 'VERIFIED' || current.status === 'PARTIALLY_VERIFIED') &&
           current.driver_hidden !== true
         if (!signed) {
           return NextResponse.json(
-            { error: 'A resume proof needs a DKIM-signed reply from the employer domain' },
+            { error: 'The reply has to come back before it can go on the resume' },
             { status: 400 },
           )
         }

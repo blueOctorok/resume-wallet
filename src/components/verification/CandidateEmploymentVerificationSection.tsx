@@ -331,27 +331,25 @@ export default function CandidateEmploymentVerificationSection({
           {isDkimVerifiedRequest(request) ? (
             <p className='text-xs text-[#173150]/75'>
               This reply is DKIM-signed
-              {request.dkimDomain ? ` by ${request.dkimDomain}` : ''}. Putting it on your resume
-              shows that signature as a proof. Midnight does not prove the mail signature.
+              {request.dkimDomain ? ` by ${request.dkimDomain}` : ''}. Put on resume shows the DKIM
+              proof. That signature replaces the employer reply.
             </p>
           ) : (
             <p className='text-xs text-[#173150]/75'>
-              This reply came back on the form. It stays on file. A resume proof needs a
-              DKIM-signed email from the employer domain.
+              Put on resume shows an employer proof now. A DKIM signature replaces that proof when
+              it arrives.
             </p>
           )}
           <div className='flex flex-wrap gap-2'>
-            {isDkimVerifiedRequest(request) && (
-              <Button
-                type='button'
-                variant='primary'
-                size='sm'
-                disabled={savingReview}
-                onClick={() => saveReview(request.id, { onResume: !request.resumeAcceptedAt })}
-              >
-                {request.resumeAcceptedAt ? 'Remove from resume' : 'Put on resume'}
-              </Button>
-            )}
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
+              disabled={savingReview}
+              onClick={() => saveReview(request.id, { onResume: !request.resumeAcceptedAt })}
+            >
+              {request.resumeAcceptedAt ? 'Remove from resume' : 'Put on resume'}
+            </Button>
             <Button
               type='button'
               variant='ghost'
