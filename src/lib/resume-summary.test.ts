@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { completeSentences, endorsementLabels, resumeSummaryPrompt, yearsOnRecord } from './resume-summary'
+import {
+  completeSentences,
+  endorsementLabels,
+  mvrLineForResume,
+  resumeSummaryPrompt,
+  summaryMentionsScreeningHarm,
+  yearsOnRecord,
+} from './resume-summary'
 
 const job = {
   titleLine: 'Commercial Driver — ABC Trucking Company',
@@ -36,8 +43,33 @@ describe('resume summary prompt', () => {
       2026,
     )
     expect(prompt).toContain('Endorsements on the application: Hazmat, Tanker, Doubles/triples')
-    expect(prompt).toContain('Motor vehicle report: 0 violations')
+    expect(prompt).toContain('Motor vehicle report: clear')
     expect(prompt).toContain('miles recorded: 450,000')
+  })
+
+  it('leaves violations and a bad license status out of the facts', () => {
+    const prompt = resumeSummaryPrompt(
+      {
+        licenseLabel: 'Class A · OH',
+        endorsements: [],
+        jobs: [job],
+        mvr: { violationCount: 4, licenseStatus: 'SUSPENDED' },
+      },
+      2026,
+    )
+    expect(prompt.toLowerCase()).not.toContain('violation')
+    expect(prompt.toLowerCase()).not.toContain('suspended')
+    expect(prompt.toLowerCase()).not.toContain('motor vehicle')
+    expect(mvrLineForResume({ violationCount: 4, licenseStatus: 'VALID' })).toBeNull()
+    expect(mvrLineForResume({ violationCount: 0, licenseStatus: 'REVOKED' })).toBeNull()
+  })
+})
+
+describe('screening harm gate', () => {
+  it('keeps a clean record and rejects a violation or PSP mention', () => {
+    expect(summaryMentionsScreeningHarm('Class A driver with a clean MVR. Hauls OTR freight.')).toBe(false)
+    expect(summaryMentionsScreeningHarm('Record shows 3 violations and a suspension.')).toBe(true)
+    expect(summaryMentionsScreeningHarm('PSP lists two crashes.')).toBe(true)
   })
 })
 

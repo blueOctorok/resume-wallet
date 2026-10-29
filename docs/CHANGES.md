@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume summaries drop MVR and PSP harm** (2026-10-29)
+
+The two-sentence resume summary was told to state the violation count whenever the motor vehicle report was not clean. A resume is not where a carrier should read a citation. Adverse records are now left out of the facts, and a finished paragraph that still names a violation, suspension, crash, or PSP record is thrown away.
+
+| File | Change |
+|---|---|
+| `src/lib/resume-summary.ts` | Clear records may be called a clean MVR. Any violation count or bad license status is omitted. Output that still names screening harm is not saved. |
+| `src/lib/resume-summary.test.ts` | Covers a suspended record with four violations, and the output gate. |
+
+---
+
 ## **A visit opens Career Card, and Apply stays on paper** (2026-10-29)
 
 Dark mode painted the Apply columns as navy glass. Those panels now use the same cream paper as the DQ file, including the job list, the job detail, and Stormi's next step. A reload opens Career Card. The old stored default was Apply, and the nav toggle never wrote a new choice, so every visit was sent back to the job view.

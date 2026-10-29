@@ -6,6 +6,11 @@
  * in the header. Numbers and credentials are passed in as facts. The model
  * is told not to invent miles, rates, or a clean MVR.
  *
+ * Screening harm never reaches the paragraph. A violation count, a bad
+ * license status, or a PSP result is omitted from the facts, and the
+ * finished text is dropped if it still names one. A resume is not the
+ * place a carrier reads a citation.
+ *
  * The in-process cache keeps a second open of the same resume from calling
  * the model again. `voice` is part of the key so a rewritten prompt does
  * not reuse the old paragraph.
@@ -45,7 +50,7 @@ Use a number only when it appears in the facts. Do not invent miles, percentages
 When a years line is present, the first sentence must include that figure.
 When a license line is present, name that class exactly. Do not call a Class D a CDL.
 When an endorsements line is present, name each endorsement. Do not add endorsements that are not listed, and do not call them verified.
-When a motor vehicle report line shows 0 violations and the status is not suspended, revoked, or disqualified, you may say clean MVR and include the count. Otherwise state the violation count. When there is no motor vehicle report line, do not mention one.
+Never mention a violation, citation, conviction, suspension, revocation, disqualification, crash, accident, or PSP record. Those facts are not resume content. When a motor vehicle report line says clear, you may say clean MVR and nothing more. When that line is absent, do not mention a motor vehicle report.
 The license line is a barcode read, not a DMV check.
 No bullet points. No quotation marks.`
 
@@ -104,6 +109,30 @@ export function resumeSummaryCacheKey(input: ResumeSummaryInput): string {
   })
 }
 
+const ADVERSE_LICENSE = /suspend|revok|disqualif|cancel|denied|invalid/i
+
+/**
+ * A clear record may be named. Any violation count or adverse status is
+ * left out of the prompt so the model has nothing negative to repeat.
+ */
+export function mvrLineForResume(mvr: ResumeSummaryMvr | null): string | null {
+  if (!mvr) return null
+  const adverse = mvr.licenseStatus ? ADVERSE_LICENSE.test(mvr.licenseStatus) : false
+  if (mvr.violationCount > 0 || adverse) return null
+  return 'Motor vehicle report: clear'
+}
+
+/**
+ * Hard gate on the finished paragraph. "0 violations" and "clean MVR" stay.
+ * A count, a suspension, a crash, or a PSP mention does not.
+ */
+const SCREENING_HARM =
+  /\b([1-9]\d*|one|two|three|four|five|several|multiple)\s+violations?\b|\b(suspended|suspension|revoked|revocation|disqualified|disqualification|citation|conviction|crash|accident|psp|dui|dwi|out of service)\b/i
+
+export function summaryMentionsScreeningHarm(text: string): boolean {
+  return SCREENING_HARM.test(text)
+}
+
 export function resumeSummaryPrompt(input: ResumeSummaryInput, nowYear = new Date().getFullYear()): string {
   const years = yearsOnRecord(
     input.jobs.map((job) => job.dateRange),
@@ -118,9 +147,7 @@ export function resumeSummaryPrompt(input: ResumeSummaryInput, nowYear = new Dat
       return `${job.titleLine} (${when})${bullets}${miles}`
     })
     .join('\n')
-  const mvr = input.mvr
-    ? `Motor vehicle report: ${input.mvr.violationCount} violations${input.mvr.licenseStatus ? `, license status ${input.mvr.licenseStatus}` : ''}`
-    : null
+  const mvr = mvrLineForResume(input.mvr)
   return [
     years ? `Years on record: ${years}` : null,
     input.licenseLabel ? `License barcode read: ${input.licenseLabel}` : null,
@@ -170,7 +197,10 @@ export async function writeResumeSummary(input: ResumeSummaryInput): Promise<str
       .replace(/^["']|["']$/g, '')
       .trim()
     const summary = completeSentences(text, 2)
-    if (!summary) return null
+    if (!summary || summaryMentionsScreeningHarm(summary)) {
+      if (summary) console.warn('[RESUME SUMMARY] Dropped paragraph that named a screening harm')
+      return null
+    }
     cache.set(key, summary)
     return summary
   } catch (error) {
