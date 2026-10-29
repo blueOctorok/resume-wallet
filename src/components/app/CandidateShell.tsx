@@ -6,8 +6,8 @@ import LoadingScreen from '@/components/LoadingScreen'
 import ProfileSetup from '@/components/app/ProfileSetup'
 import MessageInbox from '@/components/messaging/MessageInbox'
 import DotApplicationFlow from '@/components/app/DotApplicationFlow'
-import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
+import { useUIModeStore } from '@/stores/ui-mode-store'
 import CandidateInboxPage from '@/components/hub/CandidateInboxPage'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
@@ -39,6 +39,11 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'inbox',
   'ask-ai',
 ]
+
+const SimpleModeShell = dynamic(() => import('@/components/simple/SimpleModeShell'), {
+  ssr: false,
+  loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} />,
+})
 
 const ResumeBuilder = dynamic(() => import('@/components/ResumeBuilder'), {
   ssr: false,
@@ -173,8 +178,8 @@ const GitHubPage = dynamic(
  * CandidateShell — the composable hub shell for all non-employer users.
  *
  * Reads `currentPage` from UIStore and routes to the correct view.
- * Default home is the Career Card showroom (`null` / `career-card`).
- * Build (`build`) is the DQ board workspace.
+ * Home is the DQ file. The nav calls that Career Card.
+ * Apply (`uiMode === 'simple'`) is the job view.
  *
  * Each block's `pageRoute` in the registry maps to one of the cases below.
  */
@@ -189,6 +194,7 @@ export default function CandidateShell() {
     setEditingResumeId,
   } = useUIStore()
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
+  const uiMode = useUIModeStore((s) => s.mode)
 
   // Hub data must be fetched here (not in CandidateHub) so that both
   // Simple mode and Construct mode have installed blocks, onboarding state,
@@ -220,14 +226,23 @@ export default function CandidateShell() {
     return null
   }
 
+  // Apply is the job rail. Career Card is the file below.
+  if (uiMode === 'simple') {
+    return <SimpleModeShell />
+  }
+
   /*
-   View-switch transition: the keyed wrapper remounts when currentPage changes,
-   which re-runs the mount animation — a route transition with no animation
-   library. `?? 'career-card'` keeps null (home) and 'career-card' on the SAME
-   key so toggling between them doesn't double-remount the Career Card.
+   View-switch transition: the keyed wrapper remounts when currentPage changes.
+   Home, the old career-card link, and File are the same DQ file, so they share
+   one key and do not remount when an old link lands here.
   */
+  const fileHome =
+    currentPage === null ||
+    currentPage === 'career-card' ||
+    currentPage === 'build' ||
+    currentPage === 'ask-ai'
   return (
-    <div key={currentPage ?? 'career-card'} className='animate-view-fade'>
+    <div key={fileHome ? 'file' : currentPage} className='animate-view-fade'>
       {renderPage()}
     </div>
   )
@@ -350,14 +365,13 @@ export default function CandidateShell() {
       )
     }
 
-    // Explicit Build workspace (DQ board)
-    if (currentPage === 'build') {
+    // File is home. `null` is the wordmark. `career-card` is an old link.
+    if (
+      currentPage === 'build' ||
+      currentPage === 'career-card' ||
+      currentPage === null
+    ) {
       return <CandidateHub />
-    }
-
-    // Career Card is home — `null` (default after login) and `career-card` both land here
-    if (currentPage === 'career-card' || currentPage === null) {
-      return <CareerCardView onBack={() => setCurrentPage('build')} />
     }
 
     if (currentPage === 'messages') {
@@ -385,6 +399,6 @@ export default function CandidateShell() {
       return <CandidateHub />
     }
 
-    return <CareerCardView onBack={() => setCurrentPage('build')} />
+    return <CandidateHub />
   }
 }

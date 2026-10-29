@@ -1,14 +1,22 @@
 'use client'
 
-import { useMemo } from 'react'
-import { ArrowRight, FolderCheck } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { AlertCircle, ArrowRight, FolderCheck } from 'lucide-react'
 import { useAuthStore, useUIStore } from '@/stores'
+import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useJourneyProgress } from '@/stores/journey-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
+import { useTheme } from '@/contexts/ThemeContext'
 import type { PageType } from '@/stores/types'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
 import DqCoachPanel from '@/components/hub/DqCoachPanel'
+import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
+import DisclosurePreferencesModal from '@/components/hub/DisclosurePreferencesModal'
+import ResumePreviewModal from '@/components/ResumePreviewModal'
+import { downloadDriverResumePacketPdf } from '@/lib/driver-resume-packet-download'
+import type { ResumeProjection } from '@/lib/resume-projection'
 import { DQ_ITEM_DEFINITIONS } from '@/lib/dq-file-registry'
 import { dqItemHasWorkToShow, type DqItemStatus } from '@/lib/dq-file-status'
 import { DqStatusBadge } from '@/components/employer/drivers/DriverBlockBadges'
@@ -33,6 +41,48 @@ export default function BuildBoard() {
   const journey = useJourneyProgress()
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setShowProfileSetup = useAuthStore((s) => s.setShowProfileSetup)
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
+  const userProfile = useHubBlocksStore((s) => s.userProfile)
+  const { theme } = useTheme()
+  const [resumeProjection, setResumeProjection] = useState<ResumeProjection | null>(null)
+  const [resumeLoading, setResumeLoading] = useState(false)
+  const [resumeError, setResumeError] = useState<string | null>(null)
+  const [resumeDownloading, setResumeDownloading] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [disclosureOpen, setDisclosureOpen] = useState(false)
+
+  const displayName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ')
+
+  const openResumePreview = useCallback(async () => {
+    setResumeLoading(true)
+    setResumeError(null)
+    try {
+      const res = await fetch('/api/driver/resume-projection')
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(body?.error || 'Failed to load resume')
+      }
+      const json = (await res.json()) as { projection: ResumeProjection }
+      setResumeProjection(json.projection)
+    } catch (err) {
+      console.error('[FILE] resume projection:', err)
+      setResumeError(err instanceof Error ? err.message : 'Failed to load resume')
+    } finally {
+      setResumeLoading(false)
+    }
+  }, [])
+
+  const downloadResumePdf = useCallback(async () => {
+    if (!resumeProjection?.packet) return
+    setResumeDownloading(true)
+    try {
+      await downloadDriverResumePacketPdf(resumeProjection.packet, resumeProjection.title)
+    } catch (err) {
+      console.error('[FILE] resume PDF:', err)
+    } finally {
+      setResumeDownloading(false)
+    }
+  }, [resumeProjection])
 
   const { completedCount, totalCount, packet } = useMemo(() => {
     const live = DQ_ITEM_DEFINITIONS.filter((d) => d.blocksOverallCompletion)
@@ -89,11 +139,29 @@ export default function BuildBoard() {
         description='What to do first, then every piece a complete file needs — including ones we have not shipped yet.'
         status={overallStatus}
         headerActions={
-          <span className='shrink-0 rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
-            {completedCount}/{totalCount} live
+          <span className='flex shrink-0 items-center gap-2'>
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
+              isLoading={resumeLoading}
+              onClick={() => void openResumePreview()}
+            >
+              View resume
+            </Button>
+            <span className='rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
+              {completedCount}/{totalCount} live
+            </span>
           </span>
         }
       >
+        {resumeError && !resumeProjection ? (
+          <p className='mb-3 flex items-center gap-1.5 text-xs text-red-700' role='alert'>
+            <AlertCircle className='h-3.5 w-3.5 shrink-0' aria-hidden />
+            {resumeError}
+          </p>
+        ) : null}
+
         <DqCoachPanel />
 
         <div className='mt-6 border-t border-ironside/15 pt-4'>
@@ -146,6 +214,46 @@ export default function BuildBoard() {
           </ul>
         </div>
       </BlockCard>
+
+      {sessionUserId ? (
+        <>
+          <CareerCardShareModal
+            isOpen={shareOpen}
+            onClose={() => setShareOpen(false)}
+            sessionUserId={sessionUserId}
+            displayName={displayName || undefined}
+            onManagePrivacy={() => setDisclosureOpen(true)}
+          />
+          <DisclosurePreferencesModal
+            isOpen={disclosureOpen}
+            onClose={() => setDisclosureOpen(false)}
+            zIndex={1200}
+          />
+        </>
+      ) : null}
+
+      {resumeProjection ? (
+        <ResumePreviewModal
+          title={resumeProjection.title}
+          structuredData={resumeProjection.structuredData}
+          packet={resumeProjection.packet}
+          onClose={() => {
+            setResumeProjection(null)
+            setResumeError(null)
+          }}
+          onDownload={() => void downloadResumePdf()}
+          isDownloading={resumeDownloading}
+          theme={theme}
+          onShare={() => setShareOpen(true)}
+          subtitle={
+            resumeProjection.status === 'ready'
+              ? 'Download PDF for applications · Share card to bring people to Provven'
+              : resumeProjection.status === 'building'
+                ? 'Draft packet — download or share anytime; it fills as you complete DOT'
+                : 'Empty packet — start DOT to fill this resume, or share your card as-is'
+          }
+        />
+      ) : null}
     </HubSectionPanel>
   )
 }

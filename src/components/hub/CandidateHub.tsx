@@ -1,7 +1,7 @@
 'use client'
 
 import { isDarkTheme } from '@/lib/theme-storage'
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -10,8 +10,11 @@ import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
 import Button from '@/components/ui/Button'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
+import { peekInviteToken } from '@/lib/invite-resume'
+import { usePendingScreeningRequest } from '@/hooks/use-pending-screening-request'
 import BuildBoard from '@/components/hub/BuildBoard'
 import DiscoverabilityPrompt from '@/components/hub/DiscoverabilityPrompt'
+import EmployerAskBanner from '@/components/career-card/EmployerAskBanner'
 
 /** Shown when the user jumped from Apply mode to Construct to edit a block. */
 function ReturnToApplyBanner({ isDark }: { isDark: boolean }) {
@@ -67,9 +70,51 @@ function FoundSignal({ isDark }: { isDark: boolean }) {
 }
 
 /**
- * Candidate hub home — career card builder only.
- * Inbox lives under My Hub. AI watches this DQ board — not a Help chat.
+ * Driver home — the DQ file. The generated resume opens from the file header.
+ * Inbox lives under My Hub. AI watches this board, not a Help chat.
  */
+
+/** Screening and a half-finished invite are the only prompts that used to live on the career card. */
+function FileActionPrompts({ isDark }: { isDark: boolean }) {
+  const sessionUserId = useAuthStore((s) => s.sessionUserId)
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const { pendingRequest } = usePendingScreeningRequest('psp', sessionUserId)
+  const [leftoverInvite, setLeftoverInvite] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLeftoverInvite(peekInviteToken())
+  }, [])
+
+  const prompt = pendingRequest
+    ? {
+        label: `Finish screening for ${pendingRequest.companyName}`,
+        onClick: () => setCurrentPage('screening-consent'),
+      }
+    : leftoverInvite
+      ? {
+          label: 'Finish employer screening consent',
+          onClick: () => window.location.assign(`/onboard/${leftoverInvite}`),
+        }
+      : null
+
+  if (!prompt) return null
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between',
+        isDark ? 'border-teal-400/30 bg-teal-500/15' : 'border-teal-200 bg-teal-50',
+      )}
+    >
+      <p className={cn('text-sm font-semibold', isDark ? 'text-teal-100' : 'text-teal-900')}>
+        {prompt.label}
+      </p>
+      <Button type='button' variant='primary' size='sm' onClick={prompt.onClick}>
+        Open
+      </Button>
+    </div>
+  )
+}
 export default function CandidateHub() {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
@@ -135,6 +180,8 @@ export default function CandidateHub() {
       <ReturnToApplyBanner isDark={isDark} />
       <DiscoverabilityPrompt isDark={isDark} />
       <FoundSignal isDark={isDark} />
+      <FileActionPrompts isDark={isDark} />
+      {sessionUserId ? <EmployerAskBanner sessionUserId={sessionUserId} isDark={isDark} /> : null}
       <BuildBoard />
     </div>
   )

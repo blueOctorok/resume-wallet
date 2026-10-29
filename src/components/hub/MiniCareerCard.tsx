@@ -2,18 +2,17 @@
 
 import { isDarkTheme } from '@/lib/theme-storage'
 /**
- * Live preview of what employers see — name, headline, and installed block pills with status.
- * Full card opens the in-app career card; QR opens share link + QR modal (public /card/[token]).
+ * Name, headline, and installed block pills inside the Stormi drawer.
+ * Share opens the public career card link. The driver's home is the File.
  */
 
 import { useState } from 'react'
-import { ExternalLink, QrCode } from 'lucide-react'
+import { QrCode } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
-import { useUIStore, useAuthStore } from '@/stores'
+import { useAuthStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useHubContext } from '@/lib/ava-chat'
-import type { PageType } from '@/stores/types'
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
@@ -26,7 +25,6 @@ export interface MiniCareerCardProps {
 export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps) {
   const { theme } = useTheme()
   const isDark = isDarkTheme(theme)
-  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
@@ -37,7 +35,6 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
     [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') || 'Your name'
   const headline = userProfile?.headline || onboarding?.occupation || 'Add a headline'
 
-  const goCareerCard = () => setCurrentPage('career-card' as PageType)
   const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const statusStyles = {
@@ -108,10 +105,6 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
       )}
 
       <div className='flex flex-wrap gap-2 pt-0.5'>
-        <Button variant='primary' size='sm' onClick={goCareerCard} className='text-[11px] px-2.5 py-1 h-auto'>
-          <ExternalLink className='w-3 h-3' />
-          Full card
-        </Button>
         <Button
           variant='secondary'
           size='sm'

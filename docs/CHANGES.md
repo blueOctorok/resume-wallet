@@ -4,6 +4,51 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Accio result posts get an XML acknowledgment** (2026-10-29)
+
+Key's completion posts to `/api/mvr/webhook` were answered with JSON (`success: true`, `PSP result stored`). Accio accepts a post only when the body is XML and has no `<error>` node (`docs/result_receipt.md` chapter 4), so each 200 was a failed delivery. They resent until the retry limit, then stopped. Order 68451 is one completed PSP row with one result; the retries rewrote that row.
+
+Both `/api/mvr/webhook` and `/api/psp/webhook` now reply `Content-Type: text/xml` and `<XML>Accepted</XML>` after a store. A failed store replies with an `<error>` node and the real status so Accio retries. Reconcile still reads the processor's JSON outcome. Needs a deploy before Key resends the queue.
+
+## **Apply no longer says Construct** (2026-10-29)
+
+The job view called the file Construct. Those lines now say Career Card, the same name as the nav.
+
+| File | Change |
+|---|---|
+| `src/components/simple/SimpleModeShell.tsx` | The banner and its button. |
+| `src/components/simple/StormiNextStepCard.tsx` | Stormi's prompts that send the driver back. |
+| `src/components/career-card/ProjectedCareerCard.tsx` | The empty Apply card. |
+
+---
+
+## **Nav is Career Card and Apply** (2026-10-29)
+
+The center toggle is back. Career Card opens the DQ file. Apply opens the job rail. The wordmark also returns to the file.
+
+| File | Change |
+|---|---|
+| `src/components/Navigation.tsx` | Career Card / Apply toggle. |
+| `src/components/app/CandidateShell.tsx` | Apply renders the job view. |
+
+---
+
+## **File is the driver home** (2026-10-29)
+
+The Career Card / File toggle is gone. A driver lands on the DQ file. View resume on that file opens the generated resume, including the PDF download and the public card link. An old career-card link opens the file. Employer career cards and the public card link are unchanged.
+
+| File | Change |
+|---|---|
+| `src/components/Navigation.tsx` | Removed the Career Card / File toggle. |
+| `src/components/app/CandidateShell.tsx` | Home and old career-card links render the file. |
+| `src/components/hub/CandidateHub.tsx` | Screening and employer asks sit on the file. |
+| `src/components/hub/BuildBoard.tsx` | View resume opens the generated resume. |
+| `src/components/hub/MiniCareerCard.tsx` | Removed the Full card button. Share stays. |
+| `src/components/app/CareerCardView.tsx` | Removed. The driver no longer has a career-card page. |
+| `src/lib/driver-next-action.ts` | Removed with that page. The file coach already orders the next step. |
+
+---
+
 ## **DOT preview cast matches the build** (2026-10-28)
 
 The production typecheck rejected a direct cast from the stripped Form 2 object to the preview's form type. The preview now hops through `unknown`, the same way the other provenance reads in that file already do.

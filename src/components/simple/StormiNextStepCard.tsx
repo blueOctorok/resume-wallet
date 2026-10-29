@@ -7,7 +7,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
  * In Guided Mode, Stormi is a coach — not a chatbot. This card reads the
  * live `fit` result and picks ONE concrete action. Once the user takes it,
  * the parent re-renders and the card proposes the next step. There is no
- * free-form chat in Apply mode; deeper exploration happens in Construct mode.
+ * free-form chat in Apply mode; a closer look happens on the Career Card.
  *
  * Copy branches on:
  *   - No job selected → nudge to pick one
@@ -16,7 +16,7 @@ import { isDarkTheme } from '@/lib/theme-storage'
  *   - `toneBand === 'redirect'` → suggest picking a better-fit job
  *   - Missing block → install the biggest gap
  *   - Fit ≥ 80% → apply now
- *   - Fallback → nudge to Construct mode for deeper Stormi help
+ *   - Fallback → nudge to the Career Card for a closer look
  */
 
 import { useMemo } from 'react'
@@ -43,7 +43,7 @@ export interface StormiNextStepCardProps {
   resumeNeedsStart: boolean
   onAddBlock: (blockId?: string) => void
   onApply: () => void
-  /** Switch to Construct mode for deeper Stormi help. */
+  /** Switch to the Career Card for a closer look. */
   onGoToWorkspace: () => void
   lensPick?: PickBestLensResult | null
   onDraftLens?: () => void
@@ -113,7 +113,7 @@ export default function StormiNextStepCard({
         body: `You added ${listText} but haven\u2019t set ${names.length === 1 ? 'it' : 'them'} up yet. Finish ${names.length === 1 ? 'it' : 'them'} before applying \u2014 empty blocks won\u2019t help your card.`,
         primary: { label: `Set up ${first.label}`, onClick: () => onAddBlock(first.blockType) },
         secondary: names.length > 1
-          ? { label: 'Go to Construct', onClick: onGoToWorkspace }
+          ? { label: 'Go to Career Card', onClick: onGoToWorkspace }
           : undefined,
       }
     }
@@ -167,9 +167,9 @@ export default function StormiNextStepCard({
         icon: Compass,
         eyebrow: 'Honest take',
         title: 'This one\u2019s a stretch right now',
-        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Construct mode for deeper AI help.`,
+        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or open your Career Card for a closer look.`,
         primary: { label: 'Pick a closer fit \u2190', onClick: () => {}, variant: 'secondary' },
-        secondary: { label: 'Go to Construct', onClick: onGoToWorkspace },
+        secondary: { label: 'Go to Career Card', onClick: onGoToWorkspace },
       }
     }
 
@@ -221,21 +221,20 @@ export default function StormiNextStepCard({
       }
     }
 
-    // Fallback — nothing obvious missing from heuristic. Nudge to Construct mode
-    // where Stormi chat can do a deeper review.
+    // Fallback — nothing obvious missing. Send them to the Career Card.
     return {
       icon: Sparkles,
       eyebrow: 'Next move',
       title: `${fit.score}% coverage \u2014 looking good`,
-      body: `I don\u2019t see an obvious gap for \u201c${snap.title}\u201d. Switch to Construct mode where I can do a deeper card review.`,
+      body: `I don\u2019t see an obvious gap for \u201c${snap.title}\u201d. Open your Career Card for a closer look at the file.`,
       primary: {
         label: snap.isStormChain || snap.redirectUrl
           ? (snap.isStormChain ? 'Apply with career card' : 'Open employer site')
-          : 'Go to Construct',
+          : 'Go to Career Card',
         onClick: snap.isStormChain || snap.redirectUrl ? onApply : onGoToWorkspace,
       },
       secondary: snap.isStormChain || snap.redirectUrl
-        ? { label: 'Go to Construct', onClick: onGoToWorkspace }
+        ? { label: 'Go to Career Card', onClick: onGoToWorkspace }
         : undefined,
     }
   }, [
@@ -379,7 +378,7 @@ export default function StormiNextStepCard({
             {isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting') ? (
               <Loader2 className='size-3 animate-spin mr-0.5 inline' />
             ) : null}
-            {step.secondary.label === 'Go to Construct' && <LayoutDashboard className='mr-0.5 size-3 inline' />}
+            {step.secondary.label === 'Go to Career Card' && <LayoutDashboard className='mr-0.5 size-3 inline' />}
             {step.secondary.label}
           </Button>
         )}

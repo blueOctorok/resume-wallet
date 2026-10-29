@@ -81,7 +81,7 @@ export default function SimpleModeShell() {
         >
           <p className={cn('text-sm', isDark ? 'text-teal-100' : 'text-teal-900')}>
             <span className='font-semibold'>You&apos;ve got the hang of this.</span>{' '}
-            Try Construct mode for power tools — you can flip back anytime.
+            The rest of your file is on your Career Card — you can flip back anytime.
           </p>
           <div className='flex gap-2 shrink-0'>
             <Button
@@ -101,7 +101,7 @@ export default function SimpleModeShell() {
                 setUiMode('hub')
               }}
             >
-              Open Construct mode
+              Open Career Card
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { accioPostAckErrorText, accioPostAckResponse } from '@/lib/accio-post-ack'
 import { processPspAccioWebhookCompletion } from '@/lib/process-psp-accio-webhook'
 
 /**
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     console.log('[PSP WEBHOOK] received, length:', xmlBody.length)
 
     if (!xmlBody) {
-      return NextResponse.json({ error: 'Empty body' }, { status: 400 })
+      return accioPostAckResponse(400, 'Empty body')
     }
 
     const supabaseService = createServiceClient(
@@ -21,11 +22,14 @@ export async function POST(request: NextRequest) {
     )
 
     const outcome = await processPspAccioWebhookCompletion(supabaseService, xmlBody)
-    return NextResponse.json(outcome.body, { status: outcome.status })
+    return accioPostAckResponse(
+      outcome.status,
+      outcome.status >= 400 ? accioPostAckErrorText(outcome.body) : undefined,
+    )
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[PSP WEBHOOK] Unexpected:', error)
-    return NextResponse.json({ error: 'Internal server error', details: msg }, { status: 500 })
+    return accioPostAckResponse(500, `Internal server error: ${msg}`)
   }
 }
 

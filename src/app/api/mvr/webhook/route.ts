@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { accioPostAckErrorText, accioPostAckResponse } from '@/lib/accio-post-ack'
 import { processMvrAccioWebhookCompletion } from '@/lib/process-mvr-accio-webhook'
 
 /**
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!xmlBody) {
       console.error('[MVR WEBHOOK] Empty body received')
-      return NextResponse.json({ error: 'Empty body' }, { status: 400 })
+      return accioPostAckResponse(400, 'Empty body')
     }
 
     const supabaseService = createServiceClient(
@@ -34,14 +35,14 @@ export async function POST(request: NextRequest) {
     )
 
     const outcome = await processMvrAccioWebhookCompletion(supabaseService, xmlBody)
-    return NextResponse.json(outcome.body, { status: outcome.status })
+    return accioPostAckResponse(
+      outcome.status,
+      outcome.status >= 400 ? accioPostAckErrorText(outcome.body) : undefined,
+    )
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('[MVR WEBHOOK] Unexpected error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: message },
-      { status: 500 },
-    )
+    return accioPostAckResponse(500, `Internal server error: ${message}`)
   }
 }
 

@@ -15,7 +15,6 @@ import {
   Users,
   Shield,
   CheckCircle,
-  FolderCheck,
   Gift,
   LogOut,
   Menu,
@@ -38,7 +37,8 @@ import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import Button from '@/components/ui/Button'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
-import type { PageType, UserRole } from '@/stores/types'
+import { useUIModeStore } from '@/stores/ui-mode-store'
+import type { UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import ReferralModal from '@/components/hub/ReferralModal'
@@ -296,26 +296,29 @@ function NavOptionsMenu({
   )
 }
 
-type CandidateHubView = 'build' | 'career-card'
+/**
+ * Traditional top bar — wordmark left, controls right, mobile menu below.
+ * Heritage chrome: translucent ink-navy / cream bar with a hairline bottom
+ * border and a champagne-gold ledger line (neutral zinc on paper/ink themes).
+ */
+type CandidateNavView = 'career-card' | 'apply'
 
 /**
- * Hub toggle: File (the DQ queue) · Career Card (the showroom).
- * Lives in the nav center on every breakpoint — never buried in Options/hamburger.
- * One outer box; the selected segment fills gold so the switch is unmistakable.
+ * Hub toggle: Career Card (the DQ file) · Apply (jobs).
+ * Sits in the nav center. The selected segment fills so the switch is obvious.
  */
 function CandidateViewToggle({
   active,
   onSelect,
   isDark,
 }: {
-  active: CandidateHubView
-  onSelect: (view: CandidateHubView) => void
+  active: CandidateNavView
+  onSelect: (view: CandidateNavView) => void
   isDark: boolean
 }) {
-  // Career Card first (left) — it's the default home after login
-  const options: { id: CandidateHubView; label: string; icon: LucideIcon }[] = [
+  const options: { id: CandidateNavView; label: string; icon: LucideIcon }[] = [
     { id: 'career-card', label: 'Career Card', icon: LayoutDashboard },
-    { id: 'build', label: 'File', icon: FolderCheck },
+    { id: 'apply', label: 'Apply', icon: Briefcase },
   ]
 
   return (
@@ -350,7 +353,6 @@ function CandidateViewToggle({
             )}
           >
             <Icon className='h-3.5 w-3.5 shrink-0' />
-            {/* Labels eat the wordmark on a phone; icons + aria-label stay. */}
             <span className='hidden whitespace-nowrap sm:inline'>{label}</span>
           </button>
         )
@@ -359,21 +361,6 @@ function CandidateViewToggle({
   )
 }
 
-// Career Card is home (null / career-card). File is the DQ queue.
-// Work pages (dotapp, mvr, …) keep the File segment selected.
-function candidateHubViewFromPage(page: PageType): CandidateHubView {
-  return page === 'career-card' || page === null ? 'career-card' : 'build'
-}
-
-function pageFromCandidateHubView(view: CandidateHubView): PageType {
-  return view === 'build' ? 'build' : 'career-card'
-}
-
-/**
- * Traditional top bar — wordmark left, controls right, mobile menu below.
- * Heritage chrome: translucent ink-navy / cream bar with a hairline bottom
- * border and a champagne-gold ledger line (neutral zinc on paper/ink themes).
- */
 export default function Navigation({
   isAuthenticated = false,
   userRole,
@@ -394,7 +381,8 @@ export default function Navigation({
   const notificationsAnchorRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const { navigateToMessages, setCurrentPage } = useUIStore()
-  const currentPage = useUIStore((s) => s.currentPage)
+  const uiMode = useUIModeStore((s) => s.mode)
+  const setMode = useUIModeStore((s) => s.setMode)
   const employerNavSnapshot = useUIStore((s) => s.employerNavSnapshot)
   const { notifications, unreadCount } = useNotificationStore()
   // Bar is the opposite of the page: cream on Dark, ink-navy on Light.
@@ -496,7 +484,7 @@ export default function Navigation({
 
   const hubDropdownItems = (
     <>
-      {/* Legacy driver/developer hubs — candidates use CandidateViewToggle instead */}
+      {/* Legacy driver/developer hubs. Candidates go home from the wordmark. */}
       {userRole !== 'employer' && userRole !== 'candidate' && (
         <button type='button' onClick={() => { handleNavigation('hub'); setIsHubDropdownOpen(false) }} className={navDropdownItemClass(isDark)}>
           <LayoutDashboard className='w-4 h-4' />
@@ -558,14 +546,21 @@ export default function Navigation({
     <header className='sticky top-0 z-50'>
       <div className={cn('relative border-b backdrop-blur-xl', barClass)}>
         <nav className='mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8' aria-label='Main navigation'>
-          {/* Relative so the candidate toggle can sit at true viewport-center
-              without being shoved by unequal left/right control widths. */}
           <div className='relative flex h-16 items-center justify-between gap-4'>
             {/* Left — wordmark (home link) + hub menu */}
             <div className='z-10 flex min-w-0 items-center gap-2 sm:gap-5'>
               <button
                 type='button'
-                onClick={() => handleNavigation(isAuthenticated ? 'hub' : 'home')}
+                onClick={() => {
+                  // Career Card is home. Leave Apply if the wordmark is pressed.
+                  if (isAuthenticated && userRole === 'candidate') {
+                    setMode('hub')
+                    setCurrentPage(null)
+                    setIsMenuOpen(false)
+                    return
+                  }
+                  handleNavigation(isAuthenticated ? 'hub' : 'home')
+                }}
                 className='min-w-0 cursor-pointer transition-opacity hover:opacity-85'
                 aria-label={wordmarkButtonLabel}
               >
@@ -598,14 +593,20 @@ export default function Navigation({
               {isAuthenticated && <div className='hidden min-w-0 xl:block'>{employerSnapshot}</div>}
             </div>
 
-            {/* Center — Build / Career Card (true middle of the bar on every breakpoint) */}
             {isAuthenticated && userRole === 'candidate' && (
               <div className='pointer-events-none absolute inset-x-0 flex justify-center'>
                 <div className='pointer-events-auto'>
                   <CandidateViewToggle
                     isDark={isDark}
-                    active={candidateHubViewFromPage(currentPage)}
-                    onSelect={(view) => goToPage(pageFromCandidateHubView(view))}
+                    active={uiMode === 'simple' ? 'apply' : 'career-card'}
+                    onSelect={(view) => {
+                      if (view === 'apply') {
+                        setMode('simple')
+                        return
+                      }
+                      setMode('hub')
+                      setCurrentPage(null)
+                    }}
                   />
                 </div>
               </div>

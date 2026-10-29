@@ -733,17 +733,17 @@ export default function ProjectedCareerCard({
             )}
           >
             <p className={cn('text-sm font-semibold mb-1', isDark ? 'text-white' : 'text-gray-900')}>
-              {selfSectionNav === 'resume-only' ? 'Add credentials in Construct mode' : 'Your career card is ready to build'}
+              {selfSectionNav === 'resume-only' ? 'Add credentials on your Career Card' : 'Your career card is ready to build'}
             </p>
             <p className={cn('text-xs mb-5 max-w-xs mx-auto', isDark ? 'text-gray-400' : 'text-gray-600')}>
               {selfSectionNav === 'resume-only'
-                ? 'Specialized features (DOT, MVR, etc.) are added in Construct — your resume stays here in Apply.'
+                ? 'DOT, MVR, and the rest of the file are on your Career Card. Your resume stays here in Apply.'
                 : 'Add features — they appear here in the order you install them. Each one is a capability employers can discover.'}
             </p>
             {onAddBlock && (
               <Button type='button' variant='primary' size='sm' onClick={onAddBlock}>
                 <Plus className='w-4 h-4' />
-                {selfSectionNav === 'resume-only' ? 'Open Construct mode' : 'Add features to career card'}
+                {selfSectionNav === 'resume-only' ? 'Open Career Card' : 'Add features to career card'}
               </Button>
             )}
           </div>
