@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleJobRail — the left column of Guided mode.
  *
@@ -13,7 +12,6 @@ import { isDarkTheme } from '@/lib/theme-storage'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, MapPin, Loader2, Search, Zap, X, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import { useJobSearch, type JobListing } from '@/hooks/use-job-search'
 import {
   useSimpleModeStore,
@@ -63,8 +61,9 @@ function jobToSnapshot(job: JobListing): SelectedJobSnapshot {
 }
 
 export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Cream paper in Dark mode, same as the DQ file. The app theme painted
+  // these columns as navy glass.
+  const isDark = false
 
   const selectedJobId = useSimpleModeStore((s) => s.selectedJobId)
   const setSelection = useSimpleModeStore((s) => s.setSelection)
@@ -173,7 +172,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
       // Tighter padding so search + list read as one column — rail is narrow; vertical space is precious.
       contentClassName='flex flex-col h-full min-h-0 !p-3 sm:!p-4'
     >
-      <div className='flex items-center gap-2 pb-2 mb-2 border-b border-slate-300/80 dark:border-gray-700/50'>
+      <div className='flex items-center gap-2 pb-2 mb-2 border-b border-slate-300/80'>
         <div
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',

@@ -63,11 +63,11 @@ export async function GET(request: NextRequest) {
     const u = user as {
       ava_auto_welcome_candidate_at?: string | null
       stormi_walkthrough_dismissed_at?: string | null
-      ui_mode_preference?: string | null
     }
 
-    const uiMode: 'simple' | 'hub' =
-      u.ui_mode_preference === 'hub' ? 'hub' : 'simple'
+    // A visit opens Career Card. The column still defaults to 'simple' from
+    // when Apply was the home, and the nav toggle does not write it.
+    const uiMode: 'simple' | 'hub' = 'hub'
 
     return NextResponse.json({
       blocks: blocksResult.data ?? [],

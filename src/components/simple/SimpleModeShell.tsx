@@ -74,12 +74,9 @@ export default function SimpleModeShell() {
     >
       {showGraduateBanner && (
         <div
-          className={cn(
-            'mb-4 rounded-2xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 max-md:mx-3 max-md:mt-3',
-            isDark ? 'bg-teal-500/10 border-teal-500/30' : 'bg-teal-50 border-teal-200',
-          )}
+          className='mb-4 flex flex-col gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between max-md:mx-3 max-md:mt-3'
         >
-          <p className={cn('text-sm', isDark ? 'text-teal-100' : 'text-teal-900')}>
+          <p className='text-sm text-teal-900'>
             <span className='font-semibold'>You&apos;ve got the hang of this.</span>{' '}
             The rest of your file is on your Career Card — you can flip back anytime.
           </p>

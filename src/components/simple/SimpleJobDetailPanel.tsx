@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleJobDetailPanel — center column on desktop (`md+`). On phones the same
  * component renders inside `SimpleMobileSheet` on the **Job** tab (full-height
@@ -17,7 +16,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { useInstalledBlocks } from '@/stores/hub-blocks-store'
 import { computeJobFit } from '@/lib/job-fit'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import { useSimpleModeStore } from '@/stores/simple-mode-store'
@@ -66,8 +64,9 @@ function toApplyModalJob(snap: SelectedJobSnapshot) {
 }
 
 export default function SimpleJobDetailPanel({ userAddress }: SimpleJobDetailPanelProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Cream paper in Dark mode, same as the DQ file. The app theme painted
+  // this column as a navy glass box.
+  const isDark = false
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 

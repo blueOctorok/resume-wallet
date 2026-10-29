@@ -186,7 +186,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         isLoading: false,
       })
 
-      // Hydrate UI mode store with the server preference — no-op if local is already hydrated
+      // Marks the mode store hydrated. Does not move a visit off Career Card.
       useUIModeStore.getState().hydrateFromServer(data.uiModePreference ?? null)
 
       // Stormi journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub

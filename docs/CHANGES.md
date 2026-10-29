@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **A visit opens Career Card, and Apply stays on paper** (2026-10-29)
+
+Dark mode painted the Apply columns as navy glass. Those panels now use the same cream paper as the DQ file, including the job list, the job detail, and Stormi's next step. A reload opens Career Card. The old stored default was Apply, and the nav toggle never wrote a new choice, so every visit was sent back to the job view.
+
+| File | Change |
+|---|---|
+| `src/stores/ui-mode-store.ts` | Visit starts on Career Card. The stored Apply default is not restored. |
+| `src/app/api/hub/blocks/route.ts` | Hub payload reports Career Card as the landing mode. |
+| `src/components/simple/SimpleJobRail.tsx` | Paper column. |
+| `src/components/simple/SimpleJobDetailPanel.tsx` | Paper column. |
+| `src/components/simple/SimpleCardPanel.tsx` | Paper right column. |
+| `src/components/simple/StormiNextStepCard.tsx` | Paper next-step chip. |
+| `src/components/simple/SimpleModeShell.tsx` | Paper banner. |
+
+---
+
 ## **Accio result posts get an XML acknowledgment** (2026-10-29)
 
 Key's completion posts to `/api/mvr/webhook` were answered with JSON (`success: true`, `PSP result stored`). Accio accepts a post only when the body is XML and has no `<error>` node (`docs/result_receipt.md` chapter 4), so each 200 was a failed delivery. They resent until the retry limit, then stopped. Order 68451 is one completed PSP row with one result; the retries rewrote that row.

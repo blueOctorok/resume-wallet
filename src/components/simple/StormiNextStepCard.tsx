@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * StormiNextStepCard — Stormi's proactive "do this next" card.
  *
@@ -22,7 +21,6 @@ import { isDarkTheme } from '@/lib/theme-storage'
 import { useMemo } from 'react'
 import { AlertTriangle, ArrowRight, ArrowUpDown, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
 import type { JobFitResult, PickBestLensResult } from '@/lib/job-fit'
 import type { ReorderSuggestion } from '@/lib/card-reorder-suggestions'
@@ -83,8 +81,8 @@ export default function StormiNextStepCard({
   incompleteBlocks,
   isCardLoading = false,
 }: StormiNextStepCardProps) {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Paper chip on the Apply column. Dark mode was a navy box beside the cream card.
+  const isDark = false
 
   const step: NextStep | null = useMemo(() => {
     // Card data still loading — null signals the thinking state below.
@@ -262,7 +260,7 @@ export default function StormiNextStepCard({
           'flex items-center gap-2.5 rounded-xl border px-3 py-3',
           isDark
             ? 'border-violet-400/20 bg-violet-500/5'
-            : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+            : 'border-violet-200 bg-[#fbf8f1] shadow-sm',
         )}
       >
         <div
@@ -310,7 +308,7 @@ export default function StormiNextStepCard({
         'flex flex-col gap-2 rounded-xl border px-3 py-2.5',
         isDark
           ? 'border-violet-400/20 bg-violet-500/5'
-          : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+          : 'border-violet-200 bg-[#fbf8f1] shadow-sm',
       )}
     >
       <div className='flex items-start gap-2'>

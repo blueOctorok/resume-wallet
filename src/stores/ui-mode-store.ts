@@ -1,19 +1,17 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 /**
  * UI Mode Store
  *
  * Controls which chrome the candidate sees:
- * - `simple`   → job-first split view (`SimpleModeShell`) — new user default
- * - `hub`      → the composable workspace (`CandidateHub`) — power users
+ * - `hub`      → Career Card, the DQ file (`CandidateHub`) — where a visit opens
+ * - `simple`   → Apply, the job split view (`SimpleModeShell`)
  *
  * The underlying data (hub blocks, career card, Stormi) is identical in both
- * modes. This store only toggles the chrome.
- *
- * Persistence: localStorage (instant UX). The server DB column
- * `users.ui_mode_preference` mirrors this value so preference is portable
- * across devices — hydrated via `hydrateFromServer` once the profile loads.
+ * modes. This store only toggles the chrome for the current visit. A reload
+ * opens Career Card again. The old `users.ui_mode_preference` default of
+ * `simple` is not a visit choice — nothing writes the nav toggle — so
+ * `hydrateFromServer` does not apply it.
  */
 
 export type UIMode = 'simple' | 'hub'
@@ -32,48 +30,40 @@ interface UIModeState {
 interface UIModeActions {
   setMode: (mode: UIMode) => void
   toggleMode: () => void
-  /** Called after `/api/user/profile` resolves. No-op if the local value already matches. */
+  /** Called after hub data loads. Marks hydration; does not move the visit off Career Card. */
   hydrateFromServer: (serverMode: UIMode | null | undefined) => void
   setReturnToApply: (value: boolean) => void
 }
 
 const DEFAULT_MODE: UIMode = 'hub'
 
-export const useUIModeStore = create<UIModeState & UIModeActions>()(
-  persist(
-    (set, get) => ({
-      mode: DEFAULT_MODE,
-      hydrated: false,
-      returnToApply: false,
+export const useUIModeStore = create<UIModeState & UIModeActions>()((set, get) => ({
+  mode: DEFAULT_MODE,
+  hydrated: false,
+  returnToApply: false,
 
-      setMode: (mode) =>
-        set({
-          mode,
-          ...(mode === 'simple' ? { returnToApply: false } : {}),
-        }),
-
-      toggleMode: () =>
-        set({
-          mode: get().mode === 'simple' ? 'hub' : 'simple',
-          returnToApply: false,
-        }),
-
-      hydrateFromServer: (serverMode) => {
-        if (get().hydrated) return
-        if (serverMode === 'simple' || serverMode === 'hub') {
-          set({ mode: serverMode, hydrated: true })
-        } else {
-          set({ hydrated: true })
-        }
-      },
-
-      setReturnToApply: (value) => set({ returnToApply: value }),
+  setMode: (mode) =>
+    set({
+      mode,
+      ...(mode === 'simple' ? { returnToApply: false } : {}),
     }),
-    {
-      name: 'stormchain-ui-mode',
-      partialize: (state) => ({ mode: state.mode }),
-    },
-  ),
-)
+
+  toggleMode: () =>
+    set({
+      mode: get().mode === 'simple' ? 'hub' : 'simple',
+      returnToApply: false,
+    }),
+
+  hydrateFromServer: () => {
+    if (get().hydrated) return
+    // Do not apply the stored preference. It still defaults to Apply from
+    // when that was the home, and a reload should open Career Card.
+    // Leaving `mode` alone also keeps an Apply click that happened before
+    // this hub response arrived.
+    set({ hydrated: true })
+  },
+
+  setReturnToApply: (value) => set({ returnToApply: value }),
+}))
 
 export const useUIMode = () => useUIModeStore((s) => s.mode)

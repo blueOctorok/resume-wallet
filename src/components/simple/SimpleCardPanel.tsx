@@ -1,6 +1,5 @@
 'use client'
 
-import { isDarkTheme } from '@/lib/theme-storage'
 /**
  * SimpleCardPanel — the right column of the guided split view.
  *
@@ -18,7 +17,6 @@ import { ArrowRight, CheckCircle2, Compass, CreditCard, Loader2 } from 'lucide-r
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import { useSimpleModeStore } from '@/stores/simple-mode-store'
@@ -93,7 +91,7 @@ function GuestStormiHint({
         'flex flex-col gap-2 rounded-xl border px-3 py-2.5',
         isDark
           ? 'border-violet-400/20 bg-violet-500/5'
-          : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+          : 'border-violet-200 bg-[#fbf8f1] shadow-sm',
       )}
     >
       <div className='flex items-start gap-2'>
@@ -139,8 +137,8 @@ function GuestStormiHint({
 }
 
 export default function SimpleCardPanel() {
-  const { theme } = useTheme()
-  const isDark = isDarkTheme(theme)
+  // Right column stays cream paper in Dark mode, same as the career card.
+  const isDark = false
   const user = useAuthStore((s) => s.user)
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   // sessionStorage may hold a stale user snapshot after sign-out. Guard against it:
@@ -497,7 +495,7 @@ export default function SimpleCardPanel() {
         <div
           className={cn(
             'rounded-xl border p-3 space-y-2',
-            isDark ? 'border-violet-400/30 bg-violet-500/5' : 'border-violet-200 bg-violet-50/60',
+            isDark ? 'border-violet-400/30 bg-violet-500/5' : 'border-violet-200 bg-[#fbf8f1]',
           )}
         >
           <div className='flex items-center gap-2'>
