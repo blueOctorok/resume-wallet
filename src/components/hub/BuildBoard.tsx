@@ -139,22 +139,23 @@ export default function BuildBoard() {
         description='What to do first, then every piece a complete file needs — including ones we have not shipped yet.'
         status={overallStatus}
         headerActions={
-          <span className='flex shrink-0 items-center gap-2'>
-            <Button
-              type='button'
-              variant='primary'
-              size='sm'
-              isLoading={resumeLoading}
-              onClick={() => void openResumePreview()}
-            >
-              View resume
-            </Button>
-            <span className='rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
-              {completedCount}/{totalCount} live
-            </span>
+          <span className='rounded-full border border-ironside/30 bg-stone-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#173150]'>
+            {completedCount}/{totalCount} live
           </span>
         }
       >
+        <div className='mb-5 flex justify-center'>
+          <Button
+            type='button'
+            variant='ghost'
+            size='md'
+            isLoading={resumeLoading}
+            onClick={() => void openResumePreview()}
+            className='resume-border-spin whitespace-nowrap rounded-2xl px-6 py-2.5 text-sm transition-none hover:bg-transparent hover:text-white'
+          >
+            View resume
+          </Button>
+        </div>
         {resumeError && !resumeProjection ? (
           <p className='mb-3 flex items-center gap-1.5 text-xs text-red-700' role='alert'>
             <AlertCircle className='h-3.5 w-3.5 shrink-0' aria-hidden />

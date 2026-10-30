@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume button wears a spinning border** (2026-10-29)
+
+The career-card resume button was a Retro Teal pulse. It now uses a spinning Denim-to-Hot-Embers ring on a Midnight face, the same border trick as the Turbo mega buttons. On the driver home it sits centered under the DQ file title, a step larger than the header chip. Hover pauses the spin. Reduced motion keeps a still ember edge.
+
+| File | Change |
+|---|---|
+| `src/app/globals.css` | `@property --border-angle` plus the conic-gradient border. Replaces the old glow. |
+| `src/components/career-card/ViewResumeCornerButton.tsx` | The corner resume button uses that ring. |
+| `src/components/hub/BuildBoard.tsx` | The DQ file **View resume** button uses the same ring. That is the button on the driver home. |
+
+---
+
 ## **Resume summaries drop MVR and PSP harm** (2026-10-29)
 
 The two-sentence resume summary was told to state the violation count whenever the motor vehicle report was not clean. A resume is not where a carrier should read a citation. Adverse records are now left out of the facts, and a finished paragraph that still names a violation, suspension, crash, or PSP record is thrown away.

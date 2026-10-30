@@ -635,28 +635,60 @@ button:disabled,
   animation: ghost-pulse 2.4s ease-in-out infinite;
 }
 
-/* Resume corner button — Retro Teal breathe. A ring that opens and fades so the
-   button stays the click target. Reduced motion keeps a steady glow. */
-@keyframes resume-corner-glow {
-  0%,
-  100% {
-    box-shadow: 0 4px 14px -2px rgb(63 138 140 / 0.55);
-  }
-  50% {
-    box-shadow:
-      0 6px 22px 0 rgb(63 138 140 / 0.7),
-      0 0 0 4px rgb(63 138 140 / 0.22);
+/*
+ * Resume corner button — spinning border, same trick as the Turbo mega buttons.
+ * A CSS variable does not animate until @property tells the browser it is an
+ * angle. The border stays transparent. The conic gradient is painted into that
+ * border (border-box) while the Midnight fill stops at the padding edge.
+ */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0turn;
+}
+
+@keyframes resume-border-spin {
+  to {
+    --border-angle: 1turn;
   }
 }
 
-.animate-resume-corner-glow {
-  animation: resume-corner-glow 2.2s ease-in-out infinite;
+.resume-border-spin {
+  --border-angle: 0turn;
+  /* Midnight face. The ring still carries Denim into Hot Embers. */
+  --resume-btn-fill: linear-gradient(#173150, #173150);
+  --resume-btn-ring: conic-gradient(
+    from var(--border-angle),
+    transparent 10%,
+    #00608b 28%,
+    #f15a2b 48%,
+    #f28a0f 62%,
+    transparent 80%
+  );
+  border: 3px solid transparent;
+  color: #fff;
+  background:
+    var(--resume-btn-fill) padding-box,
+    var(--resume-btn-ring) border-box,
+    var(--resume-btn-fill) border-box;
+  animation: resume-border-spin 3s linear infinite;
+}
+
+.resume-border-spin:hover {
+  animation-play-state: paused;
+}
+
+.resume-border-spin:focus-visible {
+  outline: 2px solid #f15a2b;
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-resume-corner-glow {
+  .resume-border-spin {
     animation: none;
-    box-shadow: 0 0 14px 2px rgb(63 138 140 / 0.45);
+    border-color: #f15a2b;
+    background: #173150;
+    color: #fff;
   }
 }
 
