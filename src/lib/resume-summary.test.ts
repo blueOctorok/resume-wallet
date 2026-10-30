@@ -4,6 +4,7 @@ import {
   endorsementLabels,
   mvrLineForResume,
   resumeSummaryPrompt,
+  summaryAddressesTheDriver,
   summaryMentionsScreeningHarm,
   yearsOnRecord,
 } from './resume-summary'
@@ -74,6 +75,15 @@ describe('screening harm gate', () => {
     expect(summaryMentionsScreeningHarm('Class A driver. Hauls OTR freight.')).toBe(false)
     expect(summaryMentionsScreeningHarm('Record shows 3 violations and a suspension.')).toBe(true)
     expect(summaryMentionsScreeningHarm('PSP lists two crashes.')).toBe(true)
+  })
+})
+
+describe('driver-facing reply gate', () => {
+  it('drops a request for missing facts and keeps a carrier sentence', () => {
+    const asked =
+      "Here are the facts I have so far: Driver at Stone Mart (2026 – Present). I don't yet have a years of experience line, a license line, or an endorsements line. Could you share those details so I can write an accurate two-sentence summary?"
+    expect(summaryAddressesTheDriver(asked)).toBe(true)
+    expect(summaryAddressesTheDriver('Hauls freight for Stone Mart. Keeps the trailer loaded.')).toBe(false)
   })
 })
 

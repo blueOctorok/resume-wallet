@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Resume summary stops asking the driver for facts** (2026-10-30)
+
+A thin job list made the summary model answer like a chat: it listed the job, then asked for years, a license, and endorsements. That nudge belongs on the career card. The resume paragraph now writes from the facts it has, and a reply that asks a question or says a line is missing is dropped.
+
+| File | Change |
+|---|---|
+| `src/lib/resume-summary.ts` | Prompt forbids addressing the driver. Output gate rejects questions, first person, and markdown. |
+| `src/lib/resume-summary.test.ts` | The Stone Mart "could you share those details" reply fails the gate. |
+
+---
+
 ## **Resume button wears a spinning border** (2026-10-29)
 
 The career-card resume button was a Retro Teal pulse. It now uses a spinning Denim-to-Hot-Embers ring on a Midnight face, the same border trick as the Turbo mega buttons. On the driver home it sits centered under the DQ file title, a step larger than the header chip. Hover pauses the spin. Reduced motion keeps a still ember edge.

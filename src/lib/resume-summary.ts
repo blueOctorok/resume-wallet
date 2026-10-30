@@ -10,6 +10,10 @@
  * statement about a consumer report, which is assembling one. The `mvr`
  * field stays on the input so callers do not change, and it is ignored.
  *
+ * A missing license or years figure is omitted on purpose. The model must
+ * write from what is present. Asking the driver to fill a gap belongs on
+ * the career card, not in a paragraph a carrier reads.
+ *
  * The in-process cache keeps a second open of the same resume from calling
  * the model again. `voice` is part of the key so a rewritten prompt does
  * not reuse the old paragraph.
@@ -42,15 +46,16 @@ export interface ResumeSummaryInput {
 
 const cache = new Map<string, string>()
 
-const SYSTEM = `You write the two-sentence summary at the top of a truck driver's resume.
+const SYSTEM = `You write the two-sentence summary at the top of a truck driver's resume. A carrier reads it. Write the summary from the facts that are present.
+Missing facts are left out on purpose. Do not say a fact is missing. Do not ask for anything. Do not address the driver.
 Use resume voice. No pronouns. Do not say I, my, he, she, this driver, the driver, or the driver's name.
 The city is already in the header. Do not mention the city or the state.
 Use a number only when it appears in the facts. Do not invent miles, percentages, or on-time rates.
-When a years line is present, the first sentence must include that figure.
-When a license line is present, name that class exactly. Do not call a Class D a CDL.
-When an endorsements line is present, name each endorsement. Do not add endorsements that are not listed, and do not call them verified.
-Never mention an MVR, a motor vehicle report, a driving record, a DMV record, PSP, a violation, a citation, a conviction, a suspension, a crash, or an accident. Do not say a record is clean. The license line is a barcode read of the card.
-No bullet points. No quotation marks.`
+If a years figure is among the facts, the first sentence includes it.
+If a license class is among the facts, name that class exactly. Do not call a Class D a CDL.
+If endorsements are among the facts, name each one. Do not add endorsements that are not listed, and do not call them verified.
+Never mention an MVR, a motor vehicle report, a driving record, a DMV record, PSP, a violation, a citation, a conviction, a suspension, a crash, or an accident. Do not say a record is clean. A license class in the facts is a barcode read of the card.
+No bullet points. No markdown. No quotation marks. No questions.`
 
 export function endorsementLabels(raw: string[]): string[] {
   const labels: string[] = []
@@ -94,7 +99,7 @@ export function yearsOnRecord(ranges: string[], nowYear: number): number | null 
 
 export function resumeSummaryCacheKey(input: ResumeSummaryInput): string {
   return JSON.stringify({
-    voice: 'resume-no-mvr',
+    voice: 'resume-carrier-only',
     licenseLabel: input.licenseLabel,
     endorsements: endorsementLabels(input.endorsements),
     jobs: input.jobs.map((job) => ({
@@ -125,6 +130,17 @@ export function summaryMentionsScreeningHarm(text: string): boolean {
   return SCREENING_HARM.test(text)
 }
 
+/**
+ * A resume paragraph is not a chat reply. Questions, first person, and
+ * "I don't have that line yet" are the model talking to the driver.
+ */
+const TALKS_TO_THE_DRIVER =
+  /\?|\b(i|my|me)\b|\bcould you\b|\bplease\b|\bfacts i have\b|\bdon't yet\b|\bdo not yet\b|\byet have\b|\*\*/i
+
+export function summaryAddressesTheDriver(text: string): boolean {
+  return TALKS_TO_THE_DRIVER.test(text)
+}
+
 export function resumeSummaryPrompt(input: ResumeSummaryInput, nowYear = new Date().getFullYear()): string {
   const years = yearsOnRecord(
     input.jobs.map((job) => job.dateRange),
@@ -141,6 +157,7 @@ export function resumeSummaryPrompt(input: ResumeSummaryInput, nowYear = new Dat
     .join('\n')
   const mvr = mvrLineForResume(input.mvr)
   return [
+    'Write the two-sentence summary a carrier will read. Use only these facts.',
     years ? `Years on record: ${years}` : null,
     input.licenseLabel ? `License barcode read: ${input.licenseLabel}` : null,
     endorsements.length > 0 ? `Endorsements on the application: ${endorsements.join(', ')}` : null,
@@ -189,8 +206,8 @@ export async function writeResumeSummary(input: ResumeSummaryInput): Promise<str
       .replace(/^["']|["']$/g, '')
       .trim()
     const summary = completeSentences(text, 2)
-    if (!summary || summaryMentionsScreeningHarm(summary)) {
-      if (summary) console.warn('[RESUME SUMMARY] Dropped paragraph that named a screening harm')
+    if (!summary || summaryMentionsScreeningHarm(summary) || summaryAddressesTheDriver(summary)) {
+      if (summary) console.warn('[RESUME SUMMARY] Dropped paragraph that named a report or talked to the driver')
       return null
     }
     cache.set(key, summary)
