@@ -4,12 +4,11 @@
  *
  * Voice is the resume default: no "I", and no "this driver". The city stays
  * in the header. Numbers and credentials are passed in as facts. The model
- * is told not to invent miles, rates, or a clean MVR.
+ * is told not to invent miles or rates.
  *
- * Screening harm never reaches the paragraph. A violation count, a bad
- * license status, or a PSP result is omitted from the facts, and the
- * finished text is dropped if it still names one. A resume is not the
- * place a carrier reads a citation.
+ * The paragraph never talks about an MVR. A "clean MVR" line is still a
+ * statement about a consumer report, which is assembling one. The `mvr`
+ * field stays on the input so callers do not change, and it is ignored.
  *
  * The in-process cache keeps a second open of the same resume from calling
  * the model again. `voice` is part of the key so a rewritten prompt does
@@ -46,12 +45,11 @@ const cache = new Map<string, string>()
 const SYSTEM = `You write the two-sentence summary at the top of a truck driver's resume.
 Use resume voice. No pronouns. Do not say I, my, he, she, this driver, the driver, or the driver's name.
 The city is already in the header. Do not mention the city or the state.
-Use a number only when it appears in the facts. Do not invent miles, percentages, on-time rates, or accident-free claims.
+Use a number only when it appears in the facts. Do not invent miles, percentages, or on-time rates.
 When a years line is present, the first sentence must include that figure.
 When a license line is present, name that class exactly. Do not call a Class D a CDL.
 When an endorsements line is present, name each endorsement. Do not add endorsements that are not listed, and do not call them verified.
-Never mention a violation, citation, conviction, suspension, revocation, disqualification, crash, accident, or PSP record. Those facts are not resume content. When a motor vehicle report line says clear, you may say clean MVR and nothing more. When that line is absent, do not mention a motor vehicle report.
-The license line is a barcode read, not a DMV check.
+Never mention an MVR, a motor vehicle report, a driving record, a DMV record, PSP, a violation, a citation, a conviction, a suspension, a crash, or an accident. Do not say a record is clean. The license line is a barcode read of the card.
 No bullet points. No quotation marks.`
 
 export function endorsementLabels(raw: string[]): string[] {
@@ -96,10 +94,9 @@ export function yearsOnRecord(ranges: string[], nowYear: number): number | null 
 
 export function resumeSummaryCacheKey(input: ResumeSummaryInput): string {
   return JSON.stringify({
-    voice: 'resume-facts',
+    voice: 'resume-no-mvr',
     licenseLabel: input.licenseLabel,
     endorsements: endorsementLabels(input.endorsements),
-    mvr: input.mvr,
     jobs: input.jobs.map((job) => ({
       titleLine: job.titleLine,
       dateRange: job.dateRange,
@@ -109,25 +106,20 @@ export function resumeSummaryCacheKey(input: ResumeSummaryInput): string {
   })
 }
 
-const ADVERSE_LICENSE = /suspend|revok|disqualif|cancel|denied|invalid/i
-
 /**
- * A clear record may be named. Any violation count or adverse status is
- * left out of the prompt so the model has nothing negative to repeat.
+ * Always empty. A clear report is still an MVR fact, so it never becomes a
+ * prompt line. The argument stays so a caller cannot "just pass the count."
  */
-export function mvrLineForResume(mvr: ResumeSummaryMvr | null): string | null {
-  if (!mvr) return null
-  const adverse = mvr.licenseStatus ? ADVERSE_LICENSE.test(mvr.licenseStatus) : false
-  if (mvr.violationCount > 0 || adverse) return null
-  return 'Motor vehicle report: clear'
+export function mvrLineForResume(_mvr: ResumeSummaryMvr | null): string | null {
+  return null
 }
 
 /**
- * Hard gate on the finished paragraph. "0 violations" and "clean MVR" stay.
- * A count, a suspension, a crash, or a PSP mention does not.
+ * Hard gate on the finished paragraph. Naming the report is enough to drop
+ * it, including "clean MVR". A violation, a crash, or a PSP mention does too.
  */
 const SCREENING_HARM =
-  /\b([1-9]\d*|one|two|three|four|five|several|multiple)\s+violations?\b|\b(suspended|suspension|revoked|revocation|disqualified|disqualification|citation|conviction|crash|accident|psp|dui|dwi|out of service)\b/i
+  /\bmvr\b|motor vehicle|driving record|\bdmv\b|\bpsp\b|\bviolations?\b|\b(suspended|suspension|revoked|revocation|disqualified|disqualification|citation|conviction|crash|accident|dui|dwi|out of service)\b/i
 
 export function summaryMentionsScreeningHarm(text: string): boolean {
   return SCREENING_HARM.test(text)

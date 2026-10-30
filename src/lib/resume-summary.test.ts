@@ -32,7 +32,7 @@ describe('resume summary prompt', () => {
     expect(prompt.toLowerCase()).not.toContain('motor vehicle')
   })
 
-  it('names saved endorsements and a zero-violation report', () => {
+  it('names saved endorsements and leaves a clear report out', () => {
     const prompt = resumeSummaryPrompt(
       {
         licenseLabel: 'Class A · OH',
@@ -43,8 +43,10 @@ describe('resume summary prompt', () => {
       2026,
     )
     expect(prompt).toContain('Endorsements on the application: Hazmat, Tanker, Doubles/triples')
-    expect(prompt).toContain('Motor vehicle report: clear')
+    expect(prompt.toLowerCase()).not.toContain('motor vehicle')
+    expect(prompt.toLowerCase()).not.toContain('mvr')
     expect(prompt).toContain('miles recorded: 450,000')
+    expect(mvrLineForResume({ violationCount: 0, licenseStatus: 'VALID' })).toBeNull()
   })
 
   it('leaves violations and a bad license status out of the facts', () => {
@@ -66,8 +68,10 @@ describe('resume summary prompt', () => {
 })
 
 describe('screening harm gate', () => {
-  it('keeps a clean record and rejects a violation or PSP mention', () => {
-    expect(summaryMentionsScreeningHarm('Class A driver with a clean MVR. Hauls OTR freight.')).toBe(false)
+  it('rejects a clean MVR the same way it rejects a violation or PSP mention', () => {
+    expect(summaryMentionsScreeningHarm('Class A driver with a clean MVR. Hauls OTR freight.')).toBe(true)
+    expect(summaryMentionsScreeningHarm('Clean driving record. Hauls OTR freight.')).toBe(true)
+    expect(summaryMentionsScreeningHarm('Class A driver. Hauls OTR freight.')).toBe(false)
     expect(summaryMentionsScreeningHarm('Record shows 3 violations and a suspension.')).toBe(true)
     expect(summaryMentionsScreeningHarm('PSP lists two crashes.')).toBe(true)
   })

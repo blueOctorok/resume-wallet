@@ -18,12 +18,12 @@ The career-card resume button was a Retro Teal pulse. It now uses a spinning Den
 
 ## **Resume summaries drop MVR and PSP harm** (2026-10-29)
 
-The two-sentence resume summary was told to state the violation count whenever the motor vehicle report was not clean. A resume is not where a carrier should read a citation. Adverse records are now left out of the facts, and a finished paragraph that still names a violation, suspension, crash, or PSP record is thrown away.
+The two-sentence resume summary was told to state the violation count whenever the motor vehicle report was not clean, and a later pass still allowed "clean MVR." A resume does not characterize a motor vehicle report at all. The report is left out of the facts, including a clear one, and a finished paragraph that names an MVR, a driving record, a violation, or PSP is thrown away.
 
 | File | Change |
 |---|---|
-| `src/lib/resume-summary.ts` | Clear records may be called a clean MVR. Any violation count or bad license status is omitted. Output that still names screening harm is not saved. |
-| `src/lib/resume-summary.test.ts` | Covers a suspended record with four violations, and the output gate. |
+| `src/lib/resume-summary.ts` | No MVR line reaches the model, including a clear record. Output that names an MVR, a driving record, a violation, or PSP is not saved. |
+| `src/lib/resume-summary.test.ts` | A clear report stays out of the facts. "Clean MVR" fails the output gate. |
 
 ---
 
