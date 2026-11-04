@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **NJ, CO, and WA MVR orders go out as extended** (2026-11-04)
+
+Key rejected NJ order 69355 because we sent `<mvr_searchtype>standard</mvr_searchtype>`. Standard is no longer offered for CO, NJ, or WA. Every order path was hardcoding standard. The XML builder now picks the type from the license state, and the stored `mvr_search_type` uses the same pick so the row matches the XML.
+
+States Key still accepts standard (AL, FL, OR, WY, and anything they did not list) stay on standard. OR and WY also allow `cdl`, and FL also allows extended. We do not switch those on our own: `cdl` would reject a non-commercial license.
+
+| File | Change |
+|---|---|
+| `src/lib/accio-xml-builder.ts` | `mvrSearchTypeForState`. CO, NJ, WA become extended inside `buildAccioMvrOrderXml`. |
+| Order routes and `place-screening-order.ts` | Persist that same type on `mvr_orders`. |
+| `src/lib/accio-xml-builder.test.ts` | NJ asked as standard still emits extended. Texas stays standard. |
+
+---
+
 ## **Resume summary stops asking the driver for facts** (2026-10-30)
 
 A thin job list made the summary model answer like a chat: it listed the job, then asked for years, a license, and endorsements. That nudge belongs on the career card. The resume paragraph now writes from the facts it has, and a reply that asks a question or says a line is missing is dropped.

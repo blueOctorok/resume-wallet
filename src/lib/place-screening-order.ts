@@ -5,6 +5,7 @@ import {
   buildAccioPspOrderXml,
   generateOrderNumber,
   generateWebhookGuid,
+  mvrSearchTypeForState,
   parseAccioPlaceOrderBundleIds,
 } from '@/lib/accio-xml-builder'
 import { ensureHubBlockInstalled } from '@/lib/ensure-hub-blocks-psp-mvr-bundle'
@@ -206,7 +207,7 @@ export async function placeScreeningOrder(
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       orderNumber,
-      mvrSearchType: 'standard',
+      mvrSearchType: mvrSearchTypeForState(n.dlState),
       includeFmcsaCrashInspection: false,
       webhookUrl,
       webhookGuid,
@@ -248,6 +249,7 @@ export async function placeScreeningOrder(
     dlNumber: n.dlNumber,
     dlState: n.dlState,
     expiresAtIso: expiresAt,
+    mvrSearchType: type === 'mvr' ? mvrSearchTypeForState(n.dlState) : undefined,
     orderedByCompanyId: ownershipFields.ordered_by_company_id,
     orderedByUserId: ownershipFields.ordered_by_user_id,
     orderedByEmployer: ownershipFields.ordered_by_employer,

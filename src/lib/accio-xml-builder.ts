@@ -35,7 +35,11 @@ export interface AccioOrderData {
   
   // Order Configuration
   orderNumber: string // Unique order number we generate
-  mvrSearchType?: 'standard' | 'comprehensive'
+  /**
+   * Accio values are standard, extended, or cdl. The builder replaces this
+   * when the license state does not allow it. See mvrSearchTypeForState.
+   */
+  mvrSearchType?: MvrSearchType
   suppressApplicantEmail?: boolean // Suppress Accio's applicant portal email
   includeFmcsaCrashInspection?: boolean // Include FMCSA crash/inspection report
   /** When true, sets portalfromapplicant=Y (PSP / candidate-initiated flows). Default N for MVR-only. */
@@ -44,6 +48,35 @@ export interface AccioOrderData {
   // Optional: Webhook Configuration
   webhookUrl?: string
   webhookGuid?: string
+}
+
+export type MvrSearchType = 'standard' | 'extended' | 'cdl'
+
+/**
+ * Key's current MVR search types (Lana, 2026-11-04). States not listed still
+ * take standard, which Accio assumes when the tag is omitted.
+ *
+ * CO, NJ, and WA reject standard, so those orders go out as extended.
+ * OR and WY also offer cdl, and FL also offers extended. We keep standard
+ * there: it is still accepted, and cdl would reject a non-commercial license.
+ */
+const MVR_SEARCH_BY_STATE: Record<string, readonly MvrSearchType[]> = {
+  AL: ['standard'],
+  CO: ['extended'],
+  FL: ['standard', 'extended'],
+  NJ: ['extended'],
+  OR: ['standard', 'cdl'],
+  WA: ['extended'],
+  WY: ['standard', 'cdl'],
+}
+
+export function mvrSearchTypeForState(dlState: string, requested?: string): MvrSearchType {
+  const allowed = MVR_SEARCH_BY_STATE[dlState.trim().toUpperCase()]
+  if (!allowed) return 'standard'
+  if (requested && (allowed as readonly string[]).includes(requested)) {
+    return requested as MvrSearchType
+  }
+  return allowed.includes('standard') ? 'standard' : allowed[0]
 }
 
 /**
@@ -83,7 +116,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
     dlNumber: rawDlNumber,
     dlState,
     orderNumber,
-    mvrSearchType = 'standard',
+    mvrSearchType: requestedSearchType,
     suppressApplicantEmail = true,
     includeFmcsaCrashInspection = false,
     portalFromApplicant = false,
@@ -92,6 +125,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
   } = data
 
   const dlNumber = sanitizeDlNumber(rawDlNumber)
+  const mvrSearchType = mvrSearchTypeForState(dlState, requestedSearchType)
   const account = process.env.ACCIO_ACCOUNT || ''
   const username = process.env.ACCIO_USERNAME || ''
   const password = process.env.ACCIO_PASSWORD || ''

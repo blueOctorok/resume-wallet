@@ -7,7 +7,7 @@ import {
   getEmployerCompanyAccess,
 } from '@/lib/employer-company-access'
 import { can, capabilityDeniedMessage } from '@/lib/employer-permissions'
-import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid, mvrSearchTypeForState } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       orderNumber,
-      mvrSearchType,
+      mvrSearchType: mvrSearchTypeForState(n.dlState, mvrSearchType),
       includeFmcsaCrashInspection: false,
       webhookUrl,
       webhookGuid,
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
         accio_remote_order_number:  accioOrderId,
         accio_remote_suborder_number: subOrderId,
         order_type:                 'MVR',
-        mvr_search_type:            mvrSearchType,
+        mvr_search_type:            mvrSearchTypeForState(n.dlState, mvrSearchType),
         dl_number:                  n.dlNumber,
         dl_state:                   n.dlState,
         status:                     'pending',

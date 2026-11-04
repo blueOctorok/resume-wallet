@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
-import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid, mvrSearchTypeForState } from '@/lib/accio-xml-builder'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
 import { validateScreeningOrderInput, checkRecentDuplicateOrder } from '@/lib/screening-validation'
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       orderNumber,
-      mvrSearchType,
+      mvrSearchType: mvrSearchTypeForState(n.dlState, mvrSearchType),
       includeFmcsaCrashInspection,
       webhookUrl,
       webhookGuid,
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         accio_remote_suborder_number: subOrderId,
         // Order details
         order_type: 'MVR',
-        mvr_search_type: mvrSearchType,
+        mvr_search_type: mvrSearchTypeForState(n.dlState, mvrSearchType),
         dl_number: n.dlNumber,
         dl_state: n.dlState,
         status: 'pending',

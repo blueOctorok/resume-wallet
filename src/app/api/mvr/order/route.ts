@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid, mvrSearchTypeForState } from '@/lib/accio-xml-builder'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { getScreeningWebhookBaseUrl } from '@/lib/app-url'
 import { isValidSsn, normalizeSsnDigits } from '@/lib/ssn'
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
       dlNumber: n.dlNumber,
       dlState: n.dlState,
       orderNumber,
-      mvrSearchType,
+      mvrSearchType: mvrSearchTypeForState(n.dlState, mvrSearchType),
       includeFmcsaCrashInspection,
       webhookUrl,
       webhookGuid
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
       dlState: n.dlState,
       expiresAtIso,
       paymentId: payment.id,
-      mvrSearchType,
+      mvrSearchType: mvrSearchTypeForState(n.dlState, mvrSearchType),
     })
     if (reservation.ok === false) {
       if (reservation.reason === 'duplicate') {

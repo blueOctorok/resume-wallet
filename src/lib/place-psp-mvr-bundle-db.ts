@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { mvrSearchTypeForState } from '@/lib/accio-xml-builder'
 
 export interface PlacePspMvrBundleDbParams {
   driverUserId: string
@@ -42,7 +43,7 @@ export async function insertPspMvrBundleOrders(
     accio_remote_order_number: p.accioOrderId,
     accio_remote_suborder_number: p.mvrSuborderId,
     order_type: 'MVR',
-    mvr_search_type: 'standard',
+    mvr_search_type: mvrSearchTypeForState(st),
     dl_number: dl,
     dl_state: st,
     status: 'pending',
