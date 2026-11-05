@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Midnight worker keeps one wallet and saves it while it catches up** (2026-11-05)
+
+Each proof was opening a new wallet at block zero and giving up after 45 minutes, and the wallet file was only written after a full sync. Mainnet never finished, so the cache volume stayed empty and the next proof started over. The worker now keeps one wallet open in the Midnight runtime process, writes it every few minutes, and does not close it between proofs. That package has to load in its own process. The app loader looks for a CommonJS file the package does not ship, and the worker exits before it syncs. The log line is `shielded applied/relevant`, which is the index this SDK actually uses. `highestIndex` stays 0 and is not the chain tip.
+
+| File | Change |
+|---|---|
+| `midnight/runtime/src/prove-on-chain.ts` | No sync deadline. Checkpoint every 3 minutes. One held wallet for the worker. |
+| `scripts/midnight-proof-worker.ts` | Starts the wallet process and waits until it has caught up. |
+| `midnight/runtime/scripts/held-wallet-cli.ts` | The wallet process. Saves on a timer and on stop. Proves one fact per line. |
+| `src/lib/mvr-proof-worker.ts` | The queue can prove through the wallet process. |
+
+Deployed to Fly `provven-midnight-worker` in the same session (`deployment-01M6P9GDJXHWZBGE1X8KBBFJ47`). The first catch-up still starts at block zero once, then the volume keeps each checkpoint.
+
+---
+
 ## **NJ, CO, and WA MVR orders go out as extended** (2026-11-04)
 
 Key rejected NJ order 69355 because we sent `<mvr_searchtype>standard</mvr_searchtype>`. Standard is no longer offered for CO, NJ, or WA. Every order path was hardcoding standard. The XML builder now picks the type from the license state, and the stored `mvr_search_type` uses the same pick so the row matches the XML.

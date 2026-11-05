@@ -20,6 +20,7 @@ import {
 import {
   createMidnightWallet,
   saveWalletState,
+  type MidnightWalletContext,
 } from './wallet.js'
 import { createMidnightProviders } from './providers.js'
 import { MIDNIGHT_CONFIG } from './config.js'
@@ -119,44 +120,54 @@ function logProgress(message: string): void {
   console.error(`[MIDNIGHT] ${message}`)
 }
 
+// This SDK leaves `highestIndex` at 0. The number that matters is
+// `highestRelevantWalletIndex` — how far this wallet has to read.
+const CHECKPOINT_MS = 3 * 60 * 1000
+const PROGRESS_LOG_MS = 15_000
+
 function makeSyncProgressLogger(): (s: FacadeState) => void {
-  let lastApplied = -1n
+  let lastLoggedAt = 0
   return (s) => {
     const progress = s.shielded?.progress
-    if (!progress || progress.appliedIndex === lastApplied) return
-    lastApplied = progress.appliedIndex
+    if (!progress) return
+    const now = Date.now()
+    if (now - lastLoggedAt < PROGRESS_LOG_MS) return
+    lastLoggedAt = now
     logProgress(
-      `Sync progress: block ${progress.appliedIndex}/${progress.highestIndex}`,
+      `Sync progress: shielded ${progress.appliedIndex}/${progress.highestRelevantWalletIndex}`,
     )
   }
 }
 
-const WALLET_SYNC_TIMEOUT_MS = 45 * 60 * 1000
+/**
+ * Wait until shielded, dust, and unshielded are all caught up.
+ * A mainnet catch-up takes longer than an hour, so there is no deadline.
+ * The wallet file is written every few minutes. A restart continues from
+ * that file instead of starting at block zero again.
+ */
+async function waitForWalletSync(walletCtx: MidnightWalletContext) {
+  const checkpoint = setInterval(() => {
+    logProgress('Saving wallet checkpoint')
+    void saveWalletState(walletCtx)
+  }, CHECKPOINT_MS)
 
-function waitForWalletSync(wallet: { state: () => Rx.Observable<FacadeState> }) {
-  return Rx.firstValueFrom(
-    wallet.state().pipe(
-      Rx.tap(makeSyncProgressLogger()),
-      Rx.filter((s) => s.isSynced),
-      Rx.timeout({
-        first: WALLET_SYNC_TIMEOUT_MS,
-        with: () =>
-          Rx.throwError(
-            () =>
-              new Error(
-                `Wallet sync timed out after ${WALLET_SYNC_TIMEOUT_MS / 60000} minutes — delete midnight/runtime/.wallet-cache/${MIDNIGHT_CONFIG.network}.json and retry on public RPC`,
-              ),
-          ),
-      }),
-    ),
-  )
+  try {
+    return await Rx.firstValueFrom(
+      walletCtx.wallet.state().pipe(
+        Rx.tap(makeSyncProgressLogger()),
+        Rx.filter((s) => s.isSynced),
+      ),
+    )
+  } finally {
+    clearInterval(checkpoint)
+  }
 }
 
 export async function registerDustIfNeeded(
   walletCtx: Awaited<ReturnType<typeof createMidnightWallet>>,
 ): Promise<void> {
-  logProgress('Syncing wallet (first run after a restart can take several minutes)...')
-  const state = await waitForWalletSync(walletCtx.wallet)
+  logProgress('Syncing wallet. A first catch-up of mainnet keeps going until it finishes, and the wallet file is saved along the way.')
+  const state = await waitForWalletSync(walletCtx)
   logProgress('Wallet synced')
 
   if (state.dust.balance(new Date()) <= 0n) {
@@ -270,6 +281,22 @@ export async function deployMidnightContract(
   }
 }
 
+let heldWallet: MidnightWalletContext | null = null
+
+/** One wallet for the life of the worker. Later proves reuse it. */
+export async function openHeldMidnightWallet(): Promise<void> {
+  if (heldWallet) return
+  logProgress('Opening the worker wallet')
+  const seed = mnemonicToSeedBuffer(MIDNIGHT_CONFIG.walletMnemonic)
+  heldWallet = await createMidnightWallet(seed)
+  await registerDustIfNeeded(heldWallet)
+}
+
+export async function checkpointHeldWallet(): Promise<void> {
+  if (!heldWallet) return
+  await saveWalletState(heldWallet)
+}
+
 export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChainProveResult> {
   const pullNullifier = buildPullNullifier(input.sourcePullId)
   const commitment = buildFactCommitment({
@@ -281,14 +308,15 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
     disclosedFields: input.disclosedFields,
   })
 
-  const seed = mnemonicToSeedBuffer(input.mnemonic)
   const contractAddress = resolveContractAddressForFact(input.factType)
   const cfg = MIDNIGHT_CIRCUIT_CONFIGS[input.factType]
-
-  logProgress('Initializing wallet...')
-  const walletCtx = await createMidnightWallet(seed)
+  const reuseHeld = heldWallet !== null
+  const walletCtx = heldWallet ?? (await createMidnightWallet(mnemonicToSeedBuffer(input.mnemonic)))
 
   try {
+    if (!reuseHeld) logProgress('Initializing wallet...')
+    // Already-synced wallet returns immediately. A catch-up that slipped
+    // behind waits here, and the checkpoint timer keeps writing the file.
     await registerDustIfNeeded(walletCtx)
 
     const witnesses =
@@ -407,7 +435,11 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
         input.factType === 'mvr_clean_36_months',
     }
   } finally {
-    await walletCtx.wallet.stop()
+    // The worker's wallet stays open. A one-shot prove closes its own.
+    if (!reuseHeld) {
+      await saveWalletState(walletCtx)
+      await walletCtx.wallet.stop()
+    }
   }
 }
 
@@ -429,7 +461,7 @@ export async function getWalletStatus(mnemonic: string) {
     logProgress('Syncing wallet (first run can take several minutes)...')
     logProgress(`Unshielded address: ${address}`)
 
-    const state = await waitForWalletSync(walletCtx.wallet)
+    const state = await waitForWalletSync(walletCtx)
     await saveWalletState(walletCtx)
 
     const tNight =

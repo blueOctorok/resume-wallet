@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isMidnightPredicateProof } from '@/lib/card-fact-display'
 import { nextUnprovedDriver, type ProofQueueOrder } from '@/lib/mvr-proof-queue'
 import { proveCompletedMvrFacts } from '@/lib/prove-mvr-facts'
+import type { ShippedFactType } from '@/lib/fact-registry'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 const PAGE = 30
@@ -91,7 +92,12 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
  * Long-running loop. Fly keeps this process up next to the proof server.
  * Each pass proves one driver, then looks again. An empty pass waits.
  */
-export async function runMvrProofWorker(signal: { stopping: boolean }): Promise<void> {
+export async function runMvrProofWorker(
+  signal: { stopping: boolean },
+  proveDriver: (
+    userId: string,
+  ) => Promise<{ proven: ShippedFactType[]; skipped: ShippedFactType[] }> = proveCompletedMvrFacts,
+): Promise<void> {
   const supabase = await getAdminSupabaseClient()
   const cooldowns = new Map<string, number>()
   let before: string | null = null
@@ -124,7 +130,7 @@ export async function runMvrProofWorker(signal: { stopping: boolean }): Promise<
 
     const label = userId.slice(0, 8)
     try {
-      const result = await proveCompletedMvrFacts(userId)
+      const result = await proveDriver(userId)
       console.log(
         `[MVR PROOF WORKER] ${label} proved=${result.proven.join(',') || 'none'} skipped=${result.skipped.join(',') || 'none'}`,
       )
