@@ -125,25 +125,55 @@ function logProgress(message: string): void {
 const CHECKPOINT_MS = 3 * 60 * 1000
 const PROGRESS_LOG_MS = 15_000
 
+type WalletProgress = {
+  appliedIndex?: bigint
+  highestRelevantWalletIndex?: bigint
+  appliedId?: bigint
+  highestTransactionId?: bigint
+  isConnected?: boolean
+  isStrictlyComplete?: () => boolean
+}
+
+function readProgress(value: unknown): WalletProgress | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as { progress?: WalletProgress; state?: { progress?: WalletProgress } }
+  return record.progress ?? record.state?.progress
+}
+
+function formatProgress(progress: WalletProgress | undefined): string {
+  if (!progress) return 'missing'
+  const applied = progress.appliedIndex ?? progress.appliedId ?? 0n
+  const tip = progress.highestRelevantWalletIndex ?? progress.highestTransactionId ?? 0n
+  const strict = typeof progress.isStrictlyComplete === 'function' ? progress.isStrictlyComplete() : false
+  return `${applied}/${tip} connected=${Boolean(progress.isConnected)} strict=${strict}`
+}
+
 function makeSyncProgressLogger(): (s: FacadeState) => void {
   let lastLoggedAt = 0
   return (s) => {
-    const progress = s.shielded?.progress
-    if (!progress) return
     const now = Date.now()
     if (now - lastLoggedAt < PROGRESS_LOG_MS) return
     lastLoggedAt = now
     logProgress(
-      `Sync progress: shielded ${progress.appliedIndex}/${progress.highestRelevantWalletIndex}`,
+      `Sync progress: dust ${formatProgress(readProgress(s.dust))} unshielded ${formatProgress(readProgress(s.unshielded))} shielded ${formatProgress(readProgress(s.shielded))}`,
     )
   }
 }
 
 /**
- * Wait until shielded, dust, and unshielded are all caught up.
- * A mainnet catch-up takes longer than an hour, so there is no deadline.
- * The wallet file is written every few minutes. A restart continues from
- * that file instead of starting at block zero again.
+ * A prove pays its fee in DUST generated from NIGHT. The contract call
+ * carries no shielded coins, so the zswap reader is not part of the gate.
+ * The facade's own `isSynced` also waits on shielded, which on mainnet is
+ * millions of events this wallet never spends. That wait is what kept
+ * proofs from starting.
+ */
+function isReadyToProve(s: FacadeState): boolean {
+  return s.dust.progress.isStrictlyComplete() && s.unshielded.progress.isStrictlyComplete()
+}
+
+/**
+ * Wait until dust and unshielded are caught up. No deadline. The wallet
+ * file is written every few minutes while this waits.
  */
 async function waitForWalletSync(walletCtx: MidnightWalletContext) {
   const checkpoint = setInterval(() => {
@@ -155,7 +185,7 @@ async function waitForWalletSync(walletCtx: MidnightWalletContext) {
     return await Rx.firstValueFrom(
       walletCtx.wallet.state().pipe(
         Rx.tap(makeSyncProgressLogger()),
-        Rx.filter((s) => s.isSynced),
+        Rx.filter(isReadyToProve),
       ),
     )
   } finally {
@@ -166,9 +196,9 @@ async function waitForWalletSync(walletCtx: MidnightWalletContext) {
 export async function registerDustIfNeeded(
   walletCtx: Awaited<ReturnType<typeof createMidnightWallet>>,
 ): Promise<void> {
-  logProgress('Syncing wallet. A first catch-up of mainnet keeps going until it finishes, and the wallet file is saved along the way.')
+  logProgress('Syncing wallet. Waiting for dust and unshielded only. Shielded keeps reading in the background.')
   const state = await waitForWalletSync(walletCtx)
-  logProgress('Wallet synced')
+  logProgress('Wallet ready to prove')
 
   if (state.dust.balance(new Date()) <= 0n) {
     logProgress('No DUST balance — registering tNIGHT UTXOs for DUST generation...')
@@ -193,7 +223,7 @@ export async function registerDustIfNeeded(
     await Rx.firstValueFrom(
       walletCtx.wallet.state().pipe(
         Rx.throttleTime(5000),
-        Rx.filter((s) => s.isSynced),
+        Rx.filter(isReadyToProve),
         Rx.filter((s) => s.dust.balance(new Date()) > 0n),
       ),
     )
@@ -290,6 +320,10 @@ export async function openHeldMidnightWallet(): Promise<void> {
   const seed = mnemonicToSeedBuffer(MIDNIGHT_CONFIG.walletMnemonic)
   heldWallet = await createMidnightWallet(seed)
   await registerDustIfNeeded(heldWallet)
+  // Shielded keeps reading after the prove gate opens. Keep saving so a
+  // restart does not lose that background progress.
+  const wallet = heldWallet
+  setInterval(() => void saveWalletState(wallet), CHECKPOINT_MS).unref()
 }
 
 export async function checkpointHeldWallet(): Promise<void> {

@@ -1,3 +1,4 @@
+import * as Rx from 'rxjs'
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider'
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider'
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider'
@@ -26,12 +27,15 @@ export async function createMidnightProviders(
   // Each circuit has its own compiled keys/ — must not always use mvr-clean-36.
   const zkConfigPath = cfg?.managedDir ?? ZK_CONFIG_PATH
 
-  const state = await walletCtx.wallet.waitForSyncedState()
+  // Only the shielded public keys are read here. The facade's
+  // `waitForSyncedState()` would also block on the full shielded catch-up,
+  // and the caller has already waited for dust and unshielded.
+  const shielded = await Rx.firstValueFrom(walletCtx.wallet.shielded.state)
   const accountId = walletCtx.unshieldedKeystore.getBech32Address().asString()
 
   const walletProvider = {
-    getCoinPublicKey: () => state.shielded.coinPublicKey.toHexString(),
-    getEncryptionPublicKey: () => state.shielded.encryptionPublicKey.toHexString(),
+    getCoinPublicKey: () => shielded.coinPublicKey.toHexString(),
+    getEncryptionPublicKey: () => shielded.encryptionPublicKey.toHexString(),
     async balanceTx(tx: unknown, ttl?: Date) {
       const recipe = await walletCtx.wallet.balanceUnboundTransaction(
         tx as Parameters<MidnightWalletContext['wallet']['balanceUnboundTransaction']>[0],

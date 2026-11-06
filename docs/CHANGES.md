@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Midnight proofs no longer wait on the shielded wallet** (2026-11-06)
+
+A prove pays its fee in DUST generated from NIGHT and carries no shielded coins. The shielded balancer returns at once when a transaction is already balanced. The worker was still gated twice on the shielded reader: our `isSynced` filter, and `waitForSyncedState()` inside `createMidnightProviders`. On mainnet that reader is 1.5M zswap events this wallet never spends. September proofs did not hit this because the chain was far shorter. Yesterday's run reached 1,514,096 / 1,514,096 shielded and still never proved, because dust and unshielded were not printed and the facade waits on all three.
+
+The gate is now dust and unshielded only. Shielded keeps reading in the background. Save is per reader: `ZswapLocalState.serialize()` throws once its merkle copy is large, so a failed shielded save keeps the copy on disk instead of blocking dust and unshielded. A failed save logs the nested error instead of the schema tree.
+
+| File | Change |
+|---|---|
+| `midnight/runtime/src/prove-on-chain.ts` | `isReadyToProve` = dust + unshielded strict. Progress log prints all three. Held wallet checkpoints for the life of the process. |
+| `midnight/runtime/src/providers.ts` | Reads shielded public keys from the current state instead of the facade's all-three wait. |
+| `midnight/runtime/src/wallet.ts` | `serializeOrKeep` per reader. Nested error text on failure. |
+
+Deployed to Fly `provven-midnight-worker`. The first real prove after this is the next gate: the runtime is ledger v8 and mainnet forked to v9 on 2026-10-12. Do not upgrade until a synced prove fails for that reason.
+
+---
+
 ## **Midnight worker keeps one wallet and saves it while it catches up** (2026-11-05)
 
 Each proof was opening a new wallet at block zero and giving up after 45 minutes, and the wallet file was only written after a full sync. Mainnet never finished, so the cache volume stayed empty and the next proof started over. The worker now keeps one wallet open in the Midnight runtime process, writes it every few minutes, and does not close it between proofs. That package has to load in its own process. The app loader looks for a CommonJS file the package does not ship, and the worker exits before it syncs. The log line is `shielded applied/relevant`, which is the index this SDK actually uses. `highestIndex` stays 0 and is not the chain tip.

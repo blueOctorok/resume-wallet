@@ -249,6 +249,51 @@ export async function createMidnightWallet(seed: Buffer) {
   return { wallet, shieldedSecretKeys, dustSecretKey, unshieldedKeystore }
 }
 
+function serializeFailure(err: unknown): string {
+  const lines: string[] = []
+  const seen = new Set<unknown>()
+  const visit = (value: unknown, depth: number) => {
+    if (!value || depth > 6 || seen.has(value) || typeof value !== 'object') return
+    seen.add(value)
+    const record = value as { message?: unknown; actual?: unknown; cause?: unknown; issue?: unknown }
+    if (typeof record.message === 'string' && record.message.length < 400 && !record.message.includes('readonly')) {
+      lines.push(record.message.replaceAll('\n', ' '))
+    }
+    visit(record.actual, depth + 1)
+    visit(record.cause, depth + 1)
+    visit(record.issue, depth + 1)
+  }
+  visit(err, 0)
+  if (lines.length === 0) return err instanceof Error ? err.name : String(err)
+  return lines.join(' | ').slice(0, 500)
+}
+
+/**
+ * Each reader is serialized on its own. On mainnet the shielded
+ * `ZswapLocalState.serialize()` starts throwing once its merkle copy is
+ * large, and that must not block saving dust and unshielded. A failed part
+ * keeps the copy already on disk.
+ */
+async function serializeOrKeep(
+  label: string,
+  serialize: () => Promise<string>,
+  previous: string | undefined,
+): Promise<string | null> {
+  try {
+    return await serialize()
+  } catch (err) {
+    // The SDK wraps the wasm failure in a schema tree. The useful text is the
+    // nested `actual` / `cause`, and the schema print is too large to keep.
+    const reason = serializeFailure(err)
+    if (previous) {
+      console.error(`[MIDNIGHT] ${label} did not serialize, keeping the saved copy: ${reason}`)
+      return previous
+    }
+    console.error(`[MIDNIGHT] ${label} did not serialize and there is no saved copy: ${reason}`)
+    return null
+  }
+}
+
 /**
  * Serialize the wallet's synced state to disk so the next run can restore() it
  * and skip the full chain re-scan. Best-effort: a cache write must never break a
@@ -256,11 +301,13 @@ export async function createMidnightWallet(seed: Buffer) {
  */
 export async function saveWalletState(ctx: MidnightWalletContext): Promise<void> {
   try {
+    const previous = loadWalletState() ?? undefined
     const [shielded, unshielded, dust] = await Promise.all([
-      ctx.wallet.shielded.serializeState(),
-      ctx.wallet.unshielded.serializeState(),
-      ctx.wallet.dust.serializeState(),
+      serializeOrKeep('shielded', () => ctx.wallet.shielded.serializeState(), previous?.shielded),
+      serializeOrKeep('unshielded', () => ctx.wallet.unshielded.serializeState(), previous?.unshielded),
+      serializeOrKeep('dust', () => ctx.wallet.dust.serializeState(), previous?.dust),
     ])
+    if (shielded === null || unshielded === null || dust === null) return
     const payload: SerializedWalletState = {
       network: MIDNIGHT_CONFIG.network,
       shielded,
@@ -271,11 +318,7 @@ export async function saveWalletState(ctx: MidnightWalletContext): Promise<void>
     fs.mkdirSync(WALLET_CACHE_DIR, { recursive: true })
     fs.writeFileSync(WALLET_CACHE_PATH, JSON.stringify(payload))
   } catch (err) {
-    console.error(
-      `[MIDNIGHT] Could not save wallet cache: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    )
+    console.error(`[MIDNIGHT] Could not save wallet cache: ${serializeFailure(err)}`)
   }
 }
 
