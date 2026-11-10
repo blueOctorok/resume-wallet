@@ -26,6 +26,18 @@ A name is now stored with a capital first letter when someone types it and when 
 
 ---
 
+## **DOT addresses print on two lines** (2026-11-10)
+
+A street, city, state, and ZIP on one line is harder to read than a mailing address. Employer addresses typed as "293 Vernon White Rd, Winterville, NC 28590" now break after the street. Home addresses, which are already separate fields, use the same two lines.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-application-format.ts` | Postal line break for structured and typed addresses. |
+| `src/lib/dot-application-pdf.ts` | PDF uses those lines. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | On-screen copy uses the same break. |
+
+---
+
 ## **DOT application PDF header, signature line, and column collisions** (2026-11-10)
 
 The exported DOT application was still titled "Driver Qualification File". A shared copy printed the company name with no mailing address. The signature block left off the consent sentence that sits above the signature on the form. All-caps names such as BRIAN printed exactly as typed. Employment addresses ran into "Reason for leaving" because column text was measured at the card heading's 8.5pt and drawn at 10pt. The yes/no rules sat 2mm above the next row, which is inside the letters.

@@ -35,3 +35,31 @@ export function titleCaseForm1Names<T extends Record<string, unknown> | null | u
   }
   return next
 }
+
+/** Street on the first line, city / state / ZIP on the second. */
+export function formatPostalAddress(parts: {
+  street?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+  zipCode?: string | null
+}): string {
+  const street = parts.street?.trim() || ''
+  const zip = parts.zip?.trim() || parts.zipCode?.trim() || ''
+  const locality = [parts.city?.trim(), [parts.state?.trim(), zip].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ')
+  return [street, locality].filter(Boolean).join('\n')
+}
+
+/**
+ * Employer addresses are typed as one string: "293 Vernon White Rd, Winterville, NC 28590".
+ * The first comma ends the street. Anything already broken into lines is left alone.
+ */
+export function formatFreeformPostalAddress(raw?: string | null): string {
+  const text = raw?.trim() || ''
+  if (!text || text.includes('\n')) return text
+  const parts = text.split(',').map((part) => part.trim()).filter(Boolean)
+  if (parts.length < 2) return text
+  return `${parts[0]}\n${parts.slice(1).join(', ')}`
+}

@@ -13,6 +13,7 @@ import { orderHistoryEntries } from '@/lib/history-entry-order'
 import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import { cn } from '@/lib/utils'
 import { DOT_SIGNATURE_DISCLAIMER } from '@/lib/dot-signature-disclaimer'
+import { formatFreeformPostalAddress, formatPostalAddress } from '@/lib/dot-application-format'
 
 export interface DotAppPreviewData {
   form1: DotForm1Data | null
@@ -293,14 +294,8 @@ export default function DotAppPreviewContent({
               <div className='mt-4'>
                 <DotField
                   label='Current Address'
-                  value={[
-                    f1.currentMailing.street,
-                    f1.currentMailing.city,
-                    f1.currentMailing.state,
-                    f1.currentMailing.zipCode,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
+                  preserveBreaks
+                  value={formatPostalAddress(f1.currentMailing)}
                 />
               </div>
             )}
@@ -609,7 +604,7 @@ export default function DotAppPreviewContent({
                         </span>
                       </div>
                       <FieldGrid>
-                        <DotField label='Address' value={emp.address} />
+                        <DotField label='Address' value={formatFreeformPostalAddress(emp.address)} preserveBreaks />
                         <DotField label='Phone' value={emp.phone} />
                         <DotField label='Reason for Leaving' value={emp.reasonForLeaving} />
                         <DotField label='Subject to FMCSR' value={emp.subjectToFMCSR} />

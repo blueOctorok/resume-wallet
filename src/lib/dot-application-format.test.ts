@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompanyMailingAddress, titleCaseName, titleCaseForm1Names } from '@/lib/dot-application-format'
+import {
+  formatCompanyMailingAddress,
+  formatFreeformPostalAddress,
+  formatPostalAddress,
+  titleCaseForm1Names,
+  titleCaseName,
+} from '@/lib/dot-application-format'
 
 describe('titleCaseName', () => {
   it('prints an all-caps first name with one capital letter', () => {
@@ -28,6 +34,25 @@ describe('titleCaseForm1Names', () => {
       lastName: 'Harrison',
       email: 'BRIAN@EXAMPLE.COM',
     })
+  })
+})
+
+describe('formatPostalAddress', () => {
+  it('puts the street on its own line', () => {
+    expect(
+      formatPostalAddress({
+        street: '293 Vernon White Rd',
+        city: 'Winterville',
+        state: 'NC',
+        zipCode: '28590',
+      }),
+    ).toBe('293 Vernon White Rd\nWinterville, NC 28590')
+  })
+
+  it('breaks a typed employer address after the street', () => {
+    expect(formatFreeformPostalAddress('293 Vernon White Rd, Winterville, NC 28590')).toBe(
+      '293 Vernon White Rd\nWinterville, NC 28590',
+    )
   })
 })
 

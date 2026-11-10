@@ -10,7 +10,7 @@ import { jsPDF } from 'jspdf'
 import type { DotForm1Data, DotForm2Data, DotForm3Data, DotForm3Employer } from '@/lib/dot-form-mapper'
 import { historyGroupOf, orderHistoryEntries } from '@/lib/history-entry-order'
 import { DOT_SIGNATURE_DISCLAIMER } from '@/lib/dot-signature-disclaimer'
-import { titleCaseName } from '@/lib/dot-application-format'
+import { titleCaseName, formatPostalAddress, formatFreeformPostalAddress } from '@/lib/dot-application-format'
 
 type Rgb = [number, number, number]
 
@@ -382,7 +382,7 @@ export function generateDotApplicationPDF(
       const m = f1.currentMailing
       fieldRow(
         [
-          { label: 'Current address', value: joinParts([m.street, m.city, m.state, m.zipCode]) },
+          { label: 'Current address', value: formatPostalAddress(m) },
           { label: 'Years at address', value: m.yearsAtAddress },
         ],
         2,
@@ -392,7 +392,7 @@ export function generateDotApplicationPDF(
       for (const a of f1.previousAddresses) {
         fieldRow(
           [
-            { label: 'Previous address', value: joinParts([a.street, a.city, a.state, a.zipCode]) },
+            { label: 'Previous address', value: formatPostalAddress(a) },
             { label: 'Years there', value: a.yearsAtAddress },
           ],
           2,
@@ -539,7 +539,7 @@ export function generateDotApplicationPDF(
             // street cannot run into the reason the way a third-width column did.
             fieldRow(
               [
-                { label: 'Address', value: emp.address },
+                { label: 'Address', value: formatFreeformPostalAddress(emp.address) },
                 { label: 'Reason for leaving', value: emp.reasonForLeaving },
               ],
               2,
@@ -554,7 +554,7 @@ export function generateDotApplicationPDF(
           } else {
             fieldRow([
               { label: 'Course of study', value: emp.courseOfStudy },
-              { label: 'Address', value: emp.address },
+              { label: 'Address', value: formatFreeformPostalAddress(emp.address) },
               { label: 'Phone', value: emp.phone },
               { label: 'Notes', value: emp.gapsInEmployment },
             ])
