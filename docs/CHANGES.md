@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Homepage hero description** (2026-11-10)
+
+The paragraph under the homepage headline now describes building a truck driver resume, keeping employment history and credentials in one place, and reusing that profile when applying.
+
+| File | Change |
+|---|---|
+| `src/lib/site-seo.ts` | `SITE_SEO.intro`, the only copy rendered under the hero headline. |
+
+---
+
 ## **Names correct their own capitalization as they are saved** (2026-11-10)
 
 Brian Russell’s first name and Brian Harrison’s last name were stored in all caps. Harrison typed his profile that way. Both DOT applications also copied the motor vehicle report, and state reports print the legal name in all caps. That copy is locked, so the form kept putting BRIAN back on every save.
