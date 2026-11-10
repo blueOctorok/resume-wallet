@@ -15,8 +15,8 @@ export function formatCompanyMailingAddress(company: {
 }
 
 /**
- * PDF display only. Stored names stay as typed. "BRIAN" prints as "Brian";
- * a hyphen or apostrophe starts a new word ("MARY-JANE", "O'BRIEN").
+ * How a person's name is stored in Provven. "BRIAN" becomes "Brian".
+ * A hyphen or apostrophe starts a new word ("MARY-JANE", "O'BRIEN").
  */
 export function titleCaseName(raw?: string | null): string {
   if (!raw?.trim()) return ''
@@ -24,4 +24,14 @@ export function titleCaseName(raw?: string | null): string {
     .trim()
     .toLowerCase()
     .replace(/(^|[^a-z])([a-z])/g, (_match, sep: string, ch: string) => sep + ch.toUpperCase())
+}
+
+/** First, middle, and last on a DOT form. Other fields stay as entered. */
+export function titleCaseForm1Names<T extends Record<string, unknown> | null | undefined>(form1: T): T {
+  if (!form1) return form1
+  const next = { ...form1 }
+  for (const key of ['firstName', 'middleName', 'lastName'] as const) {
+    if (typeof next[key] === 'string') next[key] = titleCaseName(next[key])
+  }
+  return next
 }

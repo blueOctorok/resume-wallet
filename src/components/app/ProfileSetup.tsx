@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 import { DOT_PAPER_CARD, DOT_PAPER_INPUT, DOT_PAPER_LABEL } from '@/lib/dot-form-paper'
+import { titleCaseName } from '@/lib/dot-application-format'
 import { Car, Code2, CheckCircle, AlertTriangle } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -240,6 +241,12 @@ export default function ProfileSetup({
                 ? updateDriver('firstName', e.target.value)
                 : updateDev('firstName', e.target.value)
               }
+              onBlur={() => {
+                const current = isDriver ? driverFields.firstName : devFields.firstName
+                const next = titleCaseName(current)
+                if (isDriver) updateDriver('firstName', next)
+                else updateDev('firstName', next)
+              }}
               placeholder="Leon"
               className={inputClass}
             />
@@ -252,6 +259,12 @@ export default function ProfileSetup({
                 ? updateDriver('lastName', e.target.value)
                 : updateDev('lastName', e.target.value)
               }
+              onBlur={() => {
+                const current = isDriver ? driverFields.lastName : devFields.lastName
+                const next = titleCaseName(current)
+                if (isDriver) updateDriver('lastName', next)
+                else updateDev('lastName', next)
+              }}
               placeholder="Kennedy"
               className={inputClass}
             />

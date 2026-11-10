@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Names correct their own capitalization as they are saved** (2026-11-10)
+
+Brian Russell’s first name and Brian Harrison’s last name were stored in all caps. Harrison typed his profile that way. Both DOT applications also copied the motor vehicle report, and state reports print the legal name in all caps. That copy is locked, so the form kept putting BRIAN back on every save.
+
+A name is now stored with a capital first letter when someone types it and when the report is applied. The two existing profiles and applications were corrected: Brian Russell, Brian Harrison.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-application-format.ts` | `titleCaseName` is the stored form, not only the PDF. Form 1 names use it on save. |
+| `src/lib/mvr-to-dot-mapper.ts` | The locked name from a report is title-cased before it is written. |
+| `src/app/api/driver-applications/save-progress/route.ts` | Save title-cases Form 1 names before the report is reapplied. |
+| `src/app/api/driver-applications/complete/route.ts` | Same on submit. |
+| `src/components/driver-application/PersonalInfoForm1.tsx` | The name fields correct when the driver leaves them, and when a saved application is opened. |
+| `src/components/app/ProfileSetup.tsx` | Profile first and last name correct on blur. |
+| `src/components/ProfileSetupModal.tsx` | Same. |
+| `src/app/api/user/profile-setup/route.ts` | Saved profile name is title-cased. |
+| `src/app/api/user/update-name/route.ts` | Same. |
+| `src/app/api/driver/profile/quick-setup/route.ts` | Same. |
+| `src/app/api/developer/profile/quick-setup/route.ts` | Same. |
+
+---
+
 ## **DOT application PDF header, signature line, and column collisions** (2026-11-10)
 
 The exported DOT application was still titled "Driver Qualification File". A shared copy printed the company name with no mailing address. The signature block left off the consent sentence that sits above the signature on the form. All-caps names such as BRIAN printed exactly as typed. Employment addresses ran into "Reason for leaving" because column text was measured at the card heading's 8.5pt and drawn at 10pt. The yes/no rules sat 2mm above the next row, which is inside the letters.

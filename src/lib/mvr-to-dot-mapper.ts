@@ -7,6 +7,7 @@
 
 import { ParsedMvrResult } from './accio-xml-parser'
 import { formatPhoneForDotForm } from './mvr-display-sanitize'
+import { titleCaseName } from '@/lib/dot-application-format'
 import type { DotForm1License } from './dot-form-mapper'
 
 /**
@@ -30,10 +31,11 @@ function parseFullName(firstName?: string, middleName?: string, lastName?: strin
   middleName: string
   lastName: string
 } {
+  // State reports print names in all caps. Provven stores them as Brian, not BRIAN.
   return {
-    firstName: firstName || '',
-    middleName: middleName || '',
-    lastName: lastName || (suffix ? `${lastName} ${suffix}`.trim() : '')
+    firstName: titleCaseName(firstName),
+    middleName: titleCaseName(middleName),
+    lastName: titleCaseName(lastName || (suffix ? `${lastName} ${suffix}`.trim() : '')),
   }
 }
 

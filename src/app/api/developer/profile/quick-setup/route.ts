@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { titleCaseName } from '@/lib/dot-application-format'
 import { saveDevGithub, saveDevProfile } from '@/lib/block-data'
 
 /**
@@ -30,7 +31,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const given = titleCaseName(firstName)
+    const family = titleCaseName(lastName)
+    const fullName = `${given} ${family}`
 
     const cleanGithub = githubUsername?.trim()?.replace(/^@/, '') || null
 
@@ -51,8 +54,8 @@ export async function POST(request: NextRequest) {
 
     // Write identity data to user_profiles
     const identityData: Record<string, string | null> = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      first_name: given,
+      last_name: family,
     }
     if (email?.trim()) identityData.email = email.trim()
     if (headline?.trim()) identityData.headline = headline.trim()

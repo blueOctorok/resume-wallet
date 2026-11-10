@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompanyMailingAddress, titleCaseName } from '@/lib/dot-application-format'
+import { formatCompanyMailingAddress, titleCaseName, titleCaseForm1Names } from '@/lib/dot-application-format'
 
 describe('titleCaseName', () => {
   it('prints an all-caps first name with one capital letter', () => {
@@ -10,6 +10,24 @@ describe('titleCaseName', () => {
   it('keeps a hyphen or apostrophe as a word break', () => {
     expect(titleCaseName("MARY-JANE")).toBe('Mary-Jane')
     expect(titleCaseName("O'BRIEN")).toBe("O'Brien")
+  })
+})
+
+describe('titleCaseForm1Names', () => {
+  it('corrects only the name fields', () => {
+    expect(
+      titleCaseForm1Names({
+        firstName: 'BRIAN',
+        middleName: 'Adam',
+        lastName: 'HARRISON',
+        email: 'BRIAN@EXAMPLE.COM',
+      }),
+    ).toEqual({
+      firstName: 'Brian',
+      middleName: 'Adam',
+      lastName: 'Harrison',
+      email: 'BRIAN@EXAMPLE.COM',
+    })
   })
 })
 

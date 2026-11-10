@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { saveCdlData } from '@/lib/block-data'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
+import { titleCaseName } from '@/lib/dot-application-format'
 
 /**
  * POST /api/driver/profile/quick-setup
@@ -30,7 +31,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const given = titleCaseName(firstName)
+    const family = titleCaseName(lastName)
+    const fullName = `${given} ${family}`
 
     // Write CDL data to block table
     const cdlData: Record<string, string | null> = {}
@@ -46,8 +49,8 @@ export async function POST(request: NextRequest) {
 
     // Write all identity data to user_profiles
     const identityData: Record<string, string | null> = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      first_name: given,
+      last_name: family,
     }
     if (email?.trim()) identityData.email = email.trim()
     if (phone?.trim()) identityData.phone = phone.trim()

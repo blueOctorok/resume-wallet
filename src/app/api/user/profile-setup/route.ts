@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { syncConfirmedLicenseName } from '@/lib/apply-license-scan'
+import { titleCaseName } from '@/lib/dot-application-format'
 
 /**
  * POST /api/user/profile-setup
@@ -29,11 +30,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const given = titleCaseName(firstName)
+    const family = titleCaseName(lastName)
+    const fullName = `${given} ${family}`
 
     const profileData: Record<string, string | null> = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      first_name: given,
+      last_name: family,
     }
     if (email?.trim()) profileData.email = email.trim()
     if (phone?.trim()) profileData.phone = phone.trim()

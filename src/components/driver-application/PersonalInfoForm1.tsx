@@ -22,6 +22,7 @@ import {
 } from '@/lib/dot-field-provenance'
 import type { AttestationBadgeSummary } from '@/lib/dot-attestation-badge'
 import type { DotForm1Data } from '@/lib/dot-form-mapper'
+import { titleCaseName } from '@/lib/dot-application-format'
 import {
   DotFieldError,
   DotValidationBanner,
@@ -343,7 +344,19 @@ export default function PersonalInfoForm1({
     if (initialData && Object.keys(initialData).length > 0) {
       console.log('📋 [FORM1] Hydrating form with initialData:', initialData.firstName, initialData.lastName)
       hasHydratedRef.current = true
-      setFormData((prev) => ({ ...prev, ...initialData }))
+      setFormData((prev) => ({
+        ...prev,
+        ...initialData,
+        ...(typeof initialData.firstName === 'string'
+          ? { firstName: titleCaseName(initialData.firstName) }
+          : {}),
+        ...(typeof initialData.middleName === 'string'
+          ? { middleName: titleCaseName(initialData.middleName) }
+          : {}),
+        ...(typeof initialData.lastName === 'string'
+          ? { lastName: titleCaseName(initialData.lastName) }
+          : {}),
+      }))
     }
   }, [initialData])
 
@@ -761,6 +774,7 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.firstName}
             onChange={(e) => handleInputChange('firstName', e.target.value)}
+            onBlur={() => handleInputChange('firstName', titleCaseName(formData.firstName))}
             disabled={isLocked('firstName')}
             readOnly={isLocked('firstName')}
             className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
@@ -782,6 +796,7 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.middleName}
             onChange={(e) => handleInputChange('middleName', e.target.value)}
+            onBlur={() => handleInputChange('middleName', titleCaseName(formData.middleName))}
             disabled={isLocked('middleName')}
             readOnly={isLocked('middleName')}
             className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
@@ -800,6 +815,7 @@ export default function PersonalInfoForm1({
             type='text'
             value={formData.lastName}
             onChange={(e) => handleInputChange('lastName', e.target.value)}
+            onBlur={() => handleInputChange('lastName', titleCaseName(formData.lastName))}
             disabled={isLocked('lastName')}
             readOnly={isLocked('lastName')}
             className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${

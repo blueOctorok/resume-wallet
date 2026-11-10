@@ -7,6 +7,7 @@ import { completeDotOutreachInvites } from '@/lib/complete-dot-outreach-invites'
 import { hashJson } from '@/lib/hash-utils'
 import { loadSignatureNameAnchor } from '@/lib/load-signature-name-anchor'
 import { signatureFieldError } from '@/lib/signature-name-check'
+import { titleCaseForm1Names } from '@/lib/dot-application-format'
 
 /**
  * POST — final DOT application submit. Replaces the old `'use server'` submit
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const applicationData = await reprojectScreeningOntoApp(supabase, userId, {
-      form1: form1Data,
+      form1: titleCaseForm1Names(form1Data),
       form2: form2Data,
       form3: form3Data,
     })

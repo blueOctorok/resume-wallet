@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { DOT_PAPER_INPUT, DOT_PAPER_LABEL } from '@/lib/dot-form-paper'
+import { titleCaseName } from '@/lib/dot-application-format'
 import { User, Mail, Phone, MapPin, Sparkles } from 'lucide-react'
 
 interface ProfileSetupModalProps {
@@ -192,6 +193,7 @@ export default function ProfileSetupModal({
                 autoComplete='given-name'
                 value={form.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
+                onBlur={() => handleChange('firstName', titleCaseName(form.firstName))}
                 placeholder='John'
                 className={`w-full rounded-xl border py-2.5 pl-10 pr-4 ${DOT_PAPER_INPUT}`}
               />
@@ -207,6 +209,7 @@ export default function ProfileSetupModal({
               autoComplete='family-name'
               value={form.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
+              onBlur={() => handleChange('lastName', titleCaseName(form.lastName))}
               placeholder='Smith'
               className={`w-full rounded-xl border px-4 py-2.5 ${DOT_PAPER_INPUT}`}
             />

@@ -6,6 +6,7 @@ import {
   reprojectScreeningOntoApp,
   type DotApplicationData,
 } from '@/lib/reproject-screening-onto-app'
+import { titleCaseForm1Names } from '@/lib/dot-application-format'
 
 /**
  * GET — load saved application. Re-projects MVR + PSP locked Form 2 rows from live results.
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
     const projected = await reprojectScreeningOntoApp(supabase, userId, {
-      form1: form1Data ?? null,
+      form1: titleCaseForm1Names(form1Data ?? null),
       form2: form2Data ?? null,
       form3: form3Data ?? null,
     })

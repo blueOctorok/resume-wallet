@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
 import { syncConfirmedLicenseName } from '@/lib/apply-license-scan'
+import { titleCaseName } from '@/lib/dot-application-format'
 
 /**
  * POST /api/user/update-name
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const trimmed = name.trim()
+    const trimmed = titleCaseName(name)
     const parts = trimmed.split(/\s+/)
     const firstName = parts[0] || null
     const lastName = parts.length > 1 ? parts.slice(1).join(' ') : null
