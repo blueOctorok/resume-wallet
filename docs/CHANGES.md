@@ -4,6 +4,25 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT application PDF header, signature line, and column collisions** (2026-11-10)
+
+The exported DOT application was still titled "Driver Qualification File". A shared copy printed the company name with no mailing address. The signature block left off the consent sentence that sits above the signature on the form. All-caps names such as BRIAN printed exactly as typed. Employment addresses ran into "Reason for leaving" because column text was measured at the card heading's 8.5pt and drawn at 10pt. The yes/no rules sat 2mm above the next row, which is inside the letters.
+
+The cover now says "DOT Application". A shared copy prints the company's mailing address under its name, read from `companies.address_*`. Pace Drivers had no street on file; it is now `34940 Ridge Rd Ste 7, Willoughby, OH 44094`. The signature disclaimer is one shared sentence used by the form, the on-screen copy, and the PDF. The PDF title-cases applicant names for display only. Address and reason each get half the card, and rules sit clear of the type.
+
+| File | Change |
+|---|---|
+| `src/lib/dot-application-pdf.ts` | Cover title, company address, disclaimer, name casing, column measure-at-draw-size, rule spacing. |
+| `src/lib/dot-application-format.ts` | Mailing-address line and PDF name casing. |
+| `src/lib/dot-signature-disclaimer.ts` | The signature sentence, shared by the form, preview, and PDF. |
+| `src/lib/load-dot-app-for-viewer.ts` | Employer copy includes `addressedToAddress`. |
+| `src/app/api/employer/talent/[userId]/dot-app/pdf/route.ts` | Passes that address into the PDF. |
+| `src/app/api/admin/dot-apps/[id]/export/route.ts` | Admin export stamps the invite company's address. |
+| `src/components/career-card/DotAppPreviewContent.tsx` | Same title, address, and disclaimer on the on-screen copy. |
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Form prints the shared disclaimer sentence. |
+
+---
+
 ## **Midnight proofs no longer wait on the shielded wallet** (2026-11-06)
 
 A prove pays its fee in DUST generated from NIGHT and carries no shielded coins. The shielded balancer returns at once when a transaction is already balanced. The worker was still gated twice on the shielded reader: our `isSynced` filter, and `waitForSyncedState()` inside `createMidnightProviders`. On mainnet that reader is 1.5M zswap events this wallet never spends. September proofs did not hit this because the chain was far shorter. Yesterday's run reached 1,514,096 / 1,514,096 shielded and still never proved, because dust and unshielded were not printed and the facade waits on all three.

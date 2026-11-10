@@ -12,6 +12,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { companyCanViewDotApplication, getEmployerCompanyAccess } from '@/lib/employer-company-access'
 import { releasesDriverIdentifiers } from '@/lib/company-account-tier'
 import { projectDotAppForEmployer } from '@/lib/redact-dot-app'
+import { formatCompanyMailingAddress } from '@/lib/dot-application-format'
 
 type Json = Record<string, unknown>
 
@@ -27,6 +28,8 @@ export interface DotAppForViewer {
   redactedFields: readonly string[]
   /** Company this copy is addressed to. Null on the driver's own copy. */
   addressedToCompany: string | null
+  /** That company's mailing address. Null when they have none on file. */
+  addressedToAddress: string | null
 }
 
 export type DotAppLoadResult =
@@ -99,6 +102,7 @@ export async function loadDotAppForViewer(
         form3: (appData.form3 as Json) ?? null,
         redactedFields: [],
         addressedToCompany: null,
+        addressedToAddress: null,
       },
     }
   }
@@ -120,7 +124,7 @@ export async function loadDotAppForViewer(
   // is reading it, so two carriers never share one stamped name.
   const { data: company } = await supabase
     .from('companies')
-    .select('company_name')
+    .select('company_name, address_street, address_city, address_state, address_zip')
     .eq('id', companyAccess!.companyId)
     .maybeSingle()
 
@@ -134,6 +138,7 @@ export async function loadDotAppForViewer(
         releasesDriverIdentifiers(companyAccess!.accountTier),
       ),
       addressedToCompany: company?.company_name?.trim() || null,
+      addressedToAddress: formatCompanyMailingAddress(company),
     },
   }
 }

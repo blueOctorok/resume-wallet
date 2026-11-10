@@ -27,6 +27,7 @@ import {
   signatureFieldError,
   type SignatureNameAnchor,
 } from '@/lib/signature-name-check'
+import { DOT_SIGNATURE_DISCLAIMER } from '@/lib/dot-signature-disclaimer'
 
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
@@ -2686,7 +2687,7 @@ export default function PersonalInfoForm3({
         isDarkTheme(theme) ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
       }`}>
         <p className={`text-sm mb-4 ${isDarkTheme(theme) ? 'text-gray-300' : 'text-gray-700'}`}>
-          By signing below, I agree to use an electronic signature to demonstrate my consent. An electronic signature is as legally binding as an ink signature. This certifies that this application was completed by me, and that all entries on it and information in it are true and complete to the best of my knowledge.
+          {DOT_SIGNATURE_DISCLAIMER}
         </p>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>

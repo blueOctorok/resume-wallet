@@ -51,6 +51,7 @@ export async function GET(
       {
         candidateName,
         companyName: app.addressedToCompany,
+        companyAddress: app.addressedToAddress,
         withheldNote: app.redactedFields.length
           ? 'Social Security number, date of birth, and street addresses are held by the driver and released only through a consented screening order.'
           : null,

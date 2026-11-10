@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
 import { generateDotApplicationPDF } from '@/lib/dot-application-pdf'
+import { formatCompanyMailingAddress } from '@/lib/dot-application-format'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
+
+type CompanyStamp = {
+  company_name: string
+  address_street: string | null
+  address_city: string | null
+  address_state: string | null
+  address_zip: string | null
+}
 
 /**
  * GET /api/admin/dot-apps/[id]/export
@@ -56,12 +65,14 @@ export async function GET(
     // Check if this came from an invite (to get company name)
     const { data: invite } = await supabase
       .from('application_invites')
-      .select('companies(company_name)')
+      .select('companies(company_name, address_street, address_city, address_state, address_zip)')
       .eq('driver_application_id', id)
       .maybeSingle()
     // PostgREST types a to-one join as an array; pick the first row either way.
-    const joinedCompany = invite?.companies as { company_name: string } | { company_name: string }[] | null | undefined
-    const companyName = (Array.isArray(joinedCompany) ? joinedCompany[0] : joinedCompany)?.company_name
+    const joinedCompany = invite?.companies as CompanyStamp | CompanyStamp[] | null | undefined
+    const company = Array.isArray(joinedCompany) ? joinedCompany[0] : joinedCompany
+    const companyName = company?.company_name
+    const companyAddress = formatCompanyMailingAddress(company)
 
     if (format === 'json') {
       // Return raw JSON data
@@ -93,7 +104,7 @@ export async function GET(
         createdAt: app.created_at,
         isComplete: Boolean(app.is_complete),
       },
-      { companyName, candidateName },
+      { companyName, companyAddress, candidateName },
     )
 
     // Create filename

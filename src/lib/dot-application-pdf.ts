@@ -9,6 +9,8 @@
 import { jsPDF } from 'jspdf'
 import type { DotForm1Data, DotForm2Data, DotForm3Data, DotForm3Employer } from '@/lib/dot-form-mapper'
 import { historyGroupOf, orderHistoryEntries } from '@/lib/history-entry-order'
+import { DOT_SIGNATURE_DISCLAIMER } from '@/lib/dot-signature-disclaimer'
+import { titleCaseName } from '@/lib/dot-application-format'
 
 type Rgb = [number, number, number]
 
@@ -30,6 +32,8 @@ export interface DotApplicationPdfOptions {
   candidateName?: string
   /** The company this copy is prepared for. Absent on the driver's own copy. */
   companyName?: string | null
+  /** Mailing address printed under the company name. Absent on the driver's own copy. */
+  companyAddress?: string | null
   /** Printed under the cover when the caller withheld identifiers. */
   withheldNote?: string | null
 }
@@ -93,10 +97,11 @@ export function generateDotApplicationPDF(
   let inset = 0
 
   const { form1: f1, form2: f2, form3: f3 } = input
-  const applicantName =
+  const applicantName = titleCaseName(
     options.candidateName?.trim() ||
-    joinParts([f1?.firstName, f1?.lastName]).replace(', ', ' ') ||
-    'Applicant'
+      joinParts([f1?.firstName, f1?.lastName]).replace(', ', ' ') ||
+      'Applicant',
+  )
 
   // ── Layout helpers ─────────────────────────────────────────────────────────
 
@@ -120,7 +125,8 @@ export function generateDotApplicationPDF(
     pdf.setFontSize(10.5)
     pdf.setTextColor(...MIDNIGHT)
     pdf.text(title.toUpperCase(), margin + 10, y + 0.5)
-    y += 4
+    // Clear the title's descenders before the rule. A tighter gap draws the line through "g" and "y".
+    y += 5.5
     pdf.setDrawColor(...EMBER)
     pdf.setLineWidth(0.5)
     pdf.line(margin, y, margin + 22, y)
@@ -130,41 +136,53 @@ export function generateDotApplicationPDF(
     y += 6
   }
 
-  /** Label over value, laid out in columns. Empty values are skipped. */
+  /**
+   * Label over value, laid out in columns. Empty values are skipped.
+   * Measure after setFontSize: splitTextToSize uses whatever size is current,
+   * and the card heading leaves the font at 8.5pt. Measuring there and drawing
+   * at 10pt makes the address run into the next column.
+   */
   const fieldRow = (fields: Field[], columns = 3) => {
     const present = fields
       .map((f) => ({ label: f.label, value: f.value == null ? '' : String(f.value).trim() }))
       .filter((f) => f.value)
     if (present.length === 0) return
+    const gutter = 4
     const colW = (contentW - inset * 2) / columns
+    const innerW = Math.max(12, colW - gutter)
     for (let i = 0; i < present.length; i += columns) {
       const row = present.slice(i, i + columns)
-      const wrapped = row.map((f) => pdf.splitTextToSize(f.value, colW - 4) as string[])
-      const lines = Math.max(...wrapped.map((w) => w.length))
-      const rowH = 4 + lines * 4.2 + 2.5
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(7.5)
+      const labels = row.map((f) => pdf.splitTextToSize(f.label.toUpperCase(), innerW) as string[])
+      pdf.setFontSize(10)
+      const values = row.map((f) => pdf.splitTextToSize(f.value, innerW) as string[])
+      const labelH = Math.max(...labels.map((lines) => lines.length)) * 3.2
+      const valueH = Math.max(...values.map((lines) => lines.length)) * 4.2
+      const rowH = labelH + 1.4 + valueH + 3
       ensureRoom(rowH)
-      row.forEach((f, idx) => {
+      row.forEach((_f, idx) => {
         const x = margin + inset + idx * colW
-        pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(7.5)
         pdf.setTextColor(...INK_MUTED)
-        pdf.text(f.label.toUpperCase(), x, y)
+        pdf.text(labels[idx], x, y)
         pdf.setFontSize(10)
         pdf.setTextColor(...MIDNIGHT)
-        pdf.text(wrapped[idx], x, y + 4.2)
+        pdf.text(values[idx], x, y + labelH + 1.4)
       })
       y += rowH
     }
   }
 
   const paragraph = (text: string, color: Rgb = MIDNIGHT, size = 9.5) => {
-    const lines = pdf.splitTextToSize(text, contentW) as string[]
-    ensureRoom(lines.length * 4.4 + 2)
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(size)
+    const lines = pdf.splitTextToSize(text, contentW - inset * 2) as string[]
+    const blockH = lines.length * 4.4 + 2
+    ensureRoom(blockH)
     pdf.setTextColor(...color)
-    pdf.text(lines, margin, y)
-    y += lines.length * 4.4 + 2
+    pdf.text(lines, margin + inset, y)
+    y += blockH
   }
 
   /**
@@ -198,7 +216,8 @@ export function generateDotApplicationPDF(
     }
     draw()
     inset = 0
-    y += 1
+    // Room under the last baseline so the card stroke does not cut the last line.
+    y += 3
     // Only frame cards that fit on one page; a card that broke across pages gets a rule instead.
     if (pdf.getNumberOfPages() === startPage) {
       pdf.setDrawColor(...RULE)
@@ -211,29 +230,44 @@ export function generateDotApplicationPDF(
     y += 4
   }
 
-  /** Question on the left, answer on the right, hairline under. */
+  /**
+   * Question on the left, answer on the right, hairline under.
+   * The rule sits a full line below the glyphs, and the next row starts
+   * below that. The old 2mm gap put the rule through the next row's letters.
+   */
   const answerRow = (question: string, answer: string, detail?: string, highlight = false) => {
-    const detailLines = detail?.trim() ? (pdf.splitTextToSize(detail.trim(), contentW - 8) as string[]) : []
-    const rowH = 6.5 + detailLines.length * 4.2
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(9.5)
+    const answerW = pdf.getTextWidth(answer)
+    pdf.setFont('helvetica', 'normal')
+    const qLines = pdf.splitTextToSize(question, Math.max(40, contentW - answerW - 10)) as string[]
+    pdf.setFontSize(8.5)
+    const detailLines = detail?.trim()
+      ? (pdf.splitTextToSize(detail.trim(), contentW - 8) as string[])
+      : []
+    const qBlock = qLines.length * 4.2
+    const dBlock = detailLines.length ? detailLines.length * 3.8 + 1 : 0
+    const rowH = qBlock + dBlock + 6
     ensureRoom(rowH)
+
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(9.5)
     pdf.setTextColor(...MIDNIGHT)
-    pdf.text(question, margin + 2, y)
+    pdf.text(qLines, margin + 2, y)
     pdf.setFont('helvetica', 'bold')
-    if (highlight) pdf.setTextColor(...EMBER)
-    else pdf.setTextColor(...INK_MUTED)
+    pdf.setTextColor(...(highlight ? EMBER : INK_MUTED))
     pdf.text(answer, pageW - margin - 2, y, { align: 'right' })
     if (detailLines.length) {
       pdf.setFont('helvetica', 'normal')
       pdf.setFontSize(8.5)
       pdf.setTextColor(...INK_MUTED)
-      pdf.text(detailLines, margin + 2, y + 4.4)
+      pdf.text(detailLines, margin + 2, y + qBlock + 0.6)
     }
-    y += rowH
+    const lineY = y + qBlock + dBlock + 1.6
     pdf.setDrawColor(...RULE)
     pdf.setLineWidth(0.2)
-    pdf.line(margin, y - 2, pageW - margin, y - 2)
+    pdf.line(margin + 2, lineY, pageW - margin - 2, lineY)
+    y = lineY + 4.4
   }
 
   // A "Yes" is the answer a safety clerk has to read, so it is the one in ember.
@@ -245,44 +279,79 @@ export function generateDotApplicationPDF(
   const emptyNote = (text: string) => paragraph(text, INK_MUTED, 9)
 
   // ── Cover band ─────────────────────────────────────────────────────────────
+  // The company block is right-aligned and can be two address lines, so the
+  // band grows instead of painting the address over the driver's name.
+
+  const companyAddress = options.companyAddress?.trim() || ''
+  const stampW = 84
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(13)
+  const companyLines = options.companyName
+    ? (pdf.splitTextToSize(options.companyName, stampW) as string[])
+    : []
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(8)
+  const addressLines = companyAddress
+    ? (pdf.splitTextToSize(companyAddress, stampW) as string[])
+    : []
+
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(20)
+  const nameMax = options.companyName ? contentW - stampW - 8 : contentW
+  const nameLines = pdf.splitTextToSize(applicantName, nameMax) as string[]
+  const statusY = 26 + Math.max(0, nameLines.length - 1) * 8 + 8
+  const rightBottom = options.companyName
+    ? 15 + 6 + companyLines.length * 5.4 + addressLines.length * 3.6 + 6
+    : 0
+  const bandH = Math.max(46, statusY + 8, rightBottom + 4)
 
   pdf.setFillColor(...MIDNIGHT)
-  pdf.rect(0, 0, pageW, 46, 'F')
+  pdf.rect(0, 0, pageW, bandH, 'F')
   pdf.setFillColor(...EMBER)
-  pdf.rect(0, 46, pageW, 1.2, 'F')
+  pdf.rect(0, bandH, pageW, 1.2, 'F')
 
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(8)
   pdf.setTextColor(...IRONSIDE)
-  pdf.text('DRIVER QUALIFICATION FILE  ·  49 CFR 391.21', margin, 15)
+  pdf.text('DOT APPLICATION  ·  49 CFR 391.21', margin, 15)
 
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(20)
   pdf.setTextColor(255, 255, 255)
-  pdf.text(applicantName, margin, 26)
+  pdf.text(nameLines, margin, 26)
 
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(9.5)
   pdf.setTextColor(...IRONSIDE)
   const status = input.isComplete ? 'Complete' : 'In progress'
   const submitted = fmtDate(input.createdAt)
-  pdf.text(submitted ? `${status}  ·  Submitted ${submitted}` : status, margin, 33)
+  pdf.text(submitted ? `${status}  ·  Submitted ${submitted}` : status, margin, statusY)
 
   if (options.companyName) {
+    let ry = 15
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(8)
     pdf.setTextColor(...EMBER)
-    pdf.text('PREPARED FOR', pageW - margin, 22, { align: 'right' })
-    pdf.setFontSize(14)
+    pdf.text('PREPARED FOR', pageW - margin, ry, { align: 'right' })
+    ry += 6
+    pdf.setFontSize(13)
     pdf.setTextColor(255, 255, 255)
-    pdf.text(options.companyName, pageW - margin, 29.5, { align: 'right' })
+    pdf.text(companyLines, pageW - margin, ry, { align: 'right' })
+    ry += companyLines.length * 5.4
+    if (addressLines.length) {
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(addressLines, pageW - margin, ry, { align: 'right' })
+      ry += addressLines.length * 3.6
+    }
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(8)
     pdf.setTextColor(...IRONSIDE)
-    pdf.text('Shared by the driver through Provven', pageW - margin, 35, { align: 'right' })
+    pdf.text('Shared by the driver through Provven', pageW - margin, ry + 1.2, { align: 'right' })
   }
 
-  y = 56
+  y = bandH + 10
   if (options.withheldNote) {
     paragraph(options.withheldNote, INK_MUTED, 8.5)
   }
@@ -292,9 +361,9 @@ export function generateDotApplicationPDF(
   if (f1) {
     sectionHeader('Personal information')
     fieldRow([
-      { label: 'First name', value: f1.firstName },
-      { label: 'Middle name', value: f1.middleName },
-      { label: 'Last name', value: f1.lastName },
+      { label: 'First name', value: titleCaseName(f1.firstName) },
+      { label: 'Middle name', value: titleCaseName(f1.middleName) },
+      { label: 'Last name', value: titleCaseName(f1.lastName) },
     ])
     fieldRow([
       { label: 'Phone', value: f1.phone },
@@ -466,10 +535,17 @@ export function generateDotApplicationPDF(
         const group = historyGroupOf(emp)
         card(() => {
           if (group === 'employment') {
+            // Address and reason are the long strings. Half width each so a
+            // street cannot run into the reason the way a third-width column did.
+            fieldRow(
+              [
+                { label: 'Address', value: emp.address },
+                { label: 'Reason for leaving', value: emp.reasonForLeaving },
+              ],
+              2,
+            )
             fieldRow([
-              { label: 'Address', value: emp.address },
               { label: 'Phone', value: emp.phone },
-              { label: 'Reason for leaving', value: emp.reasonForLeaving },
               { label: 'Subject to FMCSR', value: yesNo(emp.subjectToFMCSR) },
               { label: 'Safety-sensitive function', value: yesNo(emp.safetySensitiveFunction) },
               { label: 'Salary', value: emp.salary },
@@ -505,9 +581,10 @@ export function generateDotApplicationPDF(
 
     if (f3.applicantSignature || f3.applicantNamePrinted) {
       sectionHeader('Certification and electronic signature')
+      paragraph(DOT_SIGNATURE_DISCLAIMER, MIDNIGHT, 9)
       fieldRow([
-        { label: 'Signed as', value: f3.applicantSignature },
-        { label: 'Printed name', value: f3.applicantNamePrinted },
+        { label: 'Signed as', value: titleCaseName(f3.applicantSignature) },
+        { label: 'Printed name', value: titleCaseName(f3.applicantNamePrinted) },
         { label: 'Signature date', value: fmtDate(f3.signatureDate) },
       ])
       fieldRow([

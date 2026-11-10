@@ -12,6 +12,7 @@ import { computeDotVerifiedCoverage } from '@/lib/dot-verified-coverage'
 import { orderHistoryEntries } from '@/lib/history-entry-order'
 import DotVerifiedMeter from '@/components/driver-application/DotVerifiedMeter'
 import { cn } from '@/lib/utils'
+import { DOT_SIGNATURE_DISCLAIMER } from '@/lib/dot-signature-disclaimer'
 
 export interface DotAppPreviewData {
   form1: DotForm1Data | null
@@ -26,6 +27,8 @@ export interface DotAppPreviewData {
    * to anyone — the same file can be shared with more than one carrier.
    */
   addressedToCompany?: string | null
+  /** Mailing address of the company this copy was prepared for. */
+  addressedToAddress?: string | null
 }
 
 type FieldTone = 'verified' | 'self' | null
@@ -116,11 +119,12 @@ function StatusPill({ isComplete }: { isComplete: boolean }) {
 }
 
 /** The company stamp. Only a shared copy has one; the driver's file is addressed to no one. */
-function PreparedForStamp({ company }: { company: string }) {
+function PreparedForStamp({ company, address }: { company: string; address?: string | null }) {
   return (
     <div className='rounded-xl border-2 border-[#f15a2b] bg-white px-4 py-3 text-right shadow-sm sm:min-w-56'>
       <p className='text-[10px] font-bold uppercase tracking-[0.18em] text-[#f15a2b]'>Prepared for</p>
       <p className='mt-0.5 break-words text-lg font-semibold leading-tight text-[#173150]'>{company}</p>
+      {address ? <p className='mt-1 text-xs leading-snug text-[#173150]'>{address}</p> : null}
       <p className='mt-1 text-[11px] text-[#5c6166]'>Shared by the driver through Provven</p>
     </div>
   )
@@ -224,7 +228,7 @@ export default function DotAppPreviewContent({
         <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
           <div className='min-w-0'>
             <p className='text-[10px] font-semibold uppercase tracking-[0.18em] text-[#5c6166]'>
-              Driver Qualification File · 49 CFR 391.21
+              DOT Application · 49 CFR 391.21
             </p>
             {applicantName && (
               <h2 className='mt-1 break-words text-2xl font-semibold leading-tight text-[#173150]'>
@@ -238,7 +242,9 @@ export default function DotAppPreviewContent({
               </span>
             </div>
           </div>
-          {data.addressedToCompany && <PreparedForStamp company={data.addressedToCompany} />}
+          {data.addressedToCompany && (
+            <PreparedForStamp company={data.addressedToCompany} address={data.addressedToAddress} />
+          )}
         </div>
 
         {/* Verified-% meter in its own card so it reads as a summary, not as part of the form */}
@@ -644,6 +650,7 @@ export default function DotAppPreviewContent({
 
           {(f3.applicantSignature || f3.applicantNamePrinted) && (
             <DotSection title='Electronic Signature'>
+              <p className='mb-4 text-sm leading-relaxed text-[#173150]'>{DOT_SIGNATURE_DISCLAIMER}</p>
               <FieldGrid>
                 <DotField label='Signed As' value={f3.applicantSignature} />
                 <DotField label='Printed Name' value={f3.applicantNamePrinted} />
