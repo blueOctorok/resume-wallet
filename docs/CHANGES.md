@@ -15,8 +15,11 @@ Mainnet moved to ledger 9 on 2026-11-06 ([upgrade page](https://docs.midnight.ne
 | Part | Status |
 |---|---|
 | Proof server (`midnight/proof-server/Dockerfile`, `entrypoint.sh`, `midnight/docker-compose.yml`) | **Deployed** to `provven-midnight-proof` as `deployment-01M7838G5VZ8CW503W66X7CKVM`. Image `midnightntwrk/proof-server:9.0.0` pinned by digest. `/version` inside the machine returns `9.0.0`, public `/health` is 200, and `/version` without the login is 401. |
-| Runtime (`midnight/runtime`) | In progress. Not deployed. |
+| Runtime (`midnight/runtime`) | Migrated and reviewed. Wallet SDK 2.0.0, Midnight.js 5.0.0. Typechecks with zero errors, wallet addresses unchanged, all seven deployed contracts located on mainnet with their keys accepted. A read-only sync test ran 7 minutes with memory flat at about 445 MB: the shielded reader reached the chain tip in under 3 minutes, and dust ran at about 660 events a second, which puts the dust catch-up at roughly 45 minutes. Not deployed yet. |
 | Worker (`provven-midnight-worker`) | Machine stopped until the runtime is ready. The old wallet cache is ledger 8 format and will not be reused; the first start does one full sync. |
+
+
+**Batching.** The SDK's batch timeout defaults to 1 ms, so each event was processed on its own and dust ran at about 65 events a second (an 8-hour catch-up). `wallet.ts` now waits 250 ms to fill a batch. A 2-minute run with the change showed memory rising 200 MB, but a 7-minute run with garbage collection forced showed that was uncollected garbage: memory stayed flat. The setting is kept.
 
 Proof server 9.0.0 accepts at most 10 jobs at a time by default and answers HTTP 429 beyond that. The worker proves one fact at a time, so the default is left alone.
 

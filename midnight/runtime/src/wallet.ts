@@ -116,12 +116,10 @@ export async function createMidnightWallet(seed: Buffer) {
       feeBlocksMargin: 5,
     },
     // Preprod DUST sync WASM OOM workaround (servicedesk#42) — default batch size 10 fails on DustSpendProcessed.
-    batchUpdates: { size: 5000 },
-    // The ledger 9 upgrade wiped DUST and the chain re-issued it as ledger 9
-    // events. A wallet that reads the 1.6 million older dust events throws the
-    // result away at the hand-over, so a cold start begins at the hand-over.
-    // Only a fresh start uses this; a restore continues from its saved place.
-    skipLedgerV8DustHistory: true,
+    // `timeout` is how long the SDK waits to fill a batch. Its default is 1 ms,
+    // which made almost every batch a single event, and each batch costs a
+    // full copy of the wallet state. Waiting 250 ms lets real batches form.
+    batchUpdates: { size: 5000, timeout: 250 },
   }
 
   const saved = loadWalletState()
