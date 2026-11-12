@@ -4,6 +4,64 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Ledger 9 upgrade for the Midnight proof worker** (2026-11-12, in progress)
+
+Mainnet moved to ledger 9 on 2026-11-06 ([upgrade page](https://docs.midnight.network/relnotes/ledger-9.md)). The ledger 8 SDK cannot read events written after that, so the worker cannot reach the chain tip or prove until the runtime is on the ledger 9 SDK.
+
+**No recompile and no on-chain change.** Our contracts were deployed before the fork with Compact compiler 0.31.0. Midnight's migration guide says those keep working as ledger 8 contracts: they can still be called with their existing artifacts, but not redeployed or maintained. `midnight/runtime/managed/` stays as it is.
+
+**Target versions:** Wallet SDK 2.0.0 (`@midnightntwrk/wallet-sdk`), Midnight.js 5.0.0, `compact-runtime` 0.21.0 (plus 0.16.0 under an alias for the existing ledger 8 contract code), `ledger-v9` 1.0.0, proof server 9.0.0. Midnight.js 5 needs Node 22.12 or newer; the worker image already runs Node 22.
+
+| Part | Status |
+|---|---|
+| Proof server (`midnight/proof-server/Dockerfile`, `entrypoint.sh`, `midnight/docker-compose.yml`) | **Deployed** to `provven-midnight-proof` as `deployment-01M7838G5VZ8CW503W66X7CKVM`. Image `midnightntwrk/proof-server:9.0.0` pinned by digest. `/version` inside the machine returns `9.0.0`, public `/health` is 200, and `/version` without the login is 401. |
+| Runtime (`midnight/runtime`) | In progress. Not deployed. |
+| Worker (`provven-midnight-worker`) | Machine stopped until the runtime is ready. The old wallet cache is ledger 8 format and will not be reused; the first start does one full sync. |
+
+Proof server 9.0.0 accepts at most 10 jobs at a time by default and answers HTTP 429 beyond that. The worker proves one fact at a time, so the default is left alone.
+
+---
+
+## **Midnight worker stopped reading dust because WASM memory filled up** (2026-11-12)
+
+The worker sat at dust 1,082,502 from 2026-11-06 to 2026-11-12 with no error in the log. The chain, Blockfrost, the wallet balance, and the Fly machine were all fine.
+
+**Root cause.** The wallet SDK publishes every new wallet state through an Effect `Stream.share({ replay: 1 })`. Effect 3.21.3 has a bug in that replay: a subscriber keeps a pointer into a linked list that leads to every value published after it subscribed. So the worker kept every dust state it had ever produced. Each one pins memory inside the ledger WASM module, and WASM memory is capped at 4 GiB. After about 116,000 states the cap was hit. From then on every ledger call failed with `RuntimeError: unreachable`, which is why dust stopped and why the shielded and dust saves both failed. September worked because there were far fewer dust events to read in one run.
+
+Measured on the live machine before the fix: one WASM memory at exactly 4,294,967,296 bytes, 116,569 live `DustLocalState` objects, and a replay window that could still reach 116,576 values. Replaying 40,000 of the same events in a separate process without the SDK stream used a flat 27 MB, which rules out the events, ledger v8, and Blockfrost.
+
+| File | Change |
+|---|---|
+| `midnight/runtime/patches/effect+3.21.3.patch` | The replay window lets go of its list node once it has nothing left to replay. Effect 3.22.4 still has the bug, and 4.x is not compatible with the wallet SDK. |
+| `midnight/runtime/package.json` | `patch-package` and a `postinstall` that applies the patch and fails the install if it cannot. |
+| `midnight/worker/Dockerfile` | Copies `patches/` before `npm ci` so the image is built with the patch. |
+| `midnight/runtime/src/wallet.ts` | `serializeFailure` now reaches the real WASM error. It printed only `ParseError` before, which hid the cause. |
+
+After pulling, run `npm install` in `midnight/runtime` once so the local copy is patched too.
+
+**Deployed** to `provven-midnight-worker` as `deployment-01M78135RVPC5KR79T2AZXBQ13`. In the first 7 minutes dust went from 1,081,335 to about 1,215,000, wallet memory stayed at 410 MB, and the checkpoint's dust offset moved again (1,132,003, then 1,189,539).
+
+**Still no proofs: mainnet changed its event format.** Events up to at least 1,600,299 are tagged `midnight:event[v9]`. From at least 1,629,900 onward they are `midnight:event[v14]`, and ledger-v8 8.1.0 refuses them: `expected header tag 'midnight:event[v9]:', got 'midnight:event[v14]'`. The shielded reader already fails on event 1,630,184, and dust will fail the same way when it gets there. The change landed around 2026-11-06, the same days the ledger v9 SDK generation was published (`wallet-sdk-facade` 5.0.0, `midnight-js` 5.0.0, `compact-js` 3.0.0, `compact-runtime` 0.21.0, `ledger-v9` 1.0.1). This is the evidence the "do not upgrade v8 → v9 preemptively" rule was waiting for. The upgrade is tracked in the entry above.
+
+---
+
+## **Documents block and employer driver files** (2026-11-11)
+
+Drivers can upload insurance, operating authority, and registration. The app reads slots from the file and the driver accepts a line onto the resume. That line is self-reported. It is not a proof and it is not verified. Employers get a private file drop on each driver card for an outside DOT application or a paper application. The driver cannot see those files.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/128_driver_documents_and_employer_files.sql` | `block_driver_documents`, `employer_driver_files`, and two private storage buckets. |
+| `src/lib/driver-document-lines.ts` | Turns model slots into the resume line. VIN, policy number, and SSN are not slots. |
+| `src/lib/driver-document-extract.ts` | Reads a PDF's text or a photo into those slots. |
+| `src/app/api/driver/documents/route.ts` | Upload, accept onto the resume, delete, and a signed link for the driver's own file. |
+| `src/components/blocks/DocumentsBlock.tsx` | The Documents block. |
+| `src/lib/driver-resume-packet.ts` | Accepted lines are `documentLines`, separate from proof chips. |
+| `src/app/api/employer/drivers/[userId]/files/route.ts` | Company-only upload, list, and delete on one driver. |
+| `src/components/employer/drivers/EmployerDriverFiles.tsx` | Files section on the driver card. |
+
+---
+
 ## **Homepage hero description** (2026-11-10)
 
 The paragraph under the homepage headline now describes building a truck driver resume, keeping employment history and credentials in one place, and reusing that profile when applying.

@@ -273,6 +273,23 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
         <p className='mt-6 text-sm italic text-stone-500'>{packet.thinStateHint}</p>
       ) : null}
 
+      {packet.documentLines.length > 0 ? (
+        <>
+          <SectionRule title='Equipment & authority' />
+          <p className='mb-2 text-[11px] text-stone-500'>From documents on file. Not a verified claim.</p>
+          <ul className='space-y-0.5 text-[12.5px] leading-snug text-stone-800'>
+            {packet.documentLines.map((line) => (
+              <li key={line} className='flex gap-2'>
+                <span className='text-stone-400' aria-hidden>
+                  •
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
       {packet.experience.length > 0 ? (
         <>
           <SectionRule title='Experience' />

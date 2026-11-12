@@ -19,6 +19,7 @@ import {
   GitBranch,
   Mail,
   FileWarning,
+  Files,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -195,6 +196,14 @@ function ProjectsIllustration({ accentText, isDark }: IllustrationProps) {
 }
 
 /** Default fallback */
+function DocumentsIllustration({ accentText, isDark }: IllustrationProps) {
+  return (
+    <IllustrationFrame accentText={accentText} isDark={isDark}>
+      <Files className={cn('h-9 w-9 drop-shadow-sm', accentText)} />
+    </IllustrationFrame>
+  )
+}
+
 function DefaultIllustration({ accentText, isDark }: IllustrationProps) {
   return (
     <IllustrationFrame accentText={accentText} isDark={isDark}>
@@ -215,6 +224,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'driver-screening-consent': ScreeningConsentIllustration,
   'driver-cdl-credentials': CdlIllustration,
   'driver-license':         CdlIllustration,
+  'driver-documents':       DocumentsIllustration,
   'developer-portfolio':    PortfolioIllustration,
   'developer-github':       GithubIllustration,
   'developer-projects':     ProjectsIllustration,

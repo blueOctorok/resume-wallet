@@ -25,6 +25,7 @@ import { useEmployerBlocksStore } from '@/stores/employer-blocks-store'
 import { useUIStore } from '@/stores/ui-store'
 import { BallPill, DQ_ITEM_SHORT, DqStatusBadge, ballTone } from './DriverBlockBadges'
 import DriverFileItemRow, { fmtDate } from './DriverFileItems'
+import EmployerDriverFiles from './EmployerDriverFiles'
 
 type Viewer =
   | { kind: 'mvr' | 'psp'; id: string }
@@ -243,6 +244,8 @@ export default function DriverFileModal({ userId, sessionUserId }: { userId: str
                   ))}
                 </ul>
               </section>
+
+              <EmployerDriverFiles candidateUserId={userId} />
 
               <section>
                 <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-ironside">

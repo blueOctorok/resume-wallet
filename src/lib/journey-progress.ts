@@ -124,6 +124,8 @@ export interface BlockProgressData {
   hasVerifiedAttestation?: boolean
   /** The driver confirmed a barcode read from the back of the license. */
   licenseOnFile?: boolean
+  /** At least one file saved in Documents. */
+  hasDriverDocument?: boolean
 }
 
 // ===== BLOCK → JOURNEY STEP MAP =====
@@ -329,6 +331,23 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       description: 'A barcode read fills empty license fields. It is a read of the card until a record pull verifies it.',
       target: 'license',
       priority: 'high',
+    } : null,
+  },
+
+  'driver-documents': {
+    resolve: (d) => [{
+      id: 'driver-documents',
+      label: 'Documents',
+      description: 'Insurance, authority, or registration on file',
+      status: d.hasDriverDocument ? 'complete' : 'pending',
+      action: !d.hasDriverDocument ? { label: 'Add a document', target: 'documents' } : undefined,
+      isOptional: true,
+    }],
+    nextAction: (d) => !d.hasDriverDocument ? {
+      label: 'Add a document',
+      description: 'Upload insurance, authority, or registration. You choose what shows on your resume.',
+      target: 'documents',
+      priority: 'medium',
     } : null,
   },
 

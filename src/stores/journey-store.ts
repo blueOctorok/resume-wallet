@@ -210,6 +210,7 @@ export function useJourneyProgress(): JourneyProgress {
     licenseOnFile: hubStore.dqFile?.items.some(
       (item) => item.id === 'dl_images' && item.status === 'complete',
     ) === true,
+    hasDriverDocument: (hubStore.driverDocuments?.count ?? 0) > 0,
   }
 
   const blockTypes = installedBlocks.map((b) => b.blockType)

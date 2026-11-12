@@ -68,6 +68,7 @@ function deriveBlockStatus(
     pspRecords: Array<{ orderStatus?: string }>
     portfolio: { portfolioUrl: string | null } | null
     github: { username: string | null } | null
+    driverDocuments: { count: number } | null
     licenseOnFile?: boolean
     licenseStarted?: boolean
   },
@@ -104,6 +105,8 @@ function deriveBlockStatus(
       return hubStore.github?.username ? 'complete' : 'empty'
     case 'driver-license':
       return hubStore.licenseOnFile ? 'complete' : hubStore.licenseStarted ? 'in-progress' : 'empty'
+    case 'driver-documents':
+      return (hubStore.driverDocuments?.count ?? 0) > 0 ? 'complete' : 'empty'
     case 'general-resume':
       return hubStore.resumes.some((r) => r.sourceRole === 'general') ? 'complete' : 'empty'
     default:
@@ -120,6 +123,7 @@ export function useHubContext(): HubContext {
   const pspRecords = useDriverHubStore((s) => s.pspRecords)
   const portfolio = useDriverHubStore((s) => s.portfolio)
   const github = useDriverHubStore((s) => s.github)
+  const driverDocuments = useDriverHubStore((s) => s.driverDocuments)
   const dqFile = useDriverHubStore((s) => s.dqFile)
   const stats = useDriverHubStore((s) => s.stats)
   const evRequests = useEmploymentVerificationBlockStore((s) => s.requests)
@@ -133,6 +137,7 @@ export function useHubContext(): HubContext {
     pspRecords,
     portfolio,
     github,
+    driverDocuments,
     licenseOnFile: licenseItem?.status === 'complete',
     licenseStarted: licenseItem?.status === 'in_progress',
   }

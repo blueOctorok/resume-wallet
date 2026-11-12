@@ -3,7 +3,9 @@
 # Official image is Nix-based / minimal — we copy its store into Debian and put
 # nginx Basic-auth in front (prove traffic carries private witnesses).
 
-FROM midnightntwrk/proof-server:8.0.3 AS upstream
+# Proof server 9.0.0 is the one for ledger 9 (mainnet since 2026-11-06). Pinned
+# by digest, as the Midnight release notes ask.
+FROM midnightntwrk/proof-server:9.0.0@sha256:5617e26aa76d06c44f4bee667c37eb71ccf02fefe0e5848100fa84001282d515 AS upstream
 
 FROM debian:bookworm-slim
 
@@ -17,7 +19,8 @@ RUN apt-get update \
   && rm -f /etc/nginx/sites-enabled/default
 
 COPY --from=upstream /nix /nix
-ENV PATH="/nix/store/k4a492bl82lg24l8vr6f0mcb77f5hfai-ledger-8.0.3/bin:${PATH}"
+# The store path comes from the upstream image's own PATH for this digest.
+ENV PATH="/nix/store/yvk4dzxrcahah1zmzbd84gsl5d390hz1-ledger-1.0.0/bin:${PATH}"
 
 COPY nginx.conf /etc/nginx/nginx.conf.image
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

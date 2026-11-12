@@ -1,13 +1,29 @@
 import { randomUUID } from 'crypto'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-export type DocumentBucket = 'resumes' | 'dot-applications' | 'screening-reports' | 'license-images'
+export type DocumentBucket =
+  | 'resumes'
+  | 'dot-applications'
+  | 'screening-reports'
+  | 'license-images'
+  | 'driver-documents'
+  | 'employer-driver-files'
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600
 
 export function buildStorageObjectPath(userId: string, filename: string): string {
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'document'
   return `${userId}/${randomUUID()}-${safeName}`
+}
+
+/** Company file on one driver. First folder is the company, so a candidate session cannot match it. */
+export function buildCompanyDriverFilePath(
+  companyId: string,
+  candidateUserId: string,
+  filename: string,
+): string {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'document'
+  return `${companyId}/${candidateUserId}/${randomUUID()}-${safeName}`
 }
 
 function toBuffer(file: File | Buffer | ArrayBuffer | Uint8Array): Buffer | Promise<Buffer> {

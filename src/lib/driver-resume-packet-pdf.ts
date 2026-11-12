@@ -267,6 +267,26 @@ export async function generateDriverResumePacketPDF(
     y += hintLines.length * 4 + 2
   }
 
+  // Uploaded documents the driver accepted. Not a proof.
+  if (packet.documentLines.length > 0) {
+    drawSectionHeader('Equipment & authority')
+    pdf.setFont('helvetica', 'italic')
+    pdf.setFontSize(8)
+    pdf.setTextColor(...textMuted)
+    pdf.text('From documents on file. Not a verified claim.', MARGIN, y)
+    y += 5
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(10)
+    pdf.setTextColor(...textDark)
+    for (const line of packet.documentLines) {
+      checkPage(6)
+      const wrapped = pdf.splitTextToSize(`•  ${line}`, pageWidth - MARGIN * 2 - 2)
+      pdf.text(wrapped, MARGIN + 1, y)
+      y += wrapped.length * 4.5 + 1
+    }
+    y += 2
+  }
+
   // EXPERIENCE
   if (packet.experience.length > 0) {
     drawSectionHeader('Experience')

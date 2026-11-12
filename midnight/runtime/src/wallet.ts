@@ -1,24 +1,20 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { WebSocket } from 'ws'
+import { fileURLToPath } from 'node:url'
 import { Buffer } from 'buffer'
 
-import type { Contract as CompactContract } from '@midnight-ntwrk/compact-js'
-import { CompiledContract } from '@midnight-ntwrk/compact-js'
-import { createMvrCleanCircuitWitness, type MvrCleanCircuitWitness, type MvrCleanViolationSlot } from './mvr-clean-witness.js'
-import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id'
-import * as ledger from '@midnight-ntwrk/ledger-v8'
-import { WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade'
-import { DustWallet } from '@midnight-ntwrk/wallet-sdk-dust-wallet'
-import { HDWallet, Roles } from '@midnight-ntwrk/wallet-sdk-hd'
-import { ShieldedWallet } from '@midnight-ntwrk/wallet-sdk-shielded'
 import {
   createKeystore,
+  DustWallet,
+  InMemoryTransactionHistoryStorage,
+  mergeWalletEntries,
   PublicKey,
+  ShieldedWallet,
   UnshieldedWallet,
-} from '@midnight-ntwrk/wallet-sdk-unshielded-wallet'
-import { InMemoryTransactionHistoryStorage } from '@midnight-ntwrk/wallet-sdk-abstractions'
+  WalletEntrySchema,
+  WalletFacade,
+  WalletSeeds,
+} from '@midnightntwrk/wallet-sdk'
 
 import { MIDNIGHT_CONFIG, ZK_CONFIG_PATH } from './config.js'
 
@@ -35,24 +31,17 @@ export function toRelayUrl(nodeRpc: string): URL {
 /** Incremental merkle restore dies if the cache is days behind the indexer. */
 const MAX_WALLET_CACHE_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
-// @ts-expect-error SDK expects WebSocket on global in Node
-globalThis.WebSocket = WebSocket
-
-// NetworkId is a string — Preprod was hardcoded so mainnet txs would encode
-// as mn_addr_preprod / fail against mainnet RPC. Must match MIDNIGHT_NETWORK.
-setNetworkId(MIDNIGHT_CONFIG.network)
-
-const CONTRACT_NAME = 'mvr-clean-36'
-
 const walletDir = path.dirname(fileURLToPath(import.meta.url))
 
 // Persisted wallet sync state (gitignored). Restoring it skips a full chain scan.
 // A quiet week between MVRs must not throw the cache away. A bad restore still
 // falls back to a full sync. Keyed by network. Never commit this file.
+// The `-ledger9` name keeps this SDK away from the file the ledger 8 SDK wrote
+// (`<network>.json`), which it could not restore. That older file is left alone.
 const WALLET_CACHE_DIR = path.join(walletDir, '..', '.wallet-cache')
 const WALLET_CACHE_PATH = path.join(
   WALLET_CACHE_DIR,
-  `${MIDNIGHT_CONFIG.network}.json`,
+  `${MIDNIGHT_CONFIG.network}-ledger9.json`,
 )
 
 interface SerializedWalletState {
@@ -99,85 +88,18 @@ function clearWalletState(): void {
   }
 }
 
-function buildCompiledContract(
-  module: {
-    Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
-  },
-  witnesses: MvrCleanCircuitWitness,
-) {
-  const ContractCtor = module.Contract as unknown as new (
-    witnesses: MvrCleanCircuitWitness,
-  ) => CompactContract
-
-  return CompiledContract.make(CONTRACT_NAME, ContractCtor).pipe(
-    CompiledContract.withWitnesses(witnesses),
-    CompiledContract.withCompiledFileAssets(ZK_CONFIG_PATH),
-  )
-}
-
-let contractModulePromise: Promise<{
-  Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
-  ledger: (state: unknown) => { factCommitment: string }
-}> | null = null
-
-async function loadContractModule() {
-  if (!contractModulePromise) {
-    contractModulePromise = (async () => {
-      const contractPath = path.join(ZK_CONFIG_PATH, 'contract', 'index.js')
-      if (!fs.existsSync(contractPath)) {
-        throw new Error(
-          'Compact contract not compiled — run: npm run midnight:compile',
-        )
-      }
-      return (await import(pathToFileURL(contractPath).href)) as {
-        Contract: new (witnesses: MvrCleanCircuitWitness) => CompactContract
-        ledger: (state: unknown) => { factCommitment: string }
-      }
-    })()
-  }
-  return contractModulePromise
-}
-
-export async function loadCompiledContract(witnesses: MvrCleanCircuitWitness) {
-  const module = await loadContractModule()
-  return {
-    module,
-    compiledContract: buildCompiledContract(module, witnesses),
-  }
-}
-
-/** Inactive slots — sufficient for deploy / ledger reads (no predicate data). */
-export function createEmptyMvrCleanWitness() {
-  const slots: MvrCleanViolationSlot[] = Array.from({ length: 32 }, () => ({
-    dateYmd: 0,
-    active: false,
-  }))
-  return createMvrCleanCircuitWitness(slots)
-}
-
-export function deriveKeysFromSeed(seed: Buffer) {
-  const hdWallet = HDWallet.fromSeed(seed)
-  if (hdWallet.type !== 'seedOk') throw new Error('Invalid wallet seed')
-
-  const result = hdWallet.hdWallet
-    .selectAccount(0)
-    .selectRoles([Roles.Zswap, Roles.NightExternal, Roles.Dust])
-    .deriveKeysAt(0)
-
-  if (result.type !== 'keysDerived') throw new Error('Key derivation failed')
-
-  hdWallet.hdWallet.clear()
-  return result.keys
-}
-
 export async function createMidnightWallet(seed: Buffer) {
-  const keys = deriveKeysFromSeed(seed)
   const networkId = MIDNIGHT_CONFIG.network
+  // Account 0, index 0, roles Zswap / NightExternal / Dust: the same three
+  // seeds the ledger 8 runtime derived by hand, so the addresses are unchanged.
+  const seeds = WalletSeeds.fromMasterSeed(seed)
+  const unshieldedKeystore = createKeystore(
+    { kind: 'schnorr', secret: seeds.unshielded },
+    networkId,
+  )
 
-  const shieldedSecretKeys = ledger.ZswapSecretKeys.fromSeed(keys[Roles.Zswap])
-  const dustSecretKey = ledger.DustSecretKey.fromSeed(keys[Roles.Dust])
-  const unshieldedKeystore = createKeystore(keys[Roles.NightExternal], networkId)
-
+  // `forks` is left out on purpose: the SDK default (protocol version 2000000)
+  // is the version the ledger 9 release notes give for the hand-over.
   const walletConfig = {
     networkId,
     indexerClientConnection: {
@@ -188,7 +110,7 @@ export async function createMidnightWallet(seed: Buffer) {
     // Always the public node. Keyed Foundation RPC is submit-only — wiring it
     // here as relayURL reports tip height 0 and breaks merkle sync.
     relayURL: toRelayUrl(MIDNIGHT_CONFIG.nodeRpc),
-    txHistoryStorage: new InMemoryTransactionHistoryStorage(),
+    txHistoryStorage: new InMemoryTransactionHistoryStorage(WalletEntrySchema, mergeWalletEntries),
     costParameters: {
       additionalFeeOverhead: 300_000_000_000_000n,
       feeBlocksMargin: 5,
@@ -212,7 +134,7 @@ export async function createMidnightWallet(seed: Buffer) {
       shielded: async (config) =>
         useSaved && saved
           ? ShieldedWallet(config).restore(saved.shielded)
-          : ShieldedWallet(config).startWithSecretKeys(shieldedSecretKeys),
+          : ShieldedWallet(config).startWithSeed(seeds.shielded),
       unshielded: async (config) =>
         useSaved && saved
           ? UnshieldedWallet(config).restore(saved.unshielded)
@@ -222,16 +144,13 @@ export async function createMidnightWallet(seed: Buffer) {
       dust: async (config) =>
         useSaved && saved
           ? DustWallet(config).restore(saved.dust)
-          : DustWallet(config).startWithSecretKey(
-              dustSecretKey,
-              ledger.LedgerParameters.initialParameters().dust,
-            ),
+          : DustWallet(config).startWithSeed(seeds.dust),
     })
 
   let wallet: WalletFacade
   try {
     wallet = await initWallet()
-    await wallet.start(shieldedSecretKeys, dustSecretKey)
+    await wallet.start(seeds)
   } catch (err) {
     if (!useSaved) throw err
     // Saved state was unusable — discard it and do a clean full sync.
@@ -243,25 +162,40 @@ export async function createMidnightWallet(seed: Buffer) {
     useSaved = false
     clearWalletState()
     wallet = await initWallet()
-    await wallet.start(shieldedSecretKeys, dustSecretKey)
+    await wallet.start(seeds)
   }
 
-  return { wallet, shieldedSecretKeys, dustSecretKey, unshieldedKeystore }
+  return { wallet, unshieldedKeystore }
 }
 
 function serializeFailure(err: unknown): string {
   const lines: string[] = []
   const seen = new Set<unknown>()
+  // The wasm error sits about eight levels down: ParseError → issue →
+  // issues[] → issue → issue → issue → actual. Stopping early printed only
+  // "ParseError" and hid the real reason for six days.
   const visit = (value: unknown, depth: number) => {
-    if (!value || depth > 6 || seen.has(value) || typeof value !== 'object') return
+    if (!value || depth > 12 || seen.has(value) || typeof value !== 'object') return
     seen.add(value)
-    const record = value as { message?: unknown; actual?: unknown; cause?: unknown; issue?: unknown }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1)
+      return
+    }
+    const record = value as {
+      message?: unknown
+      actual?: unknown
+      cause?: unknown
+      issue?: unknown
+      issues?: unknown
+    }
     if (typeof record.message === 'string' && record.message.length < 400 && !record.message.includes('readonly')) {
-      lines.push(record.message.replaceAll('\n', ' '))
+      const name = value instanceof Error && value.name !== 'Error' ? `${value.name}: ` : ''
+      lines.push(`${name}${record.message.replaceAll('\n', ' ')}`)
     }
     visit(record.actual, depth + 1)
     visit(record.cause, depth + 1)
     visit(record.issue, depth + 1)
+    visit(record.issues, depth + 1)
   }
   visit(err, 0)
   if (lines.length === 0) return err instanceof Error ? err.name : String(err)
@@ -269,10 +203,10 @@ function serializeFailure(err: unknown): string {
 }
 
 /**
- * Each reader is serialized on its own. On mainnet the shielded
- * `ZswapLocalState.serialize()` starts throwing once its merkle copy is
- * large, and that must not block saving dust and unshielded. A failed part
- * keeps the copy already on disk.
+ * Each reader is serialized on its own, so one reader that cannot serialize
+ * does not block saving the other two. A failed part keeps the copy already
+ * on disk. (The mainnet failures seen in November were the WASM memory filling
+ * up, fixed by patches/effect+3.22.4.patch, not the size of the state.)
  */
 async function serializeOrKeep(
   label: string,

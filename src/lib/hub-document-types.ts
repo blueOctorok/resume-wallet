@@ -82,7 +82,7 @@ function latestHubDocByType(documents: HubDocument[], type: HubDocument['type'])
 /** Artifact row for hub block management (formerly “Block files”). */
 export interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp' | 'mvr' | 'psp' | 'screening_consent' | 'portfolio' | 'github' | 'employment_verifications'
+  type: 'resume' | 'dotapp' | 'mvr' | 'psp' | 'screening_consent' | 'portfolio' | 'github' | 'employment_verifications' | 'documents'
   title: string
   subtitle?: string
   createdAt?: string
@@ -142,6 +142,9 @@ export function pickHubDocForCareerBlock(documents: HubDocument[], blockType: st
   }
   if (blockType === 'general-employment-verification') {
     return documents.find((d) => d.type === 'employment_verifications') ?? null
+  }
+  if (blockType === 'driver-documents') {
+    return documents.find((d) => d.type === 'documents') ?? null
   }
   return null
 }

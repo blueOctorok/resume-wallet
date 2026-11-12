@@ -1,6 +1,6 @@
 # Hosted Midnight proof server (Fly.io)
 
-Same `midnightntwrk/proof-server:8.0.3` image Provven uses locally, wrapped with Basic auth so witness data is not an open public endpoint.
+Same `midnightntwrk/proof-server:9.0.0` image Provven uses locally, wrapped with Basic auth so witness data is not an open public endpoint.
 
 ## Why Fly (not Vercel)
 
@@ -61,4 +61,4 @@ docker run --rm -p 8080:8080 \
 
 ## Bumping `proof-server` version
 
-The Dockerfile `PATH` pins a Nix store path from `8.0.3`. When upgrading the upstream tag, re-discover the binary path inside the new image and update `Dockerfile` + `fly.toml` notes.
+The Dockerfile pins the image by digest and its `PATH` pins the Nix store path from `9.0.0`. When upgrading the upstream tag, read the new digest and the `PATH` from the image config on Docker Hub (the registry API returns both, no Docker needed) and update `Dockerfile`.

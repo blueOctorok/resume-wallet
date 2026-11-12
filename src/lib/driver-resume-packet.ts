@@ -10,7 +10,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isLicenseScanFields } from '@/lib/aamva-license'
 import { hasValidMedicalCert } from '@/lib/accio-xml-parser'
-import { getLicenseScan, getMvrAttestationContext } from '@/lib/block-data'
+import { getDriverDocuments, getLicenseScan, getMvrAttestationContext } from '@/lib/block-data'
+import { acceptedResumeLines } from '@/lib/driver-document-lines'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
 import { formatCardFactLabel } from '@/lib/card-fact-display'
 import { normalizeAccioCdlClass } from '@/lib/fact-registry'
@@ -81,6 +82,11 @@ export interface DriverResumePacket {
   experience: DriverResumeExperienceRow[]
   /** Driver-stated safety line; omit section when null */
   safetySummary: string | null
+  /**
+   * Lines the driver accepted from uploaded documents.
+   * Self-reported. Not proof chips.
+   */
+  documentLines: string[]
   qrLabelTop: string
   footerTitle: string
   footerBody: string
@@ -182,6 +188,8 @@ export interface BuildPacketInput {
   pspResultOutcome?: string | null
   /** DOT Form 2 accidents array length when known */
   dotAccidentCount?: number | null
+  /** Accepted lines from uploaded documents. Omitted when none are accepted. */
+  documentLines?: string[]
   attestedChips?: DriverResumeProofChip[]
   /** Confirmed barcode read. Omitted when the card was never confirmed. */
   licenseProof?: { label: string; expirationDate?: string | null } | null
@@ -447,6 +455,7 @@ export function buildDriverResumePacket(input: BuildPacketInput): DriverResumePa
     verifyDisplayPath,
     experience,
     safetySummary,
+    documentLines: input.documentLines ?? [],
     qrLabelTop: 'DOT application packet',
     footerTitle: 'Full career card on Provven',
     footerBody:
@@ -477,7 +486,7 @@ export async function assembleDriverResumePacket(
 ): Promise<DriverResumePacket> {
   const shareToken = await ensureShareToken(supabase, userId)
 
-  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof, accio, dkimRows] =
+  const [{ data: mvrExtra }, { data: pspOrder }, attestedFacts, licenseProof, accio, dkimRows, driverDocuments] =
     await Promise.all([
     supabase
       .from('mvr_results')
@@ -505,6 +514,7 @@ export async function assembleDriverResumePacket(
       .eq('driver_hidden', false)
       .not('resume_accepted_at', 'is', null)
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED']),
+    getDriverDocuments(supabase, userId).catch(() => []),
   ])
 
   const accidents = opts.applicationData?.form2?.accidents
@@ -522,6 +532,7 @@ export async function assembleDriverResumePacket(
     pspResultOutcome: pspOrder?.result_outcome ?? null,
     dotAccidentCount,
     hasDotApp: opts.hasDotApp,
+    documentLines: acceptedResumeLines(driverDocuments),
     attestedChips: attestedFacts.map((f) => ({
       id: f.factType,
       label: f.label,

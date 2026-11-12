@@ -24,6 +24,10 @@ import type {
 } from '@/types/driver-profile'
 import { isDriverOwnedScreeningOrder } from '@/lib/screening-order-ownership'
 import type { ParsedResumeExtraction } from '@/types/resume-extraction'
+import {
+  parseDriverDocuments,
+  type DriverDocumentRecord,
+} from '@/lib/driver-document-lines'
 
 // ── Row types (DB shape) ────────────────────────────────────────────────────
 
@@ -223,6 +227,38 @@ export async function saveLicenseScan(
     .upsert({ user_id: userId, ...data, updated_at: now }, { onConflict: 'user_id' })
   if (error) {
     throw new Error(`block_driver_license write failed: ${error.message}`)
+  }
+}
+
+export async function getDriverDocuments(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<DriverDocumentRecord[]> {
+  const { data, error } = await supabase
+    .from('block_driver_documents')
+    .select('documents')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    throw new Error(`block_driver_documents read failed: ${error.message}`)
+  }
+  return parseDriverDocuments(data?.documents)
+}
+
+export async function saveDriverDocuments(
+  supabase: SupabaseClient,
+  userId: string,
+  documents: DriverDocumentRecord[],
+): Promise<void> {
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('block_driver_documents')
+    .upsert(
+      { user_id: userId, documents, updated_at: now },
+      { onConflict: 'user_id' },
+    )
+  if (error) {
+    throw new Error(`block_driver_documents write failed: ${error.message}`)
   }
 }
 

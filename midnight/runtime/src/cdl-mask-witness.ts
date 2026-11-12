@@ -28,11 +28,3 @@ export function createCdlRestrictionCircuitWitness(mask: number): CdlRestriction
     restrictionMask: (context) => [context.privateState, value],
   }
 }
-
-export function createEmptyCdlEndorsementWitness(): CdlEndorsementCircuitWitness {
-  return createCdlEndorsementCircuitWitness(0)
-}
-
-export function createEmptyCdlRestrictionWitness(): CdlRestrictionCircuitWitness {
-  return createCdlRestrictionCircuitWitness(0)
-}

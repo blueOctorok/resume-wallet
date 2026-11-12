@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getStormUserIdFromRequest } from '@/lib/auth-session'
-import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences, getDevPortfolio, getDevGithub } from '@/lib/block-data'
+import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences, getDevPortfolio, getDevGithub, getDriverDocuments } from '@/lib/block-data'
 import {
   pickPendingEmployerScreening,
   type CandidateRequestScreeningRow,
@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         pspRecords: [],
         portfolio: null,
         github: null,
+        driverDocuments: { count: 0 },
         jobApplications: [],
         screeningConsentBundles: [],
         dqFile: null,
@@ -105,6 +106,7 @@ export async function GET(request: NextRequest) {
       githubRow,
       candidateRequestsPendingResult,
       screeningConsentBundlesResult,
+      driverDocumentRows,
     ] = await Promise.all([
       // 1. User profile (identity: name, avatar, contact)
       supabase
@@ -218,6 +220,10 @@ export async function GET(request: NextRequest) {
         .eq('driver_user_id', user.id)
         .order('completed_at', { ascending: false, nullsFirst: false })
         .limit(20),
+      getDriverDocuments(supabase, user.id).catch((error: unknown) => {
+        console.warn('[DRIVER HUB] documents', error)
+        return []
+      }),
     ])
 
     const userProfile = userProfileResult.data || null
@@ -556,6 +562,7 @@ export async function GET(request: NextRequest) {
       pspRecords,
       portfolio,
       github,
+      driverDocuments: { count: driverDocumentRows.length },
       jobApplications,
       transactions,
       stats,

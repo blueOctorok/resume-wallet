@@ -16,7 +16,3 @@ export function createCdlClassACircuitWitness(holdsClassA: boolean): CdlClassACi
     holdsClassA: (context) => [context.privateState, holdsClassA],
   }
 }
-
-export function createEmptyCdlClassAWitness(): CdlClassACircuitWitness {
-  return createCdlClassACircuitWitness(false)
-}

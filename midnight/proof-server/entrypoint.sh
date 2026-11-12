@@ -13,7 +13,8 @@ HASH="$(openssl passwd -apr1 "$PASS")"
 printf '%s:%s\n' "$USER" "$HASH" > /etc/nginx/htpasswd
 cp /etc/nginx/nginx.conf.image /etc/nginx/nginx.conf
 
-midnight-proof-server -v &
+# Same command the upstream 9.0.0 image runs. nginx proxies to this port.
+midnight-proof-server --port 6300 &
 PROOF_PID=$!
 
 cleanup() {

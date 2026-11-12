@@ -52,6 +52,8 @@ interface DriverHubState {
   portfolio: { portfolioUrl: string | null } | null
   /** GitHub from block_dev_github (for My Files + Stormi journey) */
   github: { username: string | null } | null
+  /** Saved Documents block files. Count drives the journey step. */
+  driverDocuments: { count: number } | null
 
   /** Driver-lens DQ checklist (mirrors employer DQ monitor items). */
   dqFile: DqFileSnapshot | null
@@ -88,6 +90,7 @@ interface DriverHubActions {
   setStats: (stats: DriverHubStats | null) => void
   setPortfolio: (portfolio: { portfolioUrl: string | null } | null) => void
   setGithub: (github: { username: string | null } | null) => void
+  setDriverDocuments: (driverDocuments: { count: number } | null) => void
   setDqFile: (dqFile: DqFileSnapshot | null) => void
   
   // Loading state
@@ -125,6 +128,7 @@ interface DriverHubActions {
     stats?: DriverHubStats | null
     portfolio?: { portfolioUrl: string | null } | null
     github?: { username: string | null } | null
+    driverDocuments?: { count: number } | null
     dqFile?: DqFileSnapshot | null
   }) => void
   
@@ -163,6 +167,7 @@ const initialState: DriverHubState = {
   jobApplications: [],
   portfolio: null,
   github: null,
+  driverDocuments: null,
   dqFile: null,
   stats: initialStats,
   isLoading: true,
@@ -196,6 +201,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
     setStats: (stats) => set({ stats }),
     setPortfolio: (portfolio) => set({ portfolio }),
     setGithub: (github) => set({ github }),
+    setDriverDocuments: (driverDocuments) => set({ driverDocuments }),
     setDqFile: (dqFile) => set({ dqFile }),
 
     // Loading state
@@ -275,6 +281,7 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
       stats: data.stats ?? get().stats,
       portfolio: data.portfolio ?? get().portfolio,
       github: data.github ?? get().github,
+      driverDocuments: data.driverDocuments !== undefined ? data.driverDocuments : get().driverDocuments,
       dqFile: data.dqFile !== undefined ? data.dqFile : get().dqFile,
       hasResume: (data.resumes ?? get().resumes).length > 0,
       latestResumeIpfsHash: (data.resumes ?? get().resumes)[0]?.ipfsHash ?? null,

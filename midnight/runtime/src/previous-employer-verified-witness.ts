@@ -20,7 +20,3 @@ export function createPreviousEmployerVerifiedCircuitWitness(
     employerVerified: (context) => [context.privateState, verified],
   }
 }
-
-export function createEmptyPreviousEmployerVerifiedWitness(): PreviousEmployerVerifiedCircuitWitness {
-  return createPreviousEmployerVerifiedCircuitWitness(false)
-}

@@ -75,10 +75,7 @@ async function main() {
       `[MIDNIGHT] Deploying ${cfg.contractName} (${fact}) to ${MIDNIGHT_CONFIG.network}...`,
     )
     try {
-      const { contractAddress } = await deployMidnightContract(
-        fact,
-        MIDNIGHT_CONFIG.walletMnemonic,
-      )
+      const { contractAddress } = await deployMidnightContract(fact)
       contracts[fact] = contractAddress
       envLines.push(`${cfg.envVar}=${contractAddress}`)
       console.log(`[MIDNIGHT] ${fact} → ${contractAddress}`)

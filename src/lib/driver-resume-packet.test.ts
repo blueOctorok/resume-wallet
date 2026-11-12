@@ -28,6 +28,21 @@ const data: ResumeBuilderData = {
   references: [],
 }
 
+describe('uploaded document lines', () => {
+  it('keeps accepted document lines off the proof badges', () => {
+    const packet = buildDriverResumePacket({
+      structuredData: data,
+      mvrSummary: null,
+      shareToken: 'abc',
+      asOfCandidates: [],
+      hasDotApp: false,
+      documentLines: ['Auto liability $1,000,000 · expires Mar 2027'],
+    })
+    expect(packet.documentLines).toEqual(['Auto liability $1,000,000 · expires Mar 2027'])
+    expect(packet.proofChips.some((chip) => chip.label.includes('liability'))).toBe(false)
+  })
+})
+
 describe('resume proof badges', () => {
   it('marks a predicate-backed MVR fact as a Midnight proof and the barcode as a license proof', () => {
     const packet = buildDriverResumePacket({

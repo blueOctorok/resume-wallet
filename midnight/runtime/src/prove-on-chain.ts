@@ -1,14 +1,9 @@
 import * as Rx from 'rxjs'
-import type { FacadeState } from '@midnight-ntwrk/wallet-sdk-facade'
-import { unshieldedToken } from '@midnight-ntwrk/ledger-v8'
+import { DefaultForkSchedule, Token, type FacadeState } from '@midnightntwrk/wallet-sdk'
 import {
-  deployContract,
   findDeployedContract,
+  type Ledger8Contract,
 } from '@midnight-ntwrk/midnight-js-contracts'
-import type { Contract as CompactContract } from '@midnight-ntwrk/compact-js'
-import { CompiledContract } from '@midnight-ntwrk/compact-js'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import path from 'node:path'
 
 import { buildFactCommitment } from './fact-commitment.js'
 import { buildPullNullifier } from './pull-nullifier.js'
@@ -29,28 +24,14 @@ import {
   createMvrCleanCircuitWitness,
   type MvrCleanViolationSlot,
 } from './mvr-clean-witness.js'
-import {
-  createCdlClassACircuitWitness,
-  createEmptyCdlClassAWitness,
-} from './cdl-class-a-witness.js'
-import {
-  createCdlClassCircuitWitness,
-  createEmptyCdlClassWitness,
-} from './cdl-class-witness.js'
+import { createCdlClassACircuitWitness } from './cdl-class-a-witness.js'
+import { createCdlClassCircuitWitness } from './cdl-class-witness.js'
 import {
   createCdlEndorsementCircuitWitness,
   createCdlRestrictionCircuitWitness,
-  createEmptyCdlEndorsementWitness,
-  createEmptyCdlRestrictionWitness,
 } from './cdl-mask-witness.js'
-import {
-  createMedCertCircuitWitness,
-  createEmptyMedCertWitness,
-} from './med-cert-witness.js'
-import {
-  createPreviousEmployerVerifiedCircuitWitness,
-  createEmptyPreviousEmployerVerifiedWitness,
-} from './previous-employer-verified-witness.js'
+import { createMedCertCircuitWitness } from './med-cert-witness.js'
+import { createPreviousEmployerVerifiedCircuitWitness } from './previous-employer-verified-witness.js'
 
 export interface SharedOnChainProveInput {
   candidateUserId: string
@@ -155,25 +136,42 @@ function makeSyncProgressLogger(): (s: FacadeState) => void {
     if (now - lastLoggedAt < PROGRESS_LOG_MS) return
     lastLoggedAt = now
     logProgress(
-      `Sync progress: dust ${formatProgress(readProgress(s.dust))} unshielded ${formatProgress(readProgress(s.unshielded))} shielded ${formatProgress(readProgress(s.shielded))}`,
+      `Sync progress: dust ${formatProgress(readProgress(s.dust))} unshielded ${formatProgress(readProgress(s.unshielded))} shielded ${formatProgress(readProgress(s.shielded))} ledger ${formatLedger(s)}`,
     )
   }
 }
 
-/**
- * A prove pays its fee in DUST generated from NIGHT. The contract call
- * carries no shielded coins, so the zswap reader is not part of the gate.
- * The facade's own `isSynced` also waits on shielded, which on mainnet is
- * millions of events this wallet never spends. That wait is what kept
- * proofs from starting.
- */
-function isReadyToProve(s: FacadeState): boolean {
-  return s.dust.progress.isStrictlyComplete() && s.unshielded.progress.isStrictlyComplete()
+/** Which ledger the wallet can transact on, and which readers hold it back. */
+function formatLedger(s: FacadeState): string {
+  const phase = s.protocol
+  if (phase._tag === 'Crossing') return `8->9 waiting on ${phase.behind.join(',')}`
+  return phase.version >= DefaultForkSchedule.v9 ? '9' : '8'
 }
 
 /**
- * Wait until dust and unshielded are caught up. No deadline. The wallet
- * file is written every few minutes while this waits.
+ * A prove pays its fee in DUST generated from NIGHT. The contract call
+ * carries no shielded coins, so the zswap reader does not have to reach the
+ * tip. The facade's own `isSynced` waits for that, which on mainnet is
+ * millions of events this wallet never spends, and it kept proofs from
+ * starting.
+ *
+ * All three readers do have to be past the ledger 9 hand-over. The wallet
+ * builds and accepts transactions on the oldest ledger any of its readers
+ * is still on, so until the slowest one crosses it cannot balance the
+ * ledger 9 transaction a prove produces.
+ */
+function isReadyToProve(s: FacadeState): boolean {
+  return (
+    s.dust.progress.isStrictlyComplete() &&
+    s.unshielded.progress.isStrictlyComplete() &&
+    s.activeProtocolVersion >= DefaultForkSchedule.v9
+  )
+}
+
+/**
+ * Wait until dust and unshielded are caught up and every reader is on
+ * ledger 9. No deadline. The wallet file is written every few minutes
+ * while this waits.
  */
 async function waitForWalletSync(walletCtx: MidnightWalletContext) {
   const checkpoint = setInterval(() => {
@@ -196,7 +194,7 @@ async function waitForWalletSync(walletCtx: MidnightWalletContext) {
 export async function registerDustIfNeeded(
   walletCtx: Awaited<ReturnType<typeof createMidnightWallet>>,
 ): Promise<void> {
-  logProgress('Syncing wallet. Waiting for dust and unshielded only. Shielded keeps reading in the background.')
+  logProgress('Syncing wallet. Waiting for dust and unshielded, and for shielded to reach ledger 9. Shielded then keeps reading in the background.')
   const state = await waitForWalletSync(walletCtx)
   logProgress('Wallet ready to prove')
 
@@ -215,7 +213,7 @@ export async function registerDustIfNeeded(
     const recipe = await walletCtx.wallet.registerNightUtxosForDustGeneration(
       nightUtxos,
       walletCtx.unshieldedKeystore.getPublicKey(),
-      (payload) => walletCtx.unshieldedKeystore.signData(payload),
+      walletCtx.unshieldedKeystore.signDataAsync,
     )
 
     await walletCtx.wallet.submitTransaction(await walletCtx.wallet.finalizeRecipe(recipe))
@@ -232,83 +230,31 @@ export async function registerDustIfNeeded(
   await saveWalletState(walletCtx)
 }
 
-async function loadCompiledContractForFact(
-  factType: MidnightShippedFactType,
-  witnesses: unknown,
-) {
-  const cfg = MIDNIGHT_CIRCUIT_CONFIGS[factType]
-  const contractPath = path.join(cfg.managedDir, 'contract', 'index.js')
-  const module = (await import(pathToFileURL(contractPath).href)) as {
-    Contract: new (w: unknown) => CompactContract
-  }
+// The deployed contracts, loaded on demand so a prove imports one of them.
+// These are the ledger 8 builds (compactc 0.31). Midnight.js takes such a
+// contract as a plain `new Contract(witnesses)` and can only call it.
+const CONTRACT_MODULES = {
+  mvr_clean_36_months: () => import('../managed/mvr-clean-36/contract/index.js'),
+  cdl_class_a: () => import('../managed/cdl-class-a/contract/index.js'),
+  cdl_class: () => import('../managed/cdl-class/contract/index.js'),
+  cdl_endorsements: () => import('../managed/cdl-endorsements/contract/index.js'),
+  cdl_restrictions: () => import('../managed/cdl-restrictions/contract/index.js'),
+  med_cert_valid: () => import('../managed/med-cert-valid/contract/index.js'),
+  previous_employer_verified: () =>
+    import('../managed/previous-employer-verified/contract/index.js'),
+} satisfies Record<MidnightShippedFactType, () => Promise<unknown>>
 
-  const ContractCtor = module.Contract as unknown as new (w: unknown) => CompactContract
-  const compiledContract = CompiledContract.make(cfg.contractName, ContractCtor).pipe(
-    CompiledContract.withWitnesses(witnesses),
-    CompiledContract.withCompiledFileAssets(cfg.managedDir),
-  )
-
-  return { compiledContract, module }
-}
-
-function emptyWitnessForFact(factType: MidnightShippedFactType): unknown {
-  switch (factType) {
-    case 'mvr_clean_36_months':
-      return createMvrCleanCircuitWitness(
-        Array.from({ length: 32 }, () => ({ dateYmd: 0, active: false })),
-      )
-    case 'cdl_class_a':
-      return createEmptyCdlClassAWitness()
-    case 'cdl_class':
-      return createEmptyCdlClassWitness()
-    case 'cdl_endorsements':
-      return createEmptyCdlEndorsementWitness()
-    case 'cdl_restrictions':
-      return createEmptyCdlRestrictionWitness()
-    case 'med_cert_valid':
-      return createEmptyMedCertWitness()
-    case 'previous_employer_verified':
-      return createEmptyPreviousEmployerVerifiedWitness()
-  }
-}
-
+/**
+ * Deploys are off until the circuits are recompiled. Every Midnight network
+ * is on ledger 9 now, which still accepts calls to the ledger 8 builds in
+ * managed/ but refuses to deploy them.
+ */
 export async function deployMidnightContract(
   factType: MidnightShippedFactType,
-  mnemonic: string,
 ): Promise<{ contractAddress: string }> {
-  if (MIDNIGHT_CONFIG.network === 'mainnet' && !MIDNIGHT_CONFIG.deployNodeRpc) {
-    throw new Error(
-      'Mainnet contractDeploy needs MIDNIGHT_DEPLOY_RPC_URL (Foundation keyed node). Leave MIDNIGHT_NODE_RPC_URL on public rpc.mainnet.',
-    )
-  }
-
-  const seed = mnemonicToSeedBuffer(mnemonic)
-  const walletCtx = await createMidnightWallet(seed)
-
-  try {
-    await registerDustIfNeeded(walletCtx)
-    const { compiledContract } = await loadCompiledContractForFact(
-      factType,
-      emptyWitnessForFact(factType),
-    )
-    if (MIDNIGHT_CONFIG.deployNodeRpc) {
-      logProgress('Deploy will submit via Foundation keyed RPC (sync stays on public node)')
-    }
-    logProgress('Creating providers (proof server + indexer)...')
-    const providers = await createMidnightProviders(walletCtx, factType, {
-      submitViaDeployRpc: Boolean(MIDNIGHT_CONFIG.deployNodeRpc),
-    })
-    // The silent wait is almost always this: ZK prove of the deploy tx.
-    // Keyed submit happens only after prove+balance finish — often 10–30+ min.
-    logProgress('Proving contractDeploy (slow — no keyed submit until this finishes)...')
-    const deployed = await deployContract(providers, {
-      compiledContract,
-      args: [],
-    })
-    return { contractAddress: deployed.deployTxData.public.contractAddress }
-  } finally {
-    await walletCtx.wallet.stop()
-  }
+  throw new Error(
+    `Cannot deploy ${MIDNIGHT_CIRCUIT_CONFIGS[factType].contractName}: its compiled circuit is a ledger 8 build, and a ledger 9 network only accepts calls to those. Recompile the circuits with compactc 0.36.0 and move the deploy path to the ledger 9 contract API first.`,
+  )
 }
 
 let heldWallet: MidnightWalletContext | null = null
@@ -353,82 +299,88 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
     // behind waits here, and the checkpoint timer keeps writing the file.
     await registerDustIfNeeded(walletCtx)
 
-    const witnesses =
-      input.factType === 'mvr_clean_36_months'
-        ? createMvrCleanCircuitWitness(input.violationSlots)
-        : input.factType === 'previous_employer_verified'
-          ? createPreviousEmployerVerifiedCircuitWitness(input.employerVerified)
-          : input.factType === 'cdl_class_a'
-            ? createCdlClassACircuitWitness(input.holdsClassA)
-            : input.factType === 'cdl_class'
-              ? createCdlClassCircuitWitness(input.classCode)
-              : input.factType === 'cdl_endorsements'
-                ? createCdlEndorsementCircuitWitness(input.mask)
-                : input.factType === 'cdl_restrictions'
-                  ? createCdlRestrictionCircuitWitness(input.mask)
-                  : createMedCertCircuitWitness(input.expirationYmd)
-
     logProgress(`Loading compiled contract + providers (${input.factType})...`)
-    const { compiledContract } = await loadCompiledContractForFact(input.factType, witnesses)
     const providers = await createMidnightProviders(walletCtx, input.factType)
-
-    logProgress(`Locating deployed contract ${contractAddress.slice(0, 12)}...`)
-    const contract = await findDeployedContract(providers, {
-      contractAddress,
-      compiledContract,
-    })
+    const attach = async <C extends Ledger8Contract>(compiledContract: C) => {
+      logProgress(`Locating deployed contract ${contractAddress.slice(0, 12)}...`)
+      const contract = await findDeployedContract(providers, { contractAddress, compiledContract })
+      logProgress('Generating ZK predicate proof + submitting transaction (slow step)...')
+      return contract
+    }
 
     const asOfDate = BigInt(input.asOfDateYmd)
-    logProgress('Generating ZK predicate proof + submitting transaction (slow step)...')
-
-    let tx
-    try {
-      if (input.factType === 'mvr_clean_36_months') {
-        tx = await contract.callTx.proveCleanMvr(
-          BigInt(input.windowStartYmd),
-          BigInt(input.windowEndYmd),
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
-      } else if (input.factType === 'previous_employer_verified') {
-        tx = await contract.callTx.provePreviousEmployerVerified(
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
-      } else if (input.factType === 'cdl_class_a') {
-        tx = await contract.callTx.proveCdlClassA(asOfDate, pullNullifier, commitment)
-      } else if (input.factType === 'cdl_class') {
-        tx = await contract.callTx.proveCdlClass(
-          BigInt(input.classCode),
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
-      } else if (input.factType === 'cdl_endorsements') {
-        tx = await contract.callTx.proveCdlEndorsements(
-          BigInt(input.mask),
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
-      } else if (input.factType === 'cdl_restrictions') {
-        tx = await contract.callTx.proveCdlRestrictions(
-          BigInt(input.mask),
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
-      } else {
-        tx = await contract.callTx.proveMedCertValid(
-          BigInt(input.expirationYmd),
-          asOfDate,
-          pullNullifier,
-          commitment,
-        )
+    // One case per fact: each contract has its own witness and its own circuit
+    // arguments, and keeping them side by side lets the compiler check both
+    // against the generated contract types.
+    const callCircuit = async () => {
+      switch (input.factType) {
+        case 'mvr_clean_36_months': {
+          const { Contract } = await CONTRACT_MODULES.mvr_clean_36_months()
+          const contract = await attach(new Contract<unknown>(createMvrCleanCircuitWitness(input.violationSlots)))
+          return contract.callTx.proveCleanMvr(
+            BigInt(input.windowStartYmd),
+            BigInt(input.windowEndYmd),
+            asOfDate,
+            pullNullifier,
+            commitment,
+          )
+        }
+        case 'previous_employer_verified': {
+          const { Contract } = await CONTRACT_MODULES.previous_employer_verified()
+          const contract = await attach(
+            new Contract<unknown>(createPreviousEmployerVerifiedCircuitWitness(input.employerVerified)),
+          )
+          return contract.callTx.provePreviousEmployerVerified(asOfDate, pullNullifier, commitment)
+        }
+        case 'cdl_class_a': {
+          const { Contract } = await CONTRACT_MODULES.cdl_class_a()
+          const contract = await attach(new Contract<unknown>(createCdlClassACircuitWitness(input.holdsClassA)))
+          return contract.callTx.proveCdlClassA(asOfDate, pullNullifier, commitment)
+        }
+        case 'cdl_class': {
+          const { Contract } = await CONTRACT_MODULES.cdl_class()
+          const contract = await attach(new Contract<unknown>(createCdlClassCircuitWitness(input.classCode)))
+          return contract.callTx.proveCdlClass(
+            BigInt(input.classCode),
+            asOfDate,
+            pullNullifier,
+            commitment,
+          )
+        }
+        case 'cdl_endorsements': {
+          const { Contract } = await CONTRACT_MODULES.cdl_endorsements()
+          const contract = await attach(new Contract<unknown>(createCdlEndorsementCircuitWitness(input.mask)))
+          return contract.callTx.proveCdlEndorsements(
+            BigInt(input.mask),
+            asOfDate,
+            pullNullifier,
+            commitment,
+          )
+        }
+        case 'cdl_restrictions': {
+          const { Contract } = await CONTRACT_MODULES.cdl_restrictions()
+          const contract = await attach(new Contract<unknown>(createCdlRestrictionCircuitWitness(input.mask)))
+          return contract.callTx.proveCdlRestrictions(
+            BigInt(input.mask),
+            asOfDate,
+            pullNullifier,
+            commitment,
+          )
+        }
+        case 'med_cert_valid': {
+          const { Contract } = await CONTRACT_MODULES.med_cert_valid()
+          const contract = await attach(new Contract<unknown>(createMedCertCircuitWitness(input.expirationYmd)))
+          return contract.callTx.proveMedCertValid(
+            BigInt(input.expirationYmd),
+            asOfDate,
+            pullNullifier,
+            commitment,
+          )
+        }
       }
-    } catch (err) {
+    }
+
+    const tx = await callCircuit().catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err)
       const cause =
         err instanceof Error && err.cause instanceof Error ? err.cause.message : ''
@@ -436,7 +388,7 @@ export async function proveFactOnChain(input: OnChainProveInput): Promise<OnChai
         cause ? `${cfg.callMethod} failed: ${msg} — ${cause}` : `${cfg.callMethod} failed: ${msg}`,
         { cause: err instanceof Error ? err : undefined },
       )
-    }
+    })
 
     const txHash = tx.public.txId
     const paidFees = tx.public.fees?.paidFees ?? '0'
@@ -482,10 +434,6 @@ export async function proveCleanMvrOnChain(input: MvrOnChainProveInput): Promise
   return proveFactOnChain(input)
 }
 
-export async function deployMvrCleanContract(mnemonic: string) {
-  return deployMidnightContract('mvr_clean_36_months', mnemonic)
-}
-
 export async function getWalletStatus(mnemonic: string) {
   const seed = mnemonicToSeedBuffer(mnemonic)
   const walletCtx = await createMidnightWallet(seed)
@@ -498,8 +446,7 @@ export async function getWalletStatus(mnemonic: string) {
     const state = await waitForWalletSync(walletCtx)
     await saveWalletState(walletCtx)
 
-    const tNight =
-      state.unshielded.balances[unshieldedToken().raw] ?? 0n
+    const tNight = state.unshielded.balances[Token.night] ?? 0n
     const tDust = state.dust.balance(new Date())
 
     return {

@@ -86,6 +86,7 @@ export function useHubDocuments(refreshKey: number): {
   const hasEmploymentVerificationBlock = installedBlocks.some(
     (b) => b.blockType === 'general-employment-verification',
   )
+  const hasDocumentsBlock = installedBlocks.some((b) => b.blockType === 'driver-documents')
   const needsHubData =
     hasResumeBlock ||
     hasDotAppBlock ||
@@ -93,7 +94,8 @@ export function useHubDocuments(refreshKey: number): {
     hasPspBlock ||
     hasPortfolioBlock ||
     hasGithubBlock ||
-    hasScreeningConsentBlock
+    hasScreeningConsentBlock ||
+    hasDocumentsBlock
   const hasAnyFileSectionBlock = needsHubData || hasEmploymentVerificationBlock
 
   const fetchDocuments = useCallback(async () => {
@@ -289,6 +291,22 @@ export function useHubDocuments(refreshKey: number): {
           })
         }
 
+        if (hasDocumentsBlock) {
+          const count = Number(data.driverDocuments?.count ?? 0)
+          docs.push({
+            id: 'documents',
+            type: 'documents',
+            title: 'Documents',
+            subtitle: count > 0 ? `${count} on file` : 'Insurance, authority, registration',
+            status: count > 0 ? 'complete' : 'empty',
+            verified: false,
+            txHash: null,
+            canVerify: false,
+            canDelete: false,
+            editPage: 'documents',
+          })
+        }
+
         if (hasGithubBlock) {
           const username = data.github?.username ?? null
           docs.push({
@@ -396,6 +414,7 @@ export function useHubDocuments(refreshKey: number): {
     hasPortfolioBlock,
     hasGithubBlock,
     hasScreeningConsentBlock,
+    hasDocumentsBlock,
     hasEmploymentVerificationBlock,
     needsHubData,
     hasAnyFileSectionBlock,

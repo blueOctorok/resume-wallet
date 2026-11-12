@@ -1,0 +1,64 @@
+diff --git a/node_modules/effect/dist/cjs/internal/pubsub.js b/node_modules/effect/dist/cjs/internal/pubsub.js
+index 1a5fe0b..ad6e4cc 100644
+--- a/node_modules/effect/dist/cjs/internal/pubsub.js
++++ b/node_modules/effect/dist/cjs/internal/pubsub.js
+@@ -1239,7 +1239,9 @@ class ReplayWindowImpl {
+     this.buffer = buffer;
+     this.index = buffer.index;
+     this.remaining = buffer.size;
+-    this.head = buffer.head;
++    // Patched (patches/effect+3.22.4.patch): once there is nothing left to replay, let go of the
++    // list node. It links forward to every value published later, so holding it kept all of them alive.
++    this.head = buffer.size === 0 ? undefined : buffer.head;
+   }
+   fastForward() {
+     while (this.index < this.buffer.index) {
+@@ -1255,7 +1257,7 @@ class ReplayWindowImpl {
+     }
+     this.remaining--;
+     const value = this.head.value;
+-    this.head = this.head.next;
++    this.head = this.remaining === 0 ? undefined : this.head.next;
+     return value;
+   }
+   takeN(n) {
+@@ -1272,6 +1274,7 @@ class ReplayWindowImpl {
+       items[i] = value;
+     }
+     this.remaining -= len;
++    if (this.remaining === 0) this.head = undefined;
+     return Chunk.unsafeFromArray(items);
+   }
+   takeAll() {
+diff --git a/node_modules/effect/dist/esm/internal/pubsub.js b/node_modules/effect/dist/esm/internal/pubsub.js
+index bf7194d..6d73bab 100644
+--- a/node_modules/effect/dist/esm/internal/pubsub.js
++++ b/node_modules/effect/dist/esm/internal/pubsub.js
+@@ -1215,7 +1215,9 @@ class ReplayWindowImpl {
+     this.buffer = buffer;
+     this.index = buffer.index;
+     this.remaining = buffer.size;
+-    this.head = buffer.head;
++    // Patched (patches/effect+3.22.4.patch): once there is nothing left to replay, let go of the
++    // list node. It links forward to every value published later, so holding it kept all of them alive.
++    this.head = buffer.size === 0 ? undefined : buffer.head;
+   }
+   fastForward() {
+     while (this.index < this.buffer.index) {
+@@ -1231,7 +1233,7 @@ class ReplayWindowImpl {
+     }
+     this.remaining--;
+     const value = this.head.value;
+-    this.head = this.head.next;
++    this.head = this.remaining === 0 ? undefined : this.head.next;
+     return value;
+   }
+   takeN(n) {
+@@ -1248,6 +1250,7 @@ class ReplayWindowImpl {
+       items[i] = value;
+     }
+     this.remaining -= len;
++    if (this.remaining === 0) this.head = undefined;
+     return Chunk.unsafeFromArray(items);
+   }
+   takeAll() {

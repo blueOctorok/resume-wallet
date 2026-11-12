@@ -17,7 +17,3 @@ export function createCdlClassCircuitWitness(classCode: number): CdlClassCircuit
     licenseClassCode: (context) => [context.privateState, code],
   }
 }
-
-export function createEmptyCdlClassWitness(): CdlClassCircuitWitness {
-  return createCdlClassCircuitWitness(0)
-}

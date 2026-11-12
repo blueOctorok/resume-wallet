@@ -16,7 +16,3 @@ export function createMedCertCircuitWitness(expirationYmd: number): MedCertCircu
     medCertExpirationYmd: (context) => [context.privateState, ymd],
   }
 }
-
-export function createEmptyMedCertWitness(): MedCertCircuitWitness {
-  return createMedCertCircuitWitness(0)
-}

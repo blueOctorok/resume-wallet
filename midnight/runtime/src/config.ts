@@ -1,7 +1,3 @@
-// MUST be first: installs Node 22 Iterator Helpers on Node 20 before any
-// wallet-SDK code runs. config.ts is imported by every script, so this single
-// import guarantees the polyfill is in place before transaction balancing.
-import './iterator-helpers.js'
 import { config } from 'dotenv'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -58,8 +54,6 @@ export const MIDNIGHT_CONFIG = {
   nodeRpc:
     process.env.MIDNIGHT_NODE_RPC_URL?.trim() ||
     'https://rpc.preprod.midnight.network',
-  // Foundation keyed RPC — contractDeploy only. Never use for wallet sync or Vercel.
-  deployNodeRpc: process.env.MIDNIGHT_DEPLOY_RPC_URL?.trim() || '',
   indexer: rawIndexer,
   indexerWs: rawIndexerWs,
   contractAddress: process.env.MIDNIGHT_CONTRACT_ADDRESS?.trim() || '',
@@ -80,10 +74,11 @@ if (
 
 // Compiled artifact lives INSIDE the runtime package (not the source dir under
 // compact/). This is load-bearing: the compiled contract imports
-// @midnight-ntwrk/compact-runtime, and it must resolve to the SAME node_modules
-// (and therefore the same WASM instance) as compact-js. A symlinked artifact dir
-// resolves to a second WASM copy and breaks deploy with "expected instance of
-// ContractMaintenanceAuthority". Source .compact stays in compact/mvr-clean-36/.
+// @midnight-ntwrk/compact-runtime, which managed/node_modules links to the
+// ledger 8 copy (0.16.0, see scripts/link-ledger8-runtime.mjs). That copy and
+// Midnight.js must load the SAME onchain-runtime-v3 WASM instance. A second
+// copy makes one side reject the other's objects ("expected instance of ...").
+// Source .compact stays in compact/mvr-clean-36/.
 export const ZK_CONFIG_PATH = path.join(
   runtimeDir,
   '..',

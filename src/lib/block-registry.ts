@@ -406,6 +406,32 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     completionField: null,
     requiredEmployerBlocks: null,
   },
+  {
+    id: 'driver-documents',
+    label: 'Documents',
+    description: 'Insurance, authority, registration, and other papers',
+    icon: 'Files',
+    categoryId: 'drivers',
+    suggestedFor: [
+      'driver',
+      'cdl',
+      'insurance',
+      'authority',
+      'registration',
+      'truck',
+      'owner operator',
+      'papers',
+      'documents',
+    ],
+    complexity: 'simple',
+    appearsOnCareerCard: false,
+    pageRoute: 'documents',
+    dataTables: ['block_driver_documents'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    requiredEmployerBlocks: null,
+  },
 
   // ── Developers ─────────────────────────────────────────────────────────────
   {
@@ -537,6 +563,13 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     badgeColor:  'bg-retro-teal',
   },
   'driver-license': {
+    iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
+    iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
+    borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
+    glowColor:   'rgba(241,90,43,0.18)',
+    badgeColor:  'bg-teal-500',
+  },
+  'driver-documents': {
     iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
     iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
     borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
