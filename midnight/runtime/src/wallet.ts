@@ -117,6 +117,11 @@ export async function createMidnightWallet(seed: Buffer) {
     },
     // Preprod DUST sync WASM OOM workaround (servicedesk#42) — default batch size 10 fails on DustSpendProcessed.
     batchUpdates: { size: 5000 },
+    // The ledger 9 upgrade wiped DUST and the chain re-issued it as ledger 9
+    // events. A wallet that reads the 1.6 million older dust events throws the
+    // result away at the hand-over, so a cold start begins at the hand-over.
+    // Only a fresh start uses this; a restore continues from its saved place.
+    skipLedgerV8DustHistory: true,
   }
 
   const saved = loadWalletState()
