@@ -4,6 +4,46 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Midnight worker proves, then stalls until restarted** (2026-11-16)
+
+**Correction.** An earlier version of this entry said no proof had run on the ledger 9 SDK. That was wrong: it was written from about 100 log lines without checking the database. The `attestations` table shows 1,634 Midnight proofs on 2026-11-16 (01:32 to 12:13 UTC, 544 drivers, about one proof every 24 seconds), and 58 on 2026-11-12 (16:36 to 17:00 UTC; which worker build wrote those was not checked). The real pattern is that the worker proves after a fresh start, then stops and does not recover on its own.
+
+**What stopped it on 2026-11-16**
+
+1. **Blockfrost's daily limit.** The project was on the free Starter plan (50,000 requests a day, reset at midnight UTC). Proofs stopped at 12:13 UTC and by about 15:00 UTC both the indexer and the node answered HTTP 402 `Project Over Limit`. 1,634 proofs at roughly 30 requests each is about 50,000, so the limit most likely ran out at 12:13. The plan was upgraded to Hobby (300,000 a day) at about 15:40 UTC. Blockfrost is the only mainnet indexer since Midnight retired its own.
+2. **A prove that never answered.** The first prove after the upgrade (15:41 UTC) calculated both proofs, then sat for over 25 minutes with no transaction on chain. The SDK waits for the node to report a transaction finalized, with no time limit.
+3. **DUST left set aside.** A prove sets aside the DUST for its fee. Killing the worker mid-prove left that DUST set aside in the saved wallet file, so the balance read 0 after the restart. The ledger released it 3 hours later, at 18:41:31 UTC (its grace period), and the balance read 50,500 again.
+4. **The node's "finalized" report can go missing.** This is the stall itself, seen directly at 18:42 UTC: a `cdl_restrictions` transaction was sent at 18:42:01, the indexer shows it on chain at 18:42:06 (block 3485821), and the node never reported it. The worker waited on that report. Before today it would have waited forever, which matches "proves for hours, then stops until restarted." Submit now asks the indexer after 45 seconds of silence from the node; if the indexer shows the transaction, the prove carries on and its database row is written.
+
+**Changes**
+
+| File | Change |
+|---|---|
+| `midnight/runtime/src/prove-on-chain.ts` | Prove gate: dust within 50 events of the tip (the SDK's own default) instead of exactly 0, and the NIGHT reader is no longer checked (the wallet holds no NIGHT). The old gate did open at times, since 1,634 proofs ran under it; the new one does not depend on catching the reader at exactly 0. DUST balance is in the sync line and the ready line. If the balance is 0 and DUST is set aside for an unsettled transaction, the worker waits for it instead of trying to register NIGHT and exiting. |
+| `midnight/runtime/src/wallet.ts` | The SDK's two background checks run every 5 minutes instead of every 30 seconds, to spend fewer Blockfrost requests while idle. |
+| `midnight/runtime/src/providers.ts` | Submit no longer depends on the node alone. After 45 seconds without the node's report it asks the indexer for the transaction (2 minutes at most). Found: the prove continues. Not found: the transaction is reverted in the wallet so its DUST comes back straight away. Log lines mark the steps of a prove: fee being added, sent to the node, finalized (by the node or seen by the indexer). |
+| `midnight/runtime/scripts/held-wallet-cli.ts` | When a sent transaction is on neither the node nor the indexer, the wallet is saved and the process exits so Fly starts it with new node connections. On SIGTERM a prove in progress is finished before the wallet is saved and the process stops. |
+| `scripts/midnight-proof-worker.ts` | A prove that has not answered in 10 minutes restarts the worker (a working prove answers in about 25 seconds). The wallet child is started with the `tsx` binary instead of `npx tsx`. |
+| `midnight/worker/Dockerfile` | `CMD` runs the `tsx` binary instead of `npx tsx`. Fly's log showed `npx` exiting on SIGTERM without passing it on, so the worker's own stop handler never ran. |
+
+Worker deployments on 2026-11-16: `01M7JEWB6HAGGK2YXQ5MXGV4K1` (gate, 5-minute checks), `01M7JHA4BR854YC6DR0A3K0B98` (10-minute prove deadline), `01M7JHSMS4Y7VTTKSFS6M088AM` (submit deadline, set-aside DUST wait, step logs), `01M7JJ3M5AR1BSZA0G7XETSPEA` (`tsx` directly), `01M7JVB810B5D01A3T0KNEPNSX` (indexer check on submit).
+
+**Seen working in production (18:41 to 18:56 UTC).** DUST returned on its own and proofs resumed with database rows. The missing report at 18:42 was caught by the 3-minute deadline of the earlier build, and the worker restarted itself and kept proving. The deploy at 18:53 stopped the worker with exit code 0 ("asking the wallet to save, then stopping") and the next start read DUST balance 50,500, so a deploy no longer locks the DUST.
+
+**Known gaps.**
+
+- The `cdl_restrictions` transaction of 18:42:06 UTC is on chain with no database row, because the earlier build gave up on it. The stall at 12:13 UTC probably left one more like it. Nothing reconciles these yet.
+- The worker decides a driver is done by looking for a `cdl_class` proof, so a driver whose run was cut off after `cdl_class` does not get the remaining facts.
+- Some restriction codes on real reports are not in the circuit's table (for example "A", "NO MANUAL TRANSMISSION EQUIPPED CMV", "OTHER: UNSPECIFIED"), so those drivers get no `cdl_restrictions` proof. The worker refuses rather than proving something the circuit cannot express.
+
+---
+
+## **MVR PDF "Generated" date was a day ahead after 7pm Eastern** (2026-11-15)
+
+The report stores the moment it was drawn as a UTC instant, and the PDF is drawn on a UTC server. `toLocaleString` with no time zone uses that server clock. At 7:42pm Eastern it is already 12:42am the next day in UTC, so every report drawn this evening said Nov 16. `formatTimestamp` in `src/lib/pdf/MvrReportPdf.tsx` now prints zoned instants in `America/New_York`. Accio's own clock has no zone, and those digits are left as Accio sent them.
+
+---
+
 ## **Ledger 9 upgrade for the Midnight proof worker** (2026-11-12, in progress)
 
 Mainnet moved to ledger 9 on 2026-11-06 ([upgrade page](https://docs.midnight.network/relnotes/ledger-9.md)). The ledger 8 SDK cannot read events written after that, so the worker cannot reach the chain tip or prove until the runtime is on the ledger 9 SDK.
@@ -15,8 +55,8 @@ Mainnet moved to ledger 9 on 2026-11-06 ([upgrade page](https://docs.midnight.ne
 | Part | Status |
 |---|---|
 | Proof server (`midnight/proof-server/Dockerfile`, `entrypoint.sh`, `midnight/docker-compose.yml`) | **Deployed** to `provven-midnight-proof` as `deployment-01M7838G5VZ8CW503W66X7CKVM`. Image `midnightntwrk/proof-server:9.0.0` pinned by digest. `/version` inside the machine returns `9.0.0`, public `/health` is 200, and `/version` without the login is 401. |
-| Runtime (`midnight/runtime`) | Migrated and reviewed. Wallet SDK 2.0.0, Midnight.js 5.0.0. Typechecks with zero errors, wallet addresses unchanged, all seven deployed contracts located on mainnet with their keys accepted. A read-only sync test ran 7 minutes with memory flat at about 445 MB: the shielded reader reached the chain tip in under 3 minutes, and dust ran at about 660 events a second, which puts the dust catch-up at roughly 45 minutes. Not deployed yet. |
-| Worker (`provven-midnight-worker`) | Machine stopped until the runtime is ready. The old wallet cache is ledger 8 format and will not be reused; the first start does one full sync. |
+| Runtime (`midnight/runtime`) | Migrated and reviewed. Wallet SDK 2.0.0, Midnight.js 5.0.0. Typechecks with zero errors, wallet addresses unchanged, all seven deployed contracts located on mainnet with their keys accepted. A read-only sync test ran 7 minutes with memory flat at about 445 MB: the shielded reader reached the chain tip in under 3 minutes, and dust ran at about 660 events a second, which puts the dust catch-up at roughly 45 minutes. Deployed 2026-11-12 as `deployment-01M785ABY2ZX2YJV4MA0TW13ZR`. |
+| Worker (`provven-midnight-worker`) | Running. The first start did one full sync into a new cache file (`mainnet-ledger9.json`) and reached the chain tip by 2026-11-15 with every reader on ledger 9. It proved 1,634 facts on 2026-11-16, then stalled; see the 2026-11-16 entry above. |
 
 
 **Batching.** The SDK's batch timeout defaults to 1 ms, so each event was processed on its own and dust ran at about 65 events a second (an 8-hour catch-up). `wallet.ts` now waits 250 ms to fill a batch. A 2-minute run with the change showed memory rising 200 MB, but a 7-minute run with garbage collection forced showed that was uncollected garbage: memory stayed flat. The setting is kept.

@@ -102,14 +102,22 @@ function displaySsn(value: string | null | undefined, releaseIdentifiers: boolea
 
 function formatTimestamp(value?: string | null): string {
   if (!value) return ''
-  const d = new Date(value)
+  const raw = value.trim()
+  const d = new Date(raw)
   if (Number.isNaN(d.getTime())) return value
+  // An ISO instant (`...Z`) is a real moment. The PDF is drawn on a UTC server,
+  // and toLocaleString with no zone uses that clock, so after 7pm Eastern the
+  // "Generated" line says tomorrow. Pin those to Eastern.
+  // Accio's clock has no zone ("2026-09-30 17:03:00"). Parsing and formatting
+  // it in the same zone keeps the digits Accio sent, so that path stays as is.
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw)
   return d.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    ...(hasZone ? { timeZone: 'America/New_York' } : {}),
   })
 }
 

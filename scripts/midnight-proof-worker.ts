@@ -24,6 +24,13 @@ if (typeof globalThis.WebSocket === 'undefined') {
 }
 
 const CLI_PATH = path.join(process.cwd(), 'midnight/runtime/scripts/held-wallet-cli.ts')
+// The runtime package's own tsx, which is installed on a laptop and on Fly.
+const TSX_BIN = path.join(process.cwd(), 'midnight/runtime/node_modules/.bin/tsx')
+
+// A prove that works answers in about 25 seconds. On 2026-11-16 one sat for
+// over 25 minutes with both proofs calculated and no transaction on chain,
+// and the worker proved nothing more until it was restarted.
+const PROVE_DEADLINE_MS = 10 * 60 * 1000
 
 interface HeldWallet {
   child: ChildProcessWithoutNullStreams
@@ -33,7 +40,8 @@ interface HeldWallet {
 }
 
 function startHeldWallet(): HeldWallet {
-  const child = spawn('npx', ['tsx', CLI_PATH], {
+  // tsx directly, not `npx tsx`: npx does not pass SIGTERM on to the wallet.
+  const child = spawn(TSX_BIN, [CLI_PATH], {
     cwd: process.cwd(),
     env: process.env,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -91,7 +99,15 @@ function startHeldWallet(): HeldWallet {
     prove: async (input) => {
       await ready
       child.stdin.write(`${JSON.stringify(input)}\n`)
-      const message = await nextMessage()
+      // Nothing inside a prove has a deadline of its own. Exit code 1 makes
+      // Fly start the machine again; the wallet reloads from its saved file.
+      const deadline = setTimeout(() => {
+        console.error(
+          `[MVR PROOF WORKER] ${input.factType} prove has not answered in ${PROVE_DEADLINE_MS / 60_000} minutes, restarting`,
+        )
+        process.exit(1)
+      }, PROVE_DEADLINE_MS)
+      const message = await nextMessage().finally(() => clearTimeout(deadline))
       if (!message.ok || !message.result) {
         throw new Error(message.error || 'Midnight prove failed')
       }

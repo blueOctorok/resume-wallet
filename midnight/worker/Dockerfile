@@ -29,4 +29,7 @@ RUN npm install --no-save tsx@4.21.0
 ENV NODE_OPTIONS=--max-old-space-size=12288
 ENV ATTESTATION_BACKEND=midnight
 
-CMD ["npx", "tsx", "scripts/midnight-proof-worker.ts"]
+# tsx is started directly, not through npx. On a deploy Fly sends SIGTERM to
+# this process. npx exits on it without passing it on, so the worker's own
+# stop (finish the prove in progress, save the wallet) never ran.
+CMD ["node_modules/.bin/tsx", "scripts/midnight-proof-worker.ts"]

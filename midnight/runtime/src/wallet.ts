@@ -31,6 +31,8 @@ export function toRelayUrl(nodeRpc: string): URL {
 /** Incremental merkle restore dies if the cache is days behind the indexer. */
 const MAX_WALLET_CACHE_AGE_MS = 14 * 24 * 60 * 60 * 1000
 
+const BACKGROUND_CHECK_MS = 5 * 60 * 1000
+
 const walletDir = path.dirname(fileURLToPath(import.meta.url))
 
 // Persisted wallet sync state (gitignored). Restoring it skips a full chain scan.
@@ -120,6 +122,13 @@ export async function createMidnightWallet(seed: Buffer) {
     // which made almost every batch a single event, and each batch costs a
     // full copy of the wallet state. Waiting 250 ms lets real batches form.
     batchUpdates: { size: 5000, timeout: 250 },
+    // Two background checks the SDK runs every 30 seconds by default: "did
+    // the network change ledger version" (one per reader) and "is the indexer
+    // keeping up with the node" (a fresh node connection each time). Blockfrost
+    // counts these against a daily request limit, and at 30 seconds they use
+    // about half of the free plan's 50,000 while the worker sits idle.
+    versionWatch: { intervalMs: BACKGROUND_CHECK_MS },
+    livenessPollInterval: BACKGROUND_CHECK_MS,
   }
 
   const saved = loadWalletState()

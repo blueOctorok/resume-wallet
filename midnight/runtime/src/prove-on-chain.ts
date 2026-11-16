@@ -105,6 +105,14 @@ function logProgress(message: string): void {
 // `highestRelevantWalletIndex` — how far this wallet has to read.
 const CHECKPOINT_MS = 3 * 60 * 1000
 const PROGRESS_LOG_MS = 15_000
+/** The SDK's own default for "complete": this many events behind the tip. */
+const MAX_DUST_GAP = 50n
+/** DUST balances come back in the smallest unit; one DUST is 10^15 of them. */
+const RAW_UNITS_PER_DUST = 10n ** 15n
+
+function wholeDust(s: FacadeState): bigint {
+  return s.dust.balance(new Date()) / RAW_UNITS_PER_DUST
+}
 
 type WalletProgress = {
   appliedIndex?: bigint
@@ -136,7 +144,7 @@ function makeSyncProgressLogger(): (s: FacadeState) => void {
     if (now - lastLoggedAt < PROGRESS_LOG_MS) return
     lastLoggedAt = now
     logProgress(
-      `Sync progress: dust ${formatProgress(readProgress(s.dust))} unshielded ${formatProgress(readProgress(s.unshielded))} shielded ${formatProgress(readProgress(s.shielded))} ledger ${formatLedger(s)}`,
+      `Sync progress: dust ${formatProgress(readProgress(s.dust))} unshielded ${formatProgress(readProgress(s.unshielded))} shielded ${formatProgress(readProgress(s.shielded))} ledger ${formatLedger(s)} dustBalance=${wholeDust(s)}`,
     )
   }
 }
@@ -159,19 +167,27 @@ function formatLedger(s: FacadeState): string {
  * builds and accepts transactions on the oldest ledger any of its readers
  * is still on, so until the slowest one crosses it cannot balance the
  * ledger 9 transaction a prove produces.
+ *
+ * Dust counts as caught up within MAX_DUST_GAP events of the tip, not at
+ * exactly zero. The dust reader follows every dust event on the network and
+ * mainnet adds one every few seconds, so a reader that is fully keeping up
+ * still shows 1 or 2 behind most of the time. Asking for zero left the worker
+ * at the tip for days without ever starting a proof.
+ *
+ * The unshielded (NIGHT) reader is not checked. This wallet keeps no NIGHT on
+ * Midnight, so that reader has nothing to read (0 of 0), and whether its
+ * subscription is up does not change what a prove can spend.
  */
 function isReadyToProve(s: FacadeState): boolean {
   return (
-    s.dust.progress.isStrictlyComplete() &&
-    s.unshielded.progress.isStrictlyComplete() &&
+    s.dust.progress.isCompleteWithin(MAX_DUST_GAP) &&
     s.activeProtocolVersion >= DefaultForkSchedule.v9
   )
 }
 
 /**
- * Wait until dust and unshielded are caught up and every reader is on
- * ledger 9. No deadline. The wallet file is written every few minutes
- * while this waits.
+ * Wait until dust is caught up and every reader is on ledger 9. No deadline.
+ * The wallet file is written every few minutes while this waits.
  */
 async function waitForWalletSync(walletCtx: MidnightWalletContext) {
   const checkpoint = setInterval(() => {
@@ -194,11 +210,25 @@ async function waitForWalletSync(walletCtx: MidnightWalletContext) {
 export async function registerDustIfNeeded(
   walletCtx: Awaited<ReturnType<typeof createMidnightWallet>>,
 ): Promise<void> {
-  logProgress('Syncing wallet. Waiting for dust and unshielded, and for shielded to reach ledger 9. Shielded then keeps reading in the background.')
+  logProgress('Syncing wallet. Waiting for dust to catch up and for every reader to reach ledger 9. Shielded then keeps reading in the background.')
   const state = await waitForWalletSync(walletCtx)
-  logProgress('Wallet ready to prove')
+  logProgress(`Wallet ready to prove. DUST balance ${wholeDust(state)}`)
 
-  if (state.dust.balance(new Date()) <= 0n) {
+  if (state.dust.balance(new Date()) <= 0n && state.dust.pendingCoins.length > 0) {
+    // A transaction that was sent but has not settled keeps its DUST set
+    // aside, and that survives a restart in the saved wallet file. The
+    // wallet is not empty; the DUST comes back when that transaction lands
+    // or its time limit passes. Without this wait the branch below throws
+    // and the worker restarts in a loop.
+    logProgress('All DUST is set aside for a transaction that has not settled. Waiting for it to come back.')
+    await Rx.firstValueFrom(
+      walletCtx.wallet.state().pipe(
+        Rx.throttleTime(5000),
+        Rx.filter((s) => s.dust.balance(new Date()) > 0n),
+      ),
+    )
+    logProgress('DUST is available again')
+  } else if (state.dust.balance(new Date()) <= 0n) {
     logProgress('No DUST balance — registering tNIGHT UTXOs for DUST generation...')
 
     const nightUtxos = state.unshielded.availableCoins.filter(

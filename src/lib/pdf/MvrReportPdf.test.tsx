@@ -128,6 +128,18 @@ describe('MvrReportPdf', () => {
     expect(released).not.toContain('XXX-XX-0654')
   })
 
+  it('prints a late-evening Eastern instant on that calendar day, not the UTC date', () => {
+    // 00:42 UTC on the 16th is 7:42pm Eastern on the 15th. A UTC server used to
+    // draw this as "Nov 16".
+    const late = collectText(
+      <MvrReportPdf parsed={parsed} meta={{ ...meta, generatedAtIso: '2026-11-16T00:42:00.000Z' }} />,
+    ).join('\n')
+    expect(late).toContain('Generated Nov 15, 2026, 07:42 PM')
+    expect(late).not.toContain('Nov 16, 2026')
+    // Accio's clock has no zone. Those digits stay put.
+    expect(late).toContain('Sep 30, 2026, 05:03 PM')
+  })
+
   it('renders to a real PDF without throwing', async () => {
     const element = (<MvrReportPdf parsed={parsed} meta={meta} />) as unknown as React.ReactElement<DocumentProps>
     const buffer = await renderToBuffer(element)
