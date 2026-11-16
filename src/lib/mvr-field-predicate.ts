@@ -64,12 +64,102 @@ export function normalizeEndorsementLetter(raw: string): string | null {
   return isolated ? isolated[1] : null
 }
 
+/**
+ * Federal wording Accio stores under a state code. The letter is the circuit
+ * bit, not the state prefix: "A-CORRECTIVE LENS" is federal B.
+ * Longer phrases are listed first only where a shorter one would also match.
+ */
+const RESTRICTION_PHRASES: Array<[RegExp, string]> = [
+  [/NO\s+FULL\s+AIR\s*BRAKES?/, 'Z'],
+  [/NO\s+AIR\s*BRAKES?/, 'L'],
+  [/NO\s+CLASS\s+A\s+AND\s+B\s+PASS(?:ENGER)?\.?/, 'N'],
+  [/NO\s+CLASS\s+A\s+PASS(?:ENGER)?\.?/, 'M'],
+  [
+    /NO\s+MANUAL\s+TRANS(?:MISSION)?(?:\s+EQUIPPED)?(?:\s+(?:CMV|COMMERCIAL\s+VEHICLE))?|AUTO(?:MATIC)?\s+TRANS(?:MISSION)?(?:\s+(?:CMV|ONLY|COMMERCIAL\s+VEHICLE))?/,
+    'E',
+  ],
+  [/CORR(?:ECTIVE)?\s+LENS(?:ES)?/, 'B'],
+  [/INTRASTATE\s+ONLY/, 'K'],
+  [/OUTSIDE\s+(?:REAR\s+)?MIRROR/, 'F'],
+  [/DAYLIGHT/, 'G'],
+  [/MECHANICAL\s+AID/, 'C'],
+  [/PROSTHETIC/, 'D'],
+  [/TRACTOR-?\s*TRAILER|NO\s+TRACTOR/, 'O'],
+  [/MEDICAL\s+VARIANCE/, 'V'],
+]
+
+/** Words left over after a phrase that are not another restriction. */
+const RESTRICTION_FILLER = new Set([
+  'CDL',
+  'ONLY',
+  'REQUIRED',
+  'CMV',
+  'EQUIPPED',
+  'COMMERCIAL',
+  'VEHICLE',
+  'VEH',
+  'GLASSES',
+  'CONTACTS',
+  'BUS',
+  'WITH',
+  'FOR',
+  'THE',
+])
+
+function restrictionPieces(raw: string): string[] {
+  return raw
+    .split(/[|;\n,]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+/**
+ * One Accio piece → the federal letters it states.
+ * `[]` means this piece is "none". `null` means the circuit cannot say it.
+ */
+function lettersFromRestrictionPiece(piece: string): string[] | null {
+  const original = piece.trim().toUpperCase().replace(/\s+/g, ' ')
+  if (!original) return []
+  if (/^[A-Z]$/.test(original)) {
+    return CDL_RESTRICTION_BITS[original] !== undefined ? [original] : null
+  }
+  if (/^(?:[A-Z0-9]{1,8}\s*[-:]\s*)?NONE$/.test(original) || original === 'NO RESTRICTIONS' || original === 'UNRESTRICTED') {
+    return []
+  }
+
+  let rest = original.replace(/^[A-Z0-9]{1,8}\s*[-:]\s*/, '')
+  const found: string[] = []
+  for (const [pattern, letter] of RESTRICTION_PHRASES) {
+    if (!pattern.test(rest) || found.includes(letter)) continue
+    found.push(letter)
+    rest = rest.replace(pattern, ' ')
+  }
+  if (found.length === 0) return null
+
+  const leftovers = rest
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter((word) => word && !RESTRICTION_FILLER.has(word))
+  return leftovers.length === 0 ? found : null
+}
+
+/** Federal letters in an Accio restriction field, or null if any piece cannot be proved. */
+export function tryRestrictionLetters(raw: string): string[] | null {
+  const letters: string[] = []
+  for (const piece of restrictionPieces(raw)) {
+    const found = lettersFromRestrictionPiece(piece)
+    if (!found) return null
+    for (const letter of found) {
+      if (!letters.includes(letter)) letters.push(letter)
+    }
+  }
+  return letters
+}
+
 export function normalizeRestrictionLetter(raw: string): string | null {
-  const t = raw.trim().toUpperCase()
-  if (!t) return null
-  if (/^[A-Z]$/.test(t)) return t
-  const isolated = t.match(/\b([A-Z])\b/)
-  return isolated ? isolated[1] : null
+  const letters = tryRestrictionLetters(raw)
+  return letters?.length === 1 ? letters[0] : null
 }
 
 function maskFromLetters(
@@ -101,10 +191,20 @@ export function endorsementMaskFromCodes(codes: string[]): number {
   return mask
 }
 
-/** Empty list → 0 (circuit allows "none"). */
+/** Empty list, or a report that says none → 0 (the circuit allows "none"). */
 export function restrictionMaskFromCodes(codes: string[]): number {
   if (codes.length === 0) return 0
-  return maskFromLetters(codes, CDL_RESTRICTION_BITS, normalizeRestrictionLetter, 'Restriction')
+  let mask = 0
+  for (const raw of codes) {
+    const letters = tryRestrictionLetters(raw)
+    if (!letters) {
+      throw new Error(`Restriction code "${raw}" is not in the circuit table`)
+    }
+    for (const letter of letters) {
+      mask |= 1 << CDL_RESTRICTION_BITS[letter]
+    }
+  }
+  return mask
 }
 
 export function expirationToYmd(raw: string | null | undefined): number | null {

@@ -1,8 +1,17 @@
 /**
  * Which completed MVR should the Midnight worker prove next.
- * A driver with a predicate proof is done. A driver still cooling down
+ * The caller decides who is done. A driver still cooling down
  * failed recently and is skipped until the timer lifts.
  */
+
+/** Facts that are neither proved nor permanently skipped. */
+export function factsStillOpen(
+  required: readonly string[],
+  proved: ReadonlySet<string>,
+  permanentSkips: ReadonlySet<string>,
+): string[] {
+  return required.filter((fact) => !proved.has(fact) && !permanentSkips.has(fact))
+}
 
 export interface ProofQueueOrder {
   userId: string

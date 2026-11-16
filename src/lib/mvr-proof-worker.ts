@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isMidnightPredicateProof } from '@/lib/card-fact-display'
-import { nextUnprovedDriver, type ProofQueueOrder } from '@/lib/mvr-proof-queue'
-import { proveCompletedMvrFacts } from '@/lib/prove-mvr-facts'
+import { factsStillOpen, nextUnprovedDriver, type ProofQueueOrder } from '@/lib/mvr-proof-queue'
+import { MVR_CARD_FACTS, proveCompletedMvrFacts, type MvrFactProveResult } from '@/lib/prove-mvr-facts'
 import type { ShippedFactType } from '@/lib/fact-registry'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
@@ -53,18 +53,22 @@ async function loadPage(
   })
 }
 
-async function provedDrivers(
+function isCardFact(value: string): value is ShippedFactType {
+  return (MVR_CARD_FACTS as readonly string[]).includes(value)
+}
+
+async function provedFacts(
   supabase: SupabaseClient,
   userIds: string[],
-): Promise<Set<string>> {
-  const proved = new Set<string>()
+): Promise<Map<string, Set<ShippedFactType>>> {
+  const proved = new Map<string, Set<ShippedFactType>>()
   if (userIds.length === 0) return proved
 
   const { data, error } = await supabase
     .from('attestations')
-    .select('candidate_user_id, proof_artifact')
+    .select('candidate_user_id, fact_type, proof_artifact')
     .in('candidate_user_id', userIds)
-    .eq('fact_type', 'cdl_class')
+    .in('fact_type', [...MVR_CARD_FACTS])
     .is('superseded_by', null)
 
   if (error) throw new Error(error.message)
@@ -72,7 +76,11 @@ async function provedDrivers(
   for (const row of data ?? []) {
     if (!isMidnightPredicateProof(row.proof_artifact)) continue
     const userId = typeof row.candidate_user_id === 'string' ? row.candidate_user_id : ''
-    if (userId) proved.add(userId)
+    const factType = typeof row.fact_type === 'string' ? row.fact_type : ''
+    if (!userId || !isCardFact(factType)) continue
+    const facts = proved.get(userId) ?? new Set<ShippedFactType>()
+    facts.add(factType)
+    proved.set(userId, facts)
   }
   return proved
 }
@@ -92,14 +100,34 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
  * Long-running loop. Fly keeps this process up next to the proof server.
  * Each pass proves one driver, then looks again. An empty pass waits.
  */
+function doneDrivers(
+  page: ProofQueueOrder[],
+  proved: Map<string, Set<ShippedFactType>>,
+  permanentSkips: Map<string, Set<ShippedFactType>>,
+): Set<string> {
+  const done = new Set<string>()
+  for (const order of page) {
+    const have = proved.get(order.userId) ?? new Set<string>()
+    const skips = permanentSkips.get(order.userId) ?? new Set<string>()
+    // A driver with no proofs and no skips still has work. One with every
+    // fact either proved or permanently skipped does not.
+    if (have.size === 0 && skips.size === 0) continue
+    if (factsStillOpen(MVR_CARD_FACTS, have, skips).length === 0) done.add(order.userId)
+  }
+  return done
+}
+
 export async function runMvrProofWorker(
   signal: { stopping: boolean },
   proveDriver: (
     userId: string,
-  ) => Promise<{ proven: ShippedFactType[]; skipped: ShippedFactType[] }> = proveCompletedMvrFacts,
+    alreadySettled: readonly ShippedFactType[],
+  ) => Promise<MvrFactProveResult> = (userId, alreadySettled) =>
+    proveCompletedMvrFacts(userId, { alreadySettled }),
 ): Promise<void> {
   const supabase = await getAdminSupabaseClient()
   const cooldowns = new Map<string, number>()
+  const permanentSkips = new Map<string, Set<ShippedFactType>>()
   let before: string | null = null
 
   console.log('[MVR PROOF WORKER] watching completed driver-owned MVRs')
@@ -112,11 +140,15 @@ export async function runMvrProofWorker(
       continue
     }
 
-    const proved = await provedDrivers(
+    const proved = await provedFacts(
       supabase,
       page.map((order) => order.userId),
     )
-    const userId = nextUnprovedDriver(page, proved, activeCooldowns(cooldowns, Date.now()))
+    const userId = nextUnprovedDriver(
+      page,
+      doneDrivers(page, proved, permanentSkips),
+      activeCooldowns(cooldowns, Date.now()),
+    )
 
     if (!userId) {
       const oldest = page.reduce(
@@ -129,12 +161,16 @@ export async function runMvrProofWorker(
     }
 
     const label = userId.slice(0, 8)
+    const have = proved.get(userId) ?? new Set<ShippedFactType>()
+    const skips = permanentSkips.get(userId) ?? new Set<ShippedFactType>()
     try {
-      const result = await proveDriver(userId)
+      const result = await proveDriver(userId, [...have, ...skips])
       console.log(
-        `[MVR PROOF WORKER] ${label} proved=${result.proven.join(',') || 'none'} skipped=${result.skipped.join(',') || 'none'}`,
+        `[MVR PROOF WORKER] ${label} proved=${result.proven.join(',') || 'none'} skipped=${result.skipped.join(',') || 'none'} failed=${result.failed.join(',') || 'none'}`,
       )
-      if (result.proven.length === 0) cooldowns.set(userId, Date.now() + COOLDOWN_MS)
+      for (const fact of result.skipped) skips.add(fact)
+      permanentSkips.set(userId, skips)
+      if (result.failed.length > 0) cooldowns.set(userId, Date.now() + COOLDOWN_MS)
     } catch (err) {
       console.warn(
         `[MVR PROOF WORKER] ${label} failed:`,

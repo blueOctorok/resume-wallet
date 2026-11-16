@@ -1,6 +1,6 @@
 import {
   normalizeEndorsementLetter,
-  normalizeRestrictionLetter,
+  tryRestrictionLetters,
 } from '@/lib/mvr-field-predicate'
 
 const ENDORSEMENT_SHORT: Record<string, string> = {
@@ -70,13 +70,11 @@ export function formatCardFactLabel(
   }
 
   if (factType === 'cdl_restrictions') {
-    const raw = String(fields.restrictions ?? '').trim().toLowerCase()
-    if (!raw || raw === 'none') return 'No restrictions'
-    const letters = raw
-      .split(/[,|]/)
-      .map((s) => normalizeRestrictionLetter(s.trim()))
-      .filter((l): l is string => Boolean(l))
-    return letters.length > 0 ? `Restricted (${letters.join('')})` : 'Restricted'
+    const raw = String(fields.restrictions ?? '').trim()
+    if (!raw || raw.toLowerCase() === 'none') return 'No restrictions'
+    const letters = tryRestrictionLetters(raw)
+    if (letters && letters.length === 0) return 'No restrictions'
+    return letters && letters.length > 0 ? `Restricted (${letters.join('')})` : 'Restricted'
   }
 
   if (factType === 'med_cert_valid') {

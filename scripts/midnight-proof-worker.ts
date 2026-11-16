@@ -1,6 +1,6 @@
 /**
- * Stays running on Fly. When a driver-owned MVR has a license class and no
- * Midnight proof, prove the Accio facts. The proof server on Fly only
+ * Stays running on Fly. When a driver-owned MVR has a license class and a
+ * fact that is not yet proved, prove that fact. The proof server on Fly only
  * calculates a proof when this process asks.
  *
  * The wallet lives in its own process (midnight/runtime). This file must not
@@ -143,9 +143,10 @@ async function main() {
     proveOnChain: (input) => held.prove(input),
   })
 
-  await runMvrProofWorker(signal, (userId) =>
+  await runMvrProofWorker(signal, (userId, alreadySettled) =>
     proveCompletedMvrFacts(userId, {
       prove: (attestation) => service.proveFact(attestation),
+      alreadySettled,
     }),
   )
 }

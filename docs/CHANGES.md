@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Midnight worker finishes partial proofs and reads restriction wording** (2026-11-16)
+
+Three gaps left after proofs started landing again.
+
+**A driver is no longer finished at the class proof.** `provedFacts` reads all four card facts. A driver stays in the queue until each fact is either a Midnight proof or a permanent skip (not on the report, already recorded, the circuit rejected the data, or a restriction the circuit cannot say). A node failure stays retryable, including `pull already proven`, which means the chain has the proof and the database row is missing. Permanent skips are remembered for the life of the process, so a driver with no endorsements is not selected again every pass. A restart tries those once more.
+
+**Accio's restriction sentences map onto the federal letters the circuit already has.** "NO MANUAL TRANSMISSION EQUIPPED CMV" is E, "CORRECTIVE LENSES" is B, "A-NONE" is no restrictions. The state prefix is not the federal letter: "A-CORRECTIVE LENS" is B. A piece the circuit cannot say ("A", "YES", "OTHER: UNSPECIFIED") still fails the whole fact, so the proof does not drop a restriction. No contract change.
+
+**The 18:42 restrictions transaction now has its database row.** The report listed no restrictions, so the mask is 0, which is what that prove submitted. Issued at 18:42:06 UTC, the block time, with `predicateEnforced`. The driver whose class proof is the last row before the 12:13 stop has no other facts in the database. There is no second transaction to attach, so that driver is left for the queue.
+
+| File | Change |
+|---|---|
+| `src/lib/mvr-proof-worker.ts` | Done means every card fact is proved or permanently skipped. |
+| `src/lib/prove-mvr-facts.ts` | Splits a skip from a failure worth retrying. Leaves settled facts alone. |
+| `src/lib/mvr-field-predicate.ts` | Restriction phrases map to the existing bit table. |
+| `src/lib/card-fact-display.ts` | The restrictions headline uses those same letters. |
+
+Worker deployed as `01M7K0TDGXQFB1A2VPM6JPMFMT`. The first minutes showed drivers with a class proof being opened again for the facts they were missing, and a restrictions prove starting. DUST balance 50,500.
+
+---
+
 ## **Midnight worker proves, then stalls until restarted** (2026-11-16)
 
 **Correction.** An earlier version of this entry said no proof had run on the ledger 9 SDK. That was wrong: it was written from about 100 log lines without checking the database. The `attestations` table shows 1,634 Midnight proofs on 2026-11-16 (01:32 to 12:13 UTC, 544 drivers, about one proof every 24 seconds), and 58 on 2026-11-12 (16:36 to 17:00 UTC; which worker build wrote those was not checked). The real pattern is that the worker proves after a fresh start, then stops and does not recover on its own.
@@ -30,11 +51,7 @@ Worker deployments on 2026-11-16: `01M7JEWB6HAGGK2YXQ5MXGV4K1` (gate, 5-minute c
 
 **Seen working in production (18:41 to 18:56 UTC).** DUST returned on its own and proofs resumed with database rows. The missing report at 18:42 was caught by the 3-minute deadline of the earlier build, and the worker restarted itself and kept proving. The deploy at 18:53 stopped the worker with exit code 0 ("asking the wallet to save, then stopping") and the next start read DUST balance 50,500, so a deploy no longer locks the DUST.
 
-**Known gaps.**
-
-- The `cdl_restrictions` transaction of 18:42:06 UTC is on chain with no database row, because the earlier build gave up on it. The stall at 12:13 UTC probably left one more like it. Nothing reconciles these yet.
-- The worker decides a driver is done by looking for a `cdl_class` proof, so a driver whose run was cut off after `cdl_class` does not get the remaining facts.
-- Some restriction codes on real reports are not in the circuit's table (for example "A", "NO MANUAL TRANSMISSION EQUIPPED CMV", "OTHER: UNSPECIFIED"), so those drivers get no `cdl_restrictions` proof. The worker refuses rather than proving something the circuit cannot express.
+**Follow-up the same day.** Those three gaps are handled in the entry above. Codes the circuit still cannot say ("A", "YES", "OTHER: UNSPECIFIED") stay unproved on purpose.
 
 ---
 
