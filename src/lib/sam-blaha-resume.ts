@@ -2,8 +2,10 @@
  * Sam Blaha's public resume. Provven only prints it.
  *
  * letterhead is portfolio: no Provven wordmark, and the QR opens blahablast.io.
- * This module is not mounted in a page, a hub block, or a career card, and it
- * writes no database row. The portfolio is the public head.
+ * This module is not mounted in a page, a hub block, or a career card.
+ * A saved copy would be resumes.source_role = 'portfolio'. That category is
+ * stored and is not read by the hub, the career card, or admin resume lists.
+ * The portfolio is the public head.
  *
  * Words follow the blahablast portfolio (profile.ts, projects.ts, resume.html).
  * Reprint with `npm run resume:sam`. That writes public/Resume.pdf on that site.

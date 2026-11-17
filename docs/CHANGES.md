@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **A portfolio resume can be stored and is not shown** (2026-11-17)
+
+`resumes.source_role` now allows `portfolio`. That row can belong to a Provven user. The hub, the career card, talent search, the resume list, and admin resume counts only read `driver`, `developer`, and `general`. The career-card view used to take any resume for a person with no CDL block and no developer profile. That branch now uses the same three roles, so a portfolio print cannot become the resume employers see.
+
+Sam's blahablast file is still printed by `npm run resume:sam`. It is not inserted as a row by that command.
+
+| File | Change |
+|---|---|
+| `supabase/migrations/129_portfolio_resume_role.sql` | New role, and the career-card view ignores it. |
+| `src/lib/resume-source-role.ts` | The three roles the site reads. |
+| Hub, career card, admin, resume list | Queries use that list. |
+
+---
+
 ## **Sam's resume is a portfolio print, not a Provven record** (2026-11-17)
 
 The sheet has a letterhead. Driver packets stay `provven` and still wear the wordmark. Sam's sheet is `portfolio`: no Provven wordmark, no mark in the QR, and the name is the head. The QR still opens blahablast.io. The module is not mounted on a page, and it writes no database row. Provven only prints the file.

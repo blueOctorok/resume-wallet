@@ -7,6 +7,7 @@ import {
   getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation,
   getDevGithub, getDevPortfolio, getDevProfile,
 } from '@/lib/block-data'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 
 /**
  * GET /api/admin/users/[id]
@@ -53,7 +54,10 @@ export async function GET(
       getDevProfile(supabase, id),
       supabase.from('resumes')
         .select('id, title, filename, verification_status, created_at, resume_type')
-        .eq('user_id', id).order('created_at', { ascending: false }).then(r => r.data),
+        .eq('user_id', id)
+        .in('source_role', [...SITE_RESUME_ROLES])
+        .order('created_at', { ascending: false })
+        .then(r => r.data),
       supabase.from('driver_applications')
         .select('id, is_complete, current_step, verification_status, created_at')
         .eq('user_id', id).order('created_at', { ascending: false }).then(r => r.data),

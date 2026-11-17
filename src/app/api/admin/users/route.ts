@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin, isAdminEmail } from '@/lib/admin-auth'
 import { resolveUserIdsMatchingSearch } from '@/lib/admin-search'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 
 /**
  * Maps a block_type string (e.g. "driver-mvr") to its category prefix.
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       supabase.from('user_profiles').select('user_id, first_name, last_name, email').in('user_id', userIds),
       supabase.from('block_dev_github').select('user_id, username').in('user_id', userIds),
-      supabase.from('resumes').select('user_id').in('user_id', userIds),
+      supabase.from('resumes').select('user_id').in('user_id', userIds).in('source_role', [...SITE_RESUME_ROLES]),
       supabase.from('driver_applications').select('user_id').in('user_id', userIds),
       supabase.from('hub_blocks').select('user_id, block_type').in('user_id', userIds),
     ])

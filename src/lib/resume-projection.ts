@@ -22,6 +22,7 @@ import {
   assembleDriverResumePacket,
   type DriverResumePacket,
 } from '@/lib/driver-resume-packet'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 
 export type ResumeProjectionStatus = 'not_started' | 'building' | 'ready'
 
@@ -142,7 +143,8 @@ export async function buildResumeProjection(
       supabase
         .from('resumes')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId),
+        .eq('user_id', userId)
+        .in('source_role', [...SITE_RESUME_ROLES]),
     ])
 
   if (upResult.error) {

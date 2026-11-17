@@ -1,4 +1,5 @@
 import { getBlockDefinition } from '@/lib/block-registry'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 import {
   getCdlData,
   getLicenseScan,
@@ -576,7 +577,7 @@ async function fetchScreeningConsentSectionData(
   return { bundles }
 }
 
-/** Latest resume row for any source_role — used by STORM Resume block on the career card */
+/** Latest resume the site is allowed to show. A portfolio print is stored and skipped. */
 async function fetchLatestResumeForUser(
   supabase: SupabaseClient,
   userId: string,
@@ -585,6 +586,7 @@ async function fetchLatestResumeForUser(
     .from('resumes')
     .select('id, title, filename, ipfs_hash, storage_path, verification_status, blockchain_tx_hash, structured_data, created_at')
     .eq('user_id', userId)
+    .in('source_role', [...SITE_RESUME_ROLES])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

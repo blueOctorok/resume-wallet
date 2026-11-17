@@ -8,6 +8,7 @@ import {
 } from '@/lib/pending-employer-screening'
 import { resolveResumeDocumentSignedUrl } from '@/lib/document-storage'
 import { loadDriverDqSnapshot } from '@/lib/dq-file-load'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 
 /**
  * GET /api/driver/hub
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
         .from('resumes')
         .select('id, title, filename, ipfs_hash, storage_path, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role')
         .eq('user_id', user.id)
-        .in('source_role', ['driver', 'developer', 'general'])
+        .in('source_role', [...SITE_RESUME_ROLES])
         .order('created_at', { ascending: false }),
 
       // 11. All DOT applications (include application_data to extract applicant name)

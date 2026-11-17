@@ -1,5 +1,6 @@
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
+import { SITE_RESUME_ROLES } from '@/lib/resume-source-role'
 
 // Database operations using Supabase
 export async function createResume(data: {
@@ -44,6 +45,7 @@ export async function getUserResumes(userId: string) {
     .from('resumes')
     .select('*')
     .eq('user_id', userId)
+    .in('source_role', [...SITE_RESUME_ROLES])
     .order('created_at', { ascending: false })
 
   if (error) {
