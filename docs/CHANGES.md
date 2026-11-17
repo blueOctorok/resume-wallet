@@ -4,6 +4,35 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Sam's resume is a portfolio print, not a Provven record** (2026-11-17)
+
+The sheet has a letterhead. Driver packets stay `provven` and still wear the wordmark. Sam's sheet is `portfolio`: no Provven wordmark, no mark in the QR, and the name is the head. The QR still opens blahablast.io. The module is not mounted on a page, and it writes no database row. Provven only prints the file.
+
+| File | Change |
+|---|---|
+| `src/lib/resume-sheet.ts` | `letterhead` is `provven` or `portfolio`. |
+| `src/lib/sam-blaha-resume.ts` | Portfolio letterhead. |
+| `src/lib/driver-resume-packet-pdf.ts` | Skips the wordmark and QR mark for a portfolio sheet. |
+| `src/components/resume/DriverResumeDocument.tsx` | Same on screen. Driver previews are unchanged. |
+
+---
+
+## **Provven paper can typeset a resume that is not a driver packet** (2026-11-17)
+
+The cotton sheet, wordmark, diamond rules, and PDF drawer now draw a `ResumeSheet`. A driver packet is mapped onto that sheet, so driver resumes take the same path as before. Sam Blaha's public resume is a second sheet: experience, Riffster, skills, and background, with the QR pointed at blahablast.io. It has no proof chips. Jobs, skills, school, and Navy service are self-reported. GitHub is a link. GitHub does not sign a credential, and no Compact circuit checks one. Blockfrost is the Midnight node and indexer, not a source of facts.
+
+`npm run resume:sam` writes `public/Resume.pdf` on the blahablast site. "A resume for anyone" is the same sheet later, filled from blocks. That product is not open.
+
+| File | Change |
+|---|---|
+| `src/lib/resume-sheet.ts` | Sheet shape, and the driver packet mapped onto it. |
+| `src/lib/sam-blaha-resume.ts` | Sam's public resume as a sheet. |
+| `src/lib/driver-resume-packet-pdf.ts` | One PDF drawer for any sheet. QR mark is drawn in the file. |
+| `src/components/resume/DriverResumeDocument.tsx` | Screen paper draws the sheet. |
+| `scripts/print-sam-blaha-resume.ts` | Prints Sam's PDF. |
+
+---
+
 ## **Midnight worker finishes partial proofs and reads restriction wording** (2026-11-16)
 
 Three gaps left after proofs started landing again.

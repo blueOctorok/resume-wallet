@@ -29,7 +29,8 @@
     "midnight:prove-batch": "npx tsx scripts/midnight-prove-batch.ts",
     "midnight:proof-worker": "npx tsx scripts/midnight-proof-worker.ts",
     "midnight:proof-worker:deploy": "bash scripts/midnight-proof-worker-deploy.sh",
-    "midnight:cost-benchmark": "npx tsx scripts/midnight-cost-benchmark.ts"
+    "midnight:cost-benchmark": "npx tsx scripts/midnight-cost-benchmark.ts",
+    "resume:sam": "npx tsx scripts/print-sam-blaha-resume.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

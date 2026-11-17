@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Premium DOT-packet resume document — visual match for docs/midnight/example_resume.png.
+ * Provven resume paper — visual match for docs/midnight/example_resume.png.
+ * Draws a ResumeSheet. DriverResumeDocument maps a driver packet onto that sheet.
  * Always light “paper” (ignore app dark mode).
  *
  * Link is the primary digital CTA (desktop). QR is secondary — useful on printed PDFs /
@@ -12,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DriverResumePacket, DriverResumeProofChip } from '@/lib/driver-resume-packet'
+import { driverPacketToSheet, type ResumeSheet, type ResumeSheetSection } from '@/lib/resume-sheet'
 import { PROVVEN_QR_OPTS } from '@/lib/provven-qr'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 
@@ -48,10 +50,13 @@ function SectionRule({ title }: { title: string }) {
 function QrBlock({
   dataUrl,
   label,
+  stampMark = true,
   sizeClass = 'h-[72px] w-[72px]',
 }: {
   dataUrl: string | null
   label?: string
+  /** Provven mark in the center. Off for a portfolio print. */
+  stampMark?: boolean
   sizeClass?: string
 }) {
   return (
@@ -66,7 +71,7 @@ function QrBlock({
         ) : (
           <span className='text-sm font-bold text-emerald-600'>ZK</span>
         )}
-        {dataUrl ? (
+        {dataUrl && stampMark ? (
           <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
             <div className='flex h-[32%] w-[32%] items-center justify-center rounded-sm' style={{ backgroundColor: '#ffffff' }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- brand mark over QR */}
@@ -204,7 +209,94 @@ function ProofBadges({ chips }: { chips: DriverResumeProofChip[] }) {
   )
 }
 
-export default function DriverResumeDocument({ packet }: { packet: DriverResumePacket }) {
+function SheetSections({ sections }: { sections: ResumeSheetSection[] }) {
+  return (
+    <>
+      {sections.map((section) => {
+        if (section.kind === 'lines') {
+          return (
+            <div key={section.title}>
+              <SectionRule title={section.title} />
+              {section.note ? (
+                <p className='mb-2 text-[11px] text-stone-500'>{section.note}</p>
+              ) : null}
+              <ul className='space-y-0.5 text-[12.5px] leading-snug text-stone-800'>
+                {section.lines.map((line) => (
+                  <li key={line} className='flex gap-2'>
+                    <span className='text-stone-400' aria-hidden>
+                      •
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+        if (section.kind === 'roles') {
+          return (
+            <div key={section.title}>
+              <SectionRule title={section.title} />
+              <div className='space-y-5'>
+                {section.roles.map((row, index) => (
+                  <div key={`${row.title}-${row.date}-${index}`}>
+                    <div className='flex items-baseline justify-between gap-4'>
+                      <p className='text-[13px] font-semibold text-stone-900'>{row.title}</p>
+                      {row.date ? (
+                        <p className='shrink-0 text-[12px] text-stone-600'>{row.date}</p>
+                      ) : null}
+                    </div>
+                    {row.meta ? (
+                      <p className='text-[12.5px] text-stone-600'>{row.meta}</p>
+                    ) : null}
+                    {row.bullets.length > 0 ? (
+                      <ul className='mt-1.5 space-y-0.5 pl-0.5 text-[12.5px] leading-snug text-stone-700'>
+                        {row.bullets.map((bullet) => (
+                          <li key={bullet} className='flex gap-2'>
+                            <span className='text-stone-400' aria-hidden>
+                              •
+                            </span>
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        if (section.kind === 'prose') {
+          return (
+            <div key={section.title}>
+              <SectionRule title={section.title} />
+              <p className='text-[13px] leading-snug text-stone-800'>{section.text}</p>
+            </div>
+          )
+        }
+        return (
+          <div key={section.title}>
+            <SectionRule title={section.title} />
+            <dl className='space-y-1.5'>
+              {section.pairs.map((pair) => (
+                <div
+                  key={pair.label}
+                  className='grid grid-cols-[9.5rem_1fr] gap-x-3 gap-y-0.5 text-[12.5px] leading-snug'
+                >
+                  <dt className='font-semibold text-stone-900'>{pair.label}</dt>
+                  <dd className='text-stone-700'>{pair.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+export function ResumeSheetDocument({ sheet }: { sheet: ResumeSheet }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -212,7 +304,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
     void (async () => {
       try {
         const QRCode = (await import('qrcode')).default
-        const url = await QRCode.toDataURL(packet.verifyUrl, { ...PROVVEN_QR_OPTS, width: 256 })
+        const url = await QRCode.toDataURL(sheet.verifyUrl, { ...PROVVEN_QR_OPTS, width: 256 })
         if (!cancelled) setQrDataUrl(url)
       } catch {
         if (!cancelled) setQrDataUrl(null)
@@ -221,7 +313,7 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
     return () => {
       cancelled = true
     }
-  }, [packet.verifyUrl])
+  }, [sheet.verifyUrl])
 
   return (
     <article
@@ -237,7 +329,9 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
     >
       <div className='h-1 bg-[#173150]' aria-hidden />
       <div className='px-8 py-7 sm:px-10'>
-      <ProvvenWordmark tone='auto' className='mb-5 text-[11px]' />
+      {sheet.letterhead === 'provven' ? (
+        <ProvvenWordmark tone='auto' className='mb-5 text-[11px]' />
+      ) : null}
       {/* Header: name + contact | QR (print/phone secondary) */}
       <header className='flex items-start justify-between gap-6'>
         <div className='min-w-0 flex-1'>
@@ -245,101 +339,58 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
             className='text-[1.85rem] font-bold leading-tight tracking-tight text-stone-900 sm:text-[2.1rem]'
             style={{ fontFamily: 'Georgia, "Times New Roman", ui-serif, serif' }}
           >
-            {packet.fullName}
+            {sheet.fullName}
           </h1>
-          {packet.tagline ? (
-            <p className='mt-1.5 text-[13px] text-stone-600'>{packet.tagline}</p>
+          {sheet.tagline ? (
+            <p className='mt-1.5 text-[13px] text-stone-600'>{sheet.tagline}</p>
           ) : null}
-          {packet.contactLine ? (
-            <p className='mt-0.5 text-[13px] text-stone-600'>{packet.contactLine}</p>
+          {sheet.contactLine ? (
+            <p className='mt-0.5 text-[13px] text-stone-600'>{sheet.contactLine}</p>
           ) : null}
         </div>
-        <QrBlock dataUrl={qrDataUrl} label={packet.qrLabelTop} />
+        <QrBlock
+          dataUrl={qrDataUrl}
+          label={sheet.qrLabelTop}
+          stampMark={sheet.letterhead === 'provven'}
+        />
       </header>
 
-      {packet.freshnessNote ? (
+      {sheet.freshnessNote ? (
         <p className='mt-4 rounded-md border border-[#F28A0F]/50 bg-[#F28A0F]/10 px-3 py-2 text-[12.5px] leading-snug text-[#173150]'>
-          {packet.freshnessNote}
+          {sheet.freshnessNote}
         </p>
       ) : null}
 
-      {packet.summary ? (
-        <p className='mt-4 text-[13px] leading-relaxed text-stone-700'>{packet.summary}</p>
+      {sheet.summary ? (
+        <p className='mt-4 text-[13px] leading-relaxed text-stone-700'>{sheet.summary}</p>
       ) : null}
 
-      <ProofBadges chips={packet.proofChips} />
+      <ProofBadges chips={sheet.proofChips} />
 
-      {packet.thinStateHint ? (
-        <p className='mt-6 text-sm italic text-stone-500'>{packet.thinStateHint}</p>
+      {sheet.thinStateHint ? (
+        <p className='mt-6 text-sm italic text-stone-500'>{sheet.thinStateHint}</p>
       ) : null}
 
-      {packet.documentLines.length > 0 ? (
-        <>
-          <SectionRule title='Equipment & authority' />
-          <p className='mb-2 text-[11px] text-stone-500'>From documents on file. Not a verified claim.</p>
-          <ul className='space-y-0.5 text-[12.5px] leading-snug text-stone-800'>
-            {packet.documentLines.map((line) => (
-              <li key={line} className='flex gap-2'>
-                <span className='text-stone-400' aria-hidden>
-                  •
-                </span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-
-      {packet.experience.length > 0 ? (
-        <>
-          <SectionRule title='Experience' />
-          <div className='space-y-5'>
-            {packet.experience.map((row) => (
-              <div key={`${row.titleLine}-${row.dateRange}`}>
-                <div className='flex items-baseline justify-between gap-4'>
-                  <p className='text-[13px] font-semibold text-stone-900'>{row.titleLine}</p>
-                  {row.dateRange ? (
-                    <p className='shrink-0 text-[12px] text-stone-600'>{row.dateRange}</p>
-                  ) : null}
-                </div>
-                {row.bullets.length > 0 ? (
-                  <ul className='mt-1.5 space-y-0.5 pl-0.5 text-[12.5px] leading-snug text-stone-700'>
-                    {row.bullets.map((b) => (
-                      <li key={b} className='flex gap-2'>
-                        <span className='text-stone-400' aria-hidden>
-                          •
-                        </span>
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {packet.safetySummary ? (
-        <>
-          <SectionRule title='Safety summary (driver-stated)' />
-          <p className='text-[13px] leading-snug text-stone-800'>{packet.safetySummary}</p>
-        </>
-      ) : null}
+      <SheetSections sections={sheet.sections} />
 
       {/* Footer: link primary, QR secondary (print / phone) */}
       <footer className='mt-10'>
         <DiamondRule className='mb-6' />
         <div className='flex items-start gap-4'>
-        <QrBlock dataUrl={qrDataUrl} sizeClass='h-[64px] w-[64px]' label='Scan with phone' />
+        <QrBlock
+          dataUrl={qrDataUrl}
+          sizeClass='h-[64px] w-[64px]'
+          label='Scan with phone'
+          stampMark={sheet.letterhead === 'provven'}
+        />
         <div className='min-w-0 flex-1 pt-0.5'>
-          <p className='text-[13px] font-semibold text-stone-900'>{packet.footerTitle}</p>
-          <p className='mt-1 text-[11px] leading-relaxed text-stone-500'>{packet.footerBody}</p>
+          <p className='text-[13px] font-semibold text-stone-900'>{sheet.footerTitle}</p>
+          <p className='mt-1 text-[11px] leading-relaxed text-stone-500'>{sheet.footerBody}</p>
           <div className='mt-2.5'>
-            <CardLinkRow href={packet.verifyUrl} displayPath={packet.verifyDisplayPath} />
+            <CardLinkRow href={sheet.verifyUrl} displayPath={sheet.verifyDisplayPath} />
           </div>
-          {packet.hasVerifiedClaims ? (
-            <p className='mt-2 text-[11px] text-stone-500'>Proofs expire {packet.expiresLabel}</p>
+          {sheet.hasVerifiedClaims ? (
+            <p className='mt-2 text-[11px] text-stone-500'>Proofs expire {sheet.expiresLabel}</p>
           ) : null}
         </div>
         </div>
@@ -347,4 +398,9 @@ export default function DriverResumeDocument({ packet }: { packet: DriverResumeP
       </div>
     </article>
   )
+}
+
+/** Driver preview. The sheet is what the paper actually draws. */
+export default function DriverResumeDocument({ packet }: { packet: DriverResumePacket }) {
+  return <ResumeSheetDocument sheet={driverPacketToSheet(packet)} />
 }
