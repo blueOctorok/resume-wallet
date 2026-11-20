@@ -6,10 +6,11 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **Documents are a section on the career card** (2026-11-20)
 
-The documents page was only reachable from the journey drawer, and it asked the driver to accept a resume line. The career card now has its own Documents section: upload a PDF or a photo. The driver's card always shows it. An employer sees the files only after an application, a used invite, or an accepted request. A public share link does not include them. The files are not verified.
+The documents page was only reachable from the journey drawer, and it asked the driver to accept a resume line. The DQ file card now has its own Documents section under the packet: upload a PDF or a photo. The same section is on the career card an employer opens. An employer sees the files only after an application, a used invite, or an accepted request. A public share link does not include them. The files are not verified.
 
 | File | Change |
 |---|---|
+| `src/components/hub/BuildBoard.tsx` | Documents upload sits on the DQ file card, above the packet. |
 | `src/components/career-card/sections/DocumentsSection.tsx` | Upload, list, view, and delete. |
 | `src/lib/projected-career-card.ts` | Adds the section after the lens filter. |
 | `src/app/api/employer/drivers/[userId]/documents/route.ts` | Signed link for an employer who already has the driver. |

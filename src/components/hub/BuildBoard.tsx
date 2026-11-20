@@ -20,6 +20,7 @@ import type { ResumeProjection } from '@/lib/resume-projection'
 import { DQ_ITEM_DEFINITIONS } from '@/lib/dq-file-registry'
 import { dqItemHasWorkToShow, type DqItemStatus } from '@/lib/dq-file-status'
 import { DqStatusBadge } from '@/components/employer/drivers/DriverBlockBadges'
+import DocumentsSection from '@/components/career-card/sections/DocumentsSection'
 
 /**
  * File board — AI-ordered next steps, then the full DQ packet
@@ -164,6 +165,10 @@ export default function BuildBoard() {
         ) : null}
 
         <DqCoachPanel />
+
+        <div className='mt-6 border-t border-ironside/15 pt-4'>
+          <DocumentsSection data={{ files: [] }} mode='self' isDark={false} />
+        </div>
 
         <div className='mt-6 border-t border-ironside/15 pt-4'>
           <p className='mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#173150]'>
