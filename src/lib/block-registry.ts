@@ -409,7 +409,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   {
     id: 'driver-documents',
     label: 'Documents',
-    description: 'Insurance, authority, registration, and other papers',
+    description: 'PDFs and photos an employer you are working with can open',
     icon: 'Files',
     categoryId: 'drivers',
     suggestedFor: [

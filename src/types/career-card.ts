@@ -158,6 +158,17 @@ export interface LicenseScanCardData {
   barcodeRead: boolean
 }
 
+/** A file the driver uploaded. The storage path stays on the server. */
+export interface DriverDocumentCardFile {
+  id: string
+  filename: string
+  uploadedAt: string
+}
+
+export interface DriverDocumentsCardData {
+  files: DriverDocumentCardFile[]
+}
+
 /** Per-employer screening consent bundle (FCRA + FMCSA + CDLIS) — self card only */
 export interface ScreeningConsentData {
   bundles: Array<{
@@ -181,6 +192,7 @@ export type SectionDataMap = {
   'driver-psp': PspData
   'driver-cdl-credentials': CdlData
   'driver-license': LicenseScanCardData
+  'driver-documents': DriverDocumentsCardData
   'developer-portfolio': PortfolioData
   'developer-github': GitHubData
   'developer-projects': ProjectsData

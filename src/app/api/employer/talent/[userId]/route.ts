@@ -100,6 +100,7 @@ export async function GET(
       shareSettings,
       contactMode: 'employer',
       releaseIdentifiers,
+      includeSharedDocuments: related,
     })
 
     // A search-only account sees email and phone only after this driver is already

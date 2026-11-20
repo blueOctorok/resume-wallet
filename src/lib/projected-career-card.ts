@@ -5,6 +5,7 @@ import {
   getLicenseScan,
   getDevPortfolio,
   getDevGithub,
+  getDriverDocuments,
   saveDevGithub,
 } from '@/lib/block-data'
 import {
@@ -30,6 +31,7 @@ import type {
   ProjectsData,
   ScreeningConsentData,
   LicenseScanCardData,
+  DriverDocumentCardFile,
   OnChainCredential,
 } from '@/types/career-card'
 import { loadCardAttestedFacts } from '@/lib/card-attested-facts'
@@ -142,6 +144,11 @@ export interface BuildProjectedCareerCardInput {
    * Ignored for the driver's own card and for a public share link.
    */
   releaseIdentifiers?: boolean
+  /**
+   * Employer card only. True after an application, a used invite, or an
+   * accepted request. A public link and a talent-search stranger stay off.
+   */
+  includeSharedDocuments?: boolean
 }
 
 const DRIVER_CARD_LEAD = [
@@ -468,6 +475,34 @@ export async function buildProjectedCareerCard(
 
   const signals = computeCareerCardSignals(visibleSections, employerConfirmed)
 
+  // Documents sit on the driver's own card as an upload area. An employer
+  // sees the files only after a relationship exists. A public share link
+  // never receives them — the lens filter above cannot add them either,
+  // because this runs after it. The score above does not count this section,
+  // so an empty upload area does not raise it.
+  const shareDocuments =
+    isDriverSelf ||
+    (meta.contactMode === 'employer' && meta.includeSharedDocuments === true)
+  if (shareDocuments) {
+    const files = await loadDriverDocumentCardFiles(supabase, userId)
+    if (meta.contactMode === 'self' || files.length > 0) {
+      for (let i = visibleSections.length - 1; i >= 0; i -= 1) {
+        if (visibleSections[i].blockType === 'driver-documents') visibleSections.splice(i, 1)
+      }
+      const hubRow = hubRows.find((row) => row.block_type === 'driver-documents')
+      const def = getBlockDefinition('driver-documents')
+      visibleSections.push({
+        blockType: 'driver-documents',
+        label: def?.label ?? 'Documents',
+        icon: def?.icon ?? 'Files',
+        data: { files },
+        hubBlockId: hubRow?.id,
+        cardPage: hubRow ? readCardPage(hubRow.config ?? undefined) : 1,
+        needsSetup: files.length === 0,
+      })
+    }
+  }
+
   return {
     userId,
     name: userName,
@@ -490,6 +525,23 @@ export async function buildProjectedCareerCard(
     activeLens: lensRow
       ? { id: lensRow.id, name: lensRow.name, isDefault: lensRow.is_default }
       : undefined,
+  }
+}
+
+async function loadDriverDocumentCardFiles(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<DriverDocumentCardFile[]> {
+  try {
+    const documents = await getDriverDocuments(supabase, userId)
+    return documents.map((doc) => ({
+      id: doc.id,
+      filename: doc.filename,
+      uploadedAt: doc.uploadedAt,
+    }))
+  } catch (error) {
+    console.warn('[CAREER CARD] documents skipped:', error)
+    return []
   }
 }
 

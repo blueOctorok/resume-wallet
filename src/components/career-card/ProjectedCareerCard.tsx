@@ -18,7 +18,7 @@ import { isCareerCardOwnerMode } from '@/types/career-card'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
 import CareerCardDynamicSections from '@/components/career-card/CareerCardDynamicSections'
 import VerifiedFactsStrip from '@/components/career-card/VerifiedFactsStrip'
-import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData, ScreeningConsentData, LicenseScanCardData } from '@/types/career-card'
+import type { ResumeData, DotAppData, MvrData, PspData, CdlData, PortfolioData, GitHubData, ProjectsData, ScreeningConsentData, LicenseScanCardData, DriverDocumentsCardData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
 import {
@@ -32,6 +32,7 @@ import {
   ProjectsSection,
   ScreeningConsentSection,
   LicenseScanSection,
+  DocumentsSection,
 } from './sections'
 
 /**
@@ -854,6 +855,15 @@ function SectionRenderer({
           mode={mode}
           isDark={isDark}
           onAction={onAction}
+        />
+      )
+    case 'driver-documents':
+      return (
+        <DocumentsSection
+          data={section.data as DriverDocumentsCardData}
+          mode={mode}
+          isDark={isDark}
+          userId={userId}
         />
       )
     case 'driver-screening-consent':

@@ -82,6 +82,7 @@ export async function GET(
       shareSettings,
       contactMode: 'employer',
       releaseIdentifiers: releasesDriverIdentifiers(toCompanyAccountTier(companyTierRow?.account_tier)),
+      includeSharedDocuments: true,
     })
 
     const base =

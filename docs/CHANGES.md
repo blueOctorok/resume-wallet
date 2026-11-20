@@ -4,6 +4,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Documents are a section on the career card** (2026-11-20)
+
+The documents page was only reachable from the journey drawer, and it asked the driver to accept a resume line. The career card now has its own Documents section: upload a PDF or a photo. The driver's card always shows it. An employer sees the files only after an application, a used invite, or an accepted request. A public share link does not include them. The files are not verified.
+
+| File | Change |
+|---|---|
+| `src/components/career-card/sections/DocumentsSection.tsx` | Upload, list, view, and delete. |
+| `src/lib/projected-career-card.ts` | Adds the section after the lens filter. |
+| `src/app/api/employer/drivers/[userId]/documents/route.ts` | Signed link for an employer who already has the driver. |
+| `src/components/blocks/DocumentsBlock.tsx` | The documents page uses the same upload area. |
+
+---
+
 ## **A portfolio resume can be stored and is not shown** (2026-11-17)
 
 `resumes.source_role` now allows `portfolio`. That row can belong to a Provven user. The hub, the career card, talent search, the resume list, and admin resume counts only read `driver`, `developer`, and `general`. The career-card view used to take any resume for a person with no CDL block and no developer profile. That branch now uses the same three roles, so a portfolio print cannot become the resume employers see.

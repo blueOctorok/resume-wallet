@@ -338,14 +338,14 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'driver-documents',
       label: 'Documents',
-      description: 'Insurance, authority, or registration on file',
+      description: 'PDFs or photos on your career card',
       status: d.hasDriverDocument ? 'complete' : 'pending',
       action: !d.hasDriverDocument ? { label: 'Add a document', target: 'documents' } : undefined,
       isOptional: true,
     }],
     nextAction: (d) => !d.hasDriverDocument ? {
       label: 'Add a document',
-      description: 'Upload insurance, authority, or registration. You choose what shows on your resume.',
+      description: 'Upload a PDF or a photo. An employer you apply to, or who invited you, can open it.',
       target: 'documents',
       priority: 'medium',
     } : null,
