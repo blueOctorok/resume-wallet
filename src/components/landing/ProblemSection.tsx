@@ -1,29 +1,30 @@
 'use client'
 
 /**
- * The problem — three editorial columns, hairline-separated, no card chrome.
- * One job: make the oversharing status quo feel absurd before the fix appears.
+ * Why the file exists — every carrier hands you the same application, you
+ * retype it, and the last copy is thrown away. Resume-inbox noise stays as
+ * contrast, not the lead.
  */
 
-import { FileWarning, Inbox, RotateCcw } from 'lucide-react'
+import { ClipboardList, Inbox, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
 const PROBLEMS = [
   {
-    icon: FileWarning,
-    title: 'The whole report, every time',
-    body: 'Ask one question — is this driving record clean? — and the carrier receives everything: date of birth, home address, every violation, all fourteen pages.',
-  },
-  {
-    icon: Inbox,
-    title: 'Noise instead of signal',
-    body: 'Employer inboxes are flooded with AI-generated resumes nobody can verify. Real qualifications drown in keyword soup, and everyone loses time.',
+    icon: ClipboardList,
+    title: 'The same form, every carrier',
+    body: 'Every trucking company collects a DOT application before you drive. The questions are the same. You still fill a new packet for each one.',
   },
   {
     icon: RotateCcw,
-    title: 'Re-screened at every hop',
-    body: 'Drivers rebuild the same DQ file — MVR, PSP, employment checks — from scratch for every application. Paid for once, then thrown away.',
+    title: 'Retype, then throw away',
+    body: 'Work history, license fields, and references get typed again and again. The last copy sits in someone else’s inbox and never comes with you.',
+  },
+  {
+    icon: Inbox,
+    title: 'Resumes that say nothing',
+    body: 'Employer inboxes are full of AI-written resumes nobody can check. A finished federal application is the signal. A keyword soup is not.',
   },
 ] as const
 
@@ -32,9 +33,9 @@ export default function ProblemSection({ isDark }: { isDark: boolean }) {
     <section className={cn('py-20 sm:py-28', paperBand(isDark))}>
       <LandingContainer>
         <SectionHeader
-          eyebrow='The problem'
-          title='Hiring runs on oversharing.'
-          lede='Between candidates and employers sits a pile of unverified documents — and the only way to prove anything is to hand over everything.'
+          eyebrow='Why this exists'
+          title='Stop retyping the same application.'
+          lede='Carriers need a driver qualification file. Drivers should not rebuild it from scratch for every job.'
           isDark={isDark}
         />
 

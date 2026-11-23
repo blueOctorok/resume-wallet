@@ -3,12 +3,9 @@
 /**
  * Provven marketing landing page — composition only.
  *
- * Story: Hero (promise + product demo) → Problem → Career Card →
- * Selective Disclosure (money shot) → How It Works → Employers →
- * Built for Trust → Final CTA. Each section owns one job; see README.md.
- *
- * Replaces the old HomePage.tsx. Keeps the same props contract so
- * DriverShell wires it identically.
+ * Story: Hero (DOT application) → Fill it once → Resume band → Why it
+ * exists → How it works → Verify & disclose → Employers → Trust → Final CTA.
+ * Each section owns one job; see README.md.
  */
 
 import { useEffect, useRef } from 'react'
@@ -18,10 +15,11 @@ import { SITE_LEGAL } from '@/lib/site-legal'
 import { SITE_SEO } from '@/lib/site-seo'
 import { LandingContainer, SealDivider, mutedText } from './landing-shared'
 import HeroSection from './HeroSection'
-import ProblemSection from './ProblemSection'
 import CareerCardSection from './CareerCardSection'
-import DisclosureSection from './DisclosureSection'
+import ResumeBandSection from './ResumeBandSection'
+import ProblemSection from './ProblemSection'
 import HowItWorksSection from './HowItWorksSection'
+import DisclosureSection from './DisclosureSection'
 import EmployersSection from './EmployersSection'
 import TrustSection from './TrustSection'
 import FinalCtaSection from './FinalCtaSection'
@@ -88,10 +86,11 @@ export default function LandingPage({
         onForEmployers={scrollToEmployers}
         onBrowseJobs={onBrowseJobs}
       />
-      <ProblemSection isDark={isDark} />
       <CareerCardSection isDark={isDark} />
-      <DisclosureSection />
+      <ResumeBandSection isDark={isDark} />
+      <ProblemSection isDark={isDark} />
       <HowItWorksSection isDark={isDark} />
+      <DisclosureSection />
       <EmployersSection isDark={isDark} onLogIn={onLogIn} />
       <TrustSection />
       <FinalCtaSection
@@ -127,7 +126,7 @@ export default function LandingPage({
               </a>
             </nav>
             <p className={`text-[11px] ${mutedText(isDark)}`}>
-              © {new Date().getFullYear()} Provven · The career card you own · Built on Midnight
+              © {new Date().getFullYear()} Provven · Your DOT application, done once · Built on Midnight
             </p>
             {SITE_LEGAL.mailingAddress ? (
               <p className={`text-[11px] ${mutedText(isDark)}`}>{SITE_LEGAL.mailingAddress}</p>

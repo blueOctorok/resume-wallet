@@ -27,7 +27,7 @@ const PILLARS = [
   {
     icon: KeyRound,
     title: 'Nothing to manage',
-    body: 'No wallets, no seed phrases, no tokens, nothing to install. The cryptography does its work where you never have to see it — you just build, verify, and share.',
+    body: 'No wallets, no seed phrases, no tokens, nothing to install. The cryptography does its work where you never have to see it — you fill the file, share it, and verify when an employer asks.',
   },
 ] as const
 

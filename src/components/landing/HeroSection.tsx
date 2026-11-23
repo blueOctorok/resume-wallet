@@ -2,7 +2,10 @@
 
 /**
  * Hero — one composition: brand, headline, one supporting line, CTA group,
- * and the DisclosureCard as the dominant visual on a full-bleed ink plane.
+ * and the DQ file as the dominant visual on a full-bleed ink plane.
+ *
+ * The DOT application leads. The resume is one line under the supporting
+ * copy, because the resume is printed from the application.
  *
  * Entrance animation is pure CSS (`lp-rise` classes defined in LandingPage)
  * with staggered delays; `motion-reduce` disables it entirely.
@@ -13,7 +16,7 @@ import Button from '@/components/ui/Button'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
 import { SITE_SEO } from '@/lib/site-seo'
-import DisclosureCard from './DisclosureCard'
+import DqFileCard from './DqFileCard'
 import { GOLD_CTA, InkBand, LandingContainer } from './landing-shared'
 
 interface HeroSectionProps {
@@ -48,18 +51,19 @@ export default function HeroSection({
               <div className='mx-auto mt-3 flex max-w-xs items-center gap-3 xl:mx-0'>
                 <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55 xl:from-[#f15a2b]/55' />
                 <p className='shrink-0 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#f15a2b]'>
-                  The career card you own
+                  Free for drivers
                 </p>
                 <span className='h-px flex-1 bg-gradient-to-l from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55' />
               </div>
             </div>
 
+            {/* Must match SITE_SEO.headline — schema name and visible H1 stay in sync. */}
             <h1
               className='lp-rise mt-10 text-[1.65rem] font-semibold leading-[1.15] tracking-tight text-[#f4f1ea] sm:text-4xl xl:text-[2.75rem]'
               style={{ animationDelay: '120ms' }}
             >
-              Build Your Truck Driver Resume{' '}
-              <em className='font-semibold not-italic text-[#f15a2b]'>and Reuse It for Every Job</em>
+              Your DOT Application. Done Once.{' '}
+              <em className='font-semibold not-italic text-[#f15a2b]'>Share It With Employers.</em>
             </h1>
 
             <p
@@ -67,6 +71,12 @@ export default function HeroSection({
               style={{ animationDelay: '220ms' }}
             >
               {SITE_SEO.intro}
+            </p>
+            <p
+              className='lp-rise mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ironside xl:mx-0'
+              style={{ animationDelay: '260ms' }}
+            >
+              {SITE_SEO.resumeNote}
             </p>
 
             <div
@@ -107,13 +117,13 @@ export default function HeroSection({
                 </button>
               )}
               <p className='mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-ironside'>
-                free for candidates · no wallets, no tokens · built on Midnight
+                free for drivers · screening orders are separate · no wallet
               </p>
             </div>
           </div>
 
           <div className='lp-rise relative flex min-w-0 justify-center xl:justify-end' style={{ animationDelay: '260ms' }}>
-            <DisclosureCard view='shared' live className='relative' />
+            <DqFileCard />
           </div>
         </div>
       </LandingContainer>

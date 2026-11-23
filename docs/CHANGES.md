@@ -4,6 +4,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Homepage leads with the DOT application** (2026-11-20)
+
+The signed-out page led with “Build Your Truck Driver Resume.” That made Provven look like a resume builder. The hero now says the DOT application is done once, shared with employers, and free for drivers. The resume is one line under that, and a short band later. The hero visual is the DQ file. Selective disclosure sits after “verify when they ask.” Search title, description, intro, footer, and WebPage schema follow the same order so resume phrases stay second, not first.
+
+| File | Change |
+|---|---|
+| `src/lib/site-seo.ts` | DOT-first title, headline, intro, resume note, footer. |
+| `src/components/landing/HeroSection.tsx` | New headline, free-for-drivers eyebrow, `DqFileCard`. |
+| `src/components/landing/DqFileCard.tsx` | Hero visual — application, license, consent, MVR. |
+| `src/components/landing/CareerCardSection.tsx` | Fill-it-once packet; no verified badge on self-reported rows. |
+| `src/components/landing/ResumeBandSection.tsx` | Resume prints from the application. |
+| `src/components/landing/ProblemSection.tsx` | Stop retyping the same application. |
+| `src/components/landing/HowItWorksSection.tsx` | Fill → Share → Verify. |
+| `src/components/landing/DisclosureSection.tsx` | Verify first, then selective disclosure. |
+| `src/components/landing/EmployersSection.tsx` | Receive the DQ file; ask for consent / MVR. |
+| `src/components/landing/FinalCtaSection.tsx` | Repeats the hero, not “build a card.” |
+| `src/components/landing/LandingPage.tsx` | New section order. |
+
+---
+
 ## **Documents are a section on the career card** (2026-11-20)
 
 The documents page was only reachable from the journey drawer, and it asked the driver to accept a resume line. The DQ file card now has its own Documents section under the packet: upload a PDF or a photo. The same section is on the career card an employer opens. An employer sees the files only after an application, a used invite, or an accepted request. A public share link does not include them. The files are not verified.

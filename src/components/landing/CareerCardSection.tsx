@@ -1,75 +1,39 @@
 'use client'
 
 /**
- * The Career Card — a living identity assembled from blocks.
- * The visual is a block grid in three honest states (verified / added /
- * suggested) so "sparse card is still a valid card" is shown, not claimed.
+ * Fill it once — what goes into the file, in the order a driver meets it.
+ *
+ * Every row here is something the driver enters, so every row carries the
+ * same "on the file" label. The verified badge belongs to screener facts and
+ * first appears in DisclosureSection.
  */
 
-import {
-  ClipboardList,
-  FileText,
-  Gauge,
-  GraduationCap,
-  IdCard,
-  Plus,
-  ShieldCheck,
-  Truck,
-  Wrench,
-} from 'lucide-react'
+import { Camera, ClipboardList, IdCard, Truck, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 
-type BlockState = 'verified' | 'added' | 'suggested'
-
-const BLOCKS: Array<{ icon: typeof FileText; label: string; state: BlockState }> = [
-  { icon: IdCard, label: 'CDL credentials', state: 'verified' },
-  { icon: Gauge, label: 'MVR', state: 'verified' },
-  { icon: Truck, label: 'Employment history', state: 'verified' },
-  { icon: ClipboardList, label: 'DOT application', state: 'added' },
-  { icon: FileText, label: 'Resume', state: 'added' },
-  { icon: Wrench, label: 'Skills', state: 'added' },
-  { icon: GraduationCap, label: 'Education', state: 'suggested' },
-  { icon: Plus, label: 'Portfolio', state: 'suggested' },
-] as const
-
-function BlockChip({
-  icon: Icon,
-  label,
-  state,
-  isDark,
-  delay,
-}: {
-  icon: typeof FileText
-  label: string
-  state: BlockState
-  isDark: boolean
-  delay: number
-}) {
-  const base = 'reveal-item flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm font-medium transition-colors'
-
-  const styles =
-    state === 'verified'
-      ? isDark
-        ? 'border-[#f15a2b]/30 bg-[#f15a2b]/[0.08] text-[#f15a2b]'
-        : 'border-[#f15a2b]/50 bg-[#f15a2b]/10 text-[#173150]'
-      : state === 'added'
-        ? isDark
-          ? 'border-white/10 bg-white/[0.04] text-gray-200'
-          : 'border-stone-200 bg-white text-stone-800 shadow-sm'
-        : isDark
-          ? 'border-dashed border-white/15 bg-transparent text-gray-500'
-          : 'border-dashed border-stone-300 bg-transparent text-stone-400'
-
-  return (
-    <div className={cn(base, styles)} style={{ transitionDelay: `${delay}ms` }}>
-      <Icon className='h-4 w-4 shrink-0' />
-      <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {state === 'verified' && <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />}
-      {state === 'suggested' && <span className='shrink-0 text-[10px] font-semibold uppercase tracking-wide'>add</span>}
-    </div>
-  )
-}
+const FILE_PIECES: Array<{ icon: LucideIcon; label: string; note: string }> = [
+  {
+    icon: ClipboardList,
+    label: 'DOT application',
+    note: 'The federal driver application, Forms 1 through 3. You type it one time.',
+  },
+  {
+    icon: IdCard,
+    label: 'License scan',
+    note: 'Scan the barcode on your license and the license fields fill in.',
+  },
+  {
+    icon: Truck,
+    label: 'Employment history',
+    note: 'Your jobs, schools, and references live inside the application.',
+  },
+  {
+    icon: Camera,
+    label: 'Other papers',
+    note: 'Photos and PDFs of anything else an employer you work with needs to open.',
+  },
+]
 
 export default function CareerCardSection({ isDark }: { isDark: boolean }) {
   return (
@@ -78,12 +42,12 @@ export default function CareerCardSection({ isDark }: { isDark: boolean }) {
         <div className='grid items-center gap-12 lg:grid-cols-2 lg:gap-20'>
           <div data-reveal>
             <SectionHeader
-              eyebrow='The Career Card'
+              eyebrow='Fill it once'
               title={
                 <>
-                  Built from blocks.
+                  Type it one time.
                   <br />
-                  Built once.
+                  It stays filled.
                 </>
               }
               isDark={isDark}
@@ -91,28 +55,45 @@ export default function CareerCardSection({ isDark }: { isDark: boolean }) {
             />
             <div className='reveal-item mt-6 space-y-4' style={{ transitionDelay: '120ms' }}>
               <p className={cn('text-base leading-relaxed sm:text-lg', mutedText(isDark))}>
-                Your Career Card is a living identity, not a document. Start with one block
-                &mdash; a resume, a CDL, a DOT application &mdash; and it&rsquo;s live from day
-                one. Add verified facts over time and every employer you share with sees the
-                current card, never a stale PDF.
+                Every carrier has to collect a DOT application before you drive for them. On
+                Provven you fill that application once and it stays yours. When the next
+                company asks, your answers are already there.
               </p>
               <p className={cn('text-base leading-relaxed sm:text-lg', mutedText(isDark))}>
-                A sparse card is still a valid card. Completeness is something you grow into
-                &mdash; with an AI coach that knows your card and tells you which block moves
-                the needle next &mdash; not a gate you have to clear.
+                Update a job or an address in one place and every employer you share with
+                sees the current file. Filling it out and sharing it is free.
               </p>
             </div>
           </div>
 
-          {/* Block grid — the card assembling */}
           <div data-reveal>
-            <div className='grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
-              {BLOCKS.map((block, i) => (
-                <BlockChip key={block.label} {...block} isDark={isDark} delay={i * 70} />
-              ))}
-            </div>
-            <p className={cn('reveal-item mt-4 text-center text-xs', mutedText(isDark))} style={{ transitionDelay: '600ms' }}>
-              Verified facts carry the badge. Self-reported blocks stay clearly labeled — no exceptions.
+            <ol className='space-y-2.5'>
+              {FILE_PIECES.map((piece, i) => {
+                const Icon = piece.icon
+                return (
+                  <li
+                    key={piece.label}
+                    className={cn(
+                      'reveal-item flex items-start gap-3.5 rounded-xl border px-4 py-3.5',
+                      isDark ? 'border-white/10 bg-white/[0.04]' : 'border-stone-200 bg-white shadow-sm',
+                    )}
+                    style={{ transitionDelay: `${i * 90}ms` }}
+                  >
+                    <Icon className='mt-0.5 h-4 w-4 shrink-0 text-[#f15a2b]' aria-hidden />
+                    <div className='min-w-0 flex-1'>
+                      <p className={cn('text-sm font-semibold', headingText(isDark))}>{piece.label}</p>
+                      <p className={cn('mt-0.5 text-sm leading-relaxed', mutedText(isDark))}>{piece.note}</p>
+                    </div>
+                    <span className='mt-0.5 shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-ironside'>
+                      on the file
+                    </span>
+                  </li>
+                )
+              })}
+            </ol>
+            <p className={cn('reveal-item mt-4 text-center text-xs', mutedText(isDark))} style={{ transitionDelay: '420ms' }}>
+              These are your own entries, labeled as on the file. Verified facts come from a
+              licensed screener.
             </p>
           </div>
         </div>

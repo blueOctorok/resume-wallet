@@ -6,18 +6,22 @@ Signed-out visitors land here (wired through `DriverShell` → `LandingPage`). R
 
 One section = one job. `LandingPage.tsx` is composition only.
 
+The DOT application leads. The resume is second. Selective disclosure sits after “verify when they ask.”
+
 | File | Job |
 |---|---|
 | `LandingPage.tsx` | Composition, scroll-reveal hook, motion CSS (respects `prefers-reduced-motion`) |
-| `HeroSection.tsx` | Brand + headline + CTAs + `DisclosureCard` on a full-bleed ink plane |
-| `DisclosureCard.tsx` | **The core visual.** Career Card split by the gold selective-disclosure seam; `view='shared' \| 'vault'` |
-| `ProblemSection.tsx` | Why hiring runs on oversharing (3 editorial columns) |
-| `CareerCardSection.tsx` | Card built from blocks; sparse card still valid |
-| `DisclosureSection.tsx` | Money shot — interactive Employer view ↔ Your vault toggle |
-| `HowItWorksSection.tsx` | Build → Verify → Share |
-| `EmployersSection.tsx` | `#employers` anchor; block-request product mock |
+| `HeroSection.tsx` | Brand + DOT headline + CTAs + `DqFileCard` on a full-bleed ink plane |
+| `DqFileCard.tsx` | Hero visual — the DQ file (application, license, consent, MVR) |
+| `CareerCardSection.tsx` | Fill it once — application, license scan, history, other papers |
+| `ResumeBandSection.tsx` | Short band — resume prints from the application |
+| `ProblemSection.tsx` | Why the file exists — stop retyping the same application |
+| `HowItWorksSection.tsx` | Fill → Share → Verify |
+| `DisclosureSection.tsx` | Verify when asked, then selective disclosure (`DisclosureCard` toggle) |
+| `DisclosureCard.tsx` | Employer view ↔ vault — screener facts only carry the verified tag |
+| `EmployersSection.tsx` | `#employers` anchor — receive the DQ file, ask for consent / MVR |
 | `TrustSection.tsx` | Midnight / ZK narrative (present-continuous claims only) |
-| `FinalCtaSection.tsx` | Closing CTA + candidate-agent small print |
+| `FinalCtaSection.tsx` | Closing CTA — repeats the hero, not “build a card” |
 | `landing-shared.tsx` | `InkBand`, `SectionHeader`, `LandingContainer`, palette helpers |
 
 **Ink bands** (hero, disclosure, trust) are deliberately theme-independent — always the deep-ink plane, in light and dark themes. Everything else is theme-aware via `isDark`.
@@ -41,19 +45,11 @@ Site-wide brand (Tailwind `teal-*` remaps to Hot Embers).
 ## Fonts
 
 - **Montserrat** — body, lockup, and headlines (`font-display` → `--font-montserrat`).
-- Monospace (`font-mono`) — "technical proof" moments: sharing strip, verified tags, the `prove(mvr_clean_36mo)` line.
-
-## Swapping the Career Card mock for a real screenshot
-
-`DisclosureCard` is a hand-built mock of the test driver Barry Burton. Birth date, street address, and license number stay off this page. To replace it with a product screenshot later:
-
-1. Drop the screenshot in `public/` and swap `<DisclosureCard view='shared' />` in `HeroSection.tsx` for an `<Image>`.
-2. Keep the pedestal glow div behind it — it does the "sitting on the plane" work.
-3. `DisclosureSection.tsx` should keep the interactive component: the toggle **is** the demo. If the real product ships an equivalent share-preview screen, embed that instead.
-4. Mock data lives at the top of `DisclosureCard.tsx` (`VERIFIED_FACTS`, `PRIVATE_ROWS`) if you just want different facts.
+- Monospace (`font-mono`) — "technical proof" moments: sharing strip, verified tags, the `prove(cdl_class)` line.
 
 ## Language guardrails (do not loosen)
 
-- Verification language only on third-party / issuer-backed facts — never self-reported data.
+- Verification language only on third-party / issuer-backed facts — never self-reported data (DOT answers, resume, license scan, uploaded papers).
 - Midnight / ZK narrated present-continuous ("built on Midnight", "designed for selective disclosure") — no per-fact "proven on-chain right now" claims until Phase 3 proofs are live.
 - No wallet / token / seed-phrase language anywhere.
+- Do not advertise medical-card photo upload (still coming soon in the product).

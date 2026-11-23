@@ -50,6 +50,10 @@ export function paperBand(isDark: boolean, tint = false) {
 export const GOLD_CTA =
   'bg-ember text-white shadow-lg shadow-black/25 hover:brightness-110 dark:bg-ember dark:text-white dark:hover:brightness-110'
 
+/** White paper document that sits on an ink band — the DQ file and the disclosure card share it. */
+export const PAPER_DOCUMENT =
+  'relative w-full max-w-md overflow-hidden rounded-2xl border border-ironside/30 bg-white shadow-[0_24px_70px_-18px_rgba(0,0,0,0.45),0_0_0_1px_rgba(23,49,80,0.06)]'
+
 /** Fixed palette for ink bands (never changes with theme) */
 export const INK = {
   heading: 'text-[#f4f1ea]',

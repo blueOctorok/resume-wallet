@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * How it works — three steps with oversized numerals.
- * No card chrome: numeral, rule, title, copy.
+ * How it works — fill the application, share that file, verify when asked.
+ * No “start with a resume” step.
  */
 
 import { cn } from '@/lib/utils'
@@ -11,18 +11,18 @@ import { headingText, mutedText, paperBand, LandingContainer, SectionHeader } fr
 const STEPS = [
   {
     n: '01',
-    title: 'Build',
-    body: 'Start with one block — a resume, a CDL, a DOT application. Your Career Card is live from the first block, and an AI coach helps you strengthen it over time.',
+    title: 'Fill',
+    body: 'Complete your DOT application once — work history, license fields, education, and references. Free. It stays yours.',
   },
   {
     n: '02',
-    title: 'Verify',
-    body: 'Third-party facts — MVR, screening data, employment — are verified through licensed partners and sealed to your card. Self-reported entries stay clearly labeled as yours.',
+    title: 'Share',
+    body: 'When a company invites you or you apply, they open the same file. You do not retype it. Your resume prints from it when you need a PDF.',
   },
   {
     n: '03',
-    title: 'Share',
-    body: 'Apply to a job or answer an employer\u2019s request by sharing exactly the blocks it needs. Every share is explicit, scoped, and yours to make — every time.',
+    title: 'Verify',
+    body: 'When an employer asks, you sign screening consent. A licensed screener can pull your MVR or PSP. Those facts carry the badge. Your typed answers stay labeled as yours.',
   },
 ] as const
 
@@ -32,7 +32,7 @@ export default function HowItWorksSection({ isDark }: { isDark: boolean }) {
       <LandingContainer>
         <SectionHeader
           eyebrow='How it works'
-          title='Three moves. One card.'
+          title='Three moves. One file.'
           isDark={isDark}
           align='center'
         />
@@ -43,7 +43,7 @@ export default function HowItWorksSection({ isDark }: { isDark: boolean }) {
               <p
                 className={cn(
                   'font-display text-6xl font-light leading-none tracking-tight sm:text-7xl',
-                  isDark ? 'text-[#f15a2b]/25' : 'text-[#f15a2b]/25',
+                  'text-[#f15a2b]/25',
                 )}
                 aria-hidden
               >

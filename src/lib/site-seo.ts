@@ -1,18 +1,24 @@
 /**
  * Public homepage wording for search and answer engines.
  *
- * Driver phrases are the ones the marketing review asked the homepage to rank
- * for. "Verified" is reserved for a fact a licensed screener issued (an MVR).
+ * Order matters: the DOT application leads, the resume is the second phrase.
+ * The resume phrases stay so the terms the marketing review asked the homepage
+ * to rank for are still in the first HTML response.
+ *
+ * "Verified" is reserved for a fact a licensed screener issued (an MVR).
  * A resume or DOT application the driver typed is never described as verified.
  */
 export const SITE_SEO = {
-  title: 'Provven - Truck Driver Applications & Verified Credentials',
+  title: 'Provven - Your DOT Driver Application, Done Once',
+  /** The visible H1, the WebPage schema name, and the share-image alt text. */
+  headline: 'Your DOT Application. Done Once. Share It With Employers.',
   description:
-    'Build a truck driver resume and a DOT employment application once, then reuse them. Your Career Card stays yours. A verified MVR is shared only when you choose.',
+    'Fill out your DOT driver application once and share it with every trucking employer. Free for drivers. Your truck driver resume prints from the same file.',
   intro:
-    'Build your truck driver resume, maintain your employment history, and keep your credentials in one place. With Provven, you can update your professional profile and reuse your information when applying for trucking jobs — without starting from scratch every time. Your experience. Your credentials. Your career, all in one place.',
+    'Fill out your DOT driver application one time, free. The next trucking company that asks gets the file you already finished, so you stop retyping your work history for every job.',
+  resumeNote: 'Your truck driver resume prints from the same application.',
   footerSummary:
-    'Provven helps truck drivers keep a truck driver resume, a truck driver employment application, and a DOT driver application in one Career Card they own. They update that work history once instead of retyping it for every job. Truck driver employment verification from a licensed screener, such as an MVR, is shared only when the driver chooses.',
+    'Provven lets truck drivers fill out a DOT driver application once and share that same truck driver employment application with each employer, free. A truck driver resume prints from the file, so work history is typed one time. Truck driver employment verification from a licensed screener, such as an MVR, is shared only when the driver chooses.',
 } as const
 
 /** Organization + WebSite. LocalBusiness is omitted: Provven has no public shop address. */
@@ -42,7 +48,7 @@ export function siteJsonLd() {
       {
         '@type': 'WebPage',
         url: 'https://provven.com/',
-        name: 'Build Your Truck Driver Resume and Reuse It for Every Job',
+        name: SITE_SEO.headline,
         description: SITE_SEO.footerSummary,
         isPartOf: {
           '@type': 'WebSite',

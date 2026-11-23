@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * Final CTA — one last brand moment and the same two paths as the hero.
+ * Final CTA — repeats the hero promise, not “build a card.”
  */
 
 import { ArrowRight, Building2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ProvvenWordmark from '@/components/ui/ProvvenWordmark'
 import { cn } from '@/lib/utils'
+import { SITE_SEO } from '@/lib/site-seo'
 import { GOLD_CTA, headingText, mutedText, paperBand, LandingContainer, SealDivider } from './landing-shared'
 
 interface FinalCtaSectionProps {
@@ -39,16 +40,15 @@ export default function FinalCtaSection({
               headingText(isDark),
             )}
           >
-            Build it once.
+            Your DOT application.
             <br />
-            Own it for good.
+            Done once.
           </h2>
           <p
             className={cn('reveal-item mx-auto mt-6 max-w-xl text-base leading-relaxed sm:text-lg', mutedText(isDark))}
             style={{ transitionDelay: '120ms' }}
           >
-            Your Career Card is live from the first block — and every fact you verify makes
-            it harder to ignore.
+            Free for drivers. Share the same file with the next employer. {SITE_SEO.resumeNote}
           </p>
 
           <div

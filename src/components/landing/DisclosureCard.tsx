@@ -1,38 +1,38 @@
 'use client'
 
 /**
- * DisclosureCard — the landing page's core product visual.
+ * DisclosureCard — the selective-disclosure visual.
  *
- * `view`  — shared = employer projection; vault = owner sees everything.
- * `live`  — hero demo: facts stamp in, a share types, then private rows
- *           lock/unlock. Motion explains selective disclosure (Stripe-style).
+ * `view` — shared = employer projection; vault = owner sees everything.
+ * Flipping the view locks or unlocks the private rows one at a time.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { Lock, Eye } from 'lucide-react'
 import ProvvenMark from '@/components/ui/ProvvenMark'
 import { cn } from '@/lib/utils'
+import { PAPER_DOCUMENT } from './landing-shared'
 
 export type DisclosureView = 'shared' | 'vault'
 
 interface DisclosureCardProps {
   view: DisclosureView
-  live?: boolean
   className?: string
 }
 
-const VERIFIED_FACTS = [
+/** Screener-backed facts only — never a self-typed resume or DOT field. */
+const SHARED_FACTS = [
   {
-    fact: 'Class D CDL · Ohio',
-    source: 'On the Career Card',
+    fact: 'Clean MVR · 36 months',
+    source: 'Licensed screener',
+  },
+  {
+    fact: 'Class D · Ohio',
+    source: 'From the motor vehicle record',
   },
   {
     fact: 'Endorsements · Hazmat + Tanker',
-    source: 'H and N',
-  },
-  {
-    fact: 'Based in Raccoon City',
-    source: 'Profile',
+    source: 'From the motor vehicle record',
   },
 ] as const
 
@@ -43,155 +43,21 @@ const PRIVATE_ROWS = [
   { label: 'Full MVR report', value: 'On file', bars: ['w-24', 'w-14'] },
 ] as const
 
-const SHARE_TARGETS = ['Pace Drivers', 'Schneider', 'a Raccoon City carrier'] as const
-
-function reducedMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
-function wait(ms: number, getTimeout: (id: number) => void) {
-  return new Promise<void>((resolve) => {
-    getTimeout(window.setTimeout(resolve, ms))
-  })
-}
-
-async function typeTo(
-  word: string,
-  setText: (s: string) => void,
-  cancelled: () => boolean,
-  setTimeoutId: (id: number) => void,
-  step = 48,
-) {
-  for (let c = 1; c <= word.length; c++) {
-    if (cancelled()) return
-    setText(word.slice(0, c))
-    await wait(step, setTimeoutId)
-  }
-}
-
-async function deleteFrom(
-  word: string,
-  setText: (s: string) => void,
-  cancelled: () => boolean,
-  setTimeoutId: (id: number) => void,
-  step = 32,
-) {
-  for (let c = word.length; c >= 0; c--) {
-    if (cancelled()) return
-    setText(word.slice(0, c))
-    await wait(step, setTimeoutId)
-  }
-}
-
-/** Hero loop: stamp facts → type a share → unlock vault → lock → next audience. */
-function useLiveDemo(enabled: boolean) {
-  const [view, setView] = useState<DisclosureView>('shared')
-  const [factsOn, setFactsOn] = useState(enabled ? 0 : VERIFIED_FACTS.length)
-  const [stamped, setStamped] = useState(enabled ? 0 : VERIFIED_FACTS.length)
-  const [unlocked, setUnlocked] = useState(0)
-  const [share, setShare] = useState<string>(SHARE_TARGETS[0])
-  const [caret, setCaret] = useState(false)
-  const [seamPulse, setSeamPulse] = useState(0)
-
-  useEffect(() => {
-    if (!enabled) {
-      setView('shared')
-      setFactsOn(VERIFIED_FACTS.length)
-      setStamped(VERIFIED_FACTS.length)
-      setUnlocked(0)
-      setShare(SHARE_TARGETS[0])
-      setCaret(false)
-      return
-    }
-    if (reducedMotion()) {
-      setFactsOn(VERIFIED_FACTS.length)
-      setStamped(VERIFIED_FACTS.length)
-      setCaret(false)
-      return
-    }
-
-    let cancelled = false
-    let timeout = 0
-    const track = (id: number) => {
-      timeout = id
-    }
-    const dead = () => cancelled
-
-    const pulseSeam = () => setSeamPulse((n) => n + 1)
-
-    const run = async () => {
-      setView('shared')
-      setFactsOn(0)
-      setStamped(0)
-      setUnlocked(0)
-      setShare('')
-      setCaret(true)
-      await wait(400, track)
-
-      for (let i = 1; i <= VERIFIED_FACTS.length; i++) {
-        if (dead()) return
-        setFactsOn(i)
-        await wait(160, track)
-        setStamped(i)
-        await wait(380, track)
-      }
-
-      let audience = 0
-      while (!dead()) {
-        const target = SHARE_TARGETS[audience]
-        await typeTo(target, setShare, dead, track)
-        if (dead()) return
-        await wait(1600, track)
-
-        pulseSeam()
-        setView('vault')
-        for (let i = 1; i <= PRIVATE_ROWS.length; i++) {
-          if (dead()) return
-          setUnlocked(i)
-          await wait(200, track)
-        }
-        await wait(2200, track)
-
-        pulseSeam()
-        for (let i = PRIVATE_ROWS.length - 1; i >= 0; i--) {
-          if (dead()) return
-          setUnlocked(i)
-          await wait(140, track)
-        }
-        setView('shared')
-        await wait(700, track)
-
-        await deleteFrom(target, setShare, dead, track)
-        if (dead()) return
-        await wait(240, track)
-        audience = (audience + 1) % SHARE_TARGETS.length
-      }
-    }
-
-    void run()
-    return () => {
-      cancelled = true
-      window.clearTimeout(timeout)
-    }
-  }, [enabled])
-
-  return { view, factsOn, stamped, unlocked, share, caret, seamPulse }
-}
-
-/** Manual toggle: unlock/lock private rows one at a time so the flip isn’t a hard cut. */
-function useToggleStagger(isShared: boolean, enabled: boolean) {
+/**
+ * Unlock/lock private rows one at a time so the flip is a short sequence.
+ * Each step schedules the next with a timeout; the cleanup cancels the chain
+ * if the view flips again mid-sequence.
+ */
+function useToggleStagger(isShared: boolean) {
   const [unlocked, setUnlocked] = useState(isShared ? 0 : PRIVATE_ROWS.length)
   const first = useRef(true)
 
   useEffect(() => {
-    if (!enabled) return
-    if (first.current) {
+    const target = isShared ? 0 : PRIVATE_ROWS.length
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (first.current || reducedMotion) {
       first.current = false
-      setUnlocked(isShared ? 0 : PRIVATE_ROWS.length)
-      return
-    }
-    if (reducedMotion()) {
-      setUnlocked(isShared ? 0 : PRIVATE_ROWS.length)
+      setUnlocked(target)
       return
     }
     let cancelled = false
@@ -216,7 +82,7 @@ function useToggleStagger(isShared: boolean, enabled: boolean) {
       cancelled = true
       window.clearTimeout(timeout)
     }
-  }, [isShared, enabled])
+  }, [isShared])
 
   return unlocked
 }
@@ -238,25 +104,12 @@ function Redaction({ widths }: { widths: readonly string[] }) {
   )
 }
 
-export default function DisclosureCard({ view, live = false, className }: DisclosureCardProps) {
-  const demo = useLiveDemo(live)
-  const resolvedView = live ? demo.view : view
-  const isShared = resolvedView === 'shared'
-  const toggleUnlocked = useToggleStagger(isShared, !live)
-  const unlocked = live ? demo.unlocked : toggleUnlocked
-  const factsOn = live ? demo.factsOn : VERIFIED_FACTS.length
-  const stamped = live ? demo.stamped : VERIFIED_FACTS.length
-  const shareTarget = live ? demo.share : SHARE_TARGETS[0]
-  const showCaret = live && demo.caret && isShared
+export default function DisclosureCard({ view, className }: DisclosureCardProps) {
+  const isShared = view === 'shared'
+  const unlocked = useToggleStagger(isShared)
 
   return (
-    <div
-      className={cn(
-        'relative w-full max-w-md overflow-hidden rounded-2xl border border-ironside/30 bg-white',
-        'shadow-[0_24px_70px_-18px_rgba(0,0,0,0.45),0_0_0_1px_rgba(23,49,80,0.06)]',
-        className,
-      )}
-    >
+    <div className={cn(PAPER_DOCUMENT, className)}>
       <div
         aria-hidden
         className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#f15a2b]/50 to-transparent'
@@ -282,16 +135,7 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
         <p className='min-h-[1.25rem] font-mono text-[10px] tracking-wide text-ironside'>
           {isShared ? (
             <>
-              <span className='text-[#f15a2b]'>
-                sharing with {shareTarget}
-                {showCaret && (
-                  <span
-                    aria-hidden
-                    className='ml-px inline-block h-[0.85em] w-px translate-y-px bg-[#f15a2b] align-middle animate-pulse'
-                  />
-                )}
-              </span>{' '}
-              · 3 facts · 0 documents
+              <span className='text-[#f15a2b]'>sharing with Pace Drivers</span> · 3 facts · 0 documents
             </>
           ) : (
             <>
@@ -302,51 +146,24 @@ export default function DisclosureCard({ view, live = false, className }: Disclo
       </div>
 
       <ul className='space-y-1.5 px-5 pt-4'>
-        {VERIFIED_FACTS.map((row, i) => {
-          const on = i < factsOn
-          const isStamped = i < stamped
-          return (
-            <li
-              key={row.fact}
-              className={cn(
-                'flex min-h-[3.25rem] items-center gap-2.5 rounded-lg px-3 py-2 ring-1 ring-inset transition-all duration-300',
-                on
-                  ? 'bg-[#f15a2b]/[0.06] ring-[#f15a2b]/20'
-                  : 'bg-transparent ring-stone-200/80',
-              )}
-            >
-              <ProvvenMark
-                tone='auto'
-                className={cn('h-4 w-auto shrink-0 transition-opacity duration-300', on ? 'opacity-100' : 'opacity-20')}
-              />
-              <div className='min-w-0 flex-1'>
-                <p
-                  className={cn(
-                    'truncate text-[13px] font-medium transition-opacity duration-300',
-                    on ? 'text-[#173150] opacity-100' : 'text-ironside opacity-40',
-                  )}
-                >
-                  {on ? row.fact : '—'}
-                </p>
-                <p className={cn('truncate text-[10px] text-ironside transition-opacity duration-300', on ? 'opacity-100' : 'opacity-0')}>
-                  {row.source}
-                </p>
-              </div>
-              {isStamped && (
-                <span className='lp-stamp shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#f15a2b]'>
-                  on file
-                </span>
-              )}
-            </li>
-          )
-        })}
+        {SHARED_FACTS.map((row) => (
+          <li
+            key={row.fact}
+            className='flex min-h-[3.25rem] items-center gap-2.5 rounded-lg bg-[#f15a2b]/[0.06] px-3 py-2 ring-1 ring-inset ring-[#f15a2b]/20'
+          >
+            <ProvvenMark tone='auto' className='h-4 w-auto shrink-0' />
+            <div className='min-w-0 flex-1'>
+              <p className='truncate text-[13px] font-medium text-[#173150]'>{row.fact}</p>
+              <p className='truncate text-[10px] text-ironside'>{row.source}</p>
+            </div>
+            <span className='shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#f15a2b]'>
+              verified
+            </span>
+          </li>
+        ))}
       </ul>
 
-      <div
-        key={live ? demo.seamPulse : resolvedView}
-        className={cn('relative my-4 flex items-center gap-3 px-5', live && 'lp-seam-pulse')}
-        aria-hidden
-      >
+      <div className='relative my-4 flex items-center gap-3 px-5' aria-hidden>
         <span className='h-px flex-1 bg-gradient-to-r from-transparent via-[#f15a2b]/55 to-[#f15a2b]/55' />
         <span className='inline-flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-[#f15a2b]'>
           <Lock className='h-3 w-3' />

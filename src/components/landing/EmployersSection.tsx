@@ -1,33 +1,32 @@
 'use client'
 
 /**
- * For employers & agencies — the second audience. Copy leads with signal
- * quality; the visual is a deliberate product mock of block-specific requests
- * (the actual employer flow in the app).
+ * For employers & agencies — the file they receive and the ask they send.
+ * Resume-format comparison sits behind that.
  */
 
 import { useState } from 'react'
-import { ArrowRight, BadgeCheck, FileText, Gauge, IdCard, ShieldCheck } from 'lucide-react'
+import { ArrowRight, BadgeCheck, ClipboardList, FileSignature, Gauge, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GOLD_CTA, headingText, mutedText, paperBand, LandingContainer, SectionHeader } from './landing-shared'
 import EmployerAccessModal from '@/components/employer/EmployerAccessModal'
 
 const POINTS = [
   {
-    title: 'Structured, comparable candidates',
-    body: 'Every Career Card has the same shape. Compare CDL class, endorsements, and verified history at a glance — not fourteen resume formats.',
+    title: 'Open the DQ file they already finished',
+    body: 'Ask for the driver qualification file. The DOT application, license fields, and history are one packet — not fourteen resume layouts.',
   },
   {
-    title: 'Request exactly what you need',
-    body: 'Ask a candidate for the specific block your role requires — resume, MVR, CDL, employment verification. They know what you need; you get what you asked for.',
+    title: 'Ask for the next step, not a pile of PDFs',
+    body: 'Request screening consent, then order an MVR or PSP through a licensed screener. The driver knows what you need before you spend.',
   },
   {
-    title: 'Pre-qualified before you spend',
-    body: 'Verified facts up front mean fewer surprises at screening time, faster placements, and less sensitive PII sitting in your inbox.',
+    title: 'Facts before the full report',
+    body: 'See issuer-backed license class and clean-window facts on the card. The full report stays behind the share the driver authorizes.',
   },
 ] as const
 
-/** Static mock of the in-app block-request flow */
+/** Static mock of the in-app ask flow — DQ file first, then consent / MVR. */
 function RequestMock({ isDark }: { isDark: boolean }) {
   const chip = (icon: React.ReactNode, label: string, active?: boolean) => (
     <span
@@ -58,23 +57,25 @@ function RequestMock({ isDark }: { isDark: boolean }) {
         Request from Barry Burton
       </p>
       <div className='mt-3 flex flex-wrap gap-2'>
-        {chip(<FileText className='h-3.5 w-3.5' />, 'Resume')}
+        {chip(<ClipboardList className='h-3.5 w-3.5' />, 'DQ file', true)}
+        {chip(<FileSignature className='h-3.5 w-3.5' />, 'Consent')}
         {chip(<Gauge className='h-3.5 w-3.5' />, 'MVR')}
-        {chip(<IdCard className='h-3.5 w-3.5' />, 'CDL', true)}
       </div>
       <div
         className={cn(
           'mt-4 flex items-center gap-2.5 rounded-lg px-3 py-2.5',
-          isDark ? 'bg-[#f15a2b]/[0.08] ring-1 ring-inset ring-[#f15a2b]/25' : 'bg-[#f15a2b]/10 ring-1 ring-inset ring-[#f15a2b]/40',
+          isDark
+            ? 'bg-[#f15a2b]/[0.08] ring-1 ring-inset ring-[#f15a2b]/25'
+            : 'bg-[#f15a2b]/10 ring-1 ring-inset ring-[#f15a2b]/40',
         )}
       >
-        <ShieldCheck className={cn('h-4 w-4 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />
+        <ShieldCheck className='h-4 w-4 shrink-0 text-[#f15a2b]' />
         <div className='min-w-0'>
           <p className={cn('text-xs font-semibold', isDark ? 'text-[#f15a2b]' : 'text-[#173150]')}>
-            Class D CDL · Hazmat + Tanker
+            DOT application on file
           </p>
           <p className={cn('text-[10px]', isDark ? 'text-[#f15a2b]/70' : 'text-[#f15a2b]/85')}>
-            On the Career Card · shared by the driver
+            Shared by the driver · same packet for your ask
           </p>
         </div>
       </div>
@@ -92,10 +93,6 @@ interface EmployersSectionProps {
   onLogIn: () => void
 }
 
-/**
- * New carriers request access with a work email. Existing members use Employer
- * login → /sign-in; role routing lands them in EmployerShell.
- */
 export default function EmployersSection({ isDark, onLogIn }: EmployersSectionProps) {
   const [showAccess, setShowAccess] = useState(false)
   return (
@@ -112,8 +109,8 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
           <div data-reveal>
             <SectionHeader
               eyebrow='For employers & agencies'
-              title='Signal you can act on.'
-              lede='Built with trucking recruiters first — DQ files, MVR, PSP, DOT applications — and designed to carry any credentialed career.'
+              title='Receive the file. Ask for the next piece.'
+              lede='Built with trucking recruiters first — the DQ file, screening consent, MVR, and PSP — so you spend screening dollars on drivers who already shared their application.'
               isDark={isDark}
               className='reveal-item'
             />
@@ -121,7 +118,7 @@ export default function EmployersSection({ isDark, onLogIn }: EmployersSectionPr
             <ul className='reveal-item mt-8 space-y-5' style={{ transitionDelay: '140ms' }}>
               {POINTS.map((point) => (
                 <li key={point.title} className='flex gap-3.5'>
-                  <BadgeCheck className={cn('mt-0.5 h-5 w-5 shrink-0', isDark ? 'text-[#f15a2b]' : 'text-[#f15a2b]')} />
+                  <BadgeCheck className='mt-0.5 h-5 w-5 shrink-0 text-[#f15a2b]' />
                   <div>
                     <h3 className={cn('text-[15px] font-semibold', headingText(isDark))}>{point.title}</h3>
                     <p className={cn('mt-1 text-sm leading-relaxed', mutedText(isDark))}>{point.body}</p>
