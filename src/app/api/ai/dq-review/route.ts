@@ -10,13 +10,23 @@ import {
   dqCoachSystemPrompt,
   heuristicDqReview,
   parseDqCoachReview,
+  type DqCoachReview,
 } from '@/lib/dq-coach'
+import {
+  buildDqBrief,
+  DQ_BRIEF_VERSION,
+  dqBriefPrompt,
+  dqBriefStage,
+  parseDqBriefDraft,
+  type DqBriefDraft,
+} from '@/lib/dq-coach-brief'
 
 /**
  * POST /api/ai/dq-review
  *
- * One-shot file watch. Haiku 4.5 rewrites the heuristic floor into clerk copy.
- * Same snapshot hash as last time → return the cached brief (no Anthropic).
+ * One-shot file watch. Haiku 4.5 rewrites the heuristic floor into clerk copy
+ * and, in the same reply, writes the bullets for the popup brief.
+ * Same snapshot hash as last time → return the cached pair (no Anthropic).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,24 +41,38 @@ export async function POST(request: NextRequest) {
     const snapshotHash = hashDqCoachSnapshot(snapshot)
 
     const cached = await getDqCoachCache(supabase, userId)
-    if (cached && cached.snapshotHash === snapshotHash) {
-      return NextResponse.json({ review: cached.review, source: 'cache' })
+    // A review cached before the brief existed (or before its last change) is redone once.
+    if (
+      cached &&
+      cached.snapshotHash === snapshotHash &&
+      cached.brief?.version === DQ_BRIEF_VERSION
+    ) {
+      return NextResponse.json({ review: cached.review, brief: cached.brief, source: 'cache' })
     }
 
     const fallback = heuristicDqReview(snapshot)
 
+    const respond = async (
+      review: DqCoachReview,
+      draft: DqBriefDraft | null,
+      source: 'anthropic' | 'heuristic',
+    ) => {
+      const brief = buildDqBrief(snapshot, draft)
+      await saveDqCoachCache(supabase, userId, snapshotHash, review, brief)
+      return NextResponse.json({ review, brief, source })
+    }
+
     if (!process.env.AVA_BRAIN) {
       console.warn('[DQ REVIEW] AVA_BRAIN missing — heuristic review')
-      await saveDqCoachCache(supabase, userId, snapshotHash, fallback)
-      return NextResponse.json({ review: fallback, source: 'heuristic' })
+      return await respond(fallback, null, 'heuristic')
     }
 
     try {
       const anthropic = new Anthropic({ apiKey: process.env.AVA_BRAIN })
       const response = await anthropic.messages.create({
         model: ANTHROPIC_MODEL_HAIKU,
-        max_tokens: 600,
-        system: dqCoachSystemPrompt(snapshot),
+        max_tokens: 900,
+        system: dqCoachSystemPrompt(snapshot, dqBriefPrompt(snapshot)),
         messages: [
           {
             role: 'user',
@@ -62,13 +86,14 @@ export async function POST(request: NextRequest) {
         .map((b) => b.text)
         .join('\n')
 
-      const review = parseDqCoachReview(text, fallback)
-      await saveDqCoachCache(supabase, userId, snapshotHash, review)
-      return NextResponse.json({ review, source: 'anthropic' })
+      return await respond(
+        parseDqCoachReview(text, fallback),
+        parseDqBriefDraft(text, dqBriefStage(snapshot)),
+        'anthropic',
+      )
     } catch (err) {
       console.error('[DQ REVIEW] Anthropic failed — heuristic floor:', err)
-      await saveDqCoachCache(supabase, userId, snapshotHash, fallback)
-      return NextResponse.json({ review: fallback, source: 'heuristic' })
+      return await respond(fallback, null, 'heuristic')
     }
   } catch (err) {
     console.error('[DQ REVIEW]', err)

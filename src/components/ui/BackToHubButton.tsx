@@ -25,19 +25,21 @@ export default function BackToHubButton({
       type='button'
       onClick={onClick}
       className={cn(
+        // Opposite of the page, so the way back stays visible. Midnight chip
+        // on a light page, white chip when the page itself is midnight.
         'mb-4 flex w-fit items-center gap-2 rounded-full border py-1 pl-1 pr-3.5',
-        'text-[13px] font-medium tracking-tight text-[#173150]',
-        'border-[#173150]/15 bg-white/90 shadow-[0_1px_0_rgba(23,49,80,0.05)]',
-        'transition-colors hover:border-teal-500/45 hover:bg-teal-500/[0.06]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50',
-        'dark:border-white/15 dark:bg-white/[0.06] dark:text-[#f4efe6] dark:shadow-none',
-        'dark:hover:border-teal-500/55 dark:hover:bg-teal-500/10',
+        'text-[13px] font-medium tracking-tight text-white',
+        'border-[#173150] bg-[#173150] shadow-[0_4px_12px_-4px_rgba(23,49,80,0.35)]',
+        'transition-colors hover:bg-[#1e3d5c]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f15a2b]/50',
+        'dark:border-[#173150]/15 dark:bg-white dark:text-[#173150]',
+        'dark:hover:border-[#f15a2b]/50 dark:hover:bg-[#f15a2b]/[0.06]',
         className,
       )}
     >
       <span
         aria-hidden
-        className='flex h-7 w-7 items-center justify-center rounded-full bg-teal-500/15 text-teal-500 ring-1 ring-teal-500/30'
+        className='flex h-7 w-7 items-center justify-center rounded-full bg-[#f15a2b]/15 text-[#f15a2b] ring-1 ring-[#f15a2b]/30'
       >
         <ArrowLeft className='h-3.5 w-3.5' strokeWidth={2.25} />
       </span>

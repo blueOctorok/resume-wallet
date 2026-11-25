@@ -598,11 +598,22 @@ export function heuristicDqReview(snapshot: DqCoachSnapshot): DqCoachReview {
 }
 
 /** Claude often wraps JSON in prose or fences — take the first object. */
-function extractJsonObject(text: string): string | null {
+export function extractJsonObject(text: string): string | null {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start < 0 || end <= start) return null
   return text.slice(start, end + 1)
+}
+
+/**
+ * The step the model may not replace. Discrepancies are the floor — the model
+ * must not bury them under "add PSP". Profile, then a license barcode, stay
+ * pinned the same way. The model was skipping the scan because it used to be
+ * a placeholder.
+ */
+export function pinnedDqNext(review: DqCoachReview): DqCoachReview['next'] {
+  const keepsOwnNext = review.next?.target === 'profile' || review.next?.target === 'license'
+  return nextFromDiscrepancies(review.flags) ?? (keepsOwnNext ? review.next : null)
 }
 
 export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoachReview {
@@ -614,15 +625,10 @@ export function mergeDqReviews(base: DqCoachReview, extra: DqCoachReview): DqCoa
     seen.add(key)
     flags.push(flag)
   }
-  // Discrepancies are the floor — the model must not bury them under "add PSP".
-  // Profile, then a license barcode, stay pinned the same way. The model was
-  // skipping the scan because it used to be a placeholder.
-  const floorNext = nextFromDiscrepancies(flags)
-  const pinned =
-    base.next?.target === 'profile' || base.next?.target === 'license' ? base.next : null
   return {
     watching: extra.watching || base.watching,
-    next: floorNext ?? pinned ?? extra.next ?? base.next,
+    // Checked against the merged flags, so a mismatch the model found pins too.
+    next: pinnedDqNext({ ...base, flags }) ?? extra.next ?? base.next,
     flags: flags.slice(0, 16),
   }
 }
@@ -672,7 +678,8 @@ export function parseDqCoachReview(text: string, fallback: DqCoachReview): DqCoa
   }
 }
 
-export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot): string {
+/** `briefInstructions` comes from `dqBriefPrompt` — the popup rides on this same call. */
+export function dqCoachSystemPrompt(snapshot: DqCoachSnapshot, briefInstructions: string): string {
   const blockLabels = snapshot.blocks.map((id) => getBlockDefinition(id)?.label ?? id)
   return `You review a truck driver's DQ file the way a carrier safety clerk would. You are not a chatbot. No greetings.
 
@@ -705,6 +712,8 @@ Rules:
 - Be specific (names, state codes, dates from the snapshot).
 - List each missing DQ item as its own flag. Do not collapse them into watching.
 - Identity and report-vs-form mismatches beat a missing optional tile for next.
+
+${briefInstructions}
 
 Installed blocks: ${blockLabels.join(', ') || 'none'}
 Snapshot:

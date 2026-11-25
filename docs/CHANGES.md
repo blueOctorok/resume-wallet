@@ -4,6 +4,167 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **The card explains who can see it** (2026-11-25)
+
+Four notices sat above the career card, and two of them were the same screening ask. The empty "no views yet" line and the find-me banner are gone. One employer request stays, inside the card. Findable, Hide me, and Share sit on the card. The guide now says why: carriers can find the card before you apply, Hide me means a company sees you only after you apply, and a share link still works after you hide.
+
+| File | Change |
+|---|---|
+| `src/components/hub/CandidateHub.tsx` | Removed the stack above the card. |
+| `src/components/hub/CardVisibility.tsx` | Findable, Hide me, and Share on the card. |
+| `src/components/hub/BuildBoard.tsx` | The one employer request and the visibility row live in the card. |
+| `src/components/hub/DiscoverabilityPrompt.tsx` | Removed. |
+| `src/lib/dq-coach-brief.ts` | "Who can see it" on every guide. Brief version 5. |
+
+---
+
+## **License and documents open on the Career Card paper** (2026-11-25)
+
+The license page was a dark card, so it looked nothing like the Career Card a driver had just left. The license page and the documents page now open on the same cotton sheet: navy strip, ember label, diamond rule, and the paper buttons. The DOT application is unchanged. Back to Hub is the opposite of the page: a midnight chip in light mode, a white chip in dark mode.
+
+| File | Change |
+|---|---|
+| `src/components/blocks/DriverLicenseBlock.tsx` | License page on the resume paper. |
+| `src/components/blocks/LicenseBarcodeScanner.tsx` | The how-to box has a paper tone. |
+| `src/components/blocks/DocumentsBlock.tsx` | Documents page uses the paper upload card. |
+| `src/components/ui/BackToHubButton.tsx` | Light colors in dark mode. |
+
+---
+
+## **Buttons on the paper sit on the sheet** (2026-11-25)
+
+The ember and white pills were the same flat buttons used everywhere else, so on the cotton they looked stamped on. On this paper only, the ember button takes the sheet's navy shadow, and the second button gets a white face with a stone ring. The shared Button component is unchanged.
+
+| File | Change |
+|---|---|
+| `src/components/hub/ResumePaperCard.tsx` | Paper-only button classes. |
+| `src/components/hub/DqBriefModal.tsx` | Career path actions use them. |
+| `src/components/career-card/sections/DocumentsSection.tsx` | Upload and View use them in the paper variant. |
+
+---
+
+## **Documents and the packet share the resume paper** (2026-11-25)
+
+Career path was on the cotton paper and the two sections under it were still flat. Documents and the full DQ packet now use that same sheet: a navy strip, a centered ember label, and the diamond rule. The packet rows picked up a little more air, and Start / View is ember so the action is the thing you see. The documents page and the career card keep the plain box.
+
+| File | Change |
+|---|---|
+| `src/components/hub/ResumePaperCard.tsx` | Shared paper sheet, kicker, and rule. |
+| `src/components/career-card/sections/DocumentsSection.tsx` | `paper` variant for the hub card. |
+| `src/components/hub/BuildBoard.tsx` | Packet on the paper. Documents uses the paper variant. |
+| `src/components/hub/DqCoachPanel.tsx` | Career path uses the shared sheet. |
+
+---
+
+## **Career path sits on the resume paper** (2026-11-25)
+
+The guide was flat type on the file card, under headers that did not match the rest of the product. The card is now titled Career Card, the same words as the nav button. The guide is Career path, centered on the cotton paper the resume uses, with the resume's section rules under each heading.
+
+| File | Change |
+|---|---|
+| `src/components/hub/BuildBoard.tsx` | Card title is Career Card. |
+| `src/components/hub/DqCoachPanel.tsx` | Career path header on the resume paper. |
+| `src/components/hub/DqBriefModal.tsx` | Centered title and the resume section rule. |
+
+---
+
+## **The welcome is the path through the site** (2026-11-25)
+
+The new-driver guide was three product claims, including "free for drivers," then five steps that stopped at "look for jobs." A driver who arrived from an ad still could not tell a Provven job from an outside one, or what a license scan and an MVR do to the resume. The welcome is now the path, in headers and one-line bullets: one DOT application, what fills it in (a license scan adds a license proof, a company-ordered MVR adds its proofs), the resume those proofs land on, employment verification adding more later, Apply (Provven-marked jobs on top apply here, other jobs mean downloading the resume and applying on the company site), and uploading other papers on this page.
+
+A returning driver still gets a short "Where you are," and the rest of that same path under "Next" or "Apply." The model writes only the status lines. The path is fixed copy.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-coach-brief.ts` | New-driver sections rewritten as the path. Brief version 4. |
+| `src/lib/dq-coach-brief.test.ts` | Asserts the path, and that price is not mentioned. |
+
+---
+
+## **The guide fits where the driver is, with buttons for the next step** (2026-11-25)
+
+A brand-new driver got three short bullets and a View resume button for a resume that did not exist yet. The guide now has three stages, decided from the driver's own progress, and each stage has its own message and buttons. The first button is the main one.
+
+| Stage | Message | Buttons |
+|---|---|---|
+| **New** (nothing started) | "Welcome to Provven": what Provven is (one DOT application, every company gets it, free for drivers), then five numbered steps from license scan to messaging employers. | Scan my license, Start my DOT application. No View resume. |
+| **Building** (license scanned or DOT application started) | "Pick up where you left off": where they are, and what the resume is doing. | Start or Finish my DOT application. View resume once the application is started. |
+| **Ready** (DOT application finished) | "You are ready to apply": the application is done and the resume is ready. | Look for jobs, View resume. |
+
+Smaller rules: a driver whose company already ordered an MVR is not asked to scan a license; an unconfirmed license scan gets "Confirm my license scan".
+
+The new-driver welcome is fixed wording, because every new driver is in the same spot and the first explanation of the product should not vary. The model only writes the "Where you are" lines for returning drivers, from two progress facts (license scan, DOT application) and the product facts. It is still not allowed to mention anything from a driving record; a draft that does is thrown out and rule-based lines are used.
+
+The popup comes back when the stage or the main button changes (for example, after the license is scanned), not only when the stage changes.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-coach-brief.ts` | Stages `new` / `building` / `ready` from the snapshot, buttons per stage, numbered steps for new drivers. Brief version 3. |
+| `src/components/hub/DqBriefModal.tsx` | Renders the buttons and the numbered list. Buttons open the license block, the DOT application, Apply, or the resume. |
+| `src/app/api/ai/dq-review/route.ts` | The brief prompt is built from the snapshot. No brief prompt for a new driver. |
+| `src/components/hub/DqCoachPanel.tsx` | The loading lines no longer say a resume is building. |
+| `src/lib/dq-coach-brief.test.ts` | Rewritten for stages and buttons. |
+
+---
+
+## **The guide talks about the product, not the record** (2026-11-24)
+
+The message under Watching your file was telling a driver to add a conviction from their MVR. That is the report itself, and Provven does not walk drivers through a driving record. The message is now a guide to the product: one DOT application for every company, a license scan or a company-ordered MVR fills it in, and employers message you here. Every message, whatever stage the driver is in, ends with the same two lines: the resume is building in the background from the DOT application, and they use it in Apply, in the nav. Those two lines are written in code, so the model cannot drop them or turn them into a report. A model line that mentions a conviction, violation, accident, or the like is thrown out and the fixed guide is used instead.
+
+View resume moved from above the message to the bottom of it, centered, in the popup and in the section, so the button follows the resume lines.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-coach-brief.ts` | Feature guide plus a fixed resume section. Report contents are rejected. |
+| `src/app/api/ai/dq-review/route.ts` | The brief prompt no longer tells the model to write about the open file step. |
+| `src/components/hub/DqBriefModal.tsx` | View resume sits at the bottom right of the message. |
+| `src/components/hub/BuildBoard.tsx` | The centered View resume button is gone. |
+| `src/hooks/use-dq-coach-navigate.ts` | Removed. The message no longer opens a file step. |
+
+---
+
+## **The popup lands in Watching your file** (2026-11-24)
+
+The "What's next" button was the only way back to the popup, and it sat in the file header where drivers don't look. The popup still opens on arrival. Closing it does not lose the message: that same title, bullets, and button become the whole "Watching your file" section. The numbered step list that used to sit there is gone, so the section and the popup are one message instead of two.
+
+| File | Change |
+|---|---|
+| `src/components/hub/DqCoachPanel.tsx` | The section renders the brief once the popup has closed, or right away when this visit does not get a popup. |
+| `src/components/hub/DqBriefModal.tsx` | The message markup is shared with the section. |
+| `src/components/hub/BuildBoard.tsx` | Removed the "What's next" button. |
+| `src/stores/driver-orientation-store.ts` | The section waits until the popup decision is made, so the message does not flash under the popup. |
+
+---
+
+## **The coach writes the popup** (2026-11-24)
+
+The first version of driver orientation was a fixed welcome, the same words for every driver, plus three fixed one-line hints on the resume, jobs, and messages. That is replaced. The popup is now a brief the coach writes for the driver in front of it, in the same model call that fills "Watching your file," so the two can never name different steps.
+
+- **New driver** (DOT application not started, no license scan): "Welcome to Provven", what they can do here, and where to start.
+- **Mid-file**: "Your next step", what to do, and why it matters.
+- **Nothing open**: "You're caught up", and a button to look for jobs.
+
+Code decides the stage, title, headings, and button. The model only writes the bullets, from a fixed list of product facts and the driver's snapshot. Rule-based bullets stand in when there is no key, the call fails, or the model wrote about a step the driver will not see.
+
+The split between the two surfaces: the popup interrupts once per step, with one step and one button. "Watching your file" stays as the full list underneath. The popup opens by itself when the step changes, up to three visits for the same step, and once more after 30 days away. It never opens twice for the same step in one tab. "What's next" on the DQ file header reopens it any time.
+
+| File | Change |
+|---|---|
+| `src/lib/dq-coach-brief.ts` | New. Stage, headings, product facts, prompt section, parsing, rule-based bullets. |
+| `src/lib/dq-coach.ts` | `pinnedDqNext` (the step the model may not replace) is shared by the merge and the brief prompt. Prompt takes the brief section. |
+| `src/app/api/ai/dq-review/route.ts` | Returns `{ review, brief }`. A cached review without a current brief is redone once. |
+| `src/lib/dq-coach-cache.ts` | Brief is saved inside the `review` jsonb. No new column. |
+| `src/stores/dq-coach-store.ts` | Holds `brief`. |
+| `src/lib/driver-orientation.ts` | Memory is now `briefKey`, `shownCount`, `lastShownAt`, and the show rules. |
+| `src/stores/driver-orientation-store.ts`, `src/app/api/driver/orientation/route.ts` | Record which brief was shown. |
+| `src/components/hub/DqBriefModal.tsx` | New. The popup. Mounted in `BuildBoard`. |
+| `src/hooks/use-dq-coach-navigate.ts` | New. Opens the page for a coach step. Used by the coach list and the popup. |
+| `src/components/hub/BuildBoard.tsx` | "What's next" header button. |
+| `src/components/orientation/DriverOrientation.tsx` | Deleted, with the hint lines in `CandidateShell`, `SimpleModeShell`, and `ResumePreviewModal`. |
+| `supabase/migrations/130_driver_orientation.sql` | Unchanged. `users.driver_orientation` is reused. Keys from the old welcome are ignored, and the column comment in the database still describes them. |
+
+---
+
 ## **Homepage leads with the DOT application** (2026-11-20)
 
 The signed-out page led with “Build Your Truck Driver Resume.” That made Provven look like a resume builder. The hero now says the DOT application is done once, shared with employers, and free for drivers. The resume is one line under that, and a short band later. The hero visual is the DQ file. Selective disclosure sits after “verify when they ask.” Search title, description, intro, footer, and WebPage schema follow the same order so resume phrases stay second, not first.

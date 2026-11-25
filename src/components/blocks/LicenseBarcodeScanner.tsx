@@ -179,11 +179,17 @@ function useIsComputer() {
   return isComputer
 }
 
-export function LicenseScanHelp() {
+export function LicenseScanHelp({ paper = false }: { paper?: boolean }) {
   const isComputer = useIsComputer()
   return (
-    <div className='rounded-xl border border-[#F28A0F]/40 bg-[#F28A0F]/10 p-3 text-sm text-gray-700 dark:text-gray-200'>
-      <p className='font-medium text-gray-900 dark:text-gray-100'>
+    <div
+      className={
+        paper
+          ? 'rounded-xl border border-[#F28A0F]/40 bg-[#F28A0F]/10 p-3 text-sm text-[#173150]'
+          : 'rounded-xl border border-[#F28A0F]/40 bg-[#F28A0F]/10 p-3 text-sm text-gray-700 dark:text-gray-200'
+      }
+    >
+      <p className={paper ? 'font-medium text-[#173150]' : 'font-medium text-gray-900 dark:text-gray-100'}>
         {isComputer
           ? 'A computer camera usually cannot read this. Open this page on your phone.'
           : 'Hold the phone a few inches from the card.'}

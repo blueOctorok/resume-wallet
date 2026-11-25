@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { AlertCircle, ArrowRight, FolderCheck } from 'lucide-react'
+import { ArrowRight, FolderCheck } from 'lucide-react'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useJourneyProgress } from '@/stores/journey-store'
@@ -10,8 +10,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import type { PageType } from '@/stores/types'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
-import Button from '@/components/ui/Button'
 import DqCoachPanel from '@/components/hub/DqCoachPanel'
+import DqBriefModal from '@/components/hub/DqBriefModal'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 import DisclosurePreferencesModal from '@/components/hub/DisclosurePreferencesModal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
@@ -21,6 +21,9 @@ import { DQ_ITEM_DEFINITIONS } from '@/lib/dq-file-registry'
 import { dqItemHasWorkToShow, type DqItemStatus } from '@/lib/dq-file-status'
 import { DqStatusBadge } from '@/components/employer/drivers/DriverBlockBadges'
 import DocumentsSection from '@/components/career-card/sections/DocumentsSection'
+import EmployerAskBanner from '@/components/career-card/EmployerAskBanner'
+import CardVisibility from '@/components/hub/CardVisibility'
+import ResumePaperCard, { PaperKicker } from '@/components/hub/ResumePaperCard'
 
 /**
  * File board — AI-ordered next steps, then the full DQ packet
@@ -136,7 +139,7 @@ export default function BuildBoard() {
         variant='embed'
         paper
         icon={FolderCheck}
-        title='Your DQ file'
+        title='Career Card'
         description='What to do first, then every piece a complete file needs — including ones we have not shipped yet.'
         status={overallStatus}
         headerActions={
@@ -145,36 +148,27 @@ export default function BuildBoard() {
           </span>
         }
       >
-        <div className='mb-5 flex justify-center'>
-          <Button
-            type='button'
-            variant='ghost'
-            size='md'
-            isLoading={resumeLoading}
-            onClick={() => void openResumePreview()}
-            className='resume-border-spin whitespace-nowrap rounded-2xl px-6 py-2.5 text-sm transition-none hover:bg-transparent hover:text-white'
-          >
-            View resume
-          </Button>
-        </div>
-        {resumeError && !resumeProjection ? (
-          <p className='mb-3 flex items-center gap-1.5 text-xs text-red-700' role='alert'>
-            <AlertCircle className='h-3.5 w-3.5 shrink-0' aria-hidden />
-            {resumeError}
-          </p>
-        ) : null}
+        {sessionUserId ? <EmployerAskBanner sessionUserId={sessionUserId} isDark={false} /> : null}
+        <CardVisibility onShare={() => setShareOpen(true)} />
+        <DqCoachPanel
+          onViewResume={() => void openResumePreview()}
+          resumeLoading={resumeLoading}
+          resumeError={resumeError && !resumeProjection ? resumeError : null}
+        />
+        <DqBriefModal
+          onViewResume={() => void openResumePreview()}
+          resumeLoading={resumeLoading}
+          resumeError={resumeError && !resumeProjection ? resumeError : null}
+        />
 
-        <DqCoachPanel />
-
-        <div className='mt-6 border-t border-ironside/15 pt-4'>
-          <DocumentsSection data={{ files: [] }} mode='self' isDark={false} />
+        <div className='mt-6'>
+          <DocumentsSection data={{ files: [] }} mode='self' isDark={false} paper />
         </div>
 
-        <div className='mt-6 border-t border-ironside/15 pt-4'>
-          <p className='mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#173150]'>
-            Full DQ packet
-          </p>
-          <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-8'>
+        <div className='mt-6'>
+          <ResumePaperCard>
+            <PaperKicker>Full DQ packet</PaperKicker>
+            <ul className='grid grid-cols-1 md:grid-cols-2 md:gap-x-10'>
             {packet.map((row) => {
               const page = PACKET_PAGE[row.id]
               const badgeStatus: DqItemStatus = row.status === 'todo' ? 'missing' : row.status
@@ -193,12 +187,12 @@ export default function BuildBoard() {
               return (
                 <li
                   key={row.id}
-                  className='flex items-baseline justify-between gap-3 border-b border-ironside/10 py-2'
+                  className='flex items-center justify-between gap-3 border-b border-stone-300/80 py-2.5'
                 >
                   <span className='min-w-0'>
-                    <span className='text-sm text-[#173150]'>{row.label}</span>
+                    <span className='block text-sm font-medium text-[#173150]'>{row.label}</span>
                     {row.hint ? (
-                      <span className='ml-1.5 text-[10px] text-ironside'>{row.hint}</span>
+                      <span className='block text-[10px] leading-tight text-ironside'>{row.hint}</span>
                     ) : null}
                   </span>
                   <span className='flex shrink-0 items-center gap-2'>
@@ -207,7 +201,7 @@ export default function BuildBoard() {
                       <button
                         type='button'
                         onClick={open}
-                        className='inline-flex items-center gap-0.5 text-xs font-semibold text-[#173150] hover:text-[#f15a2b]'
+                        className='inline-flex items-center gap-0.5 text-xs font-semibold text-[#f15a2b] hover:text-[#173150]'
                       >
                         {canView ? 'View' : 'Start'}
                         <ArrowRight className='h-3.5 w-3.5' aria-hidden />
@@ -217,7 +211,8 @@ export default function BuildBoard() {
                 </li>
               )
             })}
-          </ul>
+            </ul>
+          </ResumePaperCard>
         </div>
       </BlockCard>
 

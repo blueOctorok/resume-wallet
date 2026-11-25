@@ -1,13 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { IdCard, ScanLine } from 'lucide-react'
+import { ScanLine } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
-import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
-import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import ProvvenMark from '@/components/ui/ProvvenMark'
+import ResumePaperCard, { PaperRule, paperPrimaryButtonClass } from '@/components/hub/ResumePaperCard'
 import LicenseBarcodeScanner, { LicenseScanHelp } from '@/components/blocks/LicenseBarcodeScanner'
-import { useTheme } from '@/contexts/ThemeContext'
 import { emptyLicenseFields, type LicenseScanFields } from '@/lib/aamva-license'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
@@ -22,8 +21,6 @@ const def = getBlockDefinition('driver-license')
  * This is a read of the card, not a state record and not a Midnight proof.
  */
 export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
   const sessionUserId = useAuthStore((s) => s.sessionUserId)
   const scan = useLicenseBlockStore((s) => s.scan)
   const isLoading = useLicenseBlockStore((s) => s.isLoading)
@@ -72,30 +69,33 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
   return (
     <div className='mx-auto max-w-2xl'>
       <BackToHubButton onClick={onBack} />
-      <HubSectionPanel isDark={isDark} accent='teal'>
-        <BlockCard
-          variant='embed'
-          icon={IdCard}
-          title={def?.label ?? 'Driver license'}
-          description='Read from the barcode on the back of the card. A carrier still orders a motor vehicle record before this is a verified fact.'
-          status={status}
-        >
-          <p className='text-sm text-gray-600 dark:text-gray-400'>
-            We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on your profile and the DOT application. An MVR replaces this read, even when the values match.
+      <ResumePaperCard>
+        <header className='mb-5 text-center'>
+          <ProvvenMark className='mx-auto block text-2xl' />
+          <p className='mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#f15a2b]'>
+            {def?.label ?? 'Driver license'}
           </p>
-          <div className='mt-4'>
-            <LicenseScanHelp />
-          </div>
+          <PaperRule />
+          <p className='mt-3 text-xs text-stone-500'>
+            {status === 'complete' ? 'Scanned' : status === 'in-progress' ? 'Waiting for you to confirm' : 'Not started'}
+          </p>
+        </header>
+        <p className='text-center text-sm leading-relaxed text-[#173150]'>
+          We read the barcode and show you the fields. The picture is not saved. Confirming replaces what you typed on your profile and the DOT application. An MVR replaces this read, even when the values match.
+        </p>
+        <div className='mt-4'>
+          <LicenseScanHelp paper />
+        </div>
 
-          <div className='mt-4'>
-            <Button onClick={() => setScanning(true)} disabled={isSaving}>
-              <ScanLine className='h-4 w-4' />
-              {showFields ? 'Scan again' : 'Scan the barcode'}
-            </Button>
-          </div>
+        <div className='mt-4 flex justify-center'>
+          <Button onClick={() => setScanning(true)} disabled={isSaving} className={paperPrimaryButtonClass}>
+            <ScanLine className='h-4 w-4' />
+            {showFields ? 'Scan again' : 'Scan the barcode'}
+          </Button>
+        </div>
 
           {isLoading && !scan ? (
-            <p className='mt-4 text-sm text-gray-500 dark:text-gray-400'>Loading your license…</p>
+            <p className='mt-4 text-center text-sm text-stone-500'>Loading your license…</p>
           ) : null}
 
           {scan && scan.barcodeStatus === 'failed' && showFields ? (
@@ -108,9 +108,7 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
             <div className='mt-4 space-y-4'>
               <BarcodeSummary fields={scan.fields} fromBarcode={barcodeRead} />
               <fieldset className='space-y-3' disabled={isSaving || !barcodeRead}>
-                <legend className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                  Review what we read
-                </legend>
+                <legend className='text-sm font-semibold text-[#173150]'>Review what we read</legend>
                 <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
                   <Field label='First name' value={draft.firstName} onChange={(v) => setDraft({ ...draft, firstName: v })} />
                   <Field label='Middle name' value={draft.middleName} onChange={(v) => setDraft({ ...draft, middleName: v })} />
@@ -127,7 +125,7 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
                   <Field label='ZIP' value={draft.postalCode} onChange={(v) => setDraft({ ...draft, postalCode: v })} />
                 </div>
                 {barcodeRead ? (
-                  <Button onClick={() => void onConfirm()} isLoading={isSaving}>
+                  <Button onClick={() => void onConfirm()} isLoading={isSaving} className={paperPrimaryButtonClass}>
                     {scan.status === 'complete' ? 'Save this barcode read' : 'Use this barcode read'}
                   </Button>
                 ) : null}
@@ -135,15 +133,14 @@ export default function DriverLicenseBlock({ onBack }: { onBack: () => void }) {
             </div>
           ) : null}
 
-          {error ? <p className='mt-3 text-sm text-red-600 dark:text-red-400'>{error}</p> : null}
+          {error ? <p className='mt-3 text-center text-sm text-red-700'>{error}</p> : null}
 
           {filled.length > 0 ? (
-            <p className='mt-3 text-sm text-gray-600 dark:text-gray-400'>
+            <p className='mt-3 text-center text-sm text-stone-600'>
               Filled from the barcode: {filled.join(', ')}. This is a read of the card, not a state record.
             </p>
           ) : null}
-        </BlockCard>
-      </HubSectionPanel>
+      </ResumePaperCard>
       {scanning ? <LicenseBarcodeScanner onRead={onBarcode} onClose={() => setScanning(false)} /> : null}
     </div>
   )
@@ -162,12 +159,12 @@ function BarcodeSummary({ fields, fromBarcode }: { fields: LicenseScanFields; fr
       <p className='text-[10px] font-semibold uppercase tracking-wide text-retro-teal'>
         {fromBarcode ? 'Read from the license barcode' : 'Entered by the driver'}
       </p>
-      {name ? <p className='mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100'>{name}</p> : null}
-      {detail ? <p className='text-sm text-gray-700 dark:text-gray-300'>{detail}</p> : null}
+      {name ?       <p className='mt-1 text-lg font-semibold text-[#173150]'>{name}</p> : null}
+      {detail ? <p className='text-sm text-[#173150]'>{detail}</p> : null}
       {fields.endorsements.length > 0 ? (
         <div className='mt-2 flex flex-wrap gap-1.5'>
           {fields.endorsements.map((code) => (
-            <span key={code} className='rounded-full bg-white px-2 py-0.5 text-xs font-medium text-[#173150] dark:bg-gray-900 dark:text-gray-100'>
+            <span key={code} className='rounded-full bg-white px-2 py-0.5 text-xs font-medium text-[#173150] ring-1 ring-stone-300'>
               {code}
             </span>
           ))}
@@ -199,13 +196,13 @@ function Field({
   type?: string
 }) {
   return (
-    <label className='block text-xs font-medium text-gray-600 dark:text-gray-400'>
+    <label className='block text-xs font-medium text-stone-500'>
       {label}
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className='mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100'
+        className='mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-[#173150]'
       />
     </label>
   )
